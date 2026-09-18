@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Document ID | CAREER-SITE-FSD-2026-001 |
-| Version | 0.3.1 — Draft for owner review |
+| Version | 0.3.2 — Draft for owner review |
 | Date | 2026-09-18 |
 | Owner | Roger E. Henley II |
 | Prepared with | Claude (Anthropic), working from the owner's brief, master résumé, and published writing |
@@ -21,6 +21,7 @@
 | 0.2.0 | 2026-09-18 | R. Henley / Claude | D-04 resolved: Go API with a Python sidecar; contracts, repo layout, CI, and roadmap revised; D-17 added |
 | 0.3.0 | 2026-09-18 | R. Henley / Claude | UxTS/FxTS governance-as-code adopted (new §10, NFR-GOV, FR-CNT-21); CI, testing, roadmap, risks revised; D-18 and D-19 added; §10–14 renumbered to §11–15 |
 | 0.3.1 | 2026-09-18 | R. Henley / Claude | Repository created (`reh3376/career-site`); references updated; D-10 repository name resolved |
+| 0.3.2 | 2026-09-18 | R. Henley / Claude | D-17 resolved (ConnectRPC); contracts authored in `proto/`; §8.5 regenerated from the contracts; generated-code layout updated; ADRs 0004, 0010, 0017 recorded |
 
 ---
 
@@ -709,23 +710,25 @@ Vector index: HNSW on `corpus_chunks.embedding` (cosine). Full-text: GIN on the 
 
 ### 8.5 API surface
 
-The surface is defined as Protobuf services in `proto/career/v1/` and served by the Go API under `/api/` (**D-17**: ConnectRPC recommended; each method is `POST /api/career.v1.<Service>/<Method>` with JSON or binary encoding, and the same definitions serve the REST alternative through the generated OpenAPI). Member methods require a session; admin methods require the admin role and a recent MFA check. Three things stay plain HTTP `GET` because browsers and monitors navigate to them: OAuth start/callback, download redirects, and health probes.
+**D-17 resolved (2026-09-18): ConnectRPC.** The surface is defined as Protobuf services in `proto/career/v1/` (public) and `proto/career/sidecar/v1/` (internal) and served by the Go API under `/api/`; each method is `POST /api/{package}.{Service}/{Method}` with JSON (or binary) encoding, and `ChatService.SendMessage` is server-streaming. Every method declares its access policy with the `career.v1.auth`, `allow_unverified`, `rate_limit_per_minute`, and `mfa_fresh` options, enforced by a Connect interceptor before handlers run, and every request field carries `buf.validate` rules enforced the same way. Three things stay plain HTTP `GET` because browsers and monitors navigate to them: OAuth start/callback, download redirects, and health probes.
 
-| Service | Methods |
-|---|---|
-| `AuthService` | `Register`, `Verify`, `ResendVerification`, `Login`, `Logout`, `LogoutAll`, `ForgotPassword`, `ResetPassword`, `MfaEnroll`, `MfaVerify` — plus `GET /api/auth/oauth/{provider}/start` and `/callback` |
-| `MemberService` | `GetMe`, `UpdateMe`, `SetInterests`, `GetHistory`, `ListSaved`, `SaveItem`, `UnsaveItem`, `ListConversations`, `RequestExport`, `DeleteAccount` |
-| `ContentService` | `ListContent` (tailored ordering, filters), `GetContent`, `WhatsNew`, `ListTracks`, `Search` |
-| `HomeService` | `GetHome` (assembled tailored home: welcome-back, path, highlights, résumé, suggestions) |
-| `ActivityService` | `RecordEvents` (batched; fire-and-forget from the client) |
-| `ChatService` | `CreateConversation`, `GetConversation`, `SendMessage` (server-streaming: tokens, then citations), `DeleteConversation`, `RateMessage`, `Escalate`, `GetSuggestions` |
-| `DownloadService` | `ListDownloads` — plus `GET /api/downloads/{variant}` (signed-URL redirect; records the event) |
-| `ContactService` | `Submit` |
-| `AdminService` | `ListMembers`, `GetMember`, `AddMemberNote`, `ApproveMember`, `GetReviewQueue`, `ReplyEscalation`, `GetConversation`, `GetCorpusStatus`, `TestRetrieval`, `Reingest`, `GetPersona`, `SetPersona` (later), `GetAnalytics`, `GetAudit` |
-| `SystemService` | `Version` — plus `GET /api/healthz` and `GET /api/readyz` |
-| `SidecarService` (internal, API → sidecar over gRPC; never exposed through Caddy) | `Embed`, `Rerank`, `Classify`, `RunJob`, `JobStatus` |
+The authoritative, generated reference is **`docs/api/README.md`** (conventions, JSON encoding, errors, auth, every method with request/response fields, rules, and example bodies) with **`docs/api/endpoints.json`** as the machine-readable index; both are produced by `make docs-api` from the compiled descriptors and drift-checked in CI. The table below is the same index at service level (65 methods at v0.3.2):
 
-Generated code (`gen/go`, `gen/ts`, `gen/python`) is committed; `buf lint` and `buf breaking` run on every PR, and a generation step in CI fails if the committed output drifts from the `.proto` sources.
+| Service | Auth | Methods |
+|---|---|---|
+| `AuthService` | Member / Public | `Register`, `Verify`, `ResendVerification`, `Login`, `Logout`, `LogoutAll`, `ForgotPassword`, `ResetPassword`, `ChangePassword`, `ChangeEmail`, `MfaEnroll`, `MfaVerify` — plus `GET /api/auth/oauth/{provider}/start` and `/callback` |
+| `MemberService` | Member | `GetMe`, `UpdateMe`, `SetInterests`, `GetHistory`, `ListSaved`, `SaveItem`, `UnsaveItem`, `RequestExport`, `GetExport`, `DeleteAccount` |
+| `ContentService` | Member | `ListContent`, `GetContent`, `WhatsNew`, `ListTracks`, `GetSkills`, `Search` |
+| `HomeService` | Member | `GetHome` |
+| `ActivityService` | Member | `RecordEvents` |
+| `ChatService` | Member | `CreateConversation`, `ListConversations`, `GetConversation`, `SendMessage` (server-streaming), `DeleteConversation`, `RateMessage`, `Escalate`, `GetSuggestions`, `GetQuota` |
+| `DownloadService` | Member | `ListDownloads` — plus `GET /api/downloads/{variant}` (signed-URL redirect; records the event) |
+| `ContactService` | Member | `GetContactOptions`, `SubmitContact` |
+| `AdminService` | Admin | `ListMembers`, `GetMember`, `AddMemberNote`, `SetMemberStatus`, `GetReviewQueue`, `ResolveReviewItem`, `ReplyEscalation`, `GetMemberConversation`, `GetCorpusStatus`, `TestRetrieval`, `RunJob`, `GetJob`, `GetPersona`, `GetAnalytics`, `GetAudit` |
+| `SystemService` | Public | `GetVersion`, `GetGovernanceStatus` — plus `GET /api/healthz` and `GET /api/readyz` |
+| `SidecarService` | internal (gRPC, API → sidecar only) | `Embed`, `Rerank`, `Classify`, `RunJob`, `GetJob`, `Health` |
+
+Generated code is committed inside each consumer — `services/api/gen` (Go, Connect handlers and the sidecar gRPC client), `apps/web/src/gen` (TypeScript for connect-es), `services/sidecar/src/career` and `services/sidecar/src/buf` (Python) — and `make check-gen` fails CI when any output drifts from `proto/`. `buf lint` (STANDARD + COMMENTS) and `buf breaking` run on every PR.
 
 ### 8.6 Authentication flows
 
@@ -842,23 +845,24 @@ career-site/
 │   ├── FSD.md                    # this document
 │   ├── adr/                      # architecture decision records (one per D-NN)
 │   ├── runbooks/                 # deploy, rollback, restore, rotate-secrets, incident
-│   ├── api/                      # generated OpenAPI (from the protos) for reference
+│   ├── api/README.md · api/endpoints.json   # generated API reference and endpoint index (make docs-api)
 ├── proto/
-│   ├── buf.yaml · buf.gen.yaml
-│   └── career/v1/*.proto         # Auth, Member, Content, Home, Activity, Chat, Download, Contact, Admin, System, Sidecar
-├── gen/                          # generated from proto/ (committed; drift-checked in CI)
-│   ├── go/ · ts/ · python/
+│   ├── buf.yaml · buf.lock · buf.gen.yaml · buf.gen.sidecar.yaml · README.md
+│   ├── career/v1/*.proto         # public API: options, common, auth, member, content, home, activity, chat, download, contact, admin, system
+│   └── career/sidecar/v1/sidecar.proto   # internal API ↔ sidecar contract
 ├── apps/
-│   └── web/                      # Next.js application (pnpm); Connect client from gen/ts
+│   └── web/                      # Next.js application (pnpm); generated connect-es types in src/gen/ (committed)
 ├── services/
 │   ├── api/                      # Go module `github.com/reh3376/career-site/services/api`
 │   │   ├── cmd/api/              # main: HTTP server, migrations on start, scheduler
+│   │   ├── gen/                  # generated Connect handlers, message types, sidecar gRPC client (committed)
 │   │   ├── internal/{auth,members,content,personalize,chat,admin,jobs,mail,github,sidecar}/
 │   │   ├── db/{migrations,queries}/  # goose SQL migrations; sqlc queries → internal/db
 │   │   └── go.mod · go.sum · sqlc.yaml · .golangci.yaml
 │   └── sidecar/                  # Python package `career_sidecar` (uv)
 │       ├── pyproject.toml · uv.lock
 │       ├── src/career_sidecar/{grpc,ingest,embed,assets,resume,eval,cli}/
+│       ├── src/career/ · src/buf/  # generated Python types, gRPC stubs, and buf.validate descriptors (committed)
 │       └── tests/
 ├── packages/
 │   └── schema/                   # content JSON Schema (exported from sidecar Pydantic models) → TS types
@@ -1179,20 +1183,20 @@ Each decision becomes an ADR when resolved. Recommendations reflect the analysis
 | D-01 | Public landing page with substance vs. hard gate on everything | Landing with headline accomplishments (gated detail) / minimal sign-in-only page | Landing with substance (mitigates R-01) |
 | D-02 | Registration mode | Open with verification / approval required / invite-only | Open with verification; approval mode as a flag for later |
 | D-03 | Social sign-in providers | LinkedIn / GitHub / Google / none | LinkedIn in v1 (audience fit, verifies professional identity); GitHub for technical visitors post-launch |
-| D-04 | API language | Python + FastAPI / Go + Python sidecar | **Resolved 2026-09-18:** Go API with a Python sidecar for content, ML, and scripting jobs; JS/TS front end (§8.2); ADR-0004 |
+| D-04 | API language | Python + FastAPI / Go + Python sidecar | **Resolved 2026-09-18:** Go API with a Python sidecar for content, ML, and scripting jobs; JS/TS front end (§8.2); ADR-0004 (recorded) |
 | D-05 | Assistant retrieval and memory | pgvector in-house / MDEMG integration | pgvector for v1; MDEMG as a Phase 7 showcase behind a feature flag |
 | D-06 | Q&A bank and persona editing | Repository files / admin console / both | Repository in v1 (versioned, reviewable); console editing later |
 | D-07 | Large assets | Repository (Git LFS) / object storage | Object storage; thumbnails only in the repository |
 | D-08 | Hosting | Single VPS + Compose / managed split / home compute | Single VPS + Compose (§11.1) |
 | D-09 | Licenses | Code: MIT or Apache-2.0; content: All rights reserved or CC BY-NC-ND 4.0 | MIT for code; All rights reserved for content with explicit permission to quote with attribution |
-| D-10 | Domain and site name | Owner's choice | Repository **resolved 2026-09-18: `github.com/reh3376/career-site`**, alongside the owner's open-source portfolio. Domain still open: a personal domain the owner already holds or `<firstname><lastname>.com`-style |
+| D-10 | Domain and site name | Owner's choice | Repository **resolved 2026-09-18: `github.com/reh3376/career-site`** (ADR-0010), alongside the owner's open-source portfolio. Domain still open: a personal domain the owner already holds or `<firstname><lastname>.com`-style |
 | D-11 | LLM model and embeddings provider | Hosted embeddings API / open-weight model on owner's compute; LLM model tier | Hosted embeddings for operational simplicity in v1; LLM model set by cost/quality trial on the golden set |
 | D-12 | Invite links with pre-selected tracks | Include in v1 / defer | Defer to Phase 7 |
 | D-13 | Deletion semantics for conversations | Hard delete / anonymize and keep for quality | Hard delete member-identifiable data; keep anonymized question text only if the owner wants it for the Q&A bank |
 | D-14 | Public-page analytics | Self-hosted Umami / hosted Plausible / none | Self-hosted Umami on the same host, or none in v1 |
 | D-15 | Publication permissions for photos and project details from employers | Owner to confirm per item | Required before Phase 1 exit; record the approver in content frontmatter |
 | D-16 | Assistant name and disclosure wording | "Ask Roger" / other | "Ask Roger" with the disclosure in §15.C |
-| D-17 | Browser ↔ API transport | ConnectRPC (Protobuf services, generated TS client, server-streaming chat) / REST + OpenAPI (`oapi-codegen`, SSE for chat) | ConnectRPC: one contract for all three languages, streaming without a second mechanism, and a visible demonstration of the owner's gRPC/Protobuf practice; REST if the owner prefers `curl`-able endpoints or wants to match an existing convention |
+| D-17 | Browser ↔ API transport | ConnectRPC (Protobuf services, generated TS client, server-streaming chat) / REST + OpenAPI (`oapi-codegen`, SSE for chat) | **Resolved 2026-09-18: ConnectRPC** (owner decision); contracts in `proto/`, reference in `docs/api/README.md`; ADR-0017 |
 | D-18 | Governance framework naming | Keep MDEMG's Universal acronyms (UATS, UDTS, …) / adopt a project prefix as Forge did (e.g. `C<x>TS`) | Keep the Universal acronyms: they are designed to be portable, the vendored runners and docs need no renaming, and the site can point to MDEMG as the origin |
 | D-19 | Runner implementation base | Vendor MDEMG's Python `uxts_runner_core` / `uxts_report` and per-framework runners / port Forge's Pydantic `FxTSRunner` base with its `integrity` block and `approve` workflow | Vendor MDEMG's runners (proven for UATS, USTS, UAMS, UOBS, UOTS, UBTS, ULTS, UVTS) and adopt Forge's `hash_state`/approval semantics on top for the PR workflow in §10.5 |
 
