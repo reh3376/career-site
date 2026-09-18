@@ -1,0 +1,20 @@
+# Buf module for the career-site API contracts.
+#
+# Every browser-facing and internal RPC is defined here. Generated code
+# (Go server, TypeScript client, Python stubs) and docs/api/README.md are
+# derived from these files and drift-checked in CI — edit the .proto, never
+# the outputs.
+version: v2
+modules:
+  - path: .
+    name: buf.build/reh3376/career-site
+deps:
+  - buf.build/bufbuild/protovalidate
+lint:
+  use:
+    - STANDARD
+    - COMMENTS          # every service, RPC, message, field, oneof, and enum value is documented
+  disallow_comment_ignores: true
+breaking:
+  use:
+    - FILE

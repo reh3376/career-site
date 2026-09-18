@@ -1,0 +1,36 @@
+# Code generation for the browser-facing API (package career.v1).
+# Run from the repository root with `make gen`, which also applies
+# buf.gen.sidecar.yaml. Outputs are committed and drift-checked in CI; the
+# .proto files are the single source of truth.
+version: v2
+inputs:
+  - directory: proto
+    paths:
+      - proto/career/v1
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package   # set explicitly in each .proto
+plugins:
+  # Go: message types + Connect handlers/clients (services/api).
+  - remote: buf.build/protocolbuffers/go
+    out: services/api/gen
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: services/api/gen
+    opt: paths=source_relative
+  # TypeScript: message types + service descriptors for connect-es (apps/web).
+  - remote: buf.build/bufbuild/es
+    out: apps/web/src/gen
+    opt:
+      - target=ts
+      - import_extension=none
+  # Python: message types (+ stubs) for evaluation tooling in the sidecar.
+  # include_imports also emits buf/validate/validate_pb2.py so the sidecar
+  # and scripts/gen_api_docs.py can read validation rules from descriptors.
+  - remote: buf.build/protocolbuffers/python
+    out: services/sidecar/src
+    include_imports: true
+  - remote: buf.build/protocolbuffers/pyi
+    out: services/sidecar/src
+    include_imports: true

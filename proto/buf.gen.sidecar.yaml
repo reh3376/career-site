@@ -1,0 +1,25 @@
+# Code generation for the internal API ↔ sidecar contract
+# (package career.sidecar.v1): Go client for the API, Python server stubs
+# for the sidecar. Never generated for the web app.
+version: v2
+inputs:
+  - directory: proto
+    paths:
+      - proto/career/sidecar/v1
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: services/api/gen
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: services/api/gen
+    opt: paths=source_relative
+  - remote: buf.build/protocolbuffers/python
+    out: services/sidecar/src
+  - remote: buf.build/protocolbuffers/pyi
+    out: services/sidecar/src
+  - remote: buf.build/grpc/python
+    out: services/sidecar/src

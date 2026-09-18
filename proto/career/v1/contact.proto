@@ -1,0 +1,84 @@
+// Contact options and the contact form.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/options.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Reaching the owner outside the assistant.
+service ContactService {
+  // Returns the owner's availability statement and the contact channels he
+  // has chosen to publish.
+  rpc GetContactOptions(GetContactOptionsRequest) returns (GetContactOptionsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Sends a message to the owner. The owner receives it with the member's
+  // profile context and replies by the channel the member chose.
+  rpc SubmitContact(SubmitContactRequest) returns (SubmitContactResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 3;
+  }
+}
+
+// Empty.
+message GetContactOptionsRequest {}
+
+// A published contact channel.
+message ContactChannel {
+  // Channel kind, e.g. `email`, `linkedin`, `scheduling`, `github`.
+  string kind = 1;
+  // Display label.
+  string label = 2;
+  // URL or `mailto:` link.
+  string url = 3;
+}
+
+// Contact page data.
+message GetContactOptionsResponse {
+  // Availability statement in the owner's words.
+  string availability = 1;
+  // Location and remote preferences.
+  string location_preferences = 2;
+  // Channels in display order.
+  repeated ContactChannel channels = 3;
+}
+
+// Contact form.
+message SubmitContactRequest {
+  // Subject line.
+  string subject = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // Message body.
+  string message = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 5000
+  }];
+  // Preferred reply channel.
+  ReplyChannel reply_channel = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Attach a conversation transcript for context; optional.
+  string conversation_id = 4 [(buf.validate.field).string.max_len = 64];
+
+  // How the member wants a reply.
+  enum ReplyChannel {
+    // Not set.
+    REPLY_CHANNEL_UNSPECIFIED = 0;
+    // Email to the member's verified address.
+    REPLY_CHANNEL_EMAIL = 1;
+    // LinkedIn message (requires a linked LinkedIn profile).
+    REPLY_CHANNEL_LINKEDIN = 2;
+  }
+}
+
+// Submission receipt.
+message SubmitContactResponse {
+  // Ticket identifier quoted in the owner's reply.
+  string ticket_id = 1;
+}

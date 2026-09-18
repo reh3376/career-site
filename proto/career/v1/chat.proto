@@ -1,0 +1,397 @@
+// Ask Roger: the assistant that answers in the owner's voice from his own
+// material. Every answer is grounded in retrieved content and cites its
+// sources; the assistant is always labeled as AI (FSD FR-CHAT-02).
+//
+// SendMessage is a server-streaming RPC. Over Connect it is a single
+// `POST /api/career.v1.ChatService/SendMessage` whose response body carries
+// enveloped messages; the generated TypeScript client exposes it as an async
+// iterable, so the UI does not handle framing.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/common.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Conversations with the assistant.
+service ChatService {
+  // Starts a conversation. The first assistant message is the AI disclosure
+  // (FSD §15.C) and is included in the response so the panel can render it
+  // without a round trip.
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 20;
+  }
+  // Lists the member's conversations, most recent first.
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Returns a conversation with all of its messages.
+  rpc GetConversation(GetConversationRequest) returns (GetConversationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Sends a member message and streams the assistant's reply: a `start`
+  // event, then `delta` events with text as it is generated, then
+  // `citations`, `usage`, and a final `done` carrying the complete message.
+  // Quota and budget checks happen before the first event; when exceeded the
+  // call fails with `resource_exhausted` and no message is stored.
+  rpc SendMessage(SendMessageRequest) returns (stream SendMessageResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 20;
+  }
+  // Deletes a conversation. It disappears immediately for the member and is
+  // hard-deleted within 30 days.
+  rpc DeleteConversation(DeleteConversationRequest) returns (DeleteConversationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Rates an assistant message up or down with an optional comment.
+  rpc RateMessage(RateMessageRequest) returns (RateMessageResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Sends a question, with the conversation context, to the owner. The owner
+  // replies inside the conversation (as a message with role OWNER) and the
+  // member is notified by email.
+  rpc Escalate(EscalateRequest) returns (EscalateResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 5;
+  }
+  // Returns suggested questions for the current page and the member's
+  // tracks (at least three).
+  rpc GetSuggestions(GetSuggestionsRequest) returns (GetSuggestionsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Returns the member's remaining allowance and the global budget mode so
+  // the panel can show limits before they are hit.
+  rpc GetQuota(GetQuotaRequest) returns (GetQuotaResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+}
+
+// A conversation header.
+message Conversation {
+  // Conversation ID.
+  string id = 1;
+  // Title, derived from the first question unless renamed.
+  string title = 2;
+  // Start time.
+  google.protobuf.Timestamp started_at = 3;
+  // Time of the last message.
+  google.protobuf.Timestamp last_message_at = 4;
+  // Number of messages.
+  int32 message_count = 5;
+  // Persona version in effect.
+  string persona_version = 6;
+  // Content item the conversation was opened from, when any.
+  string context_content_id = 7;
+}
+
+// A source cited by an assistant message.
+message Citation {
+  // Corpus chunk ID.
+  string chunk_id = 1;
+  // Content item the chunk belongs to; empty for private-corpus sources.
+  string content_id = 2;
+  // Title to display.
+  string title = 3;
+  // Site path to link to; empty for private-corpus sources.
+  string path = 4;
+  // Heading within the item, when known.
+  string heading = 5;
+  // Rank within the answer's citations (1-based).
+  int32 rank = 6;
+}
+
+// Assistant-side flags on a message.
+message MessageFlags {
+  // The question was outside the assistant's scope and was declined.
+  bool out_of_scope = 1;
+  // No supporting material was found; the assistant said so.
+  bool no_support = 2;
+  // Answered in degraded mode (Q&A bank only, provider unavailable or budget
+  // exhausted).
+  bool degraded = 3;
+  // The message was matched directly from the owner's Q&A bank.
+  bool qa_match = 4;
+}
+
+// A message in a conversation.
+message Message {
+  // Message ID.
+  string id = 1;
+  // Conversation ID.
+  string conversation_id = 2;
+  // Who wrote it.
+  Role role = 3;
+  // Text as Markdown (assistant text is sanitized before rendering).
+  string text = 4;
+  // Creation time.
+  google.protobuf.Timestamp created_at = 5;
+  // Sources (assistant messages only).
+  repeated Citation citations = 6;
+  // The member's rating, if any (assistant messages only).
+  Rating rating = 7;
+  // Flags (assistant messages only).
+  MessageFlags flags = 8;
+  // Persona version used (assistant messages only).
+  string persona_version = 9;
+
+  // Message author.
+  enum Role {
+    // Not set.
+    ROLE_UNSPECIFIED = 0;
+    // The member.
+    ROLE_USER = 1;
+    // The assistant.
+    ROLE_ASSISTANT = 2;
+    // The owner, replying to an escalation.
+    ROLE_OWNER = 3;
+  }
+}
+
+// Thumbs up or down.
+enum Rating {
+  // Not rated.
+  RATING_UNSPECIFIED = 0;
+  // Helpful.
+  RATING_UP = 1;
+  // Not helpful.
+  RATING_DOWN = 2;
+}
+
+// New-conversation request.
+message CreateConversationRequest {
+  // Content item the panel was opened from, used for suggestions and
+  // retrieval bias; optional.
+  string context_content_id = 1 [(buf.validate.field).string.max_len = 128];
+}
+
+// New conversation with its disclosure message.
+message CreateConversationResponse {
+  // The conversation.
+  Conversation conversation = 1;
+  // The disclosure message (role ASSISTANT).
+  Message disclosure = 2;
+}
+
+// Conversation list request.
+message ListConversationsRequest {
+  // Pagination.
+  PageRequest page = 1;
+}
+
+// Conversation list.
+message ListConversationsResponse {
+  // Conversations, most recent first.
+  repeated Conversation conversations = 1;
+  // Pagination.
+  PageResponse page = 2;
+}
+
+// Conversation detail request.
+message GetConversationRequest {
+  // Conversation ID.
+  string conversation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Conversation with messages.
+message GetConversationResponse {
+  // The conversation.
+  Conversation conversation = 1;
+  // Messages in chronological order.
+  repeated Message messages = 2;
+}
+
+// A member message.
+message SendMessageRequest {
+  // Conversation to append to.
+  string conversation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The question or message text.
+  string text = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Content item currently on screen, used to bias retrieval; optional.
+  string context_content_id = 3 [(buf.validate.field).string.max_len = 128];
+}
+
+// Token usage and remaining allowance, sent once per reply.
+message Usage {
+  // Input tokens for this reply.
+  int32 input_tokens = 1;
+  // Output tokens for this reply.
+  int32 output_tokens = 2;
+  // Messages remaining in the member's daily allowance after this one.
+  int32 remaining_today = 3;
+  // Messages remaining in this conversation before a fresh-start prompt.
+  int32 remaining_in_conversation = 4;
+}
+
+// One event in the reply stream.
+message SendMessageResponse {
+  // Exactly one event per stream message.
+  oneof event {
+    // First event: identifiers for the stored member message and the
+    // assistant message being generated.
+    Start start = 1;
+    // A fragment of assistant text, in order; concatenate to build the reply.
+    Delta delta = 2;
+    // Sources for the reply; sent once, after the text.
+    Citations citations = 3;
+    // Usage and remaining allowance; sent once.
+    Usage usage = 4;
+    // Final event: the complete assistant message as stored.
+    Done done = 5;
+  }
+
+  // Stream start.
+  message Start {
+    // ID of the stored member message.
+    string user_message_id = 1;
+    // ID of the assistant message being generated.
+    string assistant_message_id = 2;
+    // Persona version in effect.
+    string persona_version = 3;
+  }
+
+  // Text fragment.
+  message Delta {
+    // Text to append.
+    string text = 1;
+  }
+
+  // Citation list.
+  message Citations {
+    // Sources in rank order.
+    repeated Citation citations = 1;
+  }
+
+  // Stream end.
+  message Done {
+    // The complete assistant message.
+    Message message = 1;
+  }
+}
+
+// Delete request.
+message DeleteConversationRequest {
+  // Conversation ID.
+  string conversation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Empty.
+message DeleteConversationResponse {}
+
+// Rating request.
+message RateMessageRequest {
+  // Assistant message ID.
+  string message_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The rating; UNSPECIFIED clears a previous rating.
+  Rating rating = 2 [(buf.validate.field).enum.defined_only = true];
+  // Optional comment (≤ 1,000 characters).
+  string comment = 3 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Empty.
+message RateMessageResponse {}
+
+// Escalation request.
+message EscalateRequest {
+  // Conversation to escalate.
+  string conversation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The question for the owner; defaults to the last member message when empty.
+  string question = 2 [(buf.validate.field).string.max_len = 4000];
+  // Assistant message that prompted the escalation, when any.
+  string message_id = 3 [(buf.validate.field).string.max_len = 64];
+}
+
+// An escalation record.
+message Escalation {
+  // Escalation ID.
+  string id = 1;
+  // Conversation ID.
+  string conversation_id = 2;
+  // Current state.
+  Status status = 3;
+  // When it was raised.
+  google.protobuf.Timestamp created_at = 4;
+  // When the owner replied, if they have.
+  google.protobuf.Timestamp replied_at = 5;
+
+  // Escalation lifecycle.
+  enum Status {
+    // Not set.
+    STATUS_UNSPECIFIED = 0;
+    // Waiting for the owner.
+    STATUS_OPEN = 1;
+    // The owner replied in the conversation.
+    STATUS_ANSWERED = 2;
+    // Closed without a reply.
+    STATUS_CLOSED = 3;
+  }
+}
+
+// Escalation result.
+message EscalateResponse {
+  // The escalation.
+  Escalation escalation = 1;
+}
+
+// Suggestions request.
+message GetSuggestionsRequest {
+  // Site path of the current page, e.g. `/projects/mdemg`; optional.
+  string path = 1 [(buf.validate.field).string.max_len = 256];
+  // Content item on screen, when any; optional.
+  string content_id = 2 [(buf.validate.field).string.max_len = 128];
+}
+
+// Suggested questions.
+message GetSuggestionsResponse {
+  // Questions, most specific first (at least three).
+  repeated string questions = 1;
+}
+
+// Empty.
+message GetQuotaRequest {}
+
+// Allowance and budget mode.
+message GetQuotaResponse {
+  // Daily message limit.
+  int32 daily_limit = 1;
+  // Messages used today.
+  int32 used_today = 2;
+  // Per-conversation message limit.
+  int32 conversation_limit = 3;
+  // Global budget mode.
+  BudgetMode budget_mode = 4;
+
+  // Global assistant budget state.
+  enum BudgetMode {
+    // Not set.
+    BUDGET_MODE_UNSPECIFIED = 0;
+    // Full generation available.
+    BUDGET_MODE_NORMAL = 1;
+    // Monthly budget reached: answers come from the Q&A bank only.
+    BUDGET_MODE_QA_ONLY = 2;
+    // Provider unavailable: Q&A bank only until it recovers.
+    BUDGET_MODE_DEGRADED = 3;
+  }
+}

@@ -1,0 +1,22 @@
+# build artifacts
+build/
+dist/
+*.binpb
+
+# dependencies and environments
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.uv-cache/
+
+# local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# editor and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,249 @@
+// The signed-in member's own profile, interests, history, saved items, and
+// data rights (export and deletion).
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/common.proto";
+import "career/v1/options.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Profile, interests, history, saved items, export, and deletion for the
+// calling member. Every method operates on the session's own member; there is
+// no member ID parameter.
+service MemberService {
+  // Returns the calling member.
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.allow_unverified) = true;
+  }
+  // Updates profile fields named in `update_mask`. Fields outside the mask
+  // are left unchanged; an empty mask is an error.
+  rpc UpdateMe(UpdateMeRequest) returns (UpdateMeResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Replaces the member's track interests and tailoring setting. Also used
+  // to complete the first-visit questionnaire (an empty list with
+  // `questionnaire_completed` true records a skip).
+  rpc SetInterests(SetInterestsRequest) returns (SetInterestsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Returns the member's activity history, newest first.
+  rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Lists saved items, newest first.
+  rpc ListSaved(ListSavedRequest) returns (ListSavedResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Saves a content item with an optional private note. Saving an already
+  // saved item updates the note.
+  rpc SaveItem(SaveItemRequest) returns (SaveItemResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Removes a saved item. Succeeds if the item was not saved.
+  rpc UnsaveItem(UnsaveItemRequest) returns (UnsaveItemResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Requests an export of all data held about the member (profile,
+  // interests, activity, saved items, conversations) as JSON. The export is
+  // prepared asynchronously; poll GetExport or wait for the email.
+  rpc RequestExport(RequestExportRequest) returns (RequestExportResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 2;
+  }
+  // Returns the status of an export and, when ready, a short-lived download
+  // URL.
+  rpc GetExport(GetExportRequest) returns (GetExportResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Schedules deletion of the account and all personal data. The session
+  // ends immediately; data is purged within 30 days (conversations and
+  // activity are deleted or irreversibly anonymized).
+  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.allow_unverified) = true;
+    option (career.v1.rate_limit_per_minute) = 2;
+  }
+}
+
+// Empty.
+message GetMeRequest {}
+
+// The calling member.
+message GetMeResponse {
+  // The member.
+  Me me = 1;
+}
+
+// Partial profile update.
+message UpdateMeRequest {
+  // Display name.
+  string name = 1 [(buf.validate.field).string.max_len = 120];
+  // Organization.
+  string organization = 2 [(buf.validate.field).string.max_len = 200];
+  // Stated role or title.
+  string stated_role = 3 [(buf.validate.field).string.max_len = 120];
+  // Questionnaire answers and tailoring setting.
+  Profile profile = 4;
+  // Which fields to update, using paths such as `name`, `organization`,
+  // `stated_role`, `profile.seniority`, `profile.hiring_for`,
+  // `profile.priorities`, `profile.heard_from`, `profile.tailoring_enabled`.
+  google.protobuf.FieldMask update_mask = 5 [(buf.validate.field).required = true];
+}
+
+// Updated member.
+message UpdateMeResponse {
+  // The member after the update.
+  Me me = 1;
+}
+
+// Full replacement of track interests.
+message SetInterestsRequest {
+  // Interests, at most eight; the questionnaire offers up to three.
+  repeated TrackInterest interests = 1 [(buf.validate.field).repeated.max_items = 8];
+  // Whether tailoring is enabled.
+  bool tailoring_enabled = 2;
+  // Marks the first-visit questionnaire as completed (or skipped).
+  bool questionnaire_completed = 3;
+}
+
+// Updated member.
+message SetInterestsResponse {
+  // The member after the update.
+  Me me = 1;
+}
+
+// History page request.
+message GetHistoryRequest {
+  // Restrict to one kind; unspecified returns all kinds.
+  ActivityEvent.Kind kind = 1 [(buf.validate.field).enum.defined_only = true];
+  // Pagination.
+  PageRequest page = 2;
+}
+
+// History page.
+message GetHistoryResponse {
+  // Events, newest first, with `content` populated where applicable.
+  repeated ActivityEvent events = 1;
+  // Pagination.
+  PageResponse page = 2;
+}
+
+// Saved-items page request.
+message ListSavedRequest {
+  // Pagination.
+  PageRequest page = 1;
+}
+
+// A saved item.
+message SavedItem {
+  // The content item.
+  ContentSummary content = 1;
+  // Private note, possibly empty.
+  string note = 2;
+  // When it was saved.
+  google.protobuf.Timestamp saved_at = 3;
+}
+
+// Saved-items page.
+message ListSavedResponse {
+  // Items, newest first.
+  repeated SavedItem items = 1;
+  // Pagination.
+  PageResponse page = 2;
+}
+
+// Save request.
+message SaveItemRequest {
+  // Content ID to save.
+  string content_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  // Optional private note (≤ 2,000 characters).
+  string note = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// The saved item.
+message SaveItemResponse {
+  // The saved item as stored.
+  SavedItem item = 1;
+}
+
+// Unsave request.
+message UnsaveItemRequest {
+  // Content ID to remove from the saved list.
+  string content_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+}
+
+// Empty.
+message UnsaveItemResponse {}
+
+// Empty.
+message RequestExportRequest {}
+
+// Export handle.
+message RequestExportResponse {
+  // Export identifier for GetExport.
+  string export_id = 1;
+  // Expected readiness; exports usually complete within a minute.
+  google.protobuf.Timestamp estimated_ready_at = 2;
+}
+
+// Export status request.
+message GetExportRequest {
+  // Export identifier from RequestExport.
+  string export_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Export status.
+message GetExportResponse {
+  // Current state.
+  Status status = 1;
+  // Signed download URL, valid for `download_url_expires_at`; empty until READY.
+  string download_url = 2;
+  // Expiry of the download URL.
+  google.protobuf.Timestamp download_url_expires_at = 3;
+  // Size of the export in bytes when READY.
+  int64 size_bytes = 4;
+
+  // Export lifecycle.
+  enum Status {
+    // Not set.
+    STATUS_UNSPECIFIED = 0;
+    // Queued or running.
+    STATUS_PENDING = 1;
+    // Ready for download.
+    STATUS_READY = 2;
+    // Failed; the member may request again.
+    STATUS_FAILED = 3;
+    // Download window elapsed; request again.
+    STATUS_EXPIRED = 4;
+  }
+}
+
+// Account deletion; requires an explicit confirmation phrase and, for
+// password accounts, the current password.
+message DeleteAccountRequest {
+  // Must be exactly "DELETE".
+  string confirmation = 1 [(buf.validate.field).string.const = "DELETE"];
+  // Current password; required unless the account is social-only.
+  string current_password = 2 [(buf.validate.field).string.max_len = 256];
+}
+
+// Deletion schedule.
+message DeleteAccountResponse {
+  // Latest time by which personal data is purged.
+  google.protobuf.Timestamp purge_by = 1;
+}

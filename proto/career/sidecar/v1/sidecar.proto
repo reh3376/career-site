@@ -1,0 +1,270 @@
+// Internal contract between the Go API and the Python sidecar.
+//
+// Served over gRPC on the Compose network only; never exposed through the
+// reverse proxy. The API calls Embed, Rerank, and Classify on the request
+// path (each with a short deadline and a fallback so a sidecar outage
+// degrades retrieval quality rather than availability) and RunJob/GetJob
+// from its scheduler and the admin console.
+syntax = "proto3";
+
+package career.sidecar.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/sidecar/v1;sidecarv1";
+
+// Embedding, reranking, classification, and batch jobs.
+service SidecarService {
+  // Embeds one or more texts with the corpus's embedding model. Query and
+  // document embeddings go through this single implementation so ingest and
+  // retrieval never diverge. Deadline on the request path: 2 s.
+  rpc Embed(EmbedRequest) returns (EmbedResponse);
+  // Re-scores candidate chunks against a query with a cross-encoder and
+  // returns the top-k. Deadline on the request path: 3 s; on timeout the API
+  // keeps the hybrid-retrieval order.
+  rpc Rerank(RerankRequest) returns (RerankResponse);
+  // Classifies a member message as in scope, out of scope, or a suspected
+  // prompt injection. Deadline: 1 s; on timeout the API treats the message as
+  // UNCERTAIN and lets the persona prompt's own scope rules decide.
+  rpc Classify(ClassifyRequest) returns (ClassifyResponse);
+  // Starts a batch job (the same operations as `career-cli`). Returns
+  // immediately with a job ID.
+  rpc RunJob(RunJobRequest) returns (RunJobResponse);
+  // Returns a job's status.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+  // Reports readiness: models loaded, storage reachable, version.
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// Why a text is being embedded; some models use different instructions for
+// queries and documents.
+enum EmbedPurpose {
+  // Not set.
+  EMBED_PURPOSE_UNSPECIFIED = 0;
+  // A member question at retrieval time.
+  EMBED_PURPOSE_QUERY = 1;
+  // A corpus chunk at ingest time.
+  EMBED_PURPOSE_DOCUMENT = 2;
+}
+
+// Texts to embed.
+message EmbedRequest {
+  // Texts, 1–64 per call; each at most 8,000 characters.
+  repeated string texts = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 64
+    items: {
+      string: {
+        min_len: 1
+        max_len: 8000
+      }
+    }
+  }];
+  // Purpose.
+  EmbedPurpose purpose = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+// One embedding vector.
+message Embedding {
+  // Vector components.
+  repeated float values = 1;
+}
+
+// Embeddings in request order.
+message EmbedResponse {
+  // One embedding per input text.
+  repeated Embedding embeddings = 1;
+  // Model identifier.
+  string model = 2;
+  // Vector dimensions.
+  int32 dimensions = 3;
+}
+
+// A candidate chunk for reranking.
+message RerankCandidate {
+  // Chunk ID.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Chunk text.
+  string text = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8000
+  }];
+}
+
+// Rerank request.
+message RerankRequest {
+  // The query.
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Candidates, 1–100.
+  repeated RerankCandidate candidates = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
+  // How many to return, 1–50.
+  int32 top_k = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 50
+  }];
+}
+
+// A reranked candidate.
+message RerankScore {
+  // Chunk ID.
+  string id = 1;
+  // Relevance score (higher is better).
+  float score = 2;
+}
+
+// Reranked candidates.
+message RerankResponse {
+  // Top-k in descending score.
+  repeated RerankScore scores = 1;
+  // Model identifier.
+  string model = 2;
+}
+
+// Classification request.
+message ClassifyRequest {
+  // The member message.
+  string text = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Short summary of the conversation so far; optional.
+  string conversation_summary = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// Scope verdict.
+enum Scope {
+  // Not set.
+  SCOPE_UNSPECIFIED = 0;
+  // About the owner's professional background, work, views, or this site.
+  SCOPE_IN_SCOPE = 1;
+  // Outside the assistant's remit.
+  SCOPE_OUT_OF_SCOPE = 2;
+  // Looks like an attempt to override instructions or extract the prompt.
+  SCOPE_INJECTION_SUSPECTED = 3;
+  // The classifier could not decide.
+  SCOPE_UNCERTAIN = 4;
+}
+
+// Classification result.
+message ClassifyResponse {
+  // Verdict.
+  Scope scope = 1;
+  // Confidence in [0, 1].
+  float confidence = 2;
+  // Short reason, for the review queue.
+  string reason = 3;
+}
+
+// Batch jobs.
+enum JobKind {
+  // Not set.
+  JOB_KIND_UNSPECIFIED = 0;
+  // `career-cli content validate`.
+  JOB_KIND_CONTENT_VALIDATE = 1;
+  // `career-cli content index`.
+  JOB_KIND_CONTENT_INDEX = 2;
+  // `career-cli ingest --changed`.
+  JOB_KIND_INGEST_CHANGED = 3;
+  // `career-cli ingest --full`.
+  JOB_KIND_INGEST_FULL = 4;
+  // `career-cli assets push`.
+  JOB_KIND_ASSETS_PUSH = 5;
+  // `career-cli resume build`.
+  JOB_KIND_RESUME_BUILD = 6;
+  // `career-cli eval run --profile quick`.
+  JOB_KIND_EVAL_QUICK = 7;
+  // `career-cli eval run --profile full`.
+  JOB_KIND_EVAL_FULL = 8;
+}
+
+// Job lifecycle.
+enum JobStatus {
+  // Not set.
+  JOB_STATUS_UNSPECIFIED = 0;
+  // Queued.
+  JOB_STATUS_QUEUED = 1;
+  // Running.
+  JOB_STATUS_RUNNING = 2;
+  // Finished successfully.
+  JOB_STATUS_SUCCEEDED = 3;
+  // Failed.
+  JOB_STATUS_FAILED = 4;
+}
+
+// Job start.
+message RunJobRequest {
+  // Which job.
+  JobKind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Job arguments, e.g. `{"content_ids": "prj-mdemg,art-ftw"}`.
+  map<string, string> args = 2 [(buf.validate.field).map.max_pairs = 16];
+  // Who requested it, for the job log (`scheduler`, `admin:<member_id>`, `ci`).
+  string requested_by = 3 [(buf.validate.field).string.max_len = 128];
+}
+
+// Job handle.
+message RunJobResponse {
+  // Job ID.
+  string job_id = 1;
+}
+
+// Job status request.
+message GetJobRequest {
+  // Job ID.
+  string job_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Job status.
+message GetJobResponse {
+  // Job ID.
+  string job_id = 1;
+  // Which job.
+  JobKind kind = 2;
+  // Status.
+  JobStatus status = 3;
+  // Progress in percent, when reported.
+  int32 progress_pct = 4;
+  // Start time.
+  google.protobuf.Timestamp started_at = 5;
+  // Finish time.
+  google.protobuf.Timestamp finished_at = 6;
+  // Summary or error text.
+  string summary = 7;
+  // Last 50 log lines.
+  repeated string log_tail = 8;
+}
+
+// Empty.
+message HealthRequest {}
+
+// Readiness.
+message HealthResponse {
+  // True when the sidecar can serve request-path RPCs.
+  bool ready = 1;
+  // Embedding model loaded or reachable.
+  bool embedder_ready = 2;
+  // Reranker loaded (optional component).
+  bool reranker_ready = 3;
+  // Object storage reachable.
+  bool storage_ready = 4;
+  // Sidecar version.
+  string version = 5;
+}

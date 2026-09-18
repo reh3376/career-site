@@ -1,0 +1,665 @@
+// The owner's console: members, activity, conversation review, escalation
+// replies, corpus inspection, persona, analytics, and the audit log.
+//
+// Every method requires an admin session with a fresh TOTP verification. All
+// admin actions are written to the audit log (FSD FR-ADM-09).
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/chat.proto";
+import "career/v1/common.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Owner console.
+service AdminService {
+  // Lists members with search, filters, and pagination.
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns one member with recent activity, conversations, and admin notes.
+  rpc GetMember(GetMemberRequest) returns (GetMemberResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Adds a private admin note to a member.
+  rpc AddMemberNote(AddMemberNoteRequest) returns (AddMemberNoteResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Approves or rejects a registration waiting in PENDING_APPROVAL (approval
+  // mode only), or disables/re-enables an account.
+  rpc SetMemberStatus(SetMemberStatusRequest) returns (SetMemberStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Lists items needing the owner's attention: negative feedback,
+  // "I don't know" answers, escalations, and out-of-scope refusals.
+  rpc GetReviewQueue(GetReviewQueueRequest) returns (GetReviewQueueResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Resolves a review item, optionally recording that it was converted into
+  // a Q&A-bank entry (the entry itself is authored in `content/qa/`).
+  rpc ResolveReviewItem(ResolveReviewItemRequest) returns (ResolveReviewItemResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Replies to an escalation. The reply is appended to the member's
+  // conversation as an OWNER message and the member is emailed.
+  rpc ReplyEscalation(ReplyEscalationRequest) returns (ReplyEscalationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns any member's conversation with messages, sources, and persona
+  // versions (read-only).
+  rpc GetMemberConversation(GetMemberConversationRequest) returns (GetMemberConversationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns corpus statistics: documents, chunks, Q&A entries, last ingest,
+  // embedding model, and persona version.
+  rpc GetCorpusStatus(GetCorpusStatusRequest) returns (GetCorpusStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Runs retrieval for a question and returns the chunks the assistant
+  // would see, with scores ("what would the assistant retrieve?").
+  rpc TestRetrieval(TestRetrievalRequest) returns (TestRetrievalResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
+  rpc RunJob(RunJobRequest) returns (RunJobResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns the status of a job started by RunJob or the scheduler.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns the active persona version and its history. The prompt text is
+  // governed in the repository and pinned by its ULTS hash; this shows which
+  // version is live.
+  rpc GetPersona(GetPersonaRequest) returns (GetPersonaResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns aggregate analytics for a date range.
+  rpc GetAnalytics(GetAnalyticsRequest) returns (GetAnalyticsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Lists audit-log entries.
+  rpc GetAudit(GetAuditRequest) returns (GetAuditResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+}
+
+// Activity counts for a member.
+message MemberCounts {
+  // Content views.
+  int32 views = 1;
+  // Downloads.
+  int32 downloads = 2;
+  // Assistant messages sent.
+  int32 chat_messages = 3;
+  // Escalations raised.
+  int32 escalations = 4;
+  // Saved items.
+  int32 saved = 5;
+}
+
+// A member as the owner sees it.
+message MemberRecord {
+  // The member.
+  Me me = 1;
+  // Activity counts.
+  MemberCounts counts = 2;
+  // First sign-in.
+  google.protobuf.Timestamp first_seen_at = 3;
+  // Number of admin notes.
+  int32 note_count = 4;
+}
+
+// Member list filters.
+message ListMembersRequest {
+  // Case-insensitive match on name, email, or organization.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // Restrict to one status; unspecified returns all.
+  MemberStatus status = 2 [(buf.validate.field).enum.defined_only = true];
+  // Restrict to members interested in this track.
+  string track_id = 3 [(buf.validate.field).string.max_len = 64];
+  // Sort order.
+  Sort sort = 4 [(buf.validate.field).enum.defined_only = true];
+  // Pagination.
+  PageRequest page = 5;
+
+  // Sort orders.
+  enum Sort {
+    // Most recently seen first.
+    SORT_UNSPECIFIED = 0;
+    // Most recently registered first.
+    SORT_NEWEST = 1;
+    // Most active first.
+    SORT_MOST_ACTIVE = 2;
+    // Alphabetical by name.
+    SORT_NAME = 3;
+  }
+}
+
+// Member list.
+message ListMembersResponse {
+  // Members.
+  repeated MemberRecord members = 1;
+  // Pagination.
+  PageResponse page = 2;
+}
+
+// Member detail request.
+message GetMemberRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// A private admin note.
+message AdminNote {
+  // Note ID.
+  string id = 1;
+  // Note text.
+  string text = 2;
+  // When it was written.
+  google.protobuf.Timestamp created_at = 3;
+}
+
+// Member detail.
+message GetMemberResponse {
+  // The member.
+  MemberRecord member = 1;
+  // Most recent 50 activity events, newest first.
+  repeated ActivityEvent recent_activity = 2;
+  // Conversations, most recent first.
+  repeated Conversation conversations = 3;
+  // Admin notes, newest first.
+  repeated AdminNote notes = 4;
+}
+
+// Note request.
+message AddMemberNoteRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Note text.
+  string text = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+}
+
+// The stored note.
+message AddMemberNoteResponse {
+  // The note.
+  AdminNote note = 1;
+}
+
+// Status change.
+message SetMemberStatusRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // New status: ACTIVE (approve or re-enable) or DISABLED.
+  MemberStatus status = 2 [(buf.validate.field).enum = {
+    in: [
+      2,
+      4
+    ]
+  }];
+  // Reason, recorded in the audit log.
+  string reason = 3 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Updated member.
+message SetMemberStatusResponse {
+  // The member after the change.
+  MemberRecord member = 1;
+}
+
+// Kinds of review items.
+enum ReviewKind {
+  // Not set (no filter).
+  REVIEW_KIND_UNSPECIFIED = 0;
+  // A member rated an answer down.
+  REVIEW_KIND_NEGATIVE_FEEDBACK = 1;
+  // The assistant found no supporting material.
+  REVIEW_KIND_NO_SUPPORT = 2;
+  // A member escalated to the owner.
+  REVIEW_KIND_ESCALATION = 3;
+  // The assistant declined an out-of-scope question.
+  REVIEW_KIND_OUT_OF_SCOPE = 4;
+}
+
+// Review item lifecycle.
+enum ReviewStatus {
+  // Not set (no filter).
+  REVIEW_STATUS_UNSPECIFIED = 0;
+  // Awaiting the owner.
+  REVIEW_STATUS_OPEN = 1;
+  // Handled.
+  REVIEW_STATUS_RESOLVED = 2;
+  // Handled by adding a Q&A-bank entry.
+  REVIEW_STATUS_CONVERTED_TO_QA = 3;
+  // Handled by replying to the member.
+  REVIEW_STATUS_REPLIED = 4;
+}
+
+// Review queue filters.
+message GetReviewQueueRequest {
+  // Restrict to one kind.
+  ReviewKind kind = 1 [(buf.validate.field).enum.defined_only = true];
+  // Restrict to one status; unspecified returns OPEN items.
+  ReviewStatus status = 2 [(buf.validate.field).enum.defined_only = true];
+  // Pagination.
+  PageRequest page = 3;
+}
+
+// A review item.
+message ReviewItem {
+  // Review item ID.
+  string id = 1;
+  // Kind.
+  ReviewKind kind = 2;
+  // Status.
+  ReviewStatus status = 3;
+  // The member.
+  Me member = 4;
+  // Conversation ID.
+  string conversation_id = 5;
+  // Message ID that triggered the item.
+  string message_id = 6;
+  // The member's question.
+  string question = 7;
+  // The assistant's answer, truncated to 500 characters.
+  string answer_excerpt = 8;
+  // Member comment, for negative feedback.
+  string comment = 9;
+  // Escalation ID, for escalations.
+  string escalation_id = 10;
+  // When the item was created.
+  google.protobuf.Timestamp created_at = 11;
+}
+
+// Review queue page.
+message GetReviewQueueResponse {
+  // Items, oldest open first.
+  repeated ReviewItem items = 1;
+  // Pagination.
+  PageResponse page = 2;
+  // Open items in total.
+  int32 open_count = 3;
+}
+
+// Resolution request.
+message ResolveReviewItemRequest {
+  // Review item ID.
+  string review_item_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Resolution: RESOLVED or CONVERTED_TO_QA.
+  ReviewStatus resolution = 2 [(buf.validate.field).enum = {
+    in: [
+      2,
+      3
+    ]
+  }];
+  // Note for the audit log; optional.
+  string note = 3 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Empty.
+message ResolveReviewItemResponse {}
+
+// Escalation reply.
+message ReplyEscalationRequest {
+  // Escalation ID.
+  string escalation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Reply text (Markdown).
+  string text = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8000
+  }];
+  // Also email the member (default true when unset in the UI).
+  bool notify_member = 3;
+}
+
+// The stored reply.
+message ReplyEscalationResponse {
+  // The OWNER message appended to the conversation.
+  Message message = 1;
+}
+
+// Any member's conversation.
+message GetMemberConversationRequest {
+  // Conversation ID.
+  string conversation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Conversation with messages.
+message GetMemberConversationResponse {
+  // The member.
+  Me member = 1;
+  // The conversation.
+  Conversation conversation = 2;
+  // Messages in chronological order, with citations.
+  repeated Message messages = 3;
+}
+
+// Empty.
+message GetCorpusStatusRequest {}
+
+// Corpus statistics.
+message GetCorpusStatusResponse {
+  // Indexed documents.
+  int32 documents = 1;
+  // Chunks with embeddings.
+  int32 chunks = 2;
+  // Q&A-bank entries.
+  int32 qa_entries = 3;
+  // Documents by content type, keyed by the enum name (e.g. `CONTENT_TYPE_ARTICLE`).
+  map<string, int32> documents_by_type = 4;
+  // Private-corpus documents (not linked to site content).
+  int32 private_documents = 5;
+  // Last successful ingest.
+  google.protobuf.Timestamp last_ingest_at = 6;
+  // Embedding model identifier.
+  string embedding_model = 7;
+  // Embedding dimensions.
+  int32 embedding_dimensions = 8;
+  // Active persona version.
+  string persona_version = 9;
+}
+
+// Retrieval test.
+message TestRetrievalRequest {
+  // The question to retrieve for.
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Chunks to return, 1–50; zero selects the assistant's default.
+  int32 top_k = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 50
+  }];
+  // Apply the sidecar reranker after hybrid retrieval.
+  bool rerank = 3;
+}
+
+// One retrieved chunk.
+message RetrievalHit {
+  // Chunk ID.
+  string chunk_id = 1;
+  // Content item, when the chunk is site content.
+  string content_id = 2;
+  // Document title.
+  string title = 3;
+  // Heading path within the document.
+  string heading = 4;
+  // Fused score.
+  float score = 5;
+  // Chunk text.
+  string text = 6;
+  // Rank before reranking (1-based).
+  int32 pre_rerank_rank = 7;
+}
+
+// Retrieval test result.
+message TestRetrievalResponse {
+  // Chunks in rank order.
+  repeated RetrievalHit hits = 1;
+  // Matching Q&A-bank entry, when the question matched one above threshold.
+  ContentSummary qa_match = 2;
+  // Similarity of the Q&A match.
+  float qa_similarity = 3;
+  // Retrieval latency in milliseconds.
+  int32 latency_ms = 4;
+}
+
+// Sidecar jobs the owner can start.
+enum JobKind {
+  // Not set.
+  JOB_KIND_UNSPECIFIED = 0;
+  // Validate content files against the schema.
+  JOB_KIND_CONTENT_VALIDATE = 1;
+  // Rebuild the content catalog in the database.
+  JOB_KIND_CONTENT_INDEX = 2;
+  // Ingest changed content into the corpus.
+  JOB_KIND_INGEST_CHANGED = 3;
+  // Re-ingest the entire corpus.
+  JOB_KIND_INGEST_FULL = 4;
+  // Rebuild résumé PDFs from structured content.
+  JOB_KIND_RESUME_BUILD = 5;
+  // Run the UVTS retrieval evaluation (quick profile).
+  JOB_KIND_EVAL_QUICK = 6;
+  // Refresh GitHub repository metadata.
+  JOB_KIND_GITHUB_SYNC = 7;
+}
+
+// Job lifecycle.
+enum JobStatus {
+  // Not set.
+  JOB_STATUS_UNSPECIFIED = 0;
+  // Queued.
+  JOB_STATUS_QUEUED = 1;
+  // Running.
+  JOB_STATUS_RUNNING = 2;
+  // Finished successfully.
+  JOB_STATUS_SUCCEEDED = 3;
+  // Failed.
+  JOB_STATUS_FAILED = 4;
+}
+
+// Job start request.
+message RunJobRequest {
+  // Which job.
+  JobKind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+// Job handle.
+message RunJobResponse {
+  // Job ID.
+  string job_id = 1;
+}
+
+// Job status request.
+message GetJobRequest {
+  // Job ID.
+  string job_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// Job status.
+message GetJobResponse {
+  // Job ID.
+  string job_id = 1;
+  // Which job.
+  JobKind kind = 2;
+  // Status.
+  JobStatus status = 3;
+  // Progress in percent, when the job reports it.
+  int32 progress_pct = 4;
+  // Start time.
+  google.protobuf.Timestamp started_at = 5;
+  // Finish time.
+  google.protobuf.Timestamp finished_at = 6;
+  // Human-readable summary or error.
+  string summary = 7;
+}
+
+// Empty.
+message GetPersonaRequest {}
+
+// A persona version.
+message PersonaVersion {
+  // Version label, e.g. `v3`.
+  string version = 1;
+  // SHA-256 of the system prompt, as pinned by the ULTS spec.
+  string prompt_sha256 = 2;
+  // Style notes summary.
+  string style_notes = 3;
+  // True for the live version.
+  bool active = 4;
+  // When it became active.
+  google.protobuf.Timestamp activated_at = 5;
+  // UVTS quick-profile pass rate at activation, in percent.
+  float eval_pass_rate = 6;
+}
+
+// Persona versions.
+message GetPersonaResponse {
+  // The live version.
+  PersonaVersion active = 1;
+  // Previous versions, newest first.
+  repeated PersonaVersion history = 2;
+}
+
+// Analytics request.
+message GetAnalyticsRequest {
+  // Range start (inclusive).
+  google.protobuf.Timestamp from = 1 [(buf.validate.field).required = true];
+  // Range end (exclusive).
+  google.protobuf.Timestamp to = 2 [(buf.validate.field).required = true];
+}
+
+// A daily count.
+message DailyCount {
+  // Day (UTC midnight).
+  google.protobuf.Timestamp day = 1;
+  // Count.
+  int32 count = 2;
+}
+
+// A ranked content item.
+message RankedContent {
+  // The item.
+  ContentSummary item = 1;
+  // Views or downloads in the range.
+  int32 count = 2;
+}
+
+// A ranked question.
+message RankedQuestion {
+  // Representative question text.
+  string question = 1;
+  // Times asked (clustered by similarity).
+  int32 count = 2;
+  // Share of answers flagged no-support, in percent.
+  float no_support_pct = 3;
+}
+
+// Assistant usage in the range.
+message AssistantUsage {
+  // Messages sent.
+  int32 messages = 1;
+  // Conversations started.
+  int32 conversations = 2;
+  // Input tokens.
+  int64 input_tokens = 3;
+  // Output tokens.
+  int64 output_tokens = 4;
+  // Cost in US dollars.
+  double cost_usd = 5;
+  // Share of the monthly budget consumed, in percent.
+  float budget_used_pct = 6;
+  // Positive ratings.
+  int32 ratings_up = 7;
+  // Negative ratings.
+  int32 ratings_down = 8;
+}
+
+// Analytics for a range.
+message GetAnalyticsResponse {
+  // Registrations per day.
+  repeated DailyCount registrations = 1;
+  // Verifications per day.
+  repeated DailyCount verifications = 2;
+  // Active members per day (any activity).
+  repeated DailyCount active_members = 3;
+  // Members who completed the questionnaire, per day.
+  repeated DailyCount questionnaires_completed = 4;
+  // Most viewed content.
+  repeated RankedContent top_content = 5;
+  // Most downloaded files.
+  repeated RankedContent top_downloads = 6;
+  // Most asked questions.
+  repeated RankedQuestion top_questions = 7;
+  // Assistant usage and cost.
+  AssistantUsage assistant = 8;
+  // Members by track interest, keyed by track ID.
+  map<string, int32> members_by_track = 9;
+}
+
+// Audit filters.
+message GetAuditRequest {
+  // Restrict to one actor (member ID); empty for all.
+  string actor_id = 1 [(buf.validate.field).string.max_len = 64];
+  // Restrict to an action prefix, e.g. `auth.` or `admin.`.
+  string action_prefix = 2 [(buf.validate.field).string.max_len = 64];
+  // Range start; optional.
+  google.protobuf.Timestamp from = 3;
+  // Range end; optional.
+  google.protobuf.Timestamp to = 4;
+  // Pagination.
+  PageRequest page = 5;
+}
+
+// An audit-log entry.
+message AuditEntry {
+  // Entry ID.
+  string id = 1;
+  // Actor member ID; empty for system actions.
+  string actor_id = 2;
+  // Action name, e.g. `auth.login.failed`, `admin.member.note_added`.
+  string action = 3;
+  // Target type, e.g. `member`, `conversation`.
+  string target_type = 4;
+  // Target ID.
+  string target_id = 5;
+  // Details as JSON.
+  string payload_json = 6;
+  // When it happened.
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Audit page.
+message GetAuditResponse {
+  // Entries, newest first.
+  repeated AuditEntry entries = 1;
+  // Pagination.
+  PageResponse page = 2;
+}

@@ -1,0 +1,44 @@
+// Method-level options that make the API's access policy machine-readable.
+//
+// The Go server reads these options from the method descriptor in a Connect
+// interceptor and enforces them uniformly, so no handler carries its own
+// auth check. The API reference generator (scripts/gen_api_docs.py) and the
+// UATS spec scaffolder read the same options, which keeps documentation,
+// enforcement, and contract tests derived from one declaration.
+syntax = "proto3";
+
+package career.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Who may call a method. Enforced before the handler runs; a caller below
+// the required level receives the Connect code `unauthenticated` (no
+// session) or `permission_denied` (session without the role).
+enum AuthLevel {
+  // Not set. Lint fails any method that leaves the level unspecified.
+  AUTH_LEVEL_UNSPECIFIED = 0;
+  // No session required.
+  AUTH_LEVEL_PUBLIC = 1;
+  // A verified member session is required (status ACTIVE). Methods that an
+  // unverified member may call additionally set `allow_unverified`.
+  AUTH_LEVEL_MEMBER = 2;
+  // An admin session with a recent TOTP verification is required.
+  AUTH_LEVEL_ADMIN = 3;
+}
+
+extend google.protobuf.MethodOptions {
+  // Required access level for the method.
+  AuthLevel auth = 50000;
+  // When true with `auth = AUTH_LEVEL_MEMBER`, a session whose member is
+  // still UNVERIFIED may call the method (verification, resend, logout).
+  bool allow_unverified = 50001;
+  // Per-account (or per-IP for public methods) request budget. Exceeding it
+  // returns `resource_exhausted` with a `Retry-After` header. Zero means the
+  // method uses the default budget (120 per minute).
+  uint32 rate_limit_per_minute = 50002;
+  // When true, the method also requires that the admin session's last TOTP
+  // verification is younger than the configured freshness window.
+  bool mfa_fresh = 50003;
+}

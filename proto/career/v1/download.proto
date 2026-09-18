@@ -1,0 +1,58 @@
+// Résumé variants and other downloadable files.
+//
+// The download itself is a plain HTTP GET because the browser navigates to it:
+//
+//   GET /api/downloads/{variant}
+//       Records the download in the member's history and redirects (302) to
+//       a short-lived signed URL of the file in object storage. Requires a
+//       member session; responds 401 otherwise and 404 for an unknown variant.
+syntax = "proto3";
+
+package career.v1;
+
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Lists what can be downloaded.
+service DownloadService {
+  // Lists downloadable files with the variant matching the member's tracks
+  // first.
+  rpc ListDownloads(ListDownloadsRequest) returns (ListDownloadsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+}
+
+// Empty.
+message ListDownloadsRequest {}
+
+// A downloadable file.
+message DownloadItem {
+  // Variant identifier used in the download path, e.g. `automation-control`.
+  string variant = 1;
+  // Display title, e.g. "Résumé — Industrial automation & process control".
+  string title = 2;
+  // One-line description.
+  string description = 3;
+  // Version label, e.g. `2026.09`.
+  string version = 4;
+  // Tracks the variant targets.
+  repeated string track_ids = 5;
+  // File size in bytes.
+  int64 size_bytes = 6;
+  // MIME type, e.g. `application/pdf`.
+  string mime_type = 7;
+  // Last update.
+  google.protobuf.Timestamp updated_at = 8;
+  // True for the variant recommended for the member.
+  bool recommended = 9;
+  // Download path: `GET /api/downloads/{variant}`.
+  string download_path = 10;
+}
+
+// Download list.
+message ListDownloadsResponse {
+  // Items, recommended first.
+  repeated DownloadItem items = 1;
+}

@@ -1,0 +1,290 @@
+// Types shared by more than one service: content summaries, tracks,
+// pagination, and the member representation returned after sign-in.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// The kind of a content item. Mirrors the `type` field of files under
+// `content/` in the repository.
+enum ContentType {
+  // Not set; used only as a "no filter" value in list requests.
+  CONTENT_TYPE_UNSPECIFIED = 0;
+  // A role on the career timeline.
+  CONTENT_TYPE_ROLE = 1;
+  // A project or repository.
+  CONTENT_TYPE_PROJECT = 2;
+  // An article or publication.
+  CONTENT_TYPE_ARTICLE = 3;
+  // A deck or paper with a PDF.
+  CONTENT_TYPE_PRESENTATION = 4;
+  // A skill entry from the skills matrix.
+  CONTENT_TYPE_SKILL = 5;
+  // An award, degree, service record, or eligibility statement.
+  CONTENT_TYPE_CREDENTIAL = 6;
+  // A gallery photo.
+  CONTENT_TYPE_PHOTO = 7;
+  // A résumé variant available for download.
+  CONTENT_TYPE_RESUME = 8;
+  // An owner-written question/answer pair used by the assistant.
+  CONTENT_TYPE_QA = 9;
+}
+
+// Relevance of a content item to one track, as authored in the item's
+// frontmatter. Weights are in [0, 1].
+message TrackWeight {
+  // Track identifier from `content/tracks.yaml`, e.g. `automation-control`.
+  string track_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+    pattern: "^[a-z0-9-]+$"
+  }];
+  // Weight in [0, 1].
+  float weight = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+}
+
+// A curated area of the owner's experience. Members declare interest in
+// tracks; content carries track weights; tailoring orders by the product.
+message Track {
+  // Stable identifier, e.g. `ai-agentic`.
+  string id = 1;
+  // Display name, e.g. "AI/ML, agentic systems, and RAG".
+  string name = 2;
+  // One-paragraph framing in the owner's voice.
+  string framing = 3;
+  // Content IDs of the "Start here" reading path, in order.
+  repeated string start_here = 4;
+  // Suggested assistant questions for this track.
+  repeated string suggested_questions = 5;
+  // Résumé variant that best fits the track (a DownloadItem.variant).
+  string resume_variant = 6;
+}
+
+// A content item as it appears in lists, feeds, and citations. The full
+// body and type-specific details are returned by ContentService.GetContent.
+message ContentSummary {
+  // Stable content ID from frontmatter, e.g. `prj-mdemg`.
+  string id = 1;
+  // URL segment, e.g. `mdemg`.
+  string slug = 2;
+  // Content kind.
+  ContentType type = 3;
+  // Title.
+  string title = 4;
+  // One- or two-sentence summary (≤ 240 characters).
+  string summary = 5;
+  // First publication date.
+  google.protobuf.Timestamp published = 6;
+  // Last material update.
+  google.protobuf.Timestamp updated = 7;
+  // Free-form tags.
+  repeated string tags = 8;
+  // Track weights as authored.
+  repeated TrackWeight tracks = 9;
+  // Relevance score for the calling member under current tailoring
+  // (§8.8 of the FSD). Zero when tailoring is off.
+  float relevance = 10;
+  // Human-readable reason the item is ranked where it is, e.g.
+  // "Shown first because you selected Industrial automation". Empty when
+  // tailoring is off.
+  string reason = 11;
+  // True when published or materially updated since the member's last visit.
+  bool is_new = 12;
+  // True when the member has viewed the item.
+  bool viewed = 13;
+  // True when the member has saved the item.
+  bool saved = 14;
+  // Path of the site page for the item, e.g. `/projects/mdemg`.
+  string path = 15;
+}
+
+// Cursor pagination for list requests.
+message PageRequest {
+  // Items per page, 1–100. Zero selects the default of 20.
+  int32 page_size = 1 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 100
+  }];
+  // Opaque cursor from a previous response; empty for the first page.
+  string page_token = 2 [(buf.validate.field).string.max_len = 512];
+}
+
+// Cursor pagination for list responses.
+message PageResponse {
+  // Cursor for the next page; empty when there are no more items.
+  string next_page_token = 1;
+  // Total items matching the request, when cheap to compute; otherwise 0.
+  int32 total_count = 2;
+}
+
+// A member's declared interest in a track.
+message TrackInterest {
+  // Track identifier.
+  string track_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+    pattern: "^[a-z0-9-]+$"
+  }];
+  // Interest weight in [0, 1]; the questionnaire assigns 1.0.
+  float weight = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // Where the interest came from.
+  InterestSource source = 3;
+}
+
+// Origin of a track interest.
+enum InterestSource {
+  // Not set.
+  INTEREST_SOURCE_UNSPECIFIED = 0;
+  // Chosen in the first-visit questionnaire.
+  INTEREST_SOURCE_QUESTIONNAIRE = 1;
+  // Edited later under /me/interests.
+  INTEREST_SOURCE_EDITED = 2;
+  // Pre-selected by an invite link (post-launch feature).
+  INTEREST_SOURCE_INVITE = 3;
+}
+
+// Account status.
+enum MemberStatus {
+  // Not set.
+  MEMBER_STATUS_UNSPECIFIED = 0;
+  // Registered but the email address is not yet verified.
+  MEMBER_STATUS_UNVERIFIED = 1;
+  // Verified; full member access.
+  MEMBER_STATUS_ACTIVE = 2;
+  // Verified but waiting for owner approval (approval mode only).
+  MEMBER_STATUS_PENDING_APPROVAL = 3;
+  // Disabled by the owner.
+  MEMBER_STATUS_DISABLED = 4;
+}
+
+// Account role.
+enum MemberRole {
+  // Not set.
+  MEMBER_ROLE_UNSPECIFIED = 0;
+  // Ordinary member.
+  MEMBER_ROLE_MEMBER = 1;
+  // The owner's administrative account.
+  MEMBER_ROLE_ADMIN = 2;
+}
+
+// What the member said matters most to them.
+enum Priority {
+  // Not set.
+  PRIORITY_UNSPECIFIED = 0;
+  // Leadership and strategy evidence.
+  PRIORITY_LEADERSHIP = 1;
+  // Hands-on technical depth.
+  PRIORITY_HANDS_ON_DEPTH = 2;
+  // Research and original thinking.
+  PRIORITY_RESEARCH = 3;
+  // Writing and communication.
+  PRIORITY_WRITING = 4;
+}
+
+// Questionnaire answers and tailoring settings. All fields are optional.
+message Profile {
+  // Seniority of the role the member is hiring for, free text
+  // (e.g. "Director", "VP", "Principal").
+  string seniority = 1 [(buf.validate.field).string.max_len = 64];
+  // The role being hired for, free text.
+  string hiring_for = 2 [(buf.validate.field).string.max_len = 200];
+  // What matters most, up to three.
+  repeated Priority priorities = 3 [(buf.validate.field).repeated = {
+    max_items: 3
+    items: {
+      enum: {defined_only: true}
+    }
+  }];
+  // How the member heard of the owner, free text.
+  string heard_from = 4 [(buf.validate.field).string.max_len = 200];
+  // Whether tailoring is enabled ("Show everything" toggles this off).
+  bool tailoring_enabled = 5;
+  // When the questionnaire was completed or skipped; unset until then.
+  google.protobuf.Timestamp questionnaire_completed_at = 6;
+}
+
+// The calling member. Returned by sign-in, verification, GetMe, and GetHome.
+message Me {
+  // Member ID (UUID).
+  string id = 1;
+  // Display name.
+  string name = 2;
+  // Email address (verified unless status is UNVERIFIED).
+  string email = 3;
+  // Organization, self-reported.
+  string organization = 4;
+  // Stated role or title, self-reported.
+  string stated_role = 5;
+  // Account status.
+  MemberStatus status = 6;
+  // Account role.
+  MemberRole role = 7;
+  // Whether TOTP MFA is enrolled (admins only).
+  bool mfa_enrolled = 8;
+  // Questionnaire answers and tailoring settings.
+  Profile profile = 9;
+  // Declared track interests.
+  repeated TrackInterest interests = 10;
+  // Version of the consent text the member accepted at registration.
+  string consent_version = 11;
+  // Registration time.
+  google.protobuf.Timestamp created_at = 12;
+  // Start of the previous session, for welcome-back copy; unset on first visit.
+  google.protobuf.Timestamp last_seen_at = 13;
+  // Linked social sign-in providers, e.g. ["linkedin"].
+  repeated string linked_providers = 14;
+}
+
+// A recorded member action. Sent by the client in batches
+// (ActivityService.RecordEvents) and returned in history views.
+message ActivityEvent {
+  // What happened.
+  Kind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Content item involved, when any.
+  string content_id = 2 [(buf.validate.field).string.max_len = 128];
+  // When it happened on the client; the server clamps to [now − 24h, now].
+  google.protobuf.Timestamp occurred_at = 3;
+  // Time spent on a content page in milliseconds (VIEW only).
+  int32 dwell_ms = 4 [(buf.validate.field).int32.gte = 0];
+  // Search query (SEARCH only).
+  string query = 5 [(buf.validate.field).string.max_len = 200];
+  // Conversation involved (CHAT and ESCALATE only).
+  string conversation_id = 6 [(buf.validate.field).string.max_len = 64];
+  // Résumé variant downloaded (DOWNLOAD only).
+  string variant = 7 [(buf.validate.field).string.max_len = 64];
+  // Client-generated ID used to de-duplicate retried batches.
+  string client_event_id = 8 [(buf.validate.field).string.max_len = 64];
+  // Summary of the content item, populated in history responses only.
+  ContentSummary content = 9;
+
+  // Kinds of activity.
+  enum Kind {
+    // Not set.
+    KIND_UNSPECIFIED = 0;
+    // Viewed a content page.
+    KIND_VIEW = 1;
+    // Downloaded a file.
+    KIND_DOWNLOAD = 2;
+    // Ran a search.
+    KIND_SEARCH = 3;
+    // Saved an item.
+    KIND_SAVE = 4;
+    // Sent a message to the assistant (recorded server-side; clients need not send it).
+    KIND_CHAT = 5;
+    // Escalated a question to the owner (recorded server-side).
+    KIND_ESCALATE = 6;
+  }
+}

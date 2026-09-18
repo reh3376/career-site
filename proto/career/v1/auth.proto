@@ -1,0 +1,339 @@
+// Identity: registration, email verification, password sign-in, password
+// reset, credential changes, and admin MFA.
+//
+// Sessions are opaque server-side identifiers delivered in the `career_session`
+// cookie (HttpOnly; Secure; SameSite=Lax; 30-day absolute lifetime, 7-day
+// idle timeout). Clients never see or send a token; the browser sends the
+// cookie on every same-origin request. Every mutating call must also carry the
+// `Connect-Protocol-Version: 1` header, which the generated clients add and
+// which, being a non-simple header, gives cross-site request forgery no
+// same-origin path.
+//
+// Two flows are plain HTTP GET rather than RPCs because the browser navigates
+// to them:
+//
+//   GET /api/auth/oauth/{provider}/start     provider ∈ {linkedin, github, google}
+//       Redirects to the provider's authorization endpoint (PKCE + state).
+//   GET /api/auth/oauth/{provider}/callback
+//       Completes the code exchange, signs the member in (creating or linking
+//       the account by verified email), sets the session cookie, and redirects
+//       to `/me/interests` (first visit) or `/home`.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/common.proto";
+import "career/v1/options.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Registration, verification, sign-in, and credential management.
+service AuthService {
+  // Creates an unverified account and sends a verification email. The
+  // response is identical whether or not the email address already exists,
+  // to prevent account enumeration; an existing verified account receives a
+  // "someone tried to register with your address" email instead.
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 5;
+  }
+  // Confirms control of the email address with the emailed link token or the
+  // six-digit code, activates the account, and starts a session (cookie set
+  // in the response).
+  rpc Verify(VerifyRequest) returns (VerifyResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 10;
+  }
+  // Re-sends the verification email for an unverified account. Identical
+  // response whether or not the address is known.
+  rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 3;
+  }
+  // Signs in with email and password and sets the session cookie. For an
+  // admin account the session is created but flagged `mfa_required`; admin
+  // methods stay unavailable until MfaVerify succeeds.
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 10;
+  }
+  // Ends the current session and clears the cookie.
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.allow_unverified) = true;
+  }
+  // Ends every session of the member ("sign out of all devices").
+  rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Emails a single-use password-reset link (valid one hour). Identical
+  // response whether or not the address is known.
+  rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 3;
+  }
+  // Sets a new password using a reset token and signs the member in on
+  // success. All other sessions are revoked.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 5;
+  }
+  // Changes the password of the signed-in member; requires the current
+  // password. Other sessions are revoked.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 5;
+  }
+  // Starts an email change: a verification email goes to the new address and
+  // the change applies when it is confirmed via Verify. Requires the current
+  // password (or, for social-only accounts, a fresh social sign-in within
+  // the last ten minutes).
+  rpc ChangeEmail(ChangeEmailRequest) returns (ChangeEmailResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 3;
+  }
+  // Enrols TOTP MFA for an admin account that has none. Returns the shared
+  // secret as an otpauth URI plus one-time recovery codes; enrolment
+  // completes with the first successful MfaVerify.
+  rpc MfaEnroll(MfaEnrollRequest) returns (MfaEnrollResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Verifies a TOTP code (or a recovery code) for the current admin session.
+  rpc MfaVerify(MfaVerifyRequest) returns (MfaVerifyResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 5;
+  }
+}
+
+// Registration form.
+message RegisterRequest {
+  // Display name.
+  string name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 120
+  }];
+  // Email address; becomes the sign-in identifier.
+  string email = 2 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+  // Password: at least 12 characters, no composition rules; rejected if it
+  // appears in a breached-password list.
+  string password = 3 [(buf.validate.field).string = {
+    min_len: 12
+    max_len: 256
+  }];
+  // Organization, optional.
+  string organization = 4 [(buf.validate.field).string.max_len = 200];
+  // Stated role or title, optional.
+  string stated_role = 5 [(buf.validate.field).string.max_len = 120];
+  // Version identifier of the consent text shown; must match the current
+  // version served on the registration page.
+  string consent_version = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // Explicit acknowledgement that activity and assistant conversations are
+  // stored and visible to the owner. Must be true.
+  bool consent_accepted = 7 [(buf.validate.field).bool.const = true];
+  // Cloudflare Turnstile response token from the registration page.
+  string turnstile_token = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2048
+  }];
+}
+
+// Always the same body; see Register.
+message RegisterResponse {
+  // Fixed text for display: "Check your email for a verification link."
+  string message = 1;
+}
+
+// Verification by link token or by code.
+message VerifyRequest {
+  // Exactly one of the two credentials.
+  oneof credential {
+    // Single-use token from the emailed link.
+    string token = 1 [(buf.validate.field).string = {
+      min_len: 16
+      max_len: 256
+    }];
+    // Six-digit code from the email; requires `email`.
+    string code = 2 [(buf.validate.field).string.pattern = "^[0-9]{6}$"];
+  }
+  // Email address the code was sent to; required with `code`, ignored with
+  // `token`.
+  string email = 3 [(buf.validate.field).string.max_len = 254];
+}
+
+// Verification result; the session cookie is set on this response.
+message VerifyResponse {
+  // The now-active member.
+  Me me = 1;
+  // True when the first-visit questionnaire has not been completed; the
+  // client should route to `/me/interests`.
+  bool questionnaire_pending = 2;
+}
+
+// Resend request.
+message ResendVerificationRequest {
+  // Email address of the unverified account.
+  string email = 1 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+}
+
+// Always the same body.
+message ResendVerificationResponse {
+  // Fixed text for display.
+  string message = 1;
+}
+
+// Sign-in form.
+message LoginRequest {
+  // Email address.
+  string email = 1 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+  // Password.
+  string password = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  // Turnstile token; required after repeated failures for the account or IP
+  // (the server responds `failed_precondition` with reason
+  // `turnstile_required` when it is missing but needed).
+  string turnstile_token = 3 [(buf.validate.field).string.max_len = 2048];
+}
+
+// Sign-in result; the session cookie is set on this response.
+message LoginResponse {
+  // The signed-in member. `status` is UNVERIFIED for an account that has not
+  // confirmed its email; such a session can only call verification methods.
+  Me me = 1;
+  // True for an admin session that must complete MfaVerify (or MfaEnroll
+  // then MfaVerify) before admin methods are available.
+  bool mfa_required = 2;
+  // True when the first-visit questionnaire has not been completed.
+  bool questionnaire_pending = 3;
+}
+
+// Empty.
+message LogoutRequest {}
+
+// Empty.
+message LogoutResponse {}
+
+// Empty.
+message LogoutAllRequest {}
+
+// Number of sessions revoked.
+message LogoutAllResponse {
+  // Sessions revoked, including the current one.
+  int32 revoked = 1;
+}
+
+// Password-reset request.
+message ForgotPasswordRequest {
+  // Email address of the account.
+  string email = 1 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+}
+
+// Always the same body.
+message ForgotPasswordResponse {
+  // Fixed text for display.
+  string message = 1;
+}
+
+// Password-reset completion.
+message ResetPasswordRequest {
+  // Single-use token from the reset email.
+  string token = 1 [(buf.validate.field).string = {
+    min_len: 16
+    max_len: 256
+  }];
+  // New password, same rules as registration.
+  string new_password = 2 [(buf.validate.field).string = {
+    min_len: 12
+    max_len: 256
+  }];
+}
+
+// Reset result; the session cookie is set on this response.
+message ResetPasswordResponse {
+  // The signed-in member.
+  Me me = 1;
+}
+
+// Password change for a signed-in member.
+message ChangePasswordRequest {
+  // Current password.
+  string current_password = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  // New password, same rules as registration.
+  string new_password = 2 [(buf.validate.field).string = {
+    min_len: 12
+    max_len: 256
+  }];
+}
+
+// Number of other sessions revoked.
+message ChangePasswordResponse {
+  // Other sessions revoked.
+  int32 revoked = 1;
+}
+
+// Email change for a signed-in member.
+message ChangeEmailRequest {
+  // New email address; a verification email is sent there.
+  string new_email = 1 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+  // Current password; required unless the account is social-only.
+  string current_password = 2 [(buf.validate.field).string.max_len = 256];
+}
+
+// Always the same body.
+message ChangeEmailResponse {
+  // Fixed text for display.
+  string message = 1;
+}
+
+// Empty.
+message MfaEnrollRequest {}
+
+// TOTP enrolment material. Shown once; the secret is not retrievable later.
+message MfaEnrollResponse {
+  // otpauth:// URI for authenticator apps.
+  string otpauth_uri = 1;
+  // The same secret in Base32 for manual entry.
+  string secret_base32 = 2;
+  // One-time recovery codes.
+  repeated string recovery_codes = 3;
+}
+
+// TOTP verification.
+message MfaVerifyRequest {
+  // Six-digit TOTP code or a recovery code.
+  string code = 1 [(buf.validate.field).string = {
+    min_len: 6
+    max_len: 32
+  }];
+}
+
+// Verification result.
+message MfaVerifyResponse {
+  // The admin member with `mfa_enrolled` true.
+  Me me = 1;
+  // Recovery codes remaining, when a recovery code was used.
+  int32 recovery_codes_remaining = 2;
+}

@@ -1,0 +1,440 @@
+// Content: listing, detail, what's new, tracks, skills, and search.
+//
+// All content is authored under `content/` in the repository and indexed
+// into the database by the sidecar; these RPCs read the index. Listings are
+// ordered by the personalization engine (FSD §8.8) when the member has
+// tailoring enabled, and by the section default otherwise. Tailoring never
+// removes items.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/common.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Read access to the content catalog.
+service ContentService {
+  // Lists content items with optional filters, ordered by relevance to the
+  // member (tailoring on) or by date (tailoring off).
+  rpc ListContent(ListContentRequest) returns (ListContentResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Returns one content item with its body and type-specific details.
+  rpc GetContent(GetContentRequest) returns (GetContentResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Lists items published or materially updated since a point in time
+  // (default: the member's previous visit, or 90 days for a first visit).
+  rpc WhatsNew(WhatsNewRequest) returns (WhatsNewResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Lists the track taxonomy with framing copy and reading paths.
+  rpc ListTracks(ListTracksRequest) returns (ListTracksResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Returns the skills matrix grouped by category, each skill with its
+  // evidence links.
+  rpc GetSkills(GetSkillsRequest) returns (GetSkillsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+  }
+  // Full-text search across titles, summaries, bodies, and tags, with a
+  // relevance boost for the member's tracks.
+  rpc Search(SearchRequest) returns (SearchResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
+}
+
+// List filters.
+message ListContentRequest {
+  // Restrict to one content type; unspecified returns all types.
+  ContentType type = 1 [(buf.validate.field).enum.defined_only = true];
+  // Restrict to items with a non-zero weight on any of these tracks.
+  repeated string track_ids = 2 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      string: {
+        max_len: 64
+        pattern: "^[a-z0-9-]+$"
+      }
+    }
+  }];
+  // Restrict to items carrying all of these tags.
+  repeated string tags = 3 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      string: {max_len: 64}
+    }
+  }];
+  // Ordering; DEFAULT follows the member's tailoring setting.
+  Order order = 4 [(buf.validate.field).enum.defined_only = true];
+  // Pagination.
+  PageRequest page = 5;
+
+  // Orderings.
+  enum Order {
+    // Tailored when the member has tailoring on, otherwise newest first.
+    ORDER_UNSPECIFIED = 0;
+    // Relevance to the member's tracks (falls back to newest first when the
+    // member has no interests).
+    ORDER_RELEVANCE = 1;
+    // Newest first by `published`.
+    ORDER_NEWEST = 2;
+    // Chronological by role start date or `published` (timeline order).
+    ORDER_CHRONOLOGICAL = 3;
+  }
+}
+
+// List page.
+message ListContentResponse {
+  // Items in the requested order.
+  repeated ContentSummary items = 1;
+  // Pagination.
+  PageResponse page = 2;
+  // True when the order was tailored to the member's tracks.
+  bool tailored = 3;
+}
+
+// Detail request by slug or ID.
+message GetContentRequest {
+  // Which item.
+  oneof key {
+    // URL slug, e.g. `mdemg`.
+    string slug = 1 [(buf.validate.field).string = {
+      min_len: 1
+      max_len: 128
+    }];
+    // Content ID, e.g. `prj-mdemg`.
+    string id = 2 [(buf.validate.field).string = {
+      min_len: 1
+      max_len: 128
+    }];
+  }
+}
+
+// A quantified accomplishment within a role.
+message Accomplishment {
+  // Headline statement.
+  string text = 1;
+  // The number or result, e.g. "45% fewer equipment failures".
+  string metric = 2;
+  // Optional situation / action / result detail (Markdown).
+  string detail = 3;
+  // Track weights for this accomplishment.
+  repeated TrackWeight tracks = 4;
+}
+
+// Role-specific detail.
+message RoleDetail {
+  // Employer.
+  string organization = 1;
+  // Location.
+  string location = 2;
+  // Start date.
+  google.protobuf.Timestamp start = 3;
+  // End date; unset means present.
+  google.protobuf.Timestamp end = 4;
+  // Accomplishments in display order.
+  repeated Accomplishment accomplishments = 5;
+  // Technologies and systems.
+  repeated string technologies = 6;
+}
+
+// Live repository metadata cached from GitHub.
+message GithubMeta {
+  // Star count.
+  int32 stars = 1;
+  // Primary language.
+  string language = 2;
+  // Last push.
+  google.protobuf.Timestamp pushed_at = 3;
+  // When the cache was refreshed.
+  google.protobuf.Timestamp fetched_at = 4;
+}
+
+// Project-specific detail.
+message ProjectDetail {
+  // The owner's role on the project.
+  string role = 1;
+  // Lifecycle status.
+  Status status = 2;
+  // Repository URL, when public.
+  string repo_url = 3;
+  // Technology stack.
+  repeated string stack = 4;
+  // Problem statement (Markdown).
+  string problem = 5;
+  // Approach (Markdown).
+  string approach = 6;
+  // Outcomes.
+  repeated string outcomes = 7;
+  // Architecture diagram as Mermaid source, when available.
+  string diagram_mermaid = 8;
+  // GitHub metadata, when the repository is public and the cache is warm.
+  GithubMeta github = 9;
+
+  // Project lifecycle.
+  enum Status {
+    // Not set.
+    STATUS_UNSPECIFIED = 0;
+    // Under active development.
+    STATUS_ACTIVE = 1;
+    // Stable; maintained.
+    STATUS_MAINTAINED = 2;
+    // No longer developed.
+    STATUS_ARCHIVED = 3;
+    // Early exploration.
+    STATUS_EXPLORATION = 4;
+  }
+}
+
+// Article-specific detail.
+message ArticleDetail {
+  // Where it was published, e.g. "LinkedIn".
+  string venue = 1;
+  // Canonical URL at the venue, when any.
+  string canonical_url = 2;
+  // Series name, when part of one.
+  string series = 3;
+  // Position within the series (1-based).
+  int32 series_order = 4;
+  // Estimated reading time in minutes.
+  int32 reading_time_minutes = 5;
+  // True when the full text is hosted on this site (`body` is populated).
+  bool hosted = 6;
+}
+
+// Presentation-specific detail.
+message PresentationDetail {
+  // Event or venue.
+  string event = 1;
+  // Abstract (Markdown).
+  string abstract = 2;
+  // Number of slides or pages.
+  int32 slides_count = 3;
+  // Short-lived signed URL of the PDF for the in-page viewer.
+  string file_url = 4;
+  // Expiry of `file_url`.
+  google.protobuf.Timestamp file_url_expires_at = 5;
+}
+
+// Credential-specific detail.
+message CredentialDetail {
+  // Kind of credential.
+  Kind kind = 1;
+  // Issuing organization.
+  string issuer = 2;
+  // Date awarded or completed.
+  google.protobuf.Timestamp date = 3;
+
+  // Credential kinds.
+  enum Kind {
+    // Not set.
+    KIND_UNSPECIFIED = 0;
+    // Award or recognition.
+    KIND_AWARD = 1;
+    // Degree or certificate.
+    KIND_EDUCATION = 2;
+    // Military or public service.
+    KIND_SERVICE = 3;
+    // Eligibility statement (citizenship, clearance eligibility).
+    KIND_ELIGIBILITY = 4;
+  }
+}
+
+// A responsive image rendition.
+message ImageVariant {
+  // URL of the rendition.
+  string url = 1;
+  // Width in pixels.
+  int32 width = 2;
+  // Height in pixels.
+  int32 height = 3;
+  // MIME type, e.g. `image/avif`.
+  string mime_type = 4;
+}
+
+// Photo-specific detail. EXIF is stripped at build time; originals are never served.
+message PhotoDetail {
+  // Renditions from small to large.
+  repeated ImageVariant variants = 1;
+  // Caption.
+  string caption = 2;
+  // Context: where and what is happening.
+  string context = 3;
+  // When the photo was taken (month precision is typical).
+  google.protobuf.Timestamp taken = 4;
+  // Alt text for accessibility.
+  string alt = 5;
+}
+
+// Résumé-specific detail. Download goes through DownloadService.
+message ResumeDetail {
+  // Variant identifier (DownloadItem.variant).
+  string variant = 1;
+  // Version label.
+  string version = 2;
+}
+
+// Q&A-specific detail.
+message QaDetail {
+  // The question.
+  string question = 1;
+  // The owner's answer (Markdown).
+  string answer = 2;
+}
+
+// A file attached to an item (diagram, image, PDF).
+message Asset {
+  // Kind of asset, e.g. `diagram`, `image`, `pdf`.
+  string kind = 1;
+  // URL (signed when the asset lives in object storage).
+  string url = 2;
+  // Alt text or caption.
+  string alt = 3;
+}
+
+// A content item in full.
+message ContentItem {
+  // Summary fields.
+  ContentSummary summary = 1;
+  // Body as Markdown/MDX (empty for items without a body, such as photos).
+  string body = 2;
+  // Related items.
+  repeated ContentSummary related = 3;
+  // Attached assets.
+  repeated Asset assets = 4;
+  // Type-specific detail.
+  oneof detail {
+    // Present when `summary.type` is ROLE.
+    RoleDetail role = 10;
+    // Present when `summary.type` is PROJECT.
+    ProjectDetail project = 11;
+    // Present when `summary.type` is ARTICLE.
+    ArticleDetail article = 12;
+    // Present when `summary.type` is PRESENTATION.
+    PresentationDetail presentation = 13;
+    // Present when `summary.type` is CREDENTIAL.
+    CredentialDetail credential = 14;
+    // Present when `summary.type` is PHOTO.
+    PhotoDetail photo = 15;
+    // Present when `summary.type` is RESUME.
+    ResumeDetail resume = 16;
+    // Present when `summary.type` is QA.
+    QaDetail qa = 17;
+  }
+}
+
+// Detail response.
+message GetContentResponse {
+  // The item.
+  ContentItem item = 1;
+}
+
+// What's-new request.
+message WhatsNewRequest {
+  // Return items changed after this time; unset uses the member's previous
+  // visit, or 90 days ago on a first visit.
+  google.protobuf.Timestamp since = 1;
+  // Maximum items, 1–50; zero selects 20.
+  int32 limit = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 50
+  }];
+}
+
+// What's-new response.
+message WhatsNewResponse {
+  // Items, newest change first.
+  repeated ContentSummary items = 1;
+  // The effective `since` used.
+  google.protobuf.Timestamp since = 2;
+}
+
+// Empty.
+message ListTracksRequest {}
+
+// The track taxonomy.
+message ListTracksResponse {
+  // Tracks in display order.
+  repeated Track tracks = 1;
+}
+
+// Empty.
+message GetSkillsRequest {}
+
+// One skill with evidence.
+message Skill {
+  // Skill ID.
+  string id = 1;
+  // Name.
+  string name = 2;
+  // Depth on a 1–5 scale.
+  int32 level = 3;
+  // Years of experience.
+  int32 years = 4;
+  // Evidence: content items that demonstrate the skill (at least one).
+  repeated ContentSummary evidence = 5;
+  // Track weights.
+  repeated TrackWeight tracks = 6;
+}
+
+// Skills grouped by category.
+message SkillCategory {
+  // Category name, e.g. "Industrial automation, process control & OT".
+  string name = 1;
+  // Skills in display order.
+  repeated Skill skills = 2;
+}
+
+// The skills matrix.
+message GetSkillsResponse {
+  // Categories in display order, tailored to the member's tracks when
+  // tailoring is on.
+  repeated SkillCategory categories = 1;
+}
+
+// Search request.
+message SearchRequest {
+  // Query text.
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // Restrict to one content type; unspecified searches all types.
+  ContentType type = 2 [(buf.validate.field).enum.defined_only = true];
+  // Restrict to items weighted on any of these tracks.
+  repeated string track_ids = 3 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      string: {
+        max_len: 64
+        pattern: "^[a-z0-9-]+$"
+      }
+    }
+  }];
+  // Pagination.
+  PageRequest page = 4;
+}
+
+// One search hit.
+message SearchHit {
+  // The item.
+  ContentSummary item = 1;
+  // Snippet with the match highlighted using `<mark>` tags; safe to render as HTML.
+  string snippet = 2;
+  // Relevance score (higher is better; not comparable across queries).
+  float score = 3;
+}
+
+// Search results.
+message SearchResponse {
+  // Hits in descending score.
+  repeated SearchHit hits = 1;
+  // Pagination.
+  PageResponse page = 2;
+}

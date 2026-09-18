@@ -1,0 +1,86 @@
+// Build and runtime information.
+//
+// Health probes are plain HTTP GET for monitors and the reverse proxy:
+//
+//   GET /api/healthz   200 {"status":"ok"} when the process is up.
+//   GET /api/readyz    200 {"status":"ok","checks":{...},"version":"..."} when
+//                      the database, object storage, and sidecar are
+//                      reachable; 503 with the failing checks otherwise.
+syntax = "proto3";
+
+package career.v1;
+
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Version and governance status.
+service SystemService {
+  // Returns the deployed version and build metadata.
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
+  // Returns the governance status shown on the public "How this site was
+  // built" page: UxTS frameworks, spec counts, last verification, pass rate,
+  // and hash-integrity summary, read from the reports CI publishes.
+  rpc GetGovernanceStatus(GetGovernanceStatusRequest) returns (GetGovernanceStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
+}
+
+// Empty.
+message GetVersionRequest {}
+
+// Build metadata.
+message GetVersionResponse {
+  // Semantic version, e.g. `0.4.0`.
+  string version = 1;
+  // Git commit SHA.
+  string commit = 2;
+  // Build time.
+  google.protobuf.Timestamp built_at = 3;
+  // Go toolchain version.
+  string go_version = 4;
+  // Active persona version.
+  string persona_version = 5;
+}
+
+// Empty.
+message GetGovernanceStatusRequest {}
+
+// One UxTS framework's status.
+message FrameworkStatus {
+  // Acronym, e.g. `UATS`.
+  string acronym = 1;
+  // Full name.
+  string name = 2;
+  // Maturity: `spec-only`, `pilot`, `active`, `deprecated`.
+  string status = 3;
+  // CI gate mode: `observe`, `soft`, `block`.
+  string gate_mode = 4;
+  // Canonical specs on disk.
+  int32 spec_count = 5;
+  // Last run: specs passed.
+  int32 passed = 6;
+  // Last run: specs failed.
+  int32 failed = 7;
+  // Last run: hashes verified.
+  int32 hashes_verified = 8;
+  // Last run: hash mismatches.
+  int32 hashes_mismatched = 9;
+  // When the last run finished.
+  google.protobuf.Timestamp last_run_at = 10;
+}
+
+// Governance summary.
+message GetGovernanceStatusResponse {
+  // Frameworks in matrix order.
+  repeated FrameworkStatus frameworks = 1;
+  // Commit the reports were produced from.
+  string commit = 2;
+  // When the summary was published.
+  google.protobuf.Timestamp published_at = 3;
+}
