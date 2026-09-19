@@ -1,0 +1,98 @@
+package auth
+
+import (
+	"bufio"
+	"context"
+	"crypto/sha1"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+)
+
+// PwnedChecker checks a password against a corpus of known-breached
+// credentials. Implementations must be safe to call concurrently.
+type PwnedChecker interface {
+	// IsBreached returns true when the password appears in the corpus. A
+	// transport-level error is returned separately so callers can decide
+	// whether to fail closed or open.
+	IsBreached(ctx context.Context, password string) (bool, error)
+}
+
+// NoopPwnedChecker always reports "not breached". Wire this in dev; use
+// HIBPChecker in production so FR-AUTH-02 is enforced.
+type NoopPwnedChecker struct{}
+
+func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+// HIBPChecker is a HaveIBeenPwned k-anonymity range-query client. It sends
+// only the first five SHA-1 hex characters of the password to the API and
+// scans the response for the remaining 35, so the plaintext never leaves
+// the process.
+type HIBPChecker struct {
+	Client *http.Client
+}
+
+const hibpEndpoint = "https://api.pwnedpasswords.com/range/"
+
+func NewHIBPChecker() *HIBPChecker {
+	return &HIBPChecker{
+		Client: &http.Client{Timeout: 5 * time.Second},
+	}
+}
+
+func (h *HIBPChecker) IsBreached(ctx context.Context, password string) (bool, error) {
+	sum := sha1.Sum([]byte(password))
+	hex := fmt.Sprintf("%X", sum[:])
+	prefix, suffix := hex[:5], hex[5:]
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hibpEndpoint+prefix, nil)
+	if err != nil {
+		return false, fmt.Errorf("hibp request: %w", err)
+	}
+	req.Header.Set("Add-Padding", "true")
+
+	resp, err := h.Client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("hibp call: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("hibp status: %d", resp.StatusCode)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Format: SUFFIX:COUNT, one per line. Padded lines carry :0.
+		idx := strings.IndexByte(line, ':')
+		if idx <= 0 {
+			continue
+		}
+		if strings.EqualFold(line[:idx], suffix) && line[idx+1:] != "0" {
+			return true, nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return false, fmt.Errorf("hibp read: %w", err)
+	}
+	return false, nil
+}
+
+// FailOpen wraps a checker so transport errors return "not breached" plus
+// the error, letting the caller log it while still admitting the user. FSD
+// FR-AUTH-02 does not specify closed-fail behavior; the HIBP endpoint has
+// meaningful uptime but external calls should never block registration.
+type FailOpen struct{ Inner PwnedChecker }
+
+func (f FailOpen) IsBreached(ctx context.Context, password string) (bool, error) {
+	breached, err := f.Inner.IsBreached(ctx, password)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return false, err
+	}
+	return breached, err
+}

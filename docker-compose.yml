@@ -56,6 +56,13 @@ services:
       API_ENV: docker
       SIDECAR_ADDR: sidecar:50051
       DATABASE_URL: postgres://career:career_dev_only@postgres:5432/career?sslmode=disable
+      WEB_BASE_URL: http://localhost
+      OWNER_CONTACT_EMAIL: rogerhenley345@gmail.com
+      MAIL_FROM: "career-site <noreply@career-site.local>"
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      PWNED_CHECK_ENABLED: "0"
     depends_on:
       sidecar:
         condition: service_healthy

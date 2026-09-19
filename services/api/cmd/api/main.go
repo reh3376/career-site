@@ -8,10 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/db"
+	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
+	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
 func main() {
@@ -48,7 +52,40 @@ func main() {
 	}
 	defer sc.Close()
 
-	srv := server.New(cfg, log, sc, pool)
+	mailer, err := email.NewFromConfig(email.Config{
+		Provider:  cfg.EmailProvider,
+		From:      cfg.MailFrom,
+		SMTPHost:  cfg.SMTPHost,
+		SMTPPort:  cfg.SMTPPort,
+		SMTPUser:  cfg.SMTPUser,
+		SMTPPass:  cfg.SMTPPass,
+		ResendKey: cfg.ResendAPIKey,
+	})
+	if err != nil {
+		log.Error("email provider init failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	log.Info("email provider ready", slog.String("provider", mailer.Name()))
+
+	var pwned auth.PwnedChecker = auth.NoopPwnedChecker{}
+	if cfg.PwnedCheckEnabled {
+		pwned = auth.NewHIBPChecker()
+		log.Info("HIBP pwned-password check enabled")
+	}
+
+	userRepo := users.New(pool.Pool)
+	authHandler := handlers.NewAuth(log, userRepo, mailer, pwned, handlers.AuthConfig{
+		WebBaseURL:        cfg.WebBaseURL,
+		OwnerContactEmail: cfg.OwnerContactEmail,
+		MailFrom:          cfg.MailFrom,
+		ConsentVersion:    cfg.ConsentVersion,
+	})
+
+	srv := server.New(cfg, log, server.Deps{
+		Sidecar: sc,
+		DB:      pool,
+		Auth:    authHandler,
+	})
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()

@@ -1,6 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
+import { AuthService } from "@/gen/career/v1/auth_pb";
 import { SystemService } from "@/gen/career/v1/system_pb";
 
 // The Go API mounts every RPC under /api. In development that resolves to
@@ -15,3 +16,4 @@ const transport = createConnectTransport({
 });
 
 export const systemClient = createClient(SystemService, transport);
+export const authClient = createClient(AuthService, transport);

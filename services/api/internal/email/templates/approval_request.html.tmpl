@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fafafa;color:#0a0a0a;margin:0;padding:24px">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px">
+    <tr><td style="padding:32px">
+      <p style="margin:0 0 16px;font-size:14px;color:#525252">career-site · access request</p>
+      <h1 style="margin:0 0 8px;font-size:20px;line-height:1.3">New request from {{.Name}}</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:#525252">Reference: <span style="font-family:ui-monospace,monospace">{{.ReferenceID}}</span></p>
+
+      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin-bottom:24px">
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373;width:140px">Email</td><td style="padding:6px 0;font-size:14px">{{.Email}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373">Organization</td><td style="padding:6px 0;font-size:14px">{{.Organization}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373">Stated role</td><td style="padding:6px 0;font-size:14px">{{.StatedRole}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373">Submitted at</td><td style="padding:6px 0;font-size:14px">{{.SubmittedAt}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373">IP hash</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#525252">{{.IPHash}}</td></tr>
+        <tr><td style="padding:6px 0;font-size:13px;color:#737373;vertical-align:top">User-agent</td><td style="padding:6px 0;font-size:12px;color:#525252;word-break:break-all">{{.UserAgent}}</td></tr>
+      </table>
+
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-right:12px">
+            <a href="{{.AcceptURL}}" style="display:inline-block;background:#166534;color:#ffffff;padding:14px 26px;border-radius:6px;text-decoration:none;font-weight:600">Accept</a>
+          </td>
+          <td>
+            <a href="{{.DeclineURL}}" style="display:inline-block;background:#991b1b;color:#ffffff;padding:14px 26px;border-radius:6px;text-decoration:none;font-weight:600">Decline</a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:24px 0 8px;font-size:13px;color:#525252">Both links are single-use, expire in 7&nbsp;days, and require no login. If neither is clicked in 7 days, the request auto-declines and the applicant is notified.</p>
+      <p style="margin:0;font-size:13px;color:#525252">Prefer to review in the admin console? <a href="{{.ReviewURL}}" style="color:#0f3d5c">Open the review page →</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>

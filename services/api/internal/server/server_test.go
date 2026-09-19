@@ -24,7 +24,7 @@ import (
 func newTestServer(t *testing.T, sc *sidecar.Client, pool *db.Pool) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(config.Config{Addr: ":0"}, log, sc, pool).routes()
+	return New(config.Config{Addr: ":0"}, log, Deps{Sidecar: sc, DB: pool}).routes()
 }
 
 func TestHealthz(t *testing.T) {

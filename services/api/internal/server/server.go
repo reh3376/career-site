@@ -21,17 +21,28 @@ type Server struct {
 	log     *slog.Logger
 	http    *http.Server
 	system  *handlers.System
+	auth    *handlers.Auth
 	sidecar *sidecar.Client
 	db      *db.Pool
 }
 
-func New(cfg config.Config, log *slog.Logger, sc *sidecar.Client, pool *db.Pool) *Server {
+// Deps carries the process-level singletons the server wires into handlers.
+// Passing them as a struct keeps New's signature stable as later phases add
+// dependencies (session store, rate limiter, scheduler, ...).
+type Deps struct {
+	Sidecar *sidecar.Client
+	DB      *db.Pool
+	Auth    *handlers.Auth
+}
+
+func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 	s := &Server{
 		cfg:     cfg,
 		log:     log,
 		system:  handlers.NewSystem(),
-		sidecar: sc,
-		db:      pool,
+		auth:    deps.Auth,
+		sidecar: deps.Sidecar,
+		db:      deps.DB,
 	}
 	s.http = &http.Server{
 		Addr:         cfg.Addr,
@@ -48,8 +59,17 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/healthz", s.healthz)
 	mux.HandleFunc("GET /api/readyz", s.readyz)
 
+	mount := func(path string, h http.Handler) {
+		mux.Handle("/api"+path, http.StripPrefix("/api", h))
+	}
+
 	systemPath, systemHandler := careerv1connect.NewSystemServiceHandler(s.system)
-	mux.Handle("/api"+systemPath, http.StripPrefix("/api", systemHandler))
+	mount(systemPath, systemHandler)
+
+	if s.auth != nil {
+		authPath, authHandler := careerv1connect.NewAuthServiceHandler(s.auth)
+		mount(authPath, authHandler)
+	}
 
 	return withLogging(s.log, mux)
 }
@@ -83,8 +103,8 @@ func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, healthPayload{Status: "ok"})
 }
 
-// readyz reports readiness of the API's downstream dependencies. Phase 0 only
-// wires the sidecar; postgres and object storage join in later phases.
+// readyz reports readiness of the API's downstream dependencies. Phase 0
+// wires the sidecar and postgres; object storage joins later.
 // Returns 200 when every check passes, 503 with the same body otherwise.
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]bool{

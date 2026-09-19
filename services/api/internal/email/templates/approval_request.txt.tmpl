@@ -1,0 +1,26 @@
+A new access request is waiting for your review.
+
+  Name         {{.Name}}
+  Email        {{.Email}}
+  Organization {{.Organization}}
+  Stated role  {{.StatedRole}}
+  Submitted at {{.SubmittedAt}}
+  Reference    {{.ReferenceID}}
+  IP hash      {{.IPHash}}
+  User-agent   {{.UserAgent}}
+
+Approve — grants an account and emails a sign-in link:
+    {{.AcceptURL}}
+
+Decline — sends a polite rejection with instructions:
+    {{.DeclineURL}}
+
+Both links are single-use, expire in 7 days, and require no login.
+If neither is clicked in 7 days, the request auto-declines and the
+applicant is notified.
+
+Full review + override:
+    {{.ReviewURL}}
+
+—
+career-site (admin)
