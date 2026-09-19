@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "career-sidecar"
+version = "0.0.0.dev0"
+description = "Python gRPC sidecar for career-site (embed, rerank, classify, jobs)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Roger Henley" }]
+license = { text = "MIT" }
+
+dependencies = [
+  "grpcio>=1.66",
+  # buf's protoc-gen-python currently emits gencode v7.36.x; runtime must match.
+  "protobuf>=7,<8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.7",
+  "pyright>=1.1.385",
+]
+
+[project.scripts]
+career-sidecar = "career_sidecar.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/career_sidecar"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+# The generated code lives under src/career and src/buf as namespace packages
+# and ships alongside our hand-written package so `import career.sidecar.v1`
+# resolves inside the installed wheel.
+"src/career" = "career"
+"src/buf" = "buf"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["src/career", "src/buf"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+include = ["src/career_sidecar", "tests"]
+exclude = ["src/career", "src/buf", "**/__pycache__"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
