@@ -26,6 +26,9 @@ next-env.d.ts
 # never in the repository.
 /docs/personal/
 
+# owner's private local notes / deploy cheat sheet
+/career-site-deploy-readme.md
+
 # editor and OS
 .DS_Store
 .idea/
