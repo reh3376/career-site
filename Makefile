@@ -32,7 +32,7 @@ gen: ## Regenerate Go, TypeScript, and Python code from proto/
 	$(BUF) generate --template proto/buf.gen.yaml
 	$(BUF) generate --template proto/buf.gen.sidecar.yaml
 
-docs-api: ## Regenerate docs/api/README.md and docs/api/endpoints.json from proto/
+docs-api: gen ## Regenerate docs/api/README.md and docs/api/endpoints.json from proto/
 	mkdir -p $(BUILD)
 	$(BUF) build proto -o $(BUILD)/api.binpb
 	$(UV) run --python 3.12 --with protobuf python scripts/gen_api_docs.py $(BUILD)/api.binpb
