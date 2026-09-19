@@ -1,0 +1,61 @@
+# Auto-open (or keep updated) a draft PR against main whenever a
+# feature branch is pushed. Keeps the review surface visible; you flip
+# the draft to ready-for-review when the work is done.
+#
+# Ignores pushes to main itself. Uses GITHUB_TOKEN so no PAT needed;
+# the pull-requests: write permission scoped to this workflow only.
+
+name: auto-pr
+
+on:
+  push:
+    branches:
+      - "claude_dev*"
+      - "feat/*"
+      - "fix/*"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-or-update-pr:
+    name: open or update draft PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: open or update draft PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Does a PR already exist for this branch?
+          existing=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number' || echo "")
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for $BRANCH — nothing to do."
+            exit 0
+          fi
+
+          # Build a body from the commit list since main.
+          {
+            echo "Auto-opened from a push to \`$BRANCH\`. Flip to Ready-for-review when this is done."
+            echo
+            echo "## Commits since main"
+            echo
+            git log --pretty=format:'- %h %s' origin/main..HEAD
+          } > /tmp/pr-body.md
+
+          # First-line-of-newest-commit as the title.
+          title=$(git log -1 --pretty=format:'%s')
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "$title" \
+            --body-file /tmp/pr-body.md \
+            --draft

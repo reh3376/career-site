@@ -69,7 +69,38 @@ cd apps/web && pnpm dev
 
 ## Delivery phase
 
-Currently in **Phase 0** (foundation) → **Phase 1** (approval-gated registration + landing page). See FSD §12 for the full roadmap. Every commit should either advance the current phase or leave it unchanged; do not start work on a later phase without amending the roadmap first.
+Currently in **Phase 2** (content core + owner-added scope). See FSD §12 for the full roadmap. Every commit should either advance the current phase or leave it unchanged; do not start work on a later phase without amending the roadmap first.
+
+## Branch workflow
+
+**Never work directly on `main`.** All changes land through a PR from a feature branch.
+
+- Owner-facing work by Claude Code: **`claude_dev01`** (single long-lived branch).
+- Human contributor work: **`feat/<slug>`** or **`fix/<slug>`** branches.
+- `main` is protected — direct pushes refused; PRs require CI green.
+
+**Pushing a change:**
+
+```bash
+scripts/dev-push.sh
+```
+
+That script runs every check CI runs (`buf lint`, `make check-gen`, `gofmt`, `go vet`, `go test -race`, `ruff`, `pyright`, `pytest`, `pnpm typecheck`, `pnpm lint`, `pnpm build`) in the same order, then pushes. On push, GitHub Actions runs CI + security against the new SHA and the `auto-pr.yml` workflow opens (or updates) a draft PR against main.
+
+Flip the PR from Draft → Ready-for-review when the work is complete. Merge via **Squash and merge** so `main`'s history stays a linear record of shipped features. Deploys run from `main`; see `deploy/README.md`.
+
+## Docs discipline
+
+**Every behavior change touches its spec.** Before pushing, if the change:
+
+- **Modifies an RPC** — regenerate (`make gen docs-api`) and commit the diff.
+- **Adds a new field, table, or column** — add or amend the FSD `FR-*` entry.
+- **Resolves an open decision (`D-NN`)** — write an ADR at `docs/adr/NNNN-…md` and mark the FSD §14 row resolved.
+- **Adds a config env var** — add it to `.env.example` (and `.env.prod.example` when it's prod-only) with a comment explaining what reads it.
+- **Adds a new dependency** — note it in the module manifest (`go.mod`, `pyproject.toml`, `package.json`); no separate doc.
+- **Changes the deploy sequence** — update `deploy/README.md`.
+
+The FSD is the source of truth; when it and the code disagree, the FSD wins and the code changes.
 
 ## When you're stuck
 

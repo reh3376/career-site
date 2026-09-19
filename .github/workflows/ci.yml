@@ -10,7 +10,14 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    # main runs CI + publishes GHCR images.
+    # feature branches (claude_dev*, feat/*, fix/*) run CI but publish
+    # nothing — the images job checks the branch itself.
+    branches:
+      - main
+      - "claude_dev*"
+      - "feat/*"
+      - "fix/*"
   pull_request:
     branches: [main]
 
