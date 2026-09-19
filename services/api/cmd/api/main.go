@@ -13,6 +13,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
+	"github.com/reh3376/career-site/services/api/internal/scheduler"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -86,6 +87,17 @@ func main() {
 		DB:      pool,
 		Auth:    authHandler,
 	})
+
+	// Expiry jobs run in-process; interval intentionally low for dev so a
+	// manually-set expires_at gets picked up quickly. Prod overrides via env
+	// once the tests confirm behaviour.
+	expiry := handlers.NewExpiryJobs(log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail)
+	sched := scheduler.New(log,
+		scheduler.Job{Name: "expiry-warn", Interval: cfg.ExpirySchedulerInterval, Run: expiry.WarnJob},
+		scheduler.Job{Name: "expiry-cut", Interval: cfg.ExpirySchedulerInterval, Run: expiry.ExpireJob},
+	)
+	sched.Start(ctx)
+	defer sched.Stop()
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()

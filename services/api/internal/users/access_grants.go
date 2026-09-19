@@ -1,0 +1,209 @@
+package users
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+)
+
+// GrantTTL is the whitelisted set of TTL choices from FSD FR-AUTH-17.
+type GrantTTL string
+
+const (
+	GrantTTL1d        GrantTTL = "1d"
+	GrantTTL3d        GrantTTL = "3d"
+	GrantTTL7d        GrantTTL = "7d"
+	GrantTTL30d       GrantTTL = "30d"
+	GrantTTLPermanent GrantTTL = "permanent"
+)
+
+// Duration returns the wall-clock duration for a TTL. Zero means permanent —
+// callers set users.expires_at to NULL in that case.
+func (g GrantTTL) Duration() time.Duration {
+	switch g {
+	case GrantTTL1d:
+		return 24 * time.Hour
+	case GrantTTL3d:
+		return 3 * 24 * time.Hour
+	case GrantTTL7d:
+		return 7 * 24 * time.Hour
+	case GrantTTL30d:
+		return 30 * 24 * time.Hour
+	default:
+		return 0
+	}
+}
+
+func (g GrantTTL) IsPermanent() bool { return g == GrantTTLPermanent }
+
+type AccessGrant struct {
+	ID             int64
+	Email          string
+	DefaultTTL     GrantTTL
+	Notes          string
+	EntryExpiresAt *time.Time
+	CreatedBy      *int64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// GetActiveGrant returns the whitelist entry for email if one exists and its
+// entry_expires_at has not passed. Returns ErrNotFound when no active grant
+// exists (miss or expired-entry).
+func (r *Repo) GetActiveGrant(ctx context.Context, email string) (*AccessGrant, error) {
+	const q = `
+    SELECT id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at
+    FROM access_grants
+    WHERE email = $1
+      AND (entry_expires_at IS NULL OR entry_expires_at > now())
+  `
+	g := &AccessGrant{}
+	err := r.pool.QueryRow(ctx, q, email).Scan(
+		&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
+		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select grant: %w", err)
+	}
+	return g, nil
+}
+
+// Activate flips a user to `active` and sets expires_at. Pass a nil
+// expiresAt for permanent access.
+func (r *Repo) Activate(ctx context.Context, id int64, expiresAt *time.Time) error {
+	const q = `UPDATE users SET status = 'active', expires_at = $2 WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, id, expiresAt)
+	if err != nil {
+		return fmt.Errorf("activate: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ExpireOne flips a single user to `expired` in one statement, only if
+// they are currently `active` and their expires_at has passed. Returns
+// true when a row was updated. Concurrent callers stay safe because the
+// WHERE clause is guarded by status + expires_at.
+func (r *Repo) ExpireOne(ctx context.Context, id int64) (bool, error) {
+	const q = `
+    UPDATE users
+    SET status = 'expired'
+    WHERE id = $1 AND status = 'active' AND expires_at IS NOT NULL AND expires_at <= now()
+  `
+	tag, err := r.pool.Exec(ctx, q, id)
+	if err != nil {
+		return false, fmt.Errorf("expire: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// ExpiringSoon returns users whose access ends between now and `within`
+// from now. Used by the "3 days before expiry" reminder job.
+func (r *Repo) ExpiringSoon(ctx context.Context, within time.Duration) ([]*User, error) {
+	const q = `
+    SELECT ` + selectCols + `
+    FROM users
+    WHERE status = 'active'
+      AND expires_at IS NOT NULL
+      AND expires_at > now()
+      AND expires_at <= now() + $1::interval
+  `
+	rows, err := r.pool.Query(ctx, q, within.String())
+	if err != nil {
+		return nil, fmt.Errorf("query expiring: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+// Expired returns users whose expires_at has passed but who are still
+// marked `active`. Used by the hard-cut job.
+func (r *Repo) Expired(ctx context.Context) ([]*User, error) {
+	const q = `
+    SELECT ` + selectCols + `
+    FROM users
+    WHERE status = 'active'
+      AND expires_at IS NOT NULL
+      AND expires_at <= now()
+  `
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("query expired: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+// ApprovalDecision is a minimal insert helper for approval_decisions.
+type ApprovalDecision struct {
+	UserID     int64
+	Decision   string // "approve" | "decline" | "auto_decline"
+	DecidedVia string // "email_link" | "console" | "scheduler" | "whitelist_auto"
+	DecidedBy  *int64
+	GrantedTTL *time.Duration
+	TokenHash  []byte
+	IPHash     []byte
+	UserAgent  string
+}
+
+// RecordApprovalDecision inserts a row into approval_decisions.
+func (r *Repo) RecordApprovalDecision(ctx context.Context, d ApprovalDecision) error {
+	const q = `
+    INSERT INTO approval_decisions
+      (user_id, decision, decided_by, decided_via, granted_ttl,
+       token_hash, ip_hash, user_agent)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  `
+	var ttl any
+	if d.GrantedTTL != nil {
+		ttl = d.GrantedTTL.String()
+	}
+	_, err := r.pool.Exec(ctx, q,
+		d.UserID, d.Decision, d.DecidedBy, d.DecidedVia, ttl,
+		d.TokenHash, d.IPHash, d.UserAgent,
+	)
+	if err != nil {
+		return fmt.Errorf("insert decision: %w", err)
+	}
+	return nil
+}
+
+// RevokeSessions marks every active session for a user as revoked. Used
+// on expiry so a live session ends the moment the account does.
+func (r *Repo) RevokeSessions(ctx context.Context, userID int64) (int64, error) {
+	const q = `
+    UPDATE sessions SET revoked_at = now()
+    WHERE user_id = $1 AND revoked_at IS NULL
+  `
+	tag, err := r.pool.Exec(ctx, q, userID)
+	if err != nil {
+		return 0, fmt.Errorf("revoke sessions: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}

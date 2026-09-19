@@ -27,6 +27,7 @@ const (
 	StatusPendingApproval Status = "pending_approval"
 	StatusActive          Status = "active"
 	StatusDeclined        Status = "declined"
+	StatusExpired         Status = "expired"
 	StatusDisabled        Status = "disabled"
 	StatusDeleted         Status = "deleted"
 )
@@ -39,17 +40,18 @@ const (
 )
 
 type User struct {
-	ID              int64
-	Email           string
-	Name            string
-	Organization    string
-	StatedRole      string
-	Status          Status
-	Role            Role
-	ConsentVersion  string
-	ConsentAt       *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID             int64
+	Email          string
+	Name           string
+	Organization   string
+	StatedRole     string
+	Status         Status
+	Role           Role
+	ConsentVersion string
+	ConsentAt      *time.Time
+	ExpiresAt      *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type EmailTokenPurpose string
@@ -118,7 +120,7 @@ func (r *Repo) Create(ctx context.Context, in CreateInput) (*User, error) {
 
 const selectCols = `
     id, email, name, organization, stated_role, status, role,
-    consent_version, consent_at, created_at, updated_at
+    consent_version, consent_at, expires_at, created_at, updated_at
 `
 
 func scanUser(row pgx.Row) (*User, error) {
@@ -126,7 +128,7 @@ func scanUser(row pgx.Row) (*User, error) {
 	err := row.Scan(
 		&u.ID, &u.Email, &u.Name, &u.Organization, &u.StatedRole,
 		&u.Status, &u.Role,
-		&u.ConsentVersion, &u.ConsentAt, &u.CreatedAt, &u.UpdatedAt,
+		&u.ConsentVersion, &u.ConsentAt, &u.ExpiresAt, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

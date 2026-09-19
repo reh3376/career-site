@@ -165,6 +165,10 @@ enum MemberStatus {
   MEMBER_STATUS_PENDING_APPROVAL = 3;
   // Disabled by the owner.
   MEMBER_STATUS_DISABLED = 4;
+  // Owner declined the access request (D-02, ADR-0002).
+  MEMBER_STATUS_DECLINED = 5;
+  // Access period has ended (users.expires_at in the past; FR-AUTH-18, ADR-0020).
+  MEMBER_STATUS_EXPIRED = 6;
 }
 
 // Account role.

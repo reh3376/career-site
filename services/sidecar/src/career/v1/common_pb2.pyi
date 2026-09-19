@@ -38,6 +38,8 @@ class MemberStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MEMBER_STATUS_ACTIVE: _ClassVar[MemberStatus]
     MEMBER_STATUS_PENDING_APPROVAL: _ClassVar[MemberStatus]
     MEMBER_STATUS_DISABLED: _ClassVar[MemberStatus]
+    MEMBER_STATUS_DECLINED: _ClassVar[MemberStatus]
+    MEMBER_STATUS_EXPIRED: _ClassVar[MemberStatus]
 
 class MemberRole(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -71,6 +73,8 @@ MEMBER_STATUS_UNVERIFIED: MemberStatus
 MEMBER_STATUS_ACTIVE: MemberStatus
 MEMBER_STATUS_PENDING_APPROVAL: MemberStatus
 MEMBER_STATUS_DISABLED: MemberStatus
+MEMBER_STATUS_DECLINED: MemberStatus
+MEMBER_STATUS_EXPIRED: MemberStatus
 MEMBER_ROLE_UNSPECIFIED: MemberRole
 MEMBER_ROLE_MEMBER: MemberRole
 MEMBER_ROLE_ADMIN: MemberRole

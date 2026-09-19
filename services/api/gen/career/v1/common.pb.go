@@ -179,6 +179,10 @@ const (
 	MemberStatus_MEMBER_STATUS_PENDING_APPROVAL MemberStatus = 3
 	// Disabled by the owner.
 	MemberStatus_MEMBER_STATUS_DISABLED MemberStatus = 4
+	// Owner declined the access request (D-02, ADR-0002).
+	MemberStatus_MEMBER_STATUS_DECLINED MemberStatus = 5
+	// Access period has ended (users.expires_at in the past; FR-AUTH-18, ADR-0020).
+	MemberStatus_MEMBER_STATUS_EXPIRED MemberStatus = 6
 )
 
 // Enum value maps for MemberStatus.
@@ -189,6 +193,8 @@ var (
 		2: "MEMBER_STATUS_ACTIVE",
 		3: "MEMBER_STATUS_PENDING_APPROVAL",
 		4: "MEMBER_STATUS_DISABLED",
+		5: "MEMBER_STATUS_DECLINED",
+		6: "MEMBER_STATUS_EXPIRED",
 	}
 	MemberStatus_value = map[string]int32{
 		"MEMBER_STATUS_UNSPECIFIED":      0,
@@ -196,6 +202,8 @@ var (
 		"MEMBER_STATUS_ACTIVE":           2,
 		"MEMBER_STATUS_PENDING_APPROVAL": 3,
 		"MEMBER_STATUS_DISABLED":         4,
+		"MEMBER_STATUS_DECLINED":         5,
+		"MEMBER_STATUS_EXPIRED":          6,
 	}
 )
 
@@ -1396,13 +1404,15 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"\x1bINTEREST_SOURCE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dINTEREST_SOURCE_QUESTIONNAIRE\x10\x01\x12\x1a\n" +
 	"\x16INTEREST_SOURCE_EDITED\x10\x02\x12\x1a\n" +
-	"\x16INTEREST_SOURCE_INVITE\x10\x03*\xa5\x01\n" +
+	"\x16INTEREST_SOURCE_INVITE\x10\x03*\xdc\x01\n" +
 	"\fMemberStatus\x12\x1d\n" +
 	"\x19MEMBER_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18MEMBER_STATUS_UNVERIFIED\x10\x01\x12\x18\n" +
 	"\x14MEMBER_STATUS_ACTIVE\x10\x02\x12\"\n" +
 	"\x1eMEMBER_STATUS_PENDING_APPROVAL\x10\x03\x12\x1a\n" +
-	"\x16MEMBER_STATUS_DISABLED\x10\x04*X\n" +
+	"\x16MEMBER_STATUS_DISABLED\x10\x04\x12\x1a\n" +
+	"\x16MEMBER_STATUS_DECLINED\x10\x05\x12\x19\n" +
+	"\x15MEMBER_STATUS_EXPIRED\x10\x06*X\n" +
 	"\n" +
 	"MemberRole\x12\x1b\n" +
 	"\x17MEMBER_ROLE_UNSPECIFIED\x10\x00\x12\x16\n" +

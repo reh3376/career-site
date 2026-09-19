@@ -195,26 +195,97 @@ func (h *Auth) Verify(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
 	}
 
-	if err := h.users.SetStatus(ctx, userID, users.StatusPendingApproval); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
-	}
-
+	// Look up the user, then decide whether to auto-approve (whitelist hit)
+	// or drop them into pending_approval.
 	u, err := h.users.GetByID(ctx, userID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
 	}
 
-	// Fire the admin approval email; failure here does not fail the verify
-	// itself — the user experience is unchanged, and the retry lives in a
-	// scheduler job (Task 3).
+	grant, err := h.users.GetActiveGrant(ctx, u.Email)
+	switch {
+	case err == nil:
+		// Whitelist hit — grant active, set expiry, record decision, welcome.
+		return h.applyWhitelistAutoApprove(ctx, u, grant)
+	case errors.Is(err, users.ErrNotFound):
+		// No whitelist entry — standard pending_approval flow.
+		return h.applyPendingApproval(ctx, u, req.Peer().Addr, req.Header().Get("User-Agent"))
+	default:
+		h.log.Error("whitelist lookup failed",
+			slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
+	}
+}
+
+// applyWhitelistAutoApprove activates a whitelisted user, sets expires_at
+// from the grant's TTL, records the decision, and dispatches the welcome
+// email in a background goroutine.
+func (h *Auth) applyWhitelistAutoApprove(
+	ctx context.Context,
+	u *users.User,
+	grant *users.AccessGrant,
+) (*connect.Response[v1.VerifyResponse], error) {
+	var expiresAt *time.Time
+	var grantedTTL *time.Duration
+	if !grant.DefaultTTL.IsPermanent() {
+		d := grant.DefaultTTL.Duration()
+		t := time.Now().UTC().Add(d)
+		expiresAt = &t
+		grantedTTL = &d
+	}
+
+	if err := h.users.Activate(ctx, u.ID, expiresAt); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
+	}
+	if err := h.users.RecordApprovalDecision(ctx, users.ApprovalDecision{
+		UserID:     u.ID,
+		Decision:   "approve",
+		DecidedVia: "whitelist_auto",
+		GrantedTTL: grantedTTL,
+	}); err != nil {
+		h.log.Warn("record whitelist decision failed",
+			slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+	u.Status = users.StatusActive
+	u.ExpiresAt = expiresAt
+
 	go func() {
 		emailCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		if err := h.sendApprovalRequestEmail(emailCtx, u, req.Peer().Addr, req.Header().Get("User-Agent")); err != nil {
+		if err := h.sendWhitelistWelcomeEmail(emailCtx, u); err != nil {
+			h.log.Error("send whitelist-welcome email failed",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		}
+	}()
+
+	return connect.NewResponse(&v1.VerifyResponse{
+		Me: &v1.Me{
+			Id:     fmt.Sprintf("%d", u.ID),
+			Name:   u.Name,
+			Email:  u.Email,
+			Status: v1.MemberStatus_MEMBER_STATUS_ACTIVE,
+		},
+	}), nil
+}
+
+// applyPendingApproval is the pre-whitelist behaviour: park the user and
+// email Roger.
+func (h *Auth) applyPendingApproval(
+	ctx context.Context,
+	u *users.User,
+	remoteAddr, userAgent string,
+) (*connect.Response[v1.VerifyResponse], error) {
+	if err := h.users.SetStatus(ctx, u.ID, users.StatusPendingApproval); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
+	}
+	u.Status = users.StatusPendingApproval
+
+	go func() {
+		emailCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if err := h.sendApprovalRequestEmail(emailCtx, u, remoteAddr, userAgent); err != nil {
 			h.log.Error("send approval-request email failed",
-				slog.Int64("user_id", u.ID),
-				slog.String("error", err.Error()),
-			)
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		}
 	}()
 
@@ -226,6 +297,29 @@ func (h *Auth) Verify(
 			Status: v1.MemberStatus_MEMBER_STATUS_PENDING_APPROVAL,
 		},
 	}), nil
+}
+
+func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) error {
+	summary := "permanent"
+	if u.ExpiresAt != nil {
+		summary = fmt.Sprintf("through %s UTC", u.ExpiresAt.UTC().Format("Mon, 02 Jan 2006 15:04"))
+	}
+	text, html, err := email.WelcomeWhitelistTemplate.Render(map[string]any{
+		"Name":          u.Name,
+		"SignInURL":     h.cfg.WebBaseURL + "/login",
+		"AccessSummary": summary,
+		"OwnerEmail":    h.cfg.OwnerContactEmail,
+	})
+	if err != nil {
+		return err
+	}
+	return h.email.Send(ctx, email.Message{
+		To:       u.Email,
+		From:     h.cfg.MailFrom,
+		Subject:  "Your career-site access is ready",
+		TextBody: text,
+		HTMLBody: html,
+	})
 }
 
 func (h *Auth) resolveVerifyCredential(_ context.Context, msg *v1.VerifyRequest) ([]byte, error) {

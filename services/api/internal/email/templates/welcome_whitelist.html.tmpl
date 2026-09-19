@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fafafa;color:#0a0a0a;margin:0;padding:24px">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px">
+    <tr><td style="padding:32px">
+      <p style="margin:0 0 16px;font-size:14px;color:#525252">career-site</p>
+      <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3">You're in, {{.Name}}.</h1>
+      <p style="margin:0 0 20px;line-height:1.6">Your account is ready — you're already on Roger's access list, so no manual review was needed.</p>
+      <p style="margin:0 0 24px">
+        <a href="{{.SignInURL}}" style="display:inline-block;background:#0f3d5c;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:600">Sign in</a>
+      </p>
+      {{if .AccessSummary}}<p style="margin:0 0 16px;font-size:13px;color:#525252"><strong>Your access:</strong> {{.AccessSummary}}.</p>{{end}}
+      <p style="margin:0;font-size:13px;color:#525252">Questions or trouble signing in? Reach Roger at <a href="mailto:{{.OwnerEmail}}" style="color:#0f3d5c">{{.OwnerEmail}}</a>.</p>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -33,6 +33,9 @@ type Config struct {
 	SMTPPass          string
 	ResendAPIKey      string
 	PwnedCheckEnabled bool
+
+	// Scheduler
+	ExpirySchedulerInterval time.Duration
 }
 
 func Load() (Config, error) {
@@ -59,6 +62,8 @@ func Load() (Config, error) {
 		SMTPPass:          os.Getenv("SMTP_PASS"),
 		ResendAPIKey:      os.Getenv("RESEND_API_KEY"),
 		PwnedCheckEnabled: os.Getenv("PWNED_CHECK_ENABLED") == "1",
+
+		ExpirySchedulerInterval: time.Duration(envIntOr("EXPIRY_INTERVAL_SECONDS", 3600)) * time.Second,
 	}
 	if v := os.Getenv("API_READ_TIMEOUT_SECONDS"); v != "" {
 		n, err := strconv.Atoi(v)
