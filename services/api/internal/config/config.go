@@ -17,6 +17,9 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	SidecarAddr     string
 	SidecarTimeout  time.Duration
+	DatabaseURL     string
+	DBTimeout       time.Duration
+	SkipMigrate     bool
 }
 
 func Load() (Config, error) {
@@ -28,6 +31,9 @@ func Load() (Config, error) {
 		ShutdownTimeout: 10 * time.Second,
 		SidecarAddr:     envOr("SIDECAR_ADDR", "localhost:50051"),
 		SidecarTimeout:  2 * time.Second,
+		DatabaseURL:     envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
+		DBTimeout:       2 * time.Second,
+		SkipMigrate:     os.Getenv("API_SKIP_MIGRATE") == "1",
 	}
 	if v := os.Getenv("API_READ_TIMEOUT_SECONDS"); v != "" {
 		n, err := strconv.Atoi(v)

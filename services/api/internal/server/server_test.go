@@ -14,22 +14,23 @@ import (
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/config"
+	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 )
 
-// newTestServer builds a server with a nil sidecar client. Callers that need
-// a live sidecar should stand one up separately; readyz treats nil as
-// "sidecar not ready" so the negative path is well-defined.
-func newTestServer(t *testing.T, sc *sidecar.Client) http.Handler {
+// newTestServer builds a server with nil dependencies. Callers that need live
+// dependencies should stand them up separately; readyz treats nil as
+// "not ready" so every negative path is well-defined.
+func newTestServer(t *testing.T, sc *sidecar.Client, pool *db.Pool) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(config.Config{Addr: ":0"}, log, sc).routes()
+	return New(config.Config{Addr: ":0"}, log, sc, pool).routes()
 }
 
 func TestHealthz(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/healthz", nil)
-	newTestServer(t, nil).ServeHTTP(rec, req)
+	newTestServer(t, nil, nil).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
@@ -46,7 +47,7 @@ func TestHealthz(t *testing.T) {
 func TestReadyzUnreadyWhenSidecarMissing(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/readyz", nil)
-	newTestServer(t, nil).ServeHTTP(rec, req)
+	newTestServer(t, nil, nil).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", rec.Code)
@@ -64,7 +65,7 @@ func TestReadyzUnreadyWhenSidecarMissing(t *testing.T) {
 }
 
 func TestSystemGetVersion(t *testing.T) {
-	ts := httptest.NewServer(newTestServer(t, nil))
+	ts := httptest.NewServer(newTestServer(t, nil, nil))
 	defer ts.Close()
 
 	client := careerv1connect.NewSystemServiceClient(ts.Client(), ts.URL+"/api")

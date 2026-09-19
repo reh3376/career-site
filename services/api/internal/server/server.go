@@ -11,6 +11,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/config"
+	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 )
@@ -21,14 +22,16 @@ type Server struct {
 	http    *http.Server
 	system  *handlers.System
 	sidecar *sidecar.Client
+	db      *db.Pool
 }
 
-func New(cfg config.Config, log *slog.Logger, sc *sidecar.Client) *Server {
+func New(cfg config.Config, log *slog.Logger, sc *sidecar.Client, pool *db.Pool) *Server {
 	s := &Server{
 		cfg:     cfg,
 		log:     log,
 		system:  handlers.NewSystem(),
 		sidecar: sc,
+		db:      pool,
 	}
 	s.http = &http.Server{
 		Addr:         cfg.Addr,
@@ -85,7 +88,8 @@ func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 // Returns 200 when every check passes, 503 with the same body otherwise.
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]bool{
-		"sidecar": s.sidecarReady(r.Context()),
+		"sidecar":  s.sidecarReady(r.Context()),
+		"postgres": s.postgresReady(r.Context()),
 	}
 	allOk := true
 	for _, ok := range checks {
@@ -114,6 +118,19 @@ func (s *Server) sidecarReady(ctx context.Context) bool {
 		return false
 	}
 	return resp.GetReady()
+}
+
+func (s *Server) postgresReady(ctx context.Context) bool {
+	if s.db == nil {
+		return false
+	}
+	pingCtx, cancel := context.WithTimeout(ctx, s.cfg.DBTimeout)
+	defer cancel()
+	if err := s.db.Ping(pingCtx); err != nil {
+		s.log.Warn("postgres health check failed", slog.String("error", err.Error()))
+		return false
+	}
+	return true
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

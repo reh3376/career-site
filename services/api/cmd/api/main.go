@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/reh3376/career-site/services/api/internal/config"
+	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 )
@@ -22,6 +23,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if !cfg.SkipMigrate {
+		log.Info("running migrations")
+		if err := db.Migrate(ctx, cfg.DatabaseURL); err != nil {
+			log.Error("migrate failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
+
+	pool, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Error("db open failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer pool.Close()
+
 	sc, err := sidecar.Dial(cfg.SidecarAddr, cfg.SidecarTimeout)
 	if err != nil {
 		log.Error("sidecar client init failed", slog.String("error", err.Error()))
@@ -29,10 +48,7 @@ func main() {
 	}
 	defer sc.Close()
 
-	srv := server.New(cfg, log, sc)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	srv := server.New(cfg, log, sc, pool)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()
