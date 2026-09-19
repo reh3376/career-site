@@ -12,20 +12,23 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
+	"github.com/reh3376/career-site/services/api/internal/sidecar"
 )
 
 type Server struct {
-	cfg    config.Config
-	log    *slog.Logger
-	http   *http.Server
-	system *handlers.System
+	cfg     config.Config
+	log     *slog.Logger
+	http    *http.Server
+	system  *handlers.System
+	sidecar *sidecar.Client
 }
 
-func New(cfg config.Config, log *slog.Logger) *Server {
+func New(cfg config.Config, log *slog.Logger, sc *sidecar.Client) *Server {
 	s := &Server{
-		cfg:    cfg,
-		log:    log,
-		system: handlers.NewSystem(),
+		cfg:     cfg,
+		log:     log,
+		system:  handlers.NewSystem(),
+		sidecar: sc,
 	}
 	s.http = &http.Server{
 		Addr:         cfg.Addr,
@@ -53,6 +56,7 @@ func (s *Server) Start() error {
 		slog.String("addr", s.cfg.Addr),
 		slog.String("env", s.cfg.Env),
 		slog.String("version", build.Version),
+		slog.String("sidecar_addr", s.cfg.SidecarAddr),
 	)
 	if err := s.http.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
@@ -67,18 +71,49 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 type healthPayload struct {
-	Status  string `json:"status"`
-	Version string `json:"version,omitempty"`
+	Status  string          `json:"status"`
+	Version string          `json:"version,omitempty"`
+	Checks  map[string]bool `json:"checks,omitempty"`
 }
 
 func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, healthPayload{Status: "ok"})
 }
 
-// readyz will fan out to database, object storage, and sidecar checks in a
-// later phase; today it only reports process liveness plus the build version.
-func (s *Server) readyz(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, healthPayload{Status: "ok", Version: build.Version})
+// readyz reports readiness of the API's downstream dependencies. Phase 0 only
+// wires the sidecar; postgres and object storage join in later phases.
+// Returns 200 when every check passes, 503 with the same body otherwise.
+func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
+	checks := map[string]bool{
+		"sidecar": s.sidecarReady(r.Context()),
+	}
+	allOk := true
+	for _, ok := range checks {
+		if !ok {
+			allOk = false
+			break
+		}
+	}
+	body := healthPayload{Version: build.Version, Checks: checks}
+	if allOk {
+		body.Status = "ok"
+		writeJSON(w, http.StatusOK, body)
+	} else {
+		body.Status = "unready"
+		writeJSON(w, http.StatusServiceUnavailable, body)
+	}
+}
+
+func (s *Server) sidecarReady(ctx context.Context) bool {
+	if s.sidecar == nil {
+		return false
+	}
+	resp, err := s.sidecar.Health(ctx)
+	if err != nil {
+		s.log.Warn("sidecar health check failed", slog.String("error", err.Error()))
+		return false
+	}
+	return resp.GetReady()
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

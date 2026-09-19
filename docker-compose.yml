@@ -1,0 +1,147 @@
+# career-site local development stack. `docker compose up` boots caddy on
+# :80 in front of the Next.js web on :3000 and the Go API on :8080, with the
+# Python sidecar on :50051 and the data-tier services (postgres, mailpit,
+# minio) already running so later phases can wire into them without stack
+# changes. Same shape ships to production; only image tags and volumes
+# differ.
+#
+# The one runtime dependency this stack proves today is the API -> sidecar
+# gRPC call: `curl http://localhost/api/readyz` returns
+# {"checks":{"sidecar":true}, ...} when the sidecar is healthy.
+
+name: career-site
+
+x-common-env: &common-env
+  TZ: UTC
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+    networks: [app]
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      API_URL: http://api:8080
+      NEXT_TELEMETRY_DISABLED: "1"
+    networks: [app]
+
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      API_ADDR: :8080
+      API_ENV: docker
+      SIDECAR_ADDR: sidecar:50051
+    depends_on:
+      sidecar:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks: [app]
+
+  sidecar:
+    build:
+      context: ./services/sidecar
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      SIDECAR_ADDR: "[::]:50051"
+    healthcheck:
+      # Uses the grpc client shipped with the sidecar; asserts Health() reports ready.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import grpc, sys
+          from career.sidecar.v1 import sidecar_pb2, sidecar_pb2_grpc
+          ch = grpc.insecure_channel('localhost:50051')
+          try:
+              stub = sidecar_pb2_grpc.SidecarServiceStub(ch)
+              r = stub.Health(sidecar_pb2.HealthRequest(), timeout=2.0)
+              sys.exit(0 if r.ready else 1)
+          finally:
+              ch.close()
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks: [app]
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      POSTGRES_USER: career
+      POSTGRES_PASSWORD: career_dev_only
+      POSTGRES_DB: career
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U career -d career"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks: [app]
+
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
+    networks: [app]
+
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      <<: *common-env
+      MINIO_ROOT_USER: minio_dev
+      MINIO_ROOT_PASSWORD: minio_dev_only
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web UI
+    networks: [app]
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  minio_data:

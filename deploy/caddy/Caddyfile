@@ -1,0 +1,19 @@
+# Local development: HTTP on :80. Production ships the same config with a
+# real hostname block, TLS auto-managed, HSTS, and security headers per FSD
+# §8.9. That block will land in the deploy pipeline (Phase 6); keeping the
+# dev version tiny keeps `docker compose up` fast.
+
+:80 {
+    encode zstd gzip
+
+    # /api/* -> Go API. Same-origin routing means the browser never touches
+    # api:8080 directly; cookies stay first-party and CORS is unnecessary.
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    # Everything else -> Next.js.
+    handle {
+        reverse_proxy web:3000
+    }
+}

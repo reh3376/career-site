@@ -10,6 +10,7 @@ import (
 
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/server"
+	"github.com/reh3376/career-site/services/api/internal/sidecar"
 )
 
 func main() {
@@ -21,7 +22,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := server.New(cfg, log)
+	sc, err := sidecar.Dial(cfg.SidecarAddr, cfg.SidecarTimeout)
+	if err != nil {
+		log.Error("sidecar client init failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer sc.Close()
+
+	srv := server.New(cfg, log, sc)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

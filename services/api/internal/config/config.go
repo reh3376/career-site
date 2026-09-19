@@ -15,6 +15,8 @@ type Config struct {
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
+	SidecarAddr     string
+	SidecarTimeout  time.Duration
 }
 
 func Load() (Config, error) {
@@ -24,6 +26,8 @@ func Load() (Config, error) {
 		ReadTimeout:     15 * time.Second,
 		WriteTimeout:    30 * time.Second,
 		ShutdownTimeout: 10 * time.Second,
+		SidecarAddr:     envOr("SIDECAR_ADDR", "localhost:50051"),
+		SidecarTimeout:  2 * time.Second,
 	}
 	if v := os.Getenv("API_READ_TIMEOUT_SECONDS"); v != "" {
 		n, err := strconv.Atoi(v)
