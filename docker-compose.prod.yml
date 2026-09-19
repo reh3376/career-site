@@ -32,7 +32,9 @@ services:
 
   web:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-web:${IMAGE_TAG:-latest}
-    build: !override [] # do not rebuild from source in prod
+    # No build override — pull_policy: always ensures we always fetch the
+    # published image; the base compose's `build:` is inert unless someone
+    # explicitly runs `docker compose build`.
     pull_policy: always
     environment:
       NODE_ENV: production
@@ -44,7 +46,6 @@ services:
 
   api:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
-    build: !override []
     pull_policy: always
     environment:
       API_ADDR: :8080
@@ -64,7 +65,6 @@ services:
 
   sidecar:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
-    build: !override []
     pull_policy: always
 
   postgres:

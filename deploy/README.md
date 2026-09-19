@@ -81,9 +81,18 @@ Fill in every blank in `.env.prod` per the template comments. Specifically:
 
 ```bash
 cd /opt/career-site
-docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-docker compose logs -f api  # watch migrations + admin bootstrap
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml logs -f api
+```
+
+Compose only auto-loads `.env`; the extra `--env-file .env.prod` flag is
+what tells it to read the prod overlay's variable references from your
+prod secrets file. Alias it if you're going to run these a lot:
+
+```bash
+alias cs='docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml'
+# then just:  cs pull    cs up -d    cs logs -f api    cs down
 ```
 
 Verify:
@@ -108,10 +117,10 @@ Every push to `main` builds and pushes images to `ghcr.io/reh3376/career-site-{a
 
 ```bash
 cd /opt/career-site
-sudo git pull
-sudo sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=<12-char-sha>/" .env.prod
-docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+git pull
+sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=<12-char-sha>/" .env.prod
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations are additive.

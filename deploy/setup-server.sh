@@ -93,9 +93,9 @@ Next:
   2. As the $APP_USER user, first-boot:
        ssh $APP_USER@\$(curl -s ifconfig.me)
        cd $APP_DIR
-       docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-       docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-       docker compose logs -f api
+       docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml pull
+       docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d
+       docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml logs -f api
 ------------------------------------------------------------
 
 EOF
