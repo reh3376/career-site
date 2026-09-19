@@ -35,7 +35,7 @@ gen: ## Regenerate Go, TypeScript, and Python code from proto/
 docs-api: gen ## Regenerate docs/api/README.md and docs/api/endpoints.json from proto/
 	mkdir -p $(BUILD)
 	$(BUF) build proto -o $(BUILD)/api.binpb
-	$(UV) run --python 3.12 --with protobuf python scripts/gen_api_docs.py $(BUILD)/api.binpb
+	$(UV) run --no-project --python 3.12 --with protobuf python scripts/gen_api_docs.py $(BUILD)/api.binpb
 
 check-gen: gen docs-api ## Fail if committed generated code or docs drift from proto/
 	@git diff --exit-code --stat -- $(GEN_PATHS) \

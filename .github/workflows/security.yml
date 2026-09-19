@@ -1,0 +1,87 @@
+# Security scans: vulnerability checks per toolchain + secret scanning.
+# Runs on push, PR, and daily to catch newly-disclosed CVEs against
+# unchanged deps.
+
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *" # 06:17 UTC daily
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26"
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
+  PNPM_VERSION: "12.4.2"
+  UV_VERSION: "0.9.26"
+
+jobs:
+  govulncheck:
+    name: govulncheck (api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: services/api/go.sum
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: scan
+        working-directory: services/api
+        run: govulncheck ./...
+
+  pip-audit:
+    name: pip-audit (sidecar)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: export requirements
+        working-directory: services/sidecar
+        run: uv export --frozen --no-dev --no-emit-project --format requirements.txt > /tmp/reqs.txt
+      - name: scan
+        run: |
+          uv tool install pip-audit
+          uv tool run pip-audit --requirement /tmp/reqs.txt --strict
+
+  pnpm-audit:
+    name: pnpm audit (web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: enable pnpm
+        run: corepack enable && corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+      - name: audit
+        working-directory: apps/web
+        # `pnpm audit --prod` limits to runtime deps so dev-only CVEs do not
+        # fail CI; open a follow-up issue when they show up here on push runs.
+        run: pnpm audit --prod --audit-level=high
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
