@@ -10,7 +10,10 @@ export function SiteHeader() {
         >
           Roger Henley
         </Link>
-        <nav className="text-sm text-ink-3" aria-label="Primary">
+        <nav className="flex items-center gap-4 text-sm text-ink-3" aria-label="Primary">
+          <Link href="/login" className="text-ink-2 hover:text-accent">
+            Sign in
+          </Link>
           <Link
             href="/register"
             className="rounded-md bg-accent px-3 py-1.5 text-white transition-colors hover:bg-accent-hover"
