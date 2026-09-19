@@ -1,6 +1,6 @@
-# build artifacts
-build/
-dist/
+# build artifacts (repo-root only; do not match nested Go packages named `build`)
+/build/
+/dist/
 *.binpb
 
 # dependencies and environments
