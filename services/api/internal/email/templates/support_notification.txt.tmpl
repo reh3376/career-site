@@ -1,0 +1,16 @@
+{{.Category}} — {{.Subject}}
+
+From:     {{.SenderName}} <{{.SenderEmail}}>
+{{if .Auth}}Signed in: yes ({{.Auth}}){{else}}Signed in: no (anonymous form submission){{end}}
+Ticket:   {{.TicketID}}
+Received: {{.SubmittedAt}}
+
+---
+{{.Body}}
+---
+
+Reply to: {{.SenderEmail}}
+Review in the admin console: {{.ReviewURL}}
+
+—
+career-site (support inbox)

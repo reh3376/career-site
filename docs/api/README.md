@@ -1522,7 +1522,7 @@ Reaching the owner outside the assistant.
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
 | [`GetContactOptions`](#contactservice-getcontactoptions) | `/api/career.v1.ContactService/GetContactOptions` | Member | default | `GetContactOptionsRequest` → `GetContactOptionsResponse` | Returns the owner's availability statement and the contact channels he has chosen to publish. |
-| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Member | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
+| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
 
 ### ContactService.GetContactOptions
 
@@ -1553,10 +1553,12 @@ _No fields; send `{}`._
 
 ### ContactService.SubmitContact
 
-`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Member · **Rate limit:** 3/min
+`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** 3/min
 
-Sends a message to the owner. The owner receives it with the member's
-profile context and replies by the channel the member chose.
+Sends a message to the owner. Accepts both signed-in members (identity
+read from the session cookie) and anonymous visitors (name + email
+supplied on the form, Turnstile required). The owner receives the
+message with the sender's context and replies from their mailbox.
 
 **Request** — [`SubmitContactRequest`](#submitcontactrequest)
 
@@ -1566,6 +1568,10 @@ profile context and replies by the channel the member chose.
 | `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
 | `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
 | `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
+| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
+| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
 
 **Response** — [`SubmitContactResponse`](#submitcontactresponse)
 
@@ -1580,7 +1586,11 @@ profile context and replies by the channel the member chose.
   "subject": "string",
   "message": "string",
   "replyChannel": "REPLY_CHANNEL_EMAIL",
-  "conversationId": "string"
+  "conversationId": "string",
+  "category": "SUPPORT_CATEGORY_GENERAL_QUESTION",
+  "name": "string",
+  "email": "string",
+  "turnstileToken": "string"
 }
 ```
 
@@ -3618,6 +3628,10 @@ Contact form.
 | `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
 | `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
 | `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
+| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
+| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
 
 ### SubmitContactResponse
 
@@ -4516,8 +4530,22 @@ How the member wants a reply.
 | Value | Number | Description |
 |---|---|---|
 | `REPLY_CHANNEL_UNSPECIFIED` | 0 | Not set. |
-| `REPLY_CHANNEL_EMAIL` | 1 | Email to the member's verified address. |
+| `REPLY_CHANNEL_EMAIL` | 1 | Email to the member's verified address, or (for anonymous submitters) to the email supplied on the form. |
 | `REPLY_CHANNEL_LINKEDIN` | 2 | LinkedIn message (requires a linked LinkedIn profile). |
+
+### SupportCategory
+
+Category buckets for the support inbox (FR-CNT-22).
+
+| Value | Number | Description |
+|---|---|---|
+| `SUPPORT_CATEGORY_UNSPECIFIED` | 0 | Not set. |
+| `SUPPORT_CATEGORY_GENERAL_QUESTION` | 1 | Open-ended question about the site or the owner. |
+| `SUPPORT_CATEGORY_BUG_REPORT` | 2 | Bug report — something on the site isn't working. |
+| `SUPPORT_CATEGORY_FEATURE_REQUEST` | 3 | Feature request or suggestion. |
+| `SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS` | 4 | Request to be added as a collaborator on one of the owner's public GitHub repositories. Body should name the repo. |
+| `SUPPORT_CATEGORY_PRESS_INQUIRY` | 5 | Press, interview, or podcast inquiry. |
+| `SUPPORT_CATEGORY_OTHER` | 6 | Anything not covered above. |
 
 ### ListContentRequest.Order
 

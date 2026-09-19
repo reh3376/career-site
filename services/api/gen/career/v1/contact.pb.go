@@ -24,13 +24,84 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Category buckets for the support inbox (FR-CNT-22).
+type SupportCategory int32
+
+const (
+	// Not set.
+	SupportCategory_SUPPORT_CATEGORY_UNSPECIFIED SupportCategory = 0
+	// Open-ended question about the site or the owner.
+	SupportCategory_SUPPORT_CATEGORY_GENERAL_QUESTION SupportCategory = 1
+	// Bug report — something on the site isn't working.
+	SupportCategory_SUPPORT_CATEGORY_BUG_REPORT SupportCategory = 2
+	// Feature request or suggestion.
+	SupportCategory_SUPPORT_CATEGORY_FEATURE_REQUEST SupportCategory = 3
+	// Request to be added as a collaborator on one of the owner's public
+	// GitHub repositories. Body should name the repo.
+	SupportCategory_SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS SupportCategory = 4
+	// Press, interview, or podcast inquiry.
+	SupportCategory_SUPPORT_CATEGORY_PRESS_INQUIRY SupportCategory = 5
+	// Anything not covered above.
+	SupportCategory_SUPPORT_CATEGORY_OTHER SupportCategory = 6
+)
+
+// Enum value maps for SupportCategory.
+var (
+	SupportCategory_name = map[int32]string{
+		0: "SUPPORT_CATEGORY_UNSPECIFIED",
+		1: "SUPPORT_CATEGORY_GENERAL_QUESTION",
+		2: "SUPPORT_CATEGORY_BUG_REPORT",
+		3: "SUPPORT_CATEGORY_FEATURE_REQUEST",
+		4: "SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS",
+		5: "SUPPORT_CATEGORY_PRESS_INQUIRY",
+		6: "SUPPORT_CATEGORY_OTHER",
+	}
+	SupportCategory_value = map[string]int32{
+		"SUPPORT_CATEGORY_UNSPECIFIED":        0,
+		"SUPPORT_CATEGORY_GENERAL_QUESTION":   1,
+		"SUPPORT_CATEGORY_BUG_REPORT":         2,
+		"SUPPORT_CATEGORY_FEATURE_REQUEST":    3,
+		"SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS": 4,
+		"SUPPORT_CATEGORY_PRESS_INQUIRY":      5,
+		"SUPPORT_CATEGORY_OTHER":              6,
+	}
+)
+
+func (x SupportCategory) Enum() *SupportCategory {
+	p := new(SupportCategory)
+	*p = x
+	return p
+}
+
+func (x SupportCategory) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SupportCategory) Descriptor() protoreflect.EnumDescriptor {
+	return file_career_v1_contact_proto_enumTypes[0].Descriptor()
+}
+
+func (SupportCategory) Type() protoreflect.EnumType {
+	return &file_career_v1_contact_proto_enumTypes[0]
+}
+
+func (x SupportCategory) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SupportCategory.Descriptor instead.
+func (SupportCategory) EnumDescriptor() ([]byte, []int) {
+	return file_career_v1_contact_proto_rawDescGZIP(), []int{0}
+}
+
 // How the member wants a reply.
 type SubmitContactRequest_ReplyChannel int32
 
 const (
 	// Not set.
 	SubmitContactRequest_REPLY_CHANNEL_UNSPECIFIED SubmitContactRequest_ReplyChannel = 0
-	// Email to the member's verified address.
+	// Email to the member's verified address, or (for anonymous
+	// submitters) to the email supplied on the form.
 	SubmitContactRequest_REPLY_CHANNEL_EMAIL SubmitContactRequest_ReplyChannel = 1
 	// LinkedIn message (requires a linked LinkedIn profile).
 	SubmitContactRequest_REPLY_CHANNEL_LINKEDIN SubmitContactRequest_ReplyChannel = 2
@@ -61,11 +132,11 @@ func (x SubmitContactRequest_ReplyChannel) String() string {
 }
 
 func (SubmitContactRequest_ReplyChannel) Descriptor() protoreflect.EnumDescriptor {
-	return file_career_v1_contact_proto_enumTypes[0].Descriptor()
+	return file_career_v1_contact_proto_enumTypes[1].Descriptor()
 }
 
 func (SubmitContactRequest_ReplyChannel) Type() protoreflect.EnumType {
-	return &file_career_v1_contact_proto_enumTypes[0]
+	return &file_career_v1_contact_proto_enumTypes[1]
 }
 
 func (x SubmitContactRequest_ReplyChannel) Number() protoreflect.EnumNumber {
@@ -253,6 +324,18 @@ type SubmitContactRequest struct {
 	ReplyChannel SubmitContactRequest_ReplyChannel `protobuf:"varint,3,opt,name=reply_channel,json=replyChannel,proto3,enum=career.v1.SubmitContactRequest_ReplyChannel" json:"reply_channel,omitempty"`
 	// Attach a conversation transcript for context; optional.
 	ConversationId string `protobuf:"bytes,4,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	// Categorises the message so the owner can filter the support inbox
+	// (FR-CNT-22 / FR-ADM-14). Required.
+	Category SupportCategory `protobuf:"varint,5,opt,name=category,proto3,enum=career.v1.SupportCategory" json:"category,omitempty"`
+	// Anonymous sender's display name. Required when the request has no
+	// session cookie; ignored when it does (the member's name wins).
+	Name string `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
+	// Anonymous sender's email. Required + validated as an email address
+	// when the request has no session cookie; ignored when it does.
+	Email string `protobuf:"bytes,7,opt,name=email,proto3" json:"email,omitempty"`
+	// Cloudflare Turnstile response token. Required on anonymous
+	// submissions; ignored for members.
+	TurnstileToken string `protobuf:"bytes,8,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -311,6 +394,34 @@ func (x *SubmitContactRequest) GetReplyChannel() SubmitContactRequest_ReplyChann
 func (x *SubmitContactRequest) GetConversationId() string {
 	if x != nil {
 		return x.ConversationId
+	}
+	return ""
+}
+
+func (x *SubmitContactRequest) GetCategory() SupportCategory {
+	if x != nil {
+		return x.Category
+	}
+	return SupportCategory_SUPPORT_CATEGORY_UNSPECIFIED
+}
+
+func (x *SubmitContactRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SubmitContactRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *SubmitContactRequest) GetTurnstileToken() string {
+	if x != nil {
+		return x.TurnstileToken
 	}
 	return ""
 }
@@ -374,7 +485,7 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"\x19GetContactOptionsResponse\x12\"\n" +
 	"\favailability\x18\x01 \x01(\tR\favailability\x121\n" +
 	"\x14location_preferences\x18\x02 \x01(\tR\x13locationPreferences\x125\n" +
-	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\xd7\x02\n" +
+	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\x8c\x04\n" +
 	"\x14SubmitContactRequest\x12$\n" +
 	"\asubject\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\asubject\x12$\n" +
@@ -382,16 +493,29 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"\xbaH\ar\x05\x10\x01\x18\x88'R\amessage\x12]\n" +
 	"\rreply_channel\x18\x03 \x01(\x0e2,.career.v1.SubmitContactRequest.ReplyChannelB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\freplyChannel\x120\n" +
-	"\x0fconversation_id\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18@R\x0econversationId\"b\n" +
+	"\x0fconversation_id\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18@R\x0econversationId\x12B\n" +
+	"\bcategory\x18\x05 \x01(\x0e2\x1a.career.v1.SupportCategoryB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bcategory\x12\x1c\n" +
+	"\x04name\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x04name\x12\x1e\n" +
+	"\x05email\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xc0\x02R\x05email\x121\n" +
+	"\x0fturnstile_token\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80 R\x0eturnstileToken\"b\n" +
 	"\fReplyChannel\x12\x1d\n" +
 	"\x19REPLY_CHANNEL_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13REPLY_CHANNEL_EMAIL\x10\x01\x12\x1a\n" +
 	"\x16REPLY_CHANNEL_LINKEDIN\x10\x02\"4\n" +
 	"\x15SubmitContactResponse\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId2\xd4\x01\n" +
+	"\tticket_id\x18\x01 \x01(\tR\bticketId*\x8a\x02\n" +
+	"\x0fSupportCategory\x12 \n" +
+	"\x1cSUPPORT_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
+	"!SUPPORT_CATEGORY_GENERAL_QUESTION\x10\x01\x12\x1f\n" +
+	"\x1bSUPPORT_CATEGORY_BUG_REPORT\x10\x02\x12$\n" +
+	" SUPPORT_CATEGORY_FEATURE_REQUEST\x10\x03\x12'\n" +
+	"#SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS\x10\x04\x12\"\n" +
+	"\x1eSUPPORT_CATEGORY_PRESS_INQUIRY\x10\x05\x12\x1a\n" +
+	"\x16SUPPORT_CATEGORY_OTHER\x10\x062\xd4\x01\n" +
 	"\x0eContactService\x12d\n" +
 	"\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12\\\n" +
-	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03B\xa6\x01\n" +
+	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03B\xa6\x01\n" +
 	"\rcom.career.v1B\fContactProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -407,28 +531,30 @@ func file_career_v1_contact_proto_rawDescGZIP() []byte {
 	return file_career_v1_contact_proto_rawDescData
 }
 
-var file_career_v1_contact_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_career_v1_contact_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_career_v1_contact_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_career_v1_contact_proto_goTypes = []any{
-	(SubmitContactRequest_ReplyChannel)(0), // 0: career.v1.SubmitContactRequest.ReplyChannel
-	(*GetContactOptionsRequest)(nil),       // 1: career.v1.GetContactOptionsRequest
-	(*ContactChannel)(nil),                 // 2: career.v1.ContactChannel
-	(*GetContactOptionsResponse)(nil),      // 3: career.v1.GetContactOptionsResponse
-	(*SubmitContactRequest)(nil),           // 4: career.v1.SubmitContactRequest
-	(*SubmitContactResponse)(nil),          // 5: career.v1.SubmitContactResponse
+	(SupportCategory)(0),                   // 0: career.v1.SupportCategory
+	(SubmitContactRequest_ReplyChannel)(0), // 1: career.v1.SubmitContactRequest.ReplyChannel
+	(*GetContactOptionsRequest)(nil),       // 2: career.v1.GetContactOptionsRequest
+	(*ContactChannel)(nil),                 // 3: career.v1.ContactChannel
+	(*GetContactOptionsResponse)(nil),      // 4: career.v1.GetContactOptionsResponse
+	(*SubmitContactRequest)(nil),           // 5: career.v1.SubmitContactRequest
+	(*SubmitContactResponse)(nil),          // 6: career.v1.SubmitContactResponse
 }
 var file_career_v1_contact_proto_depIdxs = []int32{
-	2, // 0: career.v1.GetContactOptionsResponse.channels:type_name -> career.v1.ContactChannel
-	0, // 1: career.v1.SubmitContactRequest.reply_channel:type_name -> career.v1.SubmitContactRequest.ReplyChannel
-	1, // 2: career.v1.ContactService.GetContactOptions:input_type -> career.v1.GetContactOptionsRequest
-	4, // 3: career.v1.ContactService.SubmitContact:input_type -> career.v1.SubmitContactRequest
-	3, // 4: career.v1.ContactService.GetContactOptions:output_type -> career.v1.GetContactOptionsResponse
-	5, // 5: career.v1.ContactService.SubmitContact:output_type -> career.v1.SubmitContactResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: career.v1.GetContactOptionsResponse.channels:type_name -> career.v1.ContactChannel
+	1, // 1: career.v1.SubmitContactRequest.reply_channel:type_name -> career.v1.SubmitContactRequest.ReplyChannel
+	0, // 2: career.v1.SubmitContactRequest.category:type_name -> career.v1.SupportCategory
+	2, // 3: career.v1.ContactService.GetContactOptions:input_type -> career.v1.GetContactOptionsRequest
+	5, // 4: career.v1.ContactService.SubmitContact:input_type -> career.v1.SubmitContactRequest
+	4, // 5: career.v1.ContactService.GetContactOptions:output_type -> career.v1.GetContactOptionsResponse
+	6, // 6: career.v1.ContactService.SubmitContact:output_type -> career.v1.SubmitContactResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_contact_proto_init() }
@@ -442,7 +568,7 @@ func file_career_v1_contact_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_contact_proto_rawDesc), len(file_career_v1_contact_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
