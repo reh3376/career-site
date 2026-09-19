@@ -43,6 +43,10 @@ type AuthConfig struct {
 	MailFrom string
 	// TTL for the initial email-verify token; FR-AUTH-03 caps at 24 h.
 	VerifyTTL time.Duration
+	// TTL for admin one-click Accept/Decline URLs (FR-AUTH-15).
+	DecisionTokenTTL time.Duration
+	// HMAC signing key for one-click Accept/Decline tokens.
+	DecisionTokenSecret []byte
 	// If true, the current consent version required at registration. Empty
 	// means "accept any nonzero version" — safe for dev; production sets it.
 	ConsentVersion string
@@ -57,6 +61,9 @@ func NewAuth(
 ) *Auth {
 	if cfg.VerifyTTL == 0 {
 		cfg.VerifyTTL = 24 * time.Hour
+	}
+	if cfg.DecisionTokenTTL == 0 {
+		cfg.DecisionTokenTTL = 7 * 24 * time.Hour
 	}
 	return &Auth{log: log, users: repo, email: mailer, pwned: pwned, cfg: cfg}
 }
@@ -348,11 +355,18 @@ func (h *Auth) resolveVerifyCredential(_ context.Context, msg *v1.VerifyRequest)
 
 func (h *Auth) sendApprovalRequestEmail(ctx context.Context, u *users.User, remoteAddr, userAgent string) error {
 	ipHash := hashIP(remoteAddr)
-	reference := fmt.Sprintf("REQ-%d-%s", u.ID, time.Now().UTC().Format("20060102"))
+	reference := referenceID(u)
 
-	// Placeholder URLs — Task 3 replaces these with signed one-click links.
-	acceptURL := h.cfg.WebBaseURL + "/admin/approve?ref=" + reference
-	declineURL := h.cfg.WebBaseURL + "/admin/decline?ref=" + reference
+	acceptTok, err := auth.SignDecision(h.cfg.DecisionTokenSecret, u.ID, auth.DecisionApprove, h.cfg.DecisionTokenTTL)
+	if err != nil {
+		return fmt.Errorf("sign accept token: %w", err)
+	}
+	declineTok, err := auth.SignDecision(h.cfg.DecisionTokenSecret, u.ID, auth.DecisionDecline, h.cfg.DecisionTokenTTL)
+	if err != nil {
+		return fmt.Errorf("sign decline token: %w", err)
+	}
+	acceptURL := h.cfg.WebBaseURL + "/admin/decision?token=" + acceptTok
+	declineURL := h.cfg.WebBaseURL + "/admin/decision?token=" + declineTok
 	reviewURL := h.cfg.WebBaseURL + "/admin/pending"
 
 	text, htmlBody, err := email.ApprovalRequestTemplate.Render(map[string]any{

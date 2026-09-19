@@ -17,32 +17,35 @@ import (
 )
 
 type Server struct {
-	cfg     config.Config
-	log     *slog.Logger
-	http    *http.Server
-	system  *handlers.System
-	auth    *handlers.Auth
-	sidecar *sidecar.Client
-	db      *db.Pool
+	cfg      config.Config
+	log      *slog.Logger
+	http     *http.Server
+	system   *handlers.System
+	auth     *handlers.Auth
+	decision *handlers.AdminDecision
+	sidecar  *sidecar.Client
+	db       *db.Pool
 }
 
 // Deps carries the process-level singletons the server wires into handlers.
 // Passing them as a struct keeps New's signature stable as later phases add
 // dependencies (session store, rate limiter, scheduler, ...).
 type Deps struct {
-	Sidecar *sidecar.Client
-	DB      *db.Pool
-	Auth    *handlers.Auth
+	Sidecar  *sidecar.Client
+	DB       *db.Pool
+	Auth     *handlers.Auth
+	Decision *handlers.AdminDecision
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 	s := &Server{
-		cfg:     cfg,
-		log:     log,
-		system:  handlers.NewSystem(),
-		auth:    deps.Auth,
-		sidecar: deps.Sidecar,
-		db:      deps.DB,
+		cfg:      cfg,
+		log:      log,
+		system:   handlers.NewSystem(),
+		auth:     deps.Auth,
+		decision: deps.Decision,
+		sidecar:  deps.Sidecar,
+		db:       deps.DB,
 	}
 	s.http = &http.Server{
 		Addr:         cfg.Addr,
@@ -58,6 +61,12 @@ func (s *Server) routes() http.Handler {
 
 	mux.HandleFunc("GET /api/healthz", s.healthz)
 	mux.HandleFunc("GET /api/readyz", s.readyz)
+
+	// Plain HTTP for one-click admin approval/decline — the token IS the
+	// auth. Called from the /admin/decision Next.js page server-side.
+	if s.decision != nil {
+		mux.HandleFunc("POST /api/admin/decision", s.decision.Handle)
+	}
 
 	mount := func(path string, h http.Handler) {
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))

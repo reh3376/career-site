@@ -1,0 +1,21 @@
+Hello {{.Name}},
+
+Your access request to Roger Henley's career portfolio was declined — admin did not recognize the credentials.
+
+If you believe this is in error, reply to Roger at {{.OwnerEmail}} and paste the block below into your reply so he can look it up quickly:
+
+--- copy from here ---
+
+Reference:    {{.ReferenceID}}
+Name:         {{.Name}}
+Email:        {{.Email}}
+Organization: {{.Organization}}
+Stated role:  {{.StatedRole}}
+Submitted at: {{.SubmittedAt}}
+Decision:     declined
+Review link:  {{.ReviewURL}}
+
+--- copy to here ---
+
+—
+career-site

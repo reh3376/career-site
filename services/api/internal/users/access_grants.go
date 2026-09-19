@@ -133,6 +133,42 @@ func (r *Repo) ExpiringSoon(ctx context.Context, within time.Duration) ([]*User,
 	return out, rows.Err()
 }
 
+// PendingOlderThan returns users still in `pending_approval` whose verify
+// token was used more than `age` ago. Used by the auto-decline job
+// (FR-AUTH-16). Joins email_tokens because users itself does not carry a
+// state-change timestamp today; the verify token's used_at is the moment
+// the user entered pending_approval.
+func (r *Repo) PendingOlderThan(ctx context.Context, age time.Duration) ([]*User, error) {
+	const q = `
+    SELECT ` + selectCols + `
+    FROM users u
+    WHERE u.status = 'pending_approval'
+      AND EXISTS (
+        SELECT 1 FROM email_tokens t
+        WHERE t.user_id = u.id
+          AND t.purpose = 'verify'
+          AND t.used_at IS NOT NULL
+          AND t.used_at < now() - $1::interval
+      )
+  `
+	// selectCols columns are 'u.'-prefixed by virtue of the FROM alias.
+	rows, err := r.pool.Query(ctx, q, age.String())
+	if err != nil {
+		return nil, fmt.Errorf("query pending stale: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
 // Expired returns users whose expires_at has passed but who are still
 // marked `active`. Used by the hard-cut job.
 func (r *Repo) Expired(ctx context.Context) ([]*User, error) {

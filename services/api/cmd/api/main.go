@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -74,27 +75,48 @@ func main() {
 		log.Info("HIBP pwned-password check enabled")
 	}
 
+	// Decision-token secret. Prod supplies a stable value in
+	// DECISION_TOKEN_SECRET so existing links keep working across restarts;
+	// dev boots with a random one and warns.
+	if len(cfg.DecisionTokenSecret) == 0 {
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			log.Error("generate decision-token secret failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		cfg.DecisionTokenSecret = buf
+		log.Warn("DECISION_TOKEN_SECRET not set — generated a random one; existing email links will not survive a restart")
+	}
+
 	userRepo := users.New(pool.Pool)
 	authHandler := handlers.NewAuth(log, userRepo, mailer, pwned, handlers.AuthConfig{
-		WebBaseURL:        cfg.WebBaseURL,
-		OwnerContactEmail: cfg.OwnerContactEmail,
-		MailFrom:          cfg.MailFrom,
-		ConsentVersion:    cfg.ConsentVersion,
+		WebBaseURL:          cfg.WebBaseURL,
+		OwnerContactEmail:   cfg.OwnerContactEmail,
+		MailFrom:            cfg.MailFrom,
+		ConsentVersion:      cfg.ConsentVersion,
+		DecisionTokenTTL:    cfg.DecisionTokenTTL,
+		DecisionTokenSecret: cfg.DecisionTokenSecret,
 	})
+	decisionHandler := handlers.NewAdminDecision(
+		log, userRepo, mailer, cfg.DecisionTokenSecret,
+		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
+	)
 
 	srv := server.New(cfg, log, server.Deps{
-		Sidecar: sc,
-		DB:      pool,
-		Auth:    authHandler,
+		Sidecar:  sc,
+		DB:       pool,
+		Auth:     authHandler,
+		Decision: decisionHandler,
 	})
 
-	// Expiry jobs run in-process; interval intentionally low for dev so a
-	// manually-set expires_at gets picked up quickly. Prod overrides via env
-	// once the tests confirm behaviour.
+	// Expiry + auto-decline jobs run in-process; interval configurable so
+	// tests can drive them quickly.
 	expiry := handlers.NewExpiryJobs(log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail)
+	autoDecline := handlers.NewAutoDeclineJobs(log, userRepo, decisionHandler, cfg.PendingApprovalTTL)
 	sched := scheduler.New(log,
 		scheduler.Job{Name: "expiry-warn", Interval: cfg.ExpirySchedulerInterval, Run: expiry.WarnJob},
 		scheduler.Job{Name: "expiry-cut", Interval: cfg.ExpirySchedulerInterval, Run: expiry.ExpireJob},
+		scheduler.Job{Name: "auto-decline", Interval: cfg.ExpirySchedulerInterval, Run: autoDecline.Run},
 	)
 	sched.Start(ctx)
 	defer sched.Stop()

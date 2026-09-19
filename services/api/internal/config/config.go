@@ -36,6 +36,16 @@ type Config struct {
 
 	// Scheduler
 	ExpirySchedulerInterval time.Duration
+	// PendingApprovalTTL bounds how long a verified user may sit in
+	// pending_approval before auto-decline (FR-AUTH-16). Default 7 days.
+	PendingApprovalTTL time.Duration
+
+	// One-click Accept/Decline signing key (FR-AUTH-15).
+	// Empty in dev auto-generates a random one at boot (with a warn log)
+	// so `docker compose up` works without extra config; production sets a
+	// stable value.
+	DecisionTokenSecret []byte
+	DecisionTokenTTL    time.Duration
 }
 
 func Load() (Config, error) {
@@ -64,6 +74,16 @@ func Load() (Config, error) {
 		PwnedCheckEnabled: os.Getenv("PWNED_CHECK_ENABLED") == "1",
 
 		ExpirySchedulerInterval: time.Duration(envIntOr("EXPIRY_INTERVAL_SECONDS", 3600)) * time.Second,
+		PendingApprovalTTL:      time.Duration(envIntOr("PENDING_APPROVAL_TTL_HOURS", 24*7)) * time.Hour,
+
+		DecisionTokenTTL: time.Duration(envIntOr("DECISION_TOKEN_TTL_HOURS", 24*7)) * time.Hour,
+	}
+	if secretHex := os.Getenv("DECISION_TOKEN_SECRET"); secretHex != "" {
+		s, err := hexDecode(secretHex)
+		if err != nil {
+			return Config{}, fmt.Errorf("DECISION_TOKEN_SECRET: %w", err)
+		}
+		cfg.DecisionTokenSecret = s
 	}
 	if v := os.Getenv("API_READ_TIMEOUT_SECONDS"); v != "" {
 		n, err := strconv.Atoi(v)
@@ -96,4 +116,33 @@ func envIntOr(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func hexDecode(s string) ([]byte, error) {
+	b := make([]byte, len(s)/2)
+	for i := 0; i < len(s)/2; i++ {
+		var hi, lo byte
+		if err := hexNibble(s[2*i], &hi); err != nil {
+			return nil, err
+		}
+		if err := hexNibble(s[2*i+1], &lo); err != nil {
+			return nil, err
+		}
+		b[i] = hi<<4 | lo
+	}
+	return b, nil
+}
+
+func hexNibble(c byte, out *byte) error {
+	switch {
+	case c >= '0' && c <= '9':
+		*out = c - '0'
+	case c >= 'a' && c <= 'f':
+		*out = c - 'a' + 10
+	case c >= 'A' && c <= 'F':
+		*out = c - 'A' + 10
+	default:
+		return fmt.Errorf("invalid hex character %q", c)
+	}
+	return nil
 }

@@ -137,3 +137,53 @@ func formatExpiry(u *users.User) string {
 	}
 	return u.ExpiresAt.UTC().Format("Mon, 02 Jan 2006 15:04 UTC")
 }
+
+// AutoDeclineJobs bundles the FR-AUTH-16 auto-decline path: any user still
+// pending_approval whose verify email was used more than PendingTTL ago
+// gets flipped to `declined` with a `scheduler` audit trail, and receives
+// the auto-declined notice.
+type AutoDeclineJobs struct {
+	log        *slog.Logger
+	users      *users.Repo
+	decision   *AdminDecision
+	pendingTTL time.Duration
+}
+
+func NewAutoDeclineJobs(log *slog.Logger, repo *users.Repo, decision *AdminDecision, pendingTTL time.Duration) *AutoDeclineJobs {
+	if pendingTTL == 0 {
+		pendingTTL = 7 * 24 * time.Hour
+	}
+	return &AutoDeclineJobs{
+		log:        log,
+		users:      repo,
+		decision:   decision,
+		pendingTTL: pendingTTL,
+	}
+}
+
+func (j *AutoDeclineJobs) Run(ctx context.Context) error {
+	list, err := j.users.PendingOlderThan(ctx, j.pendingTTL)
+	if err != nil {
+		return err
+	}
+	for _, u := range list {
+		if err := j.users.SetStatus(ctx, u.ID, users.StatusDeclined); err != nil {
+			j.log.Warn("auto-decline flip failed",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+			continue
+		}
+		if err := j.users.RecordApprovalDecision(ctx, users.ApprovalDecision{
+			UserID:     u.ID,
+			Decision:   "auto_decline",
+			DecidedVia: "scheduler",
+		}); err != nil {
+			j.log.Warn("auto-decline record failed",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		}
+		if err := j.decision.SendUserAutoDeclined(ctx, u); err != nil {
+			j.log.Warn("auto-decline email failed",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		}
+	}
+	return nil
+}
