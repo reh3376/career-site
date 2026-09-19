@@ -1,7 +1,15 @@
-# pnpm 12's home for build-script approvals. unrs-resolver is a Rust-based
-# module resolver pulled in transitively by eslint-config-next; its postinstall
-# compiles a native binary. Approved because the resolver falls back to a JS
-# implementation when the binary isn't available, and the package is widely
-# used.
+# pnpm 12's home for build-script approvals and dep overrides.
+
+# unrs-resolver is a Rust-based module resolver pulled in transitively by
+# eslint-config-next; its postinstall compiles a native binary. Approved
+# because the resolver falls back to a JS implementation when the binary
+# isn't available, and the package is widely used.
 allowBuilds:
   unrs-resolver: true
+
+# Force a fixed version of postcss everywhere in the graph — the version
+# Next 15.5.x pulls transitively (<=8.5.17) is affected by
+# GHSA-6g55-p6wh-862q and GHSA-Xxxx (source-map path-traversal / read).
+# Drop this override once Next.js bumps its own pin past 8.5.18.
+overrides:
+  postcss: ">=8.5.18"
