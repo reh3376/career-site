@@ -16,6 +16,7 @@ type DecisionResult =
   | { status: "approved"; email?: string; message?: string }
   | { status: "declined"; email?: string; message?: string }
   | { status: "already_decided"; email?: string; message?: string }
+  | { status: "user_gone"; message?: string }
   | { status: "error"; detail?: string; message?: string };
 
 async function processToken(token: string): Promise<DecisionResult> {
@@ -105,6 +106,25 @@ export default async function DecisionPage({
           <p className="mt-6 text-sm text-ink-3">
             To change it, open the review console (coming in Task 5).
           </p>
+        </Wrapper>
+      );
+    case "user_gone":
+      return (
+        <Wrapper>
+          <Badge color="amber">Request gone</Badge>
+          <h1 className="mt-3 mb-4 text-3xl font-semibold text-ink">This request no longer exists</h1>
+          <p className="text-ink-2">
+            {result.message ?? "The applicant's account was removed."}
+          </p>
+          <p className="mt-6 text-sm text-ink-3">
+            If you approved them earlier, no action is needed. If not, they can register again.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex text-sm text-accent underline underline-offset-2 hover:text-accent-hover"
+          >
+            ← Back to home
+          </Link>
         </Wrapper>
       );
     case "error":

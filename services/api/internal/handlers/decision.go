@@ -90,8 +90,15 @@ func (h *AdminDecision) Handle(w http.ResponseWriter, r *http.Request) {
 
 	u, err := h.users.GetByID(r.Context(), tok.UserID)
 	if err != nil {
+		// The HMAC verified, so this token was issued for a real user at
+		// send time — the row is just gone now. Almost always means an
+		// admin (or a data-retention job) deleted the applicant after the
+		// approval email went out. Distinct status so the frontend can
+		// render a soft "no action needed" message instead of a scary
+		// "something went wrong".
 		writeJSON(w, http.StatusNotFound, decisionResponse{
-			Status: "error", Detail: "user not found",
+			Status:  "user_gone",
+			Message: "This request no longer exists — the applicant's account was removed.",
 		})
 		return
 	}
