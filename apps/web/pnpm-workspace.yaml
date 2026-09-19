@@ -1,0 +1,7 @@
+# pnpm 12's home for build-script approvals. unrs-resolver is a Rust-based
+# module resolver pulled in transitively by eslint-config-next; its postinstall
+# compiles a native binary. Approved because the resolver falls back to a JS
+# implementation when the binary isn't available, and the package is widely
+# used.
+allowBuilds:
+  unrs-resolver: true

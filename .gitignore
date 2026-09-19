@@ -10,6 +10,11 @@ __pycache__/
 *.pyc
 .uv-cache/
 
+# framework build artifacts
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
 # local configuration and secrets
 .env
 .env.*

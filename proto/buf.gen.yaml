@@ -20,11 +20,14 @@ plugins:
     out: services/api/gen
     opt: paths=source_relative
   # TypeScript: message types + service descriptors for connect-es (apps/web).
+  # include_imports also emits apps/web/src/gen/buf/validate/validate_pb.ts so
+  # the generated career/v1 files can resolve their `buf.validate` imports.
   - remote: buf.build/bufbuild/es
     out: apps/web/src/gen
     opt:
       - target=ts
       - import_extension=none
+    include_imports: true
   # Python: message types (+ stubs) for evaluation tooling in the sidecar.
   # include_imports also emits buf/validate/validate_pb2.py so the sidecar
   # and scripts/gen_api_docs.py can read validation rules from descriptors.
