@@ -1,0 +1,64 @@
+name: Bug report
+description: Something is broken.
+title: "bug: <one-line summary>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Not a bug?** Feature idea → use the *Feature request* template. Broader question → *Question*. **Security issue → do NOT open a public issue; see [SECURITY.md](../SECURITY.md).**
+  - type: input
+    id: version
+    attributes:
+      label: Site or SHA
+      description: "The live site's build SHA (footer, later), or the commit you're reproducing against."
+      placeholder: "e.g. https://rogerhenley.dev running 106e390406c5 — or main"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Registration / verify / login
+        - Admin approval flow
+        - Content / landing
+        - Ask Roger
+        - API / infrastructure
+        - Deploy / CI
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Actual behavior — with error messages if any.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: |
+        Minimal steps. If reproducible from `curl` or a specific URL, paste the exact commands / URLs.
+      placeholder: |
+        1. Sign in as X.
+        2. Navigate to /foo.
+        3. Click Bar.
+        4. Observe: <what>
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser (name + version), OS, anything relevant.
+      placeholder: "Chrome 140 / macOS 15"

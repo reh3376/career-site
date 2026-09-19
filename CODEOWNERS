@@ -1,0 +1,4 @@
+# Every PR against main auto-requests review from the owner.
+# GitHub matches paths bottom-up; the last rule wins.
+
+*                                       @reh3376

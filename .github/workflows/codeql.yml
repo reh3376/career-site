@@ -1,0 +1,62 @@
+# CodeQL — GitHub's SAST for Go, TypeScript, and Python.
+# Runs weekly + on PR against main + on push to main.
+#
+# Findings surface at Repository -> Security -> Code scanning alerts.
+
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1" # 06:23 UTC every Monday
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: services/api/go.sum
+
+      - name: init codeql
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - if: matrix.language == 'go'
+        name: build go
+        working-directory: services/api
+        run: go build ./...
+
+      - name: analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
