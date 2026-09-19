@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose new functionality.
+title: "feat: <one-line summary>"
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Substantive features almost always require an FSD amendment before implementation — see `AGENTS.md` "docs discipline". This template is the front door to that conversation.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Who's the user? What can they not do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Rough shape. Endpoints, UI, data model — as much or as little as you know.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. If you've ruled anything out, note why.
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which delivery phase?
+      description: See FSD §12. If unsure, leave blank.
+      options:
+        - Phase 2 (Content core)
+        - Phase 3 (Personalization + history)
+        - Phase 4 (Ask Roger)
+        - Phase 5 (Admin console)
+        - Phase 6 (Hardening + launch)
+        - Phase 7 (Post-launch backlog)
+        - Not sure
+    validations:
+      required: false

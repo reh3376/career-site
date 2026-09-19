@@ -2,7 +2,9 @@
 
 Roger Henley's interactive career portfolio: a gated, personalized site with a first-person conversational assistant ("Ask Roger") grounded in the owner's own writing, résumés, and repositories.
 
-> **Status:** Early scaffolding. The API contracts and generated code are in place; consumer builds (Go API, Next.js app, Python sidecar) have not been scaffolded yet. See [`docs/FSD.md`](docs/FSD.md) §12 for the delivery roadmap.
+**Live:** https://rogerhenley.dev/ · **Repo:** [github.com/reh3376/career-site](https://github.com/reh3376/career-site) · **Spec:** [`docs/FSD.md`](docs/FSD.md) · **Deploy:** [`deploy/README.md`](deploy/README.md)
+
+> **Status:** Phase 2. Public landing + approval-gated registration + email verify + admin one-click Accept/Decline + sign-in + gated member home are live in production. Ask Roger, personalized home, content sections, and the admin console are still ahead — see [FSD §12](docs/FSD.md#12-delivery-roadmap).
 
 ## Architecture
 
@@ -80,6 +82,11 @@ Full rules: [`proto/README.md`](proto/README.md).
 - [Endpoint index](docs/api/endpoints.json) — machine-readable, feeds tooling
 - [Architecture Decision Records](docs/adr/README.md)
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the branch workflow, docs discipline, and how to request repo-collaborator access. Bugs and features go through GitHub Issues (templates at `.github/ISSUE_TEMPLATE/`). Security issues follow [`SECURITY.md`](SECURITY.md) — private disclosure via GitHub Security Advisories, not public issues.
+
 ## License
 
-TBD — private working repository at present.
+- **Code:** MIT — see [`LICENSE`](LICENSE).
+- **Content** (writing, images, résumés, Ask Roger persona and answers): © Roger E. Henley II, all rights reserved with non-commercial quotation permitted. See [`LICENSE-CONTENT.md`](LICENSE-CONTENT.md).

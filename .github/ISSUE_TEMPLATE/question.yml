@@ -1,0 +1,17 @@
+name: Question
+description: You're not sure something is a bug or a feature — ask first.
+title: "question: <one-line summary>"
+labels: ["question", "triage"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What's the question?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What have you already tried or read?
+      description: |
+        Optional but helpful. Save us duplicated effort — link to any FSD sections, ADRs, or code paths you looked at.

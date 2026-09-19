@@ -1,0 +1,80 @@
+# Dependabot config — weekly cadence, grouped by ecosystem so we get one
+# PR per language stack per week instead of a dozen tiny ones.
+# Security updates always ship immediately regardless of the interval.
+
+version: 2
+
+updates:
+  # Go modules (API)
+  - package-ecosystem: gomod
+    directory: /services/api
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      go-runtime:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(api)"
+
+  # Python (sidecar) — uv tracks pyproject.toml
+  - package-ecosystem: pip
+    directory: /services/sidecar
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      python-runtime:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(sidecar)"
+
+  # npm (web)
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      web-runtime:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(web)"
+
+  # GitHub Actions used by our workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    groups:
+      actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "deps(ci)"
+
+  # Base images for the three service Dockerfiles
+  - package-ecosystem: docker
+    directory: /services/api
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: "deps(api)" }
+  - package-ecosystem: docker
+    directory: /services/sidecar
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: "deps(sidecar)" }
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: "deps(web)" }

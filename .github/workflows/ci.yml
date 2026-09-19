@@ -68,8 +68,16 @@ jobs:
       - name: buf lint
         run: BUF=$(which buf) make lint-proto
 
+      # buf breaking compares against main. On PRs the default checkout only
+      # has the merge ref, and on feature-branch pushes main isn't in the
+      # working repo either — so we fetch it explicitly. Skip only when the
+      # push is to main itself (nothing to compare against).
+      - name: fetch main for buf breaking
+        if: github.ref != 'refs/heads/main'
+        run: git fetch --no-tags --depth=1 origin main:main
+
       - name: buf breaking (against main)
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         run: BUF=$(which buf) make breaking
 
       - name: check-gen (regenerate and diff)
