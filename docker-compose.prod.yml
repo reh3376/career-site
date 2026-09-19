@@ -1,0 +1,84 @@
+# Production overrides applied on top of docker-compose.yml.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from dev:
+#   - Caddy exposes 80 + 443 with the production Caddyfile (TLS,
+#     security headers per FSD §8.9).
+#   - No host ports for mailpit, minio, postgres — they are only reachable
+#     on the internal `app` network. Dev tooling stays out of the public
+#     internet.
+#   - The API uses Resend for email (real deliverability), COOKIE_SECURE=1,
+#     PWNED_CHECK_ENABLED=1, and a stable DECISION_TOKEN_SECRET.
+#   - Every image tag is a specific version (set via .env.prod) rather
+#     than :latest, so `docker compose pull` is deterministic.
+#   - Backups + monitoring are follow-ups; the compose file is deliberately
+#     minimal so the first deploy is auditable.
+
+name: career-site
+
+services:
+  caddy:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes: !override
+      - ./deploy/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - SITE_DOMAIN=${SITE_DOMAIN}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-web:${IMAGE_TAG:-latest}
+    build: !override [] # do not rebuild from source in prod
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_DISABLED: "1"
+      API_URL: http://api:8080
+      NEXT_PUBLIC_API_URL: https://${SITE_DOMAIN}
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
+    build: !override []
+    pull_policy: always
+    environment:
+      API_ADDR: :8080
+      API_ENV: production
+      SIDECAR_ADDR: sidecar:50051
+      DATABASE_URL: postgres://career:${POSTGRES_PASSWORD}@postgres:5432/career?sslmode=disable
+      WEB_BASE_URL: https://${SITE_DOMAIN}
+      OWNER_CONTACT_EMAIL: ${OWNER_CONTACT_EMAIL}
+      MAIL_FROM: ${MAIL_FROM}
+      EMAIL_PROVIDER: resend
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      DECISION_TOKEN_SECRET: ${DECISION_TOKEN_SECRET}
+      COOKIE_SECURE: "1"
+      PWNED_CHECK_ENABLED: "1"
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      CAREER_SITE_ADMIN_PW: ${CAREER_SITE_ADMIN_PW}
+
+  sidecar:
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
+    build: !override []
+    pull_policy: always
+
+  postgres:
+    ports: !override [] # no host port in prod
+    environment:
+      POSTGRES_USER: career
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: career
+
+  mailpit:
+    profiles: ["disabled"] # not in the prod stack
+
+  minio:
+    ports: !override [] # no host ports in prod — bucket is internal-only
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}

@@ -147,6 +147,30 @@ func (r *Repo) GetByID(ctx context.Context, id int64) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx, "SELECT "+selectCols+" FROM users WHERE id = $1", id))
 }
 
+// EnsureAdmin upserts a row for the given email in role=admin,
+// status=active. On insert, the passwordHash is stored as-is. On subsequent
+// boots, the hash is refreshed when it differs so a rotated password takes
+// effect after a redeploy. Every other field is left alone so notes and
+// activity on the admin's own row survive re-runs.
+func (r *Repo) EnsureAdmin(ctx context.Context, email, name, passwordHash string) error {
+	const q = `
+    INSERT INTO users (email, password_hash, name, role, status, consent_version, consent_at)
+    VALUES ($1, $2, $3, 'admin', 'active', 'bootstrap', now())
+    ON CONFLICT (email) DO UPDATE
+      SET password_hash = EXCLUDED.password_hash,
+          role          = 'admin',
+          status        = 'active'
+      WHERE users.password_hash IS DISTINCT FROM EXCLUDED.password_hash
+         OR users.role          <> 'admin'
+         OR users.status        <> 'active'
+  `
+	_, err := r.pool.Exec(ctx, q, email, passwordHash, name)
+	if err != nil {
+		return fmt.Errorf("ensure admin: %w", err)
+	}
+	return nil
+}
+
 // PasswordHash returns the stored Argon2 PHC-encoded hash for a user, or
 // an empty string when the user has no password (OAuth-only account).
 // Used only by the Login handler; never exposed outside the package.

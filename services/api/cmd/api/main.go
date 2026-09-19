@@ -89,6 +89,23 @@ func main() {
 	}
 
 	userRepo := users.New(pool.Pool)
+
+	// Admin bootstrap. When ADMIN_USERNAME + CAREER_SITE_ADMIN_PW are set,
+	// ensure the row exists in role=admin, status=active so Roger can sign
+	// in on the very first deploy. See users.EnsureAdmin for the upsert.
+	if cfg.AdminEmail != "" && cfg.AdminPassword != "" {
+		hash, err := auth.HashPassword(cfg.AdminPassword)
+		if err != nil {
+			log.Error("hash admin password failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		if err := userRepo.EnsureAdmin(ctx, cfg.AdminEmail, "Roger Henley", hash); err != nil {
+			log.Error("ensure admin failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		log.Info("admin bootstrap ok", slog.String("email", cfg.AdminEmail))
+	}
+
 	authHandler := handlers.NewAuth(log, userRepo, mailer, pwned, handlers.AuthConfig{
 		WebBaseURL:          cfg.WebBaseURL,
 		OwnerContactEmail:   cfg.OwnerContactEmail,

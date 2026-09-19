@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -50,6 +51,12 @@ type Config struct {
 	// Sessions (FR-AUTH-08)
 	SessionTTL   time.Duration
 	CookieSecure bool
+
+	// Admin bootstrap. When both are set the API ensures a user with
+	// AdminEmail exists in role=admin, status=active on every boot,
+	// re-hashing AdminPassword when it differs. Empty in dev; set in prod.
+	AdminEmail    string
+	AdminPassword string
 }
 
 func Load() (Config, error) {
@@ -84,6 +91,9 @@ func Load() (Config, error) {
 
 		SessionTTL:   time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
 		CookieSecure: os.Getenv("COOKIE_SECURE") == "1",
+
+		AdminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_USERNAME"))),
+		AdminPassword: os.Getenv("CAREER_SITE_ADMIN_PW"),
 	}
 	if secretHex := os.Getenv("DECISION_TOKEN_SECRET"); secretHex != "" {
 		s, err := hexDecode(secretHex)

@@ -1,0 +1,39 @@
+# Production Caddyfile — replaces deploy/caddy/Caddyfile in compose overrides.
+# Caddy auto-provisions a Let's Encrypt cert for the domain listed here and
+# renews it in the background. HSTS + security headers per FSD §8.9.
+#
+# Override the domain via the ${SITE_DOMAIN} env var loaded from .env.prod
+# (Caddy reads env at start; docker-compose passes it in).
+
+{
+    email {$LETSENCRYPT_EMAIL}
+    # Uncomment to test the ACME staging endpoint instead of production
+    # certificates while the DNS is still propagating:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$SITE_DOMAIN} {
+    encode zstd gzip
+
+    # Security headers — FSD NFR-SEC-02.
+    header {
+        # HSTS: two years, include subdomains, eligible for preload lists.
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        X-Frame-Options "DENY"
+        -Server
+    }
+
+    # /api/* -> Go API. Same-origin, so session cookies stay first-party
+    # and no CORS is needed.
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    # Everything else -> Next.js.
+    handle {
+        reverse_proxy web:3000
+    }
+}
