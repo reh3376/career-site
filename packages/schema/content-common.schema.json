@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://career-site.local/schema/content-common.schema.json",
+  "title": "content-common",
+  "description": "Shared frontmatter every content item under content/** carries. Per-type schemas extend this via allOf. See FSD FR-CNT-16 and FR-CNT-17.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "slug",
+    "type",
+    "title",
+    "summary",
+    "visibility",
+    "chatbot_include"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier, never renumbered.",
+      "pattern": "^[a-z0-9-]{3,64}$"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL segment; kebab-case; unique within its type.",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "role",
+        "project",
+        "article",
+        "presentation",
+        "skill",
+        "credential",
+        "photo",
+        "resume",
+        "qa"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600,
+      "description": "One-paragraph summary used in listings and by the assistant."
+    },
+    "published": {
+      "type": "string",
+      "format": "date"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date"
+    },
+    "tracks": {
+      "type": "array",
+      "description": "Weighted association with tracks defined in content/tracks.yaml.",
+      "items": {
+        "type": "object",
+        "required": ["id", "weight"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]{2,64}$" },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+      "uniqueItems": true,
+      "maxItems": 32
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["landing", "member"],
+      "description": "landing = renderable on the public landing page; member = requires a verified, approved session."
+    },
+    "chatbot_include": {
+      "type": "boolean",
+      "description": "When true, Ask Roger may retrieve this item as context (subject to member visibility)."
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "path"],
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "type": "string", "enum": ["image", "pdf", "video", "audio"] },
+          "path": { "type": "string" },
+          "alt": { "type": "string" }
+        }
+      }
+    },
+    "related": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "IDs of related content items."
+    }
+  }
+}

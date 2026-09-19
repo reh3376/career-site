@@ -1,0 +1,56 @@
+# Pre-commit hooks for career-site. Install with `pre-commit install`; run
+# manually with `pre-commit run --all-files`. Every hook here is also
+# enforced by CI, so the local run just gives faster feedback.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: '^(services/api/gen/|apps/web/src/gen/|services/sidecar/src/(career|buf)/)'
+      - id: trailing-whitespace
+        exclude: '^(services/api/gen/|apps/web/src/gen/|services/sidecar/src/(career|buf)/)'
+      - id: mixed-line-ending
+      - id: detect-private-key
+
+  # Go: gofmt drift + `go vet ./...`
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        files: '\.go$'
+        exclude: '^services/api/gen/'
+      - id: go-vet-mod
+        files: 'services/api/.*\.go$'
+
+  # Python (sidecar): ruff check + format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        files: '^services/sidecar/'
+        exclude: '^services/sidecar/src/(career|buf)/'
+      - id: ruff-format
+        files: '^services/sidecar/'
+        exclude: '^services/sidecar/src/(career|buf)/'
+
+  # Protobuf: buf lint + format (skips generated code by default)
+  - repo: https://github.com/bufbuild/buf
+    rev: v1.66.1
+    hooks:
+      - id: buf-lint
+        args: [proto]
+      - id: buf-format
+        args: [-w]
+
+  # Secret scanning — belt-and-suspenders vs. the CI gitleaks job.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
