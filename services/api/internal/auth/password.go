@@ -1,6 +1,7 @@
 // Package auth handles password hashing, token minting, and breached-password
 // checks. Parameters follow OWASP guidance for Argon2id as of 2024:
-//   time = 2, memory = 64 MiB, threads = 1, salt = 16 B, key = 32 B.
+//
+//	time = 2, memory = 64 MiB, threads = 1, salt = 16 B, key = 32 B.
 package auth
 
 import (

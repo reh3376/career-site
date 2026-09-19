@@ -68,4 +68,3 @@ func Migrate(ctx context.Context, dsn string) error {
 func (p *Pool) Ping(ctx context.Context) error {
 	return p.Pool.Ping(ctx)
 }
-

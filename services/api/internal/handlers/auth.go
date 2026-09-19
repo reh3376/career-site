@@ -26,11 +26,11 @@ import (
 type Auth struct {
 	careerv1connect.UnimplementedAuthServiceHandler
 
-	log       *slog.Logger
-	users     *users.Repo
-	email     email.Provider
-	pwned     auth.PwnedChecker
-	cfg       AuthConfig
+	log   *slog.Logger
+	users *users.Repo
+	email email.Provider
+	pwned auth.PwnedChecker
+	cfg   AuthConfig
 }
 
 type AuthConfig struct {
@@ -446,4 +446,3 @@ func ClientIP(req connect.AnyRequest) string {
 	}
 	return req.Peer().Addr
 }
-

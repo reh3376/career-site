@@ -4366,6 +4366,8 @@ Account status.
 | `MEMBER_STATUS_ACTIVE` | 2 | Verified; full member access. |
 | `MEMBER_STATUS_PENDING_APPROVAL` | 3 | Verified but waiting for owner approval (approval mode only). |
 | `MEMBER_STATUS_DISABLED` | 4 | Disabled by the owner. |
+| `MEMBER_STATUS_DECLINED` | 5 | Owner declined the access request (D-02, ADR-0002). |
+| `MEMBER_STATUS_EXPIRED` | 6 | Access period has ended (users.expires_at in the past; FR-AUTH-18, ADR-0020). |
 
 ### MemberRole
 

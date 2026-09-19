@@ -57,9 +57,9 @@ type User struct {
 type EmailTokenPurpose string
 
 const (
-	PurposeVerify       EmailTokenPurpose = "verify"
-	PurposeReset        EmailTokenPurpose = "reset"
-	PurposeChangeEmail  EmailTokenPurpose = "change_email"
+	PurposeVerify      EmailTokenPurpose = "verify"
+	PurposeReset       EmailTokenPurpose = "reset"
+	PurposeChangeEmail EmailTokenPurpose = "change_email"
 )
 
 type EmailToken struct {
