@@ -147,6 +147,20 @@ func (r *Repo) GetByID(ctx context.Context, id int64) (*User, error) {
 	return scanUser(r.pool.QueryRow(ctx, "SELECT "+selectCols+" FROM users WHERE id = $1", id))
 }
 
+// PasswordHash returns the stored Argon2 PHC-encoded hash for a user, or
+// an empty string when the user has no password (OAuth-only account).
+// Used only by the Login handler; never exposed outside the package.
+func (r *Repo) PasswordHash(ctx context.Context, id int64) string {
+	var hash *string
+	if err := r.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, id).Scan(&hash); err != nil {
+		return ""
+	}
+	if hash == nil {
+		return ""
+	}
+	return *hash
+}
+
 func (r *Repo) SetStatus(ctx context.Context, id int64, status Status) error {
 	const q = `UPDATE users SET status = $2 WHERE id = $1`
 	tag, err := r.pool.Exec(ctx, q, id, string(status))

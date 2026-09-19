@@ -46,6 +46,10 @@ type Config struct {
 	// stable value.
 	DecisionTokenSecret []byte
 	DecisionTokenTTL    time.Duration
+
+	// Sessions (FR-AUTH-08)
+	SessionTTL   time.Duration
+	CookieSecure bool
 }
 
 func Load() (Config, error) {
@@ -77,6 +81,9 @@ func Load() (Config, error) {
 		PendingApprovalTTL:      time.Duration(envIntOr("PENDING_APPROVAL_TTL_HOURS", 24*7)) * time.Hour,
 
 		DecisionTokenTTL: time.Duration(envIntOr("DECISION_TOKEN_TTL_HOURS", 24*7)) * time.Hour,
+
+		SessionTTL:   time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
+		CookieSecure: os.Getenv("COOKIE_SECURE") == "1",
 	}
 	if secretHex := os.Getenv("DECISION_TOKEN_SECRET"); secretHex != "" {
 		s, err := hexDecode(secretHex)

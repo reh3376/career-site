@@ -1,8 +1,18 @@
 Hello {{.Name}},
 
-Your access to Roger Henley's career portfolio has ended as of {{.ExpiresAt}}.
+Your access to Roger Henley's career portfolio ended on {{.ExpiresAt}}.
 
-If you still want in, reply to this email or reach Roger at {{.OwnerEmail}} and he'll re-approve you. If you're done, no action needed — this is a courtesy notice.
+Want it extended? Email Roger directly at {{.OwnerEmail}} — one click:
+
+    {{.ExtensionMailto}}
+
+Or copy this into a fresh email:
+
+    To:      {{.OwnerEmail}}
+    Subject: Extension request — {{.Name}}
+    Body:    Hi Roger, I'd like to extend my career-site access.
+
+No action needed if you're done — this is a courtesy notice.
 
 —
 career-site

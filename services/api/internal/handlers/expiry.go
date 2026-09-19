@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/email"
@@ -97,9 +99,10 @@ func (j *ExpiryJobs) ExpireJob(ctx context.Context) error {
 
 func (j *ExpiryJobs) sendEnding(ctx context.Context, u *users.User) error {
 	text, html, err := email.AccessEndingSoonTemplate.Render(map[string]any{
-		"Name":       u.Name,
-		"ExpiresAt":  formatExpiry(u),
-		"OwnerEmail": j.ownerAddr,
+		"Name":            u.Name,
+		"ExpiresAt":       formatExpiry(u),
+		"OwnerEmail":      j.ownerAddr,
+		"ExtensionMailto": extensionMailto(u, j.ownerAddr, "Extension request"),
 	})
 	if err != nil {
 		return err
@@ -115,9 +118,10 @@ func (j *ExpiryJobs) sendEnding(ctx context.Context, u *users.User) error {
 
 func (j *ExpiryJobs) sendEnded(ctx context.Context, u *users.User) error {
 	text, html, err := email.AccessEndedTemplate.Render(map[string]any{
-		"Name":       u.Name,
-		"ExpiresAt":  formatExpiry(u),
-		"OwnerEmail": j.ownerAddr,
+		"Name":            u.Name,
+		"ExpiresAt":       formatExpiry(u),
+		"OwnerEmail":      j.ownerAddr,
+		"ExtensionMailto": extensionMailto(u, j.ownerAddr, "Extension request"),
 	})
 	if err != nil {
 		return err
@@ -129,6 +133,18 @@ func (j *ExpiryJobs) sendEnded(ctx context.Context, u *users.User) error {
 		TextBody: text,
 		HTMLBody: html,
 	})
+}
+
+// extensionMailto builds a mailto: URL that opens the user's mail client
+// with Roger's address pre-filled plus a subject that identifies who's
+// asking. Body is left generic; the user can add context.
+func extensionMailto(u *users.User, ownerAddr, subjectPrefix string) string {
+	subject := url.QueryEscape(fmt.Sprintf("%s — %s", subjectPrefix, u.Name))
+	body := url.QueryEscape(fmt.Sprintf(
+		"Hi Roger,\n\nI'd like to request an extension of my career-site access (%s).\n\nThanks,\n%s",
+		u.Email, u.Name,
+	))
+	return fmt.Sprintf("mailto:%s?subject=%s&body=%s", ownerAddr, subject, body)
 }
 
 func formatExpiry(u *users.User) string {

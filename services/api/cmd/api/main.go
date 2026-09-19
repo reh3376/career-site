@@ -96,7 +96,10 @@ func main() {
 		ConsentVersion:      cfg.ConsentVersion,
 		DecisionTokenTTL:    cfg.DecisionTokenTTL,
 		DecisionTokenSecret: cfg.DecisionTokenSecret,
+		SessionTTL:          cfg.SessionTTL,
+		CookieSecure:        cfg.CookieSecure,
 	})
+	memberHandler := handlers.NewMember(authHandler)
 	decisionHandler := handlers.NewAdminDecision(
 		log, userRepo, mailer, cfg.DecisionTokenSecret,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
@@ -106,6 +109,7 @@ func main() {
 		Sidecar:  sc,
 		DB:       pool,
 		Auth:     authHandler,
+		Member:   memberHandler,
 		Decision: decisionHandler,
 	})
 

@@ -50,6 +50,12 @@ type AuthConfig struct {
 	// If true, the current consent version required at registration. Empty
 	// means "accept any nonzero version" — safe for dev; production sets it.
 	ConsentVersion string
+
+	// Sessions
+	SessionTTL time.Duration // FR-AUTH-08: 30-day absolute lifetime.
+	// CookieSecure toggles the Secure attribute on the session cookie. Off
+	// in local dev (http://localhost/), on in production behind TLS.
+	CookieSecure bool
 }
 
 func NewAuth(
@@ -64,6 +70,9 @@ func NewAuth(
 	}
 	if cfg.DecisionTokenTTL == 0 {
 		cfg.DecisionTokenTTL = 7 * 24 * time.Hour
+	}
+	if cfg.SessionTTL == 0 {
+		cfg.SessionTTL = 30 * 24 * time.Hour
 	}
 	return &Auth{log: log, users: repo, email: mailer, pwned: pwned, cfg: cfg}
 }

@@ -22,6 +22,7 @@ type Server struct {
 	http     *http.Server
 	system   *handlers.System
 	auth     *handlers.Auth
+	member   *handlers.Member
 	decision *handlers.AdminDecision
 	sidecar  *sidecar.Client
 	db       *db.Pool
@@ -34,6 +35,7 @@ type Deps struct {
 	Sidecar  *sidecar.Client
 	DB       *db.Pool
 	Auth     *handlers.Auth
+	Member   *handlers.Member
 	Decision *handlers.AdminDecision
 }
 
@@ -43,6 +45,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		log:      log,
 		system:   handlers.NewSystem(),
 		auth:     deps.Auth,
+		member:   deps.Member,
 		decision: deps.Decision,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
@@ -78,6 +81,11 @@ func (s *Server) routes() http.Handler {
 	if s.auth != nil {
 		authPath, authHandler := careerv1connect.NewAuthServiceHandler(s.auth)
 		mount(authPath, authHandler)
+	}
+
+	if s.member != nil {
+		memberPath, memberHandler := careerv1connect.NewMemberServiceHandler(s.member)
+		mount(memberPath, memberHandler)
 	}
 
 	return withLogging(s.log, mux)
