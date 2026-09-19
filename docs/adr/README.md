@@ -4,6 +4,7 @@ One record per resolved decision from the FSD (`docs/FSD.md` §14). The file num
 
 | ADR | Decision | Status |
 |---|---|---|
+| [0002](0002-approval-gated-registration.md) | Approval-gated registration | Accepted 2026-09-19 |
 | [0004](0004-go-api-with-python-sidecar.md) | Go API with a Python sidecar | Accepted 2026-09-18 |
 | [0010](0010-repository-name-and-account.md) | Repository `reh3376/career-site` | Accepted 2026-09-18 |
 | [0017](0017-connectrpc-transport.md) | ConnectRPC between browser and API | Accepted 2026-09-18 |

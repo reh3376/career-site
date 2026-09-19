@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Document ID | CAREER-SITE-FSD-2026-001 |
-| Version | 0.3.2 — Draft for owner review |
-| Date | 2026-09-18 |
+| Version | 0.3.3 — Draft for owner review |
+| Date | 2026-09-19 |
 | Owner | Roger E. Henley II |
 | Prepared with | Claude (Anthropic), working from the owner's brief, master résumé, and published writing |
 | Status | **Draft** — not yet approved; open decisions listed in §14 |
@@ -22,6 +22,7 @@
 | 0.3.0 | 2026-09-18 | R. Henley / Claude | UxTS/FxTS governance-as-code adopted (new §10, NFR-GOV, FR-CNT-21); CI, testing, roadmap, risks revised; D-18 and D-19 added; §10–14 renumbered to §11–15 |
 | 0.3.1 | 2026-09-18 | R. Henley / Claude | Repository created (`reh3376/career-site`); references updated; D-10 repository name resolved |
 | 0.3.2 | 2026-09-18 | R. Henley / Claude | D-17 resolved (ConnectRPC); contracts authored in `proto/`; §8.5 regenerated from the contracts; generated-code layout updated; ADRs 0004, 0010, 0017 recorded |
+| 0.3.3 | 2026-09-19 | R. Henley / Claude | D-02 resolved: approval-gated registration is the default. FR-AUTH-03/04/14 amended; FR-AUTH-15/16 added; FR-ADM-10 promoted to Must; FR-NOTF-05 added; `users.status` gains `pending_approval`; `approval_decisions` table added; Phase 2 scope note; ADR-0002 recorded |
 
 ---
 
@@ -245,8 +246,8 @@ A site that acts like a well-briefed representative of the owner: it learns what
 |---|---|---|---|
 | FR-AUTH-01 | Visitors shall register with name, email, password, and optionally organization and stated role. | Must | Required fields validated server-side; duplicate email returns a generic "check your email" response (no account enumeration). |
 | FR-AUTH-02 | Passwords shall be at least 12 characters, checked against a breached-password list (k-anonymity range query), and stored with Argon2id. No composition rules. | Must | Follows NIST SP 800-63B; breached passwords rejected with a clear message. |
-| FR-AUTH-03 | Registration shall require email verification before any gated access. | Must | Single-use token valid 24 h, delivered as a link and a 6-digit code; unverified sessions see only the verification screen. |
-| FR-AUTH-04 | The site shall offer *Continue with LinkedIn* (OpenID Connect). | Should | Creates or links an account using the verified email from LinkedIn; pre-fills name and photo. Organization remains self-reported. |
+| FR-AUTH-03 | Registration shall require email verification. On successful verification the user enters state `pending_approval`; no session is issued and no gated content is served until an admin approves the account (FR-AUTH-14). | Must | Single-use token valid 24 h, delivered as a link and a 6-digit code; the verification screen for a `pending_approval` user displays a "your request is with the owner" message. |
+| FR-AUTH-04 | The site shall offer *Continue with LinkedIn* (OpenID Connect). | Should | Creates or links an account using the verified email from LinkedIn; pre-fills name and photo. Organization remains self-reported. A new account created via OIDC skips the email-verify step (the provider has verified the email) but still enters `pending_approval` and requires admin approval per FR-AUTH-14. |
 | FR-AUTH-05 | The site may offer *Continue with GitHub* and *Continue with Google*. | Could | Same linking rules as FR-AUTH-04. |
 | FR-AUTH-06 | The site may offer passkeys (WebAuthn) as an additional sign-in method. | Could | Post-launch. |
 | FR-AUTH-07 | Members shall be able to reset a forgotten password by email. | Must | Single-use link valid 1 h; response identical whether or not the email exists. |
@@ -256,7 +257,9 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-AUTH-11 | Members shall be able to change email (re-verification required), change password (current password required), and delete their account. | Must | Deletion removes personal data within 30 days; conversations and activity are deleted or irreversibly anonymized (D-13). |
 | FR-AUTH-12 | The admin role shall be granted only to allow-listed emails and shall require TOTP MFA at sign-in. | Must | MFA enrolment enforced on first admin sign-in; recovery codes generated once. |
 | FR-AUTH-13 | Authentication and account events (register, verify, sign-in success/failure, reset, MFA, deletion) shall be recorded in an audit log. | Should | Retained 12 months; visible in admin. |
-| FR-AUTH-14 | The site may support an approval or invite-code mode in which new registrations wait for owner approval. | Could (**D-02**) | Feature flag; default off. |
+| FR-AUTH-14 | The site shall require admin approval for every new registration. A verified user in `pending_approval` state has no session and no access to any gated route until an admin approves the account; if declined, the account is marked `declined` and the user is notified. This applies equally to password and OIDC registrations. | Must (**D-02** resolved 2026-09-19; ADR-0002) | Approval workflow uses the mechanisms in FR-AUTH-15 and FR-AUTH-16 and the email templates in FR-NOTF-05. Invite-code mode moves to §7 backlog. |
+| FR-AUTH-15 | Admin approval decisions shall be actionable from a transactional email containing two single-use, HMAC-signed, 7-day-TTL URLs (Accept / Decline) that require no admin sign-in. The signing key is a server-side secret; each URL binds `user_id`, decision, issued-at, and expiry; a successful click consumes the token, records the decision in `approval_decisions`, and triggers the corresponding user notification (FR-NOTF-05). A revoked token returns a clear error page linking to the MFA-protected review surface. | Must | Compromise of an inbox forwards a single decision at most; the review surface (FR-ADM-10) requires MFA and can override or re-open a decision. |
+| FR-AUTH-16 | Pending approvals shall auto-decline 7 days after email verification if no admin decision has been made. The account is marked `declined` with `decision = auto_decline`, the user is notified per FR-NOTF-05, and the row is retained for audit and re-application. | Must | The auto-decline job runs in the API's scheduler; the user's decline notification says the request timed out and invites them to reapply. |
 
 ### 5.3 Member profile and personalization (FR-PROF)
 
@@ -348,7 +351,7 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-ADM-07 | The admin shall see an analytics overview: registrations, verification rate, active members, top content, top questions, downloads, assistant usage and cost. | Should | Daily aggregates; exportable CSV. |
 | FR-ADM-08 | The admin may send an opt-in digest to members summarizing new content. | Could | Unsubscribe link mandatory. |
 | FR-ADM-09 | All admin actions shall be recorded in the audit log. | Must | Includes note edits, replies, approvals, deletions. |
-| FR-ADM-10 | The admin shall be able to approve or reject pending registrations when approval mode is enabled. | Could | Depends on FR-AUTH-14. |
+| FR-ADM-10 | The admin shall have a *Pending approvals* review surface listing every `pending_approval` user (name, email, organization, stated role, submitted at, IP hash, user-agent) with per-row Approve and Decline actions, decision history, and the ability to re-open or override a decision made via a one-click email link (FR-AUTH-15). Access requires an MFA-fresh admin session. | Must | Ships in Phase 2 as the destination for review links in FR-NOTF-05 emails; expanded coverage of admin activity lives in the full admin console (Phase 5). |
 
 ### 5.8 Notifications and email (FR-NOTF)
 
@@ -358,6 +361,7 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-NOTF-02 | The owner shall be notified of: new verified member (name, organization, role, tracks), new escalation, negative feedback, and system alerts (errors, budget thresholds). | Must / Should | Delivery channel configurable (email; optional webhook to a chat app). |
 | FR-NOTF-03 | Email sending shall go through a provider interface with a local console sink for development. | Must | Resend, Postmark, or SES adapter; provider chosen in §11. |
 | FR-NOTF-04 | Non-transactional email shall be opt-in with one-click unsubscribe. | Must | Applies to digests only. |
+| FR-NOTF-05 | The approval workflow (FR-AUTH-14…16) shall use four transactional templates: (a) **admin approval request** to the owner containing applicant context (name, email, organization, stated role, submitted at, IP hash, user-agent, reference ID) and the two one-click signed URLs from FR-AUTH-15; (b) **user approved**: brief confirmation, sign-in URL, and the owner's contact address for questions; (c) **user declined**: a plain-language message that the admin did not recognize the credentials, an invitation to contact the owner if the applicant believes the decision is in error, and a pasteable context block (reference ID, applicant fields, submitted at, decision, signed re-review URL to the admin surface in FR-ADM-10) the applicant can copy into a reply; (d) **user auto-declined** (per FR-AUTH-16): a polite time-out notice inviting reapplication. All four templates carry plain-text alternatives and are subject to SPF/DKIM/DMARC per FR-NOTF-01. | Must | Owner contact address is configuration (`OWNER_CONTACT_EMAIL`), not hard-coded. |
 
 ### 5.9 Search (FR-SRCH)
 
@@ -681,9 +685,10 @@ erDiagram
 
 | Table | Key columns (beyond `id`, `created_at`, `updated_at`) |
 |---|---|
-| `users` | `email` (unique, citext), `password_hash` (nullable for OAuth-only), `name`, `status` (`unverified` / `active` / `pending_approval` / `disabled` / `deleted`), `role` (`member` / `admin`), `consent_version`, `consent_at`, `mfa_secret` (admin), `last_seen_at` |
+| `users` | `email` (unique, citext), `password_hash` (nullable for OAuth-only), `name`, `status` (`unverified` / `pending_approval` / `active` / `declined` / `disabled` / `deleted`), `role` (`member` / `admin`), `consent_version`, `consent_at`, `mfa_secret` (admin), `last_seen_at` |
 | `sessions` | `user_id`, `token_hash`, `expires_at`, `last_active_at`, `ip_hash`, `user_agent`, `revoked_at` |
 | `email_tokens` | `user_id`, `purpose` (`verify` / `reset` / `change_email`), `token_hash`, `code_hash`, `expires_at`, `used_at` |
+| `approval_decisions` | `user_id`, `decision` (`approve` / `decline` / `auto_decline`), `decided_by` (nullable — null for `auto_decline`, admin `user_id` for one-click and console decisions), `decided_via` (`email_link` / `console` / `scheduler`), `decided_at`, `token_hash` (nullable, one-click token used), `ip_hash`, `user_agent`, `superseded_by` (nullable self-reference for overrides) |
 | `oauth_accounts` | `user_id`, `provider`, `provider_subject`, `email`, `profile_json` |
 | `member_profiles` | `user_id`, `organization`, `stated_role`, `seniority`, `hiring_for`, `priorities[]`, `heard_from`, `tailoring_enabled`, `questionnaire_completed_at` |
 | `member_track_interests` | `user_id`, `track_id`, `weight`, `source` (`questionnaire` / `edited` / `invite`) |
@@ -1140,7 +1145,7 @@ Effort is expressed in focused working days with AI-assisted development and is 
 |---|---|---|---|---|
 | **0 — Foundation** | NFR-MNT-*, NFR-OPS-05, NFR-GOV-01/03/04, §9, §10.6 | Public repository; `docs/FSD.md`; ADRs for resolved decisions; monorepo skeleton; Go, `uv`, and `pnpm` toolchains; `buf` contracts with generated Go/TS/Python code; `sqlc` + `goose` wiring; pre-commit; Compose stack with hello-world web, API, and sidecar; content schema package; CI (`ci.yml`, `security.yml`, `uxts.yml`); `Makefile`; `AGENTS.md`; governance bootstrap — policy, matrix, UNTS registry, vendored runner core, canonical guard and drift checker, discovery artifact, UOBS pilot | `docker compose up` serves a page, `/api/healthz`, and an API → sidecar `Embed` round trip on synthetic text; CI green on `main` including the guard and drift checker; UOBS health specs pass against the stack; first content file validates | 4–5 days |
 | **1 — Content core** | FR-CNT-01…20, FR-PUB-01/03/04, NFR-A11Y-*, NFR-PERF-*, NFR-GOV-01 (UPTS) | All content sections rendering from `content/` with the owner's real material; landing and legal pages; gallery pipeline; résumé build; "how this was built" page; UPTS pilot with content-parsing fixtures | Every section renders real content; Lighthouse ≥ 90; content validation, link checks, and UPTS in CI; temporarily behind basic auth | 6–8 days |
-| **2 — Identity and gate** | FR-AUTH-01…13, FR-PUB-02/05, NFR-SEC-*, NFR-PRV-01…05, NFR-GOV-05/08 | Registration, verification, sign-in, reset, sessions, LinkedIn OIDC, Turnstile, rate limits, account management, admin MFA, consent, audit log, privacy/terms pages; UATS specs for `AuthService` and `MemberService`; USTS active; UAMS specs; UOBS active | Gate enforced on all member routes; USTS authorization matrix, rate-limit, and header specs pass (`block`); UATS auth specs pass; every auth method has a UAMS spec | 5–7 days |
+| **2 — Identity and gate** | FR-AUTH-01…16, FR-ADM-10, FR-NOTF-05, FR-PUB-02/05, NFR-SEC-*, NFR-PRV-01…05, NFR-GOV-05/08 | Registration, verification, approval-gated activation (D-02, ADR-0002), sign-in, reset, sessions, LinkedIn OIDC, Turnstile, rate limits, account management, admin MFA, consent, audit log, privacy/terms pages, four approval-workflow email templates, minimal *Pending approvals* admin surface (FR-ADM-10); UATS specs for `AuthService` and `MemberService`; USTS active; UAMS specs; UOBS active | Gate enforced on all member routes; approval flow verified end-to-end (register → verify → owner one-click Accept → user "approved" email → sign-in) and (register → verify → Decline → user "declined" email with pasteable context); auto-decline job clears a 7-day-old pending row; USTS authorization matrix, rate-limit, and header specs pass (`block`); UATS auth specs pass; every auth method has a UAMS spec | 6–8 days |
 | **3 — Personalization and history** | FR-PROF-*, FR-HIST-01…06, FR-SRCH-01, NFR-GOV-05 | Questionnaire, tracks, scoring engine, tailored home, start-here paths, welcome-back, saved items, export/delete, search, retention job; UATS coverage of `ContentService`, `HomeService`, `ActivityService`, `DownloadService`, `ContactService`; UATS → active | Two members with different tracks see different first screens; return visit shows history; export and delete verified; every shipped unary RPC has a passing UATS spec | 5–6 days |
 | **4 — Ask Roger** | FR-CHAT-01…20, FR-NOTF-03, NFR-SEC-07, NFR-GOV-05/06/07/10 | Ingestion CLI, hybrid retrieval, Q&A bank, persona v1, streaming UI with citations, guardrails, quotas and budget cap, feedback, escalation, disclosure copy; UDTS for `SidecarService` and streaming chat; ULTS for every prompt; UVTS with the golden set; UPTS ingestion fixtures; no-tool-calling audit | UVTS quick profile: grounding ≥ 90 % and citation validity ≥ 95 %; injection cases pass; ULTS `--verify-hashes` green; UDTS green; outage degrade verified | 7–9 days |
 | **5 — Admin and notifications** | FR-ADM-*, FR-NOTF-01/02/04, FR-CHAT-10 (owner side), NFR-GOV-05 | Dashboard, member detail, review queue, escalation replies, corpus tools, analytics, transactional and owner emails, weekly digest; UATS specs for `AdminService` | Owner completes J5 and J6 without database access; all emails render and authenticate (SPF/DKIM/DMARC); admin RPCs covered by UATS including MFA-boundary variants | 4–6 days |
@@ -1181,7 +1186,7 @@ Each decision becomes an ADR when resolved. Recommendations reflect the analysis
 | ID | Decision | Options | Recommendation |
 |---|---|---|---|
 | D-01 | Public landing page with substance vs. hard gate on everything | Landing with headline accomplishments (gated detail) / minimal sign-in-only page | Landing with substance (mitigates R-01) |
-| D-02 | Registration mode | Open with verification / approval required / invite-only | Open with verification; approval mode as a flag for later |
+| D-02 | Registration mode | Open with verification / approval required / invite-only | **Resolved 2026-09-19: approval required.** Verified users enter `pending_approval`; admin approves or declines via a signed one-click email link; pending requests auto-decline after 7 days. FR-AUTH-14…16, FR-ADM-10, FR-NOTF-05; ADR-0002 |
 | D-03 | Social sign-in providers | LinkedIn / GitHub / Google / none | LinkedIn in v1 (audience fit, verifies professional identity); GitHub for technical visitors post-launch |
 | D-04 | API language | Python + FastAPI / Go + Python sidecar | **Resolved 2026-09-18:** Go API with a Python sidecar for content, ML, and scripting jobs; JS/TS front end (§8.2); ADR-0004 (recorded) |
 | D-05 | Assistant retrieval and memory | pgvector in-house / MDEMG integration | pgvector for v1; MDEMG as a Phase 7 showcase behind a feature flag |
