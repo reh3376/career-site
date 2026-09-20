@@ -51,3 +51,38 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
 }
+
+// Extend a member's access. `mode` picks which of the three ExtendAccess
+// request fields to populate: "days" (relative), "permanent" (clears
+// expires_at). "days" reads from formData.get("days") — the button
+// component passes a hidden `days` field for each preset.
+export async function extendAccessAction(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("member_id") ?? "");
+  const mode = String(formData.get("mode") ?? "");
+  if (!memberId || !mode) return;
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+
+  type Body = {
+    memberId: string;
+    extendDays?: number;
+    permanent?: boolean;
+  };
+  const body: Body = { memberId };
+  if (mode === "permanent") {
+    body.permanent = true;
+  } else if (mode === "days") {
+    const n = Number(formData.get("days") ?? "0");
+    if (!Number.isFinite(n) || n <= 0) return;
+    body.extendDays = Math.floor(n);
+  } else {
+    return;
+  }
+
+  await callApi({
+    path: "/api/career.v1.AdminService/ExtendAccess",
+    body,
+    cookie,
+  }).catch(() => undefined);
+  revalidatePath("/admin/registrations", "layout");
+}

@@ -247,6 +247,9 @@ message Me {
   google.protobuf.Timestamp last_seen_at = 13;
   // Linked social sign-in providers, e.g. ["linkedin"].
   repeated string linked_providers = 14;
+  // When this member's access ends (from users.expires_at). Unset
+  // for permanent access and for non-active statuses.
+  google.protobuf.Timestamp expires_at = 15;
 }
 
 // A recorded member action. Sent by the client in batches

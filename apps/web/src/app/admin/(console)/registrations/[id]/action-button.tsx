@@ -3,29 +3,34 @@
 import { useFormStatus } from "react-dom";
 
 // Small client wrapper: renders a submit button inside a form whose
-// action is the passed server action (approve, decline, or
-// set-status). Adds a per-form pending state so the label flips while
-// the round-trip is in flight. Optional `target` gets passed as a
-// hidden field for set-status calls.
+// action is the passed server action (approve, decline, set-status,
+// extend-access). Adds a per-form pending state so the label flips
+// while the round-trip is in flight. `extra` is a bag of arbitrary
+// hidden fields the specific action needs (e.g. { status: "..." },
+// { mode: "days", days: "30" }).
 type Action = (formData: FormData) => Promise<void>;
 
 export function ActionButton({
   action,
   memberId,
-  target,
+  extra,
   tone,
   label,
 }: {
   action: Action;
   memberId: string;
-  target?: string;
+  extra?: Record<string, string>;
   tone: "accent" | "signal";
   label: string;
 }) {
   return (
     <form action={action} className="m-0">
       <input type="hidden" name="member_id" value={memberId} />
-      {target ? <input type="hidden" name="status" value={target} /> : null}
+      {extra
+        ? Object.entries(extra).map(([k, v]) => (
+            <input key={k} type="hidden" name={k} value={v} />
+          ))
+        : null}
       <Submit tone={tone} label={label} />
     </form>
   );

@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 19 |
+| [`AdminService`](#adminservice) | Owner console. | 20 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1621,6 +1621,7 @@ Owner console.
 | [`ResolveContactMessage`](#adminservice-resolvecontactmessage) | `/api/career.v1.AdminService/ResolveContactMessage` | Admin (fresh MFA) | default | `ResolveContactMessageRequest` → `ResolveContactMessageResponse` | Marks a contact message as resolved (or re-opens it). |
 | [`ApproveRegistration`](#adminservice-approveregistration) | `/api/career.v1.AdminService/ApproveRegistration` | Admin (fresh MFA) | default | `ApproveRegistrationRequest` → `ApproveRegistrationResponse` | Approves a pending registration from the admin console. |
 | [`DeclineRegistration`](#adminservice-declineregistration) | `/api/career.v1.AdminService/DeclineRegistration` | Admin (fresh MFA) | default | `DeclineRegistrationRequest` → `DeclineRegistrationResponse` | Declines a pending registration from the admin console. |
+| [`ExtendAccess`](#adminservice-extendaccess) | `/api/career.v1.AdminService/ExtendAccess` | Admin (fresh MFA) | default | `ExtendAccessRequest` → `ExtendAccessResponse` | Extends an active member's access period by a fixed duration (`extend_days`), or sets a specific new `expires_at`. |
 
 ### AdminService.ListMembers
 
@@ -2263,6 +2264,44 @@ as decided_via="console" in the audit trail.
 
 </details>
 
+### AdminService.ExtendAccess
+
+`POST /api/career.v1.AdminService/ExtendAccess` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Extends an active member's access period by a fixed duration
+(`extend_days`), or sets a specific new `expires_at`. Absolute
+and relative are exclusive; passing both is InvalidArgument.
+
+**Request** — [`ExtendAccessRequest`](#extendaccessrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `extendDays` | `int32` | number | `int32: lte: 3650 gte: 0` | Add this many days to the current expires_at (or, if the member has no expires_at set, from now). 1..3650. |
+| `newExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set expires_at to this exact moment. |
+| `permanent` | `bool` | boolean |  | Make access permanent (clears expires_at). |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+**Response** — [`ExtendAccessResponse`](#extendaccessresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
+  "extendDays": 0,
+  "newExpiresAt": "2026-09-18T12:00:00Z",
+  "permanent": true,
+  "reason": "string"
+}
+```
+
+</details>
+
 ## SystemService
 
 Version and governance status.
@@ -2805,6 +2844,7 @@ The calling member. Returned by sign-in, verification, GetMe, and GetHome.
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | Registration time. |
 | `lastSeenAt` | `Timestamp` | string (RFC 3339, UTC) |  | Start of the previous session, for welcome-back copy; unset on first visit. |
 | `linkedProviders` | `string`[] | array of string |  | Linked social sign-in providers, e.g. ["linkedin"]. |
+| `expiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this member's access ends (from users.expires_at). Unset for permanent access and for non-active statuses. |
 
 ### ActivityEvent
 
@@ -3666,6 +3706,27 @@ Decline-registration request.
 ### DeclineRegistrationResponse
 
 Decline-registration response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+### ExtendAccessRequest
+
+Extend-access request. Set exactly one of extend_days /
+new_expires_at / permanent to specify the new expiry.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `extendDays` | `int32` | number | `int32: lte: 3650 gte: 0` | Add this many days to the current expires_at (or, if the member has no expires_at set, from now). 1..3650. |
+| `newExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set expires_at to this exact moment. |
+| `permanent` | `bool` | boolean |  | Make access permanent (clears expires_at). |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+### ExtendAccessResponse
+
+Extend-access response.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|

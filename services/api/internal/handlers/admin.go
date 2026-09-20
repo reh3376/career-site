@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -147,6 +148,78 @@ func (a *Admin) SetMemberStatus(
 	}
 	u.Status = target
 	return connect.NewResponse(&v1.SetMemberStatusResponse{
+		Member: memberRecordRepoToProto(u),
+	}), nil
+}
+
+// ---------------------------------------------------------------
+// ExtendAccess
+// ---------------------------------------------------------------
+
+func (a *Admin) ExtendAccess(
+	ctx context.Context,
+	req *connect.Request[v1.ExtendAccessRequest],
+) (*connect.Response[v1.ExtendAccessResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	// Exactly one of extend_days / new_expires_at / permanent must be
+	// set. Zero of them is InvalidArgument too — callers should be
+	// explicit about intent, and the earlier ambiguity between
+	// "leave as-is" and "make permanent" caused a real bug in an
+	// early prototype.
+	modes := 0
+	if req.Msg.ExtendDays > 0 {
+		modes++
+	}
+	if req.Msg.NewExpiresAt != nil {
+		modes++
+	}
+	if req.Msg.Permanent {
+		modes++
+	}
+	if modes != 1 {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("set exactly one of extend_days / new_expires_at / permanent"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+
+	var target *time.Time
+	switch {
+	case req.Msg.Permanent:
+		target = nil
+	case req.Msg.NewExpiresAt != nil:
+		t := req.Msg.NewExpiresAt.AsTime()
+		target = &t
+	default: // ExtendDays
+		base := time.Now().UTC()
+		if u.ExpiresAt != nil && u.ExpiresAt.After(base) {
+			base = *u.ExpiresAt
+		}
+		t := base.Add(time.Duration(req.Msg.ExtendDays) * 24 * time.Hour)
+		target = &t
+	}
+
+	if err := a.users.SetExpiresAt(ctx, u.ID, target); err != nil {
+		a.log.Error("SetExpiresAt failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("update failed"))
+	}
+	u.ExpiresAt = target
+	// If the account was expired but the new expires_at is in the
+	// future, flip it back to active so the member can sign in again.
+	if u.Status == users.StatusExpired && target != nil && target.After(time.Now().UTC()) {
+		if err := a.users.SetStatus(ctx, u.ID, users.StatusActive); err == nil {
+			u.Status = users.StatusActive
+		}
+	}
+	return connect.NewResponse(&v1.ExtendAccessResponse{
 		Member: memberRecordRepoToProto(u),
 	}), nil
 }
@@ -371,11 +444,19 @@ func memberStatusProtoToRepo(s v1.MemberStatus) users.Status {
 
 func memberRecordRepoToProto(u *users.User) *v1.MemberRecord {
 	me := &v1.Me{
-		Id:     strconv.FormatInt(u.ID, 10),
-		Name:   u.Name,
-		Email:  u.Email,
-		Status: statusToProto(u.Status),
-		Role:   roleToProto(u.Role),
+		Id:           strconv.FormatInt(u.ID, 10),
+		Name:         u.Name,
+		Email:        u.Email,
+		Organization: u.Organization,
+		StatedRole:   u.StatedRole,
+		Status:       statusToProto(u.Status),
+		Role:         roleToProto(u.Role),
+	}
+	if !u.CreatedAt.IsZero() {
+		me.CreatedAt = timestamppb.New(u.CreatedAt)
+	}
+	if u.ExpiresAt != nil {
+		me.ExpiresAt = timestamppb.New(*u.ExpiresAt)
 	}
 	rec := &v1.MemberRecord{
 		Me:     me,

@@ -185,7 +185,7 @@ class Profile(_message.Message):
     def __init__(self, seniority: _Optional[str] = ..., hiring_for: _Optional[str] = ..., priorities: _Optional[_Iterable[_Union[Priority, str]]] = ..., heard_from: _Optional[str] = ..., tailoring_enabled: _Optional[bool] = ..., questionnaire_completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Me(_message.Message):
-    __slots__ = ("id", "name", "email", "organization", "stated_role", "status", "role", "mfa_enrolled", "profile", "interests", "consent_version", "created_at", "last_seen_at", "linked_providers")
+    __slots__ = ("id", "name", "email", "organization", "stated_role", "status", "role", "mfa_enrolled", "profile", "interests", "consent_version", "created_at", "last_seen_at", "linked_providers", "expires_at")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
@@ -200,6 +200,7 @@ class Me(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     LAST_SEEN_AT_FIELD_NUMBER: _ClassVar[int]
     LINKED_PROVIDERS_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     email: str
@@ -214,7 +215,8 @@ class Me(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     last_seen_at: _timestamp_pb2.Timestamp
     linked_providers: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., organization: _Optional[str] = ..., stated_role: _Optional[str] = ..., status: _Optional[_Union[MemberStatus, str]] = ..., role: _Optional[_Union[MemberRole, str]] = ..., mfa_enrolled: _Optional[bool] = ..., profile: _Optional[_Union[Profile, _Mapping]] = ..., interests: _Optional[_Iterable[_Union[TrackInterest, _Mapping]]] = ..., consent_version: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_seen_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., linked_providers: _Optional[_Iterable[str]] = ...) -> None: ...
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., organization: _Optional[str] = ..., stated_role: _Optional[str] = ..., status: _Optional[_Union[MemberStatus, str]] = ..., role: _Optional[_Union[MemberRole, str]] = ..., mfa_enrolled: _Optional[bool] = ..., profile: _Optional[_Union[Profile, _Mapping]] = ..., interests: _Optional[_Iterable[_Union[TrackInterest, _Mapping]]] = ..., consent_version: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_seen_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., linked_providers: _Optional[_Iterable[str]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class ActivityEvent(_message.Message):
     __slots__ = ("kind", "content_id", "occurred_at", "dwell_ms", "query", "conversation_id", "variant", "client_event_id", "content")

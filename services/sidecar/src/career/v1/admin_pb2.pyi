@@ -641,3 +641,23 @@ class DeclineRegistrationResponse(_message.Message):
     MEMBER_FIELD_NUMBER: _ClassVar[int]
     member: MemberRecord
     def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...
+
+class ExtendAccessRequest(_message.Message):
+    __slots__ = ("member_id", "extend_days", "new_expires_at", "permanent", "reason")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    EXTEND_DAYS_FIELD_NUMBER: _ClassVar[int]
+    NEW_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    PERMANENT_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    extend_days: int
+    new_expires_at: _timestamp_pb2.Timestamp
+    permanent: bool
+    reason: str
+    def __init__(self, member_id: _Optional[str] = ..., extend_days: _Optional[int] = ..., new_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., permanent: _Optional[bool] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class ExtendAccessResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: MemberRecord
+    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...

@@ -91,6 +91,9 @@ const (
 	// AdminServiceDeclineRegistrationProcedure is the fully-qualified name of the AdminService's
 	// DeclineRegistration RPC.
 	AdminServiceDeclineRegistrationProcedure = "/career.v1.AdminService/DeclineRegistration"
+	// AdminServiceExtendAccessProcedure is the fully-qualified name of the AdminService's ExtendAccess
+	// RPC.
+	AdminServiceExtendAccessProcedure = "/career.v1.AdminService/ExtendAccess"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -150,6 +153,10 @@ type AdminServiceClient interface {
 	// transitions + emails as the one-click Decline link, but recorded
 	// as decided_via="console" in the audit trail.
 	DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error)
+	// Extends an active member's access period by a fixed duration
+	// (`extend_days`), or sets a specific new `expires_at`. Absolute
+	// and relative are exclusive; passing both is InvalidArgument.
+	ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -277,6 +284,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeclineRegistration")),
 			connect.WithClientOptions(opts...),
 		),
+		extendAccess: connect.NewClient[v1.ExtendAccessRequest, v1.ExtendAccessResponse](
+			httpClient,
+			baseURL+AdminServiceExtendAccessProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ExtendAccess")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -301,6 +314,7 @@ type adminServiceClient struct {
 	resolveContactMessage *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
 	approveRegistration   *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
 	declineRegistration   *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
+	extendAccess          *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -398,6 +412,11 @@ func (c *adminServiceClient) DeclineRegistration(ctx context.Context, req *conne
 	return c.declineRegistration.CallUnary(ctx, req)
 }
 
+// ExtendAccess calls career.v1.AdminService.ExtendAccess.
+func (c *adminServiceClient) ExtendAccess(ctx context.Context, req *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error) {
+	return c.extendAccess.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -455,6 +474,10 @@ type AdminServiceHandler interface {
 	// transitions + emails as the one-click Decline link, but recorded
 	// as decided_via="console" in the audit trail.
 	DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error)
+	// Extends an active member's access period by a fixed duration
+	// (`extend_days`), or sets a specific new `expires_at`. Absolute
+	// and relative are exclusive; passing both is InvalidArgument.
+	ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -578,6 +601,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DeclineRegistration")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceExtendAccessHandler := connect.NewUnaryHandler(
+		AdminServiceExtendAccessProcedure,
+		svc.ExtendAccess,
+		connect.WithSchema(adminServiceMethods.ByName("ExtendAccess")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -618,6 +647,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceApproveRegistrationHandler.ServeHTTP(w, r)
 		case AdminServiceDeclineRegistrationProcedure:
 			adminServiceDeclineRegistrationHandler.ServeHTTP(w, r)
+		case AdminServiceExtendAccessProcedure:
+			adminServiceExtendAccessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -701,4 +732,8 @@ func (UnimplementedAdminServiceHandler) ApproveRegistration(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeclineRegistration is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExtendAccess is not implemented"))
 }
