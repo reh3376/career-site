@@ -185,7 +185,7 @@ class Profile(_message.Message):
     def __init__(self, seniority: _Optional[str] = ..., hiring_for: _Optional[str] = ..., priorities: _Optional[_Iterable[_Union[Priority, str]]] = ..., heard_from: _Optional[str] = ..., tailoring_enabled: _Optional[bool] = ..., questionnaire_completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class Me(_message.Message):
-    __slots__ = ("id", "name", "email", "organization", "stated_role", "status", "role", "mfa_enrolled", "profile", "interests", "consent_version", "created_at", "last_seen_at", "linked_providers", "expires_at")
+    __slots__ = ("id", "name", "email", "organization", "stated_role", "status", "role", "mfa_enrolled", "profile", "interests", "consent_version", "created_at", "last_seen_at", "linked_providers", "expires_at", "last_notification_kind", "last_notification_at", "last_notification_error")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
@@ -201,6 +201,9 @@ class Me(_message.Message):
     LAST_SEEN_AT_FIELD_NUMBER: _ClassVar[int]
     LINKED_PROVIDERS_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_NOTIFICATION_KIND_FIELD_NUMBER: _ClassVar[int]
+    LAST_NOTIFICATION_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_NOTIFICATION_ERROR_FIELD_NUMBER: _ClassVar[int]
     id: str
     name: str
     email: str
@@ -216,7 +219,10 @@ class Me(_message.Message):
     last_seen_at: _timestamp_pb2.Timestamp
     linked_providers: _containers.RepeatedScalarFieldContainer[str]
     expires_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., organization: _Optional[str] = ..., stated_role: _Optional[str] = ..., status: _Optional[_Union[MemberStatus, str]] = ..., role: _Optional[_Union[MemberRole, str]] = ..., mfa_enrolled: _Optional[bool] = ..., profile: _Optional[_Union[Profile, _Mapping]] = ..., interests: _Optional[_Iterable[_Union[TrackInterest, _Mapping]]] = ..., consent_version: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_seen_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., linked_providers: _Optional[_Iterable[str]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    last_notification_kind: str
+    last_notification_at: _timestamp_pb2.Timestamp
+    last_notification_error: str
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., organization: _Optional[str] = ..., stated_role: _Optional[str] = ..., status: _Optional[_Union[MemberStatus, str]] = ..., role: _Optional[_Union[MemberRole, str]] = ..., mfa_enrolled: _Optional[bool] = ..., profile: _Optional[_Union[Profile, _Mapping]] = ..., interests: _Optional[_Iterable[_Union[TrackInterest, _Mapping]]] = ..., consent_version: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_seen_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., linked_providers: _Optional[_Iterable[str]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_notification_kind: _Optional[str] = ..., last_notification_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_notification_error: _Optional[str] = ...) -> None: ...
 
 class ActivityEvent(_message.Message):
     __slots__ = ("kind", "content_id", "occurred_at", "dwell_ms", "query", "conversation_id", "variant", "client_event_id", "content")

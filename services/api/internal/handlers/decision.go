@@ -223,14 +223,20 @@ func (h *AdminDecision) sendUserApproved(u *users.User) {
 		h.log.Warn("render user_approved failed", slog.String("error", err.Error()))
 		return
 	}
-	if err := h.email.Send(ctx, email.Message{
+	sendErr := h.email.Send(ctx, email.Message{
 		To:       u.Email,
 		From:     h.from,
 		Subject:  "Your career-site access is approved",
 		TextBody: text,
 		HTMLBody: html,
-	}); err != nil {
-		h.log.Warn("send user_approved failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	})
+	errText := ""
+	if sendErr != nil {
+		h.log.Warn("send user_approved failed", slog.Int64("user_id", u.ID), slog.String("error", sendErr.Error()))
+		errText = truncErr(sendErr.Error())
+	}
+	if recErr := h.users.RecordNotification(ctx, u.ID, "user_approved", errText); recErr != nil {
+		h.log.Warn("record user_approved notification failed", slog.Int64("user_id", u.ID), slog.String("error", recErr.Error()))
 	}
 }
 
@@ -251,15 +257,32 @@ func (h *AdminDecision) sendUserDeclined(u *users.User, ref string) {
 		h.log.Warn("render user_declined failed", slog.String("error", err.Error()))
 		return
 	}
-	if err := h.email.Send(ctx, email.Message{
+	sendErr := h.email.Send(ctx, email.Message{
 		To:       u.Email,
 		From:     h.from,
 		Subject:  "Your career-site access request",
 		TextBody: text,
 		HTMLBody: html,
-	}); err != nil {
-		h.log.Warn("send user_declined failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	})
+	errText := ""
+	if sendErr != nil {
+		h.log.Warn("send user_declined failed", slog.Int64("user_id", u.ID), slog.String("error", sendErr.Error()))
+		errText = truncErr(sendErr.Error())
 	}
+	if recErr := h.users.RecordNotification(ctx, u.ID, "user_declined", errText); recErr != nil {
+		h.log.Warn("record user_declined notification failed", slog.Int64("user_id", u.ID), slog.String("error", recErr.Error()))
+	}
+}
+
+// truncErr keeps the provider's error string short so a single row's
+// last_notification_error column never grows unbounded. 500 chars is
+// well past the useful signal (Resend / SMTP errors are short).
+func truncErr(s string) string {
+	const max = 500
+	if len(s) <= max {
+		return s
+	}
+	return s[:max]
 }
 
 // SendUserAutoDeclined is called from the auto-decline scheduler.

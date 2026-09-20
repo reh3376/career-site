@@ -698,6 +698,13 @@ func memberRecordRepoToProto(u *users.User) *v1.MemberRecord {
 	if u.ExpiresAt != nil {
 		me.ExpiresAt = timestamppb.New(*u.ExpiresAt)
 	}
+	me.LastNotificationKind = u.LastNotificationKind
+	if u.LastNotificationAt != nil {
+		me.LastNotificationAt = timestamppb.New(*u.LastNotificationAt)
+	}
+	if u.LastNotificationError != nil {
+		me.LastNotificationError = *u.LastNotificationError
+	}
 	rec := &v1.MemberRecord{
 		Me:     me,
 		Counts: &v1.MemberCounts{}, // activity counts land with the activity ingest work

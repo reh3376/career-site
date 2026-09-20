@@ -250,6 +250,16 @@ message Me {
   // When this member's access ends (from users.expires_at). Unset
   // for permanent access and for non-active statuses.
   google.protobuf.Timestamp expires_at = 15;
+  // Kind of the last notification email the API sent to this member,
+  // e.g. "user_approved" / "user_declined" / "expiry_warn". Empty
+  // until the first send. Only populated on admin-side responses.
+  string last_notification_kind = 16;
+  // Wall-clock time of the last notification send attempt (success
+  // OR failure). Admin-side only.
+  google.protobuf.Timestamp last_notification_at = 17;
+  // Truncated provider error from the last failed send; empty on
+  // success. Admin-side only.
+  string last_notification_error = 18;
 }
 
 // A recorded member action. Sent by the client in batches

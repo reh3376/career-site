@@ -27,6 +27,9 @@ type Me = {
   role: string;
   created_at?: string;
   expires_at?: string;
+  last_notification_kind?: string;
+  last_notification_at?: string;
+  last_notification_error?: string;
 };
 
 type GetMemberResp = {
@@ -181,6 +184,19 @@ export default async function AdminMemberDetailPage({
             )}
           </dd>
         </dl>
+      </section>
+
+      <section
+        aria-labelledby="notif-heading"
+        className="mt-10 border-t border-line pt-6"
+      >
+        <p
+          id="notif-heading"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+        >
+          last notification email
+        </p>
+        <NotificationPill me={me} />
       </section>
 
       <section
@@ -407,6 +423,61 @@ function ContactAction({ email, name }: { email: string; name?: string }) {
         </a>
       </div>
     </div>
+  );
+}
+
+// Human labels for the notification kinds the API stamps.
+const NOTIF_LABEL: Record<string, string> = {
+  user_approved: "approval",
+  user_declined: "decline",
+  user_auto_declined: "auto-decline",
+  expiry_warn: "expiry warning",
+  expired: "expiry notice",
+};
+
+// Small pill showing whether the last outbound email actually
+// landed with the provider. Green (success), red (failure), or
+// muted (never sent).
+function NotificationPill({ me }: { me: Me }) {
+  const kind = me.last_notification_kind ?? "";
+  const at = me.last_notification_at ? new Date(me.last_notification_at) : null;
+  const failed = Boolean(me.last_notification_error);
+
+  if (!kind || !at) {
+    return (
+      <p className="mt-3 text-sm text-ink-3">
+        No notification email has been sent to this member yet. Approve
+        / decline / extend actions dispatch one automatically.
+      </p>
+    );
+  }
+  const label = NOTIF_LABEL[kind] ?? kind;
+  const when = relative(at);
+  if (failed) {
+    return (
+      <div className="mt-3 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+        <p>
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+            send failed
+          </span>{" "}
+          <span className="text-ink-2">
+            — {label} email, {when}
+          </span>
+        </p>
+        <p className="mt-2 whitespace-pre-wrap font-mono text-[11px] text-ink-3">
+          {me.last_notification_error}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <p className="mt-3 text-sm text-ink-2">
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-success">
+        sent
+      </span>{" "}
+      — {label} email, {when}. If the member reports not receiving it,
+      check their spam folder and the provider dashboard.
+    </p>
   );
 }
 
