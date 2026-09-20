@@ -33,6 +33,19 @@ func (h *Auth) Login(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email and password are required"))
 	}
 
+	// Rate limit before any DB or argon2 work. Key on (ip, email) so
+	// a botnet can't spread attempts across many source IPs to bypass
+	// per-IP, and a single admin who's mistyped their password a few
+	// times doesn't lock out every other user behind the same NAT.
+	if h.loginLimiter != nil {
+		key := "login:" + req.Peer().Addr + "|" + addr
+		if ok, retry := h.loginLimiter.Allow(key); !ok {
+			h.log.Warn("login rate limited", slog.String("email", addr), slog.Duration("retry_after", retry))
+			return nil, connect.NewError(connect.CodeResourceExhausted,
+				errors.New("too many attempts; try again shortly"))
+		}
+	}
+
 	u, err := h.users.GetByEmail(ctx, addr)
 	if err != nil {
 		// Same response for "no such account" and "wrong password" so the

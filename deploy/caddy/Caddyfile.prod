@@ -21,8 +21,24 @@
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        # Restrict powerful browser APIs the site doesn't use. Adding
+        # anything to this list should require a real product reason.
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=(), sync-xhr=()"
         X-Frame-Options "DENY"
+        # Isolate the browsing context from other origins that could
+        # embed / open us; blunts Spectre-style cross-origin leaks and
+        # window.opener attacks. `same-origin` is the strictest
+        # setting the site can support.
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "same-origin"
+        X-Permitted-Cross-Domain-Policies "none"
+        # CSP: allow same-origin + Google Fonts (loaded by next/font in
+        # its default configuration). `unsafe-inline` on style-src is
+        # what next/font's runtime CSS needs; script-src stays without
+        # unsafe-inline because Next.js already threads a per-request
+        # nonce for its own inline bootstrap. Tighten further if a
+        # future change makes the nonce path work here too.
+        Content-Security-Policy "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://api.github.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; connect-src 'self' https://api.github.com https://api.pwnedpasswords.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         -Server
     }
 
