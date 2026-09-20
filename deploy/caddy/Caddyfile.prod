@@ -34,11 +34,14 @@
         X-Permitted-Cross-Domain-Policies "none"
         # CSP: allow same-origin + Google Fonts (loaded by next/font in
         # its default configuration). `unsafe-inline` on style-src is
-        # what next/font's runtime CSS needs; script-src stays without
-        # unsafe-inline because Next.js already threads a per-request
-        # nonce for its own inline bootstrap. Tighten further if a
-        # future change makes the nonce path work here too.
-        Content-Security-Policy "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://api.github.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; connect-src 'self' https://api.github.com https://api.pwnedpasswords.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        # what next/font's runtime CSS needs. `unsafe-inline` on
+        # script-src is what Next.js's hydration bootstrap needs —
+        # without it the app doesn't hydrate, every form does a full
+        # page reload, and client interactivity is dead. The proper
+        # tightening is per-request nonces threaded through the whole
+        # Next tree; do that as its own follow-up before removing
+        # unsafe-inline here.
+        Content-Security-Policy "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://api.github.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com https://api.pwnedpasswords.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         -Server
     }
 
