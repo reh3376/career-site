@@ -221,10 +221,19 @@ func Run(ctx context.Context, pool *db.Pool, sql string, timeoutMs int32) (*Quer
 // names for the results header. Unknown OIDs render as "oid=<n>" so
 // the caller sees something rather than a mystery number.
 func pgTypeName(oid uint32) string {
-	// Values from pg_type.h — the common ones the app's schema uses.
+	// Values from pg_type.h — the common ones the app's schema uses
+	// plus the system-catalog types that show up when a query calls
+	// current_database()/current_user/version()/etc.
 	switch oid {
+	// Booleans / numerics
 	case 16:
 		return "bool"
+	case 17:
+		return "bytea"
+	case 18:
+		return "char"
+	case 19:
+		return "name"
 	case 20:
 		return "bigint"
 	case 21:
@@ -233,26 +242,48 @@ func pgTypeName(oid uint32) string {
 		return "int"
 	case 25:
 		return "text"
+	case 26:
+		return "oid"
 	case 700:
 		return "float4"
 	case 701:
 		return "float8"
+	// Chars / strings
+	case 1042:
+		return "bpchar"
 	case 1043:
 		return "varchar"
+	// Time
 	case 1082:
 		return "date"
+	case 1083:
+		return "time"
 	case 1114:
 		return "timestamp"
 	case 1184:
 		return "timestamptz"
+	case 1186:
+		return "interval"
+	// Structured
+	case 114:
+		return "json"
 	case 2950:
 		return "uuid"
 	case 3802:
 		return "jsonb"
-	case 114:
-		return "json"
-	case 17:
-		return "bytea"
+	// Arrays commonly returned
+	case 1000:
+		return "bool[]"
+	case 1005:
+		return "int2[]"
+	case 1007:
+		return "int4[]"
+	case 1009:
+		return "text[]"
+	case 1015:
+		return "varchar[]"
+	case 1016:
+		return "int8[]"
 	default:
 		return fmt.Sprintf("oid=%d", oid)
 	}
