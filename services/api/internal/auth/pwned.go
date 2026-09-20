@@ -35,6 +35,19 @@ func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
 // SHA-256 range mode in 2022; we use it (instead of the legacy SHA-1 mode)
 // so a compromise of the on-wire k-anonymity payload wouldn't allow a
 // SHA-1 collision attack against the candidate space.
+//
+// On the CodeQL rule `go/weak-sensitive-data-hashing` (CWE-327 / 328 / 916):
+// This function DOES hash a value typed as a password with a non-KDF hash.
+// That heuristic is correct for password STORAGE — where PBKDF2, bcrypt,
+// scrypt, or argon2 are required — but not for this call site, which is a
+// wire-protocol requirement of the third-party HIBP range endpoint. HIBP's
+// public API only accepts SHA-1 or SHA-256 prefixes; passing a slow KDF
+// digest would break the check entirely, and no candidate is ever stored,
+// compared to a stored hash, or persisted anywhere. Password storage in
+// this codebase uses argon2id in package `hash` (see FR-AUTH-01) — this
+// checker is only the pre-storage breach lookup (FR-AUTH-02). The rule is
+// suppressed for this exact call in .github/codeql/codeql-config.yml with
+// this comment as the justification.
 type HIBPChecker struct {
 	Client *http.Client
 }

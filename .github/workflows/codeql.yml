@@ -50,6 +50,10 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          # Query filters live in the config so scoped false-positive
+          # suppressions carry a rationale in-repo (not on GitHub's
+          # dismissal UI). See the file for the rules.
+          config-file: ./.github/codeql/codeql-config.yml
 
       - if: matrix.language == 'go'
         name: build go
