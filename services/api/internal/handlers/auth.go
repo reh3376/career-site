@@ -49,6 +49,10 @@ type AuthConfig struct {
 	MailFrom string
 	// TTL for the initial email-verify token; FR-AUTH-03 caps at 24 h.
 	VerifyTTL time.Duration
+	// TTL for the single-use password-reset token. 60 min is long
+	// enough for a distracted user and short enough that a leaked
+	// mailbox from last week can't complete a reset.
+	ResetTTL time.Duration
 	// TTL for admin one-click Accept/Decline URLs (FR-AUTH-15).
 	DecisionTokenTTL time.Duration
 	// HMAC signing key for one-click Accept/Decline tokens.
@@ -73,6 +77,9 @@ func NewAuth(
 ) *Auth {
 	if cfg.VerifyTTL == 0 {
 		cfg.VerifyTTL = 24 * time.Hour
+	}
+	if cfg.ResetTTL == 0 {
+		cfg.ResetTTL = time.Hour
 	}
 	if cfg.DecisionTokenTTL == 0 {
 		cfg.DecisionTokenTTL = 7 * 24 * time.Hour

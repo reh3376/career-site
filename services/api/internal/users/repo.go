@@ -220,6 +220,21 @@ func (r *Repo) SetStatus(ctx context.Context, id int64, status Status) error {
 	return nil
 }
 
+// SetPasswordHash overwrites a user's password hash. Used by the
+// reset flow after the caller has presented a valid single-use
+// reset token.
+func (r *Repo) SetPasswordHash(ctx context.Context, id int64, hash string) error {
+	const q = `UPDATE users SET password_hash = $2 WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, id, hash)
+	if err != nil {
+		return fmt.Errorf("set password hash: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // RecordNotification stamps the last-notification columns for a user
 // after we hand a message to the mail provider. Kind is a short slug
 // (e.g. "user_approved"). errText should be the truncated provider
