@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getUiMode } from "@/lib/ui-mode";
 
 import "./globals.css";
 
@@ -51,10 +52,18 @@ export const metadata: Metadata = {
     "Thirty years running regulated 24/7 industrial systems. Last eight in bourbon distillery startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // The site ships two visual modes: `it` (default, editorial web) and
+  // `ot` (HMI/SCADA feel). Rendering the cookie server-side sets the
+  // `data-mode` attribute on <html> BEFORE first paint so there's no
+  // flash of the wrong mode. Design tokens in globals.css switch off
+  // this attribute; pages that want mode-specific structure branch on
+  // getUiMode() themselves.
+  const mode = await getUiMode();
   return (
     <html
       lang="en"
+      data-mode={mode}
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="flex min-h-screen flex-col bg-paper text-ink">

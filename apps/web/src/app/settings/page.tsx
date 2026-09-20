@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { signOutAction } from "@/app/actions/session";
+import { ModeToggle } from "@/components/mode-toggle";
 import { getSessionUser, isAdmin } from "@/lib/session-user";
+import { getUiMode } from "@/lib/ui-mode";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
 // block only, so the surface exists for everyone without leaking
 // anything private.
 export default async function SettingsPage() {
-  const me = await getSessionUser();
+  const [me, mode] = await Promise.all([getSessionUser(), getUiMode()]);
   const admin = isAdmin(me);
 
   return (
@@ -122,10 +124,10 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      {/* Display block — always shown. Right now it's copy about what
-          the IT / OT toggle will be. The real toggle wires up when the
-          OT-mode design system lands (see docs/personal notes; the
-          `apps/web/src/lib/ui-mode.ts` helper is already scaffolded). */}
+      {/* Display block — always shown. The mode toggle is a client
+          component that flips <html data-mode> optimistically and then
+          persists via a server action; every page across the site
+          re-tokens off the same attribute. */}
       <section
         aria-labelledby="display-heading"
         className="mt-14 border-t border-line pt-10"
@@ -141,16 +143,22 @@ export default async function SettingsPage() {
           Mode.
         </h2>
         <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-2">
-          Two visual modes are coming: <strong className="text-ink">IT</strong>
-          {" — "}the standard web presentation this page uses today
-          &mdash; and <strong className="text-ink">OT</strong>, which
-          re-renders the front-end to feel like a plant HMI / SCADA
-          screen (dark panels, mono type, tag names, status chips). The
-          toggle ships here in the next PR.
+          Two visual modes are available. <strong className="text-ink">IT</strong>
+          {" "}is the standard editorial presentation. <strong className="text-ink">OT</strong>
+          {" "}re-renders the front-end to feel like a plant HMI /
+          SCADA screen &mdash; dark panels, mono type, tag names,
+          status chips &mdash; the kind of surface Roger builds for
+          control rooms.
         </p>
+        <div className="mt-6 flex items-center gap-4">
+          <ModeToggle current={mode} />
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            currently <span className="text-ink">{mode}</span>
+          </span>
+        </div>
         <p className="mt-4 max-w-lg text-xs leading-relaxed text-ink-3">
-          For now the site is fixed in <span className="font-mono text-ink">IT</span>{" "}
-          mode.
+          Selection persists in a first-party cookie for a year. Toggling
+          on any page takes effect immediately across the whole site.
         </p>
       </section>
     </div>
