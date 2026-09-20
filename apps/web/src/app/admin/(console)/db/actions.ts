@@ -65,3 +65,75 @@ export async function runDbQueryAction(sql: string): Promise<QueryResult> {
     elapsed_ms: j.elapsedMs ?? j.elapsed_ms ?? 0,
   };
 }
+
+// ---------------------------------------------------------------
+// Saved queries (per-admin, DB-backed)
+// ---------------------------------------------------------------
+
+export type SavedQuery = {
+  id: string;
+  name: string;
+  sql: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ListSavedResult =
+  | { ok: true; queries: SavedQuery[] }
+  | { ok: false; error: string };
+
+export async function listSavedQueriesAction(): Promise<ListSavedResult> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in" };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/ListSavedQueries",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` };
+  const j = (await resp.json()) as { queries?: SavedQuery[] };
+  return { ok: true, queries: j.queries ?? [] };
+}
+
+export type SaveResult =
+  | { ok: true; query: SavedQuery; created: boolean }
+  | { ok: false; error: string };
+
+export async function upsertSavedQueryAction(
+  name: string,
+  sql: string,
+): Promise<SaveResult> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in" };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/UpsertSavedQuery",
+    body: { name, sql },
+    cookie,
+  });
+  if (!resp.ok) {
+    let error = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) error = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { ok: false, error };
+  }
+  const j = (await resp.json()) as { query?: SavedQuery; created?: boolean };
+  return {
+    ok: true,
+    query: j.query ?? { id: "", name, sql },
+    created: Boolean(j.created),
+  };
+}
+
+export async function deleteSavedQueryAction(id: string): Promise<void> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  await callApi({
+    path: "/api/career.v1.AdminService/DeleteSavedQuery",
+    body: { id },
+    cookie,
+  }).catch(() => undefined);
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -440,6 +441,78 @@ func (a *Admin) DeclineRegistration(
 }
 
 // ---------------------------------------------------------------
+// ListSavedQueries / UpsertSavedQuery / DeleteSavedQuery —
+// /admin/db saved-queries dropdown
+// ---------------------------------------------------------------
+
+func (a *Admin) ListSavedQueries(
+	ctx context.Context,
+	req *connect.Request[v1.ListSavedQueriesRequest],
+) (*connect.Response[v1.ListSavedQueriesResponse], error) {
+	u, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := a.users.ListSavedQueries(ctx, u.ID)
+	if err != nil {
+		a.log.Error("ListSavedQueries failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListSavedQueriesResponse{
+		Queries: make([]*v1.SavedQuery, 0, len(rows)),
+	}
+	for i := range rows {
+		out.Queries = append(out.Queries, savedQueryRepoToProto(&rows[i]))
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (a *Admin) UpsertSavedQuery(
+	ctx context.Context,
+	req *connect.Request[v1.UpsertSavedQueryRequest],
+) (*connect.Response[v1.UpsertSavedQueryResponse], error) {
+	u, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	name := strings.TrimSpace(req.Msg.Name)
+	if name == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name is required"))
+	}
+	s, created, err := a.users.UpsertSavedQuery(ctx, u.ID, name, req.Msg.Sql)
+	if err != nil {
+		a.log.Error("UpsertSavedQuery failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("save failed"))
+	}
+	return connect.NewResponse(&v1.UpsertSavedQueryResponse{
+		Query:   savedQueryRepoToProto(s),
+		Created: created,
+	}), nil
+}
+
+func (a *Admin) DeleteSavedQuery(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteSavedQueryRequest],
+) (*connect.Response[v1.DeleteSavedQueryResponse], error) {
+	u, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.Id, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
+	}
+	if err := a.users.DeleteSavedQuery(ctx, u.ID, id); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("not found"))
+		}
+		a.log.Error("DeleteSavedQuery failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("delete failed"))
+	}
+	return connect.NewResponse(&v1.DeleteSavedQueryResponse{}), nil
+}
+
+// ---------------------------------------------------------------
 // ListAccessGrants / UpsertAccessGrant / DeleteAccessGrant —
 // /admin/access surface
 // ---------------------------------------------------------------
@@ -776,6 +849,16 @@ func grantTTLRepoToProto(t users.GrantTTL) v1.GrantTTL {
 		return v1.GrantTTL_GRANT_TTL_PERMANENT
 	default:
 		return v1.GrantTTL_GRANT_TTL_UNSPECIFIED
+	}
+}
+
+func savedQueryRepoToProto(s *users.SavedQuery) *v1.SavedQuery {
+	return &v1.SavedQuery{
+		Id:        strconv.FormatInt(s.ID, 10),
+		Name:      s.Name,
+		Sql:       s.SQL,
+		CreatedAt: timestamppb.New(s.CreatedAt),
+		UpdatedAt: timestamppb.New(s.UpdatedAt),
 	}
 }
 
