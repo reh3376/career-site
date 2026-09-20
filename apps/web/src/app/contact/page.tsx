@@ -13,14 +13,38 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ContactPage() {
-  const [cookie, mode] = await Promise.all([getSessionCookie(), getUiMode()]);
+// Categories that the contact form's <select> renders. Kept in sync
+// with the CATEGORIES array in form.tsx — the pre-selection here is
+// validated against this set so a stray ?category=<anything> query
+// never bleeds into the form's defaultValue.
+const KNOWN_CATEGORIES = new Set([
+  "general_question",
+  "bug_report",
+  "feature_request",
+  "contributor_access",
+  "press_inquiry",
+  "other",
+]);
+
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const [cookie, mode, params] = await Promise.all([
+    getSessionCookie(),
+    getUiMode(),
+    searchParams,
+  ]);
   const signedIn = Boolean(cookie);
+  const initialCategory = KNOWN_CATEGORIES.has(params.category ?? "")
+    ? params.category
+    : undefined;
 
   if (mode === "ot") {
     return (
       <OtPanel tag="MSG-01" title="MSG.OUT · CONTACT" note="reply within 24h">
-        <ContactForm signedIn={signedIn} />
+        <ContactForm signedIn={signedIn} initialCategory={initialCategory} />
         <p className="mt-8 border-t border-line pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
           security · use{" "}
           <a
@@ -75,7 +99,7 @@ export default async function ContactPage() {
         {/* Right column — the form itself, sitting on paper without a
             surrounding card. The inputs carry the visual weight. */}
         <div>
-          <ContactForm signedIn={signedIn} />
+          <ContactForm signedIn={signedIn} initialCategory={initialCategory} />
 
           <p className="mt-10 border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
             <span className="font-mono uppercase tracking-[0.14em] text-signal">

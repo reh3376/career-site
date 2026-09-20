@@ -27,8 +27,17 @@ const labelClass =
 const helpClass = "mt-2 text-xs text-ink-3";
 
 // signedIn is passed from the server component so the anonymous name/email
-// fields render only when relevant.
-export function ContactForm({ signedIn }: { signedIn: boolean }) {
+// fields render only when relevant. initialCategory pre-selects the
+// <select> (typically from a ?category=... URL param on the /contact
+// route — e.g. the GitHub-cards CTA points at
+// /contact?category=contributor_access).
+export function ContactForm({
+  signedIn,
+  initialCategory,
+}: {
+  signedIn: boolean;
+  initialCategory?: string;
+}) {
   const [state, action] = useActionState(submitContactAction, initial);
   const v = state.values ?? {};
 
@@ -72,7 +81,7 @@ export function ContactForm({ signedIn }: { signedIn: boolean }) {
           id="category"
           name="category"
           required
-          defaultValue={v.category ?? ""}
+          defaultValue={v.category ?? initialCategory ?? ""}
           className={inputClass}
         >
           <option value="" disabled>
