@@ -174,6 +174,25 @@ func (a *Admin) SetMemberStatus(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("update failed"))
 	}
 	u.Status = target
+	// Flipping a member to DISABLED must not leave any of their
+	// existing browser sessions valid — otherwise a stolen or
+	// walk-away cookie could ride past the revocation. Best-effort:
+	// on failure we log but still return success, since the state
+	// change is already applied (a follow-up expiry sweep will pick
+	// up any straggler sessions).
+	if target == users.StatusDisabled {
+		if n, err := a.users.RevokeSessions(ctx, u.ID); err != nil {
+			a.log.Warn("revoke sessions on disable failed",
+				slog.Int64("user_id", u.ID),
+				slog.String("error", err.Error()),
+			)
+		} else if n > 0 {
+			a.log.Info("revoked sessions on disable",
+				slog.Int64("user_id", u.ID),
+				slog.Int64("count", n),
+			)
+		}
+	}
 	return connect.NewResponse(&v1.SetMemberStatusResponse{
 		Member: memberRecordRepoToProto(u),
 	}), nil

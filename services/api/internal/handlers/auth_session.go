@@ -63,6 +63,22 @@ func (h *Auth) Login(
 		return nil, err
 	}
 
+	// Session-fixation defence: if the browser is presenting an
+	// existing session cookie at login time, revoke it before minting
+	// the fresh one. An attacker who planted a cookie on the victim
+	// (via a link or cross-site inject) can't have it survive the
+	// authenticated login and become a legitimate session. Best-effort
+	// — a miss here just means one dead cookie stays dead in the DB
+	// until its TTL, which is harmless.
+	if oldToken := sessionTokenFromRequest(req); oldToken != "" {
+		if err := h.users.RevokeSession(ctx, auth.HashToken(oldToken)); err != nil {
+			h.log.Warn("pre-login session revoke failed",
+				slog.Int64("user_id", u.ID),
+				slog.String("error", err.Error()),
+			)
+		}
+	}
+
 	// Mint the session.
 	token, tokenHash, err := auth.NewToken()
 	if err != nil {

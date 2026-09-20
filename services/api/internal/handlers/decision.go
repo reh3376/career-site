@@ -174,6 +174,19 @@ func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via stri
 		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 	}
 	u.Status = users.StatusDeclined
+	// A declined account should not carry any live session forward.
+	// In practice pending_approval users don't have sessions to begin
+	// with (they can't log in), but this closes the door if a manual
+	// state fix or a future flow ever gives one.
+	if n, err := h.users.RevokeSessions(ctx, u.ID); err != nil {
+		h.log.Warn("revoke sessions on decline failed",
+			slog.Int64("user_id", u.ID), slog.String("error", err.Error()),
+		)
+	} else if n > 0 {
+		h.log.Info("revoked sessions on decline",
+			slog.Int64("user_id", u.ID), slog.Int64("count", n),
+		)
+	}
 	go h.sendUserDeclined(u, referenceID(u))
 	return nil
 }
