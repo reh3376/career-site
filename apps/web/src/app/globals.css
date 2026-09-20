@@ -130,3 +130,80 @@ body {
   height: 3px;
   background: var(--color-ink);
 }
+
+/* -----------------------------------------------------------------------
+ * OT MODE
+ *
+ * When <html data-mode="ot"> the whole surface reads as a plant HMI:
+ * dark graphite panels, hard corners, mono-first type, HMI status
+ * colors (green = running, amber = warning, red = fault). The tokens
+ * override the same variable names Tailwind consumed above, so any
+ * `bg-paper`, `text-ink`, `border-line`, etc. utility in the tree
+ * flips automatically. Landing / other pages then optionally add
+ * mode-specific structure on top of the token switch.
+ * ----------------------------------------------------------------------- */
+html[data-mode="ot"] {
+  --color-paper: #10141a;         /* deep graphite — the plant screen */
+  --color-paper-2: #171d26;       /* panel surface */
+  --color-paper-3: #1f2733;       /* panel elevation */
+  --color-ink: #e6ebf2;           /* HMI foreground text */
+  --color-ink-2: #a9b3c1;         /* secondary label */
+  --color-ink-3: #6b7684;         /* tertiary label */
+  --color-ink-4: #4a5361;         /* placeholder */
+  --color-line: #2a3140;          /* thin panel divider */
+  --color-line-strong: #3f4a5a;   /* control-outline hairline */
+
+  /* HMI accent: cyan-teal, the running-set colour on most SCADA screens */
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-accent-soft: rgba(34, 211, 238, 0.14);
+
+  /* Signal: HMI amber for warnings, kept for the same live-indicator role */
+  --color-signal: #f59e0b;
+  --color-signal-soft: rgba(245, 158, 11, 0.16);
+
+  /* Semantic — HMI-legible saturations */
+  --color-success: #22c55e;       /* RUNNING */
+  --color-warning: #f59e0b;       /* WARN */
+  --color-danger:  #ef4444;       /* FAULT / E-STOP */
+
+  /* Body type flips to monospace by default; display + fraunces still
+     available if a page opts in with .font-display. */
+  --font-sans: var(--font-jetbrains-mono, ui-monospace, monospace);
+
+  /* Hard corners across every rounded utility. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+}
+
+/* Selection uses the HMI accent so highlights don't blow out on dark. */
+html[data-mode="ot"] ::selection {
+  background: var(--color-accent);
+  color: #0b1017;
+}
+
+/* Small "LED" pilot for status chips in OT-mode UIs. Not tied to the
+   pulse-signal keyframe on purpose — pilots stay on. */
+html[data-mode="ot"] .pilot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* Utility: a dashed 1px baseline that plant HMIs use to imply a chart
+   or trend axis. Available in both modes; the OT palette makes it read. */
+.chart-baseline {
+  background-image: linear-gradient(
+    to right,
+    var(--color-line-strong) 0,
+    var(--color-line-strong) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  background-size: 8px 1px;
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+}
