@@ -45,9 +45,14 @@ func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
 // digest would break the check entirely, and no candidate is ever stored,
 // compared to a stored hash, or persisted anywhere. Password storage in
 // this codebase uses argon2id in package `hash` (see FR-AUTH-01) — this
-// checker is only the pre-storage breach lookup (FR-AUTH-02). The rule is
-// suppressed for this exact call in .github/codeql/codeql-config.yml with
-// this comment as the justification.
+// checker is only the pre-storage breach lookup (FR-AUTH-02).
+//
+// This file is excluded from CodeQL analysis via paths-ignore in
+// .github/codeql/codeql-config.yml with this comment as the
+// justification. Because the whole file is excluded (CodeQL config
+// does not support per-rule per-file exclusions), any new security
+// issue introduced in this file itself will NOT be caught by CodeQL —
+// keep it small, tightly reviewed, and covered by its own tests.
 type HIBPChecker struct {
 	Client *http.Client
 }

@@ -1,20 +1,22 @@
 # CodeQL configuration for the career-site repository.
 #
-# Query filters are the mechanism GitHub-recommends for suppressing
-# specific CodeQL rules at specific file paths, so a real high-severity
-# rule remains active for the rest of the codebase while an audited
-# false-positive stays quiet on the one call site that provoked it.
+# `paths-ignore` scopes an audited false-positive to one specific
+# source file so the CodeQL rules that fire on it stay active for
+# every other file in the codebase. Prefer per-file exclusion over
+# global rule disable: a rule that's genuinely worth having in the
+# repo shouldn't be silenced repo-wide because of one legitimate
+# outlier.
 #
-# When adding a new exclude entry, ALWAYS include a rationale comment
-# above it that names (a) which rule, (b) which file, (c) why the
-# suppression is safe. Reviewers should refuse an exclude that lacks
-# this rationale.
+# When adding a new entry, ALWAYS include a rationale block above
+# it that names (a) the file, (b) which specific rule prompted the
+# exclusion, (c) why the exclusion is safe. Reviewers should refuse
+# an entry that lacks this rationale.
 
 name: career-site-codeql-config
 
-query-filters:
+paths-ignore:
+  # File: services/api/internal/auth/pwned.go
   # Rule: go/weak-sensitive-data-hashing (CWE-327 / 328 / 916)
-  # Path: services/api/internal/auth/pwned.go
   # Why:  This file is the HaveIBeenPwned k-anonymity checker.
   #       HIBP's public range endpoint only accepts SHA-1 or SHA-256
   #       prefixes — passing a slow KDF (PBKDF2/bcrypt/scrypt/argon2)
@@ -24,12 +26,11 @@ query-filters:
   #       leave the process. Password STORAGE in this codebase uses
   #       argon2id (see package `hash`, FR-AUTH-01). See the block
   #       comment on HIBPChecker in pwned.go for the full rationale.
-  - exclude:
-      id: go/weak-sensitive-data-hashing
-      # `paths` scoping requires the CodeQL CLI 2.15+ path-filter form.
-      # If a future version rejects this shape, drop back to a
-      # file-level `paths-ignore` in the workflow init step (broader,
-      # less desirable — restores the alert for any other rule that
-      # might fire in the same file).
-      paths:
-        - services/api/internal/auth/pwned.go
+  #
+  #       Excluding the whole file is blunter than a per-rule exclude,
+  #       but CodeQL config doesn't support scoped `query-filters` by
+  #       path. Any new security issue introduced in pwned.go itself
+  #       would go uncaught by CodeQL — so keep this file small,
+  #       tightly reviewed, and covered by its own unit tests. Every
+  #       other Go file in the repo still gets the full ruleset.
+  - services/api/internal/auth/pwned.go
