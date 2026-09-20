@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { OtPanel } from "@/components/ot-panel";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
+import { getUiMode } from "@/lib/ui-mode";
 
 import { logoutAction } from "./actions";
 
@@ -39,10 +41,77 @@ async function fetchMe(): Promise<Me | null> {
 }
 
 export default async function HomePage() {
-  const me = await fetchMe();
+  const [me, mode] = await Promise.all([fetchMe(), getUiMode()]);
   if (!me) redirect("/login");
 
   const firstName = me.name?.split(" ")[0] ?? "there";
+
+  if (mode === "ot") {
+    return (
+      <OtPanel
+        tag="MBR-01"
+        title={`SESSION.ACTIVE · ${me.email}`}
+        note={me.role === "MEMBER_ROLE_ADMIN" ? "role admin" : "role member"}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+            under construction · ships late 2026
+          </p>
+          <form action={logoutAction} className="m-0">
+            <button
+              type="submit"
+              className="border border-line-strong px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2 transition-colors hover:border-signal hover:text-signal"
+            >
+              [ SIGN OUT ]
+            </button>
+          </form>
+        </div>
+        <h1
+          className="font-display mt-6 text-4xl leading-tight tracking-tight text-ink sm:text-5xl"
+          style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
+        >
+          Welcome, <span className="italic text-accent">{firstName}</span>.
+        </h1>
+        <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
+          You&rsquo;re in. The personalized dashboard lands ahead of the
+          late-2026 launch.
+        </p>
+
+        <dl className="mt-10 grid gap-3 border-t border-line pt-6 font-mono text-[12px] text-ink-2 sm:grid-cols-[10rem_1fr]">
+          <dt className="text-ink-3">STATUS</dt>
+          <dd className="m-0 text-success">
+            <span className="pilot mr-2 align-middle text-success" aria-hidden="true" />
+            ACTIVE
+          </dd>
+          <dt className="text-ink-3">EMAIL</dt>
+          <dd className="m-0 text-ink">{me.email}</dd>
+          <dt className="text-ink-3">ROLE</dt>
+          <dd className="m-0 text-ink">
+            {me.role === "MEMBER_ROLE_ADMIN" ? "admin" : "member"}
+          </dd>
+          <dt className="text-ink-3">BACKEND</dt>
+          <dd className="m-0">
+            <Link
+              href="/version"
+              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+            >
+              /version
+            </Link>
+          </dd>
+        </dl>
+
+        <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          questions?{" "}
+          <a
+            href="mailto:rogerhenley345@gmail.com"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            rogerhenley345@gmail.com
+          </a>
+        </p>
+      </OtPanel>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-16 sm:px-10 sm:py-20">

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { HamburgerMenu } from "@/components/hamburger-menu";
 import { getSessionUser, isAdmin } from "@/lib/session-user";
+import { getUiMode } from "@/lib/ui-mode";
 
 // Site header. Server component: it resolves the caller's session on
 // the server so the initial paint carries the right nav (no client
@@ -9,7 +10,7 @@ import { getSessionUser, isAdmin } from "@/lib/session-user";
 // mounted inside for open/close state and the drawer contents; it also
 // receives the same role state so its menu is composed on the server.
 export async function SiteHeader() {
-  const me = await getSessionUser();
+  const [me, mode] = await Promise.all([getSessionUser(), getUiMode()]);
   const signedIn = me != null;
   const admin = isAdmin(me);
 
@@ -74,6 +75,7 @@ export async function SiteHeader() {
             isAdmin={admin}
             memberName={me?.name}
             memberEmail={me?.email}
+            mode={mode}
           />
         </div>
       </div>
