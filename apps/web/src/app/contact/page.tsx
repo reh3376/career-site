@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
+import { OtPanel } from "@/components/ot-panel";
 import { getSessionCookie } from "@/lib/session";
+import { getUiMode } from "@/lib/ui-mode";
 
 import { ContactForm } from "./form";
 
@@ -12,8 +14,28 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ContactPage() {
-  const cookie = await getSessionCookie();
+  const [cookie, mode] = await Promise.all([getSessionCookie(), getUiMode()]);
   const signedIn = Boolean(cookie);
+
+  if (mode === "ot") {
+    return (
+      <OtPanel tag="MSG-01" title="MSG.OUT · CONTACT" note="reply within 24h">
+        <ContactForm signedIn={signedIn} />
+        <p className="mt-8 border-t border-line pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+          security · use{" "}
+          <a
+            href="https://github.com/reh3376/career-site/security/advisories/new"
+            rel="noopener noreferrer"
+            target="_blank"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            private advisories
+          </a>{" "}
+          for vulnerabilities
+        </p>
+      </OtPanel>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-20 sm:px-10 sm:py-28">
