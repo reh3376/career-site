@@ -38,14 +38,15 @@ func mustLoad(name string) *Template {
 // Registered templates. Add a var + mustLoad line, drop the .tmpl files
 // in templates/, and it's usable from handlers.
 var (
-	VerifyTemplate           = mustLoad("verify")
-	ApprovalRequestTemplate  = mustLoad("approval_request")
-	WelcomeWhitelistTemplate = mustLoad("welcome_whitelist")
-	UserApprovedTemplate     = mustLoad("user_approved")
-	UserDeclinedTemplate     = mustLoad("user_declined")
-	UserAutoDeclinedTemplate = mustLoad("user_auto_declined")
-	AccessEndingSoonTemplate = mustLoad("access_ending_soon")
-	AccessEndedTemplate      = mustLoad("access_ended")
+	VerifyTemplate              = mustLoad("verify")
+	ApprovalRequestTemplate     = mustLoad("approval_request")
+	WelcomeWhitelistTemplate    = mustLoad("welcome_whitelist")
+	UserApprovedTemplate        = mustLoad("user_approved")
+	UserDeclinedTemplate        = mustLoad("user_declined")
+	UserAutoDeclinedTemplate    = mustLoad("user_auto_declined")
+	AccessEndingSoonTemplate    = mustLoad("access_ending_soon")
+	AccessEndedTemplate         = mustLoad("access_ended")
+	SupportNotificationTemplate = mustLoad("support_notification")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the

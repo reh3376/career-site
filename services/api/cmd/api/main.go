@@ -117,6 +117,10 @@ func main() {
 		CookieSecure:        cfg.CookieSecure,
 	})
 	memberHandler := handlers.NewMember(authHandler)
+	contactHandler := handlers.NewContact(
+		log, userRepo, authHandler, mailer,
+		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
+	)
 	decisionHandler := handlers.NewAdminDecision(
 		log, userRepo, mailer, cfg.DecisionTokenSecret,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
@@ -127,6 +131,7 @@ func main() {
 		DB:       pool,
 		Auth:     authHandler,
 		Member:   memberHandler,
+		Contact:  contactHandler,
 		Decision: decisionHandler,
 	})
 

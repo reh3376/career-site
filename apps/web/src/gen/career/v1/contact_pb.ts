@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/contact.proto.
  */
 export const file_career_v1_contact: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXJlZXIvdjEvY29udGFjdC5wcm90bxIJY2FyZWVyLnYxIhoKGEdldENvbnRhY3RPcHRpb25zUmVxdWVzdCI6Cg5Db250YWN0Q2hhbm5lbBIMCgRraW5kGAEgASgJEg0KBWxhYmVsGAIgASgJEgsKA3VybBgDIAEoCSJ8ChlHZXRDb250YWN0T3B0aW9uc1Jlc3BvbnNlEhQKDGF2YWlsYWJpbGl0eRgBIAEoCRIcChRsb2NhdGlvbl9wcmVmZXJlbmNlcxgCIAEoCRIrCghjaGFubmVscxgDIAMoCzIZLmNhcmVlci52MS5Db250YWN0Q2hhbm5lbCKnAgoUU3VibWl0Q29udGFjdFJlcXVlc3QSGwoHc3ViamVjdBgBIAEoCUIKukgHcgUQARjIARIbCgdtZXNzYWdlGAIgASgJQgq6SAdyBRABGIgnEk8KDXJlcGx5X2NoYW5uZWwYAyABKA4yLC5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlcXVlc3QuUmVwbHlDaGFubmVsQgq6SAeCAQQQASAAEiAKD2NvbnZlcnNhdGlvbl9pZBgEIAEoCUIHukgEcgIYQCJiCgxSZXBseUNoYW5uZWwSHQoZUkVQTFlfQ0hBTk5FTF9VTlNQRUNJRklFRBAAEhcKE1JFUExZX0NIQU5ORUxfRU1BSUwQARIaChZSRVBMWV9DSEFOTkVMX0xJTktFRElOEAIiKgoVU3VibWl0Q29udGFjdFJlc3BvbnNlEhEKCXRpY2tldF9pZBgBIAEoCTLUAQoOQ29udGFjdFNlcnZpY2USZAoRR2V0Q29udGFjdE9wdGlvbnMSIy5jYXJlZXIudjEuR2V0Q29udGFjdE9wdGlvbnNSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldENvbnRhY3RPcHRpb25zUmVzcG9uc2UiBIC1GAISXAoNU3VibWl0Q29udGFjdBIfLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVxdWVzdBogLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVzcG9uc2UiCIC1GAKQtRgDQqYBCg1jb20uY2FyZWVyLnYxQgxDb250YWN0UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options]);
+  fileDesc("ChdjYXJlZXIvdjEvY29udGFjdC5wcm90bxIJY2FyZWVyLnYxIhoKGEdldENvbnRhY3RPcHRpb25zUmVxdWVzdCI6Cg5Db250YWN0Q2hhbm5lbBIMCgRraW5kGAEgASgJEg0KBWxhYmVsGAIgASgJEgsKA3VybBgDIAEoCSJ8ChlHZXRDb250YWN0T3B0aW9uc1Jlc3BvbnNlEhQKDGF2YWlsYWJpbGl0eRgBIAEoCRIcChRsb2NhdGlvbl9wcmVmZXJlbmNlcxgCIAEoCRIrCghjaGFubmVscxgDIAMoCzIZLmNhcmVlci52MS5Db250YWN0Q2hhbm5lbCK1AwoUU3VibWl0Q29udGFjdFJlcXVlc3QSGwoHc3ViamVjdBgBIAEoCUIKukgHcgUQARjIARIbCgdtZXNzYWdlGAIgASgJQgq6SAdyBRABGIgnEk8KDXJlcGx5X2NoYW5uZWwYAyABKA4yLC5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlcXVlc3QuUmVwbHlDaGFubmVsQgq6SAeCAQQQASAAEiAKD2NvbnZlcnNhdGlvbl9pZBgEIAEoCUIHukgEcgIYQBI4CghjYXRlZ29yeRgFIAEoDjIaLmNhcmVlci52MS5TdXBwb3J0Q2F0ZWdvcnlCCrpIB4IBBBABIAASFgoEbmFtZRgGIAEoCUIIukgFcgMYyAESFwoFZW1haWwYByABKAlCCLpIBXIDGMACEiEKD3R1cm5zdGlsZV90b2tlbhgIIAEoCUIIukgFcgMYgCAiYgoMUmVwbHlDaGFubmVsEh0KGVJFUExZX0NIQU5ORUxfVU5TUEVDSUZJRUQQABIXChNSRVBMWV9DSEFOTkVMX0VNQUlMEAESGgoWUkVQTFlfQ0hBTk5FTF9MSU5LRURJThACIioKFVN1Ym1pdENvbnRhY3RSZXNwb25zZRIRCgl0aWNrZXRfaWQYASABKAkqigIKD1N1cHBvcnRDYXRlZ29yeRIgChxTVVBQT1JUX0NBVEVHT1JZX1VOU1BFQ0lGSUVEEAASJQohU1VQUE9SVF9DQVRFR09SWV9HRU5FUkFMX1FVRVNUSU9OEAESHwobU1VQUE9SVF9DQVRFR09SWV9CVUdfUkVQT1JUEAISJAogU1VQUE9SVF9DQVRFR09SWV9GRUFUVVJFX1JFUVVFU1QQAxInCiNTVVBQT1JUX0NBVEVHT1JZX0NPTlRSSUJVVE9SX0FDQ0VTUxAEEiIKHlNVUFBPUlRfQ0FURUdPUllfUFJFU1NfSU5RVUlSWRAFEhoKFlNVUFBPUlRfQ0FURUdPUllfT1RIRVIQBjLUAQoOQ29udGFjdFNlcnZpY2USZAoRR2V0Q29udGFjdE9wdGlvbnMSIy5jYXJlZXIudjEuR2V0Q29udGFjdE9wdGlvbnNSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldENvbnRhY3RPcHRpb25zUmVzcG9uc2UiBIC1GAISXAoNU3VibWl0Q29udGFjdBIfLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVxdWVzdBogLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVzcG9uc2UiCIC1GAGQtRgDQqYBCg1jb20uY2FyZWVyLnYxQgxDb250YWN0UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options]);
 
 /**
  * Empty.
@@ -134,6 +134,38 @@ export type SubmitContactRequest = Message<"career.v1.SubmitContactRequest"> & {
    * @generated from field: string conversation_id = 4;
    */
   conversationId: string;
+
+  /**
+   * Categorises the message so the owner can filter the support inbox
+   * (FR-CNT-22 / FR-ADM-14). Required.
+   *
+   * @generated from field: career.v1.SupportCategory category = 5;
+   */
+  category: SupportCategory;
+
+  /**
+   * Anonymous sender's display name. Required when the request has no
+   * session cookie; ignored when it does (the member's name wins).
+   *
+   * @generated from field: string name = 6;
+   */
+  name: string;
+
+  /**
+   * Anonymous sender's email. Required + validated as an email address
+   * when the request has no session cookie; ignored when it does.
+   *
+   * @generated from field: string email = 7;
+   */
+  email: string;
+
+  /**
+   * Cloudflare Turnstile response token. Required on anonymous
+   * submissions; ignored for members.
+   *
+   * @generated from field: string turnstile_token = 8;
+   */
+  turnstileToken: string;
 };
 
 /**
@@ -157,7 +189,8 @@ export enum SubmitContactRequest_ReplyChannel {
   UNSPECIFIED = 0,
 
   /**
-   * Email to the member's verified address.
+   * Email to the member's verified address, or (for anonymous
+   * submitters) to the email supplied on the form.
    *
    * @generated from enum value: REPLY_CHANNEL_EMAIL = 1;
    */
@@ -199,6 +232,69 @@ export const SubmitContactResponseSchema: GenMessage<SubmitContactResponse> = /*
   messageDesc(file_career_v1_contact, 4);
 
 /**
+ * Category buckets for the support inbox (FR-CNT-22).
+ *
+ * @generated from enum career.v1.SupportCategory
+ */
+export enum SupportCategory {
+  /**
+   * Not set.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Open-ended question about the site or the owner.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_GENERAL_QUESTION = 1;
+   */
+  GENERAL_QUESTION = 1,
+
+  /**
+   * Bug report — something on the site isn't working.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_BUG_REPORT = 2;
+   */
+  BUG_REPORT = 2,
+
+  /**
+   * Feature request or suggestion.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_FEATURE_REQUEST = 3;
+   */
+  FEATURE_REQUEST = 3,
+
+  /**
+   * Request to be added as a collaborator on one of the owner's public
+   * GitHub repositories. Body should name the repo.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS = 4;
+   */
+  CONTRIBUTOR_ACCESS = 4,
+
+  /**
+   * Press, interview, or podcast inquiry.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_PRESS_INQUIRY = 5;
+   */
+  PRESS_INQUIRY = 5,
+
+  /**
+   * Anything not covered above.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_OTHER = 6;
+   */
+  OTHER = 6,
+}
+
+/**
+ * Describes the enum career.v1.SupportCategory.
+ */
+export const SupportCategorySchema: GenEnum<SupportCategory> = /*@__PURE__*/
+  enumDesc(file_career_v1_contact, 0);
+
+/**
  * Reaching the owner outside the assistant.
  *
  * @generated from service career.v1.ContactService
@@ -216,8 +312,10 @@ export const ContactService: GenService<{
     output: typeof GetContactOptionsResponseSchema;
   },
   /**
-   * Sends a message to the owner. The owner receives it with the member's
-   * profile context and replies by the channel the member chose.
+   * Sends a message to the owner. Accepts both signed-in members (identity
+   * read from the session cookie) and anonymous visitors (name + email
+   * supplied on the form, Turnstile required). The owner receives the
+   * message with the sender's context and replies from their mailbox.
    *
    * @generated from rpc career.v1.ContactService.SubmitContact
    */

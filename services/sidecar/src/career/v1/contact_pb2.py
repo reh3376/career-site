@@ -26,7 +26,7 @@ from buf.validate import validate_pb2 as buf_dot_validate_dot_validate__pb2
 from career.v1 import options_pb2 as career_dot_v1_dot_options__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63\x61reer/v1/contact.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x17\x63\x61reer/v1/options.proto\"\x1a\n\x18GetContactOptionsRequest\"L\n\x0e\x43ontactChannel\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n\x05label\x18\x02 \x01(\tR\x05label\x12\x10\n\x03url\x18\x03 \x01(\tR\x03url\"\xa9\x01\n\x19GetContactOptionsResponse\x12\"\n\x0c\x61vailability\x18\x01 \x01(\tR\x0c\x61vailability\x12\x31\n\x14location_preferences\x18\x02 \x01(\tR\x13locationPreferences\x12\x35\n\x08\x63hannels\x18\x03 \x03(\x0b\x32\x19.career.v1.ContactChannelR\x08\x63hannels\"\xd7\x02\n\x14SubmitContactRequest\x12$\n\x07subject\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\xc8\x01R\x07subject\x12$\n\x07message\x18\x02 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x88\'R\x07message\x12]\n\rreply_channel\x18\x03 \x01(\x0e\x32,.career.v1.SubmitContactRequest.ReplyChannelB\n\xbaH\x07\x82\x01\x04\x10\x01 \x00R\x0creplyChannel\x12\x30\n\x0f\x63onversation_id\x18\x04 \x01(\tB\x07\xbaH\x04r\x02\x18@R\x0e\x63onversationId\"b\n\x0cReplyChannel\x12\x1d\n\x19REPLY_CHANNEL_UNSPECIFIED\x10\x00\x12\x17\n\x13REPLY_CHANNEL_EMAIL\x10\x01\x12\x1a\n\x16REPLY_CHANNEL_LINKEDIN\x10\x02\"4\n\x15SubmitContactResponse\x12\x1b\n\tticket_id\x18\x01 \x01(\tR\x08ticketId2\xd4\x01\n\x0e\x43ontactService\x12\x64\n\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12\\\n\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x03\x42\xa6\x01\n\rcom.career.v1B\x0c\x43ontactProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63\x61reer/v1/contact.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x17\x63\x61reer/v1/options.proto\"\x1a\n\x18GetContactOptionsRequest\"L\n\x0e\x43ontactChannel\x12\x12\n\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n\x05label\x18\x02 \x01(\tR\x05label\x12\x10\n\x03url\x18\x03 \x01(\tR\x03url\"\xa9\x01\n\x19GetContactOptionsResponse\x12\"\n\x0c\x61vailability\x18\x01 \x01(\tR\x0c\x61vailability\x12\x31\n\x14location_preferences\x18\x02 \x01(\tR\x13locationPreferences\x12\x35\n\x08\x63hannels\x18\x03 \x03(\x0b\x32\x19.career.v1.ContactChannelR\x08\x63hannels\"\x8c\x04\n\x14SubmitContactRequest\x12$\n\x07subject\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\xc8\x01R\x07subject\x12$\n\x07message\x18\x02 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x88\'R\x07message\x12]\n\rreply_channel\x18\x03 \x01(\x0e\x32,.career.v1.SubmitContactRequest.ReplyChannelB\n\xbaH\x07\x82\x01\x04\x10\x01 \x00R\x0creplyChannel\x12\x30\n\x0f\x63onversation_id\x18\x04 \x01(\tB\x07\xbaH\x04r\x02\x18@R\x0e\x63onversationId\x12\x42\n\x08\x63\x61tegory\x18\x05 \x01(\x0e\x32\x1a.career.v1.SupportCategoryB\n\xbaH\x07\x82\x01\x04\x10\x01 \x00R\x08\x63\x61tegory\x12\x1c\n\x04name\x18\x06 \x01(\tB\x08\xbaH\x05r\x03\x18\xc8\x01R\x04name\x12\x1e\n\x05\x65mail\x18\x07 \x01(\tB\x08\xbaH\x05r\x03\x18\xc0\x02R\x05\x65mail\x12\x31\n\x0fturnstile_token\x18\x08 \x01(\tB\x08\xbaH\x05r\x03\x18\x80 R\x0eturnstileToken\"b\n\x0cReplyChannel\x12\x1d\n\x19REPLY_CHANNEL_UNSPECIFIED\x10\x00\x12\x17\n\x13REPLY_CHANNEL_EMAIL\x10\x01\x12\x1a\n\x16REPLY_CHANNEL_LINKEDIN\x10\x02\"4\n\x15SubmitContactResponse\x12\x1b\n\tticket_id\x18\x01 \x01(\tR\x08ticketId*\x8a\x02\n\x0fSupportCategory\x12 \n\x1cSUPPORT_CATEGORY_UNSPECIFIED\x10\x00\x12%\n!SUPPORT_CATEGORY_GENERAL_QUESTION\x10\x01\x12\x1f\n\x1bSUPPORT_CATEGORY_BUG_REPORT\x10\x02\x12$\n SUPPORT_CATEGORY_FEATURE_REQUEST\x10\x03\x12\'\n#SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS\x10\x04\x12\"\n\x1eSUPPORT_CATEGORY_PRESS_INQUIRY\x10\x05\x12\x1a\n\x16SUPPORT_CATEGORY_OTHER\x10\x06\x32\xd4\x01\n\x0e\x43ontactService\x12\x64\n\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12\\\n\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\x08\x80\xb5\x18\x01\x90\xb5\x18\x03\x42\xa6\x01\n\rcom.career.v1B\x0c\x43ontactProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -42,10 +42,20 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SUBMITCONTACTREQUEST'].fields_by_name['reply_channel']._serialized_options = b'\272H\007\202\001\004\020\001 \000'
   _globals['_SUBMITCONTACTREQUEST'].fields_by_name['conversation_id']._loaded_options = None
   _globals['_SUBMITCONTACTREQUEST'].fields_by_name['conversation_id']._serialized_options = b'\272H\004r\002\030@'
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['category']._loaded_options = None
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['category']._serialized_options = b'\272H\007\202\001\004\020\001 \000'
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['name']._loaded_options = None
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['name']._serialized_options = b'\272H\005r\003\030\310\001'
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['email']._loaded_options = None
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['email']._serialized_options = b'\272H\005r\003\030\300\002'
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['turnstile_token']._loaded_options = None
+  _globals['_SUBMITCONTACTREQUEST'].fields_by_name['turnstile_token']._serialized_options = b'\272H\005r\003\030\200 '
   _globals['_CONTACTSERVICE'].methods_by_name['GetContactOptions']._loaded_options = None
   _globals['_CONTACTSERVICE'].methods_by_name['GetContactOptions']._serialized_options = b'\200\265\030\002'
   _globals['_CONTACTSERVICE'].methods_by_name['SubmitContact']._loaded_options = None
-  _globals['_CONTACTSERVICE'].methods_by_name['SubmitContact']._serialized_options = b'\200\265\030\002\220\265\030\003'
+  _globals['_CONTACTSERVICE'].methods_by_name['SubmitContact']._serialized_options = b'\200\265\030\001\220\265\030\003'
+  _globals['_SUPPORTCATEGORY']._serialized_start=952
+  _globals['_SUPPORTCATEGORY']._serialized_end=1218
   _globals['_GETCONTACTOPTIONSREQUEST']._serialized_start=92
   _globals['_GETCONTACTOPTIONSREQUEST']._serialized_end=118
   _globals['_CONTACTCHANNEL']._serialized_start=120
@@ -53,11 +63,11 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETCONTACTOPTIONSRESPONSE']._serialized_start=199
   _globals['_GETCONTACTOPTIONSRESPONSE']._serialized_end=368
   _globals['_SUBMITCONTACTREQUEST']._serialized_start=371
-  _globals['_SUBMITCONTACTREQUEST']._serialized_end=714
-  _globals['_SUBMITCONTACTREQUEST_REPLYCHANNEL']._serialized_start=616
-  _globals['_SUBMITCONTACTREQUEST_REPLYCHANNEL']._serialized_end=714
-  _globals['_SUBMITCONTACTRESPONSE']._serialized_start=716
-  _globals['_SUBMITCONTACTRESPONSE']._serialized_end=768
-  _globals['_CONTACTSERVICE']._serialized_start=771
-  _globals['_CONTACTSERVICE']._serialized_end=983
+  _globals['_SUBMITCONTACTREQUEST']._serialized_end=895
+  _globals['_SUBMITCONTACTREQUEST_REPLYCHANNEL']._serialized_start=797
+  _globals['_SUBMITCONTACTREQUEST_REPLYCHANNEL']._serialized_end=895
+  _globals['_SUBMITCONTACTRESPONSE']._serialized_start=897
+  _globals['_SUBMITCONTACTRESPONSE']._serialized_end=949
+  _globals['_CONTACTSERVICE']._serialized_start=1221
+  _globals['_CONTACTSERVICE']._serialized_end=1433
 # @@protoc_insertion_point(module_scope)

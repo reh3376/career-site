@@ -48,8 +48,10 @@ type ContactServiceClient interface {
 	// Returns the owner's availability statement and the contact channels he
 	// has chosen to publish.
 	GetContactOptions(context.Context, *connect.Request[v1.GetContactOptionsRequest]) (*connect.Response[v1.GetContactOptionsResponse], error)
-	// Sends a message to the owner. The owner receives it with the member's
-	// profile context and replies by the channel the member chose.
+	// Sends a message to the owner. Accepts both signed-in members (identity
+	// read from the session cookie) and anonymous visitors (name + email
+	// supplied on the form, Turnstile required). The owner receives the
+	// message with the sender's context and replies from their mailbox.
 	SubmitContact(context.Context, *connect.Request[v1.SubmitContactRequest]) (*connect.Response[v1.SubmitContactResponse], error)
 }
 
@@ -100,8 +102,10 @@ type ContactServiceHandler interface {
 	// Returns the owner's availability statement and the contact channels he
 	// has chosen to publish.
 	GetContactOptions(context.Context, *connect.Request[v1.GetContactOptionsRequest]) (*connect.Response[v1.GetContactOptionsResponse], error)
-	// Sends a message to the owner. The owner receives it with the member's
-	// profile context and replies by the channel the member chose.
+	// Sends a message to the owner. Accepts both signed-in members (identity
+	// read from the session cookie) and anonymous visitors (name + email
+	// supplied on the form, Turnstile required). The owner receives the
+	// message with the sender's context and replies from their mailbox.
 	SubmitContact(context.Context, *connect.Request[v1.SubmitContactRequest]) (*connect.Response[v1.SubmitContactResponse], error)
 }
 

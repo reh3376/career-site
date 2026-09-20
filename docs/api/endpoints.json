@@ -666,7 +666,7 @@
       "request": "career.v1.SubmitContactRequest",
       "response": "career.v1.SubmitContactResponse",
       "summary": "Sends a message to the owner.",
-      "auth": "member",
+      "auth": "public",
       "allow_unverified": false,
       "rate_limit_per_minute": 3,
       "mfa_fresh": false,
