@@ -100,6 +100,45 @@ jobs:
           echo "::warning::pnpm audit could not reach the npm advisories endpoint after 3 retries; continuing"
           exit 0
 
+  trivy:
+    name: trivy (fs + config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Scan the working tree in two passes:
+      #   1. filesystem — CVEs against language lockfiles (Go, pnpm, uv)
+      #   2. config     — misconfig in Dockerfile / docker-compose / GH Actions
+      # We install Trivy directly (no third-party action) so the tool
+      # version is pinned in-repo and supply-chain review is one file.
+      - name: install trivy
+        run: |
+          v=0.58.1
+          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${v}/trivy_${v}_Linux-64bit.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin trivy
+          trivy --version
+      # Filesystem scan. --ignore-unfixed skips CVEs with no upstream fix
+      # (noise the team can't act on today). --severity gates so PRs
+      # only break on HIGH/CRITICAL; anything lower is a nag not a block.
+      - name: fs scan
+        run: |
+          trivy fs \
+            --scanners vuln \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --skip-dirs .git \
+            .
+      # Config scan. Same severity gate. Trivy's Dockerfile / compose
+      # checks catch things like "USER not set" or "mounted host path
+      # in prod", which pair with the runtime hardening pass.
+      - name: config scan
+        run: |
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --skip-dirs .git \
+            .
+
   gitleaks:
     name: gitleaks (secret scan)
     runs-on: ubuntu-latest
