@@ -54,6 +54,42 @@ func requireAdmin[T any](a *Admin, ctx context.Context, req *connect.Request[T])
 }
 
 // ---------------------------------------------------------------
+// ListMembers
+// ---------------------------------------------------------------
+
+func (a *Admin) ListMembers(
+	ctx context.Context,
+	req *connect.Request[v1.ListMembersRequest],
+) (*connect.Response[v1.ListMembersResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	msg := req.Msg
+	f := users.ListMembersFilter{
+		Query:  msg.Query,
+		Status: memberStatusProtoToRepo(msg.Status),
+	}
+	if p := msg.Page; p != nil {
+		f.Limit = p.PageSize
+	}
+	res, err := a.users.ListMembers(ctx, f)
+	if err != nil {
+		a.log.Error("ListMembers failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListMembersResponse{
+		Members: make([]*v1.MemberRecord, 0, len(res.Members)),
+		Page: &v1.PageResponse{
+			TotalCount: res.Total,
+		},
+	}
+	for i := range res.Members {
+		out.Members = append(out.Members, memberRecordRepoToProto(&res.Members[i]))
+	}
+	return connect.NewResponse(out), nil
+}
+
+// ---------------------------------------------------------------
 // ListContactMessages
 // ---------------------------------------------------------------
 
@@ -187,6 +223,51 @@ func supportStatusRepoToProto(s string) v1.SupportStatus {
 		return v1.SupportStatus_SUPPORT_STATUS_UNSPECIFIED
 	}
 }
+
+// ---------------------------------------------------------------
+// Member mappers
+// ---------------------------------------------------------------
+
+func memberStatusProtoToRepo(s v1.MemberStatus) users.Status {
+	switch s {
+	case v1.MemberStatus_MEMBER_STATUS_UNVERIFIED:
+		return users.StatusUnverified
+	case v1.MemberStatus_MEMBER_STATUS_PENDING_APPROVAL:
+		return users.StatusPendingApproval
+	case v1.MemberStatus_MEMBER_STATUS_ACTIVE:
+		return users.StatusActive
+	case v1.MemberStatus_MEMBER_STATUS_DECLINED:
+		return users.StatusDeclined
+	case v1.MemberStatus_MEMBER_STATUS_EXPIRED:
+		return users.StatusExpired
+	case v1.MemberStatus_MEMBER_STATUS_DISABLED:
+		return users.StatusDisabled
+	default:
+		return "" // any
+	}
+}
+
+func memberRecordRepoToProto(u *users.User) *v1.MemberRecord {
+	me := &v1.Me{
+		Id:     strconv.FormatInt(u.ID, 10),
+		Name:   u.Name,
+		Email:  u.Email,
+		Status: statusToProto(u.Status),
+		Role:   roleToProto(u.Role),
+	}
+	rec := &v1.MemberRecord{
+		Me:     me,
+		Counts: &v1.MemberCounts{}, // activity counts land with the activity ingest work
+	}
+	if !u.CreatedAt.IsZero() {
+		rec.FirstSeenAt = timestamppb.New(u.CreatedAt)
+	}
+	return rec
+}
+
+// ---------------------------------------------------------------
+// Support message mapper
+// ---------------------------------------------------------------
 
 func supportMessageRepoToProto(m *users.SupportMessage) *v1.SupportMessage {
 	out := &v1.SupportMessage{
