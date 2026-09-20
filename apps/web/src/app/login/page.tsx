@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   description: "Sign in to Roger Henley's career portfolio.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
   return (
     <div className="mx-auto max-w-xl px-6 py-20 sm:px-10 sm:py-28">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
@@ -31,7 +36,7 @@ export default function LoginPage() {
         .
       </p>
       <div className="mt-12">
-        <LoginForm />
+        <LoginForm next={next} />
       </div>
     </div>
   );
