@@ -138,6 +138,21 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns the public tables + columns of the API database, from
+  // information_schema. Backs the schema panel on /admin/db.
+  rpc ListDbTables(ListDbTablesRequest) returns (ListDbTablesResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Runs a SQL query against the API database from the /admin/db
+  // console. MVP is read-only: only SELECT statements are accepted;
+  // any other statement kind returns InvalidArgument. A per-statement
+  // timeout is enforced server-side and the result row-count is
+  // capped (rows past the cap are dropped with `truncated=true`).
+  rpc RunDbQuery(RunDbQueryRequest) returns (RunDbQueryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -848,4 +863,81 @@ message ExtendAccessRequest {
 message ExtendAccessResponse {
   // Updated member record.
   MemberRecord member = 1;
+}
+
+// One column of a database table.
+message DbColumn {
+  // Column name.
+  string name = 1;
+  // SQL type as reported by information_schema (e.g. "text",
+  // "bigint", "timestamp with time zone").
+  string data_type = 2;
+  // Whether the column is nullable.
+  bool nullable = 3;
+}
+
+// One table in the public schema.
+message DbTable {
+  // Table name.
+  string name = 1;
+  // Columns, ordered as declared.
+  repeated DbColumn columns = 2;
+  // Approximate row count from pg_class.reltuples (updated by
+  // ANALYZE; may be stale — the console labels it as such).
+  int64 approx_row_count = 3;
+}
+
+// List-tables request (empty for now; a future revision might
+// add filters).
+message ListDbTablesRequest {}
+
+// List-tables response.
+message ListDbTablesResponse {
+  // Public-schema tables, ordered by name.
+  repeated DbTable tables = 1;
+}
+
+// Run-query request.
+message RunDbQueryRequest {
+  // SQL statement to execute. MVP: only SELECT is accepted.
+  string sql = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+  // Statement timeout in milliseconds; server-clamped to [100, 10000].
+  int32 timeout_ms = 2;
+  // Optional column of the result to sort by (informational only —
+  // the client can reorder locally; the server passes it back so a
+  // caller can round-trip UI state).
+  string sort = 3 [(buf.validate.field).string.max_len = 64];
+}
+
+// One row of results, as a list of stringified cell values in the
+// same order as the columns array on the response. NULLs come across
+// as an empty string with a companion `null_mask` bit set on the row
+// (see below).
+message DbRow {
+  // Cell values, stringified. Callers must not attempt to parse them
+  // as JSON; the type is columns[i].data_type on the response.
+  repeated string cells = 1;
+  // Bitmask, LSB = column 0. A set bit means the corresponding cell
+  // is NULL and its stringified value should be ignored.
+  uint64 null_mask = 2;
+}
+
+// Run-query response.
+message RunDbQueryResponse {
+  // Column names (order matches DbRow.cells).
+  repeated string columns = 1;
+  // SQL types (order matches columns).
+  repeated string column_types = 2;
+  // Rows, in whatever order the query returned them.
+  repeated DbRow rows = 3;
+  // True when the result was cut off at the server-side row cap.
+  bool truncated = 4;
+  // Number of rows returned (before truncation, if applicable —
+  // matches len(rows) when truncated is false).
+  int32 row_count = 5;
+  // Milliseconds the query took on the server, wall-clock.
+  int32 elapsed_ms = 6;
 }

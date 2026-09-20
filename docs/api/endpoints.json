@@ -994,6 +994,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.AdminService",
+      "method": "ListDbTables",
+      "path": "/api/career.v1.AdminService/ListDbTables",
+      "grpc_full_method": "/career.v1.AdminService/ListDbTables",
+      "internal": false,
+      "request": "career.v1.ListDbTablesRequest",
+      "response": "career.v1.ListDbTablesResponse",
+      "summary": "Returns the public tables + columns of the API database, from information_schema.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.AdminService",
+      "method": "RunDbQuery",
+      "path": "/api/career.v1.AdminService/RunDbQuery",
+      "grpc_full_method": "/career.v1.AdminService/RunDbQuery",
+      "internal": false,
+      "request": "career.v1.RunDbQueryRequest",
+      "response": "career.v1.RunDbQueryResponse",
+      "summary": "Runs a SQL query against the API database from the /admin/db console.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.SystemService",
       "method": "GetVersion",
       "path": "/api/career.v1.SystemService/GetVersion",

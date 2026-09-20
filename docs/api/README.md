@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 20 |
+| [`AdminService`](#adminservice) | Owner console. | 22 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1622,6 +1622,8 @@ Owner console.
 | [`ApproveRegistration`](#adminservice-approveregistration) | `/api/career.v1.AdminService/ApproveRegistration` | Admin (fresh MFA) | default | `ApproveRegistrationRequest` → `ApproveRegistrationResponse` | Approves a pending registration from the admin console. |
 | [`DeclineRegistration`](#adminservice-declineregistration) | `/api/career.v1.AdminService/DeclineRegistration` | Admin (fresh MFA) | default | `DeclineRegistrationRequest` → `DeclineRegistrationResponse` | Declines a pending registration from the admin console. |
 | [`ExtendAccess`](#adminservice-extendaccess) | `/api/career.v1.AdminService/ExtendAccess` | Admin (fresh MFA) | default | `ExtendAccessRequest` → `ExtendAccessResponse` | Extends an active member's access period by a fixed duration (`extend_days`), or sets a specific new `expires_at`. |
+| [`ListDbTables`](#adminservice-listdbtables) | `/api/career.v1.AdminService/ListDbTables` | Admin (fresh MFA) | default | `ListDbTablesRequest` → `ListDbTablesResponse` | Returns the public tables + columns of the API database, from information_schema. |
+| [`RunDbQuery`](#adminservice-rundbquery) | `/api/career.v1.AdminService/RunDbQuery` | Admin (fresh MFA) | default | `RunDbQueryRequest` → `RunDbQueryResponse` | Runs a SQL query against the API database from the /admin/db console. |
 
 ### AdminService.ListMembers
 
@@ -2297,6 +2299,72 @@ and relative are exclusive; passing both is InvalidArgument.
   "newExpiresAt": "2026-09-18T12:00:00Z",
   "permanent": true,
   "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.ListDbTables
+
+`POST /api/career.v1.AdminService/ListDbTables` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns the public tables + columns of the API database, from
+information_schema. Backs the schema panel on /admin/db.
+
+**Request** — [`ListDbTablesRequest`](#listdbtablesrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListDbTablesResponse`](#listdbtablesresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `tables` | [`DbTable`](#dbtable)[] | array of object |  | Public-schema tables, ordered by name. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.RunDbQuery
+
+`POST /api/career.v1.AdminService/RunDbQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Runs a SQL query against the API database from the /admin/db
+console. MVP is read-only: only SELECT statements are accepted;
+any other statement kind returns InvalidArgument. A per-statement
+timeout is enforced server-side and the result row-count is
+capped (rows past the cap are dropped with `truncated=true`).
+
+**Request** — [`RunDbQueryRequest`](#rundbqueryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sql` | `string` | string | `string: min_len: 1 max_len: 4000` | SQL statement to execute. MVP: only SELECT is accepted. |
+| `timeoutMs` | `int32` | number |  | Statement timeout in milliseconds; server-clamped to [100, 10000]. |
+| `sort` | `string` | string | `string: max_len: 64` | Optional column of the result to sort by (informational only — the client can reorder locally; the server passes it back so a caller can round-trip UI state). |
+
+**Response** — [`RunDbQueryResponse`](#rundbqueryresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `columns` | `string`[] | array of string |  | Column names (order matches DbRow.cells). |
+| `columnTypes` | `string`[] | array of string |  | SQL types (order matches columns). |
+| `rows` | [`DbRow`](#dbrow)[] | array of object |  | Rows, in whatever order the query returned them. |
+| `truncated` | `bool` | boolean |  | True when the result was cut off at the server-side row cap. |
+| `rowCount` | `int32` | number |  | Number of rows returned (before truncation, if applicable — matches len(rows) when truncated is false). |
+| `elapsedMs` | `int32` | number |  | Milliseconds the query took on the server, wall-clock. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sql": "string",
+  "timeoutMs": 0,
+  "sort": "string"
 }
 ```
 
@@ -3731,6 +3799,76 @@ Extend-access response.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+### DbColumn
+
+One column of a database table.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string |  | Column name. |
+| `dataType` | `string` | string |  | SQL type as reported by information_schema (e.g. "text", "bigint", "timestamp with time zone"). |
+| `nullable` | `bool` | boolean |  | Whether the column is nullable. |
+
+### DbTable
+
+One table in the public schema.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string |  | Table name. |
+| `columns` | [`DbColumn`](#dbcolumn)[] | array of object |  | Columns, ordered as declared. |
+| `approxRowCount` | `int64` | string (decimal) |  | Approximate row count from pg_class.reltuples (updated by ANALYZE; may be stale — the console labels it as such). |
+
+### ListDbTablesRequest
+
+List-tables request (empty for now; a future revision might
+add filters).
+
+_No fields._
+
+### ListDbTablesResponse
+
+List-tables response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `tables` | [`DbTable`](#dbtable)[] | array of object |  | Public-schema tables, ordered by name. |
+
+### RunDbQueryRequest
+
+Run-query request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sql` | `string` | string | `string: min_len: 1 max_len: 4000` | SQL statement to execute. MVP: only SELECT is accepted. |
+| `timeoutMs` | `int32` | number |  | Statement timeout in milliseconds; server-clamped to [100, 10000]. |
+| `sort` | `string` | string | `string: max_len: 64` | Optional column of the result to sort by (informational only — the client can reorder locally; the server passes it back so a caller can round-trip UI state). |
+
+### DbRow
+
+One row of results, as a list of stringified cell values in the
+same order as the columns array on the response. NULLs come across
+as an empty string with a companion `null_mask` bit set on the row
+(see below).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `cells` | `string`[] | array of string |  | Cell values, stringified. Callers must not attempt to parse them as JSON; the type is columns[i].data_type on the response. |
+| `nullMask` | `uint64` | string (decimal) |  | Bitmask, LSB = column 0. A set bit means the corresponding cell is NULL and its stringified value should be ignored. |
+
+### RunDbQueryResponse
+
+Run-query response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `columns` | `string`[] | array of string |  | Column names (order matches DbRow.cells). |
+| `columnTypes` | `string`[] | array of string |  | SQL types (order matches columns). |
+| `rows` | [`DbRow`](#dbrow)[] | array of object |  | Rows, in whatever order the query returned them. |
+| `truncated` | `bool` | boolean |  | True when the result was cut off at the server-side row cap. |
+| `rowCount` | `int32` | number |  | Number of rows returned (before truncation, if applicable — matches len(rows) when truncated is false). |
+| `elapsedMs` | `int32` | number |  | Milliseconds the query took on the server, wall-clock. |
 
 ### RegisterRequest
 

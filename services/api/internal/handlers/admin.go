@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
@@ -12,6 +13,8 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/db"
+	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -31,10 +34,11 @@ type Admin struct {
 	users    *users.Repo
 	auth     *Auth
 	decision *AdminDecision // reused for ApproveUser / DeclineUser business logic
+	pool     *db.Pool       // the /admin/db surface reads through this
 }
 
-func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision) *Admin {
-	return &Admin{log: log, users: repo, auth: auth, decision: decision}
+func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool) *Admin {
+	return &Admin{log: log, users: repo, auth: auth, decision: decision, pool: pool}
 }
 
 // requireAdmin gates a call on session + admin role. Called at the
@@ -150,6 +154,119 @@ func (a *Admin) SetMemberStatus(
 	return connect.NewResponse(&v1.SetMemberStatusResponse{
 		Member: memberRecordRepoToProto(u),
 	}), nil
+}
+
+// ---------------------------------------------------------------
+// ListDbTables / RunDbQuery — /admin/db surface
+// ---------------------------------------------------------------
+
+func (a *Admin) ListDbTables(
+	ctx context.Context,
+	req *connect.Request[v1.ListDbTablesRequest],
+) (*connect.Response[v1.ListDbTablesResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	tables, err := adminquery.ListTables(ctx, a.pool)
+	if err != nil {
+		a.log.Error("ListTables failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list tables failed"))
+	}
+	out := &v1.ListDbTablesResponse{
+		Tables: make([]*v1.DbTable, 0, len(tables)),
+	}
+	for i := range tables {
+		t := &tables[i]
+		cols := make([]*v1.DbColumn, 0, len(t.Columns))
+		for _, c := range t.Columns {
+			cols = append(cols, &v1.DbColumn{
+				Name:     c.Name,
+				DataType: c.DataType,
+				Nullable: c.Nullable,
+			})
+		}
+		out.Tables = append(out.Tables, &v1.DbTable{
+			Name:           t.Name,
+			Columns:        cols,
+			ApproxRowCount: t.ApproxRowCount,
+		})
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (a *Admin) RunDbQuery(
+	ctx context.Context,
+	req *connect.Request[v1.RunDbQueryRequest],
+) (*connect.Response[v1.RunDbQueryResponse], error) {
+	u, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	// Log every admin-run query with the admin's user_id so the
+	// prod logs are an ad-hoc audit trail until we ship a proper
+	// query-log table. Never log the SQL body at ERROR level — a
+	// caller's typo could leak an email address or the like into a
+	// higher-attention log.
+	a.log.Info("admin db query",
+		slog.Int64("admin_user_id", u.ID),
+		slog.String("sql_head", firstN(req.Msg.Sql, 200)),
+	)
+
+	res, err := adminquery.Run(ctx, a.pool, req.Msg.Sql, req.Msg.TimeoutMs)
+	if err != nil {
+		// The safety-rail rejections (SELECT-only, single-statement,
+		// forbidden-token, empty) all come back as plain errors from
+		// adminquery.Run. Surface them as InvalidArgument so the UI
+		// can render the specific reason inline.
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	protoRows := make([]*v1.DbRow, 0, len(res.Rows))
+	for _, row := range res.Rows {
+		cells := make([]string, len(row))
+		var mask uint64
+		for i, v := range row {
+			if v == nil {
+				mask |= 1 << uint(i)
+				cells[i] = ""
+				continue
+			}
+			cells[i] = stringify(v)
+		}
+		protoRows = append(protoRows, &v1.DbRow{
+			Cells:    cells,
+			NullMask: mask,
+		})
+	}
+
+	return connect.NewResponse(&v1.RunDbQueryResponse{
+		Columns:     res.Columns,
+		ColumnTypes: res.ColumnTypes,
+		Rows:        protoRows,
+		Truncated:   res.Truncated,
+		RowCount:    int32(len(res.Rows)),
+		ElapsedMs:   res.ElapsedMs,
+	}), nil
+}
+
+func stringify(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []byte:
+		return fmt.Sprintf("\\x%x", t)
+	case time.Time:
+		return t.UTC().Format(time.RFC3339Nano)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func firstN(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
 }
 
 // ---------------------------------------------------------------
