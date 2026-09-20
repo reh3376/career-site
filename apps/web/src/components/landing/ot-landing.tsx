@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { GithubReposOt } from "@/components/github-repos";
+
 // OT-mode landing. Renders the site as a plant HMI overview screen.
 // Layout draws on Roger's actual distillery HMIs: a title bar with
 // plant identity + nav pills, tabbed left rail, a grid of KPI tiles
@@ -55,7 +57,7 @@ const EVENT_LOG = [
 const CAMERAS = [
   { id: "CAM-01", label: "workshop", src: "/images/home-office.jpeg" },
   { id: "CAM-02", label: "hobet dragline", src: "/images/hobet-dragline.jpeg" },
-  { id: "CAM-03", label: "condenser", src: "/images/copper-condenser.jpeg" },
+  { id: "CAM-03", label: "column · top bubble tray", src: "/images/bubble-tray.jpeg" },
   { id: "CAM-04", label: "whiskey house team", src: "/images/whiskey-house-team.jpeg" },
 ];
 
@@ -236,6 +238,9 @@ export function OtLanding() {
           </div>
         </section>
       </div>
+
+      {/* PUBLIC REPOS panel — cached server fetch, fails soft. */}
+      <GithubReposOt />
 
       {/* Bottom status ribbon. */}
       <div className="border-t border-line-strong bg-paper-2">
