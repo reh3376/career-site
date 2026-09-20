@@ -174,6 +174,24 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns the calling admin's saved SQL statements from /admin/db.
+  // Scoped to the caller — one admin never sees another's slots.
+  rpc ListSavedQueries(ListSavedQueriesRequest) returns (ListSavedQueriesResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Creates or updates a saved query for the caller. The tuple
+  // (caller, name) is the natural key: passing an existing name
+  // overwrites the body.
+  rpc UpsertSavedQuery(UpsertSavedQueryRequest) returns (UpsertSavedQueryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Removes one of the caller's saved queries by id.
+  rpc DeleteSavedQuery(DeleteSavedQueryRequest) returns (DeleteSavedQueryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1060,3 +1078,67 @@ message DeleteAccessGrantRequest {
 
 // Delete-grant response.
 message DeleteAccessGrantResponse {}
+
+// One saved SQL statement on the /admin/db page, scoped to a single
+// admin. Names are unique per owner but not globally.
+message SavedQuery {
+  // Numeric id (bigserial); string over the wire to avoid JSON
+  // number-precision drift.
+  string id = 1;
+  // The admin's chosen label, shown in the dropdown.
+  string name = 2;
+  // The SELECT text. Same 4000-char cap as RunDbQuery.sql.
+  string sql = 3;
+  // When the row was first saved.
+  google.protobuf.Timestamp created_at = 4;
+  // When the row was last overwritten via upsert.
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// List-saved-queries request. No filters yet — the response is
+// naturally scoped to the caller and expected to be small.
+message ListSavedQueriesRequest {}
+
+// List-saved-queries response.
+message ListSavedQueriesResponse {
+  // The caller's saved queries, ordered by name (case-insensitive).
+  repeated SavedQuery queries = 1;
+}
+
+// Upsert-saved-query request. A row with (owner, name) is created
+// if it doesn't exist and overwritten if it does.
+message UpsertSavedQueryRequest {
+  // Label to save under. Trimmed server-side; empty is rejected.
+  string name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+  }];
+  // The SQL text. Enforcement (SELECT-only, single statement) is
+  // applied at execute time by RunDbQuery, not on save — so an
+  // admin can save a draft and finish it later.
+  string sql = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 4000
+  }];
+}
+
+// Upsert-saved-query response.
+message UpsertSavedQueryResponse {
+  // The stored row (fields populated by the server).
+  SavedQuery query = 1;
+  // True when the request created a new row; false when it
+  // overwrote an existing (owner, name) tuple.
+  bool created = 2;
+}
+
+// Delete-saved-query request.
+message DeleteSavedQueryRequest {
+  // ID from SavedQuery.id.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+}
+
+// Delete-saved-query response.
+message DeleteSavedQueryResponse {}

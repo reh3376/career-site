@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 25 |
+| [`AdminService`](#adminservice) | Owner console. | 28 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1627,6 +1627,9 @@ Owner console.
 | [`ListAccessGrants`](#adminservice-listaccessgrants) | `/api/career.v1.AdminService/ListAccessGrants` | Admin (fresh MFA) | default | `ListAccessGrantsRequest` → `ListAccessGrantsResponse` | Lists the access whitelist entries. |
 | [`UpsertAccessGrant`](#adminservice-upsertaccessgrant) | `/api/career.v1.AdminService/UpsertAccessGrant` | Admin (fresh MFA) | default | `UpsertAccessGrantRequest` → `UpsertAccessGrantResponse` | Creates a new access whitelist entry or updates an existing one by email (email is the natural key). |
 | [`DeleteAccessGrant`](#adminservice-deleteaccessgrant) | `/api/career.v1.AdminService/DeleteAccessGrant` | Admin (fresh MFA) | default | `DeleteAccessGrantRequest` → `DeleteAccessGrantResponse` | Removes a whitelist entry. |
+| [`ListSavedQueries`](#adminservice-listsavedqueries) | `/api/career.v1.AdminService/ListSavedQueries` | Admin (fresh MFA) | default | `ListSavedQueriesRequest` → `ListSavedQueriesResponse` | Returns the calling admin's saved SQL statements from /admin/db. |
+| [`UpsertSavedQuery`](#adminservice-upsertsavedquery) | `/api/career.v1.AdminService/UpsertSavedQuery` | Admin (fresh MFA) | default | `UpsertSavedQueryRequest` → `UpsertSavedQueryResponse` | Creates or updates a saved query for the caller. |
+| [`DeleteSavedQuery`](#adminservice-deletesavedquery) | `/api/career.v1.AdminService/DeleteSavedQuery` | Admin (fresh MFA) | default | `DeleteSavedQueryRequest` → `DeleteSavedQueryResponse` | Removes one of the caller's saved queries by id. |
 
 ### AdminService.ListMembers
 
@@ -2457,6 +2460,90 @@ access are unaffected — this only stops future auto-approvals.
 | `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from AccessGrant.id. |
 
 **Response** — [`DeleteAccessGrantResponse`](#deleteaccessgrantresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string"
+}
+```
+
+</details>
+
+### AdminService.ListSavedQueries
+
+`POST /api/career.v1.AdminService/ListSavedQueries` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns the calling admin's saved SQL statements from /admin/db.
+Scoped to the caller — one admin never sees another's slots.
+
+**Request** — [`ListSavedQueriesRequest`](#listsavedqueriesrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListSavedQueriesResponse`](#listsavedqueriesresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `queries` | [`SavedQuery`](#savedquery)[] | array of object |  | The caller's saved queries, ordered by name (case-insensitive). |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.UpsertSavedQuery
+
+`POST /api/career.v1.AdminService/UpsertSavedQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Creates or updates a saved query for the caller. The tuple
+(caller, name) is the natural key: passing an existing name
+overwrites the body.
+
+**Request** — [`UpsertSavedQueryRequest`](#upsertsavedqueryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string | `string: min_len: 1 max_len: 80` | Label to save under. Trimmed server-side; empty is rejected. |
+| `sql` | `string` | string | `string: min_len: 1 max_len: 4000` | The SQL text. Enforcement (SELECT-only, single statement) is applied at execute time by RunDbQuery, not on save — so an admin can save a draft and finish it later. |
+
+**Response** — [`UpsertSavedQueryResponse`](#upsertsavedqueryresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | [`SavedQuery`](#savedquery) | object |  | The stored row (fields populated by the server). |
+| `created` | `bool` | boolean |  | True when the request created a new row; false when it overwrote an existing (owner, name) tuple. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "name": "string",
+  "sql": "string"
+}
+```
+
+</details>
+
+### AdminService.DeleteSavedQuery
+
+`POST /api/career.v1.AdminService/DeleteSavedQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Removes one of the caller's saved queries by id.
+
+**Request** — [`DeleteSavedQueryRequest`](#deletesavedqueryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SavedQuery.id. |
+
+**Response** — [`DeleteSavedQueryResponse`](#deletesavedqueryresponse)
 
 _No fields; send `{}`._
 
@@ -4038,6 +4125,67 @@ Delete-grant request.
 ### DeleteAccessGrantResponse
 
 Delete-grant response.
+
+_No fields._
+
+### SavedQuery
+
+One saved SQL statement on the /admin/db page, scoped to a single
+admin. Names are unique per owner but not globally.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Numeric id (bigserial); string over the wire to avoid JSON number-precision drift. |
+| `name` | `string` | string |  | The admin's chosen label, shown in the dropdown. |
+| `sql` | `string` | string |  | The SELECT text. Same 4000-char cap as RunDbQuery.sql. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row was first saved. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row was last overwritten via upsert. |
+
+### ListSavedQueriesRequest
+
+List-saved-queries request. No filters yet — the response is
+naturally scoped to the caller and expected to be small.
+
+_No fields._
+
+### ListSavedQueriesResponse
+
+List-saved-queries response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `queries` | [`SavedQuery`](#savedquery)[] | array of object |  | The caller's saved queries, ordered by name (case-insensitive). |
+
+### UpsertSavedQueryRequest
+
+Upsert-saved-query request. A row with (owner, name) is created
+if it doesn't exist and overwritten if it does.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string | `string: min_len: 1 max_len: 80` | Label to save under. Trimmed server-side; empty is rejected. |
+| `sql` | `string` | string | `string: min_len: 1 max_len: 4000` | The SQL text. Enforcement (SELECT-only, single statement) is applied at execute time by RunDbQuery, not on save — so an admin can save a draft and finish it later. |
+
+### UpsertSavedQueryResponse
+
+Upsert-saved-query response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | [`SavedQuery`](#savedquery) | object |  | The stored row (fields populated by the server). |
+| `created` | `bool` | boolean |  | True when the request created a new row; false when it overwrote an existing (owner, name) tuple. |
+
+### DeleteSavedQueryRequest
+
+Delete-saved-query request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SavedQuery.id. |
+
+### DeleteSavedQueryResponse
+
+Delete-saved-query response.
 
 _No fields._
 

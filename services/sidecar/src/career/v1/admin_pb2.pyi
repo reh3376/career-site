@@ -806,3 +806,53 @@ class DeleteAccessGrantRequest(_message.Message):
 class DeleteAccessGrantResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class SavedQuery(_message.Message):
+    __slots__ = ("id", "name", "sql", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SQL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    name: str
+    sql: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., sql: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListSavedQueriesRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListSavedQueriesResponse(_message.Message):
+    __slots__ = ("queries",)
+    QUERIES_FIELD_NUMBER: _ClassVar[int]
+    queries: _containers.RepeatedCompositeFieldContainer[SavedQuery]
+    def __init__(self, queries: _Optional[_Iterable[_Union[SavedQuery, _Mapping]]] = ...) -> None: ...
+
+class UpsertSavedQueryRequest(_message.Message):
+    __slots__ = ("name", "sql")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SQL_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    sql: str
+    def __init__(self, name: _Optional[str] = ..., sql: _Optional[str] = ...) -> None: ...
+
+class UpsertSavedQueryResponse(_message.Message):
+    __slots__ = ("query", "created")
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_FIELD_NUMBER: _ClassVar[int]
+    query: SavedQuery
+    created: bool
+    def __init__(self, query: _Optional[_Union[SavedQuery, _Mapping]] = ..., created: _Optional[bool] = ...) -> None: ...
+
+class DeleteSavedQueryRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class DeleteSavedQueryResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

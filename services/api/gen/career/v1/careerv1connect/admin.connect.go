@@ -108,6 +108,15 @@ const (
 	// AdminServiceDeleteAccessGrantProcedure is the fully-qualified name of the AdminService's
 	// DeleteAccessGrant RPC.
 	AdminServiceDeleteAccessGrantProcedure = "/career.v1.AdminService/DeleteAccessGrant"
+	// AdminServiceListSavedQueriesProcedure is the fully-qualified name of the AdminService's
+	// ListSavedQueries RPC.
+	AdminServiceListSavedQueriesProcedure = "/career.v1.AdminService/ListSavedQueries"
+	// AdminServiceUpsertSavedQueryProcedure is the fully-qualified name of the AdminService's
+	// UpsertSavedQuery RPC.
+	AdminServiceUpsertSavedQueryProcedure = "/career.v1.AdminService/UpsertSavedQuery"
+	// AdminServiceDeleteSavedQueryProcedure is the fully-qualified name of the AdminService's
+	// DeleteSavedQuery RPC.
+	AdminServiceDeleteSavedQueryProcedure = "/career.v1.AdminService/DeleteSavedQuery"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -192,6 +201,15 @@ type AdminServiceClient interface {
 	// Removes a whitelist entry. Existing accounts already granted
 	// access are unaffected — this only stops future auto-approvals.
 	DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error)
+	// Returns the calling admin's saved SQL statements from /admin/db.
+	// Scoped to the caller — one admin never sees another's slots.
+	ListSavedQueries(context.Context, *connect.Request[v1.ListSavedQueriesRequest]) (*connect.Response[v1.ListSavedQueriesResponse], error)
+	// Creates or updates a saved query for the caller. The tuple
+	// (caller, name) is the natural key: passing an existing name
+	// overwrites the body.
+	UpsertSavedQuery(context.Context, *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error)
+	// Removes one of the caller's saved queries by id.
+	DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -355,6 +373,24 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeleteAccessGrant")),
 			connect.WithClientOptions(opts...),
 		),
+		listSavedQueries: connect.NewClient[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse](
+			httpClient,
+			baseURL+AdminServiceListSavedQueriesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListSavedQueries")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertSavedQuery: connect.NewClient[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse](
+			httpClient,
+			baseURL+AdminServiceUpsertSavedQueryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("UpsertSavedQuery")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteSavedQuery: connect.NewClient[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteSavedQueryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteSavedQuery")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -385,6 +421,9 @@ type adminServiceClient struct {
 	listAccessGrants      *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
 	upsertAccessGrant     *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
 	deleteAccessGrant     *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
+	listSavedQueries      *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
+	upsertSavedQuery      *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
+	deleteSavedQuery      *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -512,6 +551,21 @@ func (c *adminServiceClient) DeleteAccessGrant(ctx context.Context, req *connect
 	return c.deleteAccessGrant.CallUnary(ctx, req)
 }
 
+// ListSavedQueries calls career.v1.AdminService.ListSavedQueries.
+func (c *adminServiceClient) ListSavedQueries(ctx context.Context, req *connect.Request[v1.ListSavedQueriesRequest]) (*connect.Response[v1.ListSavedQueriesResponse], error) {
+	return c.listSavedQueries.CallUnary(ctx, req)
+}
+
+// UpsertSavedQuery calls career.v1.AdminService.UpsertSavedQuery.
+func (c *adminServiceClient) UpsertSavedQuery(ctx context.Context, req *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error) {
+	return c.upsertSavedQuery.CallUnary(ctx, req)
+}
+
+// DeleteSavedQuery calls career.v1.AdminService.DeleteSavedQuery.
+func (c *adminServiceClient) DeleteSavedQuery(ctx context.Context, req *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error) {
+	return c.deleteSavedQuery.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -594,6 +648,15 @@ type AdminServiceHandler interface {
 	// Removes a whitelist entry. Existing accounts already granted
 	// access are unaffected — this only stops future auto-approvals.
 	DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error)
+	// Returns the calling admin's saved SQL statements from /admin/db.
+	// Scoped to the caller — one admin never sees another's slots.
+	ListSavedQueries(context.Context, *connect.Request[v1.ListSavedQueriesRequest]) (*connect.Response[v1.ListSavedQueriesResponse], error)
+	// Creates or updates a saved query for the caller. The tuple
+	// (caller, name) is the natural key: passing an existing name
+	// overwrites the body.
+	UpsertSavedQuery(context.Context, *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error)
+	// Removes one of the caller's saved queries by id.
+	DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -753,6 +816,24 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DeleteAccessGrant")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListSavedQueriesHandler := connect.NewUnaryHandler(
+		AdminServiceListSavedQueriesProcedure,
+		svc.ListSavedQueries,
+		connect.WithSchema(adminServiceMethods.ByName("ListSavedQueries")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceUpsertSavedQueryHandler := connect.NewUnaryHandler(
+		AdminServiceUpsertSavedQueryProcedure,
+		svc.UpsertSavedQuery,
+		connect.WithSchema(adminServiceMethods.ByName("UpsertSavedQuery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeleteSavedQueryHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteSavedQueryProcedure,
+		svc.DeleteSavedQuery,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteSavedQuery")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -805,6 +886,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceUpsertAccessGrantHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteAccessGrantProcedure:
 			adminServiceDeleteAccessGrantHandler.ServeHTTP(w, r)
+		case AdminServiceListSavedQueriesProcedure:
+			adminServiceListSavedQueriesHandler.ServeHTTP(w, r)
+		case AdminServiceUpsertSavedQueryProcedure:
+			adminServiceUpsertSavedQueryHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteSavedQueryProcedure:
+			adminServiceDeleteSavedQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -912,4 +999,16 @@ func (UnimplementedAdminServiceHandler) UpsertAccessGrant(context.Context, *conn
 
 func (UnimplementedAdminServiceHandler) DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteAccessGrant is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListSavedQueries(context.Context, *connect.Request[v1.ListSavedQueriesRequest]) (*connect.Response[v1.ListSavedQueriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListSavedQueries is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) UpsertSavedQuery(context.Context, *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.UpsertSavedQuery is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteSavedQuery is not implemented"))
 }
