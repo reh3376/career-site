@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { signOutAction } from "@/app/actions/session";
+import { ModeToggle } from "@/components/mode-toggle";
+import type { UiMode } from "@/lib/ui-mode";
 
 // Menu shown to the visitor. Grouped by section so the drawer stays
 // legible even when it grows. `admin` items only render when isAdmin is
@@ -19,11 +21,13 @@ export function HamburgerMenu({
   isAdmin,
   memberName,
   memberEmail,
+  mode,
 }: {
   signedIn: boolean;
   isAdmin: boolean;
   memberName?: string;
   memberEmail?: string;
+  mode: UiMode;
 }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -121,10 +125,19 @@ export function HamburgerMenu({
           ) : null}
 
           <nav aria-label="Site menu" className="py-2">
+            {/* Display-mode toggle. Sits at the top of the drawer so
+                it's discoverable from every page; also linked from
+                /settings for the same effect. */}
+            <div className="border-b border-line px-5 pb-3 pt-2">
+              <p className="pb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                display mode
+              </p>
+              <ModeToggle current={mode} />
+            </div>
             {groups.map((group, gi) => (
               <div
                 key={group.label}
-                className={gi > 0 ? "mt-1 border-t border-line pt-2" : ""}
+                className={gi > 0 ? "mt-1 border-t border-line pt-2" : "mt-1"}
               >
                 <p className="px-5 pb-1 pt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                   {group.label}
