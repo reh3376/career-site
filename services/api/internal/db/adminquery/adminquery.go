@@ -14,11 +14,22 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/reh3376/career-site/services/api/internal/db"
 )
+
+// oidCache remembers Postgres type OID → typname for the *current
+// process*. User-defined types (enums, domains like citext) get
+// dynamic OIDs at CREATE TYPE time, so the built-in switch in
+// pgTypeName misses them. On a cache miss RunDbQuery falls through
+// to a pg_type lookup and stores the result here — subsequent queries
+// return the name instantly without another round-trip. A CREATE TYPE
+// after boot needs a process restart to pick up (fine for the admin
+// console).
+var oidCache sync.Map // map[uint32]string
 
 // Sensible caps for the MVP. The proto's validation clamps the
 // caller's requested timeout to [100, 10000]; the row-count cap is
@@ -190,12 +201,36 @@ func Run(ctx context.Context, pool *db.Pool, sql string, timeoutMs int32) (*Quer
 	}
 	cols := make([]string, len(fields))
 	types := make([]string, len(fields))
+	// Two passes: first the built-in map + cache; then a single
+	// pg_type round-trip for anything still unknown so we don't
+	// leave user-defined enums / domains (citext, support_category…)
+	// rendering as raw OIDs.
+	var unresolved []uint32
 	for i, f := range fields {
 		cols[i] = string(f.Name)
-		// pgx exposes the OID; we render it as a decimal for now.
-		// A follow-up can map common OIDs to human names via
-		// pg_type but this is enough for the schema panel.
-		types[i] = pgTypeName(f.DataTypeOID)
+		if name, ok := lookupTypeName(f.DataTypeOID); ok {
+			types[i] = name
+			continue
+		}
+		unresolved = append(unresolved, f.DataTypeOID)
+	}
+	if len(unresolved) > 0 {
+		resolved, err := resolveTypeNames(txCtx, tx, unresolved)
+		if err == nil {
+			for oid, name := range resolved {
+				oidCache.Store(oid, name)
+			}
+		}
+		for i, f := range fields {
+			if types[i] != "" {
+				continue
+			}
+			if name, ok := resolved[f.DataTypeOID]; ok {
+				types[i] = name
+			} else {
+				types[i] = fmt.Sprintf("oid=%d", f.DataTypeOID)
+			}
+		}
 	}
 
 	out := &QueryResult{Columns: cols, ColumnTypes: types}
@@ -217,10 +252,56 @@ func Run(ctx context.Context, pool *db.Pool, sql string, timeoutMs int32) (*Quer
 	return out, nil
 }
 
-// pgTypeName translates common Postgres type OIDs into short human
-// names for the results header. Unknown OIDs render as "oid=<n>" so
-// the caller sees something rather than a mystery number.
-func pgTypeName(oid uint32) string {
+// lookupTypeName returns the human type name for an OID from either
+// the built-in switch (fast, no DB) or the process-wide oidCache
+// populated by a prior pg_type lookup. Returns ok=false when the OID
+// isn't known — caller can then batch it into resolveTypeNames.
+func lookupTypeName(oid uint32) (string, bool) {
+	if name := builtinTypeName(oid); name != "" {
+		return name, true
+	}
+	if v, ok := oidCache.Load(oid); ok {
+		return v.(string), true
+	}
+	return "", false
+}
+
+// resolveTypeNames does a single pg_type round-trip for a batch of
+// OIDs and returns oid → typname for every row it found. Missing
+// entries stay missing (caller renders `oid=NNN`). Runs inside the
+// caller's read-only transaction so it can't touch anything else.
+func resolveTypeNames(ctx context.Context, tx pgx.Tx, oids []uint32) (map[uint32]string, error) {
+	const q = `SELECT oid, typname FROM pg_type WHERE oid = ANY($1)`
+	rows, err := tx.Query(ctx, q, oids)
+	if err != nil {
+		return nil, fmt.Errorf("pg_type lookup: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[uint32]string, len(oids))
+	for rows.Next() {
+		var (
+			id   uint32
+			name string
+		)
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, fmt.Errorf("scan pg_type: %w", err)
+		}
+		// pg_type stores array types with a leading underscore
+		// (e.g. `_int4`). Normalise to `int4[]` so the header
+		// matches the built-in map's convention.
+		if base, ok := strings.CutPrefix(name, "_"); ok {
+			name = base + "[]"
+		}
+		out[id] = name
+	}
+	return out, rows.Err()
+}
+
+// builtinTypeName returns a short human name for well-known Postgres
+// type OIDs — the ones stable enough to hard-code from pg_type.h.
+// User-defined types (enums, domains) get dynamic OIDs and must be
+// resolved via resolveTypeNames. Empty return = unknown.
+func builtinTypeName(oid uint32) string {
 	// Values from pg_type.h — the common ones the app's schema uses
 	// plus the system-catalog types that show up when a query calls
 	// current_database()/current_user/version()/etc.
@@ -285,6 +366,6 @@ func pgTypeName(oid uint32) string {
 	case 1016:
 		return "int8[]"
 	default:
-		return fmt.Sprintf("oid=%d", oid)
+		return ""
 	}
 }
