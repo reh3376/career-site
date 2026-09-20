@@ -8,6 +8,7 @@ import { getSessionCookie } from "@/lib/session";
 import {
   approveRegistrationAction,
   declineRegistrationAction,
+  extendAccessAction,
   setMemberStatusAction,
 } from "../actions";
 
@@ -20,8 +21,12 @@ type Me = {
   id: string;
   name: string;
   email: string;
+  organization?: string;
+  stated_role?: string;
   status: string;
   role: string;
+  created_at?: string;
+  expires_at?: string;
 };
 
 type GetMemberResp = {
@@ -75,6 +80,8 @@ export default async function AdminMemberDetailPage({
   const label = STATUS_LABEL[status] ?? status;
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const isAdmin = me.role === "MEMBER_ROLE_ADMIN";
+  const created = me.created_at ? new Date(me.created_at) : null;
+  const expires = me.expires_at ? new Date(me.expires_at) : null;
 
   return (
     <>
@@ -93,40 +100,110 @@ export default async function AdminMemberDetailPage({
         {me.name || me.email}
       </h1>
 
-      <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-[10rem_1fr]">
-        <dt className="text-ink-3">id</dt>
-        <dd className="m-0 text-ink">{me.id}</dd>
-        <dt className="text-ink-3">name</dt>
-        <dd className="m-0 text-ink">{me.name || "—"}</dd>
-        <dt className="text-ink-3">email</dt>
-        <dd className="m-0">
-          <a
-            href={`mailto:${me.email}`}
-            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-          >
-            {me.email}
-          </a>
-        </dd>
-        <dt className="text-ink-3">status</dt>
-        <dd className={"m-0 " + tone}>
-          <span className="pilot mr-2 align-middle" aria-hidden="true" />
-          {label}
-        </dd>
-        <dt className="text-ink-3">role</dt>
-        <dd className="m-0 text-ink">
-          {isAdmin ? "admin" : "member"}
-        </dd>
-        <dt className="text-ink-3">first seen</dt>
-        <dd className="m-0 text-ink">
-          {data?.member?.first_seen_at
-            ? new Date(data.member.first_seen_at).toISOString().slice(0, 10)
-            : "—"}
-        </dd>
-      </dl>
+      <section
+        aria-labelledby="account-heading"
+        className="mt-10 border-t border-line pt-6"
+      >
+        <p
+          id="account-heading"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+        >
+          account
+        </p>
+        <dl className="mt-4 grid gap-3 font-mono text-sm text-ink-2 sm:grid-cols-[11rem_1fr]">
+          <dt className="text-ink-3">id</dt>
+          <dd className="m-0 text-ink">{me.id}</dd>
+          <dt className="text-ink-3">name</dt>
+          <dd className="m-0 text-ink">{me.name || "—"}</dd>
+          <dt className="text-ink-3">email</dt>
+          <dd className="m-0">
+            <a
+              href={`mailto:${me.email}`}
+              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+            >
+              {me.email}
+            </a>
+          </dd>
+          <dt className="text-ink-3">organization</dt>
+          <dd className="m-0 text-ink">{me.organization || "—"}</dd>
+          <dt className="text-ink-3">stated role</dt>
+          <dd className="m-0 text-ink">{me.stated_role || "—"}</dd>
+          <dt className="text-ink-3">status</dt>
+          <dd className={"m-0 " + tone}>
+            <span className="pilot mr-2 align-middle" aria-hidden="true" />
+            {label}
+          </dd>
+          <dt className="text-ink-3">role</dt>
+          <dd className="m-0 text-ink">{isAdmin ? "admin" : "member"}</dd>
+        </dl>
+      </section>
+
+      <section
+        aria-labelledby="access-heading"
+        className="mt-10 border-t border-line pt-6"
+      >
+        <p
+          id="access-heading"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+        >
+          access window
+        </p>
+        <dl className="mt-4 grid gap-3 font-mono text-sm text-ink-2 sm:grid-cols-[11rem_1fr]">
+          <dt className="text-ink-3">registered</dt>
+          <dd className="m-0 text-ink">
+            {created ? created.toISOString().slice(0, 10) : "—"}
+            {created ? (
+              <span className="ml-3 text-ink-3">({relative(created)})</span>
+            ) : null}
+          </dd>
+          <dt className="text-ink-3">expires</dt>
+          <dd className="m-0 text-ink">
+            {expires ? (
+              <>
+                {expires.toISOString().slice(0, 10)}
+                {" · "}
+                <span
+                  className={
+                    daysUntil(expires) <= 7
+                      ? "text-signal"
+                      : daysUntil(expires) < 0
+                        ? "text-danger"
+                        : "text-ink-2"
+                  }
+                >
+                  {formatDaysUntil(expires)}
+                </span>
+              </>
+            ) : status === "MEMBER_STATUS_ACTIVE" ? (
+              <span className="text-success">permanent</span>
+            ) : (
+              "—"
+            )}
+          </dd>
+        </dl>
+      </section>
+
+      <section
+        aria-labelledby="activity-heading"
+        className="mt-10 border-t border-line pt-6"
+      >
+        <p
+          id="activity-heading"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+        >
+          activity
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-ink-3">
+          Activity events, Ask Roger conversation history, and saved
+          items surface here when the activity ingest lands (Phase 3+).
+          The <code className="font-mono text-ink">MemberCounts</code>{" "}
+          field on the RPC is stubbed at zero for now.
+        </p>
+      </section>
 
       <section
         aria-labelledby="actions-heading"
-        className="mt-12 border-t border-line pt-8"
+        className="mt-10 border-t border-line pt-6"
       >
         <p
           id="actions-heading"
@@ -134,40 +211,26 @@ export default async function AdminMemberDetailPage({
         >
           actions
         </p>
-        <Actions memberId={me.id} status={status} isAdmin={isAdmin} />
+        <Actions me={me} isAdmin={isAdmin} />
+        <ContactAction email={me.email} name={me.name} />
       </section>
-
-      <p className="mt-10 text-xs leading-relaxed text-ink-3">
-        Activity events, conversations, and admin notes surface here
-        when the activity ingest lands (Phase 3+). Status transitions
-        write to the <code className="font-mono text-ink">approval_decisions</code>
-        {" "}table with <code className="font-mono text-ink">decided_via=console</code>
-        {" "}so the audit trail distinguishes them from the email flow.
-      </p>
     </>
   );
 }
 
-function Actions({
-  memberId,
-  status,
-  isAdmin,
-}: {
-  memberId: string;
-  status: string;
-  isAdmin: boolean;
-}) {
-  // Guard: don't let an admin accidentally disable themselves or
-  // another admin from this surface. Admin-role changes need a
-  // separate, more deliberate control.
+function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
+  const status = me.status;
+  const memberId = me.id;
+
   if (isAdmin) {
     return (
       <p className="mt-4 text-sm text-ink-3">
-        This member has the admin role. Status changes on admin users
-        aren&rsquo;t available from this surface.
+        This member has the admin role. Status transitions on admin
+        users aren&rsquo;t available from this surface.
       </p>
     );
   }
+
   switch (status) {
     case "MEMBER_STATUS_PENDING_APPROVAL":
       return (
@@ -188,14 +251,56 @@ function Actions({
       );
     case "MEMBER_STATUS_ACTIVE":
       return (
-        <div className="mt-4 flex flex-wrap gap-3">
-          <ActionButton
-            action={setMemberStatusAction}
-            memberId={memberId}
-            target="MEMBER_STATUS_DISABLED"
-            tone="signal"
-            label="Disable account"
-          />
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              extend access
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <ActionButton
+                action={extendAccessAction}
+                memberId={memberId}
+                extra={{ mode: "days", days: "30" }}
+                tone="accent"
+                label="+30 days"
+              />
+              <ActionButton
+                action={extendAccessAction}
+                memberId={memberId}
+                extra={{ mode: "days", days: "90" }}
+                tone="accent"
+                label="+90 days"
+              />
+              <ActionButton
+                action={extendAccessAction}
+                memberId={memberId}
+                extra={{ mode: "days", days: "365" }}
+                tone="accent"
+                label="+1 year"
+              />
+              <ActionButton
+                action={extendAccessAction}
+                memberId={memberId}
+                extra={{ mode: "permanent" }}
+                tone="accent"
+                label="Make permanent"
+              />
+            </div>
+          </div>
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              suspend / disable
+            </p>
+            <div className="mt-2">
+              <ActionButton
+                action={setMemberStatusAction}
+                memberId={memberId}
+                extra={{ status: "MEMBER_STATUS_DISABLED" }}
+                tone="signal"
+                label="Disable account"
+              />
+            </div>
+          </div>
         </div>
       );
     case "MEMBER_STATUS_DISABLED":
@@ -204,7 +309,7 @@ function Actions({
           <ActionButton
             action={setMemberStatusAction}
             memberId={memberId}
-            target="MEMBER_STATUS_ACTIVE"
+            extra={{ status: "MEMBER_STATUS_ACTIVE" }}
             tone="accent"
             label="Re-enable"
           />
@@ -212,11 +317,42 @@ function Actions({
       );
     case "MEMBER_STATUS_EXPIRED":
       return (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
           <p className="text-sm text-ink-3">
-            Access expired. Re-approval / TTL extension lands with the
-            access-grants console (next surface).
+            Access expired. Extend below to reactivate — a new
+            expires_at in the future flips the account back to active
+            automatically.
           </p>
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              action={extendAccessAction}
+              memberId={memberId}
+              extra={{ mode: "days", days: "30" }}
+              tone="accent"
+              label="+30 days"
+            />
+            <ActionButton
+              action={extendAccessAction}
+              memberId={memberId}
+              extra={{ mode: "days", days: "90" }}
+              tone="accent"
+              label="+90 days"
+            />
+            <ActionButton
+              action={extendAccessAction}
+              memberId={memberId}
+              extra={{ mode: "days", days: "365" }}
+              tone="accent"
+              label="+1 year"
+            />
+            <ActionButton
+              action={extendAccessAction}
+              memberId={memberId}
+              extra={{ mode: "permanent" }}
+              tone="accent"
+              label="Make permanent"
+            />
+          </div>
         </div>
       );
     case "MEMBER_STATUS_DECLINED":
@@ -224,7 +360,7 @@ function Actions({
         <div className="mt-4">
           <p className="text-sm text-ink-3">
             Applicant was declined. If they should be given access,
-            they can register again from{" "}
+            ask them to register again at{" "}
             <a
               href="/register"
               className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
@@ -240,7 +376,8 @@ function Actions({
         <div className="mt-4">
           <p className="text-sm text-ink-3">
             Applicant hasn&rsquo;t verified their email yet. No admin
-            action needed — the account moves to pending_approval
+            action needed — the account moves to{" "}
+            <span className="font-mono text-ink">pending_approval</span>{" "}
             automatically once they click the verification link.
           </p>
         </div>
@@ -252,3 +389,51 @@ function Actions({
   }
 }
 
+function ContactAction({ email, name }: { email: string; name?: string }) {
+  const subject = `Re: your career-site access`;
+  const body = `Hi ${name?.split(" ")[0] || "there"},\n\n`;
+  const href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return (
+    <div className="mt-6 border-t border-line pt-6">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        contact
+      </p>
+      <div className="mt-2 flex flex-wrap gap-3">
+        <a
+          href={href}
+          className="inline-flex items-center border border-line-strong px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+        >
+          Email {name?.split(" ")[0] || "member"}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// Date helpers
+// ---------------------------------------------------------------
+
+function relative(d: Date): string {
+  const days = Math.max(0, Math.round((Date.now() - d.getTime()) / 86_400_000));
+  if (days < 1) return "today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.round(days / 7)}w ago`;
+  if (days < 365) return `${Math.round(days / 30)}mo ago`;
+  return `${Math.round(days / 365)}y ago`;
+}
+
+function daysUntil(d: Date): number {
+  return Math.round((d.getTime() - Date.now()) / 86_400_000);
+}
+
+function formatDaysUntil(d: Date): string {
+  const n = daysUntil(d);
+  if (n === 0) return "expires today";
+  if (n < 0) return `expired ${-n}d ago`;
+  if (n === 1) return "1 day left";
+  if (n < 30) return `${n} days left`;
+  if (n < 365) return `${Math.round(n / 30)}mo left`;
+  return `${Math.round(n / 365)}y left`;
+}

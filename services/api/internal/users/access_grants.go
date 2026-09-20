@@ -243,3 +243,18 @@ func (r *Repo) RevokeSessions(ctx context.Context, userID int64) (int64, error) 
 	}
 	return tag.RowsAffected(), nil
 }
+
+// SetExpiresAt updates a user's expires_at without touching status.
+// Pass nil to make access permanent. Used by the admin console's
+// ExtendAccess action.
+func (r *Repo) SetExpiresAt(ctx context.Context, id int64, expiresAt *time.Time) error {
+	const q = `UPDATE users SET expires_at = $2 WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, id, expiresAt)
+	if err != nil {
+		return fmt.Errorf("set expires_at: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

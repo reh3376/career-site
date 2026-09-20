@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/auth"
@@ -100,13 +101,22 @@ func (h *Auth) LookupSessionUser(ctx context.Context, req connect.AnyRequest) (*
 
 // buildMe maps a repo user to the proto Me carried in responses.
 func (h *Auth) buildMe(u *users.User) *v1.Me {
-	return &v1.Me{
-		Id:     fmt.Sprintf("%d", u.ID),
-		Name:   u.Name,
-		Email:  u.Email,
-		Status: statusToProto(u.Status),
-		Role:   roleToProto(u.Role),
+	me := &v1.Me{
+		Id:           fmt.Sprintf("%d", u.ID),
+		Name:         u.Name,
+		Email:        u.Email,
+		Organization: u.Organization,
+		StatedRole:   u.StatedRole,
+		Status:       statusToProto(u.Status),
+		Role:         roleToProto(u.Role),
 	}
+	if !u.CreatedAt.IsZero() {
+		me.CreatedAt = timestamppb.New(u.CreatedAt)
+	}
+	if u.ExpiresAt != nil {
+		me.ExpiresAt = timestamppb.New(*u.ExpiresAt)
+	}
+	return me
 }
 
 func statusToProto(s users.Status) v1.MemberStatus {

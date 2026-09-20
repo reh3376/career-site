@@ -1038,8 +1038,11 @@ type Me struct {
 	LastSeenAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
 	// Linked social sign-in providers, e.g. ["linkedin"].
 	LinkedProviders []string `protobuf:"bytes,14,rep,name=linked_providers,json=linkedProviders,proto3" json:"linked_providers,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// When this member's access ends (from users.expires_at). Unset
+	// for permanent access and for non-active statuses.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Me) Reset() {
@@ -1166,6 +1169,13 @@ func (x *Me) GetLastSeenAt() *timestamppb.Timestamp {
 func (x *Me) GetLinkedProviders() []string {
 	if x != nil {
 		return x.LinkedProviders
+	}
+	return nil
+}
+
+func (x *Me) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
 	}
 	return nil
 }
@@ -1348,7 +1358,7 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"heard_from\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\theardFrom\x12+\n" +
 	"\x11tailoring_enabled\x18\x05 \x01(\bR\x10tailoringEnabled\x12X\n" +
-	"\x1aquestionnaire_completed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x18questionnaireCompletedAt\"\xb5\x04\n" +
+	"\x1aquestionnaire_completed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x18questionnaireCompletedAt\"\xf0\x04\n" +
 	"\x02Me\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1367,7 +1377,9 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12<\n" +
 	"\flast_seen_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"lastSeenAt\x12)\n" +
-	"\x10linked_providers\x18\x0e \x03(\tR\x0flinkedProviders\"\xb6\x04\n" +
+	"\x10linked_providers\x18\x0e \x03(\tR\x0flinkedProviders\x129\n" +
+	"\n" +
+	"expires_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xb6\x04\n" +
 	"\rActivityEvent\x12=\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.career.v1.ActivityEvent.KindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12'\n" +
@@ -1473,14 +1485,15 @@ var file_career_v1_common_proto_depIdxs = []int32{
 	11, // 10: career.v1.Me.interests:type_name -> career.v1.TrackInterest
 	15, // 11: career.v1.Me.created_at:type_name -> google.protobuf.Timestamp
 	15, // 12: career.v1.Me.last_seen_at:type_name -> google.protobuf.Timestamp
-	5,  // 13: career.v1.ActivityEvent.kind:type_name -> career.v1.ActivityEvent.Kind
-	15, // 14: career.v1.ActivityEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	8,  // 15: career.v1.ActivityEvent.content:type_name -> career.v1.ContentSummary
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	15, // 13: career.v1.Me.expires_at:type_name -> google.protobuf.Timestamp
+	5,  // 14: career.v1.ActivityEvent.kind:type_name -> career.v1.ActivityEvent.Kind
+	15, // 15: career.v1.ActivityEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	8,  // 16: career.v1.ActivityEvent.content:type_name -> career.v1.ContentSummary
+	17, // [17:17] is the sub-list for method output_type
+	17, // [17:17] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_common_proto_init() }

@@ -131,6 +131,13 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Extends an active member's access period by a fixed duration
+  // (`extend_days`), or sets a specific new `expires_at`. Absolute
+  // and relative are exclusive; passing both is InvalidArgument.
+  rpc ExtendAccess(ExtendAccessRequest) returns (ExtendAccessResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -811,6 +818,34 @@ message DeclineRegistrationRequest {
 
 // Decline-registration response.
 message DeclineRegistrationResponse {
+  // Updated member record.
+  MemberRecord member = 1;
+}
+
+// Extend-access request. Set exactly one of extend_days /
+// new_expires_at / permanent to specify the new expiry.
+message ExtendAccessRequest {
+  // Member ID from MemberRecord.me.id.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Add this many days to the current expires_at (or, if the member
+  // has no expires_at set, from now). 1..3650.
+  int32 extend_days = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 3650
+  }];
+  // Set expires_at to this exact moment.
+  google.protobuf.Timestamp new_expires_at = 3;
+  // Make access permanent (clears expires_at).
+  bool permanent = 4;
+  // Optional free-text reason recorded in the audit log.
+  string reason = 5 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Extend-access response.
+message ExtendAccessResponse {
   // Updated member record.
   MemberRecord member = 1;
 }
