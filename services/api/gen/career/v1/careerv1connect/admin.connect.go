@@ -99,6 +99,15 @@ const (
 	AdminServiceListDbTablesProcedure = "/career.v1.AdminService/ListDbTables"
 	// AdminServiceRunDbQueryProcedure is the fully-qualified name of the AdminService's RunDbQuery RPC.
 	AdminServiceRunDbQueryProcedure = "/career.v1.AdminService/RunDbQuery"
+	// AdminServiceListAccessGrantsProcedure is the fully-qualified name of the AdminService's
+	// ListAccessGrants RPC.
+	AdminServiceListAccessGrantsProcedure = "/career.v1.AdminService/ListAccessGrants"
+	// AdminServiceUpsertAccessGrantProcedure is the fully-qualified name of the AdminService's
+	// UpsertAccessGrant RPC.
+	AdminServiceUpsertAccessGrantProcedure = "/career.v1.AdminService/UpsertAccessGrant"
+	// AdminServiceDeleteAccessGrantProcedure is the fully-qualified name of the AdminService's
+	// DeleteAccessGrant RPC.
+	AdminServiceDeleteAccessGrantProcedure = "/career.v1.AdminService/DeleteAccessGrant"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -171,6 +180,18 @@ type AdminServiceClient interface {
 	// timeout is enforced server-side and the result row-count is
 	// capped (rows past the cap are dropped with `truncated=true`).
 	RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error)
+	// Lists the access whitelist entries. An entry with an email means
+	// a registration from that address is auto-approved for
+	// `default_ttl`. Backs /admin/access.
+	ListAccessGrants(context.Context, *connect.Request[v1.ListAccessGrantsRequest]) (*connect.Response[v1.ListAccessGrantsResponse], error)
+	// Creates a new access whitelist entry or updates an existing one
+	// by email (email is the natural key). The default_ttl controls how
+	// long access lasts once the user signs up; entry_expires_at (optional)
+	// controls how long the whitelist entry itself stays active.
+	UpsertAccessGrant(context.Context, *connect.Request[v1.UpsertAccessGrantRequest]) (*connect.Response[v1.UpsertAccessGrantResponse], error)
+	// Removes a whitelist entry. Existing accounts already granted
+	// access are unaffected — this only stops future auto-approvals.
+	DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -316,6 +337,24 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("RunDbQuery")),
 			connect.WithClientOptions(opts...),
 		),
+		listAccessGrants: connect.NewClient[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse](
+			httpClient,
+			baseURL+AdminServiceListAccessGrantsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListAccessGrants")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertAccessGrant: connect.NewClient[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse](
+			httpClient,
+			baseURL+AdminServiceUpsertAccessGrantProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("UpsertAccessGrant")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAccessGrant: connect.NewClient[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteAccessGrantProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteAccessGrant")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -343,6 +382,9 @@ type adminServiceClient struct {
 	extendAccess          *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
 	listDbTables          *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
 	runDbQuery            *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
+	listAccessGrants      *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
+	upsertAccessGrant     *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
+	deleteAccessGrant     *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -455,6 +497,21 @@ func (c *adminServiceClient) RunDbQuery(ctx context.Context, req *connect.Reques
 	return c.runDbQuery.CallUnary(ctx, req)
 }
 
+// ListAccessGrants calls career.v1.AdminService.ListAccessGrants.
+func (c *adminServiceClient) ListAccessGrants(ctx context.Context, req *connect.Request[v1.ListAccessGrantsRequest]) (*connect.Response[v1.ListAccessGrantsResponse], error) {
+	return c.listAccessGrants.CallUnary(ctx, req)
+}
+
+// UpsertAccessGrant calls career.v1.AdminService.UpsertAccessGrant.
+func (c *adminServiceClient) UpsertAccessGrant(ctx context.Context, req *connect.Request[v1.UpsertAccessGrantRequest]) (*connect.Response[v1.UpsertAccessGrantResponse], error) {
+	return c.upsertAccessGrant.CallUnary(ctx, req)
+}
+
+// DeleteAccessGrant calls career.v1.AdminService.DeleteAccessGrant.
+func (c *adminServiceClient) DeleteAccessGrant(ctx context.Context, req *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error) {
+	return c.deleteAccessGrant.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -525,6 +582,18 @@ type AdminServiceHandler interface {
 	// timeout is enforced server-side and the result row-count is
 	// capped (rows past the cap are dropped with `truncated=true`).
 	RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error)
+	// Lists the access whitelist entries. An entry with an email means
+	// a registration from that address is auto-approved for
+	// `default_ttl`. Backs /admin/access.
+	ListAccessGrants(context.Context, *connect.Request[v1.ListAccessGrantsRequest]) (*connect.Response[v1.ListAccessGrantsResponse], error)
+	// Creates a new access whitelist entry or updates an existing one
+	// by email (email is the natural key). The default_ttl controls how
+	// long access lasts once the user signs up; entry_expires_at (optional)
+	// controls how long the whitelist entry itself stays active.
+	UpsertAccessGrant(context.Context, *connect.Request[v1.UpsertAccessGrantRequest]) (*connect.Response[v1.UpsertAccessGrantResponse], error)
+	// Removes a whitelist entry. Existing accounts already granted
+	// access are unaffected — this only stops future auto-approvals.
+	DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -666,6 +735,24 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("RunDbQuery")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListAccessGrantsHandler := connect.NewUnaryHandler(
+		AdminServiceListAccessGrantsProcedure,
+		svc.ListAccessGrants,
+		connect.WithSchema(adminServiceMethods.ByName("ListAccessGrants")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceUpsertAccessGrantHandler := connect.NewUnaryHandler(
+		AdminServiceUpsertAccessGrantProcedure,
+		svc.UpsertAccessGrant,
+		connect.WithSchema(adminServiceMethods.ByName("UpsertAccessGrant")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeleteAccessGrantHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteAccessGrantProcedure,
+		svc.DeleteAccessGrant,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteAccessGrant")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -712,6 +799,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListDbTablesHandler.ServeHTTP(w, r)
 		case AdminServiceRunDbQueryProcedure:
 			adminServiceRunDbQueryHandler.ServeHTTP(w, r)
+		case AdminServiceListAccessGrantsProcedure:
+			adminServiceListAccessGrantsHandler.ServeHTTP(w, r)
+		case AdminServiceUpsertAccessGrantProcedure:
+			adminServiceUpsertAccessGrantHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteAccessGrantProcedure:
+			adminServiceDeleteAccessGrantHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -807,4 +900,16 @@ func (UnimplementedAdminServiceHandler) ListDbTables(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RunDbQuery is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListAccessGrants(context.Context, *connect.Request[v1.ListAccessGrantsRequest]) (*connect.Response[v1.ListAccessGrantsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListAccessGrants is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) UpsertAccessGrant(context.Context, *connect.Request[v1.UpsertAccessGrantRequest]) (*connect.Response[v1.UpsertAccessGrantResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.UpsertAccessGrant is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteAccessGrant(context.Context, *connect.Request[v1.DeleteAccessGrantRequest]) (*connect.Response[v1.DeleteAccessGrantResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteAccessGrant is not implemented"))
 }

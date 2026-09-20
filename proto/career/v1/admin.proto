@@ -153,6 +153,27 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Lists the access whitelist entries. An entry with an email means
+  // a registration from that address is auto-approved for
+  // `default_ttl`. Backs /admin/access.
+  rpc ListAccessGrants(ListAccessGrantsRequest) returns (ListAccessGrantsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Creates a new access whitelist entry or updates an existing one
+  // by email (email is the natural key). The default_ttl controls how
+  // long access lasts once the user signs up; entry_expires_at (optional)
+  // controls how long the whitelist entry itself stays active.
+  rpc UpsertAccessGrant(UpsertAccessGrantRequest) returns (UpsertAccessGrantResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Removes a whitelist entry. Existing accounts already granted
+  // access are unaffected — this only stops future auto-approvals.
+  rpc DeleteAccessGrant(DeleteAccessGrantRequest) returns (DeleteAccessGrantResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -941,3 +962,101 @@ message RunDbQueryResponse {
   // Milliseconds the query took on the server, wall-clock.
   int32 elapsed_ms = 6;
 }
+
+// The whitelisted set of TTL choices from FSD FR-AUTH-17. Mirrors
+// the `access_ttl` enum type in the DB (`1d` / `3d` / `7d` / `30d`
+// / `permanent`).
+enum GrantTTL {
+  // Not set (proto3 requires a zero value). Rejected in the
+  // upsert request; validation forces the caller to pick one.
+  GRANT_TTL_UNSPECIFIED = 0;
+  // 24 hours.
+  GRANT_TTL_1D = 1;
+  // 72 hours.
+  GRANT_TTL_3D = 2;
+  // 7 days.
+  GRANT_TTL_7D = 3;
+  // 30 days.
+  GRANT_TTL_30D = 4;
+  // No expiry — access does not auto-lapse.
+  GRANT_TTL_PERMANENT = 5;
+}
+
+// One row of the access_grants table.
+message AccessGrant {
+  // Numeric ID (bigserial); string over the wire so callers don't
+  // hard-code JSON number precision.
+  string id = 1;
+  // Whitelisted email address (citext in the DB).
+  string email = 2;
+  // TTL granted on signup.
+  GrantTTL default_ttl = 3;
+  // Free-text admin notes (why this email was whitelisted, etc.).
+  string notes = 4;
+  // When the whitelist entry itself lapses; unset means never.
+  google.protobuf.Timestamp entry_expires_at = 5;
+  // Admin user_id that created the entry; empty for seeded rows.
+  string created_by = 6;
+  // When the entry was created.
+  google.protobuf.Timestamp created_at = 7;
+  // When the entry was last updated.
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// List-grants request.
+message ListAccessGrantsRequest {
+  // Case-insensitive substring match against email or notes.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+}
+
+// List-grants response.
+message ListAccessGrantsResponse {
+  // Whitelist entries, newest first.
+  repeated AccessGrant grants = 1;
+  // Count of entries currently active (entry_expires_at unset or
+  // in the future).
+  int32 active_count = 2;
+  // Count of entries whose entry_expires_at has passed.
+  int32 expired_count = 3;
+}
+
+// Upsert-grant request. If a row with this email already exists it
+// is updated in place; otherwise a new row is created.
+message UpsertAccessGrantRequest {
+  // Email to whitelist. Lower-cased server-side.
+  string email = 1 [(buf.validate.field).string = {
+    min_len: 3
+    max_len: 254
+    email: true
+  }];
+  // TTL that new registrations get on approval.
+  GrantTTL default_ttl = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Free-text admin notes.
+  string notes = 3 [(buf.validate.field).string.max_len = 1000];
+  // When this whitelist entry itself should lapse; unset = never.
+  google.protobuf.Timestamp entry_expires_at = 4;
+}
+
+// Upsert-grant response.
+message UpsertAccessGrantResponse {
+  // The stored entry (with fields filled in by the server).
+  AccessGrant grant = 1;
+  // True when the request created a new row; false when it
+  // updated an existing one.
+  bool created = 2;
+}
+
+// Delete-grant request.
+message DeleteAccessGrantRequest {
+  // ID from AccessGrant.id.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+}
+
+// Delete-grant response.
+message DeleteAccessGrantResponse {}

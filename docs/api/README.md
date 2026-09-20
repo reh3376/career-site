@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 22 |
+| [`AdminService`](#adminservice) | Owner console. | 25 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1624,6 +1624,9 @@ Owner console.
 | [`ExtendAccess`](#adminservice-extendaccess) | `/api/career.v1.AdminService/ExtendAccess` | Admin (fresh MFA) | default | `ExtendAccessRequest` → `ExtendAccessResponse` | Extends an active member's access period by a fixed duration (`extend_days`), or sets a specific new `expires_at`. |
 | [`ListDbTables`](#adminservice-listdbtables) | `/api/career.v1.AdminService/ListDbTables` | Admin (fresh MFA) | default | `ListDbTablesRequest` → `ListDbTablesResponse` | Returns the public tables + columns of the API database, from information_schema. |
 | [`RunDbQuery`](#adminservice-rundbquery) | `/api/career.v1.AdminService/RunDbQuery` | Admin (fresh MFA) | default | `RunDbQueryRequest` → `RunDbQueryResponse` | Runs a SQL query against the API database from the /admin/db console. |
+| [`ListAccessGrants`](#adminservice-listaccessgrants) | `/api/career.v1.AdminService/ListAccessGrants` | Admin (fresh MFA) | default | `ListAccessGrantsRequest` → `ListAccessGrantsResponse` | Lists the access whitelist entries. |
+| [`UpsertAccessGrant`](#adminservice-upsertaccessgrant) | `/api/career.v1.AdminService/UpsertAccessGrant` | Admin (fresh MFA) | default | `UpsertAccessGrantRequest` → `UpsertAccessGrantResponse` | Creates a new access whitelist entry or updates an existing one by email (email is the natural key). |
+| [`DeleteAccessGrant`](#adminservice-deleteaccessgrant) | `/api/career.v1.AdminService/DeleteAccessGrant` | Admin (fresh MFA) | default | `DeleteAccessGrantRequest` → `DeleteAccessGrantResponse` | Removes a whitelist entry. |
 
 ### AdminService.ListMembers
 
@@ -2365,6 +2368,103 @@ capped (rows past the cap are dropped with `truncated=true`).
   "sql": "string",
   "timeoutMs": 0,
   "sort": "string"
+}
+```
+
+</details>
+
+### AdminService.ListAccessGrants
+
+`POST /api/career.v1.AdminService/ListAccessGrants` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists the access whitelist entries. An entry with an email means
+a registration from that address is auto-approved for
+`default_ttl`. Backs /admin/access.
+
+**Request** — [`ListAccessGrantsRequest`](#listaccessgrantsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | `string` | string | `string: max_len: 200` | Case-insensitive substring match against email or notes. |
+
+**Response** — [`ListAccessGrantsResponse`](#listaccessgrantsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `grants` | [`AccessGrant`](#accessgrant)[] | array of object |  | Whitelist entries, newest first. |
+| `activeCount` | `int32` | number |  | Count of entries currently active (entry_expires_at unset or in the future). |
+| `expiredCount` | `int32` | number |  | Count of entries whose entry_expires_at has passed. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "query": "string"
+}
+```
+
+</details>
+
+### AdminService.UpsertAccessGrant
+
+`POST /api/career.v1.AdminService/UpsertAccessGrant` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Creates a new access whitelist entry or updates an existing one
+by email (email is the natural key). The default_ttl controls how
+long access lasts once the user signs up; entry_expires_at (optional)
+controls how long the whitelist entry itself stays active.
+
+**Request** — [`UpsertAccessGrantRequest`](#upsertaccessgrantrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `email` | `string` | string | `string: min_len: 3 max_len: 254 email: true` | Email to whitelist. Lower-cased server-side. |
+| `defaultTtl` | [`GrantTTL`](#grantttl) | string (enum name) | `enum: defined_only: true not_in: 0` | TTL that new registrations get on approval. |
+| `notes` | `string` | string | `string: max_len: 1000` | Free-text admin notes. |
+| `entryExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this whitelist entry itself should lapse; unset = never. |
+
+**Response** — [`UpsertAccessGrantResponse`](#upsertaccessgrantresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `grant` | [`AccessGrant`](#accessgrant) | object |  | The stored entry (with fields filled in by the server). |
+| `created` | `bool` | boolean |  | True when the request created a new row; false when it updated an existing one. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "email": "string",
+  "defaultTtl": "GRANT_TTL_1D",
+  "notes": "string",
+  "entryExpiresAt": "2026-09-18T12:00:00Z"
+}
+```
+
+</details>
+
+### AdminService.DeleteAccessGrant
+
+`POST /api/career.v1.AdminService/DeleteAccessGrant` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Removes a whitelist entry. Existing accounts already granted
+access are unaffected — this only stops future auto-approvals.
+
+**Request** — [`DeleteAccessGrantRequest`](#deleteaccessgrantrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from AccessGrant.id. |
+
+**Response** — [`DeleteAccessGrantResponse`](#deleteaccessgrantresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string"
 }
 ```
 
@@ -3870,6 +3970,74 @@ Run-query response.
 | `rowCount` | `int32` | number |  | Number of rows returned (before truncation, if applicable — matches len(rows) when truncated is false). |
 | `elapsedMs` | `int32` | number |  | Milliseconds the query took on the server, wall-clock. |
 
+### AccessGrant
+
+One row of the access_grants table.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Numeric ID (bigserial); string over the wire so callers don't hard-code JSON number precision. |
+| `email` | `string` | string |  | Whitelisted email address (citext in the DB). |
+| `defaultTtl` | [`GrantTTL`](#grantttl) | string (enum name) |  | TTL granted on signup. |
+| `notes` | `string` | string |  | Free-text admin notes (why this email was whitelisted, etc.). |
+| `entryExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the whitelist entry itself lapses; unset means never. |
+| `createdBy` | `string` | string |  | Admin user_id that created the entry; empty for seeded rows. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the entry was created. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the entry was last updated. |
+
+### ListAccessGrantsRequest
+
+List-grants request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | `string` | string | `string: max_len: 200` | Case-insensitive substring match against email or notes. |
+
+### ListAccessGrantsResponse
+
+List-grants response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `grants` | [`AccessGrant`](#accessgrant)[] | array of object |  | Whitelist entries, newest first. |
+| `activeCount` | `int32` | number |  | Count of entries currently active (entry_expires_at unset or in the future). |
+| `expiredCount` | `int32` | number |  | Count of entries whose entry_expires_at has passed. |
+
+### UpsertAccessGrantRequest
+
+Upsert-grant request. If a row with this email already exists it
+is updated in place; otherwise a new row is created.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `email` | `string` | string | `string: min_len: 3 max_len: 254 email: true` | Email to whitelist. Lower-cased server-side. |
+| `defaultTtl` | [`GrantTTL`](#grantttl) | string (enum name) | `enum: defined_only: true not_in: 0` | TTL that new registrations get on approval. |
+| `notes` | `string` | string | `string: max_len: 1000` | Free-text admin notes. |
+| `entryExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this whitelist entry itself should lapse; unset = never. |
+
+### UpsertAccessGrantResponse
+
+Upsert-grant response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `grant` | [`AccessGrant`](#accessgrant) | object |  | The stored entry (with fields filled in by the server). |
+| `created` | `bool` | boolean |  | True when the request created a new row; false when it updated an existing one. |
+
+### DeleteAccessGrantRequest
+
+Delete-grant request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from AccessGrant.id. |
+
+### DeleteAccessGrantResponse
+
+Delete-grant response.
+
+_No fields._
+
 ### RegisterRequest
 
 Registration form.
@@ -4989,6 +5157,21 @@ Support message resolution status.
 | `SUPPORT_STATUS_UNSPECIFIED` | 0 | Default (proto3 requires a zero value). Treated as "any" in list requests and as "resolved" in ResolveContactMessage. |
 | `SUPPORT_STATUS_OPEN` | 1 | Message is waiting for a reply / triage. |
 | `SUPPORT_STATUS_RESOLVED` | 2 | Message has been handled. |
+
+### GrantTTL
+
+The whitelisted set of TTL choices from FSD FR-AUTH-17. Mirrors
+the `access_ttl` enum type in the DB (`1d` / `3d` / `7d` / `30d`
+/ `permanent`).
+
+| Value | Number | Description |
+|---|---|---|
+| `GRANT_TTL_UNSPECIFIED` | 0 | Not set (proto3 requires a zero value). Rejected in the upsert request; validation forces the caller to pick one. |
+| `GRANT_TTL_1D` | 1 | 24 hours. |
+| `GRANT_TTL_3D` | 2 | 72 hours. |
+| `GRANT_TTL_7D` | 3 | 7 days. |
+| `GRANT_TTL_30D` | 4 | 30 days. |
+| `GRANT_TTL_PERMANENT` | 5 | No expiry — access does not auto-lapse. |
 
 ### ListContentRequest.Order
 

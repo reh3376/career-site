@@ -55,6 +55,15 @@ class SupportStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SUPPORT_STATUS_UNSPECIFIED: _ClassVar[SupportStatus]
     SUPPORT_STATUS_OPEN: _ClassVar[SupportStatus]
     SUPPORT_STATUS_RESOLVED: _ClassVar[SupportStatus]
+
+class GrantTTL(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    GRANT_TTL_UNSPECIFIED: _ClassVar[GrantTTL]
+    GRANT_TTL_1D: _ClassVar[GrantTTL]
+    GRANT_TTL_3D: _ClassVar[GrantTTL]
+    GRANT_TTL_7D: _ClassVar[GrantTTL]
+    GRANT_TTL_30D: _ClassVar[GrantTTL]
+    GRANT_TTL_PERMANENT: _ClassVar[GrantTTL]
 REVIEW_KIND_UNSPECIFIED: ReviewKind
 REVIEW_KIND_NEGATIVE_FEEDBACK: ReviewKind
 REVIEW_KIND_NO_SUPPORT: ReviewKind
@@ -81,6 +90,12 @@ JOB_STATUS_FAILED: JobStatus
 SUPPORT_STATUS_UNSPECIFIED: SupportStatus
 SUPPORT_STATUS_OPEN: SupportStatus
 SUPPORT_STATUS_RESOLVED: SupportStatus
+GRANT_TTL_UNSPECIFIED: GrantTTL
+GRANT_TTL_1D: GrantTTL
+GRANT_TTL_3D: GrantTTL
+GRANT_TTL_7D: GrantTTL
+GRANT_TTL_30D: GrantTTL
+GRANT_TTL_PERMANENT: GrantTTL
 
 class MemberCounts(_message.Message):
     __slots__ = ("views", "downloads", "chat_messages", "escalations", "saved")
@@ -725,3 +740,69 @@ class RunDbQueryResponse(_message.Message):
     row_count: int
     elapsed_ms: int
     def __init__(self, columns: _Optional[_Iterable[str]] = ..., column_types: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[DbRow, _Mapping]]] = ..., truncated: _Optional[bool] = ..., row_count: _Optional[int] = ..., elapsed_ms: _Optional[int] = ...) -> None: ...
+
+class AccessGrant(_message.Message):
+    __slots__ = ("id", "email", "default_ttl", "notes", "entry_expires_at", "created_by", "created_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_TTL_FIELD_NUMBER: _ClassVar[int]
+    NOTES_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    email: str
+    default_ttl: GrantTTL
+    notes: str
+    entry_expires_at: _timestamp_pb2.Timestamp
+    created_by: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListAccessGrantsRequest(_message.Message):
+    __slots__ = ("query",)
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    query: str
+    def __init__(self, query: _Optional[str] = ...) -> None: ...
+
+class ListAccessGrantsResponse(_message.Message):
+    __slots__ = ("grants", "active_count", "expired_count")
+    GRANTS_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    grants: _containers.RepeatedCompositeFieldContainer[AccessGrant]
+    active_count: int
+    expired_count: int
+    def __init__(self, grants: _Optional[_Iterable[_Union[AccessGrant, _Mapping]]] = ..., active_count: _Optional[int] = ..., expired_count: _Optional[int] = ...) -> None: ...
+
+class UpsertAccessGrantRequest(_message.Message):
+    __slots__ = ("email", "default_ttl", "notes", "entry_expires_at")
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    DEFAULT_TTL_FIELD_NUMBER: _ClassVar[int]
+    NOTES_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    default_ttl: GrantTTL
+    notes: str
+    entry_expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class UpsertAccessGrantResponse(_message.Message):
+    __slots__ = ("grant", "created")
+    GRANT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_FIELD_NUMBER: _ClassVar[int]
+    grant: AccessGrant
+    created: bool
+    def __init__(self, grant: _Optional[_Union[AccessGrant, _Mapping]] = ..., created: _Optional[bool] = ...) -> None: ...
+
+class DeleteAccessGrantRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class DeleteAccessGrantResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

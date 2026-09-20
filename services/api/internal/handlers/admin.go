@@ -402,6 +402,91 @@ func (a *Admin) DeclineRegistration(
 }
 
 // ---------------------------------------------------------------
+// ListAccessGrants / UpsertAccessGrant / DeleteAccessGrant —
+// /admin/access surface
+// ---------------------------------------------------------------
+
+func (a *Admin) ListAccessGrants(
+	ctx context.Context,
+	req *connect.Request[v1.ListAccessGrantsRequest],
+) (*connect.Response[v1.ListAccessGrantsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	res, err := a.users.ListGrants(ctx, users.ListGrantsFilter{Query: req.Msg.Query})
+	if err != nil {
+		a.log.Error("ListGrants failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListAccessGrantsResponse{
+		Grants:       make([]*v1.AccessGrant, 0, len(res.Grants)),
+		ActiveCount:  res.ActiveCount,
+		ExpiredCount: res.ExpiredCount,
+	}
+	for i := range res.Grants {
+		out.Grants = append(out.Grants, accessGrantRepoToProto(&res.Grants[i]))
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (a *Admin) UpsertAccessGrant(
+	ctx context.Context,
+	req *connect.Request[v1.UpsertAccessGrantRequest],
+) (*connect.Response[v1.UpsertAccessGrantResponse], error) {
+	u, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	ttl := grantTTLProtoToRepo(req.Msg.DefaultTtl)
+	if ttl == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("default_ttl is required"))
+	}
+	var expiresAt *time.Time
+	if req.Msg.EntryExpiresAt != nil {
+		t := req.Msg.EntryExpiresAt.AsTime()
+		expiresAt = &t
+	}
+	adminID := u.ID
+	g, created, err := a.users.UpsertGrant(
+		ctx,
+		req.Msg.Email,
+		ttl,
+		req.Msg.Notes,
+		expiresAt,
+		&adminID,
+	)
+	if err != nil {
+		a.log.Error("UpsertGrant failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("save failed"))
+	}
+	return connect.NewResponse(&v1.UpsertAccessGrantResponse{
+		Grant:   accessGrantRepoToProto(g),
+		Created: created,
+	}), nil
+}
+
+func (a *Admin) DeleteAccessGrant(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteAccessGrantRequest],
+) (*connect.Response[v1.DeleteAccessGrantResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.Id, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
+	}
+	if err := a.users.DeleteGrant(ctx, id); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("grant not found"))
+		}
+		a.log.Error("DeleteGrant failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("delete failed"))
+	}
+	return connect.NewResponse(&v1.DeleteAccessGrantResponse{}), nil
+}
+
+// ---------------------------------------------------------------
 // ListContactMessages
 // ---------------------------------------------------------------
 
@@ -607,6 +692,62 @@ func supportMessageRepoToProto(m *users.SupportMessage) *v1.SupportMessage {
 	}
 	if m.ResolvedAt != nil {
 		out.ResolvedAt = timestamppb.New(*m.ResolvedAt)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------
+// Access-grant mappers
+// ---------------------------------------------------------------
+
+func grantTTLProtoToRepo(t v1.GrantTTL) users.GrantTTL {
+	switch t {
+	case v1.GrantTTL_GRANT_TTL_1D:
+		return users.GrantTTL1d
+	case v1.GrantTTL_GRANT_TTL_3D:
+		return users.GrantTTL3d
+	case v1.GrantTTL_GRANT_TTL_7D:
+		return users.GrantTTL7d
+	case v1.GrantTTL_GRANT_TTL_30D:
+		return users.GrantTTL30d
+	case v1.GrantTTL_GRANT_TTL_PERMANENT:
+		return users.GrantTTLPermanent
+	default:
+		return ""
+	}
+}
+
+func grantTTLRepoToProto(t users.GrantTTL) v1.GrantTTL {
+	switch t {
+	case users.GrantTTL1d:
+		return v1.GrantTTL_GRANT_TTL_1D
+	case users.GrantTTL3d:
+		return v1.GrantTTL_GRANT_TTL_3D
+	case users.GrantTTL7d:
+		return v1.GrantTTL_GRANT_TTL_7D
+	case users.GrantTTL30d:
+		return v1.GrantTTL_GRANT_TTL_30D
+	case users.GrantTTLPermanent:
+		return v1.GrantTTL_GRANT_TTL_PERMANENT
+	default:
+		return v1.GrantTTL_GRANT_TTL_UNSPECIFIED
+	}
+}
+
+func accessGrantRepoToProto(g *users.AccessGrant) *v1.AccessGrant {
+	out := &v1.AccessGrant{
+		Id:         strconv.FormatInt(g.ID, 10),
+		Email:      g.Email,
+		DefaultTtl: grantTTLRepoToProto(g.DefaultTTL),
+		Notes:      g.Notes,
+		CreatedAt:  timestamppb.New(g.CreatedAt),
+		UpdatedAt:  timestamppb.New(g.UpdatedAt),
+	}
+	if g.EntryExpiresAt != nil {
+		out.EntryExpiresAt = timestamppb.New(*g.EntryExpiresAt)
+	}
+	if g.CreatedBy != nil {
+		out.CreatedBy = strconv.FormatInt(*g.CreatedBy, 10)
 	}
 	return out
 }
