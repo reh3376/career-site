@@ -12,12 +12,16 @@ const fieldInputClass =
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string } = {}) {
   const [state, formAction] = useActionState(loginAction, initial);
   const v = state.values ?? {};
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
+      {/* Hidden pass-through of the intended post-login destination.
+          The action validates the value before redirecting so this is
+          not an open-redirect vector. */}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       {state.error ? (
         <p
           role="alert"

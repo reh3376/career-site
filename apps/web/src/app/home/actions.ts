@@ -1,21 +1,4 @@
-"use server";
-
-import { redirect } from "next/navigation";
-
-import { callApi } from "@/lib/api-fetch";
-import { clearSession, getSessionCookie } from "@/lib/session";
-
-export async function logoutAction(): Promise<void> {
-  const cookie = await getSessionCookie();
-  if (cookie) {
-    // Fire-and-forget: even if the API is unavailable, we clear the cookie
-    // client-side so the user is signed out from their browser's view.
-    await callApi({
-      path: "/api/career.v1.AuthService/Logout",
-      body: {},
-      cookie,
-    }).catch(() => undefined);
-  }
-  await clearSession();
-  redirect("/");
-}
+// The /home sign-out button uses the shared action so all sign-out
+// paths (hamburger, member home, future admin surface) go through one
+// place. Kept as a re-export so the callsite import stays local.
+export { signOutAction as logoutAction } from "@/app/actions/session";
