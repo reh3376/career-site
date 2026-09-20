@@ -47,6 +47,7 @@ var (
 	AccessEndingSoonTemplate    = mustLoad("access_ending_soon")
 	AccessEndedTemplate         = mustLoad("access_ended")
 	SupportNotificationTemplate = mustLoad("support_notification")
+	PasswordResetTemplate       = mustLoad("password_reset")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the

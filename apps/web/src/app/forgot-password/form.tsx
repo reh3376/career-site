@@ -1,28 +1,37 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { loginAction, type LoginState } from "./actions";
+import { forgotPasswordAction, type ForgotState } from "./actions";
 
-const initial: LoginState = {};
+const initial: ForgotState = {};
 
 const fieldInputClass =
   "block w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-accent";
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function LoginForm({ next }: { next?: string } = {}) {
-  const [state, formAction] = useActionState(loginAction, initial);
+export function ForgotForm() {
+  const [state, formAction] = useActionState(forgotPasswordAction, initial);
   const v = state.values ?? {};
+
+  if (state.submitted) {
+    return (
+      <div className="space-y-4">
+        <p className="border-l-2 border-accent bg-accent/10 px-4 py-3 text-sm text-ink">
+          {state.message}
+        </p>
+        <p className="text-sm text-ink-3">
+          Nothing arrived after a couple of minutes? Check your spam
+          folder, or try again with the exact address on your account.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
-      {/* Hidden pass-through of the intended post-login destination.
-          The action validates the value before redirecting so this is
-          not an open-redirect vector. */}
-      {next ? <input type="hidden" name="next" value={next} /> : null}
       {state.error ? (
         <p
           role="alert"
@@ -47,28 +56,6 @@ export function LoginForm({ next }: { next?: string } = {}) {
         />
       </div>
 
-      <div>
-        <div className="mb-2 flex items-baseline justify-between">
-          <label htmlFor="password" className={labelClass}>
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3 no-underline transition-colors hover:text-accent"
-          >
-            forgot?
-          </Link>
-        </div>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className={fieldInputClass}
-        />
-      </div>
-
       <Submit />
     </form>
   );
@@ -82,7 +69,7 @@ function Submit() {
       disabled={pending}
       className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Signing in…" : "Sign in"}
+      {pending ? "Sending…" : "Send reset link"}
     </button>
   );
 }

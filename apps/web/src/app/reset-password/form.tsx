@@ -1,28 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { loginAction, type LoginState } from "./actions";
+import { resetPasswordAction, type ResetState } from "./actions";
 
-const initial: LoginState = {};
+const initial: ResetState = {};
 
 const fieldInputClass =
   "block w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-accent";
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function LoginForm({ next }: { next?: string } = {}) {
-  const [state, formAction] = useActionState(loginAction, initial);
-  const v = state.values ?? {};
+export function ResetForm({ token }: { token: string }) {
+  const [state, formAction] = useActionState(resetPasswordAction, initial);
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
-      {/* Hidden pass-through of the intended post-login destination.
-          The action validates the value before redirecting so this is
-          not an open-redirect vector. */}
-      {next ? <input type="hidden" name="next" value={next} /> : null}
+      <input type="hidden" name="token" value={token} />
+
       {state.error ? (
         <p
           role="alert"
@@ -33,38 +29,35 @@ export function LoginForm({ next }: { next?: string } = {}) {
       ) : null}
 
       <div>
-        <label htmlFor="email" className={labelClass}>
-          Email
+        <label htmlFor="new_password" className={labelClass}>
+          New password
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="new_password"
+          name="new_password"
+          type="password"
           required
-          autoComplete="email"
-          defaultValue={v.email ?? ""}
+          minLength={12}
+          autoComplete="new-password"
           className={fieldInputClass}
         />
+        <p className="mt-2 text-xs text-ink-3">
+          At least 12 characters. Anything that appears in a known
+          breach is rejected.
+        </p>
       </div>
 
       <div>
-        <div className="mb-2 flex items-baseline justify-between">
-          <label htmlFor="password" className={labelClass}>
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3 no-underline transition-colors hover:text-accent"
-          >
-            forgot?
-          </Link>
-        </div>
+        <label htmlFor="confirm" className={labelClass}>
+          Confirm new password
+        </label>
         <input
-          id="password"
-          name="password"
+          id="confirm"
+          name="confirm"
           type="password"
           required
-          autoComplete="current-password"
+          minLength={12}
+          autoComplete="new-password"
           className={fieldInputClass}
         />
       </div>
@@ -82,7 +75,7 @@ function Submit() {
       disabled={pending}
       className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Signing in…" : "Sign in"}
+      {pending ? "Updating…" : "Set new password"}
     </button>
   );
 }
