@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
+import { DecisionButtons } from "./decision-buttons";
+
 export const metadata: Metadata = { title: "Admin — Registrations" };
 export const dynamic = "force-dynamic";
 
@@ -130,11 +132,10 @@ export default async function AdminRegistrationsPage({
         Registrations.
       </h1>
       <p className="mt-6 max-w-xl text-sm leading-relaxed text-ink-3">
-        Read-only view of every registration and its state. Approve /
-        decline still happen through the one-click email flow
-        (<code className="font-mono text-ink">/admin/decision</code>)
-        which is what sends the sign-in email; a console action lands
-        in a follow-up.
+        Every registration and its state. Approve / decline pending
+        rows below fires the same DB update + email as the one-click
+        link, recorded as <code className="font-mono text-ink">decided_via=console</code>
+        in the audit log.
       </p>
 
       <nav
@@ -213,32 +214,40 @@ function MemberRow({ m }: { m: MemberRecord }) {
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const seen = m.first_seen_at ? new Date(m.first_seen_at) : null;
   const when = seen ? formatWhen(seen) : "—";
+  const pending = status === "MEMBER_STATUS_PENDING_APPROVAL";
   return (
-    <li className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px] sm:items-baseline sm:gap-6">
-      <div className="min-w-0">
-        <p className="truncate text-sm text-ink">{me.name || "—"}</p>
-        <p className="truncate text-xs text-ink-3">
-          <a
-            href={`mailto:${me.email}`}
-            className="text-ink-2 no-underline hover:text-accent"
-          >
-            {me.email}
-          </a>
-        </p>
+    <li className="py-4">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px] sm:items-baseline sm:gap-6">
+        <div className="min-w-0">
+          <p className="truncate text-sm text-ink">{me.name || "—"}</p>
+          <p className="truncate text-xs text-ink-3">
+            <a
+              href={`mailto:${me.email}`}
+              className="text-ink-2 no-underline hover:text-accent"
+            >
+              {me.email}
+            </a>
+          </p>
+        </div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          <span className="text-ink">id</span> {me.id}
+          <span className="mx-2 text-ink-4">·</span>
+          <span className="text-ink">role</span>{" "}
+          {me.role === "MEMBER_ROLE_ADMIN" ? "admin" : "member"}
+        </div>
+        <div className={"font-mono text-[11px] uppercase tracking-[0.14em] " + tone}>
+          <span className="pilot mr-2 align-middle" aria-hidden="true" />
+          {label}
+        </div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          {when}
+        </div>
       </div>
-      <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <span className="text-ink">id</span> {me.id}
-        <span className="mx-2 text-ink-4">·</span>
-        <span className="text-ink">role</span>{" "}
-        {me.role === "MEMBER_ROLE_ADMIN" ? "admin" : "member"}
-      </div>
-      <div className={"font-mono text-[11px] uppercase tracking-[0.14em] " + tone}>
-        <span className="pilot mr-2 align-middle" aria-hidden="true" />
-        {label}
-      </div>
-      <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        {when}
-      </div>
+      {pending ? (
+        <div className="mt-3">
+          <DecisionButtons memberId={me.id} />
+        </div>
+      ) : null}
     </li>
   );
 }

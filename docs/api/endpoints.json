@@ -946,6 +946,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.AdminService",
+      "method": "ApproveRegistration",
+      "path": "/api/career.v1.AdminService/ApproveRegistration",
+      "grpc_full_method": "/career.v1.AdminService/ApproveRegistration",
+      "internal": false,
+      "request": "career.v1.ApproveRegistrationRequest",
+      "response": "career.v1.ApproveRegistrationResponse",
+      "summary": "Approves a pending registration from the admin console.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.AdminService",
+      "method": "DeclineRegistration",
+      "path": "/api/career.v1.AdminService/DeclineRegistration",
+      "grpc_full_method": "/career.v1.AdminService/DeclineRegistration",
+      "internal": false,
+      "request": "career.v1.DeclineRegistrationRequest",
+      "response": "career.v1.DeclineRegistrationResponse",
+      "summary": "Declines a pending registration from the admin console.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.SystemService",
       "method": "GetVersion",
       "path": "/api/career.v1.SystemService/GetVersion",

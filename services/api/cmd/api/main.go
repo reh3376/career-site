@@ -125,7 +125,7 @@ func main() {
 		log, userRepo, mailer, cfg.DecisionTokenSecret,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
 	)
-	adminHandler := handlers.NewAdmin(log, userRepo, authHandler)
+	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,
