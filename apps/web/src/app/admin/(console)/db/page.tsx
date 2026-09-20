@@ -57,7 +57,7 @@ export default async function AdminDbPage() {
         5s statement timeout. Every query is logged with your user_id.
       </p>
 
-      <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,260px)_1fr]">
+      <div className="mt-10 grid gap-8 md:grid-cols-[260px_minmax(0,1fr)]">
         <SchemaPanel tables={tables} />
         <QueryConsole tables={tables.map((t) => t.name)} />
       </div>
