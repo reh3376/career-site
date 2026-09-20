@@ -85,6 +85,12 @@ const (
 	// AdminServiceResolveContactMessageProcedure is the fully-qualified name of the AdminService's
 	// ResolveContactMessage RPC.
 	AdminServiceResolveContactMessageProcedure = "/career.v1.AdminService/ResolveContactMessage"
+	// AdminServiceApproveRegistrationProcedure is the fully-qualified name of the AdminService's
+	// ApproveRegistration RPC.
+	AdminServiceApproveRegistrationProcedure = "/career.v1.AdminService/ApproveRegistration"
+	// AdminServiceDeclineRegistrationProcedure is the fully-qualified name of the AdminService's
+	// DeclineRegistration RPC.
+	AdminServiceDeclineRegistrationProcedure = "/career.v1.AdminService/DeclineRegistration"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -136,6 +142,14 @@ type AdminServiceClient interface {
 	// Marks a contact message as resolved (or re-opens it). Records the
 	// acting admin's user_id + timestamp so the audit trail is clean.
 	ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error)
+	// Approves a pending registration from the admin console. Same DB
+	// transitions + emails as the one-click Accept link, but recorded
+	// as decided_via="console" in the audit trail.
+	ApproveRegistration(context.Context, *connect.Request[v1.ApproveRegistrationRequest]) (*connect.Response[v1.ApproveRegistrationResponse], error)
+	// Declines a pending registration from the admin console. Same DB
+	// transitions + emails as the one-click Decline link, but recorded
+	// as decided_via="console" in the audit trail.
+	DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -251,6 +265,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ResolveContactMessage")),
 			connect.WithClientOptions(opts...),
 		),
+		approveRegistration: connect.NewClient[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse](
+			httpClient,
+			baseURL+AdminServiceApproveRegistrationProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ApproveRegistration")),
+			connect.WithClientOptions(opts...),
+		),
+		declineRegistration: connect.NewClient[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse](
+			httpClient,
+			baseURL+AdminServiceDeclineRegistrationProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeclineRegistration")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -273,6 +299,8 @@ type adminServiceClient struct {
 	getAudit              *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
 	listContactMessages   *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
 	resolveContactMessage *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
+	approveRegistration   *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
+	declineRegistration   *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -360,6 +388,16 @@ func (c *adminServiceClient) ResolveContactMessage(ctx context.Context, req *con
 	return c.resolveContactMessage.CallUnary(ctx, req)
 }
 
+// ApproveRegistration calls career.v1.AdminService.ApproveRegistration.
+func (c *adminServiceClient) ApproveRegistration(ctx context.Context, req *connect.Request[v1.ApproveRegistrationRequest]) (*connect.Response[v1.ApproveRegistrationResponse], error) {
+	return c.approveRegistration.CallUnary(ctx, req)
+}
+
+// DeclineRegistration calls career.v1.AdminService.DeclineRegistration.
+func (c *adminServiceClient) DeclineRegistration(ctx context.Context, req *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error) {
+	return c.declineRegistration.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -409,6 +447,14 @@ type AdminServiceHandler interface {
 	// Marks a contact message as resolved (or re-opens it). Records the
 	// acting admin's user_id + timestamp so the audit trail is clean.
 	ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error)
+	// Approves a pending registration from the admin console. Same DB
+	// transitions + emails as the one-click Accept link, but recorded
+	// as decided_via="console" in the audit trail.
+	ApproveRegistration(context.Context, *connect.Request[v1.ApproveRegistrationRequest]) (*connect.Response[v1.ApproveRegistrationResponse], error)
+	// Declines a pending registration from the admin console. Same DB
+	// transitions + emails as the one-click Decline link, but recorded
+	// as decided_via="console" in the audit trail.
+	DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -520,6 +566,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ResolveContactMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceApproveRegistrationHandler := connect.NewUnaryHandler(
+		AdminServiceApproveRegistrationProcedure,
+		svc.ApproveRegistration,
+		connect.WithSchema(adminServiceMethods.ByName("ApproveRegistration")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeclineRegistrationHandler := connect.NewUnaryHandler(
+		AdminServiceDeclineRegistrationProcedure,
+		svc.DeclineRegistration,
+		connect.WithSchema(adminServiceMethods.ByName("DeclineRegistration")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -556,6 +614,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListContactMessagesHandler.ServeHTTP(w, r)
 		case AdminServiceResolveContactMessageProcedure:
 			adminServiceResolveContactMessageHandler.ServeHTTP(w, r)
+		case AdminServiceApproveRegistrationProcedure:
+			adminServiceApproveRegistrationHandler.ServeHTTP(w, r)
+		case AdminServiceDeclineRegistrationProcedure:
+			adminServiceDeclineRegistrationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -631,4 +693,12 @@ func (UnimplementedAdminServiceHandler) ListContactMessages(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ResolveContactMessage is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ApproveRegistration(context.Context, *connect.Request[v1.ApproveRegistrationRequest]) (*connect.Response[v1.ApproveRegistrationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ApproveRegistration is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeclineRegistration(context.Context, *connect.Request[v1.DeclineRegistrationRequest]) (*connect.Response[v1.DeclineRegistrationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeclineRegistration is not implemented"))
 }

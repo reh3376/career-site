@@ -117,6 +117,20 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Approves a pending registration from the admin console. Same DB
+  // transitions + emails as the one-click Accept link, but recorded
+  // as decided_via="console" in the audit trail.
+  rpc ApproveRegistration(ApproveRegistrationRequest) returns (ApproveRegistrationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Declines a pending registration from the admin console. Same DB
+  // transitions + emails as the one-click Decline link, but recorded
+  // as decided_via="console" in the audit trail.
+  rpc DeclineRegistration(DeclineRegistrationRequest) returns (DeclineRegistrationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -765,4 +779,38 @@ message ResolveContactMessageRequest {
 message ResolveContactMessageResponse {
   // The message row after the status flip.
   SupportMessage message = 1;
+}
+
+// Approve-registration request.
+message ApproveRegistrationRequest {
+  // Member ID from MemberRecord.me.id.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Optional free-text reason recorded in the audit log.
+  string reason = 2 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Approve-registration response.
+message ApproveRegistrationResponse {
+  // Updated member record.
+  MemberRecord member = 1;
+}
+
+// Decline-registration request.
+message DeclineRegistrationRequest {
+  // Member ID from MemberRecord.me.id.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Optional free-text reason recorded in the audit log.
+  string reason = 2 [(buf.validate.field).string.max_len = 1000];
+}
+
+// Decline-registration response.
+message DeclineRegistrationResponse {
+  // Updated member record.
+  MemberRecord member = 1;
 }

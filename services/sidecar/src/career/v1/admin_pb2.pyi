@@ -613,3 +613,31 @@ class ResolveContactMessageResponse(_message.Message):
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     message: SupportMessage
     def __init__(self, message: _Optional[_Union[SupportMessage, _Mapping]] = ...) -> None: ...
+
+class ApproveRegistrationRequest(_message.Message):
+    __slots__ = ("member_id", "reason")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    reason: str
+    def __init__(self, member_id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class ApproveRegistrationResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: MemberRecord
+    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...
+
+class DeclineRegistrationRequest(_message.Message):
+    __slots__ = ("member_id", "reason")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    reason: str
+    def __init__(self, member_id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class DeclineRegistrationResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: MemberRecord
+    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...

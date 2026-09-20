@@ -124,29 +124,69 @@ func (h *AdminDecision) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *AdminDecision) approve(w http.ResponseWriter, ctx context.Context, u *users.User, tokenPlain string) {
+// ApproveUser flips a pending user to ACTIVE with the default TTL,
+// records the decision, and fires the approval email. Shared by both
+// the one-click email HTTP handler and the AdminService.ApproveRegistration
+// RPC — `via` distinguishes them in the audit log ("email_link" vs
+// "console") and `tokenHash` is nil for console-initiated approvals.
+// Mutates u.ExpiresAt so the caller can render it back.
+func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via string, tokenHash []byte) (users.GrantTTL, error) {
 	ttl := h.AcceptDefaultTTL
 	d := ttl.Duration()
 	expiresAt := time.Now().UTC().Add(d)
 
 	if err := h.users.Activate(ctx, u.ID, &expiresAt); err != nil {
 		h.log.Error("activate failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
-		writeJSON(w, http.StatusInternalServerError, decisionResponse{Status: "error", Detail: "server error"})
-		return
+		return ttl, fmt.Errorf("activate: %w", err)
 	}
 	if err := h.users.RecordApprovalDecision(ctx, users.ApprovalDecision{
 		UserID:     u.ID,
 		Decision:   "approve",
-		DecidedVia: "email_link",
+		DecidedVia: via,
 		GrantedTTL: &d,
-		TokenHash:  auth.HashToken(tokenPlain),
+		TokenHash:  tokenHash,
 	}); err != nil {
 		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 	}
 	u.ExpiresAt = &expiresAt
+	u.Status = users.StatusActive
 
 	go h.sendUserApproved(u)
+	return ttl, nil
+}
 
+// DeclineUser flips a pending user to DECLINED, records the decision,
+// and fires the decline email. Shared by both the one-click email
+// HTTP handler and the AdminService.DeclineRegistration RPC — `via`
+// distinguishes them in the audit log and `tokenHash` is nil for
+// console-initiated declines.
+func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via string, tokenHash []byte) error {
+	if err := h.users.SetStatus(ctx, u.ID, users.StatusDeclined); err != nil {
+		h.log.Error("decline failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		return fmt.Errorf("set status: %w", err)
+	}
+	if err := h.users.RecordApprovalDecision(ctx, users.ApprovalDecision{
+		UserID:     u.ID,
+		Decision:   "decline",
+		DecidedVia: via,
+		TokenHash:  tokenHash,
+	}); err != nil {
+		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+	u.Status = users.StatusDeclined
+	go h.sendUserDeclined(u, referenceID(u))
+	return nil
+}
+
+// approve / decline are the thin HTTP wrappers used by the one-click
+// email flow. Business logic lives in ApproveUser / DeclineUser so
+// the admin-console RPCs can reuse it.
+func (h *AdminDecision) approve(w http.ResponseWriter, ctx context.Context, u *users.User, tokenPlain string) {
+	ttl, err := h.ApproveUser(ctx, u, "email_link", auth.HashToken(tokenPlain))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, decisionResponse{Status: "error", Detail: "server error"})
+		return
+	}
 	writeJSON(w, http.StatusOK, decisionResponse{
 		Status:  "approved",
 		Email:   u.Email,
@@ -154,23 +194,11 @@ func (h *AdminDecision) approve(w http.ResponseWriter, ctx context.Context, u *u
 	})
 }
 
-func (h *AdminDecision) decline(w http.ResponseWriter, ctx context.Context, u *users.User, tokenPlain string, ref string) {
-	if err := h.users.SetStatus(ctx, u.ID, users.StatusDeclined); err != nil {
-		h.log.Error("decline failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+func (h *AdminDecision) decline(w http.ResponseWriter, ctx context.Context, u *users.User, tokenPlain string, _ref string) {
+	if err := h.DeclineUser(ctx, u, "email_link", auth.HashToken(tokenPlain)); err != nil {
 		writeJSON(w, http.StatusInternalServerError, decisionResponse{Status: "error", Detail: "server error"})
 		return
 	}
-	if err := h.users.RecordApprovalDecision(ctx, users.ApprovalDecision{
-		UserID:     u.ID,
-		Decision:   "decline",
-		DecidedVia: "email_link",
-		TokenHash:  auth.HashToken(tokenPlain),
-	}); err != nil {
-		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
-	}
-
-	go h.sendUserDeclined(u, ref)
-
 	writeJSON(w, http.StatusOK, decisionResponse{
 		Status:  "declined",
 		Email:   u.Email,

@@ -26,13 +26,14 @@ import (
 type Admin struct {
 	careerv1connect.UnimplementedAdminServiceHandler
 
-	log   *slog.Logger
-	users *users.Repo
-	auth  *Auth
+	log      *slog.Logger
+	users    *users.Repo
+	auth     *Auth
+	decision *AdminDecision // reused for ApproveUser / DeclineUser business logic
 }
 
-func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth) *Admin {
-	return &Admin{log: log, users: repo, auth: auth}
+func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision) *Admin {
+	return &Admin{log: log, users: repo, auth: auth, decision: decision}
 }
 
 // requireAdmin gates a call on session + admin role. Called at the
@@ -87,6 +88,66 @@ func (a *Admin) ListMembers(
 		out.Members = append(out.Members, memberRecordRepoToProto(&res.Members[i]))
 	}
 	return connect.NewResponse(out), nil
+}
+
+// ---------------------------------------------------------------
+// ApproveRegistration / DeclineRegistration
+// ---------------------------------------------------------------
+
+func (a *Admin) ApproveRegistration(
+	ctx context.Context,
+	req *connect.Request[v1.ApproveRegistrationRequest],
+) (*connect.Response[v1.ApproveRegistrationResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	if u.Status != users.StatusPendingApproval {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("member is not in pending_approval"))
+	}
+	if _, err := a.decision.ApproveUser(ctx, u, "console", nil); err != nil {
+		a.log.Error("ApproveUser failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("approve failed"))
+	}
+	return connect.NewResponse(&v1.ApproveRegistrationResponse{
+		Member: memberRecordRepoToProto(u),
+	}), nil
+}
+
+func (a *Admin) DeclineRegistration(
+	ctx context.Context,
+	req *connect.Request[v1.DeclineRegistrationRequest],
+) (*connect.Response[v1.DeclineRegistrationResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	if u.Status != users.StatusPendingApproval {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("member is not in pending_approval"))
+	}
+	if err := a.decision.DeclineUser(ctx, u, "console", nil); err != nil {
+		a.log.Error("DeclineUser failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("decline failed"))
+	}
+	return connect.NewResponse(&v1.DeclineRegistrationResponse{
+		Member: memberRecordRepoToProto(u),
+	}), nil
 }
 
 // ---------------------------------------------------------------

@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 17 |
+| [`AdminService`](#adminservice) | Owner console. | 19 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1619,6 +1619,8 @@ Owner console.
 | [`GetAudit`](#adminservice-getaudit) | `/api/career.v1.AdminService/GetAudit` | Admin (fresh MFA) | default | `GetAuditRequest` → `GetAuditResponse` | Lists audit-log entries. |
 | [`ListContactMessages`](#adminservice-listcontactmessages) | `/api/career.v1.AdminService/ListContactMessages` | Admin (fresh MFA) | default | `ListContactMessagesRequest` → `ListContactMessagesResponse` | Lists messages sent via the public contact form (FR-ADM-14). |
 | [`ResolveContactMessage`](#adminservice-resolvecontactmessage) | `/api/career.v1.AdminService/ResolveContactMessage` | Admin (fresh MFA) | default | `ResolveContactMessageRequest` → `ResolveContactMessageResponse` | Marks a contact message as resolved (or re-opens it). |
+| [`ApproveRegistration`](#adminservice-approveregistration) | `/api/career.v1.AdminService/ApproveRegistration` | Admin (fresh MFA) | default | `ApproveRegistrationRequest` → `ApproveRegistrationResponse` | Approves a pending registration from the admin console. |
+| [`DeclineRegistration`](#adminservice-declineregistration) | `/api/career.v1.AdminService/DeclineRegistration` | Admin (fresh MFA) | default | `DeclineRegistrationRequest` → `DeclineRegistrationResponse` | Declines a pending registration from the admin console. |
 
 ### AdminService.ListMembers
 
@@ -2192,6 +2194,70 @@ acting admin's user_id + timestamp so the audit trail is clean.
 {
   "id": "string",
   "status": "SUPPORT_STATUS_OPEN"
+}
+```
+
+</details>
+
+### AdminService.ApproveRegistration
+
+`POST /api/career.v1.AdminService/ApproveRegistration` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Approves a pending registration from the admin console. Same DB
+transitions + emails as the one-click Accept link, but recorded
+as decided_via="console" in the audit trail.
+
+**Request** — [`ApproveRegistrationRequest`](#approveregistrationrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+**Response** — [`ApproveRegistrationResponse`](#approveregistrationresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.DeclineRegistration
+
+`POST /api/career.v1.AdminService/DeclineRegistration` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Declines a pending registration from the admin console. Same DB
+transitions + emails as the one-click Decline link, but recorded
+as decided_via="console" in the audit trail.
+
+**Request** — [`DeclineRegistrationRequest`](#declineregistrationrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+**Response** — [`DeclineRegistrationResponse`](#declineregistrationresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
+  "reason": "string"
 }
 ```
 
@@ -3570,6 +3636,40 @@ Updated message.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `message` | [`SupportMessage`](#supportmessage) | object |  | The message row after the status flip. |
+
+### ApproveRegistrationRequest
+
+Approve-registration request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+### ApproveRegistrationResponse
+
+Approve-registration response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
+
+### DeclineRegistrationRequest
+
+Decline-registration request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+
+### DeclineRegistrationResponse
+
+Decline-registration response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | Updated member record. |
 
 ### RegisterRequest
 
