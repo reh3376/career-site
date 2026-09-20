@@ -216,6 +216,7 @@ function buildGroups({
       label: "your account",
       items: [
         { kind: "link", label: "Member home", href: "/home" },
+        { kind: "link", label: "Settings", href: "/settings" },
         { kind: "action", label: "Sign out", action: signOutAction },
       ],
     });
@@ -225,6 +226,7 @@ function buildGroups({
       items: [
         { kind: "link", label: "Sign in", href: "/login" },
         { kind: "link", label: "Request access", href: "/register" },
+        { kind: "link", label: "Settings", href: "/settings" },
       ],
     });
   }
