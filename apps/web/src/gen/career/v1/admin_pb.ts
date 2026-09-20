@@ -1648,11 +1648,15 @@ export type SupportMessage = Message<"career.v1.SupportMessage"> & {
   ticketId: string;
 
   /**
+   * Category the sender picked on the contact form.
+   *
    * @generated from field: career.v1.SupportCategory category = 3;
    */
   category: SupportCategory;
 
   /**
+   * Open vs resolved state.
+   *
    * @generated from field: career.v1.SupportStatus status = 4;
    */
   status: SupportStatus;
@@ -1694,11 +1698,16 @@ export type SupportMessage = Message<"career.v1.SupportMessage"> & {
   userId: string;
 
   /**
+   * When the message was received.
+   *
    * @generated from field: google.protobuf.Timestamp created_at = 10;
    */
   createdAt?: Timestamp | undefined;
 
   /**
+   * When the row last changed (initially = created_at; bumps on
+   * status changes).
+   *
    * @generated from field: google.protobuf.Timestamp updated_at = 11;
    */
   updatedAt?: Timestamp | undefined;
@@ -1767,23 +1776,29 @@ export const ListContactMessagesRequestSchema: GenMessage<ListContactMessagesReq
  */
 export type ListContactMessagesResponse = Message<"career.v1.ListContactMessagesResponse"> & {
   /**
+   * Messages matching the filter, newest first.
+   *
    * @generated from field: repeated career.v1.SupportMessage messages = 1;
    */
   messages: SupportMessage[];
 
   /**
+   * Pagination.
+   *
    * @generated from field: career.v1.PageResponse page = 2;
    */
   page?: PageResponse | undefined;
 
   /**
-   * Aggregate counts for the header UI.
+   * Unfiltered count of messages currently in the "open" state.
    *
    * @generated from field: int32 open_count = 3;
    */
   openCount: number;
 
   /**
+   * Unfiltered count of messages currently in the "resolved" state.
+   *
    * @generated from field: int32 resolved_count = 4;
    */
   resolvedCount: number;
@@ -1831,6 +1846,8 @@ export const ResolveContactMessageRequestSchema: GenMessage<ResolveContactMessag
  */
 export type ResolveContactMessageResponse = Message<"career.v1.ResolveContactMessageResponse"> & {
   /**
+   * The message row after the status flip.
+   *
    * @generated from field: career.v1.SupportMessage message = 1;
    */
   message?: SupportMessage | undefined;
@@ -2063,16 +2080,23 @@ export const JobStatusSchema: GenEnum<JobStatus> = /*@__PURE__*/
  */
 export enum SupportStatus {
   /**
+   * Default (proto3 requires a zero value). Treated as "any" in list
+   * requests and as "resolved" in ResolveContactMessage.
+   *
    * @generated from enum value: SUPPORT_STATUS_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
+   * Message is waiting for a reply / triage.
+   *
    * @generated from enum value: SUPPORT_STATUS_OPEN = 1;
    */
   OPEN = 1,
 
   /**
+   * Message has been handled.
+   *
    * @generated from enum value: SUPPORT_STATUS_RESOLVED = 2;
    */
   RESOLVED = 2,

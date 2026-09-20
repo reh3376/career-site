@@ -2145,10 +2145,10 @@ table this reads from.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  |  |
-| `page` | [`PageResponse`](#pageresponse) | object |  |  |
-| `openCount` | `int32` | number |  | Aggregate counts for the header UI. |
-| `resolvedCount` | `int32` | number |  |  |
+| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  | Messages matching the filter, newest first. |
+| `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `openCount` | `int32` | number |  | Unfiltered count of messages currently in the "open" state. |
+| `resolvedCount` | `int32` | number |  | Unfiltered count of messages currently in the "resolved" state. |
 
 <details><summary>Example request body</summary>
 
@@ -2184,7 +2184,7 @@ acting admin's user_id + timestamp so the audit trail is clean.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `message` | [`SupportMessage`](#supportmessage) | object |  |  |
+| `message` | [`SupportMessage`](#supportmessage) | object |  | The message row after the status flip. |
 
 <details><summary>Example request body</summary>
 
@@ -3521,15 +3521,15 @@ One row of the support_messages table, as the owner sees it.
 |---|---|---|---|---|
 | `id` | `string` | string |  | Numeric ID (bigserial); string over the wire so callers don't hard-code JSON number precision. |
 | `ticketId` | `string` | string |  | Ticket ID (public reference shown in the "we got your message" email). |
-| `category` | [`SupportCategory`](#supportcategory) | string (enum name) |  |  |
-| `status` | [`SupportStatus`](#supportstatus) | string (enum name) |  |  |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) |  | Category the sender picked on the contact form. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) |  | Open vs resolved state. |
 | `subject` | `string` | string |  | Subject line the sender wrote. |
 | `body` | `string` | string |  | Message body, plain text. |
 | `senderName` | `string` | string |  | Sender name (as submitted or copied from the user row for members). |
 | `senderEmail` | `string` | string |  | Sender email (as submitted or copied from the user row for members). |
 | `userId` | `string` | string |  | The signed-in user_id if the sender was a member at submit time, empty for anonymous submissions. |
-| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  |  |
-| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  |  |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the message was received. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row last changed (initially = created_at; bumps on status changes). |
 | `resolvedAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set only for resolved messages. |
 
 ### ListContactMessagesRequest
@@ -3549,10 +3549,10 @@ Contact-message list response.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  |  |
-| `page` | [`PageResponse`](#pageresponse) | object |  |  |
-| `openCount` | `int32` | number |  | Aggregate counts for the header UI. |
-| `resolvedCount` | `int32` | number |  |  |
+| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  | Messages matching the filter, newest first. |
+| `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `openCount` | `int32` | number |  | Unfiltered count of messages currently in the "open" state. |
+| `resolvedCount` | `int32` | number |  | Unfiltered count of messages currently in the "resolved" state. |
 
 ### ResolveContactMessageRequest
 
@@ -3569,7 +3569,7 @@ Updated message.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `message` | [`SupportMessage`](#supportmessage) | object |  |  |
+| `message` | [`SupportMessage`](#supportmessage) | object |  | The message row after the status flip. |
 
 ### RegisterRequest
 
@@ -4687,9 +4687,9 @@ Support message resolution status.
 
 | Value | Number | Description |
 |---|---|---|
-| `SUPPORT_STATUS_UNSPECIFIED` | 0 |  |
-| `SUPPORT_STATUS_OPEN` | 1 |  |
-| `SUPPORT_STATUS_RESOLVED` | 2 |  |
+| `SUPPORT_STATUS_UNSPECIFIED` | 0 | Default (proto3 requires a zero value). Treated as "any" in list requests and as "resolved" in ResolveContactMessage. |
+| `SUPPORT_STATUS_OPEN` | 1 | Message is waiting for a reply / triage. |
+| `SUPPORT_STATUS_RESOLVED` | 2 | Message has been handled. |
 
 ### ListContentRequest.Order
 

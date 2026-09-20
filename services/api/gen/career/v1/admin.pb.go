@@ -289,9 +289,13 @@ func (JobStatus) EnumDescriptor() ([]byte, []int) {
 type SupportStatus int32
 
 const (
+	// Default (proto3 requires a zero value). Treated as "any" in list
+	// requests and as "resolved" in ResolveContactMessage.
 	SupportStatus_SUPPORT_STATUS_UNSPECIFIED SupportStatus = 0
-	SupportStatus_SUPPORT_STATUS_OPEN        SupportStatus = 1
-	SupportStatus_SUPPORT_STATUS_RESOLVED    SupportStatus = 2
+	// Message is waiting for a reply / triage.
+	SupportStatus_SUPPORT_STATUS_OPEN SupportStatus = 1
+	// Message has been handled.
+	SupportStatus_SUPPORT_STATUS_RESOLVED SupportStatus = 2
 )
 
 // Enum value maps for SupportStatus.
@@ -3176,9 +3180,11 @@ type SupportMessage struct {
 	// hard-code JSON number precision.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Ticket ID (public reference shown in the "we got your message" email).
-	TicketId string          `protobuf:"bytes,2,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
+	TicketId string `protobuf:"bytes,2,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
+	// Category the sender picked on the contact form.
 	Category SupportCategory `protobuf:"varint,3,opt,name=category,proto3,enum=career.v1.SupportCategory" json:"category,omitempty"`
-	Status   SupportStatus   `protobuf:"varint,4,opt,name=status,proto3,enum=career.v1.SupportStatus" json:"status,omitempty"`
+	// Open vs resolved state.
+	Status SupportStatus `protobuf:"varint,4,opt,name=status,proto3,enum=career.v1.SupportStatus" json:"status,omitempty"`
 	// Subject line the sender wrote.
 	Subject string `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
 	// Message body, plain text.
@@ -3189,8 +3195,11 @@ type SupportMessage struct {
 	SenderEmail string `protobuf:"bytes,8,opt,name=sender_email,json=senderEmail,proto3" json:"sender_email,omitempty"`
 	// The signed-in user_id if the sender was a member at submit time,
 	// empty for anonymous submissions.
-	UserId    string                 `protobuf:"bytes,9,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserId string `protobuf:"bytes,9,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// When the message was received.
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// When the row last changed (initially = created_at; bumps on
+	// status changes).
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Set only for resolved messages.
 	ResolvedAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
@@ -3387,11 +3396,14 @@ func (x *ListContactMessagesRequest) GetPage() *PageRequest {
 
 // Contact-message list response.
 type ListContactMessagesResponse struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	Messages []*SupportMessage      `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
-	Page     *PageResponse          `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
-	// Aggregate counts for the header UI.
-	OpenCount     int32 `protobuf:"varint,3,opt,name=open_count,json=openCount,proto3" json:"open_count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Messages matching the filter, newest first.
+	Messages []*SupportMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	// Pagination.
+	Page *PageResponse `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	// Unfiltered count of messages currently in the "open" state.
+	OpenCount int32 `protobuf:"varint,3,opt,name=open_count,json=openCount,proto3" json:"open_count,omitempty"`
+	// Unfiltered count of messages currently in the "resolved" state.
 	ResolvedCount int32 `protobuf:"varint,4,opt,name=resolved_count,json=resolvedCount,proto3" json:"resolved_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3512,8 +3524,9 @@ func (x *ResolveContactMessageRequest) GetStatus() SupportStatus {
 
 // Updated message.
 type ResolveContactMessageResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       *SupportMessage        `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The message row after the status flip.
+	Message       *SupportMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

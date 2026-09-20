@@ -686,8 +686,12 @@ message GetAuditResponse {
 
 // Support message resolution status.
 enum SupportStatus {
+  // Default (proto3 requires a zero value). Treated as "any" in list
+  // requests and as "resolved" in ResolveContactMessage.
   SUPPORT_STATUS_UNSPECIFIED = 0;
+  // Message is waiting for a reply / triage.
   SUPPORT_STATUS_OPEN = 1;
+  // Message has been handled.
   SUPPORT_STATUS_RESOLVED = 2;
 }
 
@@ -698,7 +702,9 @@ message SupportMessage {
   string id = 1;
   // Ticket ID (public reference shown in the "we got your message" email).
   string ticket_id = 2;
+  // Category the sender picked on the contact form.
   SupportCategory category = 3;
+  // Open vs resolved state.
   SupportStatus status = 4;
   // Subject line the sender wrote.
   string subject = 5;
@@ -711,7 +717,10 @@ message SupportMessage {
   // The signed-in user_id if the sender was a member at submit time,
   // empty for anonymous submissions.
   string user_id = 9;
+  // When the message was received.
   google.protobuf.Timestamp created_at = 10;
+  // When the row last changed (initially = created_at; bumps on
+  // status changes).
   google.protobuf.Timestamp updated_at = 11;
   // Set only for resolved messages.
   google.protobuf.Timestamp resolved_at = 12;
@@ -731,10 +740,13 @@ message ListContactMessagesRequest {
 
 // Contact-message list response.
 message ListContactMessagesResponse {
+  // Messages matching the filter, newest first.
   repeated SupportMessage messages = 1;
+  // Pagination.
   PageResponse page = 2;
-  // Aggregate counts for the header UI.
+  // Unfiltered count of messages currently in the "open" state.
   int32 open_count = 3;
+  // Unfiltered count of messages currently in the "resolved" state.
   int32 resolved_count = 4;
 }
 
@@ -751,5 +763,6 @@ message ResolveContactMessageRequest {
 
 // Updated message.
 message ResolveContactMessageResponse {
+  // The message row after the status flip.
   SupportMessage message = 1;
 }

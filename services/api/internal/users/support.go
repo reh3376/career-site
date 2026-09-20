@@ -36,7 +36,7 @@ type SupportMessage struct {
 // ListSupportFilter narrows a ListSupport call. Zero values mean "no
 // filter" so callers can pass in a partly-populated struct.
 type ListSupportFilter struct {
-	Query    string // case-insensitive substring in subject / body / sender
+	Query    string          // case-insensitive substring in subject / body / sender
 	Category SupportCategory // "" = any
 	Status   string          // "" = any, "open" | "resolved"
 	Limit    int32           // 1..200 (clamped)
