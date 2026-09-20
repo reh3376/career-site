@@ -10,3 +10,4 @@ One record per resolved decision from the FSD (`docs/FSD.md` §14). The file num
 | [0017](0017-connectrpc-transport.md) | ConnectRPC between browser and API | Accepted 2026-09-18 |
 | [0020](0020-registration-whitelist-and-time-limited-access.md) | Registration whitelist and time-limited access | Accepted 2026-09-19 |
 | [0027](0027-docs-discipline-and-public-repo-maturity.md) | Docs discipline and public-repo maturity | Accepted 2026-09-19 |
+| [0028](0028-frontend-design-system.md) | Frontend design system: blueprint editorial | Accepted 2026-09-19 |

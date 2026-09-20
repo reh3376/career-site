@@ -1,61 +1,132 @@
 @import "tailwindcss";
 
-/* Design tokens. Colors sit close to neutral — the site's professional
- * audience reads restraint as competence. A single deep-blue accent carries
- * intent (CTAs, links, focus rings); everything else is grayscale.
+/* -----------------------------------------------------------------------
+ * Design tokens
  *
- * Every color has a light and dark value so we can flip themes without
- * rewriting components later. Dark mode ships in Phase 2 with the design
- * pass; the tokens are already wired.
- */
+ * A cool off-white paper base with deep teal-blue as the structural
+ * accent (blueprint / control screen) and a spare safety-orange signal
+ * used only for live-status indicators. Type: Fraunces for display,
+ * Inter Tight for body, JetBrains Mono for numeric callouts and system
+ * tags. Every color is defined once here so a theme pass can rebrand
+ * the whole surface in one place.
+ * ----------------------------------------------------------------------- */
 @theme {
-  --color-ink: #0a0a0a;
-  --color-ink-2: #262626;
-  --color-ink-3: #525252;
-  --color-ink-4: #737373;
-  --color-paper: #fafafa;
-  --color-paper-2: #f5f5f5;
-  --color-paper-3: #e5e5e5;
-  --color-line: #d4d4d4;
+  /* Ink + paper */
+  --color-paper: #f6f6f4;
+  --color-paper-2: #eeede8;
+  --color-paper-3: #e5e4de;
+  --color-ink: #111417;
+  --color-ink-2: #3a3f45;
+  --color-ink-3: #7c828a;
+  --color-ink-4: #a8ada9;
+  --color-line: #d4d5d1;
+  --color-line-strong: #b5b6b1;
 
-  --color-accent: #0f3d5c;
-  --color-accent-hover: #0a2c44;
-  --color-accent-soft: #e7eef3;
+  /* Accent — deep teal-blue, reads as technical / blueprint */
+  --color-accent: #164e63;
+  --color-accent-hover: #0e3b4a;
+  --color-accent-soft: #e3eef2;
 
+  /* Signal — safety orange. Used only for live-status indicators. */
+  --color-signal: #c2410c;
+  --color-signal-soft: #fce8dd;
+
+  /* Semantic */
   --color-success: #166534;
   --color-warning: #92400e;
   --color-danger: #991b1b;
 
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Mono",
-    monospace;
+  /* Type — assigned in layout.tsx via next/font */
+  --font-display: var(--font-fraunces, serif);
+  --font-sans: var(--font-inter-tight, -apple-system, BlinkMacSystemFont, sans-serif);
+  --font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 }
 
-/* Reset a few defaults that Tailwind Preflight leaves alone. */
+/* -----------------------------------------------------------------------
+ * Base
+ * ----------------------------------------------------------------------- */
 html {
   color: var(--color-ink);
   background: var(--color-paper);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "kern", "liga", "calt", "ss01";
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
   min-height: 100dvh;
 }
 
-/* Keyboard-only focus ring for accessibility (WCAG 2.4.7). */
+/* Selection uses the accent so highlighting reinforces brand */
+::selection {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+
+/* Considered focus ring — slightly offset, uses accent */
 :focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: 2px;
+}
+
+/* Display font utility */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "ss02", "kern", "calt";
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero", "tnum";
+}
+
+/* Tabular numerals for anywhere numbers align vertically */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* -----------------------------------------------------------------------
+ * The single motion moment — a slow, considered pulse used behind the
+ * "system · nominal" indicator in the header. Not a fade-in, not a
+ * scroll effect — just one live element that ties the brand back to
+ * Roger's actual work (running 24/7 systems).
+ * ----------------------------------------------------------------------- */
+@keyframes pulse-signal {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.85); }
+}
+
+.pulse-signal {
+  animation: pulse-signal 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-signal { animation: none; }
+}
+
+/* -----------------------------------------------------------------------
+ * A hairline rule with structural meaning — thicker on one side to
+ * suggest a plotted line, not a divider. Used sparingly to break the
+ * hero from the sections below.
+ * ----------------------------------------------------------------------- */
+.rule-plot {
+  height: 1px;
+  background: var(--color-line);
+  position: relative;
+}
+.rule-plot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 96px;
+  height: 3px;
+  background: var(--color-ink);
 }

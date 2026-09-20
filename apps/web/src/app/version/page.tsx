@@ -28,20 +28,36 @@ export default async function VersionPage() {
   const result = await fetchVersion();
 
   return (
-    <main style={{ padding: "3rem 1.5rem", maxWidth: "40rem", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "1.25rem" }}>API version</h1>
+    <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+        health check
+      </p>
+      <h1
+        className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
+        style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
+      >
+        API version.
+      </h1>
       {result.ok ? (
-        <dl style={{ fontFamily: "monospace", lineHeight: 1.8 }}>
-          <dt style={{ fontWeight: "bold" }}>version</dt>
-          <dd style={{ margin: 0 }}>{result.version || "(empty)"}</dd>
-          <dt style={{ fontWeight: "bold", marginTop: "0.75rem" }}>commit</dt>
-          <dd style={{ margin: 0 }}>{result.commit || "(empty)"}</dd>
-          <dt style={{ fontWeight: "bold", marginTop: "0.75rem" }}>go</dt>
-          <dd style={{ margin: 0 }}>{result.goVersion || "(empty)"}</dd>
+        <dl className="mt-10 grid gap-4 border-t border-line pt-6 font-mono text-sm text-ink-2">
+          <div className="flex gap-4">
+            <dt className="min-w-[6rem] text-ink-3">version</dt>
+            <dd className="m-0 text-ink">{result.version || "(empty)"}</dd>
+          </div>
+          <div className="flex gap-4">
+            <dt className="min-w-[6rem] text-ink-3">commit</dt>
+            <dd className="m-0 text-ink">{result.commit || "(empty)"}</dd>
+          </div>
+          <div className="flex gap-4">
+            <dt className="min-w-[6rem] text-ink-3">go</dt>
+            <dd className="m-0 text-ink">{result.goVersion || "(empty)"}</dd>
+          </div>
         </dl>
       ) : (
-        <p style={{ color: "#c00" }}>API unreachable: {result.error}</p>
+        <p className="mt-10 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+          API unreachable: <span className="font-mono">{result.error}</span>
+        </p>
       )}
-    </main>
+    </div>
   );
 }

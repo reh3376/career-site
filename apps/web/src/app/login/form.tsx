@@ -8,25 +8,27 @@ import { loginAction, type LoginState } from "./actions";
 const initial: LoginState = {};
 
 const fieldInputClass =
-  "block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
+  "block w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-accent";
+const labelClass =
+  "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
 export function LoginForm() {
   const [state, formAction] = useActionState(loginAction, initial);
   const v = state.values ?? {};
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} className="space-y-8" noValidate>
       {state.error ? (
         <p
           role="alert"
-          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink"
         >
           {state.error}
         </p>
       ) : null}
 
       <div>
-        <label htmlFor="email" className="mb-1 block text-sm font-medium text-ink-2">
+        <label htmlFor="email" className={labelClass}>
           Email
         </label>
         <input
@@ -41,7 +43,7 @@ export function LoginForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-ink-2">
+        <label htmlFor="password" className={labelClass}>
           Password
         </label>
         <input
@@ -65,7 +67,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center rounded-md bg-accent px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Signing in…" : "Sign in"}
     </button>

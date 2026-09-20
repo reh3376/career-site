@@ -53,6 +53,14 @@ jobs:
           # First-line-of-newest-commit as the title.
           title=$(git log -1 --pretty=format:'%s')
 
+          # Auto-pr is the only path that opens PRs for these branches.
+          # If this create fails — including the "GitHub Actions is not
+          # permitted to create or approve pull requests" permission
+          # error — we let it fail loudly. That's a real config problem
+          # (owner toggle in Settings → Actions → General) that we want
+          # to see, not paper over. Do NOT race this step with manual
+          # `gh pr create` calls from a dev shell; that produces spurious
+          # concurrent-create failures.
           gh pr create \
             --base main \
             --head "$BRANCH" \

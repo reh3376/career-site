@@ -12,11 +12,11 @@ export function RegisterForm() {
   const v = state.values ?? {};
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} className="space-y-8" noValidate>
       {state.error ? (
         <p
           role="alert"
-          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink"
         >
           {state.error}
         </p>
@@ -85,12 +85,15 @@ export function RegisterForm() {
           type="checkbox"
           name="consent"
           required
-          className="mt-1 h-4 w-4 rounded border-line accent-accent"
+          className="mt-1 h-4 w-4 border-line accent-accent"
         />
         <span>
-          I understand my activity on this site and my conversations with Ask Roger will be stored
-          and visible to Roger. See the{" "}
-          <a href="/privacy" className="text-accent underline underline-offset-2">
+          I understand my activity on this site and my conversations with Ask
+          Roger will be stored and visible to Roger. See the{" "}
+          <a
+            href="/privacy"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
             privacy policy
           </a>
           .
@@ -99,9 +102,9 @@ export function RegisterForm() {
 
       <SubmitButton />
 
-      <p className="text-xs text-ink-3">
-        Registration is reviewed by Roger — usually within a day. You&rsquo;ll receive an email when
-        he decides.
+      <p className="text-xs leading-relaxed text-ink-3">
+        Registration is reviewed by Roger &mdash; usually within a day.
+        You&rsquo;ll receive an email when he decides.
       </p>
     </form>
   );
@@ -121,11 +124,14 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-ink-2">
+      <label
+        htmlFor={id}
+        className="mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+      >
         {label}
       </label>
       {children}
-      {hint ? <p className="mt-1 text-xs text-ink-3">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs text-ink-3">{hint}</p> : null}
     </div>
   );
 }
@@ -136,12 +142,14 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center rounded-md bg-accent px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Submitting…" : "Request access"}
     </button>
   );
 }
 
+// Underlined-field inputs matching the contact form: hairline bottom rule
+// on paper, accent flip on focus. No shadow, no rounded corners.
 const fieldInputClass =
-  "block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
+  "block w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-accent";

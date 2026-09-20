@@ -1,6 +1,13 @@
-# Dependabot config — weekly cadence, grouped by ecosystem so we get one
-# PR per language stack per week instead of a dozen tiny ones.
-# Security updates always ship immediately regardless of the interval.
+# Dependabot config — weekly cadence with two groups per ecosystem:
+#   * `<eco>-minor-patch` — safe bumps, batched into one PR per week
+#   * `<eco>-major`       — each major bump in its own PR, always
+#
+# Grouping majors caused an unreviewable "5 packages, 5 major versions
+# each" PR (see the closed PR #4). Splitting them lets each major land
+# with its own review + codemod pass.
+#
+# Security updates always ship immediately regardless of these intervals
+# or groups.
 
 version: 2
 
@@ -8,64 +15,45 @@ updates:
   # Go modules (API)
   - package-ecosystem: gomod
     directory: /services/api
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: America/New_York
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/New_York }
     groups:
-      go-runtime:
-        patterns: ["*"]
+      go-minor-patch:
+        update-types: [minor, patch]
     open-pull-requests-limit: 5
-    commit-message:
-      prefix: "deps(api)"
+    commit-message: { prefix: "deps(api)" }
 
-  # Python (sidecar) — uv tracks pyproject.toml
+  # Python (sidecar)
   - package-ecosystem: pip
     directory: /services/sidecar
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: America/New_York
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/New_York }
     groups:
-      python-runtime:
-        patterns: ["*"]
+      python-minor-patch:
+        update-types: [minor, patch]
     open-pull-requests-limit: 5
-    commit-message:
-      prefix: "deps(sidecar)"
+    commit-message: { prefix: "deps(sidecar)" }
 
   # npm (web)
   - package-ecosystem: npm
     directory: /apps/web
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: America/New_York
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/New_York }
     groups:
-      web-runtime:
-        patterns: ["*"]
+      web-minor-patch:
+        update-types: [minor, patch]
     open-pull-requests-limit: 5
-    commit-message:
-      prefix: "deps(web)"
+    commit-message: { prefix: "deps(web)" }
 
-  # GitHub Actions used by our workflows
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: America/New_York
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: America/New_York }
     groups:
-      actions:
-        patterns: ["*"]
+      actions-minor-patch:
+        update-types: [minor, patch]
     open-pull-requests-limit: 3
-    commit-message:
-      prefix: "deps(ci)"
+    commit-message: { prefix: "deps(ci)" }
 
-  # Base images for the three service Dockerfiles
+  # Docker base images. Node stays pinned at 22 (current LTS); ignore
+  # any major bump until we deliberately move to the next LTS.
   - package-ecosystem: docker
     directory: /services/api
     schedule: { interval: weekly, day: monday }
@@ -78,3 +66,6 @@ updates:
     directory: /apps/web
     schedule: { interval: weekly, day: monday }
     commit-message: { prefix: "deps(web)" }
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
