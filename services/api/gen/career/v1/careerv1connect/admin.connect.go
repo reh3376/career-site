@@ -79,6 +79,12 @@ const (
 	AdminServiceGetAnalyticsProcedure = "/career.v1.AdminService/GetAnalytics"
 	// AdminServiceGetAuditProcedure is the fully-qualified name of the AdminService's GetAudit RPC.
 	AdminServiceGetAuditProcedure = "/career.v1.AdminService/GetAudit"
+	// AdminServiceListContactMessagesProcedure is the fully-qualified name of the AdminService's
+	// ListContactMessages RPC.
+	AdminServiceListContactMessagesProcedure = "/career.v1.AdminService/ListContactMessages"
+	// AdminServiceResolveContactMessageProcedure is the fully-qualified name of the AdminService's
+	// ResolveContactMessage RPC.
+	AdminServiceResolveContactMessageProcedure = "/career.v1.AdminService/ResolveContactMessage"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -122,6 +128,14 @@ type AdminServiceClient interface {
 	GetAnalytics(context.Context, *connect.Request[v1.GetAnalyticsRequest]) (*connect.Response[v1.GetAnalyticsResponse], error)
 	// Lists audit-log entries.
 	GetAudit(context.Context, *connect.Request[v1.GetAuditRequest]) (*connect.Response[v1.GetAuditResponse], error)
+	// Lists messages sent via the public contact form (FR-ADM-14). Backs
+	// /admin/contacts in the console; every submission from
+	// ContactService.SubmitContact lands in the same support_messages
+	// table this reads from.
+	ListContactMessages(context.Context, *connect.Request[v1.ListContactMessagesRequest]) (*connect.Response[v1.ListContactMessagesResponse], error)
+	// Marks a contact message as resolved (or re-opens it). Records the
+	// acting admin's user_id + timestamp so the audit trail is clean.
+	ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -225,6 +239,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetAudit")),
 			connect.WithClientOptions(opts...),
 		),
+		listContactMessages: connect.NewClient[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse](
+			httpClient,
+			baseURL+AdminServiceListContactMessagesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListContactMessages")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveContactMessage: connect.NewClient[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse](
+			httpClient,
+			baseURL+AdminServiceResolveContactMessageProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ResolveContactMessage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -245,6 +271,8 @@ type adminServiceClient struct {
 	getPersona            *connect.Client[v1.GetPersonaRequest, v1.GetPersonaResponse]
 	getAnalytics          *connect.Client[v1.GetAnalyticsRequest, v1.GetAnalyticsResponse]
 	getAudit              *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
+	listContactMessages   *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
+	resolveContactMessage *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -322,6 +350,16 @@ func (c *adminServiceClient) GetAudit(ctx context.Context, req *connect.Request[
 	return c.getAudit.CallUnary(ctx, req)
 }
 
+// ListContactMessages calls career.v1.AdminService.ListContactMessages.
+func (c *adminServiceClient) ListContactMessages(ctx context.Context, req *connect.Request[v1.ListContactMessagesRequest]) (*connect.Response[v1.ListContactMessagesResponse], error) {
+	return c.listContactMessages.CallUnary(ctx, req)
+}
+
+// ResolveContactMessage calls career.v1.AdminService.ResolveContactMessage.
+func (c *adminServiceClient) ResolveContactMessage(ctx context.Context, req *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error) {
+	return c.resolveContactMessage.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -363,6 +401,14 @@ type AdminServiceHandler interface {
 	GetAnalytics(context.Context, *connect.Request[v1.GetAnalyticsRequest]) (*connect.Response[v1.GetAnalyticsResponse], error)
 	// Lists audit-log entries.
 	GetAudit(context.Context, *connect.Request[v1.GetAuditRequest]) (*connect.Response[v1.GetAuditResponse], error)
+	// Lists messages sent via the public contact form (FR-ADM-14). Backs
+	// /admin/contacts in the console; every submission from
+	// ContactService.SubmitContact lands in the same support_messages
+	// table this reads from.
+	ListContactMessages(context.Context, *connect.Request[v1.ListContactMessagesRequest]) (*connect.Response[v1.ListContactMessagesResponse], error)
+	// Marks a contact message as resolved (or re-opens it). Records the
+	// acting admin's user_id + timestamp so the audit trail is clean.
+	ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -462,6 +508,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetAudit")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListContactMessagesHandler := connect.NewUnaryHandler(
+		AdminServiceListContactMessagesProcedure,
+		svc.ListContactMessages,
+		connect.WithSchema(adminServiceMethods.ByName("ListContactMessages")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceResolveContactMessageHandler := connect.NewUnaryHandler(
+		AdminServiceResolveContactMessageProcedure,
+		svc.ResolveContactMessage,
+		connect.WithSchema(adminServiceMethods.ByName("ResolveContactMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -494,6 +552,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetAnalyticsHandler.ServeHTTP(w, r)
 		case AdminServiceGetAuditProcedure:
 			adminServiceGetAuditHandler.ServeHTTP(w, r)
+		case AdminServiceListContactMessagesProcedure:
+			adminServiceListContactMessagesHandler.ServeHTTP(w, r)
+		case AdminServiceResolveContactMessageProcedure:
+			adminServiceResolveContactMessageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -561,4 +623,12 @@ func (UnimplementedAdminServiceHandler) GetAnalytics(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) GetAudit(context.Context, *connect.Request[v1.GetAuditRequest]) (*connect.Response[v1.GetAuditResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetAudit is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListContactMessages(context.Context, *connect.Request[v1.ListContactMessagesRequest]) (*connect.Response[v1.ListContactMessagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListContactMessages is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ResolveContactMessage(context.Context, *connect.Request[v1.ResolveContactMessageRequest]) (*connect.Response[v1.ResolveContactMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ResolveContactMessage is not implemented"))
 }
