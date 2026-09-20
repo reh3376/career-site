@@ -303,5 +303,9 @@ message ActivityEvent {
     KIND_CHAT = 5;
     // Escalated a question to the owner (recorded server-side).
     KIND_ESCALATE = 6;
+    // Signed in via the /login form (recorded server-side).
+    KIND_LOGIN = 7;
+    // Signed out via /logout (recorded server-side).
+    KIND_LOGOUT = 8;
   }
 }

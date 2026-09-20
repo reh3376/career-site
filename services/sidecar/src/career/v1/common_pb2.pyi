@@ -235,6 +235,8 @@ class ActivityEvent(_message.Message):
         KIND_SAVE: _ClassVar[ActivityEvent.Kind]
         KIND_CHAT: _ClassVar[ActivityEvent.Kind]
         KIND_ESCALATE: _ClassVar[ActivityEvent.Kind]
+        KIND_LOGIN: _ClassVar[ActivityEvent.Kind]
+        KIND_LOGOUT: _ClassVar[ActivityEvent.Kind]
     KIND_UNSPECIFIED: ActivityEvent.Kind
     KIND_VIEW: ActivityEvent.Kind
     KIND_DOWNLOAD: ActivityEvent.Kind
@@ -242,6 +244,8 @@ class ActivityEvent(_message.Message):
     KIND_SAVE: ActivityEvent.Kind
     KIND_CHAT: ActivityEvent.Kind
     KIND_ESCALATE: ActivityEvent.Kind
+    KIND_LOGIN: ActivityEvent.Kind
+    KIND_LOGOUT: ActivityEvent.Kind
     KIND_FIELD_NUMBER: _ClassVar[int]
     CONTENT_ID_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]

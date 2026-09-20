@@ -154,6 +154,7 @@ func main() {
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
 	)
 	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler, pool, readonlyPool)
+	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,
@@ -163,6 +164,7 @@ func main() {
 		Contact:  contactHandler,
 		Decision: decisionHandler,
 		Admin:    adminHandler,
+		Activity: activityHandler,
 	})
 
 	// Expiry + auto-decline jobs run in-process; interval configurable so

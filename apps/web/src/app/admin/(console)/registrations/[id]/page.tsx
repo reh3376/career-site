@@ -32,11 +32,42 @@ type Me = {
   last_notification_error?: string;
 };
 
+type ActivityCounts = {
+  views?: number;
+  downloads?: number;
+  chat_messages?: number;
+  escalations?: number;
+  saved?: number;
+};
+
+type ActivityEvent = {
+  kind: string;
+  content_id?: string;
+  conversation_id?: string;
+  query?: string;
+  variant?: string;
+  dwell_ms?: number;
+  occurred_at?: string;
+};
+
 type GetMemberResp = {
   member?: {
     me?: Me;
     first_seen_at?: string;
+    counts?: ActivityCounts;
   };
+  recent_activity?: ActivityEvent[];
+};
+
+const ACTIVITY_LABEL: Record<string, string> = {
+  KIND_LOGIN: "signed in",
+  KIND_LOGOUT: "signed out",
+  KIND_VIEW: "viewed",
+  KIND_DOWNLOAD: "downloaded",
+  KIND_SEARCH: "searched",
+  KIND_SAVE: "saved",
+  KIND_CHAT: "asked Roger",
+  KIND_ESCALATE: "escalated",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -209,12 +240,10 @@ export default async function AdminMemberDetailPage({
         >
           activity
         </p>
-        <p className="mt-4 text-sm leading-relaxed text-ink-3">
-          Activity events, Ask Roger conversation history, and saved
-          items surface here when the activity ingest lands (Phase 3+).
-          The <code className="font-mono text-ink">MemberCounts</code>{" "}
-          field on the RPC is stubbed at zero for now.
-        </p>
+        <ActivityBlock
+          counts={data?.member?.counts}
+          events={data?.recent_activity ?? []}
+        />
       </section>
 
       <section
@@ -478,6 +507,81 @@ function NotificationPill({ me }: { me: Me }) {
       — {label} email, {when}. If the member reports not receiving it,
       check their spam folder and the provider dashboard.
     </p>
+  );
+}
+
+function ActivityBlock({
+  counts,
+  events,
+}: {
+  counts?: ActivityCounts;
+  events: ActivityEvent[];
+}) {
+  const anyCount =
+    (counts?.views ?? 0) +
+      (counts?.downloads ?? 0) +
+      (counts?.chat_messages ?? 0) +
+      (counts?.escalations ?? 0) +
+      (counts?.saved ?? 0) >
+    0;
+
+  if (!anyCount && events.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-ink-3">
+        No activity recorded yet. Events land here on sign-in, page
+        view, download, or Ask Roger interaction.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <dl className="grid gap-3 border-y border-line py-3 font-mono text-sm text-ink-2 sm:grid-cols-5">
+        <CountCell label="views" n={counts?.views ?? 0} />
+        <CountCell label="downloads" n={counts?.downloads ?? 0} />
+        <CountCell label="ask roger" n={counts?.chat_messages ?? 0} />
+        <CountCell label="escalations" n={counts?.escalations ?? 0} />
+        <CountCell label="saved" n={counts?.saved ?? 0} />
+      </dl>
+
+      {events.length > 0 ? (
+        <ul className="mt-5 space-y-2 border-l border-line pl-4 text-sm">
+          {events.slice(0, 20).map((e, i) => (
+            <li key={i} className="text-ink-2">
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                {e.occurred_at ? relative(new Date(e.occurred_at)) : "—"}
+              </span>{" "}
+              <span className="text-ink">
+                {ACTIVITY_LABEL[e.kind] ?? e.kind.toLowerCase()}
+              </span>
+              {e.content_id ? (
+                <>
+                  {" "}
+                  <span className="text-ink-3">·</span>{" "}
+                  <span className="font-mono text-xs">{e.content_id}</span>
+                </>
+              ) : null}
+              {e.query ? (
+                <>
+                  {" "}
+                  <span className="text-ink-3">·</span>{" "}
+                  <span className="italic">&ldquo;{e.query}&rdquo;</span>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function CountCell({ label, n }: { label: string; n: number }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <dt className="text-ink-3">{label}</dt>
+      <dd className="m-0 tabular text-ink text-lg">{n}</dd>
+    </div>
   );
 }
 
