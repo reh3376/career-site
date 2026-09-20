@@ -258,3 +258,116 @@ func (r *Repo) SetExpiresAt(ctx context.Context, id int64, expiresAt *time.Time)
 	}
 	return nil
 }
+
+// ListGrantsFilter narrows the /admin/access listing.
+type ListGrantsFilter struct {
+	Query string // matched against email + notes, case-insensitive substring
+}
+
+// ListGrantsResult is what ListGrants returns: the page of rows and
+// the unfiltered active/expired counts the console renders as chips.
+type ListGrantsResult struct {
+	Grants       []AccessGrant
+	ActiveCount  int32
+	ExpiredCount int32
+}
+
+const grantCols = `id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at`
+
+// ListGrants returns every whitelist entry matching the filter, newest
+// first, plus per-status counts computed across the full table
+// (independent of the query filter, so the header chips are stable).
+func (r *Repo) ListGrants(ctx context.Context, f ListGrantsFilter) (*ListGrantsResult, error) {
+	out := &ListGrantsResult{}
+
+	// Counts first — one query, `count(*) filter (where ...)` so we get
+	// both buckets in a single round-trip.
+	const countQ = `
+    SELECT
+      COUNT(*) FILTER (WHERE entry_expires_at IS NULL OR entry_expires_at > now())::int AS active,
+      COUNT(*) FILTER (WHERE entry_expires_at IS NOT NULL AND entry_expires_at <= now())::int AS expired
+    FROM access_grants
+  `
+	if err := r.pool.QueryRow(ctx, countQ).Scan(&out.ActiveCount, &out.ExpiredCount); err != nil {
+		return nil, fmt.Errorf("count grants: %w", err)
+	}
+
+	// Page rows. Filter args are appended dynamically so the query stays
+	// parameterised (no string-concat with user input).
+	q := `SELECT ` + grantCols + ` FROM access_grants`
+	var args []any
+	if f.Query != "" {
+		q += ` WHERE email ILIKE '%' || $1 || '%' OR notes ILIKE '%' || $1 || '%'`
+		args = append(args, f.Query)
+	}
+	q += ` ORDER BY created_at DESC LIMIT 500`
+
+	rows, err := r.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list grants: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var g AccessGrant
+		if err := rows.Scan(
+			&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
+			&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan grant: %w", err)
+		}
+		out.Grants = append(out.Grants, g)
+	}
+	return out, rows.Err()
+}
+
+// UpsertGrant inserts a whitelist entry or updates an existing one
+// with the same email. Returns the stored row and true when a new
+// row was created. Lowercases the email server-side (citext handles
+// case-insensitive uniqueness but the app should still normalise for
+// display).
+func (r *Repo) UpsertGrant(
+	ctx context.Context,
+	email string,
+	ttl GrantTTL,
+	notes string,
+	entryExpiresAt *time.Time,
+	createdBy *int64,
+) (*AccessGrant, bool, error) {
+	// ON CONFLICT with a RETURNING + xmax=0 trick tells us whether the
+	// row was newly inserted vs updated in a single round-trip.
+	const q = `
+    INSERT INTO access_grants (email, default_ttl, notes, entry_expires_at, created_by)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (email) DO UPDATE
+      SET default_ttl = EXCLUDED.default_ttl,
+          notes = EXCLUDED.notes,
+          entry_expires_at = EXCLUDED.entry_expires_at,
+          updated_at = now()
+    RETURNING ` + grantCols + `, (xmax = 0) AS inserted
+  `
+	g := &AccessGrant{}
+	var inserted bool
+	err := r.pool.QueryRow(ctx, q, email, ttl, notes, entryExpiresAt, createdBy).Scan(
+		&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
+		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+		&inserted,
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("upsert grant: %w", err)
+	}
+	return g, inserted, nil
+}
+
+// DeleteGrant removes a whitelist entry by id. Returns ErrNotFound
+// when no row matched.
+func (r *Repo) DeleteGrant(ctx context.Context, id int64) error {
+	const q = `DELETE FROM access_grants WHERE id = $1`
+	tag, err := r.pool.Exec(ctx, q, id)
+	if err != nil {
+		return fmt.Errorf("delete grant: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
