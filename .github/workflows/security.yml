@@ -112,9 +112,10 @@ jobs:
       # version is pinned in-repo and supply-chain review is one file.
       - name: install trivy
         run: |
-          v=0.58.1
-          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${v}/trivy_${v}_Linux-64bit.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin trivy
+          v=0.74.0
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${v}/trivy_${v}_Linux-64bit.tar.gz" \
+            -o /tmp/trivy.tgz
+          sudo tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
           trivy --version
       # Filesystem scan. --ignore-unfixed skips CVEs with no upstream fix
       # (noise the team can't act on today). --severity gates so PRs
