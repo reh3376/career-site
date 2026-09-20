@@ -34,11 +34,15 @@ type Admin struct {
 	users    *users.Repo
 	auth     *Auth
 	decision *AdminDecision // reused for ApproveUser / DeclineUser business logic
-	pool     *db.Pool       // the /admin/db surface reads through this
+	pool     *db.Pool       // write-capable app pool
+	roPool   *db.Pool       // read-only pool used by the /admin/db surface
 }
 
-func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool) *Admin {
-	return &Admin{log: log, users: repo, auth: auth, decision: decision, pool: pool}
+func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool, roPool *db.Pool) *Admin {
+	if roPool == nil {
+		roPool = pool
+	}
+	return &Admin{log: log, users: repo, auth: auth, decision: decision, pool: pool, roPool: roPool}
 }
 
 // requireAdmin gates a call on session + admin role. Called at the
@@ -167,7 +171,7 @@ func (a *Admin) ListDbTables(
 	if _, err := requireAdmin(a, ctx, req); err != nil {
 		return nil, err
 	}
-	tables, err := adminquery.ListTables(ctx, a.pool)
+	tables, err := adminquery.ListTables(ctx, a.roPool)
 	if err != nil {
 		a.log.Error("ListTables failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("list tables failed"))
@@ -212,7 +216,7 @@ func (a *Admin) RunDbQuery(
 		slog.String("sql_head", firstN(req.Msg.Sql, 200)),
 	)
 
-	res, err := adminquery.Run(ctx, a.pool, req.Msg.Sql, req.Msg.TimeoutMs)
+	res, err := adminquery.Run(ctx, a.roPool, req.Msg.Sql, req.Msg.TimeoutMs)
 	if err != nil {
 		// The safety-rail rejections (SELECT-only, single-statement,
 		// forbidden-token, empty) all come back as plain errors from
