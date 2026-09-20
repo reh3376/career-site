@@ -19,6 +19,16 @@
 
 name: career-site-codeql-config
 
+# Broaden from the default CodeQL query pack to `security-extended`
+# and the `security-and-quality` suite. The extended set catches
+# real-world classes of issues the default misses (SSRF via URL
+# construction, path traversal via string joins, unsafe deserialization,
+# more); quality catches coding-style bugs that often correlate with
+# real security issues. Both are maintained by the CodeQL team.
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
 # ---------------------------------------------------------------------
 # Global rule exclusions
 # ---------------------------------------------------------------------

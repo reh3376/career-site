@@ -661,3 +661,67 @@ class ExtendAccessResponse(_message.Message):
     MEMBER_FIELD_NUMBER: _ClassVar[int]
     member: MemberRecord
     def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...
+
+class DbColumn(_message.Message):
+    __slots__ = ("name", "data_type", "nullable")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DATA_TYPE_FIELD_NUMBER: _ClassVar[int]
+    NULLABLE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    data_type: str
+    nullable: bool
+    def __init__(self, name: _Optional[str] = ..., data_type: _Optional[str] = ..., nullable: _Optional[bool] = ...) -> None: ...
+
+class DbTable(_message.Message):
+    __slots__ = ("name", "columns", "approx_row_count")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    APPROX_ROW_COUNT_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    columns: _containers.RepeatedCompositeFieldContainer[DbColumn]
+    approx_row_count: int
+    def __init__(self, name: _Optional[str] = ..., columns: _Optional[_Iterable[_Union[DbColumn, _Mapping]]] = ..., approx_row_count: _Optional[int] = ...) -> None: ...
+
+class ListDbTablesRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListDbTablesResponse(_message.Message):
+    __slots__ = ("tables",)
+    TABLES_FIELD_NUMBER: _ClassVar[int]
+    tables: _containers.RepeatedCompositeFieldContainer[DbTable]
+    def __init__(self, tables: _Optional[_Iterable[_Union[DbTable, _Mapping]]] = ...) -> None: ...
+
+class RunDbQueryRequest(_message.Message):
+    __slots__ = ("sql", "timeout_ms", "sort")
+    SQL_FIELD_NUMBER: _ClassVar[int]
+    TIMEOUT_MS_FIELD_NUMBER: _ClassVar[int]
+    SORT_FIELD_NUMBER: _ClassVar[int]
+    sql: str
+    timeout_ms: int
+    sort: str
+    def __init__(self, sql: _Optional[str] = ..., timeout_ms: _Optional[int] = ..., sort: _Optional[str] = ...) -> None: ...
+
+class DbRow(_message.Message):
+    __slots__ = ("cells", "null_mask")
+    CELLS_FIELD_NUMBER: _ClassVar[int]
+    NULL_MASK_FIELD_NUMBER: _ClassVar[int]
+    cells: _containers.RepeatedScalarFieldContainer[str]
+    null_mask: int
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., null_mask: _Optional[int] = ...) -> None: ...
+
+class RunDbQueryResponse(_message.Message):
+    __slots__ = ("columns", "column_types", "rows", "truncated", "row_count", "elapsed_ms")
+    COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    COLUMN_TYPES_FIELD_NUMBER: _ClassVar[int]
+    ROWS_FIELD_NUMBER: _ClassVar[int]
+    TRUNCATED_FIELD_NUMBER: _ClassVar[int]
+    ROW_COUNT_FIELD_NUMBER: _ClassVar[int]
+    ELAPSED_MS_FIELD_NUMBER: _ClassVar[int]
+    columns: _containers.RepeatedScalarFieldContainer[str]
+    column_types: _containers.RepeatedScalarFieldContainer[str]
+    rows: _containers.RepeatedCompositeFieldContainer[DbRow]
+    truncated: bool
+    row_count: int
+    elapsed_ms: int
+    def __init__(self, columns: _Optional[_Iterable[str]] = ..., column_types: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[DbRow, _Mapping]]] = ..., truncated: _Optional[bool] = ..., row_count: _Optional[int] = ..., elapsed_ms: _Optional[int] = ...) -> None: ...

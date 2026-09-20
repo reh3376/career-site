@@ -94,6 +94,11 @@ const (
 	// AdminServiceExtendAccessProcedure is the fully-qualified name of the AdminService's ExtendAccess
 	// RPC.
 	AdminServiceExtendAccessProcedure = "/career.v1.AdminService/ExtendAccess"
+	// AdminServiceListDbTablesProcedure is the fully-qualified name of the AdminService's ListDbTables
+	// RPC.
+	AdminServiceListDbTablesProcedure = "/career.v1.AdminService/ListDbTables"
+	// AdminServiceRunDbQueryProcedure is the fully-qualified name of the AdminService's RunDbQuery RPC.
+	AdminServiceRunDbQueryProcedure = "/career.v1.AdminService/RunDbQuery"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -157,6 +162,15 @@ type AdminServiceClient interface {
 	// (`extend_days`), or sets a specific new `expires_at`. Absolute
 	// and relative are exclusive; passing both is InvalidArgument.
 	ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error)
+	// Returns the public tables + columns of the API database, from
+	// information_schema. Backs the schema panel on /admin/db.
+	ListDbTables(context.Context, *connect.Request[v1.ListDbTablesRequest]) (*connect.Response[v1.ListDbTablesResponse], error)
+	// Runs a SQL query against the API database from the /admin/db
+	// console. MVP is read-only: only SELECT statements are accepted;
+	// any other statement kind returns InvalidArgument. A per-statement
+	// timeout is enforced server-side and the result row-count is
+	// capped (rows past the cap are dropped with `truncated=true`).
+	RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -290,6 +304,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ExtendAccess")),
 			connect.WithClientOptions(opts...),
 		),
+		listDbTables: connect.NewClient[v1.ListDbTablesRequest, v1.ListDbTablesResponse](
+			httpClient,
+			baseURL+AdminServiceListDbTablesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListDbTables")),
+			connect.WithClientOptions(opts...),
+		),
+		runDbQuery: connect.NewClient[v1.RunDbQueryRequest, v1.RunDbQueryResponse](
+			httpClient,
+			baseURL+AdminServiceRunDbQueryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RunDbQuery")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -315,6 +341,8 @@ type adminServiceClient struct {
 	approveRegistration   *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
 	declineRegistration   *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
 	extendAccess          *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
+	listDbTables          *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
+	runDbQuery            *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -417,6 +445,16 @@ func (c *adminServiceClient) ExtendAccess(ctx context.Context, req *connect.Requ
 	return c.extendAccess.CallUnary(ctx, req)
 }
 
+// ListDbTables calls career.v1.AdminService.ListDbTables.
+func (c *adminServiceClient) ListDbTables(ctx context.Context, req *connect.Request[v1.ListDbTablesRequest]) (*connect.Response[v1.ListDbTablesResponse], error) {
+	return c.listDbTables.CallUnary(ctx, req)
+}
+
+// RunDbQuery calls career.v1.AdminService.RunDbQuery.
+func (c *adminServiceClient) RunDbQuery(ctx context.Context, req *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error) {
+	return c.runDbQuery.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -478,6 +516,15 @@ type AdminServiceHandler interface {
 	// (`extend_days`), or sets a specific new `expires_at`. Absolute
 	// and relative are exclusive; passing both is InvalidArgument.
 	ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error)
+	// Returns the public tables + columns of the API database, from
+	// information_schema. Backs the schema panel on /admin/db.
+	ListDbTables(context.Context, *connect.Request[v1.ListDbTablesRequest]) (*connect.Response[v1.ListDbTablesResponse], error)
+	// Runs a SQL query against the API database from the /admin/db
+	// console. MVP is read-only: only SELECT statements are accepted;
+	// any other statement kind returns InvalidArgument. A per-statement
+	// timeout is enforced server-side and the result row-count is
+	// capped (rows past the cap are dropped with `truncated=true`).
+	RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -607,6 +654,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ExtendAccess")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListDbTablesHandler := connect.NewUnaryHandler(
+		AdminServiceListDbTablesProcedure,
+		svc.ListDbTables,
+		connect.WithSchema(adminServiceMethods.ByName("ListDbTables")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRunDbQueryHandler := connect.NewUnaryHandler(
+		AdminServiceRunDbQueryProcedure,
+		svc.RunDbQuery,
+		connect.WithSchema(adminServiceMethods.ByName("RunDbQuery")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -649,6 +708,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceDeclineRegistrationHandler.ServeHTTP(w, r)
 		case AdminServiceExtendAccessProcedure:
 			adminServiceExtendAccessHandler.ServeHTTP(w, r)
+		case AdminServiceListDbTablesProcedure:
+			adminServiceListDbTablesHandler.ServeHTTP(w, r)
+		case AdminServiceRunDbQueryProcedure:
+			adminServiceRunDbQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -736,4 +799,12 @@ func (UnimplementedAdminServiceHandler) DeclineRegistration(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) ExtendAccess(context.Context, *connect.Request[v1.ExtendAccessRequest]) (*connect.Response[v1.ExtendAccessResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExtendAccess is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListDbTables(context.Context, *connect.Request[v1.ListDbTablesRequest]) (*connect.Response[v1.ListDbTablesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListDbTables is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RunDbQuery(context.Context, *connect.Request[v1.RunDbQueryRequest]) (*connect.Response[v1.RunDbQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RunDbQuery is not implemented"))
 }

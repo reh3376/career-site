@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -31,6 +32,11 @@ type Auth struct {
 	email email.Provider
 	pwned auth.PwnedChecker
 	cfg   AuthConfig
+	// loginLimiter: per-(ip, email) bucket that slows credential-
+	// stuffing without needing an external cache. Sized for 5
+	// attempts per 15 minutes (single-instance API only; a
+	// horizontally-scaled deployment would need Redis).
+	loginLimiter *ratelimit.Limiter
 }
 
 type AuthConfig struct {
@@ -74,7 +80,14 @@ func NewAuth(
 	if cfg.SessionTTL == 0 {
 		cfg.SessionTTL = 30 * 24 * time.Hour
 	}
-	return &Auth{log: log, users: repo, email: mailer, pwned: pwned, cfg: cfg}
+	return &Auth{
+		log:          log,
+		users:        repo,
+		email:        mailer,
+		pwned:        pwned,
+		cfg:          cfg,
+		loginLimiter: ratelimit.New(5, 5.0/(15*60)), // 5 attempts, refills to 5 over 15 min
+	}
 }
 
 // Register accepts a new registration, hashes the password, creates the
