@@ -3,7 +3,7 @@ package auth
 import (
 	"bufio"
 	"context"
-	"crypto/sha1"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net/http"
@@ -28,15 +28,22 @@ func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
 	return false, nil
 }
 
-// HIBPChecker is a HaveIBeenPwned k-anonymity range-query client. It sends
-// only the first five SHA-1 hex characters of the password to the API and
-// scans the response for the remaining 35, so the plaintext never leaves
-// the process.
+// HIBPChecker is a HaveIBeenPwned k-anonymity range-query client. It hashes
+// the password with SHA-256 in-process, sends only the first five hex
+// characters of the digest to the API, and scans the response for the
+// remaining 59, so the plaintext never leaves the process. HIBP added the
+// SHA-256 range mode in 2022; we use it (instead of the legacy SHA-1 mode)
+// so a compromise of the on-wire k-anonymity payload wouldn't allow a
+// SHA-1 collision attack against the candidate space.
 type HIBPChecker struct {
 	Client *http.Client
 }
 
+// The `?mode=sha256` param switches HIBP's response from SHA-1 suffixes
+// to SHA-256 suffixes. Same body format (SUFFIX:COUNT lines) so the
+// scanner below is unchanged apart from suffix length.
 const hibpEndpoint = "https://api.pwnedpasswords.com/range/"
+const hibpModeParam = "?mode=sha256"
 
 func NewHIBPChecker() *HIBPChecker {
 	return &HIBPChecker{
@@ -45,11 +52,11 @@ func NewHIBPChecker() *HIBPChecker {
 }
 
 func (h *HIBPChecker) IsBreached(ctx context.Context, password string) (bool, error) {
-	sum := sha1.Sum([]byte(password))
+	sum := sha256.Sum256([]byte(password))
 	hex := fmt.Sprintf("%X", sum[:])
 	prefix, suffix := hex[:5], hex[5:]
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hibpEndpoint+prefix, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hibpEndpoint+prefix+hibpModeParam, nil)
 	if err != nil {
 		return false, fmt.Errorf("hibp request: %w", err)
 	}
