@@ -25,6 +25,7 @@ type Server struct {
 	member   *handlers.Member
 	contact  *handlers.Contact
 	decision *handlers.AdminDecision
+	admin    *handlers.Admin
 	sidecar  *sidecar.Client
 	db       *db.Pool
 }
@@ -39,6 +40,7 @@ type Deps struct {
 	Member   *handlers.Member
 	Contact  *handlers.Contact
 	Decision *handlers.AdminDecision
+	Admin    *handlers.Admin
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
@@ -50,6 +52,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		member:   deps.Member,
 		contact:  deps.Contact,
 		decision: deps.Decision,
+		admin:    deps.Admin,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
 	}
@@ -94,6 +97,11 @@ func (s *Server) routes() http.Handler {
 	if s.contact != nil {
 		contactPath, contactHandler := careerv1connect.NewContactServiceHandler(s.contact)
 		mount(contactPath, contactHandler)
+	}
+
+	if s.admin != nil {
+		adminPath, adminHandler := careerv1connect.NewAdminServiceHandler(s.admin)
+		mount(adminPath, adminHandler)
 	}
 
 	return withLogging(s.log, mux)

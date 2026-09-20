@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 15 |
+| [`AdminService`](#adminservice) | Owner console. | 17 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1617,6 +1617,8 @@ Owner console.
 | [`GetPersona`](#adminservice-getpersona) | `/api/career.v1.AdminService/GetPersona` | Admin (fresh MFA) | default | `GetPersonaRequest` → `GetPersonaResponse` | Returns the active persona version and its history. |
 | [`GetAnalytics`](#adminservice-getanalytics) | `/api/career.v1.AdminService/GetAnalytics` | Admin (fresh MFA) | default | `GetAnalyticsRequest` → `GetAnalyticsResponse` | Returns aggregate analytics for a date range. |
 | [`GetAudit`](#adminservice-getaudit) | `/api/career.v1.AdminService/GetAudit` | Admin (fresh MFA) | default | `GetAuditRequest` → `GetAuditResponse` | Lists audit-log entries. |
+| [`ListContactMessages`](#adminservice-listcontactmessages) | `/api/career.v1.AdminService/ListContactMessages` | Admin (fresh MFA) | default | `ListContactMessagesRequest` → `ListContactMessagesResponse` | Lists messages sent via the public contact form (FR-ADM-14). |
+| [`ResolveContactMessage`](#adminservice-resolvecontactmessage) | `/api/career.v1.AdminService/ResolveContactMessage` | Admin (fresh MFA) | default | `ResolveContactMessageRequest` → `ResolveContactMessageResponse` | Marks a contact message as resolved (or re-opens it). |
 
 ### AdminService.ListMembers
 
@@ -2116,6 +2118,80 @@ Lists audit-log entries.
     "pageSize": 0,
     "pageToken": "string"
   }
+}
+```
+
+</details>
+
+### AdminService.ListContactMessages
+
+`POST /api/career.v1.AdminService/ListContactMessages` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists messages sent via the public contact form (FR-ADM-14). Backs
+/admin/contacts in the console; every submission from
+ContactService.SubmitContact lands in the same support_messages
+table this reads from.
+
+**Request** — [`ListContactMessagesRequest`](#listcontactmessagesrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | `string` | string | `string: max_len: 200` | Case-insensitive substring match against subject / body / sender. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) | `enum: defined_only: true` | Restrict to one status; unspecified returns all. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true` | Restrict to one category; unspecified returns all. |
+| `page` | [`PageRequest`](#pagerequest) | object |  | Pagination. |
+
+**Response** — [`ListContactMessagesResponse`](#listcontactmessagesresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  | Messages matching the filter, newest first. |
+| `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `openCount` | `int32` | number |  | Unfiltered count of messages currently in the "open" state. |
+| `resolvedCount` | `int32` | number |  | Unfiltered count of messages currently in the "resolved" state. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "query": "string",
+  "status": "SUPPORT_STATUS_OPEN",
+  "category": "SUPPORT_CATEGORY_GENERAL_QUESTION",
+  "page": {
+    "pageSize": 0,
+    "pageToken": "string"
+  }
+}
+```
+
+</details>
+
+### AdminService.ResolveContactMessage
+
+`POST /api/career.v1.AdminService/ResolveContactMessage` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Marks a contact message as resolved (or re-opens it). Records the
+acting admin's user_id + timestamp so the audit trail is clean.
+
+**Request** — [`ResolveContactMessageRequest`](#resolvecontactmessagerequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SupportMessage.id. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) | `enum: defined_only: true` | Target status. UNSPECIFIED defaults to RESOLVED. |
+
+**Response** — [`ResolveContactMessageResponse`](#resolvecontactmessageresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `message` | [`SupportMessage`](#supportmessage) | object |  | The message row after the status flip. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string",
+  "status": "SUPPORT_STATUS_OPEN"
 }
 ```
 
@@ -2964,6 +3040,55 @@ Allowance and budget mode.
 | `conversationLimit` | `int32` | number |  | Per-conversation message limit. |
 | `budgetMode` | [`GetQuotaResponse.BudgetMode`](#getquotaresponsebudgetmode) | string (enum name) |  | Global budget mode. |
 
+### GetContactOptionsRequest
+
+Empty.
+
+_No fields._
+
+### ContactChannel
+
+A published contact channel.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `kind` | `string` | string |  | Channel kind, e.g. `email`, `linkedin`, `scheduling`, `github`. |
+| `label` | `string` | string |  | Display label. |
+| `url` | `string` | string |  | URL or `mailto:` link. |
+
+### GetContactOptionsResponse
+
+Contact page data.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `availability` | `string` | string |  | Availability statement in the owner's words. |
+| `locationPreferences` | `string` | string |  | Location and remote preferences. |
+| `channels` | [`ContactChannel`](#contactchannel)[] | array of object |  | Channels in display order. |
+
+### SubmitContactRequest
+
+Contact form.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `subject` | `string` | string | `string: min_len: 1 max_len: 200` | Subject line. |
+| `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
+| `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
+| `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
+| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
+| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
+
+### SubmitContactResponse
+
+Submission receipt.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `ticketId` | `string` | string |  | Ticket identifier quoted in the owner's reply. |
+
 ### MemberCounts
 
 Activity counts for a member.
@@ -3388,6 +3513,64 @@ Audit page.
 | `entries` | [`AuditEntry`](#auditentry)[] | array of object |  | Entries, newest first. |
 | `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
 
+### SupportMessage
+
+One row of the support_messages table, as the owner sees it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Numeric ID (bigserial); string over the wire so callers don't hard-code JSON number precision. |
+| `ticketId` | `string` | string |  | Ticket ID (public reference shown in the "we got your message" email). |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) |  | Category the sender picked on the contact form. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) |  | Open vs resolved state. |
+| `subject` | `string` | string |  | Subject line the sender wrote. |
+| `body` | `string` | string |  | Message body, plain text. |
+| `senderName` | `string` | string |  | Sender name (as submitted or copied from the user row for members). |
+| `senderEmail` | `string` | string |  | Sender email (as submitted or copied from the user row for members). |
+| `userId` | `string` | string |  | The signed-in user_id if the sender was a member at submit time, empty for anonymous submissions. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the message was received. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row last changed (initially = created_at; bumps on status changes). |
+| `resolvedAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set only for resolved messages. |
+
+### ListContactMessagesRequest
+
+Contact-message list request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | `string` | string | `string: max_len: 200` | Case-insensitive substring match against subject / body / sender. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) | `enum: defined_only: true` | Restrict to one status; unspecified returns all. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true` | Restrict to one category; unspecified returns all. |
+| `page` | [`PageRequest`](#pagerequest) | object |  | Pagination. |
+
+### ListContactMessagesResponse
+
+Contact-message list response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `messages` | [`SupportMessage`](#supportmessage)[] | array of object |  | Messages matching the filter, newest first. |
+| `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `openCount` | `int32` | number |  | Unfiltered count of messages currently in the "open" state. |
+| `resolvedCount` | `int32` | number |  | Unfiltered count of messages currently in the "resolved" state. |
+
+### ResolveContactMessageRequest
+
+Mark-resolved / re-open request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SupportMessage.id. |
+| `status` | [`SupportStatus`](#supportstatus) | string (enum name) | `enum: defined_only: true` | Target status. UNSPECIFIED defaults to RESOLVED. |
+
+### ResolveContactMessageResponse
+
+Updated message.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `message` | [`SupportMessage`](#supportmessage) | object |  | The message row after the status flip. |
+
 ### RegisterRequest
 
 Registration form.
@@ -3591,55 +3774,6 @@ Verification result.
 |---|---|---|---|---|
 | `me` | [`Me`](#me) | object |  | The admin member with `mfa_enrolled` true. |
 | `recoveryCodesRemaining` | `int32` | number |  | Recovery codes remaining, when a recovery code was used. |
-
-### GetContactOptionsRequest
-
-Empty.
-
-_No fields._
-
-### ContactChannel
-
-A published contact channel.
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `kind` | `string` | string |  | Channel kind, e.g. `email`, `linkedin`, `scheduling`, `github`. |
-| `label` | `string` | string |  | Display label. |
-| `url` | `string` | string |  | URL or `mailto:` link. |
-
-### GetContactOptionsResponse
-
-Contact page data.
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `availability` | `string` | string |  | Availability statement in the owner's words. |
-| `locationPreferences` | `string` | string |  | Location and remote preferences. |
-| `channels` | [`ContactChannel`](#contactchannel)[] | array of object |  | Channels in display order. |
-
-### SubmitContactRequest
-
-Contact form.
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `subject` | `string` | string | `string: min_len: 1 max_len: 200` | Subject line. |
-| `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
-| `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
-| `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
-| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
-| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
-| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
-| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
-
-### SubmitContactResponse
-
-Submission receipt.
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `ticketId` | `string` | string |  | Ticket identifier quoted in the owner's reply. |
 
 ### ListContentRequest
 
@@ -4461,6 +4595,30 @@ Thumbs up or down.
 | `RATING_UP` | 1 | Helpful. |
 | `RATING_DOWN` | 2 | Not helpful. |
 
+### SubmitContactRequest.ReplyChannel
+
+How the member wants a reply.
+
+| Value | Number | Description |
+|---|---|---|
+| `REPLY_CHANNEL_UNSPECIFIED` | 0 | Not set. |
+| `REPLY_CHANNEL_EMAIL` | 1 | Email to the member's verified address, or (for anonymous submitters) to the email supplied on the form. |
+| `REPLY_CHANNEL_LINKEDIN` | 2 | LinkedIn message (requires a linked LinkedIn profile). |
+
+### SupportCategory
+
+Category buckets for the support inbox (FR-CNT-22).
+
+| Value | Number | Description |
+|---|---|---|
+| `SUPPORT_CATEGORY_UNSPECIFIED` | 0 | Not set. |
+| `SUPPORT_CATEGORY_GENERAL_QUESTION` | 1 | Open-ended question about the site or the owner. |
+| `SUPPORT_CATEGORY_BUG_REPORT` | 2 | Bug report — something on the site isn't working. |
+| `SUPPORT_CATEGORY_FEATURE_REQUEST` | 3 | Feature request or suggestion. |
+| `SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS` | 4 | Request to be added as a collaborator on one of the owner's public GitHub repositories. Body should name the repo. |
+| `SUPPORT_CATEGORY_PRESS_INQUIRY` | 5 | Press, interview, or podcast inquiry. |
+| `SUPPORT_CATEGORY_OTHER` | 6 | Anything not covered above. |
+
 ### ListMembersRequest.Sort
 
 Sort orders.
@@ -4523,29 +4681,15 @@ Job lifecycle.
 | `JOB_STATUS_SUCCEEDED` | 3 | Finished successfully. |
 | `JOB_STATUS_FAILED` | 4 | Failed. |
 
-### SubmitContactRequest.ReplyChannel
+### SupportStatus
 
-How the member wants a reply.
-
-| Value | Number | Description |
-|---|---|---|
-| `REPLY_CHANNEL_UNSPECIFIED` | 0 | Not set. |
-| `REPLY_CHANNEL_EMAIL` | 1 | Email to the member's verified address, or (for anonymous submitters) to the email supplied on the form. |
-| `REPLY_CHANNEL_LINKEDIN` | 2 | LinkedIn message (requires a linked LinkedIn profile). |
-
-### SupportCategory
-
-Category buckets for the support inbox (FR-CNT-22).
+Support message resolution status.
 
 | Value | Number | Description |
 |---|---|---|
-| `SUPPORT_CATEGORY_UNSPECIFIED` | 0 | Not set. |
-| `SUPPORT_CATEGORY_GENERAL_QUESTION` | 1 | Open-ended question about the site or the owner. |
-| `SUPPORT_CATEGORY_BUG_REPORT` | 2 | Bug report — something on the site isn't working. |
-| `SUPPORT_CATEGORY_FEATURE_REQUEST` | 3 | Feature request or suggestion. |
-| `SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS` | 4 | Request to be added as a collaborator on one of the owner's public GitHub repositories. Body should name the repo. |
-| `SUPPORT_CATEGORY_PRESS_INQUIRY` | 5 | Press, interview, or podcast inquiry. |
-| `SUPPORT_CATEGORY_OTHER` | 6 | Anything not covered above. |
+| `SUPPORT_STATUS_UNSPECIFIED` | 0 | Default (proto3 requires a zero value). Treated as "any" in list requests and as "resolved" in ResolveContactMessage. |
+| `SUPPORT_STATUS_OPEN` | 1 | Message is waiting for a reply / triage. |
+| `SUPPORT_STATUS_RESOLVED` | 2 | Message has been handled. |
 
 ### ListContentRequest.Order
 

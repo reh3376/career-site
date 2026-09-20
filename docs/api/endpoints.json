@@ -914,6 +914,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.AdminService",
+      "method": "ListContactMessages",
+      "path": "/api/career.v1.AdminService/ListContactMessages",
+      "grpc_full_method": "/career.v1.AdminService/ListContactMessages",
+      "internal": false,
+      "request": "career.v1.ListContactMessagesRequest",
+      "response": "career.v1.ListContactMessagesResponse",
+      "summary": "Lists messages sent via the public contact form (FR-ADM-14).",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.AdminService",
+      "method": "ResolveContactMessage",
+      "path": "/api/career.v1.AdminService/ResolveContactMessage",
+      "grpc_full_method": "/career.v1.AdminService/ResolveContactMessage",
+      "internal": false,
+      "request": "career.v1.ResolveContactMessageRequest",
+      "response": "career.v1.ResolveContactMessageResponse",
+      "summary": "Marks a contact message as resolved (or re-opens it).",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.SystemService",
       "method": "GetVersion",
       "path": "/api/career.v1.SystemService/GetVersion",

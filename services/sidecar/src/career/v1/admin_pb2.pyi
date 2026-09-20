@@ -3,6 +3,7 @@ import datetime
 from buf.validate import validate_pb2 as _validate_pb2
 from career.v1 import chat_pb2 as _chat_pb2
 from career.v1 import common_pb2 as _common_pb2
+from career.v1 import contact_pb2 as _contact_pb2
 from career.v1 import options_pb2 as _options_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
@@ -48,6 +49,12 @@ class JobStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     JOB_STATUS_RUNNING: _ClassVar[JobStatus]
     JOB_STATUS_SUCCEEDED: _ClassVar[JobStatus]
     JOB_STATUS_FAILED: _ClassVar[JobStatus]
+
+class SupportStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SUPPORT_STATUS_UNSPECIFIED: _ClassVar[SupportStatus]
+    SUPPORT_STATUS_OPEN: _ClassVar[SupportStatus]
+    SUPPORT_STATUS_RESOLVED: _ClassVar[SupportStatus]
 REVIEW_KIND_UNSPECIFIED: ReviewKind
 REVIEW_KIND_NEGATIVE_FEEDBACK: ReviewKind
 REVIEW_KIND_NO_SUPPORT: ReviewKind
@@ -71,6 +78,9 @@ JOB_STATUS_QUEUED: JobStatus
 JOB_STATUS_RUNNING: JobStatus
 JOB_STATUS_SUCCEEDED: JobStatus
 JOB_STATUS_FAILED: JobStatus
+SUPPORT_STATUS_UNSPECIFIED: SupportStatus
+SUPPORT_STATUS_OPEN: SupportStatus
+SUPPORT_STATUS_RESOLVED: SupportStatus
 
 class MemberCounts(_message.Message):
     __slots__ = ("views", "downloads", "chat_messages", "escalations", "saved")
@@ -537,3 +547,69 @@ class GetAuditResponse(_message.Message):
     entries: _containers.RepeatedCompositeFieldContainer[AuditEntry]
     page: _common_pb2.PageResponse
     def __init__(self, entries: _Optional[_Iterable[_Union[AuditEntry, _Mapping]]] = ..., page: _Optional[_Union[_common_pb2.PageResponse, _Mapping]] = ...) -> None: ...
+
+class SupportMessage(_message.Message):
+    __slots__ = ("id", "ticket_id", "category", "status", "subject", "body", "sender_name", "sender_email", "user_id", "created_at", "updated_at", "resolved_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TICKET_ID_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    BODY_FIELD_NUMBER: _ClassVar[int]
+    SENDER_NAME_FIELD_NUMBER: _ClassVar[int]
+    SENDER_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    RESOLVED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    ticket_id: str
+    category: _contact_pb2.SupportCategory
+    status: SupportStatus
+    subject: str
+    body: str
+    sender_name: str
+    sender_email: str
+    user_id: str
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    resolved_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., ticket_id: _Optional[str] = ..., category: _Optional[_Union[_contact_pb2.SupportCategory, str]] = ..., status: _Optional[_Union[SupportStatus, str]] = ..., subject: _Optional[str] = ..., body: _Optional[str] = ..., sender_name: _Optional[str] = ..., sender_email: _Optional[str] = ..., user_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resolved_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListContactMessagesRequest(_message.Message):
+    __slots__ = ("query", "status", "category", "page")
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    query: str
+    status: SupportStatus
+    category: _contact_pb2.SupportCategory
+    page: _common_pb2.PageRequest
+    def __init__(self, query: _Optional[str] = ..., status: _Optional[_Union[SupportStatus, str]] = ..., category: _Optional[_Union[_contact_pb2.SupportCategory, str]] = ..., page: _Optional[_Union[_common_pb2.PageRequest, _Mapping]] = ...) -> None: ...
+
+class ListContactMessagesResponse(_message.Message):
+    __slots__ = ("messages", "page", "open_count", "resolved_count")
+    MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    OPEN_COUNT_FIELD_NUMBER: _ClassVar[int]
+    RESOLVED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    messages: _containers.RepeatedCompositeFieldContainer[SupportMessage]
+    page: _common_pb2.PageResponse
+    open_count: int
+    resolved_count: int
+    def __init__(self, messages: _Optional[_Iterable[_Union[SupportMessage, _Mapping]]] = ..., page: _Optional[_Union[_common_pb2.PageResponse, _Mapping]] = ..., open_count: _Optional[int] = ..., resolved_count: _Optional[int] = ...) -> None: ...
+
+class ResolveContactMessageRequest(_message.Message):
+    __slots__ = ("id", "status")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    status: SupportStatus
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[SupportStatus, str]] = ...) -> None: ...
+
+class ResolveContactMessageResponse(_message.Message):
+    __slots__ = ("message",)
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    message: SupportMessage
+    def __init__(self, message: _Optional[_Union[SupportMessage, _Mapping]] = ...) -> None: ...
