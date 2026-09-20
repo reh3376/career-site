@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { signOutAction } from "@/app/actions/session";
@@ -29,13 +28,12 @@ export function HamburgerMenu({
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const pathname = usePathname();
 
-  // Close on route change (Next.js keeps the layout mounted across
-  // navigation, so we clear the drawer ourselves).
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  // Route-change close is handled on each menu item's click (see
+  // renderItem below) rather than via a usePathname effect. This
+  // satisfies react-hooks/set-state-in-effect and, more importantly,
+  // avoids one render cycle where the drawer stays open while the
+  // new route is streaming in.
 
   // Escape and click-outside close.
   useEffect(() => {
@@ -133,7 +131,9 @@ export function HamburgerMenu({
                 </p>
                 <ul>
                   {group.items.map((item) => (
-                    <li key={item.label}>{renderItem(item)}</li>
+                    <li key={item.label}>
+                      {renderItem(item, () => setOpen(false))}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -145,7 +145,7 @@ export function HamburgerMenu({
   );
 }
 
-function renderItem(item: MenuItem) {
+function renderItem(item: MenuItem, close: () => void) {
   const base =
     "block w-full px-5 py-2 text-left text-sm text-ink-2 no-underline transition-colors hover:bg-accent-soft hover:text-accent";
   if (item.kind === "link") {
@@ -157,20 +157,21 @@ function renderItem(item: MenuItem) {
           rel="noopener noreferrer"
           target="_blank"
           role="menuitem"
+          onClick={close}
         >
           {item.label}
         </a>
       );
     }
     return (
-      <Link href={item.href} className={base} role="menuitem">
+      <Link href={item.href} className={base} role="menuitem" onClick={close}>
         {item.label}
       </Link>
     );
   }
   return (
     <form action={item.action} className="m-0">
-      <button type="submit" className={base} role="menuitem">
+      <button type="submit" className={base} role="menuitem" onClick={close}>
         {item.label}
       </button>
     </form>
