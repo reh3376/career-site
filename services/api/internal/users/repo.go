@@ -272,3 +272,105 @@ func errorContains(err error, sub string) bool {
 	}
 	return false
 }
+
+// ListMembersFilter narrows a ListMembers call. Zero values disable
+// each dimension.
+type ListMembersFilter struct {
+	Query  string // ILIKE substring on name, email, or organization
+	Status Status // "" (or StatusUnspecified) = any
+	Limit  int32  // 1..200 (clamped)
+	Offset int32  // >= 0
+}
+
+// ListMembersResult is a page of users plus aggregate counts per
+// status so the admin console can render a summary bar. Total is the
+// filtered count (without limit/offset); the counts are unfiltered so
+// the tabs always show the true totals.
+type ListMembersResult struct {
+	Members     []User
+	Total       int32
+	CountByStat map[Status]int32
+}
+
+// ListMembers returns a page of users plus per-status aggregate
+// counts. Ordering: NEWEST first (created_at DESC). Filters are
+// parameter-bound so there's no injection surface.
+func (r *Repo) ListMembers(ctx context.Context, f ListMembersFilter) (*ListMembersResult, error) {
+	if f.Limit <= 0 || f.Limit > 200 {
+		f.Limit = 50
+	}
+	if f.Offset < 0 {
+		f.Offset = 0
+	}
+
+	// Aggregate counts per status, always across the full table so
+	// the header tabs show real totals regardless of the filter.
+	countRows, err := r.pool.Query(ctx, `
+    SELECT status::text, COUNT(*) FROM users GROUP BY status
+  `)
+	if err != nil {
+		return nil, fmt.Errorf("count members: %w", err)
+	}
+	defer countRows.Close()
+	counts := map[Status]int32{}
+	for countRows.Next() {
+		var s string
+		var n int32
+		if err := countRows.Scan(&s, &n); err != nil {
+			return nil, fmt.Errorf("scan count: %w", err)
+		}
+		counts[Status(s)] = n
+	}
+	if err := countRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate counts: %w", err)
+	}
+
+	// Build filter WHERE
+	where := "WHERE 1=1"
+	args := []any{}
+	next := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	if f.Query != "" {
+		p := next("%" + f.Query + "%")
+		where += " AND (name ILIKE " + p + " OR email::text ILIKE " + p +
+			" OR organization ILIKE " + p + ")"
+	}
+	if f.Status != "" {
+		where += " AND status = " + next(string(f.Status)) + "::user_status"
+	}
+
+	// Filtered total (for pagination header).
+	var total int32
+	if err := r.pool.QueryRow(ctx,
+		"SELECT COUNT(*) FROM users "+where, args...,
+	).Scan(&total); err != nil {
+		return nil, fmt.Errorf("count filtered: %w", err)
+	}
+
+	// Paged select.
+	limArg := next(f.Limit)
+	offArg := next(f.Offset)
+	q := "SELECT " + selectCols + " FROM users " + where +
+		" ORDER BY created_at DESC LIMIT " + limArg + " OFFSET " + offArg
+	rows, err := r.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select members: %w", err)
+	}
+	defer rows.Close()
+
+	members := []User{}
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan member: %w", err)
+		}
+		members = append(members, *u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate members: %w", err)
+	}
+	return &ListMembersResult{
+		Members:     members,
+		Total:       total,
+		CountByStat: counts,
+	}, nil
+}
