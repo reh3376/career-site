@@ -32,9 +32,12 @@ services:
 
   web:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-web:${IMAGE_TAG:-latest}
-    # No build override — pull_policy: always ensures we always fetch the
-    # published image; the base compose's `build:` is inert unless someone
-    # explicitly runs `docker compose build`.
+    # Kill the base compose's `build:` fallback in prod. Without this,
+    # a missing tag on GHCR (e.g. IMAGE_TAG bumped ahead of the CI
+    # publish) makes compose fall through to `docker build` locally on
+    # the CX22, which OOM-kills `pnpm build` and takes prod down. With
+    # `build: !reset` compose refuses to build and fails the up loud.
+    build: !reset null
     pull_policy: always
     environment:
       NODE_ENV: production
@@ -46,6 +49,7 @@ services:
 
   api:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
+    build: !reset null
     pull_policy: always
     environment:
       API_ADDR: :8080
@@ -65,6 +69,7 @@ services:
 
   sidecar:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
+    build: !reset null
     pull_policy: always
 
   postgres:
