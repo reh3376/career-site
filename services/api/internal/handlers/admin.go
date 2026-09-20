@@ -91,6 +91,67 @@ func (a *Admin) ListMembers(
 }
 
 // ---------------------------------------------------------------
+// GetMember / SetMemberStatus
+// ---------------------------------------------------------------
+
+func (a *Admin) GetMember(
+	ctx context.Context,
+	req *connect.Request[v1.GetMemberRequest],
+) (*connect.Response[v1.GetMemberResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	// Activity events + conversations + notes come online with the
+	// activity ingest work (Phase 3+). For now the detail page has
+	// enough for status-transition actions on the member itself.
+	return connect.NewResponse(&v1.GetMemberResponse{
+		Member: memberRecordRepoToProto(u),
+	}), nil
+}
+
+func (a *Admin) SetMemberStatus(
+	ctx context.Context,
+	req *connect.Request[v1.SetMemberStatusRequest],
+) (*connect.Response[v1.SetMemberStatusResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	// The proto validation locks status to ACTIVE (2) or DISABLED (4);
+	// the map handles both plus a fallthrough that returns InvalidArgument
+	// so a rare wire-level bypass can't set a state the DB wouldn't
+	// accept anyway.
+	target := memberStatusProtoToRepo(req.Msg.Status)
+	if target != users.StatusActive && target != users.StatusDisabled {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("status must be ACTIVE or DISABLED"))
+	}
+	if err := a.users.SetStatus(ctx, u.ID, target); err != nil {
+		a.log.Error("SetStatus failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("update failed"))
+	}
+	u.Status = target
+	return connect.NewResponse(&v1.SetMemberStatusResponse{
+		Member: memberRecordRepoToProto(u),
+	}), nil
+}
+
+// ---------------------------------------------------------------
 // ApproveRegistration / DeclineRegistration
 // ---------------------------------------------------------------
 

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
+import Link from "next/link";
+
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
-
-import { DecisionButtons } from "./decision-buttons";
 
 export const metadata: Metadata = { title: "Admin — Registrations" };
 export const dynamic = "force-dynamic";
@@ -132,10 +132,10 @@ export default async function AdminRegistrationsPage({
         Registrations.
       </h1>
       <p className="mt-6 max-w-xl text-sm leading-relaxed text-ink-3">
-        Every registration and its state. Approve / decline pending
-        rows below fires the same DB update + email as the one-click
-        link, recorded as <code className="font-mono text-ink">decided_via=console</code>
-        in the audit log.
+        Every registration and its state. Click a row for the detail
+        view where you can approve, decline, disable, or re-enable —
+        state-appropriate actions live there so this list stays
+        scannable.
       </p>
 
       <nav
@@ -214,20 +214,15 @@ function MemberRow({ m }: { m: MemberRecord }) {
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const seen = m.first_seen_at ? new Date(m.first_seen_at) : null;
   const when = seen ? formatWhen(seen) : "—";
-  const pending = status === "MEMBER_STATUS_PENDING_APPROVAL";
   return (
-    <li className="py-4">
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px] sm:items-baseline sm:gap-6">
+    <li>
+      <Link
+        href={`/admin/registrations/${me.id}`}
+        className="grid gap-2 py-4 no-underline transition-colors hover:bg-accent-soft/40 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px] sm:items-baseline sm:gap-6"
+      >
         <div className="min-w-0">
           <p className="truncate text-sm text-ink">{me.name || "—"}</p>
-          <p className="truncate text-xs text-ink-3">
-            <a
-              href={`mailto:${me.email}`}
-              className="text-ink-2 no-underline hover:text-accent"
-            >
-              {me.email}
-            </a>
-          </p>
+          <p className="truncate text-xs text-ink-3">{me.email}</p>
         </div>
         <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           <span className="text-ink">id</span> {me.id}
@@ -242,12 +237,7 @@ function MemberRow({ m }: { m: MemberRecord }) {
         <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           {when}
         </div>
-      </div>
-      {pending ? (
-        <div className="mt-3">
-          <DecisionButtons memberId={me.id} />
-        </div>
-      ) : null}
+      </Link>
     </li>
   );
 }

@@ -34,3 +34,20 @@ export async function declineRegistrationAction(formData: FormData): Promise<voi
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
 }
+
+// Console flip between ACTIVE and DISABLED for a non-admin member.
+// The `status` field must be one of MEMBER_STATUS_ACTIVE /
+// MEMBER_STATUS_DISABLED; anything else is rejected server-side.
+export async function setMemberStatusAction(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("member_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!memberId || !status) return;
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  await callApi({
+    path: "/api/career.v1.AdminService/SetMemberStatus",
+    body: { memberId, status },
+    cookie,
+  }).catch(() => undefined);
+  revalidatePath("/admin/registrations", "layout");
+}
