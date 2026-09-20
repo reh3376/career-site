@@ -47,6 +47,34 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Read-only role for the /admin/db console. When
+	// DB_READONLY_PASSWORD is set, flip the role created by migration
+	// 00005 to LOGIN + password. Then, if DATABASE_URL_READONLY is
+	// set, open a second pool that connects with that role — the SQL
+	// console runs through it so a bug in the SELECT-only guard can't
+	// write anything. In dev, both are unset and the console falls
+	// back to the main pool with a warn.
+	var readonlyPool *db.Pool
+	if cfg.DBReadonlyPassword != "" {
+		if err := pool.SetReadonlyRolePassword(ctx, cfg.DBReadonlyPassword); err != nil {
+			log.Error("set readonly role password failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		log.Info("readonly role password synced")
+	}
+	if cfg.DatabaseURLReadonly != "" {
+		readonlyPool, err = db.Open(ctx, cfg.DatabaseURLReadonly)
+		if err != nil {
+			log.Error("readonly db open failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		defer readonlyPool.Close()
+		log.Info("admin/db surface using dedicated readonly pool")
+	} else {
+		readonlyPool = pool
+		log.Warn("admin/db surface using write-capable pool — set DATABASE_URL_READONLY in prod")
+	}
+
 	sc, err := sidecar.Dial(cfg.SidecarAddr, cfg.SidecarTimeout)
 	if err != nil {
 		log.Error("sidecar client init failed", slog.String("error", err.Error()))
@@ -125,7 +153,7 @@ func main() {
 		log, userRepo, mailer, cfg.DecisionTokenSecret,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
 	)
-	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler, pool)
+	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler, pool, readonlyPool)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,

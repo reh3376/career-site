@@ -56,6 +56,12 @@ services:
       API_ENV: production
       SIDECAR_ADDR: sidecar:50051
       DATABASE_URL: postgres://career:${POSTGRES_PASSWORD}@postgres:5432/career?sslmode=disable
+      # /admin/db surface runs through the dedicated read-only role
+      # created by migration 00005. The API applies DB_READONLY_PASSWORD
+      # to the role at boot via ALTER ROLE; DATABASE_URL_READONLY tells
+      # it which DSN to open the second pool with. Both empty in dev.
+      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD}
+      DATABASE_URL_READONLY: postgres://career_admin_readonly:${DB_READONLY_PASSWORD}@postgres:5432/career?sslmode=disable
       WEB_BASE_URL: https://${SITE_DOMAIN}
       OWNER_CONTACT_EMAIL: ${OWNER_CONTACT_EMAIL}
       MAIL_FROM: ${MAIL_FROM}

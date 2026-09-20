@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
+	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -34,11 +35,32 @@ type Admin struct {
 	users    *users.Repo
 	auth     *Auth
 	decision *AdminDecision // reused for ApproveUser / DeclineUser business logic
-	pool     *db.Pool       // the /admin/db surface reads through this
+	pool     *db.Pool       // write-capable app pool
+	roPool   *db.Pool       // read-only pool used by the /admin/db surface
+	// queryLimiter caps how often a single admin can hit RunDbQuery.
+	// The read-only role bounds the *effect* of a bad query; this bounds
+	// the *rate*, so a compromised admin session (or a stuck client
+	// hammering "Run") can't monopolise DB connections. Keyed on
+	// admin user_id so a lockout is per-account, not per-IP.
+	queryLimiter *ratelimit.Limiter
 }
 
-func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool) *Admin {
-	return &Admin{log: log, users: repo, auth: auth, decision: decision, pool: pool}
+func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool, roPool *db.Pool) *Admin {
+	if roPool == nil {
+		roPool = pool
+	}
+	return &Admin{
+		log:      log,
+		users:    repo,
+		auth:     auth,
+		decision: decision,
+		pool:     pool,
+		roPool:   roPool,
+		// 20-query burst, refills to 20 across a minute. Enough for
+		// interactive exploration; well below what a hung client loop
+		// would produce.
+		queryLimiter: ratelimit.New(20, 20.0/60.0),
+	}
 }
 
 // requireAdmin gates a call on session + admin role. Called at the
@@ -167,7 +189,7 @@ func (a *Admin) ListDbTables(
 	if _, err := requireAdmin(a, ctx, req); err != nil {
 		return nil, err
 	}
-	tables, err := adminquery.ListTables(ctx, a.pool)
+	tables, err := adminquery.ListTables(ctx, a.roPool)
 	if err != nil {
 		a.log.Error("ListTables failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("list tables failed"))
@@ -202,6 +224,22 @@ func (a *Admin) RunDbQuery(
 	if err != nil {
 		return nil, err
 	}
+	// Per-admin rate limit. Blocks a stuck-in-a-loop client and a
+	// compromised admin session both — the read-only role means a bad
+	// query can't write, but nothing else stops one from hammering
+	// the DB. Bucket is keyed on user_id so shared IPs don't collide.
+	if a.queryLimiter != nil {
+		key := "adminquery:" + strconv.FormatInt(u.ID, 10)
+		if ok, retry := a.queryLimiter.Allow(key); !ok {
+			a.log.Warn("admin db query rate limited",
+				slog.Int64("admin_user_id", u.ID),
+				slog.Duration("retry_after", retry),
+			)
+			return nil, connect.NewError(connect.CodeResourceExhausted,
+				errors.New("too many queries; slow down for a moment"))
+		}
+	}
+
 	// Log every admin-run query with the admin's user_id so the
 	// prod logs are an ad-hoc audit trail until we ship a proper
 	// query-log table. Never log the SQL body at ERROR level — a
@@ -212,7 +250,7 @@ func (a *Admin) RunDbQuery(
 		slog.String("sql_head", firstN(req.Msg.Sql, 200)),
 	)
 
-	res, err := adminquery.Run(ctx, a.pool, req.Msg.Sql, req.Msg.TimeoutMs)
+	res, err := adminquery.Run(ctx, a.roPool, req.Msg.Sql, req.Msg.TimeoutMs)
 	if err != nil {
 		// The safety-rail rejections (SELECT-only, single-statement,
 		// forbidden-token, empty) all come back as plain errors from

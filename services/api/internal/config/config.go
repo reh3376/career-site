@@ -19,8 +19,20 @@ type Config struct {
 	SidecarAddr     string
 	SidecarTimeout  time.Duration
 	DatabaseURL     string
-	DBTimeout       time.Duration
-	SkipMigrate     bool
+	// DatabaseURLReadonly is an optional DSN used by the /admin/db
+	// surface. When set, the SQL console runs through this pool
+	// instead of the write-capable app pool, so the SELECT-only guard
+	// in adminquery is defence in depth rather than the only line.
+	// Empty → the console falls back to the main pool with a warn
+	// log at boot.
+	DatabaseURLReadonly string
+	// DBReadonlyPassword, when set, is applied at boot via
+	// `ALTER ROLE career_admin_readonly LOGIN PASSWORD '...'` so the
+	// role created by the migration becomes usable. Keeps the
+	// bootstrap out of migration files (secrets never land in git).
+	DBReadonlyPassword string
+	DBTimeout          time.Duration
+	SkipMigrate        bool
 
 	// Auth / email
 	WebBaseURL        string
@@ -61,16 +73,18 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Addr:            envOr("API_ADDR", ":8080"),
-		Env:             envOr("API_ENV", "development"),
-		ReadTimeout:     15 * time.Second,
-		WriteTimeout:    30 * time.Second,
-		ShutdownTimeout: 10 * time.Second,
-		SidecarAddr:     envOr("SIDECAR_ADDR", "localhost:50051"),
-		SidecarTimeout:  2 * time.Second,
-		DatabaseURL:     envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
-		DBTimeout:       2 * time.Second,
-		SkipMigrate:     os.Getenv("API_SKIP_MIGRATE") == "1",
+		Addr:                envOr("API_ADDR", ":8080"),
+		Env:                 envOr("API_ENV", "development"),
+		ReadTimeout:         15 * time.Second,
+		WriteTimeout:        30 * time.Second,
+		ShutdownTimeout:     10 * time.Second,
+		SidecarAddr:         envOr("SIDECAR_ADDR", "localhost:50051"),
+		SidecarTimeout:      2 * time.Second,
+		DatabaseURL:         envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
+		DatabaseURLReadonly: os.Getenv("DATABASE_URL_READONLY"),
+		DBReadonlyPassword:  os.Getenv("DB_READONLY_PASSWORD"),
+		DBTimeout:           2 * time.Second,
+		SkipMigrate:         os.Getenv("API_SKIP_MIGRATE") == "1",
 
 		WebBaseURL:        envOr("WEB_BASE_URL", "http://localhost"),
 		OwnerContactEmail: envOr("OWNER_CONTACT_EMAIL", "rogerhenley345@gmail.com"),
