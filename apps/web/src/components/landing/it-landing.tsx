@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { GithubReposIt } from "@/components/github-repos";
+
 // Landing. Editorial, one column, with image bands set into the reading
 // gutter rather than filling the viewport. The type does most of the
 // work — Fraunces variable at display sizes for the hero, real numbers
@@ -8,7 +10,7 @@ import Link from "next/link";
 // being data points glued next to prose.
 //
 // The four supporting photographs alternate between industrial work
-// (copper condenser, Hobet dragline) and human context (teaching at UK,
+// (distillation-column bubble tray, Hobet dragline) and human context (teaching at UK,
 // the home workshop desk with the dog underfoot) so a visiting hiring
 // manager sees a working engineer with a life, not a résumé PDF in HTML.
 
@@ -157,24 +159,24 @@ export function ItLanding() {
       </section>
 
       {/* -----------------------------------------------------------------
-       * IMAGE + PULL QUOTE — copper condenser / distillery close-up
-       * Set at full-column width, offset with a Fraunces pull quote so the
-       * image reads as evidence, not decoration.
+       * IMAGE + PULL QUOTE — top bubble tray of a continuous distillation
+       * column, post-run. Set at full-column width, offset with a Fraunces
+       * pull quote so the image reads as evidence, not decoration.
        * ----------------------------------------------------------------- */}
       <section aria-label="From the plant floor" className="bg-paper-2/60">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 sm:px-10 md:grid-cols-[1.4fr_1fr] md:items-center md:py-28">
           <figure className="m-0">
             <div className="relative aspect-[4/3] overflow-hidden">
               <Image
-                src="/images/copper-condenser.jpeg"
-                alt="Interior of a copper distillation condenser: rows of tubes and a still-wet bourbon-run copper wash."
+                src="/images/bubble-tray.jpeg"
+                alt="Top bubble tray of a continuous distillation column, viewed through the sight glass — rows of vapor caps against a wet copper wash."
                 fill
                 sizes="(min-width: 768px) 640px, 100vw"
                 className="object-cover"
               />
             </div>
             <figcaption className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              condenser interior <span className="text-ink-4">·</span> post-run
+              column top bubble tray <span className="text-ink-4">·</span> post-run
             </figcaption>
           </figure>
           <blockquote className="border-l-2 border-accent pl-6 text-ink">
@@ -418,6 +420,13 @@ export function ItLanding() {
           </div>
         </div>
       </section>
+
+      {/* -----------------------------------------------------------------
+       * PUBLIC REPOSITORIES — Roger's GitHub. Server-rendered, cached
+       * for an hour. Fails soft: if api.github.com is unreachable the
+       * component renders a direct link and moves on.
+       * ----------------------------------------------------------------- */}
+      <GithubReposIt />
 
       {/* -----------------------------------------------------------------
        * ABOUT THE BUILD — colophon-style closer. Explains the site as a
