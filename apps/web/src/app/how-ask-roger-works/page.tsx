@@ -8,20 +8,30 @@ export const metadata: Metadata = {
 
 export default function HowAskRogerWorksPage() {
   return (
-    <div className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="mb-8 text-3xl font-semibold text-ink">How Ask Roger works</h1>
-      <div className="space-y-6 leading-relaxed text-ink-2">
+    <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+        the assistant
+      </p>
+      <h1
+        className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
+        style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
+      >
+        How Ask Roger works.
+      </h1>
+      <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
-          This page is under construction. When Ask Roger launches (late 2026), it will describe —
-          plainly — how the assistant works: which model, which corpus, how it retrieves and cites,
-          what it refuses to answer, how it&rsquo;s evaluated, and how you can hand a conversation
-          to Roger directly.
+          This page is under construction. When Ask Roger launches (late
+          2026), it will describe &mdash; plainly &mdash; how the assistant
+          works: which model, which corpus, how it retrieves and cites, what
+          it refuses to answer, how it&rsquo;s evaluated, and how you can
+          hand a conversation to Roger directly.
         </p>
         <p className="text-sm text-ink-3">
-          Short version, for now: Ask Roger is a first-person conversational assistant grounded in
-          Roger&rsquo;s own writing, projects, and résumé. It cites its sources, admits what it
-          doesn&rsquo;t know, and never speaks about compensation, references, current-employer
-          confidential matters, or personal life.
+          Short version, for now: Ask Roger is a first-person conversational
+          assistant grounded in Roger&rsquo;s own writing, projects, and
+          r&eacute;sum&eacute;. It cites its sources, admits what it
+          doesn&rsquo;t know, and never speaks about compensation,
+          references, current-employer confidential matters, or personal life.
         </p>
       </div>
     </div>
