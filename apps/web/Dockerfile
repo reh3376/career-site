@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-slim AS deps
+FROM node:25-slim AS deps
 RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-FROM node:22-slim AS build
+FROM node:25-slim AS build
 RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -17,7 +17,7 @@ RUN pnpm build
 
 # Debian-based runtime — sharp / libvips prebuilt binaries work
 # out of the box, which Alpine + musl does not.
-FROM node:22-slim AS runtime
+FROM node:25-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000
 
