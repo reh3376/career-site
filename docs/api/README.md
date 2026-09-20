@@ -3013,6 +3013,9 @@ The calling member. Returned by sign-in, verification, GetMe, and GetHome.
 | `lastSeenAt` | `Timestamp` | string (RFC 3339, UTC) |  | Start of the previous session, for welcome-back copy; unset on first visit. |
 | `linkedProviders` | `string`[] | array of string |  | Linked social sign-in providers, e.g. ["linkedin"]. |
 | `expiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this member's access ends (from users.expires_at). Unset for permanent access and for non-active statuses. |
+| `lastNotificationKind` | `string` | string |  | Kind of the last notification email the API sent to this member, e.g. "user_approved" / "user_declined" / "expiry_warn". Empty until the first send. Only populated on admin-side responses. |
+| `lastNotificationAt` | `Timestamp` | string (RFC 3339, UTC) |  | Wall-clock time of the last notification send attempt (success OR failure). Admin-side only. |
+| `lastNotificationError` | `string` | string |  | Truncated provider error from the last failed send; empty on success. Admin-side only. |
 
 ### ActivityEvent
 

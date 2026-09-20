@@ -52,6 +52,13 @@ type User struct {
 	ExpiresAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// Set by RecordNotification when a notification email is
+	// dispatched. LastNotificationError is nil on success and holds
+	// the truncated provider error on failure — the admin UI shows
+	// a green pill when nil, a red one when set.
+	LastNotificationKind  string
+	LastNotificationAt    *time.Time
+	LastNotificationError *string
 }
 
 type EmailTokenPurpose string
@@ -120,15 +127,26 @@ func (r *Repo) Create(ctx context.Context, in CreateInput) (*User, error) {
 
 const selectCols = `
     id, email, name, organization, stated_role, status, role,
-    consent_version, consent_at, expires_at, created_at, updated_at
+    consent_version, consent_at, expires_at, created_at, updated_at,
+    last_notification_kind, last_notification_at, last_notification_error
 `
 
 func scanUser(row pgx.Row) (*User, error) {
 	u := &User{}
+	// pgx returns a NULL text column as an empty string when we scan
+	// into a *string via sql.NullString semantics. Wrap the three
+	// nullable notification columns so the caller can distinguish
+	// "never sent" from "sent successfully".
+	var (
+		kind    *string
+		at      *time.Time
+		errText *string
+	)
 	err := row.Scan(
 		&u.ID, &u.Email, &u.Name, &u.Organization, &u.StatedRole,
 		&u.Status, &u.Role,
 		&u.ConsentVersion, &u.ConsentAt, &u.ExpiresAt, &u.CreatedAt, &u.UpdatedAt,
+		&kind, &at, &errText,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -136,6 +154,11 @@ func scanUser(row pgx.Row) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("scan user: %w", err)
 	}
+	if kind != nil {
+		u.LastNotificationKind = *kind
+	}
+	u.LastNotificationAt = at
+	u.LastNotificationError = errText
 	return u, nil
 }
 
@@ -193,6 +216,30 @@ func (r *Repo) SetStatus(ctx context.Context, id int64, status Status) error {
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+// RecordNotification stamps the last-notification columns for a user
+// after we hand a message to the mail provider. Kind is a short slug
+// (e.g. "user_approved"). errText should be the truncated provider
+// error on failure, or empty on success. The write is best-effort:
+// callers should not fail the request if this returns an error, since
+// the email itself has already gone (or already failed) — the audit
+// info is a nice-to-have.
+func (r *Repo) RecordNotification(
+	ctx context.Context, userID int64, kind string, errText string,
+) error {
+	const q = `
+    UPDATE users
+    SET last_notification_kind  = $2,
+        last_notification_at    = now(),
+        last_notification_error = NULLIF($3, '')
+    WHERE id = $1
+  `
+	_, err := r.pool.Exec(ctx, q, userID, kind, errText)
+	if err != nil {
+		return fmt.Errorf("record notification: %w", err)
 	}
 	return nil
 }
