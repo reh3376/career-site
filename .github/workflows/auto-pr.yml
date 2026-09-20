@@ -32,19 +32,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: ${{ github.ref_name }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
 
-          # Return the open PR number for this branch (empty string if
-          # none). Wrapped in a function because we run this before AND
-          # after gh pr create — GitHub search indexing can lag a few
-          # seconds behind a just-created PR, so we treat empty as a
-          # not-yet-visible case rather than a definite "no PR."
-          existing_pr() {
-            gh pr list --head "$BRANCH" --base main --state open \
-              --json number --jq '.[0].number' 2>/dev/null || true
-          }
-
-          existing=$(existing_pr)
+          # Does a PR already exist for this branch?
+          existing=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number' || echo "")
           if [ -n "$existing" ]; then
             echo "PR #$existing already open for $BRANCH — nothing to do."
             exit 0
@@ -62,43 +53,17 @@ jobs:
           # First-line-of-newest-commit as the title.
           title=$(git log -1 --pretty=format:'%s')
 
-          # Try to create. Two well-known failure modes are both fine to
-          # ignore, because they mean "the PR either exists or was
-          # created by another process":
-          #  1) The owner-toggle "Allow GitHub Actions to create and
-          #     approve pull requests" is off — we cannot open PRs from
-          #     CI at all. Whoever pushed can open one by hand; the
-          #     workflow shouldn't fail the pipeline over a permission
-          #     the repo owner controls at Settings level.
-          #  2) A PR was opened concurrently (e.g. via `gh pr create`
-          #     from a dev shell in the same second as the push
-          #     webhook). GitHub's list index lags a few seconds behind
-          #     the create endpoint, so our existence check above can
-          #     return empty even though the PR is really there.
-          out=$(gh pr create \
+          # Auto-pr is the only path that opens PRs for these branches.
+          # If this create fails — including the "GitHub Actions is not
+          # permitted to create or approve pull requests" permission
+          # error — we let it fail loudly. That's a real config problem
+          # (owner toggle in Settings → Actions → General) that we want
+          # to see, not paper over. Do NOT race this step with manual
+          # `gh pr create` calls from a dev shell; that produces spurious
+          # concurrent-create failures.
+          gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "$title" \
             --body-file /tmp/pr-body.md \
-            --draft 2>&1) && rc=0 || rc=$?
-          echo "$out"
-
-          if [ $rc -eq 0 ]; then
-            exit 0
-          fi
-
-          if grep -q "GitHub Actions is not permitted to create" <<<"$out"; then
-            echo "::warning::auto-pr disabled at repo Settings (Actions → General → 'Allow GitHub Actions to create and approve pull requests'). Skipping."
-            exit 0
-          fi
-
-          # Re-check: did somebody else create the PR between our first
-          # list and our create attempt?
-          existing=$(existing_pr)
-          if [ -n "$existing" ]; then
-            echo "PR #$existing appeared concurrently — treating create failure as benign."
-            exit 0
-          fi
-
-          echo "::error::gh pr create failed and no open PR exists for $BRANCH"
-          exit $rc
+            --draft
