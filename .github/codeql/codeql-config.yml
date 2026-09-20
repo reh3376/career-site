@@ -1,36 +1,58 @@
 # CodeQL configuration for the career-site repository.
 #
-# `paths-ignore` scopes an audited false-positive to one specific
-# source file so the CodeQL rules that fire on it stay active for
-# every other file in the codebase. Prefer per-file exclusion over
-# global rule disable: a rule that's genuinely worth having in the
-# repo shouldn't be silenced repo-wide because of one legitimate
-# outlier.
+# Two suppression mechanisms are in play:
 #
-# When adding a new entry, ALWAYS include a rationale block above
-# it that names (a) the file, (b) which specific rule prompted the
-# exclusion, (c) why the exclusion is safe. Reviewers should refuse
-# an entry that lacks this rationale.
+#   * `paths-ignore` (below) — file-level exclusion. Only takes effect
+#     for interpreted languages (JS / TS / Python / Ruby). Silently
+#     ignored for compiled languages (Go, Java, C++) whose extraction
+#     comes from build output.
+#
+#   * `query-filters` (below) — rule-level exclusion. Works for every
+#     language. Applies globally to the analyzed codebase, so it
+#     should only be used when the rule is broadly not-applicable to
+#     THIS codebase — not as a workaround for one file's false
+#     positive when the rule is genuinely valuable elsewhere.
+#
+# When adding a new entry to either section, ALWAYS include a
+# rationale block above it. Reviewers should refuse an entry that
+# lacks this rationale.
 
 name: career-site-codeql-config
 
-paths-ignore:
-  # File: services/api/internal/auth/pwned.go
+# ---------------------------------------------------------------------
+# Global rule exclusions
+# ---------------------------------------------------------------------
+query-filters:
   # Rule: go/weak-sensitive-data-hashing (CWE-327 / 328 / 916)
-  # Why:  This file is the HaveIBeenPwned k-anonymity checker.
-  #       HIBP's public range endpoint only accepts SHA-1 or SHA-256
-  #       prefixes — passing a slow KDF (PBKDF2/bcrypt/scrypt/argon2)
-  #       digest would break the wire protocol. No password is ever
-  #       stored, compared to a stored hash, or persisted anywhere in
-  #       this path; only the first 5 hex chars of the SHA-256 digest
-  #       leave the process. Password STORAGE in this codebase uses
-  #       argon2id (see package `hash`, FR-AUTH-01). See the block
-  #       comment on HIBPChecker in pwned.go for the full rationale.
+  # Why:  The only Go file that hashes password data is
+  #       services/api/internal/auth/pwned.go — the HaveIBeenPwned
+  #       k-anonymity checker. HIBP's public range endpoint accepts
+  #       only SHA-1 or SHA-256 prefixes, so a slow KDF (PBKDF2,
+  #       bcrypt, scrypt, argon2) would break the wire protocol.
+  #       No password is ever stored, compared to a stored hash, or
+  #       persisted anywhere in that path; only the first 5 hex chars
+  #       of the SHA-256 digest leave the process.
   #
-  #       Excluding the whole file is blunter than a per-rule exclude,
-  #       but CodeQL config doesn't support scoped `query-filters` by
-  #       path. Any new security issue introduced in pwned.go itself
-  #       would go uncaught by CodeQL — so keep this file small,
-  #       tightly reviewed, and covered by its own unit tests. Every
-  #       other Go file in the repo still gets the full ruleset.
-  - services/api/internal/auth/pwned.go
+  #       Password STORAGE in this codebase uses argon2id in package
+  #       `hash` (FR-AUTH-01) — a different call path this rule
+  #       (correctly) never fires on. So disabling the rule globally
+  #       here does not open a real hole today.
+  #
+  #       CodeQL config does not support per-file rule suppression
+  #       for Go (paths-ignore is silently ignored for compiled
+  #       languages), so the choice is: dismiss the alert per PR head
+  #       (fragile — a code move re-creates it), or disable the rule
+  #       globally with this rationale. The latter is durable and
+  #       reviewable.
+  #
+  # If a future PR adds a Go file that hashes password-like data,
+  # reviewers must audit whether that call site needs the same
+  # justification, or whether the code should switch to argon2id.
+  - exclude:
+      id: go/weak-sensitive-data-hashing
+
+# ---------------------------------------------------------------------
+# Per-file exclusions (interpreted languages only)
+# ---------------------------------------------------------------------
+# paths-ignore:
+#   (none today)

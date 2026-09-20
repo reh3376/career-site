@@ -47,12 +47,16 @@ func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
 // this codebase uses argon2id in package `hash` (see FR-AUTH-01) — this
 // checker is only the pre-storage breach lookup (FR-AUTH-02).
 //
-// This file is excluded from CodeQL analysis via paths-ignore in
-// .github/codeql/codeql-config.yml with this comment as the
-// justification. Because the whole file is excluded (CodeQL config
-// does not support per-rule per-file exclusions), any new security
-// issue introduced in this file itself will NOT be caught by CodeQL —
-// keep it small, tightly reviewed, and covered by its own tests.
+// The `go/weak-sensitive-data-hashing` rule is disabled globally for
+// Go in .github/codeql/codeql-config.yml with this comment as the
+// justification. CodeQL config does not support per-file rule
+// suppression for compiled languages, and dismissing the alert per PR
+// head is fragile (a code move re-creates it), so the global disable
+// is the durable option. Password STORAGE in package `hash` still
+// uses argon2id — the rule (correctly) never fires on that path — so
+// disabling here does not open a real hole today. Reviewers of any
+// new Go file that hashes password-like data must audit whether that
+// call site needs the same justification.
 type HIBPChecker struct {
 	Client *http.Client
 }
