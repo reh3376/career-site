@@ -2,9 +2,9 @@
 
 Roger Henley's interactive career portfolio: a gated, personalized site with a first-person conversational assistant ("Ask Roger") grounded in the owner's own writing, résumés, and repositories.
 
-**Live:** https://rogerhenley.dev/ · **Repo:** [github.com/reh3376/career-site](https://github.com/reh3376/career-site) · **Spec:** [`docs/FSD.md`](docs/FSD.md) · **Deploy:** [`deploy/README.md`](deploy/README.md)
+**Live:** https://rogerhenley.dev/ · **Repo:** [github.com/reh3376/career-site](https://github.com/reh3376/career-site) · **Spec:** [`docs/FSD.md`](docs/FSD.md) · **Deploy:** [`deploy/README.md`](deploy/README.md) · **Services:** [`SERVICES.md`](SERVICES.md)
 
-> **Status:** Phase 2. Public landing + approval-gated registration + email verify + admin one-click Accept/Decline + sign-in + gated member home are live in production. Ask Roger, personalized home, content sections, and the admin console are still ahead — see [FSD §12](docs/FSD.md#12-delivery-roadmap).
+> **Status:** Phase 3. Public landing, approval-gated registration + email verify, admin one-click Accept/Decline, sign-in with 30-day sessions, forgot-password (email link + HIBP-checked reset), personalized member home, and the admin console (contacts, registrations + member detail, access whitelist, per-admin activity view, read-only SQL surface) are live in production. Client-side activity beacon is landing events; Ask Roger, content sections, JD upload, articles reader, and dwell tracking are still ahead — see [FSD §12](docs/FSD.md#12-delivery-roadmap).
 
 ## Architecture
 
@@ -12,8 +12,8 @@ Three services behind one contract:
 
 | Component | Path | Language | Role |
 |---|---|---|---|
-| Web app | `apps/web/` | Next.js 15 / TypeScript | Public landing + gated member UI; calls the API through `connect-es` |
-| API | `services/api/` | Go (stable) | ConnectRPC endpoints, auth, sessions, personalization, chat orchestration, admin, scheduling |
+| Web app | `apps/web/` | Next.js 16 / TypeScript 6 | Public landing + gated member UI; calls the API through `connect-es` |
+| API | `services/api/` | Go 1.26 | ConnectRPC endpoints, auth, sessions, personalization, chat orchestration, admin, scheduling |
 | Sidecar | `services/sidecar/` | Python 3.12+ | gRPC service for embedding, rerank, classification, and batch jobs; hosts the `career-cli` |
 
 The `.proto` files in `proto/` are the single source of truth. Everything else — Go, TypeScript, and Python stubs plus the API reference — is generated from them. See [ADR 0004](docs/adr/0004-go-api-with-python-sidecar.md) for the split and [ADR 0017](docs/adr/0017-connectrpc-transport.md) for the transport choice.
