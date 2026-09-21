@@ -1,4 +1,8 @@
-# From Data to Decisions: Why Your Manufacturing AI Keeps Dying in the Pilot
+---
+title: "From Data to Decisions: Why Your Manufacturing AI Keeps Dying in the Pilot"
+subtitle: "Ontology-driven manufacturing hub as the substrate under the AI layer"
+date: 2026
+---
 
 Most industrial AI programs don’t fail because the model was bad. They fail because the context the model needed was never built — or never governed once it was.
 

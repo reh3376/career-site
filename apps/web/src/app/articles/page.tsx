@@ -51,8 +51,10 @@ export default async function ArticlesIndexPage() {
                     {a.subtitle}
                   </p>
                 ) : null}
-                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                  read →
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                  {a.date ? <span>{a.date}</span> : null}
+                  {a.date ? <span className="text-ink-4">·</span> : null}
+                  <span className="text-accent">read →</span>
                 </p>
               </Link>
             </li>
