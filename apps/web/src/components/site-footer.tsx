@@ -34,6 +34,11 @@ export function SiteFooter() {
             </p>
             <ul className="space-y-2">
               <li>
+                <Link href="/articles" className="text-ink-2 no-underline hover:text-accent">
+                  Articles
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>
