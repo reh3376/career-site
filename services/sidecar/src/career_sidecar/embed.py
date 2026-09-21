@@ -21,7 +21,6 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Protocol
 
-
 PURPOSE_DOCUMENT = "document"
 PURPOSE_QUERY = "query"
 
@@ -55,8 +54,7 @@ class Embedder(Protocol):
     name: str
     dimensions: int
 
-    def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]:
-        ...
+    def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]: ...
 
 
 def task_prefix(model: str, purpose: str) -> str:
@@ -173,11 +171,7 @@ def _l2_normalise(v: list[float]) -> list[float]:
 def build_embedder(provider: str, ollama_url: str, model: str, dimensions: int) -> Embedder:
     """Construct the configured embedder or raise. Called once at boot."""
     if provider == "ollama":
-        return OllamaEmbedder(
-            base_url=ollama_url, model=model, dimensions=dimensions
-        )
+        return OllamaEmbedder(base_url=ollama_url, model=model, dimensions=dimensions)
     if provider == "stub":
         return StubEmbedder(dimensions=dimensions)
-    raise RuntimeError(
-        f"unknown SIDECAR_EMBED_PROVIDER: {provider!r} (want 'ollama' or 'stub')"
-    )
+    raise RuntimeError(f"unknown SIDECAR_EMBED_PROVIDER: {provider!r} (want 'ollama' or 'stub')")

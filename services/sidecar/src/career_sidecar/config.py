@@ -29,9 +29,7 @@ class Config:
             shutdown_grace_seconds=int(os.environ.get("SIDECAR_SHUTDOWN_GRACE_SECONDS", "5")),
             embed_provider=os.environ.get("SIDECAR_EMBED_PROVIDER", "stub"),
             ollama_url=os.environ.get("OLLAMA_URL", "http://ollama:11434"),
-            ollama_embed_model=os.environ.get(
-                "OLLAMA_EMBED_MODEL", "nomic-embed-text"
-            ),
+            ollama_embed_model=os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text"),
             # Locked to 768 because the DB schema fixes the vector
             # dimension at that width (migration 00011). Change together
             # with a dual-index migration if a different model warrants it.

@@ -54,9 +54,7 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             context.set_details(f"embed failed: {e}")
             return sidecar_pb2.EmbedResponse()
         return sidecar_pb2.EmbedResponse(
-            embeddings=[
-                sidecar_pb2.Embedding(values=v) for v in vectors
-            ],
+            embeddings=[sidecar_pb2.Embedding(values=v) for v in vectors],
             model=self._embedder.name,
             dimensions=self._embedder.dimensions,
         )

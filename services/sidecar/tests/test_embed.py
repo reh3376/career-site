@@ -29,7 +29,9 @@ def test_stub_differs_for_different_text():
 def test_ollama_name_includes_model_and_recipe():
     e = OllamaEmbedder(base_url="http://ollama:11434", model="nomic-embed-text", dimensions=768)
     assert e.name == "ollama:nomic-embed-text#p1"
-    other = OllamaEmbedder(base_url="http://ollama:11434", model="mxbai-embed-large", dimensions=768)
+    other = OllamaEmbedder(
+        base_url="http://ollama:11434", model="mxbai-embed-large", dimensions=768
+    )
     assert other.name == "ollama:mxbai-embed-large#raw"
 
 
