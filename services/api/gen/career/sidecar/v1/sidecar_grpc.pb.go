@@ -27,13 +27,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SidecarService_Embed_FullMethodName    = "/career.sidecar.v1.SidecarService/Embed"
-	SidecarService_Rerank_FullMethodName   = "/career.sidecar.v1.SidecarService/Rerank"
-	SidecarService_Classify_FullMethodName = "/career.sidecar.v1.SidecarService/Classify"
-	SidecarService_RunJob_FullMethodName   = "/career.sidecar.v1.SidecarService/RunJob"
-	SidecarService_GetJob_FullMethodName   = "/career.sidecar.v1.SidecarService/GetJob"
-	SidecarService_Health_FullMethodName   = "/career.sidecar.v1.SidecarService/Health"
-	SidecarService_Generate_FullMethodName = "/career.sidecar.v1.SidecarService/Generate"
+	SidecarService_Embed_FullMethodName        = "/career.sidecar.v1.SidecarService/Embed"
+	SidecarService_Rerank_FullMethodName       = "/career.sidecar.v1.SidecarService/Rerank"
+	SidecarService_Classify_FullMethodName     = "/career.sidecar.v1.SidecarService/Classify"
+	SidecarService_RunJob_FullMethodName       = "/career.sidecar.v1.SidecarService/RunJob"
+	SidecarService_GetJob_FullMethodName       = "/career.sidecar.v1.SidecarService/GetJob"
+	SidecarService_Health_FullMethodName       = "/career.sidecar.v1.SidecarService/Health"
+	SidecarService_Generate_FullMethodName     = "/career.sidecar.v1.SidecarService/Generate"
+	SidecarService_RenderResume_FullMethodName = "/career.sidecar.v1.SidecarService/RenderResume"
 )
 
 // SidecarServiceClient is the client API for SidecarService service.
@@ -68,6 +69,10 @@ type SidecarServiceClient interface {
 	// provider gateway and never rewrites prompts. Deadline is set by the
 	// caller and can be minutes on CPU inference.
 	Generate(ctx context.Context, in *GenerateRequest, opts ...grpc.CallOption) (*GenerateResponse, error)
+	// Renders a verified résumé (the API's structured JSON) to a PDF with
+	// Typst and applies an owner password so the file opens freely but
+	// cannot be edited. Rendering never touches a model.
+	RenderResume(ctx context.Context, in *RenderResumeRequest, opts ...grpc.CallOption) (*RenderResumeResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -148,6 +153,16 @@ func (c *sidecarServiceClient) Generate(ctx context.Context, in *GenerateRequest
 	return out, nil
 }
 
+func (c *sidecarServiceClient) RenderResume(ctx context.Context, in *RenderResumeRequest, opts ...grpc.CallOption) (*RenderResumeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenderResumeResponse)
+	err := c.cc.Invoke(ctx, SidecarService_RenderResume_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
@@ -180,6 +195,10 @@ type SidecarServiceServer interface {
 	// provider gateway and never rewrites prompts. Deadline is set by the
 	// caller and can be minutes on CPU inference.
 	Generate(context.Context, *GenerateRequest) (*GenerateResponse, error)
+	// Renders a verified résumé (the API's structured JSON) to a PDF with
+	// Typst and applies an owner password so the file opens freely but
+	// cannot be edited. Rendering never touches a model.
+	RenderResume(context.Context, *RenderResumeRequest) (*RenderResumeResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -210,6 +229,9 @@ func (UnimplementedSidecarServiceServer) Health(context.Context, *HealthRequest)
 }
 func (UnimplementedSidecarServiceServer) Generate(context.Context, *GenerateRequest) (*GenerateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Generate not implemented")
+}
+func (UnimplementedSidecarServiceServer) RenderResume(context.Context, *RenderResumeRequest) (*RenderResumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenderResume not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
 func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
@@ -358,6 +380,24 @@ func _SidecarService_Generate_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SidecarService_RenderResume_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenderResumeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).RenderResume(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_RenderResume_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).RenderResume(ctx, req.(*RenderResumeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -392,6 +432,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Generate",
 			Handler:    _SidecarService_Generate_Handler,
+		},
+		{
+			MethodName: "RenderResume",
+			Handler:    _SidecarService_RenderResume_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

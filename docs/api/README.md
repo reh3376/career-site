@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 36 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
-| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 7 |
+| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
 
@@ -2849,6 +2849,7 @@ generated résumé when present. Backs /admin/jd/[id].
 | `llmModel` | `string` | string |  | Model that produced the résumé. |
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
+| `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
 
 <details><summary>Example request body</summary>
 
@@ -3028,6 +3029,7 @@ Embedding, reranking, classification, and batch jobs.
 | [`GetJob`](#sidecarservice-getjob) | `/career.sidecar.v1.SidecarService/GetJob (gRPC)` | — | — | `GetJobRequest` → `GetJobResponse` | Returns a job's status. |
 | [`Health`](#sidecarservice-health) | `/career.sidecar.v1.SidecarService/Health (gRPC)` | — | — | `HealthRequest` → `HealthResponse` | Reports readiness: models loaded, storage reachable, version. |
 | [`Generate`](#sidecarservice-generate) | `/career.sidecar.v1.SidecarService/Generate (gRPC)` | — | — | `GenerateRequest` → `GenerateResponse` | Runs one chat completion with the configured LLM provider (Ollama locally / on-host, a hosted API later, stub in CI). |
+| [`RenderResume`](#sidecarservice-renderresume) | `/career.sidecar.v1.SidecarService/RenderResume (gRPC)` | — | — | `RenderResumeRequest` → `RenderResumeResponse` | Renders a verified résumé (the API's structured JSON) to a PDF with Typst and applies an owner password so the file opens freely but cannot be edited. |
 
 ### SidecarService.Embed
 
@@ -3230,6 +3232,7 @@ _No fields; send `{}`._
 | `version` | `string` | string |  | Sidecar version. |
 | `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
 | `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
+| `rendererReady` | `bool` | boolean |  | PDF renderer available (Typst compiler importable). |
 
 <details><summary>Example request body</summary>
 
@@ -3284,6 +3287,42 @@ caller and can be minutes on CPU inference.
   "json": true,
   "traceId": "string",
   "jsonSchema": "string"
+}
+```
+
+</details>
+
+### SidecarService.RenderResume
+
+`/career.sidecar.v1.SidecarService/RenderResume` (gRPC)
+
+Renders a verified résumé (the API's structured JSON) to a PDF with
+Typst and applies an owner password so the file opens freely but
+cannot be edited. Rendering never touches a model.
+
+**Request** — [`RenderResumeRequest`](#renderresumerequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `resumeJson` | `string` | string | `string: min_len: 2 max_len: 200000` | The verified résumé JSON (headline, summary, competencies, experience, education). Source ids are ignored by the renderer. |
+| `ownerPassword` | `string` | string | `string: min_len: 1 max_len: 128` | Owner password that locks editing; the user password is always empty so the PDF opens without a prompt. Required. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `jd:42`). |
+
+**Response** — [`RenderResumeResponse`](#renderresumeresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `pdf` | `bytes` | string (base64) |  | The encrypted PDF. |
+| `pages` | `int32` | number |  | Page count. |
+| `engine` | `string` | string |  | Renderer identifier (e.g. `typst:0.15.0`). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "resumeJson": "string",
+  "ownerPassword": "string",
+  "traceId": "string"
 }
 ```
 
@@ -3444,6 +3483,26 @@ Completion result plus the accounting the API's usage ledger needs.
 | `latencyMs` | `int64` | string (decimal) |  | Wall-clock time of the provider call in milliseconds. |
 | `finishReason` | `string` | string |  | Provider finish reason (`stop`, `length`, ...), empty if unknown. |
 
+### RenderResumeRequest
+
+Résumé render request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `resumeJson` | `string` | string | `string: min_len: 2 max_len: 200000` | The verified résumé JSON (headline, summary, competencies, experience, education). Source ids are ignored by the renderer. |
+| `ownerPassword` | `string` | string | `string: min_len: 1 max_len: 128` | Owner password that locks editing; the user password is always empty so the PDF opens without a prompt. Required. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `jd:42`). |
+
+### RenderResumeResponse
+
+Résumé render result.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `pdf` | `bytes` | string (base64) |  | The encrypted PDF. |
+| `pages` | `int32` | number |  | Page count. |
+| `engine` | `string` | string |  | Renderer identifier (e.g. `typst:0.15.0`). |
+
 ### HealthRequest
 
 Empty.
@@ -3463,6 +3522,7 @@ Readiness.
 | `version` | `string` | string |  | Sidecar version. |
 | `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
 | `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
+| `rendererReady` | `bool` | boolean |  | PDF renderer available (Typst compiler importable). |
 
 ### TrackWeight
 
@@ -4899,6 +4959,7 @@ Get-jd-submission response.
 | `llmModel` | `string` | string |  | Model that produced the résumé. |
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
+| `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
 
 ### ReindexCorpusRequest
 

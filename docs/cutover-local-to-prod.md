@@ -15,7 +15,7 @@ truth for the LLM rollout.
 | LLM gateway | Ollama on the host, `qwen3:14b` (`SIDECAR_LLM_PROVIDER=ollama`) | **`stub`** (schema-valid placeholder JSON; api keeps the retrieval score as the gate) |
 | Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus` |
 | JD scoring | requirements → per-requirement retrieval → verdicts → weighted score in code | retrieval pre-score only (assessor disabled on stub) |
-| Résumé | JSON with source ids (PR 3b), markdown render; PDF via sidecar (PR 4) | not generated; above-threshold rows wait at `generating` |
+| Résumé | JSON with source ids, code-side verification, markdown render, Typst PDF locked with `RESUME_PDF_OWNER_PASSWORD` | not generated; above-threshold rows wait at `generating` |
 | Adapter | LoRA experiments on the Mac (`reh3376/mdemg-llm-*` in local Ollama) | none |
 
 The api decides at boot whether to run the structured assessor: it calls the
@@ -108,10 +108,16 @@ are proven locally. Until then production stays on `stub` for the LLM and
 6. Watch `llm_usage` latency for a day; if p95 exceeds the pipeline timeout,
    drop to the smaller model or raise the tier.
 
-### Phase D: résumé PDFs (PR 4)
+### Phase D: résumé PDFs (shipped with PR 3b/4)
 
-Sidecar gains Typst and a `RenderResume` RPC; the api stores the PDF in
-MinIO and fills `generated_resume_url`. No model change involved.
+The sidecar renders the verified JSON with Typst (the `typst` wheel bundles
+the compiler; no binary download) and `pypdf` applies AES-256 with an empty
+user password and the owner password from `RESUME_PDF_OWNER_PASSWORD`, so the
+file opens without a prompt but cannot be edited. The api stores the PDF on
+the submission row and serves it at `/api/jd/resume/<id>.pdf?t=<result_token>`;
+`generated_resume_url` carries that path. **Prod step:** set
+`RESUME_PDF_OWNER_PASSWORD` in `.env.prod` before the LLM flip; with it empty
+the api skips the PDF and logs why, and the markdown remains the deliverable.
 
 ## 5. Programmatic changes required, by step
 
@@ -124,10 +130,11 @@ MinIO and fills `generated_resume_url`. No model change involved.
 | B/C | requirements → retrieval → judgment assessor, `assessment` jsonb, `retrieval_score` | PR 3a |
 | B/C | api enables the assessor from sidecar `Health.llm_provider` | PR 3a |
 | B/C | result token on submissions; public poll releases the résumé only with it | PR 3a |
-| B | grounded résumé JSON with source ids, verification, markdown render | PR 3b |
+| B | grounded résumé JSON with source ids, verification, markdown render | PR 3b (with PR 4) |
 | C | admin "re-score" action + one automatic retry on transient LLM errors | backlog |
 | C | `OLLAMA_MEM_LIMIT` / `KEEP_ALIVE` raise, model publish path | runbook only |
-| D | Typst render in sidecar, MinIO upload, `generated_resume_url` | PR 4 |
+| C | `RESUME_PDF_OWNER_PASSWORD` set in `.env.prod` | runbook only |
+| D | Typst + pypdf render in sidecar, PDF on the row, token-gated download route | PR 4 (with PR 3b) |
 | later | Ask Roger chat on the same gateway (streaming `Generate`, `chat_usage` kind) | PR 5 |
 | later | adapter Modelfile + publish step in `deploy/` | when the local evaluation passes |
 

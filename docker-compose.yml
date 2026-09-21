@@ -73,6 +73,9 @@ services:
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-900}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-0}
       LLM_ALLOW_STUB: ${LLM_ALLOW_STUB:-0}
+      # Owner password that locks editing on generated résumé PDFs. Set
+      # in the repo-root .env (gitignored); empty skips PDF rendering.
+      RESUME_PDF_OWNER_PASSWORD: ${RESUME_PDF_OWNER_PASSWORD:-}
       # Corpus reindex reads markdown from here. Bind-mounted below
       # so `/admin/corpus` → "Reindex articles" walks the same files
       # that ship with the web bundle.

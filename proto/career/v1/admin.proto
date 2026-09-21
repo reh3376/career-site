@@ -1474,6 +1474,10 @@ message GetJdSubmissionResponse {
   string prompt_id = 6;
   // Prompt version that produced the résumé.
   int32 prompt_version = 7;
+  // Download path for the locked PDF, including the submission's
+  // result token, when a PDF was rendered; empty otherwise. Admin-only
+  // by virtue of this RPC's auth level.
+  string download_url = 8;
 }
 
 // Reindex-corpus request. `scope` picks the mount: `public` walks the

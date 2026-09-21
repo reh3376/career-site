@@ -317,6 +317,74 @@ func (r *Repo) SearchCorpus(
 	return out, rows.Err()
 }
 
+// ListChunksByKind returns every chunk of documents with the given
+// source_kind in document order, as hits with similarity 0. Used to
+// hand the résumé writer the master résumé regardless of what the JD
+// retrieval surfaced, so roles and dates always have a source.
+func (r *Repo) ListChunksByKind(ctx context.Context, sourceKind string, limit int) ([]CorpusHit, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 40
+	}
+	const q = `
+    SELECT c.id, c.document_id, c.chunk_index, c.text, COALESCE(c.token_count, 0),
+           d.title, d.source_kind, d.source_path, d.visibility
+    FROM corpus_chunks c
+    JOIN corpus_documents d ON d.id = c.document_id
+    WHERE d.source_kind = $1
+    ORDER BY d.id, c.chunk_index
+    LIMIT $2
+  `
+	rows, err := r.pool.Query(ctx, q, sourceKind, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list chunks by kind: %w", err)
+	}
+	defer rows.Close()
+	var out []CorpusHit
+	for rows.Next() {
+		var h CorpusHit
+		if err := rows.Scan(
+			&h.Chunk.ID, &h.Chunk.DocumentID, &h.Chunk.ChunkIndex, &h.Chunk.Text,
+			&h.Chunk.TokenCount, &h.Title, &h.SourceKind, &h.SourcePath, &h.Visibility,
+		); err != nil {
+			return nil, fmt.Errorf("scan chunk by kind: %w", err)
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
+}
+
+// GetCorpusChunks returns the chunks with the given ids (any order),
+// joined to their document for title / kind / visibility.
+func (r *Repo) GetCorpusChunks(ctx context.Context, ids []int64) ([]CorpusHit, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	const q = `
+    SELECT c.id, c.document_id, c.chunk_index, c.text, COALESCE(c.token_count, 0),
+           d.title, d.source_kind, d.source_path, d.visibility
+    FROM corpus_chunks c
+    JOIN corpus_documents d ON d.id = c.document_id
+    WHERE c.id = ANY($1)
+  `
+	rows, err := r.pool.Query(ctx, q, ids)
+	if err != nil {
+		return nil, fmt.Errorf("get corpus chunks: %w", err)
+	}
+	defer rows.Close()
+	var out []CorpusHit
+	for rows.Next() {
+		var h CorpusHit
+		if err := rows.Scan(
+			&h.Chunk.ID, &h.Chunk.DocumentID, &h.Chunk.ChunkIndex, &h.Chunk.Text,
+			&h.Chunk.TokenCount, &h.Title, &h.SourceKind, &h.SourcePath, &h.Visibility,
+		); err != nil {
+			return nil, fmt.Errorf("scan corpus chunk: %w", err)
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
+}
+
 // HashCorpusContent returns SHA-256 of the source text — used by
 // ingest jobs to decide whether a document needs re-embedding.
 func HashCorpusContent(text string) []byte {

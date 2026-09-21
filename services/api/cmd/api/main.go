@@ -189,18 +189,23 @@ func main() {
 		// pre-score stays the gate unless LLM_ALLOW_STUB is set (CI and
 		// end-to-end exercises of the pipeline).
 		var assessor *jd.Assessor
+		var writer *jd.ResumeWriter
 		provider := ""
 		if h, err := sc.Health(ctx); err == nil {
 			provider = h.LlmProvider
 		}
 		if provider != "" && (cfg.LLMAllowStub || !strings.HasPrefix(provider, "stub")) {
-			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc},
-				llm.SidecarLLM{Client: sc}, cfg.LLMMonthlyCallCap)
-			log.Info("jd assessor enabled", slog.String("llm_provider", provider))
+			gateway := llm.SidecarLLM{Client: sc}
+			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap)
+			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,
+				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword)
+			log.Info("jd assessor + résumé writer enabled",
+				slog.String("llm_provider", provider),
+				slog.Bool("pdf", cfg.ResumePDFOwnerPassword != ""))
 		} else {
 			log.Info("jd assessor disabled; retrieval score is the gate", slog.String("llm_provider", provider))
 		}
-		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor)
+		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer)
 	}
 	jdHandler := handlers.NewJd(log, userRepo, jdScorer, cfg.JDPipelineTimeout)
 

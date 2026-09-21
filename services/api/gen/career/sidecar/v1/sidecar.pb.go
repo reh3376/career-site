@@ -1258,6 +1258,136 @@ func (x *GenerateResponse) GetFinishReason() string {
 	return ""
 }
 
+// Résumé render request.
+type RenderResumeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The verified résumé JSON (headline, summary, competencies,
+	// experience, education). Source ids are ignored by the renderer.
+	ResumeJson string `protobuf:"bytes,1,opt,name=resume_json,json=resumeJson,proto3" json:"resume_json,omitempty"`
+	// Owner password that locks editing; the user password is always
+	// empty so the PDF opens without a prompt. Required.
+	OwnerPassword string `protobuf:"bytes,2,opt,name=owner_password,json=ownerPassword,proto3" json:"owner_password,omitempty"`
+	// Caller trace id for log correlation (e.g. `jd:42`).
+	TraceId       string `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderResumeRequest) Reset() {
+	*x = RenderResumeRequest{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderResumeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderResumeRequest) ProtoMessage() {}
+
+func (x *RenderResumeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderResumeRequest.ProtoReflect.Descriptor instead.
+func (*RenderResumeRequest) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RenderResumeRequest) GetResumeJson() string {
+	if x != nil {
+		return x.ResumeJson
+	}
+	return ""
+}
+
+func (x *RenderResumeRequest) GetOwnerPassword() string {
+	if x != nil {
+		return x.OwnerPassword
+	}
+	return ""
+}
+
+func (x *RenderResumeRequest) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+// Résumé render result.
+type RenderResumeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The encrypted PDF.
+	Pdf []byte `protobuf:"bytes,1,opt,name=pdf,proto3" json:"pdf,omitempty"`
+	// Page count.
+	Pages int32 `protobuf:"varint,2,opt,name=pages,proto3" json:"pages,omitempty"`
+	// Renderer identifier (e.g. `typst:0.15.0`).
+	Engine        string `protobuf:"bytes,3,opt,name=engine,proto3" json:"engine,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderResumeResponse) Reset() {
+	*x = RenderResumeResponse{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderResumeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderResumeResponse) ProtoMessage() {}
+
+func (x *RenderResumeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderResumeResponse.ProtoReflect.Descriptor instead.
+func (*RenderResumeResponse) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RenderResumeResponse) GetPdf() []byte {
+	if x != nil {
+		return x.Pdf
+	}
+	return nil
+}
+
+func (x *RenderResumeResponse) GetPages() int32 {
+	if x != nil {
+		return x.Pages
+	}
+	return 0
+}
+
+func (x *RenderResumeResponse) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
 // Empty.
 type HealthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1267,7 +1397,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +1409,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +1422,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{15}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{17}
 }
 
 // Readiness.
@@ -1312,14 +1442,16 @@ type HealthResponse struct {
 	LlmReady bool `protobuf:"varint,6,opt,name=llm_ready,json=llmReady,proto3" json:"llm_ready,omitempty"`
 	// LLM provider name (`stub`, `ollama:<model>`) so the API can decide
 	// whether structured pipelines are meaningful.
-	LlmProvider   string `protobuf:"bytes,7,opt,name=llm_provider,json=llmProvider,proto3" json:"llm_provider,omitempty"`
+	LlmProvider string `protobuf:"bytes,7,opt,name=llm_provider,json=llmProvider,proto3" json:"llm_provider,omitempty"`
+	// PDF renderer available (Typst compiler importable).
+	RendererReady bool `protobuf:"varint,8,opt,name=renderer_ready,json=rendererReady,proto3" json:"renderer_ready,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1331,7 +1463,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1344,7 +1476,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{16}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HealthResponse) GetReady() bool {
@@ -1394,6 +1526,13 @@ func (x *HealthResponse) GetLlmProvider() string {
 		return x.LlmProvider
 	}
 	return ""
+}
+
+func (x *HealthResponse) GetRendererReady() bool {
+	if x != nil {
+		return x.RendererReady
+	}
+	return false
 }
 
 var File_career_sidecar_v1_sidecar_proto protoreflect.FileDescriptor
@@ -1486,8 +1625,18 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x11completion_tokens\x18\x04 \x01(\x05R\x10completionTokens\x12\x1d\n" +
 	"\n" +
 	"latency_ms\x18\x05 \x01(\x03R\tlatencyMs\x12#\n" +
-	"\rfinish_reason\x18\x06 \x01(\tR\ffinishReason\"\x0f\n" +
-	"\rHealthRequest\"\xf3\x01\n" +
+	"\rfinish_reason\x18\x06 \x01(\tR\ffinishReason\"\x9a\x01\n" +
+	"\x13RenderResumeRequest\x12,\n" +
+	"\vresume_json\x18\x01 \x01(\tB\v\xbaH\br\x06\x10\x02\x18\xc0\x9a\fR\n" +
+	"resumeJson\x121\n" +
+	"\x0eowner_password\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\rownerPassword\x12\"\n" +
+	"\btrace_id\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18@R\atraceId\"V\n" +
+	"\x14RenderResumeResponse\x12\x10\n" +
+	"\x03pdf\x18\x01 \x01(\fR\x03pdf\x12\x14\n" +
+	"\x05pages\x18\x02 \x01(\x05R\x05pages\x12\x16\n" +
+	"\x06engine\x18\x03 \x01(\tR\x06engine\"\x0f\n" +
+	"\rHealthRequest\"\x9a\x02\n" +
 	"\x0eHealthResponse\x12\x14\n" +
 	"\x05ready\x18\x01 \x01(\bR\x05ready\x12%\n" +
 	"\x0eembedder_ready\x18\x02 \x01(\bR\rembedderReady\x12%\n" +
@@ -1495,7 +1644,8 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\rstorage_ready\x18\x04 \x01(\bR\fstorageReady\x12\x18\n" +
 	"\aversion\x18\x05 \x01(\tR\aversion\x12\x1b\n" +
 	"\tllm_ready\x18\x06 \x01(\bR\bllmReady\x12!\n" +
-	"\fllm_provider\x18\a \x01(\tR\vllmProvider*b\n" +
+	"\fllm_provider\x18\a \x01(\tR\vllmProvider\x12%\n" +
+	"\x0erenderer_ready\x18\b \x01(\bR\rrendererReady*b\n" +
 	"\fEmbedPurpose\x12\x1d\n" +
 	"\x19EMBED_PURPOSE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13EMBED_PURPOSE_QUERY\x10\x01\x12\x1a\n" +
@@ -1521,7 +1671,7 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x11JOB_STATUS_QUEUED\x10\x01\x12\x16\n" +
 	"\x12JOB_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14JOB_STATUS_SUCCEEDED\x10\x03\x12\x15\n" +
-	"\x11JOB_STATUS_FAILED\x10\x042\xc2\x04\n" +
+	"\x11JOB_STATUS_FAILED\x10\x042\xa3\x05\n" +
 	"\x0eSidecarService\x12J\n" +
 	"\x05Embed\x12\x1f.career.sidecar.v1.EmbedRequest\x1a .career.sidecar.v1.EmbedResponse\x12M\n" +
 	"\x06Rerank\x12 .career.sidecar.v1.RerankRequest\x1a!.career.sidecar.v1.RerankResponse\x12S\n" +
@@ -1529,7 +1679,8 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x06RunJob\x12 .career.sidecar.v1.RunJobRequest\x1a!.career.sidecar.v1.RunJobResponse\x12M\n" +
 	"\x06GetJob\x12 .career.sidecar.v1.GetJobRequest\x1a!.career.sidecar.v1.GetJobResponse\x12M\n" +
 	"\x06Health\x12 .career.sidecar.v1.HealthRequest\x1a!.career.sidecar.v1.HealthResponse\x12S\n" +
-	"\bGenerate\x12\".career.sidecar.v1.GenerateRequest\x1a#.career.sidecar.v1.GenerateResponseB\xd8\x01\n" +
+	"\bGenerate\x12\".career.sidecar.v1.GenerateRequest\x1a#.career.sidecar.v1.GenerateResponse\x12_\n" +
+	"\fRenderResume\x12&.career.sidecar.v1.RenderResumeRequest\x1a'.career.sidecar.v1.RenderResumeResponseB\xd8\x01\n" +
 	"\x15com.career.sidecar.v1B\fSidecarProtoP\x01ZKgithub.com/reh3376/career-site/services/api/gen/career/sidecar/v1;sidecarv1\xa2\x02\x03CSX\xaa\x02\x11Career.Sidecar.V1\xca\x02\x11Career\\Sidecar\\V1\xe2\x02\x1dCareer\\Sidecar\\V1\\GPBMetadata\xea\x02\x13Career::Sidecar::V1b\x06proto3"
 
 var (
@@ -1545,7 +1696,7 @@ func file_career_sidecar_v1_sidecar_proto_rawDescGZIP() []byte {
 }
 
 var file_career_sidecar_v1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_career_sidecar_v1_sidecar_proto_goTypes = []any{
 	(EmbedPurpose)(0),             // 0: career.sidecar.v1.EmbedPurpose
 	(Scope)(0),                    // 1: career.sidecar.v1.Scope
@@ -1566,10 +1717,12 @@ var file_career_sidecar_v1_sidecar_proto_goTypes = []any{
 	(*GetJobResponse)(nil),        // 16: career.sidecar.v1.GetJobResponse
 	(*GenerateRequest)(nil),       // 17: career.sidecar.v1.GenerateRequest
 	(*GenerateResponse)(nil),      // 18: career.sidecar.v1.GenerateResponse
-	(*HealthRequest)(nil),         // 19: career.sidecar.v1.HealthRequest
-	(*HealthResponse)(nil),        // 20: career.sidecar.v1.HealthResponse
-	nil,                           // 21: career.sidecar.v1.RunJobRequest.ArgsEntry
-	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
+	(*RenderResumeRequest)(nil),   // 19: career.sidecar.v1.RenderResumeRequest
+	(*RenderResumeResponse)(nil),  // 20: career.sidecar.v1.RenderResumeResponse
+	(*HealthRequest)(nil),         // 21: career.sidecar.v1.HealthRequest
+	(*HealthResponse)(nil),        // 22: career.sidecar.v1.HealthResponse
+	nil,                           // 23: career.sidecar.v1.RunJobRequest.ArgsEntry
+	(*timestamppb.Timestamp)(nil), // 24: google.protobuf.Timestamp
 }
 var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	0,  // 0: career.sidecar.v1.EmbedRequest.purpose:type_name -> career.sidecar.v1.EmbedPurpose
@@ -1578,27 +1731,29 @@ var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	9,  // 3: career.sidecar.v1.RerankResponse.scores:type_name -> career.sidecar.v1.RerankScore
 	1,  // 4: career.sidecar.v1.ClassifyResponse.scope:type_name -> career.sidecar.v1.Scope
 	2,  // 5: career.sidecar.v1.RunJobRequest.kind:type_name -> career.sidecar.v1.JobKind
-	21, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
+	23, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
 	2,  // 7: career.sidecar.v1.GetJobResponse.kind:type_name -> career.sidecar.v1.JobKind
 	3,  // 8: career.sidecar.v1.GetJobResponse.status:type_name -> career.sidecar.v1.JobStatus
-	22, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	22, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	24, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	24, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
 	4,  // 11: career.sidecar.v1.SidecarService.Embed:input_type -> career.sidecar.v1.EmbedRequest
 	8,  // 12: career.sidecar.v1.SidecarService.Rerank:input_type -> career.sidecar.v1.RerankRequest
 	11, // 13: career.sidecar.v1.SidecarService.Classify:input_type -> career.sidecar.v1.ClassifyRequest
 	13, // 14: career.sidecar.v1.SidecarService.RunJob:input_type -> career.sidecar.v1.RunJobRequest
 	15, // 15: career.sidecar.v1.SidecarService.GetJob:input_type -> career.sidecar.v1.GetJobRequest
-	19, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
+	21, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
 	17, // 17: career.sidecar.v1.SidecarService.Generate:input_type -> career.sidecar.v1.GenerateRequest
-	6,  // 18: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
-	10, // 19: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
-	12, // 20: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
-	14, // 21: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
-	16, // 22: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
-	20, // 23: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
-	18, // 24: career.sidecar.v1.SidecarService.Generate:output_type -> career.sidecar.v1.GenerateResponse
-	18, // [18:25] is the sub-list for method output_type
-	11, // [11:18] is the sub-list for method input_type
+	19, // 18: career.sidecar.v1.SidecarService.RenderResume:input_type -> career.sidecar.v1.RenderResumeRequest
+	6,  // 19: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
+	10, // 20: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
+	12, // 21: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
+	14, // 22: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
+	16, // 23: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
+	22, // 24: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
+	18, // 25: career.sidecar.v1.SidecarService.Generate:output_type -> career.sidecar.v1.GenerateResponse
+	20, // 26: career.sidecar.v1.SidecarService.RenderResume:output_type -> career.sidecar.v1.RenderResumeResponse
+	19, // [19:27] is the sub-list for method output_type
+	11, // [11:19] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -1615,7 +1770,7 @@ func file_career_sidecar_v1_sidecar_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_sidecar_v1_sidecar_proto_rawDesc), len(file_career_sidecar_v1_sidecar_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

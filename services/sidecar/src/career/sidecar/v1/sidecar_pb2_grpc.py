@@ -50,6 +50,11 @@ class SidecarServiceStub:
                 request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.SerializeToString,
                 response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.FromString,
                 _registered_method=True)
+        self.RenderResume = channel.unary_unary(
+                '/career.sidecar.v1.SidecarService/RenderResume',
+                request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.SerializeToString,
+                response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.FromString,
+                _registered_method=True)
 
 
 class SidecarServiceServicer:
@@ -117,6 +122,15 @@ class SidecarServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RenderResume(self, request, context):
+        """Renders a verified résumé (the API's structured JSON) to a PDF with
+        Typst and applies an owner password so the file opens freely but
+        cannot be edited. Rendering never touches a model.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SidecarServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -154,6 +168,11 @@ def add_SidecarServiceServicer_to_server(servicer, server):
                     servicer.Generate,
                     request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.FromString,
                     response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.SerializeToString,
+            ),
+            'RenderResume': grpc.unary_unary_rpc_method_handler(
+                    servicer.RenderResume,
+                    request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.FromString,
+                    response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -346,6 +365,33 @@ class SidecarService:
             '/career.sidecar.v1.SidecarService/Generate',
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.SerializeToString,
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RenderResume(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/career.sidecar.v1.SidecarService/RenderResume',
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.SerializeToString,
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.FromString,
             options,
             channel_credentials,
             insecure,

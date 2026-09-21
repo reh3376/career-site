@@ -1,0 +1,330 @@
+package jd
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/reh3376/career-site/services/api/internal/llm"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
+	"github.com/reh3376/career-site/services/api/internal/users"
+)
+
+// ResumeTopK is how many JD-retrieved chunks join the résumé evidence
+// on top of the assessment's cited chunks and the master résumé.
+const ResumeTopK = 12
+
+// Sourced is one résumé line with the chunk ids it was drawn from.
+type Sourced struct {
+	Text    string  `json:"text"`
+	Sources []int64 `json:"sources"`
+}
+
+// Experience is one role.
+type Experience struct {
+	Role         string    `json:"role"`
+	Organisation string    `json:"organisation"`
+	Dates        string    `json:"dates"`
+	Bullets      []Sourced `json:"bullets"`
+}
+
+// Resume is the verified structured résumé. Every Sourced item has at
+// least one source that was among the evidence offered to the model.
+type Resume struct {
+	Headline     string       `json:"headline"`
+	Summary      string       `json:"summary"`
+	Competencies []Sourced    `json:"competencies"`
+	Experience   []Experience `json:"experience"`
+	Education    []Sourced    `json:"education"`
+	// Verification stats, kept for the admin view.
+	Dropped    int    `json:"dropped"`
+	Model      string `json:"model"`
+	PromptID   string `json:"prompt_id"`
+	PromptVers int    `json:"prompt_version"`
+}
+
+// Renderer produces the locked PDF from verified résumé JSON. The
+// sidecar implements it with Typst + pypdf.
+type Renderer interface {
+	RenderResume(ctx context.Context, resumeJSON, ownerPassword, traceID string) (pdf []byte, pages int32, err error)
+}
+
+// ResumeWriter turns an above-threshold assessment into a grounded
+// résumé via the LLM gateway, verifies the sources in code, and
+// renders markdown from the verified structure.
+type ResumeWriter struct {
+	log        *slog.Logger
+	users      *users.Repo
+	llm        llm.Client
+	monthlyCap int64
+	// PDF rendering is optional: nil renderer or empty password leaves
+	// the markdown as the deliverable and logs why.
+	renderer      Renderer
+	ownerPassword string
+}
+
+// NewResumeWriter wires the deps. renderer may be nil.
+func NewResumeWriter(log *slog.Logger, repo *users.Repo, client llm.Client, monthlyCap int64, renderer Renderer, ownerPassword string) *ResumeWriter {
+	return &ResumeWriter{log: log, users: repo, llm: client, monthlyCap: monthlyCap, renderer: renderer, ownerPassword: ownerPassword}
+}
+
+// RenderPDF renders the verified résumé to a locked PDF. Returns nil,
+// 0, nil when rendering is not configured so callers can treat the
+// PDF as optional.
+func (w *ResumeWriter) RenderPDF(ctx context.Context, submissionID int64, resumeJSON []byte) ([]byte, int32, error) {
+	if w.renderer == nil {
+		return nil, 0, nil
+	}
+	if w.ownerPassword == "" {
+		w.log.Warn("resume pdf skipped: RESUME_PDF_OWNER_PASSWORD is not set", slog.Int64("jd_id", submissionID))
+		return nil, 0, nil
+	}
+	return w.renderer.RenderResume(ctx, string(resumeJSON), w.ownerPassword, fmt.Sprintf("jd:%d", submissionID))
+}
+
+// Write assembles evidence, calls the model once, verifies, and
+// returns the résumé plus its markdown rendering.
+func (w *ResumeWriter) Write(
+	ctx context.Context, submissionID int64, jdText string, hints prompts.Hints,
+	assessment *Assessment, jdHits []users.CorpusHit,
+) (*Resume, string, error) {
+	if err := w.checkCap(ctx, 1); err != nil {
+		return nil, "", err
+	}
+
+	// Evidence: master résumé first (roles and dates), then the chunks
+	// the judge cited, then the JD retrieval. De-duplicated by id.
+	var evidence []users.CorpusHit
+	seen := map[int64]bool{}
+	add := func(hits []users.CorpusHit) {
+		for _, h := range hits {
+			if !seen[h.Chunk.ID] {
+				seen[h.Chunk.ID] = true
+				evidence = append(evidence, h)
+			}
+		}
+	}
+	if resume, err := w.users.ListChunksByKind(ctx, "resume", 40); err == nil {
+		add(resume)
+	} else {
+		w.log.Warn("resume chunks unavailable", slog.String("error", err.Error()))
+	}
+	var verdicts []prompts.Verdict
+	if assessment != nil {
+		var cited []int64
+		for _, j := range assessment.Judgments {
+			cited = append(cited, j.EvidenceIDs...)
+		}
+		if hits, err := w.users.GetCorpusChunks(ctx, cited); err == nil {
+			add(hits)
+		}
+		reqText := map[string]string{}
+		for _, r := range assessment.Requirements {
+			reqText[r.ID] = r.Text
+		}
+		for _, j := range assessment.Judgments {
+			verdicts = append(verdicts, prompts.Verdict{RequirementID: j.RequirementID, Text: reqText[j.RequirementID], Verdict: j.Verdict})
+		}
+	}
+	if len(jdHits) > ResumeTopK {
+		jdHits = jdHits[:ResumeTopK]
+	}
+	add(jdHits)
+	if len(evidence) == 0 {
+		return nil, "", errors.New("resume: no evidence available")
+	}
+
+	p := prompts.ResumeTailor
+	started := time.Now()
+	resp, err := w.llm.Generate(ctx, llm.Request{
+		System:      p.System,
+		User:        prompts.RenderResumeUser(jdText, hints, verdicts, evidence),
+		MaxTokens:   2200,
+		Temperature: 0.2,
+		JSONSchema:  p.Schema,
+		TraceID:     fmt.Sprintf("jd:%d:%s", submissionID, p.ID),
+	})
+	usage := users.LLMUsage{
+		Kind: "jd_resume", RefID: submissionID,
+		PromptID: p.ID, PromptVersion: p.Version,
+		LatencyMs: time.Since(started).Milliseconds(), Model: "unknown",
+	}
+	if err == nil {
+		usage.OK = true
+		usage.Model = resp.Model
+		usage.PromptTokens = resp.PromptTokens
+		usage.CompletionTokens = resp.CompletionTokens
+		if resp.LatencyMs > 0 {
+			usage.LatencyMs = resp.LatencyMs
+		}
+	} else {
+		usage.Error = truncErr(err.Error())
+	}
+	if rErr := w.users.RecordLLMUsage(context.WithoutCancel(ctx), usage); rErr != nil {
+		w.log.Warn("llm usage record failed", slog.Int64("jd_id", submissionID), slog.String("error", rErr.Error()))
+	}
+	if err != nil {
+		return nil, "", err
+	}
+
+	var raw struct {
+		Headline     string `json:"headline"`
+		Summary      string `json:"summary"`
+		Competencies []struct {
+			Text    string   `json:"text"`
+			Sources []string `json:"sources"`
+		} `json:"competencies"`
+		Experience []struct {
+			Role         string `json:"role"`
+			Organisation string `json:"organisation"`
+			Dates        string `json:"dates"`
+			Bullets      []struct {
+				Text    string   `json:"text"`
+				Sources []string `json:"sources"`
+			} `json:"bullets"`
+		} `json:"experience"`
+		Education []struct {
+			Text    string   `json:"text"`
+			Sources []string `json:"sources"`
+		} `json:"education"`
+	}
+	if err := json.Unmarshal([]byte(resp.Text), &raw); err != nil {
+		return nil, "", fmt.Errorf("decode resume: %w", err)
+	}
+
+	out := &Resume{
+		Headline:   tidy(raw.Headline),
+		Summary:    tidy(raw.Summary),
+		Model:      resp.Model,
+		PromptID:   p.ID,
+		PromptVers: p.Version,
+	}
+	verify := func(text string, sources []string) (Sourced, bool) {
+		var ids []int64
+		for _, s := range sources {
+			id, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
+			if err == nil && seen[id] {
+				ids = append(ids, id)
+			}
+		}
+		text = tidy(text)
+		if text == "" || len(ids) == 0 {
+			out.Dropped++
+			return Sourced{}, false
+		}
+		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+		return Sourced{Text: text, Sources: ids}, true
+	}
+	for _, c := range raw.Competencies {
+		if s, ok := verify(c.Text, c.Sources); ok {
+			out.Competencies = append(out.Competencies, s)
+		}
+	}
+	for _, e := range raw.Experience {
+		exp := Experience{Role: tidy(e.Role), Organisation: tidy(e.Organisation), Dates: tidy(e.Dates)}
+		for _, b := range e.Bullets {
+			if s, ok := verify(b.Text, b.Sources); ok {
+				exp.Bullets = append(exp.Bullets, s)
+			}
+		}
+		if exp.Role != "" && len(exp.Bullets) > 0 {
+			out.Experience = append(out.Experience, exp)
+		} else {
+			out.Dropped++
+		}
+	}
+	for _, e := range raw.Education {
+		if s, ok := verify(e.Text, e.Sources); ok {
+			out.Education = append(out.Education, s)
+		}
+	}
+	if out.Headline == "" || len(out.Experience) == 0 {
+		return nil, "", errors.New("resume: verification left no usable experience")
+	}
+	return out, RenderMarkdown(out), nil
+}
+
+// DownloadPath is the api route that streams a submission's PDF. The
+// caller appends the result token as `?t=`; the path alone is what is
+// stored, so a token never lands in the database twice.
+func (w *ResumeWriter) DownloadPath(submissionID int64) string {
+	return fmt.Sprintf("/api/jd/resume/%d.pdf", submissionID)
+}
+
+// RenderMarkdown is the deterministic markdown view of a verified
+// résumé. Sources are not printed; they stay in the JSON for audit and
+// for the PDF renderer.
+func RenderMarkdown(r *Resume) string {
+	var b strings.Builder
+	b.WriteString("# Roger E. Henley II\n\n")
+	if r.Headline != "" {
+		b.WriteString(r.Headline + "\n\n")
+	}
+	if r.Summary != "" {
+		b.WriteString("## Summary\n\n" + r.Summary + "\n\n")
+	}
+	if len(r.Competencies) > 0 {
+		b.WriteString("## Core competencies\n\n")
+		for _, c := range r.Competencies {
+			b.WriteString("- " + c.Text + "\n")
+		}
+		b.WriteString("\n")
+	}
+	if len(r.Experience) > 0 {
+		b.WriteString("## Selected experience\n\n")
+		for _, e := range r.Experience {
+			line := "### " + e.Role
+			if e.Organisation != "" {
+				line += ", " + e.Organisation
+			}
+			if e.Dates != "" {
+				line += " (" + e.Dates + ")"
+			}
+			b.WriteString(line + "\n\n")
+			for _, bl := range e.Bullets {
+				b.WriteString("- " + bl.Text + "\n")
+			}
+			b.WriteString("\n")
+		}
+	}
+	if len(r.Education) > 0 {
+		b.WriteString("## Education and credentials\n\n")
+		for _, e := range r.Education {
+			b.WriteString("- " + e.Text + "\n")
+		}
+		b.WriteString("\n")
+	}
+	return strings.TrimSpace(b.String()) + "\n"
+}
+
+// tidy trims whitespace and enforces the site's no-em-dash rule on
+// generated text.
+func tidy(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.ReplaceAll(s, " — ", ", ")
+	s = strings.ReplaceAll(s, "—", ", ")
+	s = strings.ReplaceAll(s, "&mdash;", ", ")
+	return s
+}
+
+func (w *ResumeWriter) checkCap(ctx context.Context, calls int64) error {
+	if w.monthlyCap <= 0 {
+		return nil
+	}
+	now := time.Now().UTC()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	n, err := w.users.CountLLMCallsSince(ctx, monthStart)
+	if err != nil {
+		return err
+	}
+	if n+calls > w.monthlyCap {
+		return ErrMonthlyCap
+	}
+	return nil
+}

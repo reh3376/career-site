@@ -1060,7 +1060,7 @@ class GetJdSubmissionRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
 
 class GetJdSubmissionResponse(_message.Message):
-    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version")
+    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version", "download_url")
     ROW_FIELD_NUMBER: _ClassVar[int]
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
     ASSESSMENT_JSON_FIELD_NUMBER: _ClassVar[int]
@@ -1068,6 +1068,7 @@ class GetJdSubmissionResponse(_message.Message):
     LLM_MODEL_FIELD_NUMBER: _ClassVar[int]
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    DOWNLOAD_URL_FIELD_NUMBER: _ClassVar[int]
     row: JdSubmissionRow
     jd_text: str
     assessment_json: str
@@ -1075,7 +1076,8 @@ class GetJdSubmissionResponse(_message.Message):
     llm_model: str
     prompt_id: str
     prompt_version: int
-    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ...) -> None: ...
+    download_url: str
+    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ...) -> None: ...
 
 class ReindexCorpusRequest(_message.Message):
     __slots__ = ("source_kind", "scope")
