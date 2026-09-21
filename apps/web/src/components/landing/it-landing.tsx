@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { GithubReposIt } from "@/components/github-repos";
+import { RecentWritingStrip } from "@/components/landing/recent-writing";
 import { getSocialLinks } from "@/lib/social-links";
 
 // Landing. Editorial, one column, with image bands set into the reading
@@ -300,6 +301,13 @@ export function ItLanding() {
           </div>
         </div>
       </section>
+
+      {/* -----------------------------------------------------------------
+       * RECENT WRITING — proof that the "notes" claim above isn't
+       * empty. Three most-recent articles as tiles, with a link into
+       * the full archive.
+       * ----------------------------------------------------------------- */}
+      <RecentWritingStrip />
 
       {/* -----------------------------------------------------------------
        * HERO IMAGE BAND — the Hobet dragline, edge-to-edge, as the

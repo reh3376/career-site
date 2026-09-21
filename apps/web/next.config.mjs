@@ -10,6 +10,11 @@ const nextConfig = {
   // articles are read via `fs`, so we tell it to include them
   // manually. See src/lib/articles.ts.
   outputFileTracingIncludes: {
+    // The landing page's RecentWritingStrip reads the same corpus,
+    // so `/` needs the markdown files traced in too — a missing
+    // entry here means the standalone build succeeds but `/`
+    // renders nothing because listArticles() sees an empty dir.
+    "/": ["./content/articles/**/*.md"],
     "/articles": ["./content/articles/**/*.md"],
     "/articles/[slug]": ["./content/articles/**/*.md"],
   },
