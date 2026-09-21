@@ -9,7 +9,7 @@ import { GithubReposOt } from "@/components/github-repos";
 // with mono-set values, a practice-area panel with running-state
 // pilot chips, a small event log, four "camera feed" thumbnails
 // down the right rail, and a bottom status ribbon. Every piece is
-// static content — the "live" values (uptime, historian rate) are
+// static content, the "live" values (uptime, historian rate) are
 // design elements, not data hookups, and are labeled as such where
 // a plant operator would recognize the fiction.
 
@@ -66,7 +66,7 @@ export function OtLanding() {
     <div className="min-h-[calc(100vh-160px)] bg-paper text-ink">
       {/* Plant title strip. Left = nav pills, center = plant name, */}
       {/* right = live status. The visual grammar is 100% "SCADA top    */}
-      {/* bar" — Roger's Bardstown HMI has the exact same structure.    */}
+      {/* bar", Roger's Bardstown HMI has the exact same structure.    */}
       <div className="border-b border-line-strong bg-paper-2">
         <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
@@ -96,7 +96,7 @@ export function OtLanding() {
         </div>
       </div>
 
-      {/* Main HMI body — 12-col grid on wide screens, stacked on phone. */}
+      {/* Main HMI body, 12-col grid on wide screens, stacked on phone. */}
       <div className="mx-auto grid max-w-[1600px] gap-4 px-4 py-4 sm:px-6 md:grid-cols-12">
         {/* Left rail: system + KPI tiles ---------------------------- */}
         <section
@@ -246,7 +246,7 @@ export function OtLanding() {
         </section>
       </div>
 
-      {/* PUBLIC REPOS panel — cached server fetch, fails soft. */}
+      {/* PUBLIC REPOS panel, cached server fetch, fails soft. */}
       <GithubReposOt />
 
       {/* Bottom status ribbon. */}

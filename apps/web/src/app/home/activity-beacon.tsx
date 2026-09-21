@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { recordActivityAction } from "./actions";
 
 // Fires a single `view` activity event for the current page after
-// mount. React Strict Mode double-invokes effects in dev — we guard
+// mount. React Strict Mode double-invokes effects in dev, we guard
 // with a ref so we only call the server action once, and the server
 // action passes `clientEventId` so a genuine retry still de-dupes
 // at the API layer.

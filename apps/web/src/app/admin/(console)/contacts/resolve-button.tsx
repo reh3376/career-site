@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { setContactResolvedAction } from "./actions";
 
 // Client wrapper so we can render a pending-state label on submit.
-// Simple form with hidden id + target — server action does the work.
+// Simple form with hidden id + target, server action does the work.
 export function ResolveButton({
   id,
   currentlyResolved,

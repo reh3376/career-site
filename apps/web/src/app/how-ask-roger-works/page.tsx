@@ -21,7 +21,7 @@ export default function HowAskRogerWorksPage() {
       <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
           This page is under construction. When Ask Roger launches (late
-          2026), it will describe &mdash; plainly &mdash; how the assistant
+          2026), it will describe, plainly, how the assistant
           works: which model, which corpus, how it retrieves and cites, what
           it refuses to answer, how it&rsquo;s evaluated, and how you can
           hand a conversation to Roger directly.

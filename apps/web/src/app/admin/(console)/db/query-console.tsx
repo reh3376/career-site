@@ -55,7 +55,7 @@ function pushHistory(sql: string): HistoryEntry[] {
     // only on *other* tabs.
     window.dispatchEvent(new Event("admin.db.history"));
   } catch {
-    /* quota exceeded / private tab — ignore */
+    /* quota exceeded / private tab, ignore */
   }
   return next;
 }
@@ -64,7 +64,7 @@ const EMPTY_HISTORY: HistoryEntry[] = [];
 
 // useSyncExternalStore-friendly view of the history list. The
 // snapshot is cached in a module-local ref so React sees a stable
-// reference across renders when nothing changed — otherwise
+// reference across renders when nothing changed, otherwise
 // useSyncExternalStore would tear on every re-render.
 let cachedHistory: HistoryEntry[] = EMPTY_HISTORY;
 let cachedHistoryRaw = "";
@@ -107,7 +107,7 @@ export function QueryConsole({ tables }: { tables: string[] }) {
   const [flash, setFlash] = useState<string | null>(null);
 
   // Load saved queries from the server on mount. Not derivable from
-  // props, and the RPC needs the session cookie — so an effect is
+  // props, and the RPC needs the session cookie, so an effect is
   // the right shape here.
   useEffect(() => {
     let cancelled = false;

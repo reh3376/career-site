@@ -41,7 +41,7 @@ export async function loginAction(
 
   // Success: relay the API's Set-Cookie so the browser session sticks.
   await relaySetCookies(resp.headers);
-  // Honor ?next= when it's a same-origin path — the login page passes
+  // Honor ?next= when it's a same-origin path, the login page passes
   // the query through as a hidden form field. Anything that isn't a
   // plain "/foo" path is ignored so this can't be turned into an open
   // redirect.

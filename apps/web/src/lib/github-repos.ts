@@ -1,7 +1,7 @@
 import "server-only";
 
 // A tiny shape mapped from GitHub REST /users/{user}/repos entries.
-// Not every field the API returns is useful for the card — we pick
+// Not every field the API returns is useful for the card, we pick
 // exactly what the UI reads so the tsx callsite is legible and the
 // serialized RSC payload stays small.
 export type PublicRepo = {
@@ -46,7 +46,7 @@ type ApiRepo = {
 };
 
 // Fetch the user's public, non-archived, non-fork repos. Returns
-// `null` on any error rather than throwing — the caller renders a
+// `null` on any error rather than throwing, the caller renders a
 // fallback panel so a rate-limit or upstream outage never breaks the
 // landing page.
 export async function fetchPublicRepos({

@@ -8,7 +8,7 @@ import { getArticle, listArticles } from "@/lib/articles";
 
 // Statically prerender each known slug at build time. Combined with
 // force-static, the reader page becomes an edge-cacheable HTML page
-// per article — no per-request markdown parse.
+// per article, no per-request markdown parse.
 export const dynamicParams = false;
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {

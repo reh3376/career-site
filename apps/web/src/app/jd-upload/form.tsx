@@ -25,7 +25,7 @@ export function JdForm() {
         {state.submission_id ? (
           <p className="font-mono text-xs text-ink-3">
             ref{" "}
-            <span className="text-ink">#{state.submission_id}</span> —
+            <span className="text-ink">#{state.submission_id}</span>,
             keep this if you want to check back later.
           </p>
         ) : null}
@@ -38,7 +38,7 @@ export function JdForm() {
           >
             Use the contact form
           </a>{" "}
-          — same inbox.
+         , same inbox.
         </p>
       </div>
     );
@@ -67,11 +67,11 @@ export function JdForm() {
           maxLength={50000}
           rows={16}
           defaultValue={v.jdText ?? ""}
-          placeholder="Paste the full posting here — title, responsibilities, requirements, comp band if you have one. The more you give, the better the match."
+          placeholder="Paste the full posting here, title, responsibilities, requirements, comp band if you have one. The more you give, the better the match."
           className="block w-full border border-line-strong bg-canvas px-3 py-2 font-mono text-[13px] leading-snug text-ink outline-none focus:border-accent"
         />
         <p className="mt-2 text-xs text-ink-3">
-          Minimum 100 characters. PDF upload lands next — for now,
+          Minimum 100 characters. PDF upload lands next, for now,
           paste the text.
         </p>
       </div>

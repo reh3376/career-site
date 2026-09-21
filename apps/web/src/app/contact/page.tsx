@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 // Categories that the contact form's <select> renders. Kept in sync
-// with the CATEGORIES array in form.tsx — the pre-selection here is
+// with the CATEGORIES array in form.tsx, the pre-selection here is
 // validated against this set so a stray ?category=<anything> query
 // never bleeds into the form's defaultValue.
 const KNOWN_CATEGORIES = new Set([
@@ -64,7 +64,7 @@ export default async function ContactPage({
   return (
     <div className="mx-auto max-w-5xl px-6 py-20 sm:px-10 sm:py-28">
       <div className="grid gap-16 md:grid-cols-[1fr_1.4fr] md:gap-20">
-        {/* Left column — invitation, deliberately quiet */}
+        {/* Left column, invitation, deliberately quiet */}
         <div className="max-w-sm">
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
             get in touch
@@ -77,7 +77,7 @@ export default async function ContactPage({
           </h1>
           <p className="mt-6 text-base leading-relaxed text-ink-2">
             A bug, a feature idea, press, an interview, a question about the
-            work &mdash; send it here. Replies come from my inbox, usually
+            work, send it here. Replies come from my inbox, usually
             within a day.
           </p>
           <dl className="mt-10 space-y-4 font-mono text-sm text-ink-2">
@@ -96,7 +96,7 @@ export default async function ContactPage({
           </dl>
         </div>
 
-        {/* Right column — the form itself, sitting on paper without a
+        {/* Right column, the form itself, sitting on paper without a
             surrounding card. The inputs carry the visual weight. */}
         <div>
           <ContactForm signedIn={signedIn} initialCategory={initialCategory} />

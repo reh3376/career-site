@@ -8,7 +8,7 @@ import { getUiMode } from "@/lib/ui-mode";
 
 import "./globals.css";
 
-// Fraunces — variable serif for display. Distinctive letterforms
+// Fraunces, variable serif for display. Distinctive letterforms
 // (soft-square terminals, wonky ampersand, opsz variation) that read as
 // crafted, not templated.
 const fraunces = Fraunces({
@@ -23,7 +23,7 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-// Inter Tight — slightly condensed Inter. Precise, humanist, disappears
+// Inter Tight, slightly condensed Inter. Precise, humanist, disappears
 // when needed; the small horizontal savings vs. regular Inter give body
 // text more breathing room on narrow columns.
 const interTight = Inter_Tight({
@@ -33,7 +33,7 @@ const interTight = Inter_Tight({
   display: "swap",
 });
 
-// JetBrains Mono — reserved for numeric callouts, mono tags, and the
+// JetBrains Mono, reserved for numeric callouts, mono tags, and the
 // system-status indicator. Signals the industrial-control aesthetic
 // without hijacking body prose.
 const jetbrainsMono = JetBrains_Mono({
@@ -45,8 +45,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Roger Henley — Industrial automation, plant operations, applied AI",
-    template: "%s — Roger Henley",
+    default: "Roger Henley · Industrial automation, plant operations, applied AI",
+    template: "%s · Roger Henley",
   },
   description:
     "Thirty years running regulated 24/7 industrial systems. Last eight in bourbon distillery startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.",

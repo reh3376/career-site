@@ -75,7 +75,7 @@ export function GrantForm({
           type="text"
           name="notes"
           defaultValue={initial?.notes ?? ""}
-          placeholder="context — why whitelisted?"
+          placeholder="context, why whitelisted?"
           className="mt-1 block w-full border border-line-strong bg-canvas px-2 py-1.5 font-mono text-sm text-ink outline-none focus:border-accent"
         />
       </label>

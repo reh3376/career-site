@@ -9,7 +9,7 @@ import { fetchPublicRepos, type PublicRepo } from "@/lib/github-repos";
 // fallback message that reads the same on either surface.
 
 // -------------------------------------------------------------------
-// IT — editorial card block
+// IT, editorial card block
 // -------------------------------------------------------------------
 
 export async function GithubReposIt() {
@@ -83,7 +83,7 @@ export async function GithubReposIt() {
 }
 
 // -------------------------------------------------------------------
-// OT — HMI panel row
+// OT, HMI panel row
 // -------------------------------------------------------------------
 
 export async function GithubReposOt() {
@@ -117,7 +117,7 @@ export async function GithubReposOt() {
           </>
         ) : (
           <div className="p-4 font-mono text-[12px] text-ink-3">
-            api.github.com unreachable — direct link{" "}
+            api.github.com unreachable, direct link{" "}
             <a
               href="https://github.com/reh3376?tab=repositories"
               rel="noopener noreferrer"
@@ -168,14 +168,14 @@ function RepoRow({ repo, variant }: { repo: PublicRepo; variant: "it" | "ot" }) 
         </a>
         <span className="min-w-0">
           <span className="block truncate text-ink-2">
-            {repo.description || "—"}
+            {repo.description || "-"}
           </span>
           <span className="block truncate text-[10px] uppercase tracking-[0.14em] text-ink-3">
             updated {updated}
           </span>
         </span>
         <span className="text-right tabular text-ink">{repo.stars}</span>
-        <span className="text-right text-ink-3">{repo.language || "—"}</span>
+        <span className="text-right text-ink-3">{repo.language || "-"}</span>
       </div>
     );
   }
@@ -208,7 +208,7 @@ function RepoRow({ repo, variant }: { repo: PublicRepo; variant: "it" | "ot" }) 
   );
 }
 
-// "updated 2mo ago" / "updated 3d ago" — server-computed against the
+// "updated 2mo ago" / "updated 3d ago", server-computed against the
 // request time so both landing variants render the same string.
 function formatWhen(iso: string): string {
   const then = Date.parse(iso);

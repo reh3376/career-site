@@ -4,7 +4,7 @@ import Link from "next/link";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Admin — Activity" };
+export const metadata: Metadata = { title: "Admin · Activity" };
 export const dynamic = "force-dynamic";
 
 // ConnectRPC's default JSON codec emits camelCase field names.
@@ -108,7 +108,7 @@ export default async function AdminActivityPage({
         Activity.
       </h1>
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
-        Per-member engagement summary — sortable by name, most-recent
+        Per-member engagement summary, sortable by name, most-recent
         event, session count, total active time, or Ask Roger count.
         Click any row for the full activity timeline on that member.
       </p>
@@ -146,7 +146,7 @@ export default async function AdminActivityPage({
 
       {!result.ok ? (
         <p className="mt-10 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-          Couldn&rsquo;t load activity — {result.error}.
+          Couldn&rsquo;t load activity, {result.error}.
         </p>
       ) : (result.data.members ?? []).length === 0 ? (
         <p className="mt-10 text-sm text-ink-3">
@@ -244,7 +244,7 @@ function Row({ m, nowMs }: { m: MemberActivity; nowMs: number }) {
         {lastAt ? (
           <>
             <span className="text-ink">
-              {KIND_LABEL[lastKind] ?? lastKind ?? "—"}
+              {KIND_LABEL[lastKind] ?? lastKind ?? "-"}
             </span>{" "}
             <span className="text-ink-3">·</span>{" "}
             <span className="font-mono text-[11px]">
@@ -278,7 +278,7 @@ function relative(d: Date, nowMs: number): string {
 }
 
 function formatDuration(secs: number): string {
-  if (!secs || secs < 0) return "—";
+  if (!secs || secs < 0) return "-";
   if (secs < 60) return `${secs}s`;
   const m = Math.round(secs / 60);
   if (m < 60) return `${m}m`;

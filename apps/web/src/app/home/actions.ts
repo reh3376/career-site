@@ -15,7 +15,7 @@ export async function logoutAction(): Promise<void> {
 // Records one activity event on behalf of the signed-in caller. The
 // component that calls this passes a stable `clientEventId` so a
 // double-invocation (React Strict Mode, back/forward navigation) is
-// deduped at the API's ON CONFLICT layer. Failures never surface —
+// deduped at the API's ON CONFLICT layer. Failures never surface,
 // the beacon is best-effort telemetry.
 export async function recordActivityAction(input: {
   kind: string;

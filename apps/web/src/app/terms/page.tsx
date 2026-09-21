@@ -19,9 +19,9 @@ export default function TermsPage() {
       </h1>
       <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
-          This site is under construction. Full terms &mdash; covering
+          This site is under construction. Full terms, covering
           acceptable use of the site and Ask Roger, content licensing, and
-          account management &mdash; ship alongside the launch (late 2026).
+          account management, ship alongside the launch (late 2026).
         </p>
         <p className="text-sm text-ink-3">
           In the meantime, this site is a personal, non-commercial portfolio.

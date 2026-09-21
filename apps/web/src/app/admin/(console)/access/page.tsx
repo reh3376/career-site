@@ -6,7 +6,7 @@ import { getSessionCookie } from "@/lib/session";
 import { DeleteGrantButton } from "./delete-button";
 import { GrantForm } from "./grant-form";
 
-export const metadata: Metadata = { title: "Admin — Access & whitelist" };
+export const metadata: Metadata = { title: "Admin · Access & whitelist" };
 export const dynamic = "force-dynamic";
 
 // Mirrors the AccessGrant proto in wire form (camelCase from the
@@ -75,7 +75,7 @@ export default async function AdminAccessPage({
       <>
         <Header />
         <p className="mt-6 max-w-lg border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-          Couldn&rsquo;t load the whitelist — {result.message}.
+          Couldn&rsquo;t load the whitelist, {result.message}.
         </p>
       </>
     );
@@ -92,7 +92,7 @@ export default async function AdminAccessPage({
         Emails on this list are auto-approved on signup. The TTL sets
         how long the resulting account stays active; the (optional)
         entry-expiry limits how long the whitelist row itself is
-        honoured. Removing an entry only stops future auto-approvals —
+        honoured. Removing an entry only stops future auto-approvals,
         existing accounts are untouched.
       </p>
 

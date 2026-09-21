@@ -14,7 +14,7 @@ import {
 
 import { ActionButton } from "./action-button";
 
-export const metadata: Metadata = { title: "Admin — Member detail" };
+export const metadata: Metadata = { title: "Admin · Member detail" };
 export const dynamic = "force-dynamic";
 
 type Me = {
@@ -148,7 +148,7 @@ export default async function AdminMemberDetailPage({
           <dt className="text-ink-3">id</dt>
           <dd className="m-0 text-ink">{me.id}</dd>
           <dt className="text-ink-3">name</dt>
-          <dd className="m-0 text-ink">{me.name || "—"}</dd>
+          <dd className="m-0 text-ink">{me.name || "-"}</dd>
           <dt className="text-ink-3">email</dt>
           <dd className="m-0">
             <a
@@ -159,9 +159,9 @@ export default async function AdminMemberDetailPage({
             </a>
           </dd>
           <dt className="text-ink-3">organization</dt>
-          <dd className="m-0 text-ink">{me.organization || "—"}</dd>
+          <dd className="m-0 text-ink">{me.organization || "-"}</dd>
           <dt className="text-ink-3">stated role</dt>
-          <dd className="m-0 text-ink">{me.stated_role || "—"}</dd>
+          <dd className="m-0 text-ink">{me.stated_role || "-"}</dd>
           <dt className="text-ink-3">status</dt>
           <dd className={"m-0 " + tone}>
             <span className="pilot mr-2 align-middle" aria-hidden="true" />
@@ -185,7 +185,7 @@ export default async function AdminMemberDetailPage({
         <dl className="mt-4 grid gap-3 font-mono text-sm text-ink-2 sm:grid-cols-[11rem_1fr]">
           <dt className="text-ink-3">registered</dt>
           <dd className="m-0 text-ink">
-            {created ? created.toISOString().slice(0, 10) : "—"}
+            {created ? created.toISOString().slice(0, 10) : "-"}
             {created ? (
               <span className="ml-3 text-ink-3">({relative(created)})</span>
             ) : null}
@@ -211,7 +211,7 @@ export default async function AdminMemberDetailPage({
             ) : status === "MEMBER_STATUS_ACTIVE" ? (
               <span className="text-success">permanent</span>
             ) : (
-              "—"
+              "-"
             )}
           </dd>
         </dl>
@@ -364,7 +364,7 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
       return (
         <div className="mt-4 space-y-4">
           <p className="text-sm text-ink-3">
-            Access expired. Extend below to reactivate — a new
+            Access expired. Extend below to reactivate, a new
             expires_at in the future flips the account back to active
             automatically.
           </p>
@@ -421,7 +421,7 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
         <div className="mt-4">
           <p className="text-sm text-ink-3">
             Applicant hasn&rsquo;t verified their email yet. No admin
-            action needed — the account moves to{" "}
+            action needed, the account moves to{" "}
             <span className="font-mono text-ink">pending_approval</span>{" "}
             automatically once they click the verification link.
           </p>
@@ -490,7 +490,7 @@ function NotificationPill({ me }: { me: Me }) {
             send failed
           </span>{" "}
           <span className="text-ink-2">
-            — {label} email, {when}
+           , {label} email, {when}
           </span>
         </p>
         <p className="mt-2 whitespace-pre-wrap font-mono text-[11px] text-ink-3">
@@ -504,7 +504,7 @@ function NotificationPill({ me }: { me: Me }) {
       <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-success">
         sent
       </span>{" "}
-      — {label} email, {when}. If the member reports not receiving it,
+     , {label} email, {when}. If the member reports not receiving it,
       check their spam folder and the provider dashboard.
     </p>
   );
@@ -549,7 +549,7 @@ function ActivityBlock({
           {events.slice(0, 20).map((e, i) => (
             <li key={i} className="text-ink-2">
               <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                {e.occurred_at ? relative(new Date(e.occurred_at)) : "—"}
+                {e.occurred_at ? relative(new Date(e.occurred_at)) : "-"}
               </span>{" "}
               <span className="text-ink">
                 {ACTIVITY_LABEL[e.kind] ?? e.kind.toLowerCase()}

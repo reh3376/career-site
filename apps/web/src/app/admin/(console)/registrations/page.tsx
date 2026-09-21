@@ -5,11 +5,11 @@ import Link from "next/link";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Admin — Registrations" };
+export const metadata: Metadata = { title: "Admin · Registrations" };
 export const dynamic = "force-dynamic";
 
 // Read-only member list. Approve / decline still happen through the
-// one-click email flow (/admin/decision) — that path is well-tested
+// one-click email flow (/admin/decision), that path is well-tested
 // and sends the sign-in email as part of the transition. This surface
 // is the durable record you can review outside of Gmail.
 
@@ -111,7 +111,7 @@ export default async function AdminRegistrationsPage({
           Registrations.
         </h1>
         <p className="mt-6 max-w-lg border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-          Couldn&rsquo;t load members — {result.message}.
+          Couldn&rsquo;t load members, {result.message}.
         </p>
       </>
     );
@@ -133,7 +133,7 @@ export default async function AdminRegistrationsPage({
       </h1>
       <p className="mt-6 max-w-xl text-sm leading-relaxed text-ink-3">
         Every registration and its state. Click a row for the detail
-        view where you can approve, decline, disable, or re-enable —
+        view where you can approve, decline, disable, or re-enable,
         state-appropriate actions live there so this list stays
         scannable.
       </p>
@@ -213,7 +213,7 @@ function MemberRow({ m }: { m: MemberRecord }) {
   const label = STATUS_LABEL[status] ?? status;
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const seen = m.first_seen_at ? new Date(m.first_seen_at) : null;
-  const when = seen ? formatWhen(seen) : "—";
+  const when = seen ? formatWhen(seen) : "-";
   return (
     <li>
       <Link
@@ -221,7 +221,7 @@ function MemberRow({ m }: { m: MemberRecord }) {
         className="grid gap-2 py-4 no-underline transition-colors hover:bg-accent-soft/40 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_120px_120px] sm:items-baseline sm:gap-6"
       >
         <div className="min-w-0">
-          <p className="truncate text-sm text-ink">{me.name || "—"}</p>
+          <p className="truncate text-sm text-ink">{me.name || "-"}</p>
           <p className="truncate text-xs text-ink-3">{me.email}</p>
         </div>
         <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

@@ -54,7 +54,7 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
 
 // Extend a member's access. `mode` picks which of the three ExtendAccess
 // request fields to populate: "days" (relative), "permanent" (clears
-// expires_at). "days" reads from formData.get("days") — the button
+// expires_at). "days" reads from formData.get("days"), the button
 // component passes a hidden `days` field for each preset.
 export async function extendAccessAction(formData: FormData): Promise<void> {
   const memberId = String(formData.get("member_id") ?? "");

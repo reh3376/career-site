@@ -79,7 +79,7 @@ export function HamburgerMenu({
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-line bg-paper text-ink transition-colors hover:border-accent hover:text-accent"
       >
         {/* Three-stroke hamburger. The middle bar fades and the outer
-            two slide together into an X when open — subtle motion cue
+            two slide together into an X when open, subtle motion cue
             that reinforces the toggle. */}
         <span aria-hidden="true" className="relative block h-4 w-5">
           <span
@@ -249,7 +249,7 @@ function buildGroups({
     items: [
       {
         kind: "link",
-        label: "GitHub — reh3376",
+        label: "GitHub, reh3376",
         href: "https://github.com/reh3376",
         external: true,
       },

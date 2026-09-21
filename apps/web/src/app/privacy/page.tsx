@@ -19,10 +19,10 @@ export default function PrivacyPage() {
       </h1>
       <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
-          This site is under construction. The full privacy policy &mdash;
+          This site is under construction. The full privacy policy ,
           covering what is collected, how long it&rsquo;s retained, how to
           export or delete your data, and how conversations with Ask Roger are
-          stored &mdash; ships alongside the launch (late 2026).
+          stored, ships alongside the launch (late 2026).
         </p>
         <p className="text-sm text-ink-3">
           Until then, the only data collected from a request-access form is

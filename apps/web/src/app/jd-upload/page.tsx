@@ -5,7 +5,7 @@ import { JdForm } from "./form";
 export const metadata: Metadata = {
   title: "JD upload",
   description:
-    "Paste a job description; Roger scores it against his experience and — when the fit clears the threshold — sends back a résumé tailored to that specific posting.",
+    "Paste a job description; Roger scores it against his experience and, when the fit clears the threshold, sends back a résumé tailored to that specific posting.",
 };
 
 export default function JdUploadPage() {
@@ -21,7 +21,7 @@ export default function JdUploadPage() {
         Upload JD for review.
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
-        Roger keeps a master career corpus &mdash; 30 years across
+        Roger keeps a master career corpus, 30 years across
         control rooms, manufacturing plants, decision infrastructure,
         and AI/ML. This JD review evaluates his skill set against the
         JD criteria and produces a skills-match confidence score. If
