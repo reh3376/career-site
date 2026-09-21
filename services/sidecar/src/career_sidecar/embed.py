@@ -56,6 +56,7 @@ class Embedder(Protocol):
 
     def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]:
         """Embed a batch of texts; one vector per input, in order."""
+        ...
 
 
 def task_prefix(model: str, purpose: str) -> str:
