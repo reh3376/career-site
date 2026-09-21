@@ -161,17 +161,50 @@ func (r *Repo) SetJdAssessment(ctx context.Context, id int64, retrievalScore flo
 	return nil
 }
 
-// SetJdResume stores the generated résumé and flips the row to ready.
-func (r *Repo) SetJdResume(
-	ctx context.Context, id int64, markdown, model, promptID string, promptVersion int,
-) error {
+// SetJdResumePDF stores the rendered PDF and the download URL the
+// public poll hands out.
+func (r *Repo) SetJdResumePDF(ctx context.Context, id int64, pdf []byte, pages int32, url string) error {
 	const q = `
     UPDATE jd_submissions
-    SET status = 'ready', resume_markdown = $2, llm_model = $3,
+    SET resume_pdf = $2, resume_pdf_pages = $3, generated_resume_url = $4
+    WHERE id = $1
+  `
+	tag, err := r.pool.Exec(ctx, q, id, pdf, pages, url)
+	if err != nil {
+		return fmt.Errorf("set jd resume pdf: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// GetJdResumePDF returns the PDF bytes and the row's result token so
+// the download handler can gate on it. pdf is nil when not rendered.
+func (r *Repo) GetJdResumePDF(ctx context.Context, id int64) (pdf []byte, token []byte, err error) {
+	const q = `SELECT resume_pdf, result_token FROM jd_submissions WHERE id = $1`
+	if err := r.pool.QueryRow(ctx, q, id).Scan(&pdf, &token); err != nil {
+		return nil, nil, fmt.Errorf("get jd resume pdf: %w", err)
+	}
+	return pdf, token, nil
+}
+
+// SetJdResume stores the verified résumé (structured JSON plus the
+// markdown rendered from it) and flips the row to ready.
+func (r *Repo) SetJdResume(
+	ctx context.Context, id int64, resumeJSON []byte, markdown, model, promptID string, promptVersion int,
+) error {
+	var doc any
+	if len(resumeJSON) > 0 {
+		doc = string(resumeJSON)
+	}
+	const q = `
+    UPDATE jd_submissions
+    SET status = 'ready', resume_json = $6::jsonb, resume_markdown = $2, llm_model = $3,
         prompt_id = $4, prompt_version = $5, error = NULL, completed_at = now()
     WHERE id = $1
   `
-	tag, err := r.pool.Exec(ctx, q, id, markdown, model, promptID, promptVersion)
+	tag, err := r.pool.Exec(ctx, q, id, markdown, model, promptID, promptVersion, doc)
 	if err != nil {
 		return fmt.Errorf("set jd resume: %w", err)
 	}

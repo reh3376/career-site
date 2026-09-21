@@ -42,6 +42,10 @@ service SidecarService {
   // provider gateway and never rewrites prompts. Deadline is set by the
   // caller and can be minutes on CPU inference.
   rpc Generate(GenerateRequest) returns (GenerateResponse);
+  // Renders a verified résumé (the API's structured JSON) to a PDF with
+  // Typst and applies an owner password so the file opens freely but
+  // cannot be edited. Rendering never touches a model.
+  rpc RenderResume(RenderResumeRequest) returns (RenderResumeResponse);
 }
 
 // Why a text is being embedded; some models use different instructions for
@@ -307,6 +311,34 @@ message GenerateResponse {
   string finish_reason = 6;
 }
 
+// Résumé render request.
+message RenderResumeRequest {
+  // The verified résumé JSON (headline, summary, competencies,
+  // experience, education). Source ids are ignored by the renderer.
+  string resume_json = 1 [(buf.validate.field).string = {
+    min_len: 2
+    max_len: 200000
+  }];
+  // Owner password that locks editing; the user password is always
+  // empty so the PDF opens without a prompt. Required.
+  string owner_password = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  // Caller trace id for log correlation (e.g. `jd:42`).
+  string trace_id = 3 [(buf.validate.field).string.max_len = 64];
+}
+
+// Résumé render result.
+message RenderResumeResponse {
+  // The encrypted PDF.
+  bytes pdf = 1;
+  // Page count.
+  int32 pages = 2;
+  // Renderer identifier (e.g. `typst:0.15.0`).
+  string engine = 3;
+}
+
 // Empty.
 message HealthRequest {}
 
@@ -327,4 +359,6 @@ message HealthResponse {
   // LLM provider name (`stub`, `ollama:<model>`) so the API can decide
   // whether structured pipelines are meaningful.
   string llm_provider = 7;
+  // PDF renderer available (Typst compiler importable).
+  bool renderer_ready = 8;
 }

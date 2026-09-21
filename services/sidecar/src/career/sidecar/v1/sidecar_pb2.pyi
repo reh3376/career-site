@@ -226,12 +226,32 @@ class GenerateResponse(_message.Message):
     finish_reason: str
     def __init__(self, text: _Optional[str] = ..., model: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., finish_reason: _Optional[str] = ...) -> None: ...
 
+class RenderResumeRequest(_message.Message):
+    __slots__ = ("resume_json", "owner_password", "trace_id")
+    RESUME_JSON_FIELD_NUMBER: _ClassVar[int]
+    OWNER_PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    TRACE_ID_FIELD_NUMBER: _ClassVar[int]
+    resume_json: str
+    owner_password: str
+    trace_id: str
+    def __init__(self, resume_json: _Optional[str] = ..., owner_password: _Optional[str] = ..., trace_id: _Optional[str] = ...) -> None: ...
+
+class RenderResumeResponse(_message.Message):
+    __slots__ = ("pdf", "pages", "engine")
+    PDF_FIELD_NUMBER: _ClassVar[int]
+    PAGES_FIELD_NUMBER: _ClassVar[int]
+    ENGINE_FIELD_NUMBER: _ClassVar[int]
+    pdf: bytes
+    pages: int
+    engine: str
+    def __init__(self, pdf: _Optional[bytes] = ..., pages: _Optional[int] = ..., engine: _Optional[str] = ...) -> None: ...
+
 class HealthRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
 class HealthResponse(_message.Message):
-    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version", "llm_ready", "llm_provider")
+    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version", "llm_ready", "llm_provider", "renderer_ready")
     READY_FIELD_NUMBER: _ClassVar[int]
     EMBEDDER_READY_FIELD_NUMBER: _ClassVar[int]
     RERANKER_READY_FIELD_NUMBER: _ClassVar[int]
@@ -239,6 +259,7 @@ class HealthResponse(_message.Message):
     VERSION_FIELD_NUMBER: _ClassVar[int]
     LLM_READY_FIELD_NUMBER: _ClassVar[int]
     LLM_PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    RENDERER_READY_FIELD_NUMBER: _ClassVar[int]
     ready: bool
     embedder_ready: bool
     reranker_ready: bool
@@ -246,4 +267,5 @@ class HealthResponse(_message.Message):
     version: str
     llm_ready: bool
     llm_provider: str
-    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ..., llm_ready: _Optional[bool] = ..., llm_provider: _Optional[str] = ...) -> None: ...
+    renderer_ready: bool
+    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ..., llm_ready: _Optional[bool] = ..., llm_provider: _Optional[str] = ..., renderer_ready: _Optional[bool] = ...) -> None: ...

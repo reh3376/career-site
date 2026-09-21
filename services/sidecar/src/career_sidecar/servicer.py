@@ -10,6 +10,7 @@ import time
 import grpc
 
 from career.sidecar.v1 import sidecar_pb2, sidecar_pb2_grpc
+from career_sidecar import render
 from career_sidecar.build import VERSION
 from career_sidecar.embed import PURPOSE_DOCUMENT, PURPOSE_QUERY, Embedder
 from career_sidecar.llm import LLM
@@ -41,7 +42,29 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             version=VERSION,
             llm_ready=self._llm is not None,
             llm_provider=self._llm.name if self._llm is not None else "",
+            renderer_ready=render.renderer_ready(),
         )
+
+    def RenderResume(
+        self,
+        request: sidecar_pb2.RenderResumeRequest,
+        context: grpc.ServicerContext,
+    ) -> sidecar_pb2.RenderResumeResponse:
+        if not render.renderer_ready():
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("pdf renderer not available")
+            return sidecar_pb2.RenderResumeResponse()
+        try:
+            res = render.render_resume(request.resume_json, request.owner_password)
+        except ValueError as e:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return sidecar_pb2.RenderResumeResponse()
+        except Exception as e:  # noqa: BLE001 — propagate error to gRPC
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"render failed: {e}")
+            return sidecar_pb2.RenderResumeResponse()
+        return sidecar_pb2.RenderResumeResponse(pdf=res.pdf, pages=res.pages, engine=res.engine)
 
     def Generate(
         self,

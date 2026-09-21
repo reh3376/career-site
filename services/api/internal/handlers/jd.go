@@ -3,9 +3,12 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -167,15 +170,56 @@ func (h *Jd) GetJdResult(
 	if s.CompletedAt != nil {
 		out.CompletedAt = timestamppb.New(*s.CompletedAt)
 	}
-	// The résumé is only released to a caller holding the token that
-	// was issued at submit time; the numeric id alone reveals nothing
-	// beyond status and score.
+	// The résumé (and its PDF link) is only released to a caller holding
+	// the token that was issued at submit time; the numeric id alone
+	// reveals nothing beyond status and score.
+	out.GeneratedResumeUrl = ""
 	if s.ResumeMarkdown != "" {
-		if presented, err := hex.DecodeString(strings.TrimSpace(req.Msg.ResultToken)); err == nil && s.TokenMatches(presented) {
+		tok := strings.TrimSpace(req.Msg.ResultToken)
+		if presented, err := hex.DecodeString(tok); err == nil && s.TokenMatches(presented) {
 			out.ResumeMarkdown = s.ResumeMarkdown
+			if s.GeneratedResumeURL != "" {
+				out.GeneratedResumeUrl = s.GeneratedResumeURL + "?t=" + tok
+			}
 		}
 	}
 	return connect.NewResponse(out), nil
+}
+
+// ServeResumePDF streams a submission's locked PDF. Plain HTTP (a
+// browser download link), gated by the result token in `t`.
+// Route: GET /api/jd/resume/{file} where file is "<id>.pdf".
+func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
+	file := r.PathValue("file")
+	idText, ok := strings.CutSuffix(file, ".pdf")
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	id, err := strconv.ParseInt(idText, 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	presented, err := hex.DecodeString(strings.TrimSpace(r.URL.Query().Get("t")))
+	if err != nil || len(presented) == 0 {
+		http.Error(w, "missing result token", http.StatusForbidden)
+		return
+	}
+	pdf, token, err := h.users.GetJdResumePDF(r.Context(), id)
+	if err != nil || pdf == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if len(token) == 0 || subtle.ConstantTimeCompare(token, presented) != 1 {
+		http.Error(w, "invalid result token", http.StatusForbidden)
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"roger-henley-resume-%d.pdf\"", id))
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(pdf)
 }
 
 // fixedSubmitAckMessage is the copy rendered back after every

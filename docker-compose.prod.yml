@@ -88,6 +88,7 @@ services:
       CORPUS_PRIVATE_ROOT: /corpus-private
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-1200}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-2000}
+      RESUME_PDF_OWNER_PASSWORD: ${RESUME_PDF_OWNER_PASSWORD}
     volumes: !override
       - ./apps/web/content:/corpus:ro
       - ${CORPUS_PRIVATE_HOST_DIR:-/opt/career-site-private/corpus}:/corpus-private:ro

@@ -1424,6 +1424,22 @@
       "mfa_fresh": false,
       "server_streaming": false,
       "client_streaming": false
+    },
+    {
+      "service": "career.sidecar.v1.SidecarService",
+      "method": "RenderResume",
+      "path": null,
+      "grpc_full_method": "/career.sidecar.v1.SidecarService/RenderResume",
+      "internal": true,
+      "request": "career.sidecar.v1.RenderResumeRequest",
+      "response": "career.sidecar.v1.RenderResumeResponse",
+      "summary": "Renders a verified r\u00e9sum\u00e9 (the API's structured JSON) to a PDF with Typst and applies an owner password so the file opens freely but cannot be edited.",
+      "auth": "unspecified",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
     }
   ]
 }

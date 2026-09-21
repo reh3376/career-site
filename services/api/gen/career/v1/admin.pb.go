@@ -6434,6 +6434,10 @@ type GetJdSubmissionResponse struct {
 	PromptId string `protobuf:"bytes,6,opt,name=prompt_id,json=promptId,proto3" json:"prompt_id,omitempty"`
 	// Prompt version that produced the résumé.
 	PromptVersion int32 `protobuf:"varint,7,opt,name=prompt_version,json=promptVersion,proto3" json:"prompt_version,omitempty"`
+	// Download path for the locked PDF, including the submission's
+	// result token, when a PDF was rendered; empty otherwise. Admin-only
+	// by virtue of this RPC's auth level.
+	DownloadUrl   string `protobuf:"bytes,8,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6515,6 +6519,13 @@ func (x *GetJdSubmissionResponse) GetPromptVersion() int32 {
 		return x.PromptVersion
 	}
 	return 0
+}
+
+func (x *GetJdSubmissionResponse) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
 }
 
 // Reindex-corpus request. `scope` picks the mount: `public` walks the
@@ -7436,7 +7447,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06failed\x18\x04 \x01(\x05R\x06failed\x12\x1c\n" +
 	"\tremaining\x18\x05 \x01(\x05R\tremaining\"H\n" +
 	"\x16GetJdSubmissionRequest\x12.\n" +
-	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"\x93\x02\n" +
+	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"\xb6\x02\n" +
 	"\x17GetJdSubmissionResponse\x12,\n" +
 	"\x03row\x18\x01 \x01(\v2\x1a.career.v1.JdSubmissionRowR\x03row\x12\x17\n" +
 	"\ajd_text\x18\x02 \x01(\tR\x06jdText\x12'\n" +
@@ -7444,7 +7455,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x0fresume_markdown\x18\x04 \x01(\tR\x0eresumeMarkdown\x12\x1b\n" +
 	"\tllm_model\x18\x05 \x01(\tR\bllmModel\x12\x1b\n" +
 	"\tprompt_id\x18\x06 \x01(\tR\bpromptId\x12%\n" +
-	"\x0eprompt_version\x18\a \x01(\x05R\rpromptVersion\"_\n" +
+	"\x0eprompt_version\x18\a \x01(\x05R\rpromptVersion\x12!\n" +
+	"\fdownload_url\x18\b \x01(\tR\vdownloadUrl\"_\n" +
 	"\x14ReindexCorpusRequest\x12(\n" +
 	"\vsource_kind\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18(R\n" +
 	"sourceKind\x12\x1d\n" +

@@ -15,6 +15,8 @@ dependencies = [
   "grpcio>=1.66",
   # buf's protoc-gen-python currently emits gencode v7.36.x; runtime must match.
   "protobuf>=7,<8",
+  "pypdf[crypto]>=6.19.0",
+  "typst>=0.15.0",
 ]
 
 [project.optional-dependencies]

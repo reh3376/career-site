@@ -40,11 +40,14 @@ type Scorer struct {
 	// assessor is optional; nil means the retrieval pre-score is the
 	// gate (dev without an LLM provider, or stub provider).
 	assessor *Assessor
+	// resume is optional; nil leaves above-threshold rows at
+	// `generating` for manual attention.
+	resume *ResumeWriter
 }
 
-// NewScorer wires the deps. assessor may be nil.
-func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor) *Scorer {
-	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor}
+// NewScorer wires the deps. assessor and resume may be nil.
+func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter) *Scorer {
+	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor, resume: resume}
 }
 
 // Score embeds the JD, retrieves top-K corpus chunks, and returns the
@@ -132,8 +135,6 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 
 	next := "below_threshold"
 	if score >= MatchThreshold {
-		// Above the gate: résumé generation lands in the next slice;
-		// until then the row waits here for manual attention.
 		next = "generating"
 	}
 	if err := s.users.UpdateJdScoring(ctx, submissionID, next, &score, ""); err != nil {
@@ -150,6 +151,52 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 		slog.String("status", next),
 		slog.Int("top_hits", len(hits)),
 	)
+	if next != "generating" || s.resume == nil {
+		return
+	}
+
+	// Grounded résumé: one model call, sources verified in code.
+	var usable *Assessment
+	if assessment != nil && assessment.Error == "" {
+		usable = assessment
+	}
+	started := time.Now()
+	res, markdown, err := s.resume.Write(ctx, submissionID, jdText, hints, usable, hits)
+	if err != nil {
+		s.log.Warn("jd: résumé failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", &score, "résumé generation failed: "+truncErr(err.Error())); uErr != nil {
+			s.log.Warn("jd: failed to record résumé failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+		}
+		return
+	}
+	raw, _ := json.Marshal(res)
+	if err := s.users.SetJdResume(ctx, submissionID, raw, markdown, res.Model, res.PromptID, res.PromptVers); err != nil {
+		s.log.Warn("jd: failed to store résumé", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		return
+	}
+	s.log.Info("jd: résumé ready",
+		slog.Int64("id", submissionID),
+		slog.String("model", res.Model),
+		slog.Int("bullets_dropped", res.Dropped),
+		slog.Int("chars", len(markdown)),
+		slog.Duration("took", time.Since(started)),
+	)
+
+	// PDF is optional: the markdown is already deliverable, so a render
+	// failure is logged and the row stays ready.
+	pdf, pages, err := s.resume.RenderPDF(ctx, submissionID, raw)
+	if err != nil {
+		s.log.Warn("jd: pdf render failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		return
+	}
+	if pdf == nil {
+		return
+	}
+	if err := s.users.SetJdResumePDF(ctx, submissionID, pdf, pages, s.resume.DownloadPath(submissionID)); err != nil {
+		s.log.Warn("jd: failed to store pdf", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		return
+	}
+	s.log.Info("jd: pdf ready", slog.Int64("id", submissionID), slog.Int("bytes", len(pdf)), slog.Int("pages", int(pages)))
 }
 
 // truncErr keeps a persisted error short: the row's `error` column is

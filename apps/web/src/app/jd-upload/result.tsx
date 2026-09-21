@@ -12,6 +12,8 @@ type Poll = {
   error_message?: string;
   resumeMarkdown?: string;
   resume_markdown?: string;
+  generatedResumeUrl?: string;
+  generated_resume_url?: string;
 };
 
 const LIVE = new Set(["JD_STATUS_RECEIVED", "JD_STATUS_SCORING", "JD_STATUS_GENERATING"]);
@@ -84,6 +86,7 @@ export function JdResult({
   const status = poll.status ?? "";
   const score = poll.matchScore ?? poll.match_score;
   const resume = poll.resumeMarkdown ?? poll.resume_markdown ?? "";
+  const pdfUrl = poll.generatedResumeUrl ?? poll.generated_resume_url ?? "";
   const err = poll.errorMessage ?? poll.error_message ?? "";
   const live = LIVE.has(status);
 
@@ -123,6 +126,20 @@ export function JdResult({
         <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
           The pipeline hit an error{err ? `: ${err}` : ""}. Roger has
           the submission and will follow up.
+        </p>
+      ) : null}
+
+      {status === "JD_STATUS_READY" && pdfUrl ? (
+        <p>
+          <a
+            href={pdfUrl}
+            className="inline-flex items-center justify-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+          >
+            Download the tailored résumé (PDF)
+          </a>
+          <span className="ml-3 text-xs text-ink-3">
+            Opens without a password; editing is locked.
+          </span>
         </p>
       ) : null}
 

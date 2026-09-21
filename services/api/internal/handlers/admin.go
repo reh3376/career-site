@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -1257,7 +1258,7 @@ func (a *Admin) GetJdSubmission(
 	if s.CompletedAt != nil {
 		row.CompletedAt = timestamppb.New(*s.CompletedAt)
 	}
-	return connect.NewResponse(&v1.GetJdSubmissionResponse{
+	out := &v1.GetJdSubmissionResponse{
 		Row:            row,
 		JdText:         s.JdText,
 		AssessmentJson: string(s.Assessment),
@@ -1265,7 +1266,11 @@ func (a *Admin) GetJdSubmission(
 		LlmModel:       s.LLMModel,
 		PromptId:       s.PromptID,
 		PromptVersion:  s.PromptVersion,
-	}), nil
+	}
+	if s.GeneratedResumeURL != "" && len(s.ResultToken) > 0 {
+		out.DownloadUrl = s.GeneratedResumeURL + "?t=" + hex.EncodeToString(s.ResultToken)
+	}
+	return connect.NewResponse(out), nil
 }
 
 // ---------------------------------------------------------------

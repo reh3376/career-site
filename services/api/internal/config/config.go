@@ -41,7 +41,11 @@ type Config struct {
 	// sidecar's stub provider (schema-valid, meaningless output). Off
 	// by default so a stub never gates real submissions.
 	LLMAllowStub bool
-	DatabaseURL  string
+	// ResumePDFOwnerPassword locks editing on generated résumé PDFs
+	// (the user password is empty, so they open freely). Empty skips
+	// PDF rendering; never commit the value, the repo is public.
+	ResumePDFOwnerPassword string
+	DatabaseURL            string
 	// DatabaseURLReadonly is an optional DSN used by the /admin/db
 	// surface. When set, the SQL console runs through this pool
 	// instead of the write-capable app pool, so the SELECT-only guard
@@ -96,23 +100,24 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Addr:                envOr("API_ADDR", ":8080"),
-		Env:                 envOr("API_ENV", "development"),
-		ReadTimeout:         15 * time.Second,
-		WriteTimeout:        30 * time.Second,
-		ShutdownTimeout:     10 * time.Second,
-		SidecarAddr:         envOr("SIDECAR_ADDR", "localhost:50051"),
-		SidecarTimeout:      2 * time.Second,
-		CorpusRoot:          envOr("CORPUS_ROOT", "/corpus"),
-		CorpusPrivateRoot:   envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
-		LLMMonthlyCallCap:   int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
-		JDPipelineTimeout:   time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
-		LLMAllowStub:        os.Getenv("LLM_ALLOW_STUB") == "1",
-		DatabaseURL:         envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
-		DatabaseURLReadonly: os.Getenv("DATABASE_URL_READONLY"),
-		DBReadonlyPassword:  os.Getenv("DB_READONLY_PASSWORD"),
-		DBTimeout:           2 * time.Second,
-		SkipMigrate:         os.Getenv("API_SKIP_MIGRATE") == "1",
+		Addr:                   envOr("API_ADDR", ":8080"),
+		Env:                    envOr("API_ENV", "development"),
+		ReadTimeout:            15 * time.Second,
+		WriteTimeout:           30 * time.Second,
+		ShutdownTimeout:        10 * time.Second,
+		SidecarAddr:            envOr("SIDECAR_ADDR", "localhost:50051"),
+		SidecarTimeout:         2 * time.Second,
+		CorpusRoot:             envOr("CORPUS_ROOT", "/corpus"),
+		CorpusPrivateRoot:      envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
+		LLMMonthlyCallCap:      int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
+		JDPipelineTimeout:      time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
+		LLMAllowStub:           os.Getenv("LLM_ALLOW_STUB") == "1",
+		ResumePDFOwnerPassword: os.Getenv("RESUME_PDF_OWNER_PASSWORD"),
+		DatabaseURL:            envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
+		DatabaseURLReadonly:    os.Getenv("DATABASE_URL_READONLY"),
+		DBReadonlyPassword:     os.Getenv("DB_READONLY_PASSWORD"),
+		DBTimeout:              2 * time.Second,
+		SkipMigrate:            os.Getenv("API_SKIP_MIGRATE") == "1",
 
 		WebBaseURL:        envOr("WEB_BASE_URL", "http://localhost"),
 		OwnerContactEmail: envOr("OWNER_CONTACT_EMAIL", "rogerhenley345@gmail.com"),

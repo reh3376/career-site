@@ -83,6 +83,11 @@ func (s *Server) routes() http.Handler {
 	if s.decision != nil {
 		mux.HandleFunc("POST /api/admin/decision", s.decision.Handle)
 	}
+	// Plain HTTP download of a generated résumé PDF; the result token
+	// in `?t=` is the auth.
+	if s.jd != nil {
+		mux.HandleFunc("GET /api/jd/resume/{file}", s.jd.ServeResumePDF)
+	}
 
 	mount := func(path string, h http.Handler) {
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))

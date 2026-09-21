@@ -43,6 +43,8 @@ type Detail = {
   promptId?: string;
   prompt_version?: number;
   promptVersion?: number;
+  download_url?: string;
+  downloadUrl?: string;
 };
 
 type Requirement = { id: string; text: string; category: string; weight: number };
@@ -222,6 +224,17 @@ export default async function AdminJdDetailPage({
         <section className="mt-10">
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
             generated résumé
+            {d.download_url ?? d.downloadUrl ? (
+              <>
+                <span className="text-ink-4"> · </span>
+                <a
+                  href={d.download_url ?? d.downloadUrl}
+                  className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+                >
+                  download PDF
+                </a>
+              </>
+            ) : null}
           </p>
           <div className="prose-article mt-4 border border-line-strong bg-canvas p-6 text-ink-2">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{resume}</ReactMarkdown>

@@ -61,3 +61,16 @@ func (c *Client) Embed(ctx context.Context, texts []string, purpose sidecarv1.Em
 func (c *Client) Generate(ctx context.Context, req *sidecarv1.GenerateRequest) (*sidecarv1.GenerateResponse, error) {
 	return c.stub.Generate(ctx, req)
 }
+
+// RenderResume turns verified résumé JSON into an owner-password-locked
+// PDF. Typst renders in well under a second; two minutes bounds a
+// wedged sidecar.
+func (c *Client) RenderResume(ctx context.Context, resumeJSON, ownerPassword, traceID string) (*sidecarv1.RenderResumeResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	return c.stub.RenderResume(ctx, &sidecarv1.RenderResumeRequest{
+		ResumeJson:    resumeJSON,
+		OwnerPassword: ownerPassword,
+		TraceId:       traceID,
+	})
+}
