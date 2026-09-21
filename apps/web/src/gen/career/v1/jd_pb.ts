@@ -51,15 +51,18 @@ export type SubmitJdRequest = Message<"career.v1.SubmitJdRequest"> & {
   source: JdSource;
 
   /**
-   * Optional context: the role the visitor is considering Roger
-   * for, and the employer name. Free-form; used for admin triage
-   * and to steer the tailored-résumé prompt when scoring lands.
+   * Optional role / title the visitor is considering Roger for.
+   * Free-form; used for admin triage and to steer the tailored
+   * résumé prompt when scoring lands.
    *
    * @generated from field: string role_hint = 3;
    */
   roleHint: string;
 
   /**
+   * Optional employer name (e.g. "Anthropic"). Same free-form
+   * triage aid as role_hint.
+   *
    * @generated from field: string employer_hint = 4;
    */
   employerHint: string;

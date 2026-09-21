@@ -172,10 +172,12 @@ type SubmitJdRequest struct {
 	// Where the text came from — the frontend sets this so the
 	// backend knows what to record.
 	Source JdSource `protobuf:"varint,2,opt,name=source,proto3,enum=career.v1.JdSource" json:"source,omitempty"`
-	// Optional context: the role the visitor is considering Roger
-	// for, and the employer name. Free-form; used for admin triage
-	// and to steer the tailored-résumé prompt when scoring lands.
-	RoleHint     string `protobuf:"bytes,3,opt,name=role_hint,json=roleHint,proto3" json:"role_hint,omitempty"`
+	// Optional role / title the visitor is considering Roger for.
+	// Free-form; used for admin triage and to steer the tailored
+	// résumé prompt when scoring lands.
+	RoleHint string `protobuf:"bytes,3,opt,name=role_hint,json=roleHint,proto3" json:"role_hint,omitempty"`
+	// Optional employer name (e.g. "Anthropic"). Same free-form
+	// triage aid as role_hint.
 	EmployerHint string `protobuf:"bytes,4,opt,name=employer_hint,json=employerHint,proto3" json:"employer_hint,omitempty"`
 	// Optional email so the visitor can be notified when the résumé
 	// is ready without keeping the tab open. Never surfaced publicly.

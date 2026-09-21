@@ -2678,8 +2678,8 @@ on the actual scoring / generation — those run out of band.
 |---|---|---|---|---|
 | `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
 | `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
-| `roleHint` | `string` | string | `string: max_len: 200` | Optional context: the role the visitor is considering Roger for, and the employer name. Free-form; used for admin triage and to steer the tailored-résumé prompt when scoring lands. |
-| `employerHint` | `string` | string | `string: max_len: 200` |  |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
 | `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
 
 **Response** — [`SubmitJdResponse`](#submitjdresponse)
@@ -4958,8 +4958,8 @@ is expected — the handler surfaces InvalidArgument otherwise.
 |---|---|---|---|---|
 | `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
 | `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
-| `roleHint` | `string` | string | `string: max_len: 200` | Optional context: the role the visitor is considering Roger for, and the employer name. Free-form; used for admin triage and to steer the tailored-résumé prompt when scoring lands. |
-| `employerHint` | `string` | string | `string: max_len: 200` |  |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
 | `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
 
 ### SubmitJdResponse
