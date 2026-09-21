@@ -112,15 +112,16 @@ export function ContactForm({
               hiring inquiry
             </p>
             <p className={helpClass}>
-              Bit of context so Roger can triage. All optional; a JD
-              URL below is nice, but pasting the full posting at{" "}
+              Bit of context so Roger can triage. All optional. Members
+              can paste the full posting at{" "}
               <a
                 href="/jd-upload"
                 className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
               >
                 /jd-upload
               </a>{" "}
-              is what triggers the tailored-résumé pipeline.
+              after signing in; that is what triggers the scored,
+              tailored-résumé pipeline.
             </p>
           </div>
           <div>

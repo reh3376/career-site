@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { GithubReposIt } from "@/components/github-repos";
-import { RecentWritingStrip } from "@/components/landing/recent-writing";
 import { getSocialLinks } from "@/lib/social-links";
 
 // Landing. Editorial, one column, with image bands set into the reading
@@ -79,10 +78,10 @@ export function ItLanding() {
 
         <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
           <Link
-            href="/jd-upload"
+            href="/register"
             className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
           >
-            Considering me for a role? Paste the JD →
+            Considering me for a role? Request access →
           </Link>
           <Link
             href="/contact"
@@ -91,10 +90,10 @@ export function ItLanding() {
             Or reach out directly
           </Link>
           <Link
-            href="/register"
+            href="/login"
             className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
           >
-            Request member access
+            Already a member? Sign in
           </Link>
         </div>
         <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
@@ -302,12 +301,7 @@ export function ItLanding() {
         </div>
       </section>
 
-      {/* -----------------------------------------------------------------
-       * RECENT WRITING, proof that the "notes" claim above isn't
-       * empty. Three most-recent articles as tiles, with a link into
-       * the full archive.
-       * ----------------------------------------------------------------- */}
-      <RecentWritingStrip />
+      {/* Articles are members-only; the recent-writing strip lives on /home. */}
 
       {/* -----------------------------------------------------------------
        * HERO IMAGE BAND, the Hobet dragline, edge-to-edge, as the

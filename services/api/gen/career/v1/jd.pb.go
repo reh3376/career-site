@@ -532,8 +532,8 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
 	"\x10JD_STATUS_FAILED\x10\x062\xb2\x01\n" +
 	"\tJdService\x12M\n" +
-	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03\x12V\n" +
-	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x1eB\xa1\x01\n" +
+	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12V\n" +
+	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1eB\xa1\x01\n" +
 	"\rcom.career.v1B\aJdProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

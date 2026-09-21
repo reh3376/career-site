@@ -17,20 +17,21 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
 
-// JD-upload flow, public.
+// JD-upload flow, members only: a signed-in session is required to
+// submit or poll, and the submitting member is recorded on the row.
 service JdService {
   // Accepts a job description and stores it for scoring. Returns the
   // submission id the caller uses to poll GetJdResult. Never blocks
   // on the actual scoring / generation — those run out of band.
   rpc SubmitJd(SubmitJdRequest) returns (SubmitJdResponse) {
-    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 3;
   }
   // Returns the current state of a submission — queued / scoring /
   // below-threshold / generating / ready / failed — plus the
   // generated résumé URL when status is `ready`.
   rpc GetJdResult(GetJdResultRequest) returns (GetJdResultResponse) {
-    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 30;
   }
 }

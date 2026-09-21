@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+
+import { getSessionUser } from "@/lib/session-user";
 
 import { JdForm } from "./form";
 
@@ -7,8 +10,13 @@ export const metadata: Metadata = {
   description:
     "Paste a job description; Roger scores it against his experience and, when the fit clears the threshold, sends back a résumé tailored to that specific posting.",
 };
+export const dynamic = "force-dynamic";
 
-export default function JdUploadPage() {
+// Members only: the API rejects anonymous submissions too, this just
+// sends a visitor to sign in instead of showing a form that cannot work.
+export default async function JdUploadPage() {
+  const me = await getSessionUser();
+  if (!me) redirect("/login?next=/jd-upload");
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">

@@ -6780,6 +6780,9 @@ type JdSubmissionRow struct {
 	// Retrieval pre-score (mean top-K cosine); unset before scoring.
 	// match_score is the requirement-weighted gate when the assessor ran.
 	RetrievalScore *float64 `protobuf:"fixed64,13,opt,name=retrieval_score,json=retrievalScore,proto3,oneof" json:"retrieval_score,omitempty"`
+	// Email of the signed-in member who submitted; empty for rows created
+	// before JD upload became members-only.
+	SubmitterEmail string `protobuf:"bytes,14,opt,name=submitter_email,json=submitterEmail,proto3" json:"submitter_email,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -6903,6 +6906,13 @@ func (x *JdSubmissionRow) GetRetrievalScore() float64 {
 		return *x.RetrievalScore
 	}
 	return 0
+}
+
+func (x *JdSubmissionRow) GetSubmitterEmail() string {
+	if x != nil {
+		return x.SubmitterEmail
+	}
+	return ""
 }
 
 // List-jd-submissions response.
@@ -7473,7 +7483,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x0fchunks_inserted\x18\x05 \x01(\x05R\x0echunksInserted\x12'\n" +
 	"\x0fchunks_embedded\x18\x06 \x01(\x05R\x0echunksEmbedded\x12\x16\n" +
 	"\x06errors\x18\a \x03(\tR\x06errors\"\x1a\n" +
-	"\x18ListJdSubmissionsRequest\"\xc8\x04\n" +
+	"\x18ListJdSubmissionsRequest\"\xf1\x04\n" +
 	"\x0fJdSubmissionRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
@@ -7490,7 +7500,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
 	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12,\n" +
-	"\x0fretrieval_score\x18\r \x01(\x01H\x01R\x0eretrievalScore\x88\x01\x01B\x0e\n" +
+	"\x0fretrieval_score\x18\r \x01(\x01H\x01R\x0eretrievalScore\x88\x01\x01\x12'\n" +
+	"\x0fsubmitter_email\x18\x0e \x01(\tR\x0esubmitterEmailB\x0e\n" +
 	"\f_match_scoreB\x12\n" +
 	"\x10_retrieval_score\"\xf9\x01\n" +
 	"\x19ListJdSubmissionsResponse\x12<\n" +

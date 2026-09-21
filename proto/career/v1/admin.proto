@@ -1554,6 +1554,9 @@ message JdSubmissionRow {
   // Retrieval pre-score (mean top-K cosine); unset before scoring.
   // match_score is the requirement-weighted gate when the assessor ran.
   optional double retrieval_score = 13;
+  // Email of the signed-in member who submitted; empty for rows created
+  // before JD upload became members-only.
+  string submitter_email = 14;
 }
 
 // List-jd-submissions response.

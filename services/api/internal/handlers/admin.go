@@ -714,6 +714,7 @@ func (a *Admin) ListJdSubmissions(
 			ErrorMessage:       r.Error,
 			GeneratedResumeUrl: r.GeneratedResumeURL,
 			CreatedAt:          timestamppb.New(r.CreatedAt),
+			SubmitterEmail:     r.SubmitterEmail,
 		}
 		if r.MatchScore != nil {
 			score := *r.MatchScore
@@ -1246,6 +1247,7 @@ func (a *Admin) GetJdSubmission(
 		ErrorMessage:       s.Error,
 		GeneratedResumeUrl: s.GeneratedResumeURL,
 		CreatedAt:          timestamppb.New(s.CreatedAt),
+		SubmitterEmail:     s.SubmitterEmail,
 	}
 	if s.MatchScore != nil {
 		v := *s.MatchScore

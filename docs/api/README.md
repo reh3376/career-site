@@ -125,7 +125,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
 | [`AdminService`](#adminservice) | Owner console. | 36 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
-| [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
+| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -2928,16 +2928,17 @@ _No fields; send `{}`._
 
 ## JdService
 
-JD-upload flow, public.
+JD-upload flow, members only: a signed-in session is required to
+submit or poll, and the submitting member is recorded on the row.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Public | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
-| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Public | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
+| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
 
 ### JdService.SubmitJd
 
-`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** 3/min
 
 Accepts a job description and stores it for scoring. Returns the
 submission id the caller uses to poll GetJdResult. Never blocks
@@ -2978,7 +2979,7 @@ on the actual scoring / generation — those run out of band.
 
 ### JdService.GetJdResult
 
-`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Public · **Rate limit:** 30/min
+`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
 
 Returns the current state of a submission — queued / scoring /
 below-threshold / generating / ready / failed — plus the
@@ -5016,6 +5017,7 @@ One row of the /admin/jd triage table.
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was received. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state was reached; unset while in-flight. |
 | `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Retrieval pre-score (mean top-K cosine); unset before scoring. match_score is the requirement-weighted gate when the assessor ran. |
+| `submitterEmail` | `string` | string |  | Email of the signed-in member who submitted; empty for rows created before JD upload became members-only. |
 
 ### ListJdSubmissionsResponse
 

@@ -1114,7 +1114,7 @@ class ListJdSubmissionsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class JdSubmissionRow(_message.Message):
-    __slots__ = ("id", "status", "match_score", "text_head", "role_hint", "employer_hint", "contact_email", "source", "error_message", "generated_resume_url", "created_at", "completed_at", "retrieval_score")
+    __slots__ = ("id", "status", "match_score", "text_head", "role_hint", "employer_hint", "contact_email", "source", "error_message", "generated_resume_url", "created_at", "completed_at", "retrieval_score", "submitter_email")
     ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
@@ -1128,6 +1128,7 @@ class JdSubmissionRow(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
     RETRIEVAL_SCORE_FIELD_NUMBER: _ClassVar[int]
+    SUBMITTER_EMAIL_FIELD_NUMBER: _ClassVar[int]
     id: str
     status: _jd_pb2.JdStatus
     match_score: float
@@ -1141,7 +1142,8 @@ class JdSubmissionRow(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
     retrieval_score: float
-    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ..., match_score: _Optional[float] = ..., text_head: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., source: _Optional[_Union[_jd_pb2.JdSource, str]] = ..., error_message: _Optional[str] = ..., generated_resume_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., retrieval_score: _Optional[float] = ...) -> None: ...
+    submitter_email: str
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ..., match_score: _Optional[float] = ..., text_head: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., source: _Optional[_Union[_jd_pb2.JdSource, str]] = ..., error_message: _Optional[str] = ..., generated_resume_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., retrieval_score: _Optional[float] = ..., submitter_email: _Optional[str] = ...) -> None: ...
 
 class ListJdSubmissionsResponse(_message.Message):
     __slots__ = ("submissions", "ready_count", "below_threshold_count", "failed_count", "in_flight_count")

@@ -1,6 +1,7 @@
 "use server";
 
 import { callApi } from "@/lib/api-fetch";
+import { getSessionCookie } from "@/lib/session";
 
 export type SubmitState = {
   ok?: boolean;
@@ -16,13 +17,17 @@ export type SubmitState = {
   };
 };
 
-// Server action for the /jd-upload textarea. Public, no session
-// cookie needed. Forwards to career.v1.JdService.SubmitJd; the
-// endpoint is rate-limited server-side (5 per 15 min per IP+JD).
+// Server action for the /jd-upload textarea. Members only: forwards
+// the session cookie to career.v1.JdService.SubmitJd, which rejects
+// anonymous calls; rate-limited server-side (5 per 15 min per member+JD).
 export async function submitJdAction(
   _prev: SubmitState,
   formData: FormData,
 ): Promise<SubmitState> {
+  const cookie = await getSessionCookie();
+  if (!cookie) {
+    return { error: "Sign in to submit a job description." };
+  }
   const jdText = String(formData.get("jd_text") ?? "").trim();
   const roleHint = String(formData.get("role_hint") ?? "").trim();
   const employerHint = String(formData.get("employer_hint") ?? "").trim();
@@ -48,6 +53,7 @@ export async function submitJdAction(
       employerHint,
       contactEmail,
     },
+    cookie,
   });
 
   if (!resp.ok) {
