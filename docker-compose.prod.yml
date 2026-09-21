@@ -102,6 +102,42 @@ services:
       SIDECAR_EMBED_PROVIDER: ${SIDECAR_EMBED_PROVIDER:-stub}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # Embedding host. Always part of the prod stack so the provider flip is
+  # a one-variable change (SIDECAR_EMBED_PROVIDER=ollama) plus an embed
+  # sweep from /admin/corpus. Model pulled on first boot into a volume.
+  # Sizing: nomic-embed-text is ~275 MB on disk and ~600 MB resident while
+  # loaded; OLLAMA_KEEP_ALIVE unloads it when idle. Run this on a tier
+  # with at least 4 GB total RAM (CX32 or better); see deploy/README.md.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    profiles: !reset []
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        pid=$$!
+        sleep 5
+        ollama pull "$${OLLAMA_EMBED_MODEL}" || echo "model pull failed; serving without it"
+        wait $$pid
+    environment:
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+      OLLAMA_NUM_PARALLEL: "1"
+    mem_limit: ${OLLAMA_MEM_LIMIT:-1500m}
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [app]
 
   postgres:
     ports: !override [] # no host port in prod

@@ -132,6 +132,9 @@ const (
 	// AdminServiceReindexCorpusProcedure is the fully-qualified name of the AdminService's
 	// ReindexCorpus RPC.
 	AdminServiceReindexCorpusProcedure = "/career.v1.AdminService/ReindexCorpus"
+	// AdminServiceSweepCorpusEmbeddingsProcedure is the fully-qualified name of the AdminService's
+	// SweepCorpusEmbeddings RPC.
+	AdminServiceSweepCorpusEmbeddingsProcedure = "/career.v1.AdminService/SweepCorpusEmbeddings"
 	// AdminServiceListJdSubmissionsProcedure is the fully-qualified name of the AdminService's
 	// ListJdSubmissions RPC.
 	AdminServiceListJdSubmissionsProcedure = "/career.v1.AdminService/ListJdSubmissions"
@@ -255,6 +258,13 @@ type AdminServiceClient interface {
 	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
 	// "Reindex articles" button on /admin/corpus.
 	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
+	// Re-embeds every chunk whose vector is missing or was produced by a
+	// different embedder than the sidecar's current one. Bounded per call
+	// (max_chunks); the response's `remaining` says whether to call again.
+	// This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
+	// changing the embedding model: nothing is deleted, the corpus is
+	// walked until every chunk carries the current model's vector.
+	SweepCorpusEmbeddings(context.Context, *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
@@ -470,6 +480,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ReindexCorpus")),
 			connect.WithClientOptions(opts...),
 		),
+		sweepCorpusEmbeddings: connect.NewClient[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse](
+			httpClient,
+			baseURL+AdminServiceSweepCorpusEmbeddingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SweepCorpusEmbeddings")),
+			connect.WithClientOptions(opts...),
+		),
 		listJdSubmissions: connect.NewClient[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse](
 			httpClient,
 			baseURL+AdminServiceListJdSubmissionsProcedure,
@@ -514,6 +530,7 @@ type adminServiceClient struct {
 	ingestCorpusText      *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
 	listCorpusDocuments   *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
 	reindexCorpus         *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
+	sweepCorpusEmbeddings *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 }
 
@@ -682,6 +699,11 @@ func (c *adminServiceClient) ReindexCorpus(ctx context.Context, req *connect.Req
 	return c.reindexCorpus.CallUnary(ctx, req)
 }
 
+// SweepCorpusEmbeddings calls career.v1.AdminService.SweepCorpusEmbeddings.
+func (c *adminServiceClient) SweepCorpusEmbeddings(ctx context.Context, req *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error) {
+	return c.sweepCorpusEmbeddings.CallUnary(ctx, req)
+}
+
 // ListJdSubmissions calls career.v1.AdminService.ListJdSubmissions.
 func (c *adminServiceClient) ListJdSubmissions(ctx context.Context, req *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
 	return c.listJdSubmissions.CallUnary(ctx, req)
@@ -805,6 +827,13 @@ type AdminServiceHandler interface {
 	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
 	// "Reindex articles" button on /admin/corpus.
 	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
+	// Re-embeds every chunk whose vector is missing or was produced by a
+	// different embedder than the sidecar's current one. Bounded per call
+	// (max_chunks); the response's `remaining` says whether to call again.
+	// This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
+	// changing the embedding model: nothing is deleted, the corpus is
+	// walked until every chunk carries the current model's vector.
+	SweepCorpusEmbeddings(context.Context, *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
@@ -1016,6 +1045,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ReindexCorpus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceSweepCorpusEmbeddingsHandler := connect.NewUnaryHandler(
+		AdminServiceSweepCorpusEmbeddingsProcedure,
+		svc.SweepCorpusEmbeddings,
+		connect.WithSchema(adminServiceMethods.ByName("SweepCorpusEmbeddings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListJdSubmissionsHandler := connect.NewUnaryHandler(
 		AdminServiceListJdSubmissionsProcedure,
 		svc.ListJdSubmissions,
@@ -1090,6 +1125,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListCorpusDocumentsHandler.ServeHTTP(w, r)
 		case AdminServiceReindexCorpusProcedure:
 			adminServiceReindexCorpusHandler.ServeHTTP(w, r)
+		case AdminServiceSweepCorpusEmbeddingsProcedure:
+			adminServiceSweepCorpusEmbeddingsHandler.ServeHTTP(w, r)
 		case AdminServiceListJdSubmissionsProcedure:
 			adminServiceListJdSubmissionsHandler.ServeHTTP(w, r)
 		default:
@@ -1231,6 +1268,10 @@ func (UnimplementedAdminServiceHandler) ListCorpusDocuments(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ReindexCorpus is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SweepCorpusEmbeddings(context.Context, *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SweepCorpusEmbeddings is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {

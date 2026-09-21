@@ -147,6 +147,35 @@ Then in the admin console: `/admin/corpus` → **Reindex private corpus**.
 Everything under the private mount is ingested as `visibility=corpus_only`;
 front matter cannot loosen that. The sync never deletes on the server.
 
+## Real embeddings (Ollama)
+
+The stack ships with `SIDECAR_EMBED_PROVIDER=stub`, which keeps every
+interface exercised but produces meaningless vectors: JD match scores and
+retrieval are random until the provider is flipped. The `ollama` service is
+part of the prod stack and pulls `nomic-embed-text` into a volume on first
+boot.
+
+**Sizing first.** `free -m` on the current box reports ~1.9 GB total with
+~1 GB available; the base stack uses ~300 MB. Ollama needs ~600 MB resident
+while the embed model is loaded. Resize to at least **CX32 (4 vCPU / 8 GB)**
+before flipping; that tier also leaves room for a small quantised LLM later
+(a 7B q4 model wants ~5 GB, so plan CX42 / 16 GB for that step). Resize is a
+Hetzner console operation (power off → Rescale → keep disk → power on).
+
+Then:
+
+```bash
+cd /opt/career-site
+sed -i "s/^SIDECAR_EMBED_PROVIDER=.*/SIDECAR_EMBED_PROVIDER=ollama/" .env.prod
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d ollama sidecar
+docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml logs -f ollama   # wait for the pull
+```
+
+Finally `/admin/corpus` → **Embed sweep**, repeated until `remaining` reads
+0. The sweep re-embeds any chunk whose recorded embedder differs from the
+live one, so nothing needs deleting; the same button handles a future model
+change.
+
 ## Backups (next)
 
 Not in this deploy. Follow-ups:

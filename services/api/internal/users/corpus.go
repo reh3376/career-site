@@ -163,16 +163,21 @@ func (r *Repo) UpsertCorpusChunk(
 	return &out, nil
 }
 
-// SetCorpusChunkEmbedding fills the embedding for one chunk. Used
-// by the embed pass in an insert-first, embed-later ingest.
+// SetCorpusChunkEmbedding fills the embedding for one chunk and
+// records which embedder produced it. Used by the embed pass in an
+// insert-first, embed-later ingest and by the embed sweep.
 func (r *Repo) SetCorpusChunkEmbedding(
-	ctx context.Context, chunkID int64, embedding []float32,
+	ctx context.Context, chunkID int64, embedding []float32, embedderModel string,
 ) error {
 	if len(embedding) == 0 {
 		return fmt.Errorf("empty embedding")
 	}
-	const q = `UPDATE corpus_chunks SET embedding = $2 WHERE id = $1`
-	tag, err := r.pool.Exec(ctx, q, chunkID, vectorLiteral(embedding))
+	const q = `
+    UPDATE corpus_chunks
+    SET embedding = $2, embedder_model = NULLIF($3, ''), embedded_at = now()
+    WHERE id = $1
+  `
+	tag, err := r.pool.Exec(ctx, q, chunkID, vectorLiteral(embedding), embedderModel)
 	if err != nil {
 		return fmt.Errorf("set chunk embedding: %w", err)
 	}
@@ -180,6 +185,86 @@ func (r *Repo) SetCorpusChunkEmbedding(
 		return ErrNotFound
 	}
 	return nil
+}
+
+// ListChunksNeedingEmbedding returns chunks whose vector is missing or
+// was produced by a different embedder than `currentModel`, oldest
+// first, capped at limit. Text is included so the caller can embed
+// without a second query.
+func (r *Repo) ListChunksNeedingEmbedding(
+	ctx context.Context, currentModel string, limit int,
+) ([]CorpusChunk, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 64
+	}
+	const q = `
+    SELECT id, document_id, chunk_index, text, COALESCE(token_count, 0), created_at
+    FROM corpus_chunks
+    WHERE embedding IS NULL OR embedder_model IS DISTINCT FROM $1
+    ORDER BY id
+    LIMIT $2
+  `
+	rows, err := r.pool.Query(ctx, q, currentModel, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list chunks needing embedding: %w", err)
+	}
+	defer rows.Close()
+	var out []CorpusChunk
+	for rows.Next() {
+		var c CorpusChunk
+		if err := rows.Scan(&c.ID, &c.DocumentID, &c.ChunkIndex, &c.Text, &c.TokenCount, &c.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan chunk: %w", err)
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// CountChunksNeedingEmbedding is the sweep's "remaining" number.
+func (r *Repo) CountChunksNeedingEmbedding(ctx context.Context, currentModel string) (int32, error) {
+	const q = `
+    SELECT COUNT(*)::int FROM corpus_chunks
+    WHERE embedding IS NULL OR embedder_model IS DISTINCT FROM $1
+  `
+	var n int32
+	if err := r.pool.QueryRow(ctx, q, currentModel).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count chunks needing embedding: %w", err)
+	}
+	return n, nil
+}
+
+// EmbedderCount is one row of the per-embedder breakdown shown on
+// /admin/corpus. Model is "" for chunks that have no embedding.
+type EmbedderCount struct {
+	Model string
+	Count int32
+}
+
+// CountChunksByEmbedder groups every chunk by the embedder that
+// produced its vector so the admin can see, after a provider flip,
+// how much of the corpus is still on the old one.
+func (r *Repo) CountChunksByEmbedder(ctx context.Context) ([]EmbedderCount, error) {
+	const q = `
+    SELECT CASE WHEN embedding IS NULL THEN '' ELSE COALESCE(embedder_model, 'untracked') END AS model,
+           COUNT(*)::int
+    FROM corpus_chunks
+    GROUP BY 1
+    ORDER BY 2 DESC, 1
+  `
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("count chunks by embedder: %w", err)
+	}
+	defer rows.Close()
+	var out []EmbedderCount
+	for rows.Next() {
+		var c EmbedderCount
+		if err := rows.Scan(&c.Model, &c.Count); err != nil {
+			return nil, fmt.Errorf("scan embedder count: %w", err)
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 // SearchCorpus returns the top-k chunks nearest to the query

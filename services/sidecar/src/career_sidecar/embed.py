@@ -51,6 +51,13 @@ class OllamaEmbedder:
     dimensions: int
     name: str = "ollama"
 
+    def __post_init__(self) -> None:
+        # The api records this per chunk and re-embeds anything whose
+        # recorded name differs, so the model must be part of the name:
+        # switching nomic-embed-text for another model has to look like a
+        # new embedder, not the same one.
+        self.name = f"ollama:{self.model}"
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         out: list[list[float]] = []
         for text in texts:

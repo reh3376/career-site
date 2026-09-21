@@ -198,7 +198,7 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 		}
 		res.EmbedderModel = model
 		for j, emb := range vectors {
-			if err := i.users.SetCorpusChunkEmbedding(ctx, chunkIDs[start+j], emb); err != nil {
+			if err := i.users.SetCorpusChunkEmbedding(ctx, chunkIDs[start+j], emb, model); err != nil {
 				i.log.Warn("set embedding failed",
 					slog.Int64("chunk_id", chunkIDs[start+j]),
 					slog.String("error", err.Error()),

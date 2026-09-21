@@ -556,6 +556,13 @@ func (a *Admin) ListCorpusDocuments(
 		TotalCorpusOnly: summary.TotalCorpusOnly,
 		Documents:       make([]*v1.CorpusDocumentRow, 0, len(summary.Rows)),
 	}
+	if counts, err := a.users.CountChunksByEmbedder(ctx); err == nil {
+		for _, c := range counts {
+			out.EmbedderCounts = append(out.EmbedderCounts, &v1.EmbedderCount{Model: c.Model, Count: c.Count})
+		}
+	} else {
+		a.log.Warn("count chunks by embedder failed", slog.String("error", err.Error()))
+	}
 	for i := range summary.Rows {
 		row := &summary.Rows[i]
 		out.Documents = append(out.Documents, &v1.CorpusDocumentRow{
@@ -1099,6 +1106,35 @@ func supportStatusRepoToProto(s string) v1.SupportStatus {
 	default:
 		return v1.SupportStatus_SUPPORT_STATUS_UNSPECIFIED
 	}
+}
+
+func (a *Admin) SweepCorpusEmbeddings(
+	ctx context.Context,
+	req *connect.Request[v1.SweepCorpusEmbeddingsRequest],
+) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	if a.ingest == nil {
+		return nil, connect.NewError(connect.CodeUnavailable,
+			errors.New("corpus ingester not wired"))
+	}
+	// A sweep of 512 chunks through Ollama on CPU can take a few
+	// minutes; give it a budget beyond the default request timeout.
+	sweepCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Minute)
+	defer cancel()
+	res, err := a.ingest.EmbedSweep(sweepCtx, ingest.SweepOptions{MaxChunks: int(req.Msg.MaxChunks)})
+	if err != nil {
+		a.log.Error("SweepCorpusEmbeddings failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeUnavailable, err)
+	}
+	return connect.NewResponse(&v1.SweepCorpusEmbeddingsResponse{
+		Model:      res.Model,
+		Considered: int32(res.Considered),
+		Embedded:   int32(res.Embedded),
+		Failed:     int32(res.Failed),
+		Remaining:  res.Remaining,
+	}), nil
 }
 
 // ---------------------------------------------------------------

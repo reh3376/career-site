@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 34 |
+| [`AdminService`](#adminservice) | Owner console. | 35 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
@@ -1642,6 +1642,7 @@ Owner console.
 | [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin (fresh MFA) | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
 | [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin (fresh MFA) | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
 | [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a filesystem tree for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed article content instead of paste-by-paste. |
+| [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin (fresh MFA) | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 
 ### AdminService.ListMembers
@@ -2701,6 +2702,7 @@ _No fields; send `{}`._
 | `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
 | `totalPublic` | `int32` | number |  | Documents with visibility=public. |
 | `totalCorpusOnly` | `int32` | number |  | Documents with visibility=corpus_only. |
+| `embedderCounts` | [`EmbedderCount`](#embeddercount)[] | array of object |  | Chunk counts grouped by the embedder that produced their vector. |
 
 <details><summary>Example request body</summary>
 
@@ -2749,6 +2751,43 @@ resolved from CORPUS_ROOT + a subdirectory per source_kind
 {
   "sourceKind": "string",
   "scope": "string"
+}
+```
+
+</details>
+
+### AdminService.SweepCorpusEmbeddings
+
+`POST /api/career.v1.AdminService/SweepCorpusEmbeddings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Re-embeds every chunk whose vector is missing or was produced by a
+different embedder than the sidecar's current one. Bounded per call
+(max_chunks); the response's `remaining` says whether to call again.
+This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
+changing the embedding model: nothing is deleted, the corpus is
+walked until every chunk carries the current model's vector.
+
+**Request** — [`SweepCorpusEmbeddingsRequest`](#sweepcorpusembeddingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `maxChunks` | `int32` | number | `int32: lte: 5000 gte: 0` | Upper bound on chunks to (re)embed in this call. 0 → 512. |
+
+**Response** — [`SweepCorpusEmbeddingsResponse`](#sweepcorpusembeddingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `model` | `string` | string |  | Embedder the sidecar is currently serving; every chunk is converged onto this. |
+| `considered` | `int32` | number |  | Chunks selected as stale this call. |
+| `embedded` | `int32` | number |  | Chunks successfully re-embedded this call. |
+| `failed` | `int32` | number |  | Chunks that failed (left stale for the next sweep). |
+| `remaining` | `int32` | number |  | Chunks still stale after this call; zero means converged. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "maxChunks": 0
 }
 ```
 
@@ -4682,6 +4721,36 @@ List-corpus-documents response.
 | `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
 | `totalPublic` | `int32` | number |  | Documents with visibility=public. |
 | `totalCorpusOnly` | `int32` | number |  | Documents with visibility=corpus_only. |
+| `embedderCounts` | [`EmbedderCount`](#embeddercount)[] | array of object |  | Chunk counts grouped by the embedder that produced their vector. |
+
+### EmbedderCount
+
+One row of the per-embedder chunk breakdown.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `model` | `string` | string |  | Embedder name as reported by the sidecar (e.g. `stub`, `ollama:nomic-embed-text`); empty for chunks with no vector yet, `untracked` for vectors written before per-chunk tracking existed. |
+| `count` | `int32` | number |  | Number of chunks. |
+
+### SweepCorpusEmbeddingsRequest
+
+Sweep-corpus-embeddings request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `maxChunks` | `int32` | number | `int32: lte: 5000 gte: 0` | Upper bound on chunks to (re)embed in this call. 0 → 512. |
+
+### SweepCorpusEmbeddingsResponse
+
+Sweep-corpus-embeddings response — mirrors ingest.SweepResult.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `model` | `string` | string |  | Embedder the sidecar is currently serving; every chunk is converged onto this. |
+| `considered` | `int32` | number |  | Chunks selected as stale this call. |
+| `embedded` | `int32` | number |  | Chunks successfully re-embedded this call. |
+| `failed` | `int32` | number |  | Chunks that failed (left stale for the next sweep). |
+| `remaining` | `int32` | number |  | Chunks still stale after this call; zero means converged. |
 
 ### ReindexCorpusRequest
 

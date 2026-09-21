@@ -155,12 +155,41 @@ services:
       - "9001:9001" # web UI
     networks: [app]
 
+  # Real embeddings for dev. Opt in with `docker compose --profile embed up`
+  # and set SIDECAR_EMBED_PROVIDER=ollama on the sidecar; the default dev
+  # stack keeps the stub so `up -d` needs no model download.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    profiles: ["embed"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        pid=$$!
+        sleep 5
+        ollama pull "$${OLLAMA_EMBED_MODEL}" || echo "model pull failed; serving without it"
+        wait $$pid
+    environment:
+      OLLAMA_EMBED_MODEL: nomic-embed-text
+      OLLAMA_KEEP_ALIVE: 10m
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [app]
+
 networks:
   app:
     driver: bridge
 
 volumes:
   caddy_data:
+  ollama_models:
   caddy_config:
   postgres_data:
   minio_data:
