@@ -102,9 +102,9 @@ const (
 	JdStatus_JD_STATUS_RECEIVED JdStatus = 1
 	// Retrieval + scoring is running.
 	JdStatus_JD_STATUS_SCORING JdStatus = 2
-	// Score < 0.65; the caller gets the polite fallback response.
+	// Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response.
 	JdStatus_JD_STATUS_BELOW_THRESHOLD JdStatus = 3
-	// Score ≥ 0.65; résumé generation is running.
+	// Score at or above the match gate; résumé generation is running.
 	JdStatus_JD_STATUS_GENERATING JdStatus = 4
 	// Résumé is ready; generated_resume_url is populated.
 	JdStatus_JD_STATUS_READY JdStatus = 5

@@ -95,7 +95,7 @@ export default async function AdminJdPage() {
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
         Every JD submitted at /jd-upload. The match score is computed
         in code from per-requirement verdicts (open a row for the
-        derivation). Threshold is 0.65; above it, the résumé pipeline
+        derivation). Threshold is 0.55; above it, the résumé pipeline
         runs. Below, Roger triages manually.
       </p>
 

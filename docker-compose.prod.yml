@@ -89,6 +89,8 @@ services:
       CORPUS_PRIVATE_ROOT: /corpus-private
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-1200}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-2000}
+      # Must match SIDECAR_LLM_NUM_CTX; the api budgets prompts to it.
+      LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}
       RESUME_PDF_OWNER_PASSWORD: ${RESUME_PDF_OWNER_PASSWORD}
     volumes: !override
       - ./apps/web/content:/corpus:ro
@@ -109,8 +111,13 @@ services:
       # LLM gateway stays on stub in prod until the model is proven
       # locally and the box is resized; see docs/cutover-local-to-prod.md.
       SIDECAR_LLM_PROVIDER: ${SIDECAR_LLM_PROVIDER:-stub}
+      # LLM host; defaults to the box's ollama. Point it at a tailnet
+      # address to run the model on the owner's workstation instead.
+      OLLAMA_LLM_URL: ${OLLAMA_LLM_URL:-http://ollama:11434}
       OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:14b}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       SIDECAR_LLM_TIMEOUT_SECONDS: ${SIDECAR_LLM_TIMEOUT_SECONDS:-900}
+      SIDECAR_LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}
     depends_on:
       ollama:
         condition: service_healthy

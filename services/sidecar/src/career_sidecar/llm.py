@@ -72,6 +72,15 @@ class OllamaLLM:
     base_url: str
     model: str
     timeout_seconds: int = 600
+    # Context window requested per call. Ollama's server default (4096
+    # on current releases, 2048 on older) silently truncates longer
+    # prompts, which turned a 15k-token judgment prompt into a 2k one in
+    # prod and produced confident, wrong verdicts. Always set it, and
+    # check the reported prompt_eval_count against the prompt size.
+    num_ctx: int = 16384
+    # Bearer token for a hosted Ollama endpoint (ollama.com). Empty for a
+    # local or tailnet server.
+    api_key: str = ""
     name: str = "ollama"
 
     def __post_init__(self) -> None:
@@ -95,7 +104,7 @@ class OllamaLLM:
             "messages": messages,
             "stream": False,
             "think": False,
-            "options": {"temperature": temperature},
+            "options": {"temperature": temperature, "num_ctx": self.num_ctx},
         }
         if max_tokens > 0:
             body["options"]["num_predict"] = max_tokens
@@ -106,26 +115,56 @@ class OllamaLLM:
             body["format"] = schema
         elif json_mode:
             body["format"] = "json"
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         req = urllib.request.Request(
             f"{self.base_url.rstrip('/')}/api/chat",
             data=json.dumps(body).encode(),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             method="POST",
         )
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail = e.read(300).decode("utf-8", "replace") if e.fp else ""
+            raise RuntimeError(f"ollama generate failed: HTTP {e.code} {detail}".strip()) from e
         except urllib.error.URLError as e:
             raise RuntimeError(f"ollama generate failed: {e}") from e
         content = (payload.get("message") or {}).get("content", "")
         if not isinstance(content, str):
             raise RuntimeError("ollama returned no message content")
+        prompt_tokens = int(payload.get("prompt_eval_count") or 0)
+        check_truncation(
+            prompt_tokens, estimate_tokens(system) + estimate_tokens(user), self.num_ctx
+        )
         return GenerateResult(
             text=strip_thinking(content),
             model=self.name,
-            prompt_tokens=int(payload.get("prompt_eval_count") or 0),
+            prompt_tokens=prompt_tokens,
             completion_tokens=int(payload.get("eval_count") or 0),
             finish_reason=str(payload.get("done_reason") or ""),
+        )
+
+
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate for English prose and markup (about 3.6
+    characters per token for these prompts)."""
+    return int(len(text) / 3.6)
+
+
+def check_truncation(prompt_tokens: int, estimated: int, num_ctx: int) -> None:
+    """Raise when the server evidently dropped part of the prompt. Ollama
+    truncates to the context window without an error; a judgment made on
+    a partial prompt is worse than no judgment, so refuse it."""
+    if prompt_tokens <= 0 or estimated < 512:
+        return
+    if prompt_tokens < 0.6 * estimated:
+        raise RuntimeError(
+            f"prompt truncated by the model server: {prompt_tokens} tokens evaluated of "
+            f"about {estimated} sent (num_ctx={num_ctx}); raise SIDECAR_LLM_NUM_CTX or "
+            "shorten the prompt"
         )
 
 
@@ -195,10 +234,23 @@ def _stub_instance(schema: dict):
     return "stub"
 
 
-def build_llm(provider: str, ollama_url: str, model: str, timeout_seconds: int) -> LLM:
+def build_llm(
+    provider: str,
+    ollama_url: str,
+    model: str,
+    timeout_seconds: int,
+    num_ctx: int = 16384,
+    api_key: str = "",
+) -> LLM:
     """Construct the configured LLM provider or raise. Called once at boot."""
     if provider == "ollama":
-        return OllamaLLM(base_url=ollama_url, model=model, timeout_seconds=timeout_seconds)
+        return OllamaLLM(
+            base_url=ollama_url,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            num_ctx=num_ctx,
+            api_key=api_key,
+        )
     if provider == "stub":
         return StubLLM()
     raise RuntimeError(f"unknown SIDECAR_LLM_PROVIDER: {provider!r} (want 'ollama' or 'stub')")

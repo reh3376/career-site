@@ -115,7 +115,7 @@ export function JdResult({
 
       {status === "JD_STATUS_BELOW_THRESHOLD" ? (
         <p className="text-sm leading-relaxed text-ink-2">
-          The requirement-by-requirement check came in under the 0.65
+          The requirement-by-requirement check came in under the 0.55
           gate, so no tailored résumé was generated. Roger still sees
           every submission and will reply personally if the role looks
           worth a conversation.

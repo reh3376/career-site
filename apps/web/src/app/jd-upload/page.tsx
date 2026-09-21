@@ -33,7 +33,7 @@ export default async function JdUploadPage() {
         control rooms, manufacturing plants, decision infrastructure,
         and AI/ML. This JD review evaluates his skill set against the
         JD criteria and produces a skills-match confidence score. If
-        the score is &ge; 0.65, a 2-page r&eacute;sum&eacute; custom
+        the score is &ge; 0.55, a 2-page r&eacute;sum&eacute; custom
         built for the uploaded JD is generated as a PDF.
       </p>
 
@@ -46,7 +46,7 @@ export default async function JdUploadPage() {
         <ol className="ml-4 list-decimal space-y-1.5 text-sm">
           <li>The full JD text lands in Roger&rsquo;s inbox with a match score.</li>
           <li>
-            <span className="text-ink">Score ≥ 0.65:</span> a 2-page résumé is
+            <span className="text-ink">Score ≥ 0.55:</span> a 2-page résumé is
             generated from the master corpus, tailored to the posting.
           </li>
           <li>

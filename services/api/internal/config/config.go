@@ -37,6 +37,10 @@ type Config struct {
 	// JDPipelineTimeout bounds one submission's score + generate run.
 	// CPU inference of a two-page résumé can take minutes.
 	JDPipelineTimeout time.Duration
+	// LLMNumCtx is the model context window the sidecar requests; the
+	// API budgets its judgment batches and résumé evidence to it so the
+	// pipeline fits the box (8192 on the CPX31 with qwen3:8b).
+	LLMNumCtx int
 	// LLMAllowStub lets the structured JD assessor run against the
 	// sidecar's stub provider (schema-valid, meaningless output). Off
 	// by default so a stub never gates real submissions.
@@ -112,6 +116,7 @@ func Load() (Config, error) {
 		LLMMonthlyCallCap:      int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
 		JDPipelineTimeout:      time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
 		LLMAllowStub:           os.Getenv("LLM_ALLOW_STUB") == "1",
+		LLMNumCtx:              envIntOr("LLM_NUM_CTX", 16384),
 		ResumePDFOwnerPassword: os.Getenv("RESUME_PDF_OWNER_PASSWORD"),
 		DatabaseURL:            envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
 		DatabaseURLReadonly:    os.Getenv("DATABASE_URL_READONLY"),

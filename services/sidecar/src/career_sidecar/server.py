@@ -40,11 +40,13 @@ def build_server(cfg: Config) -> tuple[grpc.Server, str]:
     )
     llm = build_llm(
         provider=cfg.llm_provider,
-        ollama_url=cfg.ollama_url,
+        ollama_url=cfg.ollama_llm_url,
         model=cfg.ollama_llm_model,
         timeout_seconds=cfg.llm_timeout_seconds,
+        num_ctx=cfg.llm_num_ctx,
+        api_key=cfg.ollama_api_key,
     )
-    log.info("sidecar llm ready", extra={"provider": llm.name})
+    log.info("sidecar llm ready", extra={"provider": llm.name, "num_ctx": cfg.llm_num_ctx})
     sidecar_pb2_grpc.add_SidecarServiceServicer_to_server(
         SidecarServicer(embedder=embedder, llm=llm), server
     )

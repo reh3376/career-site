@@ -37,7 +37,40 @@ From the owner's design notes (see `project_llm_design_principles` memory):
    drops anything unsourced.
 4. PDF is rendered outside the model (sidecar, Typst).
 
-## 3. Sizing and the hardware step
+## 3. Sizing: the CPX31 is the ceiling
+
+**Constraint (owner, 2026-09-21): no further server spend.** The CPX31
+(4 vCPU / 8 GB) is the box; the design has to fit it. Two levers make
+that work, and both are in place:
+
+1. **Context budgeting.** `SIDECAR_LLM_NUM_CTX` (sidecar) and `LLM_NUM_CTX`
+   (api) carry one number. The sidecar requests exactly that window from
+   Ollama and refuses any call the server evidently truncated; the api
+   batches the judgment prompt into calls that fit it and trims résumé
+   evidence to it in priority order (master résumé, cited chunks, JD
+   retrieval). At 8192 the KV cache for `qwen3:8b` is ~1.2 GB, so the
+   model (5.2 GB) plus cache stays under a 7 GB `OLLAMA_MEM_LIMIT`.
+   Judgments are one requirement per call (`judgeBatchMax`), which
+   costs nothing in total tokens and makes the verdicts independent of
+   the context size; the reasoning and the measurements are in
+   `docs/llm-tuning-log.md`. Expect ~10 minutes per JD on this CPU.
+2. **The LLM host can be elsewhere at no cost.** `OLLAMA_LLM_URL` lets the
+   sidecar send LLM calls to a different Ollama than the embedder. With a
+   Tailscale link between the CPX31 and the owner's Mac, `qwen3:14b` runs
+   on the Mac's GPU at the measured quality (0.79 / 0.36 / 0.00 / 0.00 on
+   the calibration set) while embeddings stay on the box. Starlink's CGNAT
+   is irrelevant: tailnet traffic is outbound from both ends. If the Mac
+   is off, the assessor errors and the pipeline falls back to the
+   retrieval pre-score, which is the documented degraded mode.
+
+| Workload | Model | Where | Memory | Notes |
+|---|---|---|---|---|
+| Embeddings | `nomic-embed-text` | CPX31 `ollama` | ~0.6 GB loaded | done (Phase A) |
+| Assess + résumé | `qwen3:8b` at 8k ctx | CPX31 `ollama` | ~6.4 GB | fits; 2-3 judgment batches; ~10 min per JD |
+| Assess + résumé | `qwen3:4b` at 16k ctx | CPX31 `ollama` | ~5 GB | fallback if 8b is too tight; lower quality |
+| Assess + résumé | `qwen3:14b` at 16k ctx | owner's Mac via Tailscale | Mac RAM | best quality; needs the Mac on |
+
+### Historical sizing note
 
 | Workload | Model | Disk | RAM while loaded | Fits |
 |---|---|---|---|---|
@@ -50,12 +83,12 @@ CPU inference of a 14B model on 4 or 8 shared vCPUs runs at a few tokens per
 second. The JD pipeline is asynchronous and bounded by
 `JD_PIPELINE_TIMEOUT_SECONDS` (1200 s in prod), so a slow answer is
 acceptable; a timed-out one is recorded as `failed` with the error visible in
-`/admin/jd`. Budget roughly: two assessment calls (~1.5k output tokens
-total) plus one résumé call (~1.4k tokens) per above-threshold JD.
+`/admin/jd`. Budget roughly: one requirements call, one judge call per
+requirement (6 to 14, ~1.2k prompt tokens each) and one résumé call
+(~1.4k output tokens) per above-threshold JD.
 
-The owner has said the CPX upgrade happens only once the model and adapter
-are proven locally. Until then production stays on `stub` for the LLM and
-`ollama` (once flipped) for embeddings only.
+Production stays on `stub` for the LLM until the log records a passing
+run at 8k with the chosen backend; embeddings are already on `ollama`.
 
 ## 4. Order of operations
 

@@ -28,8 +28,11 @@ def running_server() -> Iterator[str]:
         ollama_embed_model="nomic-embed-text",
         embed_dimensions=768,
         llm_provider="stub",
+        ollama_llm_url="http://ollama:11434",
         ollama_llm_model="qwen3:14b",
+        ollama_api_key="",
         llm_timeout_seconds=30,
+        llm_num_ctx=16384,
     )
     server, addr = build_server(cfg)
     server.start()

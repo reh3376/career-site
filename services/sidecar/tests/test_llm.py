@@ -57,6 +57,19 @@ def test_stub_honours_json_schema():
     assert out["requirements"][0]["weight"] == 1
 
 
+def test_truncation_guard():
+    from career_sidecar.llm import check_truncation, estimate_tokens
+
+    # A 15k-token prompt evaluated as 2k is a truncation.
+    with pytest.raises(RuntimeError):
+        check_truncation(2050, 15000, 4096)
+    # Small prompts and healthy ratios pass.
+    check_truncation(400, 300, 4096)
+    check_truncation(14000, 15000, 16384)
+    check_truncation(0, 15000, 16384)  # server did not report; nothing to check
+    assert estimate_tokens("a" * 3600) == 1000
+
+
 def test_ollama_name_includes_model():
     llm = OllamaLLM(base_url="http://ollama:11434", model="qwen3:14b")
     assert llm.name == "ollama:qwen3:14b"

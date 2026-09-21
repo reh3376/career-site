@@ -192,11 +192,12 @@ func main() {
 		}
 		if provider != "" && (cfg.LLMAllowStub || !strings.HasPrefix(provider, "stub")) {
 			gateway := llm.SidecarLLM{Client: sc}
-			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap)
+			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap, cfg.LLMNumCtx)
 			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,
-				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword)
+				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword, cfg.LLMNumCtx)
 			log.Info("jd assessor + résumé writer enabled",
 				slog.String("llm_provider", provider),
+				slog.Int("num_ctx", cfg.LLMNumCtx),
 				slog.Bool("pdf", cfg.ResumePDFOwnerPassword != ""))
 		} else {
 			log.Info("jd assessor disabled; retrieval score is the gate", slog.String("llm_provider", provider))
