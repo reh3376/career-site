@@ -120,6 +120,12 @@ const (
 	// AdminServiceListMemberActivityProcedure is the fully-qualified name of the AdminService's
 	// ListMemberActivity RPC.
 	AdminServiceListMemberActivityProcedure = "/career.v1.AdminService/ListMemberActivity"
+	// AdminServiceIngestCorpusTextProcedure is the fully-qualified name of the AdminService's
+	// IngestCorpusText RPC.
+	AdminServiceIngestCorpusTextProcedure = "/career.v1.AdminService/IngestCorpusText"
+	// AdminServiceListCorpusDocumentsProcedure is the fully-qualified name of the AdminService's
+	// ListCorpusDocuments RPC.
+	AdminServiceListCorpusDocumentsProcedure = "/career.v1.AdminService/ListCorpusDocuments"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -218,6 +224,15 @@ type AdminServiceClient interface {
 	// /admin/activity — Roger's request for a sortable "who's using
 	// the site" surface.
 	ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error)
+	// Ingests one text document into the Ask Roger corpus. Chunks
+	// it, embeds via the sidecar, and stores under (source_kind,
+	// source_path). Idempotent: an identical body with the same
+	// (source_kind, source_path) is a no-op (skipped=true). Backs
+	// the paste-a-document form on /admin/corpus.
+	IngestCorpusText(context.Context, *connect.Request[v1.IngestCorpusTextRequest]) (*connect.Response[v1.IngestCorpusTextResponse], error)
+	// Returns every document currently in the corpus with a per-row
+	// chunk count. Backs the list on /admin/corpus.
+	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -405,6 +420,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListMemberActivity")),
 			connect.WithClientOptions(opts...),
 		),
+		ingestCorpusText: connect.NewClient[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse](
+			httpClient,
+			baseURL+AdminServiceIngestCorpusTextProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("IngestCorpusText")),
+			connect.WithClientOptions(opts...),
+		),
+		listCorpusDocuments: connect.NewClient[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse](
+			httpClient,
+			baseURL+AdminServiceListCorpusDocumentsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -439,6 +466,8 @@ type adminServiceClient struct {
 	upsertSavedQuery      *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
 	deleteSavedQuery      *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
 	listMemberActivity    *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
+	ingestCorpusText      *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
+	listCorpusDocuments   *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -586,6 +615,16 @@ func (c *adminServiceClient) ListMemberActivity(ctx context.Context, req *connec
 	return c.listMemberActivity.CallUnary(ctx, req)
 }
 
+// IngestCorpusText calls career.v1.AdminService.IngestCorpusText.
+func (c *adminServiceClient) IngestCorpusText(ctx context.Context, req *connect.Request[v1.IngestCorpusTextRequest]) (*connect.Response[v1.IngestCorpusTextResponse], error) {
+	return c.ingestCorpusText.CallUnary(ctx, req)
+}
+
+// ListCorpusDocuments calls career.v1.AdminService.ListCorpusDocuments.
+func (c *adminServiceClient) ListCorpusDocuments(ctx context.Context, req *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
+	return c.listCorpusDocuments.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -682,6 +721,15 @@ type AdminServiceHandler interface {
 	// /admin/activity — Roger's request for a sortable "who's using
 	// the site" surface.
 	ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error)
+	// Ingests one text document into the Ask Roger corpus. Chunks
+	// it, embeds via the sidecar, and stores under (source_kind,
+	// source_path). Idempotent: an identical body with the same
+	// (source_kind, source_path) is a no-op (skipped=true). Backs
+	// the paste-a-document form on /admin/corpus.
+	IngestCorpusText(context.Context, *connect.Request[v1.IngestCorpusTextRequest]) (*connect.Response[v1.IngestCorpusTextResponse], error)
+	// Returns every document currently in the corpus with a per-row
+	// chunk count. Backs the list on /admin/corpus.
+	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -865,6 +913,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListMemberActivity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceIngestCorpusTextHandler := connect.NewUnaryHandler(
+		AdminServiceIngestCorpusTextProcedure,
+		svc.IngestCorpusText,
+		connect.WithSchema(adminServiceMethods.ByName("IngestCorpusText")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceListCorpusDocumentsHandler := connect.NewUnaryHandler(
+		AdminServiceListCorpusDocumentsProcedure,
+		svc.ListCorpusDocuments,
+		connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -925,6 +985,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceDeleteSavedQueryHandler.ServeHTTP(w, r)
 		case AdminServiceListMemberActivityProcedure:
 			adminServiceListMemberActivityHandler.ServeHTTP(w, r)
+		case AdminServiceIngestCorpusTextProcedure:
+			adminServiceIngestCorpusTextHandler.ServeHTTP(w, r)
+		case AdminServiceListCorpusDocumentsProcedure:
+			adminServiceListCorpusDocumentsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1048,4 +1112,12 @@ func (UnimplementedAdminServiceHandler) DeleteSavedQuery(context.Context, *conne
 
 func (UnimplementedAdminServiceHandler) ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListMemberActivity is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) IngestCorpusText(context.Context, *connect.Request[v1.IngestCorpusTextRequest]) (*connect.Response[v1.IngestCorpusTextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.IngestCorpusText is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListCorpusDocuments is not implemented"))
 }

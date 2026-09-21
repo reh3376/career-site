@@ -14,6 +14,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
+	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
@@ -153,7 +154,19 @@ func main() {
 		log, userRepo, mailer, cfg.DecisionTokenSecret,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
 	)
-	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler, pool, readonlyPool)
+	// Ask Roger corpus ingester. Sidecar-adapted; nil sidecar
+	// (e.g. dev without a live sidecar) still lets Admin surface
+	// non-corpus routes since IngestCorpusText guards on a nil
+	// ingester and returns Unavailable.
+	var ingester *ingest.Ingester
+	if sc != nil {
+		ingester = ingest.NewIngester(
+			log, userRepo, ingest.SidecarEmbed{Client: sc}, nil,
+		)
+	}
+	adminHandler := handlers.NewAdmin(
+		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
+	)
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
 	jdHandler := handlers.NewJd(log, userRepo)
 

@@ -16,6 +16,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
+	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -35,9 +36,10 @@ type Admin struct {
 	log      *slog.Logger
 	users    *users.Repo
 	auth     *Auth
-	decision *AdminDecision // reused for ApproveUser / DeclineUser business logic
-	pool     *db.Pool       // write-capable app pool
-	roPool   *db.Pool       // read-only pool used by the /admin/db surface
+	decision *AdminDecision   // reused for ApproveUser / DeclineUser business logic
+	pool     *db.Pool         // write-capable app pool
+	roPool   *db.Pool         // read-only pool used by the /admin/db surface
+	ingest   *ingest.Ingester // Ask Roger corpus ingest
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -46,7 +48,15 @@ type Admin struct {
 	queryLimiter *ratelimit.Limiter
 }
 
-func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDecision, pool *db.Pool, roPool *db.Pool) *Admin {
+func NewAdmin(
+	log *slog.Logger,
+	repo *users.Repo,
+	auth *Auth,
+	decision *AdminDecision,
+	pool *db.Pool,
+	roPool *db.Pool,
+	ingester *ingest.Ingester,
+) *Admin {
 	if roPool == nil {
 		roPool = pool
 	}
@@ -57,6 +67,7 @@ func NewAdmin(log *slog.Logger, repo *users.Repo, auth *Auth, decision *AdminDec
 		decision: decision,
 		pool:     pool,
 		roPool:   roPool,
+		ingest:   ingester,
 		// 20-query burst, refills to 20 across a minute. Enough for
 		// interactive exploration; well below what a hung client loop
 		// would produce.
@@ -476,6 +487,76 @@ func (a *Admin) DeclineRegistration(
 	return connect.NewResponse(&v1.DeclineRegistrationResponse{
 		Member: memberRecordRepoToProto(u),
 	}), nil
+}
+
+// ---------------------------------------------------------------
+// IngestCorpusText / ListCorpusDocuments — /admin/corpus surface
+// ---------------------------------------------------------------
+
+func (a *Admin) IngestCorpusText(
+	ctx context.Context,
+	req *connect.Request[v1.IngestCorpusTextRequest],
+) (*connect.Response[v1.IngestCorpusTextResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	if a.ingest == nil {
+		return nil, connect.NewError(connect.CodeUnavailable,
+			errors.New("corpus ingester not wired"))
+	}
+	msg := req.Msg
+	res, err := a.ingest.IngestText(ctx, ingest.IngestInput{
+		SourceKind: strings.TrimSpace(msg.SourceKind),
+		SourcePath: strings.TrimSpace(msg.SourcePath),
+		Title:      strings.TrimSpace(msg.Title),
+		Body:       msg.Body,
+	})
+	if err != nil {
+		a.log.Error("IngestCorpusText failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return connect.NewResponse(&v1.IngestCorpusTextResponse{
+		DocumentId:     strconv.FormatInt(res.DocumentID, 10),
+		ChunksInserted: int32(res.ChunksInserted),
+		ChunksEmbedded: int32(res.ChunksEmbedded),
+		Skipped:        res.Skipped,
+		ChunkerName:    res.ChunkerName,
+		EmbedderModel:  res.EmbedderModel,
+	}), nil
+}
+
+func (a *Admin) ListCorpusDocuments(
+	ctx context.Context,
+	req *connect.Request[v1.ListCorpusDocumentsRequest],
+) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	summary, err := a.users.ListCorpusDocuments(ctx)
+	if err != nil {
+		a.log.Error("ListCorpusDocuments failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListCorpusDocumentsResponse{
+		TotalDocuments: summary.TotalDocuments,
+		TotalChunks:    summary.TotalChunks,
+		TotalEmbedded:  summary.TotalEmbedded,
+		Documents:      make([]*v1.CorpusDocumentRow, 0, len(summary.Rows)),
+	}
+	for i := range summary.Rows {
+		row := &summary.Rows[i]
+		out.Documents = append(out.Documents, &v1.CorpusDocumentRow{
+			Id:            strconv.FormatInt(row.Document.ID, 10),
+			SourceKind:    row.Document.SourceKind,
+			SourcePath:    row.Document.SourcePath,
+			Title:         row.Document.Title,
+			ChunkCount:    row.ChunkCount,
+			EmbeddedCount: row.EmbeddedCount,
+			IngestedAt:    timestamppb.New(row.Document.IngestedAt),
+			UpdatedAt:     timestamppb.New(row.Document.UpdatedAt),
+		})
+	}
+	return connect.NewResponse(out), nil
 }
 
 // ---------------------------------------------------------------

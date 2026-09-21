@@ -911,3 +911,67 @@ class ListMemberActivityResponse(_message.Message):
     MEMBERS_FIELD_NUMBER: _ClassVar[int]
     members: _containers.RepeatedCompositeFieldContainer[MemberActivitySummary]
     def __init__(self, members: _Optional[_Iterable[_Union[MemberActivitySummary, _Mapping]]] = ...) -> None: ...
+
+class IngestCorpusTextRequest(_message.Message):
+    __slots__ = ("source_kind", "source_path", "title", "body")
+    SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_PATH_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    BODY_FIELD_NUMBER: _ClassVar[int]
+    source_kind: str
+    source_path: str
+    title: str
+    body: str
+    def __init__(self, source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., body: _Optional[str] = ...) -> None: ...
+
+class IngestCorpusTextResponse(_message.Message):
+    __slots__ = ("document_id", "chunks_inserted", "chunks_embedded", "skipped", "chunker_name", "embedder_model")
+    DOCUMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    CHUNKS_INSERTED_FIELD_NUMBER: _ClassVar[int]
+    CHUNKS_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    SKIPPED_FIELD_NUMBER: _ClassVar[int]
+    CHUNKER_NAME_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDER_MODEL_FIELD_NUMBER: _ClassVar[int]
+    document_id: str
+    chunks_inserted: int
+    chunks_embedded: int
+    skipped: bool
+    chunker_name: str
+    embedder_model: str
+    def __init__(self, document_id: _Optional[str] = ..., chunks_inserted: _Optional[int] = ..., chunks_embedded: _Optional[int] = ..., skipped: _Optional[bool] = ..., chunker_name: _Optional[str] = ..., embedder_model: _Optional[str] = ...) -> None: ...
+
+class ListCorpusDocumentsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class CorpusDocumentRow(_message.Message):
+    __slots__ = ("id", "source_kind", "source_path", "title", "chunk_count", "embedded_count", "ingested_at", "updated_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_PATH_FIELD_NUMBER: _ClassVar[int]
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    CHUNK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    INGESTED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    source_kind: str
+    source_path: str
+    title: str
+    chunk_count: int
+    embedded_count: int
+    ingested_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., chunk_count: _Optional[int] = ..., embedded_count: _Optional[int] = ..., ingested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListCorpusDocumentsResponse(_message.Message):
+    __slots__ = ("documents", "total_documents", "total_chunks", "total_embedded")
+    DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_CHUNKS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    documents: _containers.RepeatedCompositeFieldContainer[CorpusDocumentRow]
+    total_documents: int
+    total_chunks: int
+    total_embedded: int
+    def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ...) -> None: ...
