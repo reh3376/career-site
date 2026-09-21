@@ -178,7 +178,7 @@ export default async function HomePage() {
             >
               /jd-upload
             </Link>{" "}
-            <span className="text-ink-3">— paste a role, get a scored résumé</span>
+            <span className="text-ink-3">: paste a role, get a scored résumé</span>
           </li>
           <li>
             <span className="text-signal">ARTICLES</span>{" "}
@@ -189,7 +189,18 @@ export default async function HomePage() {
             >
               /articles
             </Link>{" "}
-            <span className="text-ink-3">— five pieces from the corpus</span>
+            <span className="text-ink-3">: five pieces from the corpus</span>
+          </li>
+          <li>
+            <span className="text-signal">GALLERY</span>{" "}
+            <span className="text-ink-3">·</span>{" "}
+            <Link
+              href="/gallery"
+              className="text-accent no-underline hover:text-accent-hover"
+            >
+              /gallery
+            </Link>{" "}
+            <span className="text-ink-3">: on-the-floor photos with context</span>
           </li>
           <li>
             <span className="text-ink-3">ASK.ROGER</span>{" "}
