@@ -3046,19 +3046,23 @@ export type ListCorpusDocumentsResponse = Message<"career.v1.ListCorpusDocuments
   documents: CorpusDocumentRow[];
 
   /**
-   * Aggregate counts across the whole corpus, rendered as header
-   * chips on /admin/corpus.
+   * Aggregate document count across the whole corpus (rendered as
+   * a header chip on /admin/corpus).
    *
    * @generated from field: int32 total_documents = 2;
    */
   totalDocuments: number;
 
   /**
+   * Aggregate chunk count across every stored document.
+   *
    * @generated from field: int32 total_chunks = 3;
    */
   totalChunks: number;
 
   /**
+   * Aggregate count of chunks that have an embedding populated.
+   *
    * @generated from field: int32 total_embedded = 4;
    */
   totalEmbedded: number;

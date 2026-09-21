@@ -2657,9 +2657,9 @@ _No fields; send `{}`._
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `documents` | [`CorpusDocumentRow`](#corpusdocumentrow)[] | array of object |  | All documents, newest first. |
-| `totalDocuments` | `int32` | number |  | Aggregate counts across the whole corpus, rendered as header chips on /admin/corpus. |
-| `totalChunks` | `int32` | number |  |  |
-| `totalEmbedded` | `int32` | number |  |  |
+| `totalDocuments` | `int32` | number |  | Aggregate document count across the whole corpus (rendered as a header chip on /admin/corpus). |
+| `totalChunks` | `int32` | number |  | Aggregate chunk count across every stored document. |
+| `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
 
 <details><summary>Example request body</summary>
 
@@ -4479,9 +4479,9 @@ List-corpus-documents response.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `documents` | [`CorpusDocumentRow`](#corpusdocumentrow)[] | array of object |  | All documents, newest first. |
-| `totalDocuments` | `int32` | number |  | Aggregate counts across the whole corpus, rendered as header chips on /admin/corpus. |
-| `totalChunks` | `int32` | number |  |  |
-| `totalEmbedded` | `int32` | number |  |  |
+| `totalDocuments` | `int32` | number |  | Aggregate document count across the whole corpus (rendered as a header chip on /admin/corpus). |
+| `totalChunks` | `int32` | number |  | Aggregate chunk count across every stored document. |
+| `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
 
 ### RegisterRequest
 

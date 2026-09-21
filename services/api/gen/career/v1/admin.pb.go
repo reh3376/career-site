@@ -5837,13 +5837,15 @@ type ListCorpusDocumentsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// All documents, newest first.
 	Documents []*CorpusDocumentRow `protobuf:"bytes,1,rep,name=documents,proto3" json:"documents,omitempty"`
-	// Aggregate counts across the whole corpus, rendered as header
-	// chips on /admin/corpus.
+	// Aggregate document count across the whole corpus (rendered as
+	// a header chip on /admin/corpus).
 	TotalDocuments int32 `protobuf:"varint,2,opt,name=total_documents,json=totalDocuments,proto3" json:"total_documents,omitempty"`
-	TotalChunks    int32 `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
-	TotalEmbedded  int32 `protobuf:"varint,4,opt,name=total_embedded,json=totalEmbedded,proto3" json:"total_embedded,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Aggregate chunk count across every stored document.
+	TotalChunks int32 `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
+	// Aggregate count of chunks that have an embedding populated.
+	TotalEmbedded int32 `protobuf:"varint,4,opt,name=total_embedded,json=totalEmbedded,proto3" json:"total_embedded,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCorpusDocumentsResponse) Reset() {

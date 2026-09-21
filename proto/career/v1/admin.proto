@@ -1302,9 +1302,11 @@ message CorpusDocumentRow {
 message ListCorpusDocumentsResponse {
   // All documents, newest first.
   repeated CorpusDocumentRow documents = 1;
-  // Aggregate counts across the whole corpus, rendered as header
-  // chips on /admin/corpus.
+  // Aggregate document count across the whole corpus (rendered as
+  // a header chip on /admin/corpus).
   int32 total_documents = 2;
+  // Aggregate chunk count across every stored document.
   int32 total_chunks = 3;
+  // Aggregate count of chunks that have an embedding populated.
   int32 total_embedded = 4;
 }
