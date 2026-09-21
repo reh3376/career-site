@@ -109,9 +109,9 @@ services:
   # Embedding host. Always part of the prod stack so the provider flip is
   # a one-variable change (SIDECAR_EMBED_PROVIDER=ollama) plus an embed
   # sweep from /admin/corpus. Model pulled on first boot into a volume.
-  # Sizing: nomic-embed-text is ~275 MB on disk and ~600 MB resident while
-  # loaded; OLLAMA_KEEP_ALIVE unloads it when idle. Run this on a tier
-  # with at least 4 GB total RAM (CX32 or better); see deploy/README.md.
+  # Sizing: nomic-embed-text is ~275 MB on disk and ~500-600 MB resident
+  # while loaded; OLLAMA_KEEP_ALIVE unloads it when idle. Fits the CPX11
+  # (2 GB) with the 900m cap; see deploy/README.md.
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
@@ -126,9 +126,9 @@ services:
         wait $$pid
     environment:
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
-      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
       OLLAMA_NUM_PARALLEL: "1"
-    mem_limit: ${OLLAMA_MEM_LIMIT:-1500m}
+    mem_limit: ${OLLAMA_MEM_LIMIT:-900m}
     volumes:
       - ollama_models:/root/.ollama
     healthcheck:

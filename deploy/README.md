@@ -1,6 +1,6 @@
 # Deploy
 
-career-site deploys as a single-host Docker Compose stack behind Caddy (auto-TLS via Let's Encrypt). Target host today: one Hetzner Cloud CX22 in Ashburn, VA. Everything the deploy needs lives in this directory:
+career-site deploys as a single-host Docker Compose stack behind Caddy (auto-TLS via Let's Encrypt). Target host today: one Hetzner Cloud CPX11 in Ashburn, VA. Everything the deploy needs lives in this directory:
 
 ```
 deploy/
@@ -24,7 +24,7 @@ Do these in order. Each step is a hand-off between you and me.
 
 In the Hetzner Cloud console:
 
-1. **Server**: Add server → Location: **Ashburn, VA (US East)** → Image: **Ubuntu 24.04** → Type: **CX22** ($5/mo, 2 vCPU / 4 GB / 40 GB).
+1. **Server**: Add server → Location: **Ashburn, VA (US East)** → Image: **Ubuntu 24.04** → Type: **CPX11** (2 vCPU / 2 GB / 40 GB; upgrade to CPX31 when the LLM lands).
 2. **SSH key**: pick the ed25519 public key you added earlier (`macbook->macstudio-tb`).
 3. **Networking**: IPv4 + IPv6 both on; firewall rules **inbound tcp/22, 80, 443** and nothing else.
 4. **Backups**: enable (+$1/mo — worth it).
@@ -155,12 +155,14 @@ retrieval are random until the provider is flipped. The `ollama` service is
 part of the prod stack and pulls `nomic-embed-text` into a volume on first
 boot.
 
-**Sizing first.** `free -m` on the current box reports ~1.9 GB total with
-~1 GB available; the base stack uses ~300 MB. Ollama needs ~600 MB resident
-while the embed model is loaded. Resize to at least **CX32 (4 vCPU / 8 GB)**
-before flipping; that tier also leaves room for a small quantised LLM later
-(a 7B q4 model wants ~5 GB, so plan CX42 / 16 GB for that step). Resize is a
-Hetzner console operation (power off → Rescale → keep disk → power on).
+**Sizing.** The box is a CPX11 (2 vCPU / 2 GB): `free -m` reports ~1.9 GB
+total with ~1 GB available, and the base stack uses ~300 MB. Embeddings fit:
+`nomic-embed-text` loads at ~500-600 MB, so run Ollama with
+`OLLAMA_MEM_LIMIT=900m` and `OLLAMA_KEEP_ALIVE=5m` (it unloads between
+sweeps) and keep a 2 GB swapfile as the OOM safety net. The upgrade to
+**CPX31 (4 vCPU / 8 GB)** is deferred until the LLM + adapter are ready to
+deploy; it needs a power-off in the Hetzner console (Rescale → keep disk).
+Do not run an LLM on the CPX11.
 
 Then:
 
