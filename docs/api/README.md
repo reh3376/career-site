@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 36 |
+| [`AdminService`](#adminservice) | Owner console. | 37 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -1645,6 +1645,7 @@ Owner console.
 | [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin (fresh MFA) | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 | [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
+| [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score, assessment, résumé and PDF when above threshold) for one submission in the background, e.g. |
 
 ### AdminService.ListMembers
 
@@ -2850,6 +2851,37 @@ generated résumé when present. Backs /admin/jd/[id].
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string"
+}
+```
+
+</details>
+
+### AdminService.RescoreJd
+
+`POST /api/career.v1.AdminService/RescoreJd` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Re-runs the scoring pipeline (retrieval pre-score, assessment,
+résumé and PDF when above threshold) for one submission in the
+background, e.g. after a transient sidecar failure or a prompt
+change. Returns immediately; poll GetJdSubmission for the outcome.
+
+**Request** — [`RescoreJdRequest`](#rescorejdrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+
+**Response** — [`RescoreJdResponse`](#rescorejdresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Status the row was set to when the run was queued (`scoring`). |
 
 <details><summary>Example request body</summary>
 
@@ -4961,6 +4993,22 @@ Get-jd-submission response.
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
+
+### RescoreJdRequest
+
+Rescore-jd request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+
+### RescoreJdResponse
+
+Rescore-jd response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Status the row was set to when the run was queued (`scoring`). |
 
 ### ReindexCorpusRequest
 

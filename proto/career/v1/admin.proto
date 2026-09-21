@@ -259,6 +259,14 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Re-runs the scoring pipeline (retrieval pre-score, assessment,
+  // résumé and PDF when above threshold) for one submission in the
+  // background, e.g. after a transient sidecar failure or a prompt
+  // change. Returns immediately; poll GetJdSubmission for the outcome.
+  rpc RescoreJd(RescoreJdRequest) returns (RescoreJdResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1478,6 +1486,21 @@ message GetJdSubmissionResponse {
   // result token, when a PDF was rendered; empty otherwise. Admin-only
   // by virtue of this RPC's auth level.
   string download_url = 8;
+}
+
+// Rescore-jd request.
+message RescoreJdRequest {
+  // Submission id (numeric, stringified).
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+}
+
+// Rescore-jd response.
+message RescoreJdResponse {
+  // Status the row was set to when the run was queued (`scoring`).
+  JdStatus status = 1;
 }
 
 // Reindex-corpus request. `scope` picks the mount: `public` walks the

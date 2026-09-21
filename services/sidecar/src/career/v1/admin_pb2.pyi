@@ -1079,6 +1079,18 @@ class GetJdSubmissionResponse(_message.Message):
     download_url: str
     def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ...) -> None: ...
 
+class RescoreJdRequest(_message.Message):
+    __slots__ = ("submission_id",)
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    submission_id: str
+    def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
+
+class RescoreJdResponse(_message.Message):
+    __slots__ = ("status",)
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    status: _jd_pb2.JdStatus
+    def __init__(self, status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ...) -> None: ...
+
 class ReindexCorpusRequest(_message.Message):
     __slots__ = ("source_kind", "scope")
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
