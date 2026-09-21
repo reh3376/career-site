@@ -182,9 +182,14 @@ function renderItem(item: MenuItem, close: () => void) {
       </Link>
     );
   }
+  // NOTE: do NOT call close() from the submit button's onClick —
+  // setOpen(false) unmounts the <form> synchronously in the same
+  // click, which cancels the browser's submit before the server
+  // action can fire. signOutAction ends with redirect("/"), so the
+  // subsequent client navigation unmounts the drawer naturally.
   return (
     <form action={item.action} className="m-0">
-      <button type="submit" className={base} role="menuitem" onClick={close}>
+      <button type="submit" className={base} role="menuitem">
         {item.label}
       </button>
     </form>
