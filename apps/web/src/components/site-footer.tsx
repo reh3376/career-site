@@ -39,6 +39,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/jd-upload" className="text-ink-2 no-underline hover:text-accent">
+                  Have a role for Roger?
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>

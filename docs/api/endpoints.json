@@ -1170,6 +1170,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.JdService",
+      "method": "SubmitJd",
+      "path": "/api/career.v1.JdService/SubmitJd",
+      "grpc_full_method": "/career.v1.JdService/SubmitJd",
+      "internal": false,
+      "request": "career.v1.SubmitJdRequest",
+      "response": "career.v1.SubmitJdResponse",
+      "summary": "Accepts a job description and stores it for scoring.",
+      "auth": "public",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 3,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.JdService",
+      "method": "GetJdResult",
+      "path": "/api/career.v1.JdService/GetJdResult",
+      "grpc_full_method": "/career.v1.JdService/GetJdResult",
+      "internal": false,
+      "request": "career.v1.GetJdResultRequest",
+      "response": "career.v1.GetJdResultResponse",
+      "summary": "Returns the current state of a submission \u2014 queued / scoring / below-threshold / generating / ready / failed \u2014 plus the generated r\u00e9sum\u00e9 URL when status is `ready`.",
+      "auth": "public",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 30,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.sidecar.v1.SidecarService",
       "method": "Embed",
       "path": null,
