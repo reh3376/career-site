@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin/registrations", label: "Registrations" },
   { href: "/admin/access", label: "Access & whitelist" },
   { href: "/admin/activity", label: "Activity" },
+  { href: "/admin/corpus", label: "Corpus" },
   { href: "/admin/db", label: "DB query" },
 ];
 

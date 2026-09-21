@@ -47,6 +47,35 @@ type CorpusHit struct {
 	Similarity float32
 }
 
+// GetCorpusDocumentByPath returns the document at
+// (source_kind, source_path), or nil (no error) when the row does
+// not exist. Callers use this to short-circuit re-ingest when the
+// content hash hasn't changed.
+func (r *Repo) GetCorpusDocumentByPath(
+	ctx context.Context, sourceKind, sourcePath string,
+) (*CorpusDocument, error) {
+	const q = `
+    SELECT id, source_kind, source_path, title, mime,
+           COALESCE(meta::text, '{}'), content_hash, ingested_at, updated_at
+    FROM corpus_documents
+    WHERE source_kind = $1 AND source_path = $2
+  `
+	d := &CorpusDocument{}
+	var metaText string
+	err := r.pool.QueryRow(ctx, q, sourceKind, sourcePath).Scan(
+		&d.ID, &d.SourceKind, &d.SourcePath, &d.Title, &d.MIME,
+		&metaText, &d.ContentHash, &d.IngestedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get corpus doc by path: %w", err)
+	}
+	d.Meta = []byte(metaText)
+	return d, nil
+}
+
 // UpsertCorpusDocument creates or replaces a document by (source_kind,
 // source_path). Returns the stored row.
 func (r *Repo) UpsertCorpusDocument(
@@ -188,6 +217,64 @@ func (r *Repo) SearchCorpus(
 func HashCorpusContent(text string) []byte {
 	sum := sha256.Sum256([]byte(text))
 	return sum[:]
+}
+
+// CorpusListRow is a document + counts for /admin/corpus. Kept
+// separate from CorpusDocument so the list query can compute the
+// chunk counts in one round-trip without loading every chunk body.
+type CorpusListRow struct {
+	Document      CorpusDocument
+	ChunkCount    int32
+	EmbeddedCount int32
+}
+
+// CorpusListSummary is the whole-corpus header the admin page shows.
+type CorpusListSummary struct {
+	Rows           []CorpusListRow
+	TotalDocuments int32
+	TotalChunks    int32
+	TotalEmbedded  int32
+}
+
+// ListCorpusDocuments returns every document with chunk + embedded
+// counts, newest first. Caps at 500 to keep the payload bounded;
+// the admin needs pagination once we ingest more than that (not
+// today — the corpus is a handful of docs).
+func (r *Repo) ListCorpusDocuments(ctx context.Context) (*CorpusListSummary, error) {
+	const q = `
+    SELECT d.id, d.source_kind, d.source_path, d.title, d.mime,
+           d.ingested_at, d.updated_at,
+           COUNT(c.id)::int                                     AS chunk_count,
+           COUNT(c.id) FILTER (WHERE c.embedding IS NOT NULL)::int AS embedded_count
+    FROM corpus_documents d
+    LEFT JOIN corpus_chunks c ON c.document_id = d.id
+    GROUP BY d.id
+    ORDER BY d.ingested_at DESC
+    LIMIT 500
+  `
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list corpus documents: %w", err)
+	}
+	defer rows.Close()
+
+	out := &CorpusListSummary{}
+	for rows.Next() {
+		var row CorpusListRow
+		if err := rows.Scan(
+			&row.Document.ID, &row.Document.SourceKind, &row.Document.SourcePath,
+			&row.Document.Title, &row.Document.MIME,
+			&row.Document.IngestedAt, &row.Document.UpdatedAt,
+			&row.ChunkCount, &row.EmbeddedCount,
+		); err != nil {
+			return nil, fmt.Errorf("scan corpus row: %w", err)
+		}
+		out.Rows = append(out.Rows, row)
+		out.TotalChunks += row.ChunkCount
+		out.TotalEmbedded += row.EmbeddedCount
+	}
+	out.TotalDocuments = int32(len(out.Rows))
+	return out, rows.Err()
 }
 
 // vectorLiteral formats a []float32 as pgvector's text literal:

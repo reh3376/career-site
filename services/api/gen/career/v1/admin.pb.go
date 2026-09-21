@@ -5515,6 +5515,395 @@ func (x *ListMemberActivityResponse) GetMembers() []*MemberActivitySummary {
 	return nil
 }
 
+// Ingest one document into the Ask Roger corpus.
+type IngestCorpusTextRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Where the text came from: 'article', 'resume', 'career_note',
+	// 'adr', 'other'. Kept as free text (not enum) so a new source
+	// kind is just a new value at the ingest form, not a proto edit.
+	SourceKind string `protobuf:"bytes,1,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	// Stable per-source_kind key. Filesystem sources pass the relative
+	// path; pasted documents pass a slug like `paste/2026-09-21-notes`.
+	SourcePath string `protobuf:"bytes,2,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
+	// Human-readable title. Empty falls back to the first non-blank
+	// line of the body (with a leading `#` stripped) at ingest time.
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	// The document text, post-front-matter for markdown. Capped at
+	// 200 KiB so the form doesn't paste in an unbounded blob.
+	Body          string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestCorpusTextRequest) Reset() {
+	*x = IngestCorpusTextRequest{}
+	mi := &file_career_v1_admin_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestCorpusTextRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestCorpusTextRequest) ProtoMessage() {}
+
+func (x *IngestCorpusTextRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestCorpusTextRequest.ProtoReflect.Descriptor instead.
+func (*IngestCorpusTextRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *IngestCorpusTextRequest) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextRequest) GetSourcePath() string {
+	if x != nil {
+		return x.SourcePath
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+// Ingest response — mirrors ingest.IngestResult.
+type IngestCorpusTextResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the stored corpus_documents row.
+	DocumentId string `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	// Number of chunks written this run (0 if skipped).
+	ChunksInserted int32 `protobuf:"varint,2,opt,name=chunks_inserted,json=chunksInserted,proto3" json:"chunks_inserted,omitempty"`
+	// Number of chunks successfully embedded this run.
+	ChunksEmbedded int32 `protobuf:"varint,3,opt,name=chunks_embedded,json=chunksEmbedded,proto3" json:"chunks_embedded,omitempty"`
+	// True when the body's content hash matched the stored row and
+	// no chunk / embed work ran.
+	Skipped bool `protobuf:"varint,4,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	// Stable identifier of the chunker version used (e.g. "paragraph.v1").
+	ChunkerName string `protobuf:"bytes,5,opt,name=chunker_name,json=chunkerName,proto3" json:"chunker_name,omitempty"`
+	// Embedder model reported by the sidecar (e.g. "stub", "ollama").
+	EmbedderModel string `protobuf:"bytes,6,opt,name=embedder_model,json=embedderModel,proto3" json:"embedder_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestCorpusTextResponse) Reset() {
+	*x = IngestCorpusTextResponse{}
+	mi := &file_career_v1_admin_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestCorpusTextResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestCorpusTextResponse) ProtoMessage() {}
+
+func (x *IngestCorpusTextResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestCorpusTextResponse.ProtoReflect.Descriptor instead.
+func (*IngestCorpusTextResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *IngestCorpusTextResponse) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextResponse) GetChunksInserted() int32 {
+	if x != nil {
+		return x.ChunksInserted
+	}
+	return 0
+}
+
+func (x *IngestCorpusTextResponse) GetChunksEmbedded() int32 {
+	if x != nil {
+		return x.ChunksEmbedded
+	}
+	return 0
+}
+
+func (x *IngestCorpusTextResponse) GetSkipped() bool {
+	if x != nil {
+		return x.Skipped
+	}
+	return false
+}
+
+func (x *IngestCorpusTextResponse) GetChunkerName() string {
+	if x != nil {
+		return x.ChunkerName
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextResponse) GetEmbedderModel() string {
+	if x != nil {
+		return x.EmbedderModel
+	}
+	return ""
+}
+
+// List-corpus-documents request. No filters yet — corpus is small
+// enough that the admin surface returns everything.
+type ListCorpusDocumentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCorpusDocumentsRequest) Reset() {
+	*x = ListCorpusDocumentsRequest{}
+	mi := &file_career_v1_admin_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCorpusDocumentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCorpusDocumentsRequest) ProtoMessage() {}
+
+func (x *ListCorpusDocumentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCorpusDocumentsRequest.ProtoReflect.Descriptor instead.
+func (*ListCorpusDocumentsRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{78}
+}
+
+// One row in the corpus with a computed chunk count.
+type CorpusDocumentRow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the corpus_documents row.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Source kind slug.
+	SourceKind string `protobuf:"bytes,2,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	// Stable per-source_kind key.
+	SourcePath string `protobuf:"bytes,3,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
+	// Human-readable title.
+	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	// Count of chunk rows referencing this document.
+	ChunkCount int32 `protobuf:"varint,5,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
+	// Count of chunks that have an embedding populated.
+	EmbeddedCount int32 `protobuf:"varint,6,opt,name=embedded_count,json=embeddedCount,proto3" json:"embedded_count,omitempty"`
+	// When the row was first written.
+	IngestedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=ingested_at,json=ingestedAt,proto3" json:"ingested_at,omitempty"`
+	// When any field changed (title / hash / meta).
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CorpusDocumentRow) Reset() {
+	*x = CorpusDocumentRow{}
+	mi := &file_career_v1_admin_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CorpusDocumentRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CorpusDocumentRow) ProtoMessage() {}
+
+func (x *CorpusDocumentRow) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CorpusDocumentRow.ProtoReflect.Descriptor instead.
+func (*CorpusDocumentRow) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *CorpusDocumentRow) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CorpusDocumentRow) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *CorpusDocumentRow) GetSourcePath() string {
+	if x != nil {
+		return x.SourcePath
+	}
+	return ""
+}
+
+func (x *CorpusDocumentRow) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CorpusDocumentRow) GetChunkCount() int32 {
+	if x != nil {
+		return x.ChunkCount
+	}
+	return 0
+}
+
+func (x *CorpusDocumentRow) GetEmbeddedCount() int32 {
+	if x != nil {
+		return x.EmbeddedCount
+	}
+	return 0
+}
+
+func (x *CorpusDocumentRow) GetIngestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.IngestedAt
+	}
+	return nil
+}
+
+func (x *CorpusDocumentRow) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// List-corpus-documents response.
+type ListCorpusDocumentsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// All documents, newest first.
+	Documents []*CorpusDocumentRow `protobuf:"bytes,1,rep,name=documents,proto3" json:"documents,omitempty"`
+	// Aggregate counts across the whole corpus, rendered as header
+	// chips on /admin/corpus.
+	TotalDocuments int32 `protobuf:"varint,2,opt,name=total_documents,json=totalDocuments,proto3" json:"total_documents,omitempty"`
+	TotalChunks    int32 `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
+	TotalEmbedded  int32 `protobuf:"varint,4,opt,name=total_embedded,json=totalEmbedded,proto3" json:"total_embedded,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListCorpusDocumentsResponse) Reset() {
+	*x = ListCorpusDocumentsResponse{}
+	mi := &file_career_v1_admin_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCorpusDocumentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCorpusDocumentsResponse) ProtoMessage() {}
+
+func (x *ListCorpusDocumentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCorpusDocumentsResponse.ProtoReflect.Descriptor instead.
+func (*ListCorpusDocumentsResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *ListCorpusDocumentsResponse) GetDocuments() []*CorpusDocumentRow {
+	if x != nil {
+		return x.Documents
+	}
+	return nil
+}
+
+func (x *ListCorpusDocumentsResponse) GetTotalDocuments() int32 {
+	if x != nil {
+		return x.TotalDocuments
+	}
+	return 0
+}
+
+func (x *ListCorpusDocumentsResponse) GetTotalChunks() int32 {
+	if x != nil {
+		return x.TotalChunks
+	}
+	return 0
+}
+
+func (x *ListCorpusDocumentsResponse) GetTotalEmbedded() int32 {
+	if x != nil {
+		return x.TotalEmbedded
+	}
+	return 0
+}
+
 var File_career_v1_admin_proto protoreflect.FileDescriptor
 
 const file_career_v1_admin_proto_rawDesc = "" +
@@ -5894,7 +6283,43 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x19ListMemberActivityRequest\x125\n" +
 	"\x04sort\x18\x01 \x01(\x0e2\x17.career.v1.ActivitySortB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04sort\"X\n" +
 	"\x1aListMemberActivityResponse\x12:\n" +
-	"\amembers\x18\x01 \x03(\v2 .career.v1.MemberActivitySummaryR\amembers*\xa2\x01\n" +
+	"\amembers\x18\x01 \x03(\v2 .career.v1.MemberActivitySummaryR\amembers\"\xb3\x01\n" +
+	"\x17IngestCorpusTextRequest\x12*\n" +
+	"\vsource_kind\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18(R\n" +
+	"sourceKind\x12+\n" +
+	"\vsource_path\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\n" +
+	"sourcePath\x12\x1e\n" +
+	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xac\x02R\x05title\x12\x1f\n" +
+	"\x04body\x18\x04 \x01(\tB\v\xbaH\br\x06\x10\x01\x18\x80\xc0\fR\x04body\"\xf1\x01\n" +
+	"\x18IngestCorpusTextResponse\x12\x1f\n" +
+	"\vdocument_id\x18\x01 \x01(\tR\n" +
+	"documentId\x12'\n" +
+	"\x0fchunks_inserted\x18\x02 \x01(\x05R\x0echunksInserted\x12'\n" +
+	"\x0fchunks_embedded\x18\x03 \x01(\x05R\x0echunksEmbedded\x12\x18\n" +
+	"\askipped\x18\x04 \x01(\bR\askipped\x12!\n" +
+	"\fchunker_name\x18\x05 \x01(\tR\vchunkerName\x12%\n" +
+	"\x0eembedder_model\x18\x06 \x01(\tR\rembedderModel\"\x1c\n" +
+	"\x1aListCorpusDocumentsRequest\"\xbb\x02\n" +
+	"\x11CorpusDocumentRow\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vsource_kind\x18\x02 \x01(\tR\n" +
+	"sourceKind\x12\x1f\n" +
+	"\vsource_path\x18\x03 \x01(\tR\n" +
+	"sourcePath\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x1f\n" +
+	"\vchunk_count\x18\x05 \x01(\x05R\n" +
+	"chunkCount\x12%\n" +
+	"\x0eembedded_count\x18\x06 \x01(\x05R\rembeddedCount\x12;\n" +
+	"\vingested_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"ingestedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcc\x01\n" +
+	"\x1bListCorpusDocumentsResponse\x12:\n" +
+	"\tdocuments\x18\x01 \x03(\v2\x1c.career.v1.CorpusDocumentRowR\tdocuments\x12'\n" +
+	"\x0ftotal_documents\x18\x02 \x01(\x05R\x0etotalDocuments\x12!\n" +
+	"\ftotal_chunks\x18\x03 \x01(\x05R\vtotalChunks\x12%\n" +
+	"\x0etotal_embedded\x18\x04 \x01(\x05R\rtotalEmbedded*\xa2\x01\n" +
 	"\n" +
 	"ReviewKind\x12\x1b\n" +
 	"\x17REVIEW_KIND_UNSPECIFIED\x10\x00\x12!\n" +
@@ -5939,7 +6364,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1dACTIVITY_SORT_LAST_EVENT_DESC\x10\x01\x12\x1f\n" +
 	"\x1bACTIVITY_SORT_SESSIONS_DESC\x10\x02\x12\"\n" +
 	"\x1eACTIVITY_SORT_ACTIVE_TIME_DESC\x10\x03\x12 \n" +
-	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xa0\x16\n" +
+	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xf7\x17\n" +
 	"\fAdminService\x12V\n" +
 	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12P\n" +
 	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
@@ -5971,7 +6396,9 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x10ListSavedQueries\x12\".career.v1.ListSavedQueriesRequest\x1a#.career.v1.ListSavedQueriesResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
 	"\x10UpsertSavedQuery\x12\".career.v1.UpsertSavedQueryRequest\x1a#.career.v1.UpsertSavedQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
 	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01B\xa4\x01\n" +
+	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
+	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
+	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01B\xa4\x01\n" +
 	"\rcom.career.v1B\n" +
 	"AdminProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
@@ -5989,7 +6416,7 @@ func file_career_v1_admin_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 78)
+var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 83)
 var file_career_v1_admin_proto_goTypes = []any{
 	(ReviewKind)(0),                       // 0: career.v1.ReviewKind
 	(ReviewStatus)(0),                     // 1: career.v1.ReviewStatus
@@ -6075,66 +6502,71 @@ var file_career_v1_admin_proto_goTypes = []any{
 	(*MemberActivitySummary)(nil),         // 81: career.v1.MemberActivitySummary
 	(*ListMemberActivityRequest)(nil),     // 82: career.v1.ListMemberActivityRequest
 	(*ListMemberActivityResponse)(nil),    // 83: career.v1.ListMemberActivityResponse
-	nil,                                   // 84: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	nil,                                   // 85: career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	(*Me)(nil),                            // 86: career.v1.Me
-	(*timestamppb.Timestamp)(nil),         // 87: google.protobuf.Timestamp
-	(MemberStatus)(0),                     // 88: career.v1.MemberStatus
-	(*PageRequest)(nil),                   // 89: career.v1.PageRequest
-	(*PageResponse)(nil),                  // 90: career.v1.PageResponse
-	(*ActivityEvent)(nil),                 // 91: career.v1.ActivityEvent
-	(*Conversation)(nil),                  // 92: career.v1.Conversation
-	(*Message)(nil),                       // 93: career.v1.Message
-	(*ContentSummary)(nil),                // 94: career.v1.ContentSummary
-	(SupportCategory)(0),                  // 95: career.v1.SupportCategory
+	(*IngestCorpusTextRequest)(nil),       // 84: career.v1.IngestCorpusTextRequest
+	(*IngestCorpusTextResponse)(nil),      // 85: career.v1.IngestCorpusTextResponse
+	(*ListCorpusDocumentsRequest)(nil),    // 86: career.v1.ListCorpusDocumentsRequest
+	(*CorpusDocumentRow)(nil),             // 87: career.v1.CorpusDocumentRow
+	(*ListCorpusDocumentsResponse)(nil),   // 88: career.v1.ListCorpusDocumentsResponse
+	nil,                                   // 89: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	nil,                                   // 90: career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	(*Me)(nil),                            // 91: career.v1.Me
+	(*timestamppb.Timestamp)(nil),         // 92: google.protobuf.Timestamp
+	(MemberStatus)(0),                     // 93: career.v1.MemberStatus
+	(*PageRequest)(nil),                   // 94: career.v1.PageRequest
+	(*PageResponse)(nil),                  // 95: career.v1.PageResponse
+	(*ActivityEvent)(nil),                 // 96: career.v1.ActivityEvent
+	(*Conversation)(nil),                  // 97: career.v1.Conversation
+	(*Message)(nil),                       // 98: career.v1.Message
+	(*ContentSummary)(nil),                // 99: career.v1.ContentSummary
+	(SupportCategory)(0),                  // 100: career.v1.SupportCategory
 }
 var file_career_v1_admin_proto_depIdxs = []int32{
-	86,  // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
+	91,  // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
 	8,   // 1: career.v1.MemberRecord.counts:type_name -> career.v1.MemberCounts
-	87,  // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
-	88,  // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
+	92,  // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
+	93,  // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
 	7,   // 4: career.v1.ListMembersRequest.sort:type_name -> career.v1.ListMembersRequest.Sort
-	89,  // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
+	94,  // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
 	9,   // 6: career.v1.ListMembersResponse.members:type_name -> career.v1.MemberRecord
-	90,  // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
-	87,  // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
+	95,  // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
+	92,  // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
 	9,   // 9: career.v1.GetMemberResponse.member:type_name -> career.v1.MemberRecord
-	91,  // 10: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
-	92,  // 11: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
+	96,  // 10: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
+	97,  // 11: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
 	13,  // 12: career.v1.GetMemberResponse.notes:type_name -> career.v1.AdminNote
 	13,  // 13: career.v1.AddMemberNoteResponse.note:type_name -> career.v1.AdminNote
-	88,  // 14: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
+	93,  // 14: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
 	9,   // 15: career.v1.SetMemberStatusResponse.member:type_name -> career.v1.MemberRecord
 	0,   // 16: career.v1.GetReviewQueueRequest.kind:type_name -> career.v1.ReviewKind
 	1,   // 17: career.v1.GetReviewQueueRequest.status:type_name -> career.v1.ReviewStatus
-	89,  // 18: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
+	94,  // 18: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
 	0,   // 19: career.v1.ReviewItem.kind:type_name -> career.v1.ReviewKind
 	1,   // 20: career.v1.ReviewItem.status:type_name -> career.v1.ReviewStatus
-	86,  // 21: career.v1.ReviewItem.member:type_name -> career.v1.Me
-	87,  // 22: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
+	91,  // 21: career.v1.ReviewItem.member:type_name -> career.v1.Me
+	92,  // 22: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
 	20,  // 23: career.v1.GetReviewQueueResponse.items:type_name -> career.v1.ReviewItem
-	90,  // 24: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
+	95,  // 24: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
 	1,   // 25: career.v1.ResolveReviewItemRequest.resolution:type_name -> career.v1.ReviewStatus
-	93,  // 26: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
-	86,  // 27: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
-	92,  // 28: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
-	93,  // 29: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
-	84,  // 30: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	87,  // 31: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
+	98,  // 26: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
+	91,  // 27: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
+	97,  // 28: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
+	98,  // 29: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
+	89,  // 30: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	92,  // 31: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
 	31,  // 32: career.v1.TestRetrievalResponse.hits:type_name -> career.v1.RetrievalHit
-	94,  // 33: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
+	99,  // 33: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
 	2,   // 34: career.v1.RunJobRequest.kind:type_name -> career.v1.JobKind
 	2,   // 35: career.v1.GetJobResponse.kind:type_name -> career.v1.JobKind
 	3,   // 36: career.v1.GetJobResponse.status:type_name -> career.v1.JobStatus
-	87,  // 37: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	87,  // 38: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
-	87,  // 39: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
+	92,  // 37: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	92,  // 38: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	92,  // 39: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
 	38,  // 40: career.v1.GetPersonaResponse.active:type_name -> career.v1.PersonaVersion
 	38,  // 41: career.v1.GetPersonaResponse.history:type_name -> career.v1.PersonaVersion
-	87,  // 42: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
-	87,  // 43: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
-	87,  // 44: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
-	94,  // 45: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
+	92,  // 42: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
+	92,  // 43: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
+	92,  // 44: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
+	99,  // 45: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
 	41,  // 46: career.v1.GetAnalyticsResponse.registrations:type_name -> career.v1.DailyCount
 	41,  // 47: career.v1.GetAnalyticsResponse.verifications:type_name -> career.v1.DailyCount
 	41,  // 48: career.v1.GetAnalyticsResponse.active_members:type_name -> career.v1.DailyCount
@@ -6143,111 +6575,118 @@ var file_career_v1_admin_proto_depIdxs = []int32{
 	42,  // 51: career.v1.GetAnalyticsResponse.top_downloads:type_name -> career.v1.RankedContent
 	43,  // 52: career.v1.GetAnalyticsResponse.top_questions:type_name -> career.v1.RankedQuestion
 	44,  // 53: career.v1.GetAnalyticsResponse.assistant:type_name -> career.v1.AssistantUsage
-	85,  // 54: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	87,  // 55: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
-	87,  // 56: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
-	89,  // 57: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
-	87,  // 58: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
+	90,  // 54: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	92,  // 55: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
+	92,  // 56: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
+	94,  // 57: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
+	92,  // 58: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
 	47,  // 59: career.v1.GetAuditResponse.entries:type_name -> career.v1.AuditEntry
-	90,  // 60: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
-	95,  // 61: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
+	95,  // 60: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
+	100, // 61: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
 	4,   // 62: career.v1.SupportMessage.status:type_name -> career.v1.SupportStatus
-	87,  // 63: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 64: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
-	87,  // 65: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
+	92,  // 63: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 64: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 65: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
 	4,   // 66: career.v1.ListContactMessagesRequest.status:type_name -> career.v1.SupportStatus
-	95,  // 67: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
-	89,  // 68: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
+	100, // 67: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
+	94,  // 68: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
 	49,  // 69: career.v1.ListContactMessagesResponse.messages:type_name -> career.v1.SupportMessage
-	90,  // 70: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
+	95,  // 70: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
 	4,   // 71: career.v1.ResolveContactMessageRequest.status:type_name -> career.v1.SupportStatus
 	49,  // 72: career.v1.ResolveContactMessageResponse.message:type_name -> career.v1.SupportMessage
 	9,   // 73: career.v1.ApproveRegistrationResponse.member:type_name -> career.v1.MemberRecord
 	9,   // 74: career.v1.DeclineRegistrationResponse.member:type_name -> career.v1.MemberRecord
-	87,  // 75: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
+	92,  // 75: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
 	9,   // 76: career.v1.ExtendAccessResponse.member:type_name -> career.v1.MemberRecord
 	60,  // 77: career.v1.DbTable.columns:type_name -> career.v1.DbColumn
 	61,  // 78: career.v1.ListDbTablesResponse.tables:type_name -> career.v1.DbTable
 	65,  // 79: career.v1.RunDbQueryResponse.rows:type_name -> career.v1.DbRow
 	5,   // 80: career.v1.AccessGrant.default_ttl:type_name -> career.v1.GrantTTL
-	87,  // 81: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
-	87,  // 82: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 83: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 81: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
+	92,  // 82: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 83: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
 	67,  // 84: career.v1.ListAccessGrantsResponse.grants:type_name -> career.v1.AccessGrant
 	5,   // 85: career.v1.UpsertAccessGrantRequest.default_ttl:type_name -> career.v1.GrantTTL
-	87,  // 86: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
+	92,  // 86: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
 	67,  // 87: career.v1.UpsertAccessGrantResponse.grant:type_name -> career.v1.AccessGrant
-	87,  // 88: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
-	87,  // 89: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
+	92,  // 88: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
+	92,  // 89: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
 	74,  // 90: career.v1.ListSavedQueriesResponse.queries:type_name -> career.v1.SavedQuery
 	74,  // 91: career.v1.UpsertSavedQueryResponse.query:type_name -> career.v1.SavedQuery
-	88,  // 92: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
-	87,  // 93: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
+	93,  // 92: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
+	92,  // 93: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
 	6,   // 94: career.v1.ListMemberActivityRequest.sort:type_name -> career.v1.ActivitySort
 	81,  // 95: career.v1.ListMemberActivityResponse.members:type_name -> career.v1.MemberActivitySummary
-	10,  // 96: career.v1.AdminService.ListMembers:input_type -> career.v1.ListMembersRequest
-	12,  // 97: career.v1.AdminService.GetMember:input_type -> career.v1.GetMemberRequest
-	15,  // 98: career.v1.AdminService.AddMemberNote:input_type -> career.v1.AddMemberNoteRequest
-	17,  // 99: career.v1.AdminService.SetMemberStatus:input_type -> career.v1.SetMemberStatusRequest
-	19,  // 100: career.v1.AdminService.GetReviewQueue:input_type -> career.v1.GetReviewQueueRequest
-	22,  // 101: career.v1.AdminService.ResolveReviewItem:input_type -> career.v1.ResolveReviewItemRequest
-	24,  // 102: career.v1.AdminService.ReplyEscalation:input_type -> career.v1.ReplyEscalationRequest
-	26,  // 103: career.v1.AdminService.GetMemberConversation:input_type -> career.v1.GetMemberConversationRequest
-	28,  // 104: career.v1.AdminService.GetCorpusStatus:input_type -> career.v1.GetCorpusStatusRequest
-	30,  // 105: career.v1.AdminService.TestRetrieval:input_type -> career.v1.TestRetrievalRequest
-	33,  // 106: career.v1.AdminService.RunJob:input_type -> career.v1.RunJobRequest
-	35,  // 107: career.v1.AdminService.GetJob:input_type -> career.v1.GetJobRequest
-	37,  // 108: career.v1.AdminService.GetPersona:input_type -> career.v1.GetPersonaRequest
-	40,  // 109: career.v1.AdminService.GetAnalytics:input_type -> career.v1.GetAnalyticsRequest
-	46,  // 110: career.v1.AdminService.GetAudit:input_type -> career.v1.GetAuditRequest
-	50,  // 111: career.v1.AdminService.ListContactMessages:input_type -> career.v1.ListContactMessagesRequest
-	52,  // 112: career.v1.AdminService.ResolveContactMessage:input_type -> career.v1.ResolveContactMessageRequest
-	54,  // 113: career.v1.AdminService.ApproveRegistration:input_type -> career.v1.ApproveRegistrationRequest
-	56,  // 114: career.v1.AdminService.DeclineRegistration:input_type -> career.v1.DeclineRegistrationRequest
-	58,  // 115: career.v1.AdminService.ExtendAccess:input_type -> career.v1.ExtendAccessRequest
-	62,  // 116: career.v1.AdminService.ListDbTables:input_type -> career.v1.ListDbTablesRequest
-	64,  // 117: career.v1.AdminService.RunDbQuery:input_type -> career.v1.RunDbQueryRequest
-	68,  // 118: career.v1.AdminService.ListAccessGrants:input_type -> career.v1.ListAccessGrantsRequest
-	70,  // 119: career.v1.AdminService.UpsertAccessGrant:input_type -> career.v1.UpsertAccessGrantRequest
-	72,  // 120: career.v1.AdminService.DeleteAccessGrant:input_type -> career.v1.DeleteAccessGrantRequest
-	75,  // 121: career.v1.AdminService.ListSavedQueries:input_type -> career.v1.ListSavedQueriesRequest
-	77,  // 122: career.v1.AdminService.UpsertSavedQuery:input_type -> career.v1.UpsertSavedQueryRequest
-	79,  // 123: career.v1.AdminService.DeleteSavedQuery:input_type -> career.v1.DeleteSavedQueryRequest
-	82,  // 124: career.v1.AdminService.ListMemberActivity:input_type -> career.v1.ListMemberActivityRequest
-	11,  // 125: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
-	14,  // 126: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
-	16,  // 127: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
-	18,  // 128: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
-	21,  // 129: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
-	23,  // 130: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
-	25,  // 131: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
-	27,  // 132: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
-	29,  // 133: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
-	32,  // 134: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
-	34,  // 135: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
-	36,  // 136: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
-	39,  // 137: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
-	45,  // 138: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
-	48,  // 139: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
-	51,  // 140: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
-	53,  // 141: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
-	55,  // 142: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
-	57,  // 143: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
-	59,  // 144: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
-	63,  // 145: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
-	66,  // 146: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
-	69,  // 147: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
-	71,  // 148: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
-	73,  // 149: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
-	76,  // 150: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
-	78,  // 151: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
-	80,  // 152: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
-	83,  // 153: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
-	125, // [125:154] is the sub-list for method output_type
-	96,  // [96:125] is the sub-list for method input_type
-	96,  // [96:96] is the sub-list for extension type_name
-	96,  // [96:96] is the sub-list for extension extendee
-	0,   // [0:96] is the sub-list for field type_name
+	92,  // 96: career.v1.CorpusDocumentRow.ingested_at:type_name -> google.protobuf.Timestamp
+	92,  // 97: career.v1.CorpusDocumentRow.updated_at:type_name -> google.protobuf.Timestamp
+	87,  // 98: career.v1.ListCorpusDocumentsResponse.documents:type_name -> career.v1.CorpusDocumentRow
+	10,  // 99: career.v1.AdminService.ListMembers:input_type -> career.v1.ListMembersRequest
+	12,  // 100: career.v1.AdminService.GetMember:input_type -> career.v1.GetMemberRequest
+	15,  // 101: career.v1.AdminService.AddMemberNote:input_type -> career.v1.AddMemberNoteRequest
+	17,  // 102: career.v1.AdminService.SetMemberStatus:input_type -> career.v1.SetMemberStatusRequest
+	19,  // 103: career.v1.AdminService.GetReviewQueue:input_type -> career.v1.GetReviewQueueRequest
+	22,  // 104: career.v1.AdminService.ResolveReviewItem:input_type -> career.v1.ResolveReviewItemRequest
+	24,  // 105: career.v1.AdminService.ReplyEscalation:input_type -> career.v1.ReplyEscalationRequest
+	26,  // 106: career.v1.AdminService.GetMemberConversation:input_type -> career.v1.GetMemberConversationRequest
+	28,  // 107: career.v1.AdminService.GetCorpusStatus:input_type -> career.v1.GetCorpusStatusRequest
+	30,  // 108: career.v1.AdminService.TestRetrieval:input_type -> career.v1.TestRetrievalRequest
+	33,  // 109: career.v1.AdminService.RunJob:input_type -> career.v1.RunJobRequest
+	35,  // 110: career.v1.AdminService.GetJob:input_type -> career.v1.GetJobRequest
+	37,  // 111: career.v1.AdminService.GetPersona:input_type -> career.v1.GetPersonaRequest
+	40,  // 112: career.v1.AdminService.GetAnalytics:input_type -> career.v1.GetAnalyticsRequest
+	46,  // 113: career.v1.AdminService.GetAudit:input_type -> career.v1.GetAuditRequest
+	50,  // 114: career.v1.AdminService.ListContactMessages:input_type -> career.v1.ListContactMessagesRequest
+	52,  // 115: career.v1.AdminService.ResolveContactMessage:input_type -> career.v1.ResolveContactMessageRequest
+	54,  // 116: career.v1.AdminService.ApproveRegistration:input_type -> career.v1.ApproveRegistrationRequest
+	56,  // 117: career.v1.AdminService.DeclineRegistration:input_type -> career.v1.DeclineRegistrationRequest
+	58,  // 118: career.v1.AdminService.ExtendAccess:input_type -> career.v1.ExtendAccessRequest
+	62,  // 119: career.v1.AdminService.ListDbTables:input_type -> career.v1.ListDbTablesRequest
+	64,  // 120: career.v1.AdminService.RunDbQuery:input_type -> career.v1.RunDbQueryRequest
+	68,  // 121: career.v1.AdminService.ListAccessGrants:input_type -> career.v1.ListAccessGrantsRequest
+	70,  // 122: career.v1.AdminService.UpsertAccessGrant:input_type -> career.v1.UpsertAccessGrantRequest
+	72,  // 123: career.v1.AdminService.DeleteAccessGrant:input_type -> career.v1.DeleteAccessGrantRequest
+	75,  // 124: career.v1.AdminService.ListSavedQueries:input_type -> career.v1.ListSavedQueriesRequest
+	77,  // 125: career.v1.AdminService.UpsertSavedQuery:input_type -> career.v1.UpsertSavedQueryRequest
+	79,  // 126: career.v1.AdminService.DeleteSavedQuery:input_type -> career.v1.DeleteSavedQueryRequest
+	82,  // 127: career.v1.AdminService.ListMemberActivity:input_type -> career.v1.ListMemberActivityRequest
+	84,  // 128: career.v1.AdminService.IngestCorpusText:input_type -> career.v1.IngestCorpusTextRequest
+	86,  // 129: career.v1.AdminService.ListCorpusDocuments:input_type -> career.v1.ListCorpusDocumentsRequest
+	11,  // 130: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
+	14,  // 131: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
+	16,  // 132: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
+	18,  // 133: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
+	21,  // 134: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
+	23,  // 135: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
+	25,  // 136: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
+	27,  // 137: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
+	29,  // 138: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
+	32,  // 139: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
+	34,  // 140: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
+	36,  // 141: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
+	39,  // 142: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
+	45,  // 143: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
+	48,  // 144: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
+	51,  // 145: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
+	53,  // 146: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
+	55,  // 147: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
+	57,  // 148: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
+	59,  // 149: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
+	63,  // 150: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
+	66,  // 151: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
+	69,  // 152: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
+	71,  // 153: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
+	73,  // 154: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
+	76,  // 155: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
+	78,  // 156: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
+	80,  // 157: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
+	83,  // 158: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
+	85,  // 159: career.v1.AdminService.IngestCorpusText:output_type -> career.v1.IngestCorpusTextResponse
+	88,  // 160: career.v1.AdminService.ListCorpusDocuments:output_type -> career.v1.ListCorpusDocumentsResponse
+	130, // [130:161] is the sub-list for method output_type
+	99,  // [99:130] is the sub-list for method input_type
+	99,  // [99:99] is the sub-list for extension type_name
+	99,  // [99:99] is the sub-list for extension extendee
+	0,   // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_admin_proto_init() }
@@ -6265,7 +6704,7 @@ func file_career_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_admin_proto_rawDesc), len(file_career_v1_admin_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   78,
+			NumMessages:   83,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

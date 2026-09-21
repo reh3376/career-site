@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 29 |
+| [`AdminService`](#adminservice) | Owner console. | 31 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
@@ -1638,6 +1638,8 @@ Owner console.
 | [`UpsertSavedQuery`](#adminservice-upsertsavedquery) | `/api/career.v1.AdminService/UpsertSavedQuery` | Admin (fresh MFA) | default | `UpsertSavedQueryRequest` → `UpsertSavedQueryResponse` | Creates or updates a saved query for the caller. |
 | [`DeleteSavedQuery`](#adminservice-deletesavedquery) | `/api/career.v1.AdminService/DeleteSavedQuery` | Admin (fresh MFA) | default | `DeleteSavedQueryRequest` → `DeleteSavedQueryResponse` | Removes one of the caller's saved queries by id. |
 | [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin (fresh MFA) | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
+| [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin (fresh MFA) | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
+| [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin (fresh MFA) | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
 
 ### AdminService.ListMembers
 
@@ -2592,6 +2594,77 @@ the site" surface.
 {
   "sort": "ACTIVITY_SORT_LAST_EVENT_DESC"
 }
+```
+
+</details>
+
+### AdminService.IngestCorpusText
+
+`POST /api/career.v1.AdminService/IngestCorpusText` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Ingests one text document into the Ask Roger corpus. Chunks
+it, embeds via the sidecar, and stores under (source_kind,
+source_path). Idempotent: an identical body with the same
+(source_kind, source_path) is a no-op (skipped=true). Backs
+the paste-a-document form on /admin/corpus.
+
+**Request** — [`IngestCorpusTextRequest`](#ingestcorpustextrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Where the text came from: 'article', 'resume', 'career_note', 'adr', 'other'. Kept as free text (not enum) so a new source kind is just a new value at the ingest form, not a proto edit. |
+| `sourcePath` | `string` | string | `string: min_len: 1 max_len: 200` | Stable per-source_kind key. Filesystem sources pass the relative path; pasted documents pass a slug like `paste/2026-09-21-notes`. |
+| `title` | `string` | string | `string: max_len: 300` | Human-readable title. Empty falls back to the first non-blank line of the body (with a leading `#` stripped) at ingest time. |
+| `body` | `string` | string | `string: min_len: 1 max_len: 204800` | The document text, post-front-matter for markdown. Capped at 200 KiB so the form doesn't paste in an unbounded blob. |
+
+**Response** — [`IngestCorpusTextResponse`](#ingestcorpustextresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documentId` | `string` | string |  | ID of the stored corpus_documents row. |
+| `chunksInserted` | `int32` | number |  | Number of chunks written this run (0 if skipped). |
+| `chunksEmbedded` | `int32` | number |  | Number of chunks successfully embedded this run. |
+| `skipped` | `bool` | boolean |  | True when the body's content hash matched the stored row and no chunk / embed work ran. |
+| `chunkerName` | `string` | string |  | Stable identifier of the chunker version used (e.g. "paragraph.v1"). |
+| `embedderModel` | `string` | string |  | Embedder model reported by the sidecar (e.g. "stub", "ollama"). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sourceKind": "string",
+  "sourcePath": "string",
+  "title": "string",
+  "body": "string"
+}
+```
+
+</details>
+
+### AdminService.ListCorpusDocuments
+
+`POST /api/career.v1.AdminService/ListCorpusDocuments` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns every document currently in the corpus with a per-row
+chunk count. Backs the list on /admin/corpus.
+
+**Request** — [`ListCorpusDocumentsRequest`](#listcorpusdocumentsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListCorpusDocumentsResponse`](#listcorpusdocumentsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documents` | [`CorpusDocumentRow`](#corpusdocumentrow)[] | array of object |  | All documents, newest first. |
+| `totalDocuments` | `int32` | number |  | Aggregate counts across the whole corpus, rendered as header chips on /admin/corpus. |
+| `totalChunks` | `int32` | number |  |  |
+| `totalEmbedded` | `int32` | number |  |  |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
 ```
 
 </details>
@@ -4352,6 +4425,63 @@ List-member-activity response.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `members` | [`MemberActivitySummary`](#memberactivitysummary)[] | array of object |  | One row per member (up to 500). |
+
+### IngestCorpusTextRequest
+
+Ingest one document into the Ask Roger corpus.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Where the text came from: 'article', 'resume', 'career_note', 'adr', 'other'. Kept as free text (not enum) so a new source kind is just a new value at the ingest form, not a proto edit. |
+| `sourcePath` | `string` | string | `string: min_len: 1 max_len: 200` | Stable per-source_kind key. Filesystem sources pass the relative path; pasted documents pass a slug like `paste/2026-09-21-notes`. |
+| `title` | `string` | string | `string: max_len: 300` | Human-readable title. Empty falls back to the first non-blank line of the body (with a leading `#` stripped) at ingest time. |
+| `body` | `string` | string | `string: min_len: 1 max_len: 204800` | The document text, post-front-matter for markdown. Capped at 200 KiB so the form doesn't paste in an unbounded blob. |
+
+### IngestCorpusTextResponse
+
+Ingest response — mirrors ingest.IngestResult.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documentId` | `string` | string |  | ID of the stored corpus_documents row. |
+| `chunksInserted` | `int32` | number |  | Number of chunks written this run (0 if skipped). |
+| `chunksEmbedded` | `int32` | number |  | Number of chunks successfully embedded this run. |
+| `skipped` | `bool` | boolean |  | True when the body's content hash matched the stored row and no chunk / embed work ran. |
+| `chunkerName` | `string` | string |  | Stable identifier of the chunker version used (e.g. "paragraph.v1"). |
+| `embedderModel` | `string` | string |  | Embedder model reported by the sidecar (e.g. "stub", "ollama"). |
+
+### ListCorpusDocumentsRequest
+
+List-corpus-documents request. No filters yet — corpus is small
+enough that the admin surface returns everything.
+
+_No fields._
+
+### CorpusDocumentRow
+
+One row in the corpus with a computed chunk count.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | ID of the corpus_documents row. |
+| `sourceKind` | `string` | string |  | Source kind slug. |
+| `sourcePath` | `string` | string |  | Stable per-source_kind key. |
+| `title` | `string` | string |  | Human-readable title. |
+| `chunkCount` | `int32` | number |  | Count of chunk rows referencing this document. |
+| `embeddedCount` | `int32` | number |  | Count of chunks that have an embedding populated. |
+| `ingestedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row was first written. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When any field changed (title / hash / meta). |
+
+### ListCorpusDocumentsResponse
+
+List-corpus-documents response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documents` | [`CorpusDocumentRow`](#corpusdocumentrow)[] | array of object |  | All documents, newest first. |
+| `totalDocuments` | `int32` | number |  | Aggregate counts across the whole corpus, rendered as header chips on /admin/corpus. |
+| `totalChunks` | `int32` | number |  |  |
+| `totalEmbedded` | `int32` | number |  |  |
 
 ### RegisterRequest
 
