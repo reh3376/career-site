@@ -49,8 +49,8 @@ func (c *Client) Health(ctx context.Context) (*sidecarv1.HealthResponse, error) 
 // Embed returns one embedding per input text, in request order. Uses a
 // longer timeout than Health because embedding a batch can take seconds
 // (Ollama on CPU) — 60s cap keeps a stuck request from wedging a caller.
-func (c *Client) Embed(ctx context.Context, texts []string) (*sidecarv1.EmbedResponse, error) {
+func (c *Client) Embed(ctx context.Context, texts []string, purpose sidecarv1.EmbedPurpose) (*sidecarv1.EmbedResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
-	return c.stub.Embed(ctx, &sidecarv1.EmbedRequest{Texts: texts})
+	return c.stub.Embed(ctx, &sidecarv1.EmbedRequest{Texts: texts, Purpose: purpose})
 }
