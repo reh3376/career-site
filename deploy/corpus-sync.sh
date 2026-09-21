@@ -27,8 +27,10 @@ fi
 
 ssh "$HOST" "mkdir -p '$DEST'"
 
+# Manifest is read on fd 3: ssh and rsync inside the loop would otherwise
+# consume the rest of the manifest from stdin.
 synced=0
-while IFS= read -r line || [[ -n "$line" ]]; do
+while IFS= read -r -u 3 line || [[ -n "$line" ]]; do
   line="${line%%#*}"
   line="$(echo "$line" | sed -e 's/[[:space:]]*$//')"
   [[ -z "$line" ]] && continue
@@ -62,7 +64,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
   echo "synced $src -> $kind/"
   synced=$((synced + 1))
-done < "$MANIFEST"
+done 3< "$MANIFEST"
 
 echo "done: $synced manifest entries synced to $HOST:$DEST"
 echo "next: /admin/corpus -> Reindex private corpus"
