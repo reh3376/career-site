@@ -1122,6 +1122,22 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.AdminService",
+      "method": "ListMemberActivity",
+      "path": "/api/career.v1.AdminService/ListMemberActivity",
+      "grpc_full_method": "/career.v1.AdminService/ListMemberActivity",
+      "internal": false,
+      "request": "career.v1.ListMemberActivityRequest",
+      "response": "career.v1.ListMemberActivityResponse",
+      "summary": "Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event).",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.SystemService",
       "method": "GetVersion",
       "path": "/api/career.v1.SystemService/GetVersion",

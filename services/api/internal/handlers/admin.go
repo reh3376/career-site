@@ -479,6 +479,65 @@ func (a *Admin) DeclineRegistration(
 }
 
 // ---------------------------------------------------------------
+// ListMemberActivity — /admin/activity aggregate table
+// ---------------------------------------------------------------
+
+func (a *Admin) ListMemberActivity(
+	ctx context.Context,
+	req *connect.Request[v1.ListMemberActivityRequest],
+) (*connect.Response[v1.ListMemberActivityResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	sort := activitySortProtoToRepo(req.Msg.Sort)
+	rows, err := a.users.ListMemberActivity(ctx, sort)
+	if err != nil {
+		a.log.Error("ListMemberActivity failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListMemberActivityResponse{
+		Members: make([]*v1.MemberActivitySummary, 0, len(rows)),
+	}
+	for i := range rows {
+		out.Members = append(out.Members, memberActivityRepoToProto(&rows[i]))
+	}
+	return connect.NewResponse(out), nil
+}
+
+func activitySortProtoToRepo(s v1.ActivitySort) users.ActivitySort {
+	switch s {
+	case v1.ActivitySort_ACTIVITY_SORT_LAST_EVENT_DESC:
+		return users.ActivitySortLastEventDesc
+	case v1.ActivitySort_ACTIVITY_SORT_SESSIONS_DESC:
+		return users.ActivitySortSessionsDesc
+	case v1.ActivitySort_ACTIVITY_SORT_ACTIVE_TIME_DESC:
+		return users.ActivitySortActiveSecsDesc
+	case v1.ActivitySort_ACTIVITY_SORT_ASK_ROGER_DESC:
+		return users.ActivitySortAskRogerDesc
+	default:
+		return users.ActivitySortName
+	}
+}
+
+func memberActivityRepoToProto(m *users.MemberActivitySummary) *v1.MemberActivitySummary {
+	out := &v1.MemberActivitySummary{
+		UserId:          strconv.FormatInt(m.UserID, 10),
+		Name:            m.Name,
+		Email:           m.Email,
+		Status:          statusToProto(m.Status),
+		TotalSessions:   m.TotalSessions,
+		TotalActiveSecs: m.TotalActiveSecs,
+		AskRogerCount:   m.AskRogerCount,
+		TotalEvents:     m.TotalEvents,
+		LastKind:        m.LastKind,
+	}
+	if m.LastEventAt != nil {
+		out.LastEventAt = timestamppb.New(*m.LastEventAt)
+	}
+	return out
+}
+
+// ---------------------------------------------------------------
 // ListSavedQueries / UpsertSavedQuery / DeleteSavedQuery —
 // /admin/db saved-queries dropdown
 // ---------------------------------------------------------------

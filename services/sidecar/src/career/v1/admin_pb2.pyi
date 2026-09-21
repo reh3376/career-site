@@ -64,6 +64,14 @@ class GrantTTL(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     GRANT_TTL_7D: _ClassVar[GrantTTL]
     GRANT_TTL_30D: _ClassVar[GrantTTL]
     GRANT_TTL_PERMANENT: _ClassVar[GrantTTL]
+
+class ActivitySort(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ACTIVITY_SORT_UNSPECIFIED: _ClassVar[ActivitySort]
+    ACTIVITY_SORT_LAST_EVENT_DESC: _ClassVar[ActivitySort]
+    ACTIVITY_SORT_SESSIONS_DESC: _ClassVar[ActivitySort]
+    ACTIVITY_SORT_ACTIVE_TIME_DESC: _ClassVar[ActivitySort]
+    ACTIVITY_SORT_ASK_ROGER_DESC: _ClassVar[ActivitySort]
 REVIEW_KIND_UNSPECIFIED: ReviewKind
 REVIEW_KIND_NEGATIVE_FEEDBACK: ReviewKind
 REVIEW_KIND_NO_SUPPORT: ReviewKind
@@ -96,6 +104,11 @@ GRANT_TTL_3D: GrantTTL
 GRANT_TTL_7D: GrantTTL
 GRANT_TTL_30D: GrantTTL
 GRANT_TTL_PERMANENT: GrantTTL
+ACTIVITY_SORT_UNSPECIFIED: ActivitySort
+ACTIVITY_SORT_LAST_EVENT_DESC: ActivitySort
+ACTIVITY_SORT_SESSIONS_DESC: ActivitySort
+ACTIVITY_SORT_ACTIVE_TIME_DESC: ActivitySort
+ACTIVITY_SORT_ASK_ROGER_DESC: ActivitySort
 
 class MemberCounts(_message.Message):
     __slots__ = ("views", "downloads", "chat_messages", "escalations", "saved")
@@ -856,3 +869,39 @@ class DeleteSavedQueryRequest(_message.Message):
 class DeleteSavedQueryResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class MemberActivitySummary(_message.Message):
+    __slots__ = ("user_id", "name", "email", "status", "total_sessions", "total_active_secs", "ask_roger_count", "total_events", "last_kind", "last_event_at")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_ACTIVE_SECS_FIELD_NUMBER: _ClassVar[int]
+    ASK_ROGER_COUNT_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_EVENTS_FIELD_NUMBER: _ClassVar[int]
+    LAST_KIND_FIELD_NUMBER: _ClassVar[int]
+    LAST_EVENT_AT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    name: str
+    email: str
+    status: _common_pb2.MemberStatus
+    total_sessions: int
+    total_active_secs: int
+    ask_roger_count: int
+    total_events: int
+    last_kind: str
+    last_event_at: _timestamp_pb2.Timestamp
+    def __init__(self, user_id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., status: _Optional[_Union[_common_pb2.MemberStatus, str]] = ..., total_sessions: _Optional[int] = ..., total_active_secs: _Optional[int] = ..., ask_roger_count: _Optional[int] = ..., total_events: _Optional[int] = ..., last_kind: _Optional[str] = ..., last_event_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListMemberActivityRequest(_message.Message):
+    __slots__ = ("sort",)
+    SORT_FIELD_NUMBER: _ClassVar[int]
+    sort: ActivitySort
+    def __init__(self, sort: _Optional[_Union[ActivitySort, str]] = ...) -> None: ...
+
+class ListMemberActivityResponse(_message.Message):
+    __slots__ = ("members",)
+    MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    members: _containers.RepeatedCompositeFieldContainer[MemberActivitySummary]
+    def __init__(self, members: _Optional[_Iterable[_Union[MemberActivitySummary, _Mapping]]] = ...) -> None: ...
