@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 33 |
+| [`AdminService`](#adminservice) | Owner console. | 34 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
@@ -1610,7 +1610,8 @@ Owner console.
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
 | [`ListMembers`](#adminservice-listmembers) | `/api/career.v1.AdminService/ListMembers` | Admin (fresh MFA) | default | `ListMembersRequest` → `ListMembersResponse` | Lists members with search, filters, and pagination. |
-| [`GetMember`](#adminservice-getmember) | `/api/career.v1.AdminService/GetMember` | Admin (fresh MFA) | default | `GetMemberRequest` → `GetMemberResponse` | Returns one member with recent activity, conversations, and admin notes. |
+| [`ResendNotification`](#adminservice-resendnotification) | `/api/career.v1.AdminService/ResendNotification` | Admin (fresh MFA) | default | `ResendNotificationRequest` → `ResendNotificationResponse` | Re-sends the approval or decline email to a member and returns the audited attempt so the console can show the provider's verdict inline. |
+| [`GetMember`](#adminservice-getmember) | `/api/career.v1.AdminService/GetMember` | Admin (fresh MFA) | default | `GetMemberRequest` → `GetMemberResponse` | Returns one member with recent activity, conversations, admin notes, and email delivery history. |
 | [`AddMemberNote`](#adminservice-addmembernote) | `/api/career.v1.AdminService/AddMemberNote` | Admin (fresh MFA) | default | `AddMemberNoteRequest` → `AddMemberNoteResponse` | Adds a private admin note to a member. |
 | [`SetMemberStatus`](#adminservice-setmemberstatus) | `/api/career.v1.AdminService/SetMemberStatus` | Admin (fresh MFA) | default | `SetMemberStatusRequest` → `SetMemberStatusResponse` | Approves or rejects a registration waiting in PENDING_APPROVAL (approval mode only), or disables/re-enables an account. |
 | [`GetReviewQueue`](#adminservice-getreviewqueue) | `/api/career.v1.AdminService/GetReviewQueue` | Admin (fresh MFA) | default | `GetReviewQueueRequest` → `GetReviewQueueResponse` | Lists items needing the owner's attention: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals. |
@@ -1683,11 +1684,44 @@ Lists members with search, filters, and pagination.
 
 </details>
 
+### AdminService.ResendNotification
+
+`POST /api/career.v1.AdminService/ResendNotification` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Re-sends the approval or decline email to a member and returns
+the audited attempt so the console can show the provider's verdict
+inline. Backs the "Resend" button on /admin/registrations/[id].
+
+**Request** — [`ResendNotificationRequest`](#resendnotificationrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `kind` | `string` | string | `string: min_len: 1 max_len: 40` | Which mail to re-fire. Only `user_approved` (member must be active) and `user_declined` (member must be declined) are resendable; token-bearing mails (verify, reset) are not. |
+
+**Response** — [`ResendNotificationResponse`](#resendnotificationresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `delivery` | [`NotificationDelivery`](#notificationdelivery) | object |  | The audited attempt, including any provider error. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
+  "kind": "string"
+}
+```
+
+</details>
+
 ### AdminService.GetMember
 
 `POST /api/career.v1.AdminService/GetMember` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Returns one member with recent activity, conversations, and admin notes.
+Returns one member with recent activity, conversations, admin notes,
+and email delivery history.
 
 **Request** — [`GetMemberRequest`](#getmemberrequest)
 
@@ -1703,6 +1737,7 @@ Returns one member with recent activity, conversations, and admin notes.
 | `recentActivity` | [`ActivityEvent`](#activityevent)[] | array of object |  | Most recent 50 activity events, newest first. |
 | `conversations` | [`Conversation`](#conversation)[] | array of object |  | Conversations, most recent first. |
 | `notes` | [`AdminNote`](#adminnote)[] | array of object |  | Admin notes, newest first. |
+| `deliveries` | [`NotificationDelivery`](#notificationdelivery)[] | array of object |  | Most recent 20 email attempts, newest first. |
 
 <details><summary>Example request body</summary>
 
@@ -3833,6 +3868,22 @@ A private admin note.
 | `text` | `string` | string |  | Note text. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was written. |
 
+### NotificationDelivery
+
+One audited email attempt for a member.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Delivery row id. |
+| `kind` | `string` | string |  | Slug of the mail: user_approved, user_declined, welcome_whitelist, verify_email, password_reset, expiry_warn, expired, user_auto_declined. |
+| `recipient` | `string` | string |  | Address the mail was sent to. |
+| `provider` | `string` | string |  | Provider that handled it (resend / smtp). |
+| `triggeredBy` | `string` | string |  | "system" for automatic sends; "admin:<id>" for console resends. |
+| `durationMs` | `int64` | string (decimal) |  | Provider round-trip in milliseconds. |
+| `ok` | `bool` | boolean |  | True when the provider accepted the message. |
+| `error` | `string` | string |  | Truncated provider error when ok is false; empty otherwise. |
+| `sentAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the attempt happened. |
+
 ### GetMemberResponse
 
 Member detail.
@@ -3843,6 +3894,24 @@ Member detail.
 | `recentActivity` | [`ActivityEvent`](#activityevent)[] | array of object |  | Most recent 50 activity events, newest first. |
 | `conversations` | [`Conversation`](#conversation)[] | array of object |  | Conversations, most recent first. |
 | `notes` | [`AdminNote`](#adminnote)[] | array of object |  | Admin notes, newest first. |
+| `deliveries` | [`NotificationDelivery`](#notificationdelivery)[] | array of object |  | Most recent 20 email attempts, newest first. |
+
+### ResendNotificationRequest
+
+Resend-notification request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `kind` | `string` | string | `string: min_len: 1 max_len: 40` | Which mail to re-fire. Only `user_approved` (member must be active) and `user_declined` (member must be declined) are resendable; token-bearing mails (verify, reset) are not. |
+
+### ResendNotificationResponse
+
+Resend-notification response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `delivery` | [`NotificationDelivery`](#notificationdelivery) | object |  | The audited attempt, including any provider error. |
 
 ### AddMemberNoteRequest
 

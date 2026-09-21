@@ -205,6 +205,8 @@ func (h *Auth) sendVerifyEmail(ctx context.Context, u *users.User) error {
 		Subject:  "Verify your email for career-site",
 		TextBody: text,
 		HTMLBody: htmlBody,
+		Kind:     "verify_email",
+		UserID:   u.ID,
 	})
 }
 
@@ -355,6 +357,8 @@ func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) err
 		Subject:  "Your career-site access is ready",
 		TextBody: text,
 		HTMLBody: html,
+		Kind:     "welcome_whitelist",
+		UserID:   u.ID,
 	})
 }
 
@@ -420,6 +424,7 @@ func (h *Auth) sendApprovalRequestEmail(ctx context.Context, u *users.User, remo
 		Subject:  fmt.Sprintf("[career-site] Access request from %s", u.Name),
 		TextBody: text,
 		HTMLBody: htmlBody,
+		Kind:     "approval_request",
 	})
 }
 

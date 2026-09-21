@@ -42,6 +42,9 @@ const (
 	// AdminServiceListMembersProcedure is the fully-qualified name of the AdminService's ListMembers
 	// RPC.
 	AdminServiceListMembersProcedure = "/career.v1.AdminService/ListMembers"
+	// AdminServiceResendNotificationProcedure is the fully-qualified name of the AdminService's
+	// ResendNotification RPC.
+	AdminServiceResendNotificationProcedure = "/career.v1.AdminService/ResendNotification"
 	// AdminServiceGetMemberProcedure is the fully-qualified name of the AdminService's GetMember RPC.
 	AdminServiceGetMemberProcedure = "/career.v1.AdminService/GetMember"
 	// AdminServiceAddMemberNoteProcedure is the fully-qualified name of the AdminService's
@@ -138,7 +141,12 @@ const (
 type AdminServiceClient interface {
 	// Lists members with search, filters, and pagination.
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	// Returns one member with recent activity, conversations, and admin notes.
+	// Re-sends the approval or decline email to a member and returns
+	// the audited attempt so the console can show the provider's verdict
+	// inline. Backs the "Resend" button on /admin/registrations/[id].
+	ResendNotification(context.Context, *connect.Request[v1.ResendNotificationRequest]) (*connect.Response[v1.ResendNotificationResponse], error)
+	// Returns one member with recent activity, conversations, admin notes,
+	// and email delivery history.
 	GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error)
 	// Adds a private admin note to a member.
 	AddMemberNote(context.Context, *connect.Request[v1.AddMemberNoteRequest]) (*connect.Response[v1.AddMemberNoteResponse], error)
@@ -268,6 +276,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AdminServiceListMembersProcedure,
 			connect.WithSchema(adminServiceMethods.ByName("ListMembers")),
+			connect.WithClientOptions(opts...),
+		),
+		resendNotification: connect.NewClient[v1.ResendNotificationRequest, v1.ResendNotificationResponse](
+			httpClient,
+			baseURL+AdminServiceResendNotificationProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ResendNotification")),
 			connect.WithClientOptions(opts...),
 		),
 		getMember: connect.NewClient[v1.GetMemberRequest, v1.GetMemberResponse](
@@ -468,6 +482,7 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
 	listMembers           *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	resendNotification    *connect.Client[v1.ResendNotificationRequest, v1.ResendNotificationResponse]
 	getMember             *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
 	addMemberNote         *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
 	setMemberStatus       *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
@@ -505,6 +520,11 @@ type adminServiceClient struct {
 // ListMembers calls career.v1.AdminService.ListMembers.
 func (c *adminServiceClient) ListMembers(ctx context.Context, req *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
 	return c.listMembers.CallUnary(ctx, req)
+}
+
+// ResendNotification calls career.v1.AdminService.ResendNotification.
+func (c *adminServiceClient) ResendNotification(ctx context.Context, req *connect.Request[v1.ResendNotificationRequest]) (*connect.Response[v1.ResendNotificationResponse], error) {
+	return c.resendNotification.CallUnary(ctx, req)
 }
 
 // GetMember calls career.v1.AdminService.GetMember.
@@ -671,7 +691,12 @@ func (c *adminServiceClient) ListJdSubmissions(ctx context.Context, req *connect
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
 	ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error)
-	// Returns one member with recent activity, conversations, and admin notes.
+	// Re-sends the approval or decline email to a member and returns
+	// the audited attempt so the console can show the provider's verdict
+	// inline. Backs the "Resend" button on /admin/registrations/[id].
+	ResendNotification(context.Context, *connect.Request[v1.ResendNotificationRequest]) (*connect.Response[v1.ResendNotificationResponse], error)
+	// Returns one member with recent activity, conversations, admin notes,
+	// and email delivery history.
 	GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error)
 	// Adds a private admin note to a member.
 	AddMemberNote(context.Context, *connect.Request[v1.AddMemberNoteRequest]) (*connect.Response[v1.AddMemberNoteResponse], error)
@@ -797,6 +822,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		AdminServiceListMembersProcedure,
 		svc.ListMembers,
 		connect.WithSchema(adminServiceMethods.ByName("ListMembers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceResendNotificationHandler := connect.NewUnaryHandler(
+		AdminServiceResendNotificationProcedure,
+		svc.ResendNotification,
+		connect.WithSchema(adminServiceMethods.ByName("ResendNotification")),
 		connect.WithHandlerOptions(opts...),
 	)
 	adminServiceGetMemberHandler := connect.NewUnaryHandler(
@@ -995,6 +1026,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
 			adminServiceListMembersHandler.ServeHTTP(w, r)
+		case AdminServiceResendNotificationProcedure:
+			adminServiceResendNotificationHandler.ServeHTTP(w, r)
 		case AdminServiceGetMemberProcedure:
 			adminServiceGetMemberHandler.ServeHTTP(w, r)
 		case AdminServiceAddMemberNoteProcedure:
@@ -1070,6 +1103,10 @@ type UnimplementedAdminServiceHandler struct{}
 
 func (UnimplementedAdminServiceHandler) ListMembers(context.Context, *connect.Request[v1.ListMembersRequest]) (*connect.Response[v1.ListMembersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListMembers is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ResendNotification(context.Context, *connect.Request[v1.ResendNotificationRequest]) (*connect.Response[v1.ResendNotificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ResendNotification is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetMember(context.Context, *connect.Request[v1.GetMemberRequest]) (*connect.Response[v1.GetMemberResponse], error) {

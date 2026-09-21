@@ -15,6 +15,15 @@ type Message struct {
 	Subject  string
 	TextBody string
 	HTMLBody string
+
+	// Audit metadata. Providers ignore these; the Audited decorator
+	// records them so the admin console can show per-member delivery
+	// history. Kind is a short slug ("user_approved"); UserID is the
+	// member the mail is about (0 for owner-bound mail); TriggeredBy
+	// is "system" when empty, or "admin:<id>" for console resends.
+	Kind        string
+	UserID      int64
+	TriggeredBy string
 }
 
 type Provider interface {

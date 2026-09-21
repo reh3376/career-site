@@ -113,6 +113,8 @@ func (j *ExpiryJobs) sendEnding(ctx context.Context, u *users.User) error {
 		Subject:  "Your career-site access ends in about 3 days",
 		TextBody: text,
 		HTMLBody: html,
+		Kind:     "expiry_warn",
+		UserID:   u.ID,
 	})
 }
 
@@ -132,6 +134,8 @@ func (j *ExpiryJobs) sendEnded(ctx context.Context, u *users.User) error {
 		Subject:  "Your career-site access has ended",
 		TextBody: text,
 		HTMLBody: html,
+		Kind:     "expired",
+		UserID:   u.ID,
 	})
 }
 

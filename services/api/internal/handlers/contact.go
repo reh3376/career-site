@@ -184,6 +184,7 @@ func (h *Contact) sendSupportNotification(ctx context.Context, m *users.SupportM
 		Subject:  fmt.Sprintf("[%s] %s", categoryShort(m.Category), m.Subject),
 		TextBody: text,
 		HTMLBody: html,
+		Kind:     "contact_owner",
 	})
 }
 

@@ -185,17 +185,55 @@ class AdminNote(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     def __init__(self, id: _Optional[str] = ..., text: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
+class NotificationDelivery(_message.Message):
+    __slots__ = ("id", "kind", "recipient", "provider", "triggered_by", "duration_ms", "ok", "error", "sent_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    RECIPIENT_FIELD_NUMBER: _ClassVar[int]
+    PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    TRIGGERED_BY_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MS_FIELD_NUMBER: _ClassVar[int]
+    OK_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    SENT_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    kind: str
+    recipient: str
+    provider: str
+    triggered_by: str
+    duration_ms: int
+    ok: bool
+    error: str
+    sent_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., kind: _Optional[str] = ..., recipient: _Optional[str] = ..., provider: _Optional[str] = ..., triggered_by: _Optional[str] = ..., duration_ms: _Optional[int] = ..., ok: _Optional[bool] = ..., error: _Optional[str] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
 class GetMemberResponse(_message.Message):
-    __slots__ = ("member", "recent_activity", "conversations", "notes")
+    __slots__ = ("member", "recent_activity", "conversations", "notes", "deliveries")
     MEMBER_FIELD_NUMBER: _ClassVar[int]
     RECENT_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     CONVERSATIONS_FIELD_NUMBER: _ClassVar[int]
     NOTES_FIELD_NUMBER: _ClassVar[int]
+    DELIVERIES_FIELD_NUMBER: _ClassVar[int]
     member: MemberRecord
     recent_activity: _containers.RepeatedCompositeFieldContainer[_common_pb2.ActivityEvent]
     conversations: _containers.RepeatedCompositeFieldContainer[_chat_pb2.Conversation]
     notes: _containers.RepeatedCompositeFieldContainer[AdminNote]
-    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ..., recent_activity: _Optional[_Iterable[_Union[_common_pb2.ActivityEvent, _Mapping]]] = ..., conversations: _Optional[_Iterable[_Union[_chat_pb2.Conversation, _Mapping]]] = ..., notes: _Optional[_Iterable[_Union[AdminNote, _Mapping]]] = ...) -> None: ...
+    deliveries: _containers.RepeatedCompositeFieldContainer[NotificationDelivery]
+    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ..., recent_activity: _Optional[_Iterable[_Union[_common_pb2.ActivityEvent, _Mapping]]] = ..., conversations: _Optional[_Iterable[_Union[_chat_pb2.Conversation, _Mapping]]] = ..., notes: _Optional[_Iterable[_Union[AdminNote, _Mapping]]] = ..., deliveries: _Optional[_Iterable[_Union[NotificationDelivery, _Mapping]]] = ...) -> None: ...
+
+class ResendNotificationRequest(_message.Message):
+    __slots__ = ("member_id", "kind")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    kind: str
+    def __init__(self, member_id: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+
+class ResendNotificationResponse(_message.Message):
+    __slots__ = ("delivery",)
+    DELIVERY_FIELD_NUMBER: _ClassVar[int]
+    delivery: NotificationDelivery
+    def __init__(self, delivery: _Optional[_Union[NotificationDelivery, _Mapping]] = ...) -> None: ...
 
 class AddMemberNoteRequest(_message.Message):
     __slots__ = ("member_id", "text")

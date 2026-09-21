@@ -97,6 +97,8 @@ func (h *Auth) sendPasswordResetEmail(ctx context.Context, u *users.User) error 
 		Subject:  "Reset your career-site password",
 		TextBody: text,
 		HTMLBody: htmlBody,
+		Kind:     "password_reset",
+		UserID:   u.ID,
 	})
 }
 

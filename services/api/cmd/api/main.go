@@ -120,6 +120,12 @@ func main() {
 
 	userRepo := users.New(pool.Pool)
 
+	// Every outbound email is audited to notification_deliveries so
+	// the admin console can show per-member delivery history and
+	// offer a resend. Wrapped here, after the repo exists, and handed
+	// to every handler in place of the raw provider.
+	mailer = email.Audited{Inner: mailer, Sink: userRepo, Log: log}
+
 	// Admin bootstrap. When ADMIN_USERNAME + CAREER_SITE_ADMIN_PW are set,
 	// ensure the row exists in role=admin, status=active so Roger can sign
 	// in on the very first deploy. See users.EnsureAdmin for the upsert.
