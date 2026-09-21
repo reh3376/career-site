@@ -47,7 +47,11 @@ I SSH in as root (with your key), run `deploy/setup-server.sh`, which:
 - Creates a non-root `career` user with sudo + docker access
 - Clones `github.com/reh3376/career-site` into `/opt/career-site`
 - Creates `/opt/career-site/.env.prod` with placeholder values
-- Sets up a systemd unit so the stack survives reboots
+- Relies on Docker's `restart: unless-stopped` policy (and an enabled
+  docker.service) to bring the whole stack back after a reboot; there is
+  no separate systemd unit. Never `docker compose stop` before a planned
+  reboot, or those containers stay down afterwards; a plain `poweroff`
+  is the right move.
 
 I do **not** paste secrets on the command line — you fill `.env.prod` in step 6.
 
