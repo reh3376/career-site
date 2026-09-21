@@ -17,6 +17,10 @@ const nextConfig = {
     "/": ["./content/articles/**/*.md"],
     "/articles": ["./content/articles/**/*.md"],
     "/articles/[slug]": ["./content/articles/**/*.md"],
+    // Gallery front matter + dimensions manifest (derivatives are
+    // static files under public/ and need no tracing).
+    "/gallery": ["./content/photos/**"],
+    "/home": ["./content/articles/**/*.md", "./content/photos/**"],
   },
 };
 

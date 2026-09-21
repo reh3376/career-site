@@ -215,6 +215,7 @@ function buildGroups({
   if (signedIn) {
     browse.push(
       { kind: "link", label: "Articles", href: "/articles" },
+      { kind: "link", label: "Gallery", href: "/gallery" },
       { kind: "link", label: "JD upload", href: "/jd-upload" },
       { kind: "link", label: "How Ask Roger works", href: "/how-ask-roger-works" },
     );

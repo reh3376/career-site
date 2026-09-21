@@ -1,0 +1,164 @@
+{
+  "bootcamp-1987": {
+    "width": 1600,
+    "height": 2133,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 1067,
+        "bytes": 24000
+      },
+      "1600": {
+        "width": 1600,
+        "height": 2133,
+        "bytes": 66774
+      }
+    },
+    "originalWidth": 3024,
+    "originalHeight": 4032
+  },
+  "column-top-bubbletray": {
+    "width": 1600,
+    "height": 1200,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 600,
+        "bytes": 57302
+      },
+      "1600": {
+        "width": 1600,
+        "height": 1200,
+        "bytes": 178830
+      }
+    },
+    "originalWidth": 4032,
+    "originalHeight": 3024
+  },
+  "conservation-valve": {
+    "width": 1600,
+    "height": 2133,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 1067,
+        "bytes": 126378
+      },
+      "1600": {
+        "width": 1600,
+        "height": 2133,
+        "bytes": 344154
+      }
+    },
+    "originalWidth": 3024,
+    "originalHeight": 4032
+  },
+  "hex401-set": {
+    "width": 1600,
+    "height": 2133,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 1067,
+        "bytes": 132906
+      },
+      "1600": {
+        "width": 1600,
+        "height": 2133,
+        "bytes": 351484
+      }
+    },
+    "originalWidth": 3024,
+    "originalHeight": 4032
+  },
+  "hobet-dragline": {
+    "width": 1600,
+    "height": 900,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 450,
+        "bytes": 34904
+      },
+      "1600": {
+        "width": 1600,
+        "height": 900,
+        "bytes": 87100
+      }
+    },
+    "originalWidth": 1920,
+    "originalHeight": 1080
+  },
+  "home-office": {
+    "width": 1600,
+    "height": 2133,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 1067,
+        "bytes": 102882
+      },
+      "1600": {
+        "width": 1600,
+        "height": 2133,
+        "bytes": 316150
+      }
+    },
+    "originalWidth": 3024,
+    "originalHeight": 4032
+  },
+  "jbbi-podium": {
+    "width": 1179,
+    "height": 1445,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 980,
+        "bytes": 39724
+      },
+      "1600": {
+        "width": 1179,
+        "height": 1445,
+        "bytes": 63122
+      }
+    },
+    "originalWidth": 1179,
+    "originalHeight": 1445
+  },
+  "rum-pots": {
+    "width": 1600,
+    "height": 2133,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 1067,
+        "bytes": 143156
+      },
+      "1600": {
+        "width": 1600,
+        "height": 2133,
+        "bytes": 401046
+      }
+    },
+    "originalWidth": 3024,
+    "originalHeight": 4032
+  },
+  "twenty-hour-shift": {
+    "width": 1600,
+    "height": 1200,
+    "sizes": {
+      "800": {
+        "width": 800,
+        "height": 600,
+        "bytes": 46968
+      },
+      "1600": {
+        "width": 1600,
+        "height": 1200,
+        "bytes": 158764
+      }
+    },
+    "originalWidth": 4032,
+    "originalHeight": 3024
+  }
+}
