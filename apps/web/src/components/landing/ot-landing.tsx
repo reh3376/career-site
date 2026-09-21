@@ -86,6 +86,7 @@ export function OtLanding() {
             <span className="text-ink-3">
               MODE <span className="text-ink">OT</span>
             </span>
+            <OtSocialPills />
             <Link
               href="/login"
               className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
@@ -350,6 +351,36 @@ function StatusChip({
       <span className={`pilot text-${color}`} aria-hidden="true" />
       <span>{children}</span>
     </span>
+  );
+}
+
+// Top-bar profile pills next to [ SIGN IN ], so LinkedIn and GitHub are
+// visible without scrolling to the NAV panel.
+function OtSocialPills() {
+  const s = getSocialLinks();
+  return (
+    <>
+      {s.linkedin ? (
+        <a
+          href={s.linkedin}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+        >
+          [ LINKEDIN ]
+        </a>
+      ) : null}
+      {s.github ? (
+        <a
+          href={s.github}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+        >
+          [ GITHUB ]
+        </a>
+      ) : null}
+    </>
   );
 }
 

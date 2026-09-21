@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { HamburgerMenu } from "@/components/hamburger-menu";
 import { getSessionUser, isAdmin } from "@/lib/session-user";
+import { getSocialLinks } from "@/lib/social-links";
 import { getUiMode } from "@/lib/ui-mode";
 
 // Site header. Server component: it resolves the caller's session on
@@ -13,6 +14,7 @@ export async function SiteHeader() {
   const [me, mode] = await Promise.all([getSessionUser(), getUiMode()]);
   const signedIn = me != null;
   const admin = isAdmin(me);
+  const social = getSocialLinks();
 
   return (
     <header className="relative border-b border-line bg-paper">
@@ -76,6 +78,12 @@ export async function SiteHeader() {
             memberName={me?.name}
             memberEmail={me?.email}
             mode={mode}
+            social={{
+              linkedinUrl: social.linkedin,
+              linkedinHandle: social.linkedinHandle,
+              githubUrl: social.github,
+              githubHandle: social.githubHandle,
+            }}
           />
         </div>
       </div>
