@@ -9,7 +9,12 @@ import grpc
 
 from career.sidecar.v1 import sidecar_pb2, sidecar_pb2_grpc
 from career_sidecar.build import VERSION
-from career_sidecar.embed import Embedder
+from career_sidecar.embed import PURPOSE_DOCUMENT, PURPOSE_QUERY, Embedder
+
+_PURPOSE_BY_ENUM = {
+    sidecar_pb2.EMBED_PURPOSE_QUERY: PURPOSE_QUERY,
+    sidecar_pb2.EMBED_PURPOSE_DOCUMENT: PURPOSE_DOCUMENT,
+}
 
 
 class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
@@ -41,16 +46,15 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             context.set_details("texts is required and must not be empty")
             return sidecar_pb2.EmbedResponse()
+        purpose = _PURPOSE_BY_ENUM.get(request.purpose, PURPOSE_DOCUMENT)
         try:
-            vectors = self._embedder.embed(texts)
+            vectors = self._embedder.embed(texts, purpose)
         except Exception as e:  # noqa: BLE001 — propagate error to gRPC
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"embed failed: {e}")
             return sidecar_pb2.EmbedResponse()
         return sidecar_pb2.EmbedResponse(
-            embeddings=[
-                sidecar_pb2.Embedding(values=v) for v in vectors
-            ],
+            embeddings=[sidecar_pb2.Embedding(values=v) for v in vectors],
             model=self._embedder.name,
             dimensions=self._embedder.dimensions,
         )

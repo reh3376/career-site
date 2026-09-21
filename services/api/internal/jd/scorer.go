@@ -51,7 +51,7 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 	if s.embed == nil {
 		return 0, nil, errors.New("scorer: no embed client wired")
 	}
-	vectors, _, err := s.embed.Embed(ctx, []string{jdText})
+	vectors, _, err := s.embed.Embed(ctx, []string{jdText}, ingest.PurposeQuery)
 	if err != nil {
 		return 0, nil, err
 	}

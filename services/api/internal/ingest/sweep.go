@@ -45,7 +45,7 @@ func (i *Ingester) EmbedSweep(ctx context.Context, opts SweepOptions) (*SweepRes
 	}
 	res := &SweepResult{StartedAt: time.Now().UTC()}
 
-	_, model, err := i.sidecar.Embed(ctx, []string{"embedder probe"})
+	_, model, err := i.sidecar.Embed(ctx, []string{"embedder probe"}, PurposeDocument)
 	if err != nil {
 		return nil, fmt.Errorf("sweep: probe embedder: %w", err)
 	}
@@ -69,7 +69,7 @@ func (i *Ingester) EmbedSweep(ctx context.Context, opts SweepOptions) (*SweepRes
 		for j, c := range chunks {
 			texts[j] = c.Text
 		}
-		vectors, gotModel, err := i.sidecar.Embed(ctx, texts)
+		vectors, gotModel, err := i.sidecar.Embed(ctx, texts, PurposeDocument)
 		if err != nil {
 			// A failing batch is not retried here; the chunks stay stale
 			// and the next sweep picks them up. Stop rather than spin.

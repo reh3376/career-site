@@ -37,8 +37,19 @@ type Ingester struct {
 // gRPC stack, and so the ingest package doesn't depend on the
 // generated proto types.
 type EmbedClient interface {
-	Embed(ctx context.Context, texts []string) (vectors [][]float32, model string, err error)
+	Embed(ctx context.Context, texts []string, purpose EmbedPurpose) (vectors [][]float32, model string, err error)
 }
+
+// EmbedPurpose tells the embedder which side of retrieval a text is
+// on. Asymmetric models (nomic-embed-text) prefix documents and
+// queries differently; embedding both sides the same way flattens the
+// similarity distribution and ruins threshold calibration.
+type EmbedPurpose string
+
+const (
+	PurposeDocument EmbedPurpose = "document"
+	PurposeQuery    EmbedPurpose = "query"
+)
 
 // NewIngester wires the dependencies. Passing nil for chunker uses
 // the v1 ParagraphChunker with default options.
@@ -185,7 +196,7 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 	const batchSize = 64
 	for start := 0; start < len(texts); start += batchSize {
 		end := min(start+batchSize, len(texts))
-		vectors, model, err := i.sidecar.Embed(ctx, texts[start:end])
+		vectors, model, err := i.sidecar.Embed(ctx, texts[start:end], PurposeDocument)
 		if err != nil {
 			i.log.Warn("embed batch failed",
 				slog.Int64("document_id", doc.ID),

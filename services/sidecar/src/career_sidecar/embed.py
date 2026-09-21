@@ -21,18 +21,48 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Protocol
 
+PURPOSE_DOCUMENT = "document"
+PURPOSE_QUERY = "query"
+
+# Task prefixes nomic-embed-text was trained with. Embedding a corpus
+# chunk and a question with the same prefix (or none) measurably
+# flattens the similarity distribution; the asymmetric prefixes are
+# what give retrieval its dynamic range. Keyed by model-name prefix so
+# a non-nomic model gets no prefix.
+_TASK_PREFIXES: dict[str, dict[str, str]] = {
+    "nomic-embed-text": {
+        PURPOSE_DOCUMENT: "search_document: ",
+        PURPOSE_QUERY: "search_query: ",
+    },
+}
+
+# Bumped whenever the text handed to the model changes for the same
+# model (prefixes, normalisation). It is part of the embedder name the
+# api records per chunk, so a recipe change makes every existing vector
+# stale and the embed sweep re-embeds the corpus.
+_RECIPE = "p1"
+
 
 class Embedder(Protocol):
     """One method — batch embed. Both implementations honour a
     fixed dimension so the sidecar can advertise it back to callers
     (matches the DB's vector(N) column width — see migration 00011).
+    `purpose` is PURPOSE_DOCUMENT (corpus chunk) or PURPOSE_QUERY
+    (a question or JD at retrieval time).
     """
 
     name: str
     dimensions: int
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        ...
+    def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]: ...
+
+
+def task_prefix(model: str, purpose: str) -> str:
+    """Prefix to prepend for (model, purpose); empty when the model has none."""
+    for model_prefix, table in _TASK_PREFIXES.items():
+        if model.startswith(model_prefix):
+            return table.get(purpose, table[PURPOSE_DOCUMENT])
+    return ""
 
 
 @dataclass
@@ -53,15 +83,17 @@ class OllamaEmbedder:
 
     def __post_init__(self) -> None:
         # The api records this per chunk and re-embeds anything whose
-        # recorded name differs, so the model must be part of the name:
-        # switching nomic-embed-text for another model has to look like a
-        # new embedder, not the same one.
-        self.name = f"ollama:{self.model}"
+        # recorded name differs, so the model AND the text recipe must be
+        # part of the name: switching models, or changing the prefixes,
+        # has to look like a new embedder, not the same one.
+        recipe = _RECIPE if task_prefix(self.model, PURPOSE_DOCUMENT) else "raw"
+        self.name = f"ollama:{self.model}#{recipe}"
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]:
+        prefix = task_prefix(self.model, purpose)
         out: list[list[float]] = []
         for text in texts:
-            payload = json.dumps({"model": self.model, "prompt": text}).encode()
+            payload = json.dumps({"model": self.model, "prompt": prefix + text}).encode()
             req = urllib.request.Request(
                 f"{self.base_url.rstrip('/')}/api/embeddings",
                 data=payload,
@@ -103,7 +135,7 @@ class StubEmbedder:
     dimensions: int
     name: str = "stub"
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def embed(self, texts: list[str], purpose: str = PURPOSE_DOCUMENT) -> list[list[float]]:
         out: list[list[float]] = []
         for text in texts:
             vec = _pseudo_vector(text, self.dimensions)
@@ -139,11 +171,7 @@ def _l2_normalise(v: list[float]) -> list[float]:
 def build_embedder(provider: str, ollama_url: str, model: str, dimensions: int) -> Embedder:
     """Construct the configured embedder or raise. Called once at boot."""
     if provider == "ollama":
-        return OllamaEmbedder(
-            base_url=ollama_url, model=model, dimensions=dimensions
-        )
+        return OllamaEmbedder(base_url=ollama_url, model=model, dimensions=dimensions)
     if provider == "stub":
         return StubEmbedder(dimensions=dimensions)
-    raise RuntimeError(
-        f"unknown SIDECAR_EMBED_PROVIDER: {provider!r} (want 'ollama' or 'stub')"
-    )
+    raise RuntimeError(f"unknown SIDECAR_EMBED_PROVIDER: {provider!r} (want 'ollama' or 'stub')")

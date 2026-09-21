@@ -2,7 +2,14 @@ import math
 
 import pytest
 
-from career_sidecar.embed import OllamaEmbedder, StubEmbedder, build_embedder
+from career_sidecar.embed import (
+    PURPOSE_DOCUMENT,
+    PURPOSE_QUERY,
+    OllamaEmbedder,
+    StubEmbedder,
+    build_embedder,
+    task_prefix,
+)
 
 
 def test_stub_is_deterministic_and_normalised():
@@ -19,9 +26,25 @@ def test_stub_differs_for_different_text():
     assert a != b
 
 
-def test_ollama_name_includes_model():
+def test_ollama_name_includes_model_and_recipe():
     e = OllamaEmbedder(base_url="http://ollama:11434", model="nomic-embed-text", dimensions=768)
-    assert e.name == "ollama:nomic-embed-text"
+    assert e.name == "ollama:nomic-embed-text#p1"
+    other = OllamaEmbedder(
+        base_url="http://ollama:11434", model="mxbai-embed-large", dimensions=768
+    )
+    assert other.name == "ollama:mxbai-embed-large#raw"
+
+
+def test_nomic_task_prefixes_are_asymmetric():
+    assert task_prefix("nomic-embed-text", PURPOSE_DOCUMENT) == "search_document: "
+    assert task_prefix("nomic-embed-text:latest", PURPOSE_QUERY) == "search_query: "
+    assert task_prefix("nomic-embed-text", "bogus") == "search_document: "
+    assert task_prefix("mxbai-embed-large", PURPOSE_QUERY) == ""
+
+
+def test_stub_ignores_purpose():
+    e = StubEmbedder(dimensions=16)
+    assert e.embed(["x"], PURPOSE_QUERY) == e.embed(["x"], PURPOSE_DOCUMENT)
 
 
 def test_build_embedder_stub_name():

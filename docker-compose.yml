@@ -63,6 +63,10 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PWNED_CHECK_ENABLED: "0"
+      # Optional local admin bootstrap; set both in the repo-root .env
+      # (gitignored) to sign into /admin without the email approval flow.
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      CAREER_SITE_ADMIN_PW: ${CAREER_SITE_ADMIN_PW:-}
       # Corpus reindex reads markdown from here. Bind-mounted below
       # so `/admin/corpus` → "Reindex articles" walks the same files
       # that ship with the web bundle.
@@ -89,6 +93,15 @@ services:
     environment:
       <<: *common-env
       SIDECAR_ADDR: "[::]:50051"
+      # Local development against an Ollama running on the host machine:
+      #   SIDECAR_EMBED_PROVIDER=ollama docker compose up -d
+      # host.docker.internal resolves to the host on Docker Desktop; the
+      # extra_hosts entry gives Linux engines the same name.
+      SIDECAR_EMBED_PROVIDER: ${SIDECAR_EMBED_PROVIDER:-stub}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       # Uses the grpc client shipped with the sidecar; asserts Health() reports ready.
       test:

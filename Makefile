@@ -14,7 +14,7 @@ BUILD := build
 
 GEN_PATHS := services/api/gen apps/web/src/gen services/sidecar/src/career services/sidecar/src/buf docs/api
 
-.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus
+.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus stage-corpus
 
 CORPUS_MANIFEST ?= docs/personal/corpus-manifest.txt
 CORPUS_HOST     ?= career@5.161.62.205
@@ -51,3 +51,6 @@ clean: ## Remove build artifacts
 
 sync-corpus: ## Rsync the curated private corpus (docs/personal manifest) to the server
 	deploy/corpus-sync.sh $(CORPUS_MANIFEST) $(CORPUS_HOST) $(CORPUS_DEST)
+
+stage-corpus: ## Stage the private corpus into ./.corpus-private for the local dev stack
+	deploy/corpus-sync.sh $(CORPUS_MANIFEST) local ./.corpus-private
