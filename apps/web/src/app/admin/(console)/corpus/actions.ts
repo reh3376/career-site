@@ -5,6 +5,70 @@ import { revalidatePath } from "next/cache";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
+export type ReindexResult =
+  | {
+      ok: true;
+      root: string;
+      files_scanned: number;
+      docs_ingested: number;
+      docs_skipped: number;
+      chunks_inserted: number;
+      chunks_embedded: number;
+      errors: string[];
+    }
+  | { ok: false; error: string };
+
+export async function reindexCorpusAction(
+  sourceKind: string,
+): Promise<ReindexResult> {
+  const kind = sourceKind.trim();
+  if (!kind) return { ok: false, error: "source_kind is required." };
+
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in." };
+
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/ReindexCorpus",
+    body: { sourceKind: kind },
+    cookie,
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { ok: false, error: msg };
+  }
+  const j = (await resp.json()) as {
+    root?: string;
+    filesScanned?: number;
+    files_scanned?: number;
+    docsIngested?: number;
+    docs_ingested?: number;
+    docsSkipped?: number;
+    docs_skipped?: number;
+    chunksInserted?: number;
+    chunks_inserted?: number;
+    chunksEmbedded?: number;
+    chunks_embedded?: number;
+    errors?: string[];
+  };
+  revalidatePath("/admin/corpus", "layout");
+  return {
+    ok: true,
+    root: j.root ?? "",
+    files_scanned: j.filesScanned ?? j.files_scanned ?? 0,
+    docs_ingested: j.docsIngested ?? j.docs_ingested ?? 0,
+    docs_skipped: j.docsSkipped ?? j.docs_skipped ?? 0,
+    chunks_inserted: j.chunksInserted ?? j.chunks_inserted ?? 0,
+    chunks_embedded: j.chunksEmbedded ?? j.chunks_embedded ?? 0,
+    errors: j.errors ?? [],
+  };
+}
+
 export type IngestResult =
   | {
       ok: true;

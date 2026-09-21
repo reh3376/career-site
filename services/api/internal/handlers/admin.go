@@ -40,6 +40,9 @@ type Admin struct {
 	pool     *db.Pool         // write-capable app pool
 	roPool   *db.Pool         // read-only pool used by the /admin/db surface
 	ingest   *ingest.Ingester // Ask Roger corpus ingest
+	// corpusRoot is the filesystem root the reindex walker reads from.
+	// Each source_kind resolves to a subdirectory under this root.
+	corpusRoot string
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -56,18 +59,20 @@ func NewAdmin(
 	pool *db.Pool,
 	roPool *db.Pool,
 	ingester *ingest.Ingester,
+	corpusRoot string,
 ) *Admin {
 	if roPool == nil {
 		roPool = pool
 	}
 	return &Admin{
-		log:      log,
-		users:    repo,
-		auth:     auth,
-		decision: decision,
-		pool:     pool,
-		roPool:   roPool,
-		ingest:   ingester,
+		log:        log,
+		users:      repo,
+		auth:       auth,
+		decision:   decision,
+		pool:       pool,
+		roPool:     roPool,
+		ingest:     ingester,
+		corpusRoot: corpusRoot,
 		// 20-query burst, refills to 20 across a minute. Enough for
 		// interactive exploration; well below what a hung client loop
 		// would produce.
@@ -557,6 +562,62 @@ func (a *Admin) ListCorpusDocuments(
 		})
 	}
 	return connect.NewResponse(out), nil
+}
+
+// corpusSubdirs maps a source_kind slug to its subdirectory under
+// corpusRoot. Adding a new kind is a one-line edit here plus a
+// filesystem-level decision about where its content lives. Keeping
+// this in-code (not env-var-driven) makes the allow-list explicit —
+// an arbitrary source_kind can't be walked, and the walker never
+// escapes the configured root.
+var corpusSubdirs = map[string]string{
+	"article": "articles",
+}
+
+func (a *Admin) ReindexCorpus(
+	ctx context.Context,
+	req *connect.Request[v1.ReindexCorpusRequest],
+) (*connect.Response[v1.ReindexCorpusResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	if a.ingest == nil {
+		return nil, connect.NewError(connect.CodeUnavailable,
+			errors.New("corpus ingester not wired"))
+	}
+	if a.corpusRoot == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("CORPUS_ROOT is not configured"))
+	}
+	kind := strings.TrimSpace(req.Msg.SourceKind)
+	subdir, ok := corpusSubdirs[kind]
+	if !ok {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("unknown source_kind %q; known: article", kind))
+	}
+	root := a.corpusRoot + "/" + subdir
+	res, err := a.ingest.WalkDirectory(ctx, root, kind)
+	if err != nil {
+		a.log.Error("ReindexCorpus failed", slog.String("root", root),
+			slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	// Cap error list so a broken directory doesn't produce an
+	// unbounded response. Twenty is enough to diagnose without
+	// blowing up the admin UI.
+	errs := res.Errors
+	if len(errs) > 20 {
+		errs = append(errs[:20:20], fmt.Sprintf("... %d more", len(res.Errors)-20))
+	}
+	return connect.NewResponse(&v1.ReindexCorpusResponse{
+		Root:           res.Root,
+		FilesScanned:   int32(res.FilesScanned),
+		DocsIngested:   int32(res.DocsIngested),
+		DocsSkipped:    int32(res.DocsSkipped),
+		ChunksInserted: int32(res.ChunksInserted),
+		ChunksEmbedded: int32(res.ChunksEmbedded),
+		Errors:         errs,
+	}), nil
 }
 
 // ---------------------------------------------------------------

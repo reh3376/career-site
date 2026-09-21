@@ -126,6 +126,9 @@ const (
 	// AdminServiceListCorpusDocumentsProcedure is the fully-qualified name of the AdminService's
 	// ListCorpusDocuments RPC.
 	AdminServiceListCorpusDocumentsProcedure = "/career.v1.AdminService/ListCorpusDocuments"
+	// AdminServiceReindexCorpusProcedure is the fully-qualified name of the AdminService's
+	// ReindexCorpus RPC.
+	AdminServiceReindexCorpusProcedure = "/career.v1.AdminService/ReindexCorpus"
 	// AdminServiceListJdSubmissionsProcedure is the fully-qualified name of the AdminService's
 	// ListJdSubmissions RPC.
 	AdminServiceListJdSubmissionsProcedure = "/career.v1.AdminService/ListJdSubmissions"
@@ -236,6 +239,14 @@ type AdminServiceClient interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
+	// Walks a filesystem tree for markdown files and runs each through
+	// IngestCorpusText, so the corpus can be seeded from committed
+	// article content instead of paste-by-paste. Idempotent — files
+	// whose content_hash matches the stored row are skipped. Root is
+	// resolved from CORPUS_ROOT + a subdirectory per source_kind
+	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
+	// "Reindex articles" button on /admin/corpus.
+	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
@@ -439,6 +450,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
 			connect.WithClientOptions(opts...),
 		),
+		reindexCorpus: connect.NewClient[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse](
+			httpClient,
+			baseURL+AdminServiceReindexCorpusProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ReindexCorpus")),
+			connect.WithClientOptions(opts...),
+		),
 		listJdSubmissions: connect.NewClient[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse](
 			httpClient,
 			baseURL+AdminServiceListJdSubmissionsProcedure,
@@ -481,6 +498,7 @@ type adminServiceClient struct {
 	listMemberActivity    *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
 	ingestCorpusText      *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
 	listCorpusDocuments   *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
+	reindexCorpus         *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 }
 
@@ -639,6 +657,11 @@ func (c *adminServiceClient) ListCorpusDocuments(ctx context.Context, req *conne
 	return c.listCorpusDocuments.CallUnary(ctx, req)
 }
 
+// ReindexCorpus calls career.v1.AdminService.ReindexCorpus.
+func (c *adminServiceClient) ReindexCorpus(ctx context.Context, req *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error) {
+	return c.reindexCorpus.CallUnary(ctx, req)
+}
+
 // ListJdSubmissions calls career.v1.AdminService.ListJdSubmissions.
 func (c *adminServiceClient) ListJdSubmissions(ctx context.Context, req *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
 	return c.listJdSubmissions.CallUnary(ctx, req)
@@ -749,6 +772,14 @@ type AdminServiceHandler interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
+	// Walks a filesystem tree for markdown files and runs each through
+	// IngestCorpusText, so the corpus can be seeded from committed
+	// article content instead of paste-by-paste. Idempotent — files
+	// whose content_hash matches the stored row are skipped. Root is
+	// resolved from CORPUS_ROOT + a subdirectory per source_kind
+	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
+	// "Reindex articles" button on /admin/corpus.
+	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
@@ -948,6 +979,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceReindexCorpusHandler := connect.NewUnaryHandler(
+		AdminServiceReindexCorpusProcedure,
+		svc.ReindexCorpus,
+		connect.WithSchema(adminServiceMethods.ByName("ReindexCorpus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListJdSubmissionsHandler := connect.NewUnaryHandler(
 		AdminServiceListJdSubmissionsProcedure,
 		svc.ListJdSubmissions,
@@ -1018,6 +1055,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceIngestCorpusTextHandler.ServeHTTP(w, r)
 		case AdminServiceListCorpusDocumentsProcedure:
 			adminServiceListCorpusDocumentsHandler.ServeHTTP(w, r)
+		case AdminServiceReindexCorpusProcedure:
+			adminServiceReindexCorpusHandler.ServeHTTP(w, r)
 		case AdminServiceListJdSubmissionsProcedure:
 			adminServiceListJdSubmissionsHandler.ServeHTTP(w, r)
 		default:
@@ -1151,6 +1190,10 @@ func (UnimplementedAdminServiceHandler) IngestCorpusText(context.Context, *conne
 
 func (UnimplementedAdminServiceHandler) ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListCorpusDocuments is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ReindexCorpus is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {

@@ -4,6 +4,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import { IngestForm } from "./ingest-form";
+import { ReindexPanel } from "./reindex-panel";
 
 export const metadata: Metadata = { title: "Admin · Corpus" };
 export const dynamic = "force-dynamic";
@@ -99,6 +100,15 @@ export default async function AdminCorpusPage() {
           </div>
         </dl>
       )}
+
+      <section aria-label="Reindex from filesystem" className="mt-10">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          reindex from filesystem
+        </p>
+        <div className="mt-3">
+          <ReindexPanel />
+        </div>
+      </section>
 
       <section aria-label="Ingest a document" className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

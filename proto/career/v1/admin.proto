@@ -216,6 +216,17 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Walks a filesystem tree for markdown files and runs each through
+  // IngestCorpusText, so the corpus can be seeded from committed
+  // article content instead of paste-by-paste. Idempotent — files
+  // whose content_hash matches the stored row are skipped. Root is
+  // resolved from CORPUS_ROOT + a subdirectory per source_kind
+  // (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
+  // "Reindex articles" button on /admin/corpus.
+  rpc ReindexCorpus(ReindexCorpusRequest) returns (ReindexCorpusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Returns every JD submission with score + status. Backs
   // /admin/jd — Roger's triage view for the JD-upload flow. Full
   // JD body is elided from the list; the detail lookup returns it.
@@ -1317,6 +1328,42 @@ message ListCorpusDocumentsResponse {
   int32 total_chunks = 3;
   // Aggregate count of chunks that have an embedding populated.
   int32 total_embedded = 4;
+}
+
+// Reindex-corpus request. `source_kind` picks which subdirectory
+// under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
+// Currently the handler only knows about `article`; adding a kind is
+// a code edit + a compose bind-mount, not a proto change.
+message ReindexCorpusRequest {
+  // Which corpus subtree to walk. Free-text so a new kind is a
+  // one-line handler change, not a proto edit. Validated against the
+  // handler's allow-list.
+  string source_kind = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 40
+  }];
+}
+
+// Reindex-corpus response — mirrors ingest.WalkResult.
+message ReindexCorpusResponse {
+  // Absolute path the handler actually walked.
+  string root = 1;
+  // Number of `.md` files the walker saw.
+  int32 files_scanned = 2;
+  // Number of files handed to the ingester without error. Includes
+  // skipped-because-unchanged.
+  int32 docs_ingested = 3;
+  // Subset of docs_ingested whose content_hash matched the stored
+  // row and did no chunk / embed work this run.
+  int32 docs_skipped = 4;
+  // Sum of newly-inserted chunk rows across all files this run.
+  int32 chunks_inserted = 5;
+  // Sum of chunks successfully embedded across all files this run.
+  int32 chunks_embedded = 6;
+  // Per-file error strings from files that failed mid-walk. Capped
+  // at 20 entries so a broken directory can't produce an unbounded
+  // response.
+  repeated string errors = 7;
 }
 
 // List-jd-submissions request. No filters yet.

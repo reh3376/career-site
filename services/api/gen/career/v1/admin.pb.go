@@ -5906,6 +5906,161 @@ func (x *ListCorpusDocumentsResponse) GetTotalEmbedded() int32 {
 	return 0
 }
 
+// Reindex-corpus request. `source_kind` picks which subdirectory
+// under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
+// Currently the handler only knows about `article`; adding a kind is
+// a code edit + a compose bind-mount, not a proto change.
+type ReindexCorpusRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Which corpus subtree to walk. Free-text so a new kind is a
+	// one-line handler change, not a proto edit. Validated against the
+	// handler's allow-list.
+	SourceKind    string `protobuf:"bytes,1,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReindexCorpusRequest) Reset() {
+	*x = ReindexCorpusRequest{}
+	mi := &file_career_v1_admin_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReindexCorpusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReindexCorpusRequest) ProtoMessage() {}
+
+func (x *ReindexCorpusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReindexCorpusRequest.ProtoReflect.Descriptor instead.
+func (*ReindexCorpusRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *ReindexCorpusRequest) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+// Reindex-corpus response — mirrors ingest.WalkResult.
+type ReindexCorpusResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Absolute path the handler actually walked.
+	Root string `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty"`
+	// Number of `.md` files the walker saw.
+	FilesScanned int32 `protobuf:"varint,2,opt,name=files_scanned,json=filesScanned,proto3" json:"files_scanned,omitempty"`
+	// Number of files handed to the ingester without error. Includes
+	// skipped-because-unchanged.
+	DocsIngested int32 `protobuf:"varint,3,opt,name=docs_ingested,json=docsIngested,proto3" json:"docs_ingested,omitempty"`
+	// Subset of docs_ingested whose content_hash matched the stored
+	// row and did no chunk / embed work this run.
+	DocsSkipped int32 `protobuf:"varint,4,opt,name=docs_skipped,json=docsSkipped,proto3" json:"docs_skipped,omitempty"`
+	// Sum of newly-inserted chunk rows across all files this run.
+	ChunksInserted int32 `protobuf:"varint,5,opt,name=chunks_inserted,json=chunksInserted,proto3" json:"chunks_inserted,omitempty"`
+	// Sum of chunks successfully embedded across all files this run.
+	ChunksEmbedded int32 `protobuf:"varint,6,opt,name=chunks_embedded,json=chunksEmbedded,proto3" json:"chunks_embedded,omitempty"`
+	// Per-file error strings from files that failed mid-walk. Capped
+	// at 20 entries so a broken directory can't produce an unbounded
+	// response.
+	Errors        []string `protobuf:"bytes,7,rep,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReindexCorpusResponse) Reset() {
+	*x = ReindexCorpusResponse{}
+	mi := &file_career_v1_admin_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReindexCorpusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReindexCorpusResponse) ProtoMessage() {}
+
+func (x *ReindexCorpusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReindexCorpusResponse.ProtoReflect.Descriptor instead.
+func (*ReindexCorpusResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *ReindexCorpusResponse) GetRoot() string {
+	if x != nil {
+		return x.Root
+	}
+	return ""
+}
+
+func (x *ReindexCorpusResponse) GetFilesScanned() int32 {
+	if x != nil {
+		return x.FilesScanned
+	}
+	return 0
+}
+
+func (x *ReindexCorpusResponse) GetDocsIngested() int32 {
+	if x != nil {
+		return x.DocsIngested
+	}
+	return 0
+}
+
+func (x *ReindexCorpusResponse) GetDocsSkipped() int32 {
+	if x != nil {
+		return x.DocsSkipped
+	}
+	return 0
+}
+
+func (x *ReindexCorpusResponse) GetChunksInserted() int32 {
+	if x != nil {
+		return x.ChunksInserted
+	}
+	return 0
+}
+
+func (x *ReindexCorpusResponse) GetChunksEmbedded() int32 {
+	if x != nil {
+		return x.ChunksEmbedded
+	}
+	return 0
+}
+
+func (x *ReindexCorpusResponse) GetErrors() []string {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 // List-jd-submissions request. No filters yet.
 type ListJdSubmissionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -5915,7 +6070,7 @@ type ListJdSubmissionsRequest struct {
 
 func (x *ListJdSubmissionsRequest) Reset() {
 	*x = ListJdSubmissionsRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[81]
+	mi := &file_career_v1_admin_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5927,7 +6082,7 @@ func (x *ListJdSubmissionsRequest) String() string {
 func (*ListJdSubmissionsRequest) ProtoMessage() {}
 
 func (x *ListJdSubmissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[81]
+	mi := &file_career_v1_admin_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5940,7 +6095,7 @@ func (x *ListJdSubmissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJdSubmissionsRequest.ProtoReflect.Descriptor instead.
 func (*ListJdSubmissionsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{81}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{83}
 }
 
 // One row of the /admin/jd triage table.
@@ -5978,7 +6133,7 @@ type JdSubmissionRow struct {
 
 func (x *JdSubmissionRow) Reset() {
 	*x = JdSubmissionRow{}
-	mi := &file_career_v1_admin_proto_msgTypes[82]
+	mi := &file_career_v1_admin_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5990,7 +6145,7 @@ func (x *JdSubmissionRow) String() string {
 func (*JdSubmissionRow) ProtoMessage() {}
 
 func (x *JdSubmissionRow) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[82]
+	mi := &file_career_v1_admin_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6003,7 +6158,7 @@ func (x *JdSubmissionRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JdSubmissionRow.ProtoReflect.Descriptor instead.
 func (*JdSubmissionRow) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{82}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *JdSubmissionRow) GetId() string {
@@ -6109,7 +6264,7 @@ type ListJdSubmissionsResponse struct {
 
 func (x *ListJdSubmissionsResponse) Reset() {
 	*x = ListJdSubmissionsResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[83]
+	mi := &file_career_v1_admin_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6121,7 +6276,7 @@ func (x *ListJdSubmissionsResponse) String() string {
 func (*ListJdSubmissionsResponse) ProtoMessage() {}
 
 func (x *ListJdSubmissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[83]
+	mi := &file_career_v1_admin_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6134,7 +6289,7 @@ func (x *ListJdSubmissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJdSubmissionsResponse.ProtoReflect.Descriptor instead.
 func (*ListJdSubmissionsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{83}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ListJdSubmissionsResponse) GetSubmissions() []*JdSubmissionRow {
@@ -6587,7 +6742,18 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\tdocuments\x18\x01 \x03(\v2\x1c.career.v1.CorpusDocumentRowR\tdocuments\x12'\n" +
 	"\x0ftotal_documents\x18\x02 \x01(\x05R\x0etotalDocuments\x12!\n" +
 	"\ftotal_chunks\x18\x03 \x01(\x05R\vtotalChunks\x12%\n" +
-	"\x0etotal_embedded\x18\x04 \x01(\x05R\rtotalEmbedded\"\x1a\n" +
+	"\x0etotal_embedded\x18\x04 \x01(\x05R\rtotalEmbedded\"B\n" +
+	"\x14ReindexCorpusRequest\x12*\n" +
+	"\vsource_kind\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18(R\n" +
+	"sourceKind\"\x82\x02\n" +
+	"\x15ReindexCorpusResponse\x12\x12\n" +
+	"\x04root\x18\x01 \x01(\tR\x04root\x12#\n" +
+	"\rfiles_scanned\x18\x02 \x01(\x05R\ffilesScanned\x12#\n" +
+	"\rdocs_ingested\x18\x03 \x01(\x05R\fdocsIngested\x12!\n" +
+	"\fdocs_skipped\x18\x04 \x01(\x05R\vdocsSkipped\x12'\n" +
+	"\x0fchunks_inserted\x18\x05 \x01(\x05R\x0echunksInserted\x12'\n" +
+	"\x0fchunks_embedded\x18\x06 \x01(\x05R\x0echunksEmbedded\x12\x16\n" +
+	"\x06errors\x18\a \x03(\tR\x06errors\"\x1a\n" +
 	"\x18ListJdSubmissionsRequest\"\x86\x04\n" +
 	"\x0fJdSubmissionRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
@@ -6657,7 +6823,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1dACTIVITY_SORT_LAST_EVENT_DESC\x10\x01\x12\x1f\n" +
 	"\x1bACTIVITY_SORT_SESSIONS_DESC\x10\x02\x12\"\n" +
 	"\x1eACTIVITY_SORT_ACTIVE_TIME_DESC\x10\x03\x12 \n" +
-	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xe1\x18\n" +
+	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xbf\x19\n" +
 	"\fAdminService\x12V\n" +
 	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12P\n" +
 	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
@@ -6691,7 +6857,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
 	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
 	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
+	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
+	"\rReindexCorpus\x12\x1f.career.v1.ReindexCorpusRequest\x1a .career.v1.ReindexCorpusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
 	"\x11ListJdSubmissions\x12#.career.v1.ListJdSubmissionsRequest\x1a$.career.v1.ListJdSubmissionsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01B\xa4\x01\n" +
 	"\rcom.career.v1B\n" +
 	"AdminProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
@@ -6710,7 +6877,7 @@ func file_career_v1_admin_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 86)
+var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 88)
 var file_career_v1_admin_proto_goTypes = []any{
 	(ReviewKind)(0),                       // 0: career.v1.ReviewKind
 	(ReviewStatus)(0),                     // 1: career.v1.ReviewStatus
@@ -6801,71 +6968,73 @@ var file_career_v1_admin_proto_goTypes = []any{
 	(*ListCorpusDocumentsRequest)(nil),    // 86: career.v1.ListCorpusDocumentsRequest
 	(*CorpusDocumentRow)(nil),             // 87: career.v1.CorpusDocumentRow
 	(*ListCorpusDocumentsResponse)(nil),   // 88: career.v1.ListCorpusDocumentsResponse
-	(*ListJdSubmissionsRequest)(nil),      // 89: career.v1.ListJdSubmissionsRequest
-	(*JdSubmissionRow)(nil),               // 90: career.v1.JdSubmissionRow
-	(*ListJdSubmissionsResponse)(nil),     // 91: career.v1.ListJdSubmissionsResponse
-	nil,                                   // 92: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	nil,                                   // 93: career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	(*Me)(nil),                            // 94: career.v1.Me
-	(*timestamppb.Timestamp)(nil),         // 95: google.protobuf.Timestamp
-	(MemberStatus)(0),                     // 96: career.v1.MemberStatus
-	(*PageRequest)(nil),                   // 97: career.v1.PageRequest
-	(*PageResponse)(nil),                  // 98: career.v1.PageResponse
-	(*ActivityEvent)(nil),                 // 99: career.v1.ActivityEvent
-	(*Conversation)(nil),                  // 100: career.v1.Conversation
-	(*Message)(nil),                       // 101: career.v1.Message
-	(*ContentSummary)(nil),                // 102: career.v1.ContentSummary
-	(SupportCategory)(0),                  // 103: career.v1.SupportCategory
-	(JdStatus)(0),                         // 104: career.v1.JdStatus
-	(JdSource)(0),                         // 105: career.v1.JdSource
+	(*ReindexCorpusRequest)(nil),          // 89: career.v1.ReindexCorpusRequest
+	(*ReindexCorpusResponse)(nil),         // 90: career.v1.ReindexCorpusResponse
+	(*ListJdSubmissionsRequest)(nil),      // 91: career.v1.ListJdSubmissionsRequest
+	(*JdSubmissionRow)(nil),               // 92: career.v1.JdSubmissionRow
+	(*ListJdSubmissionsResponse)(nil),     // 93: career.v1.ListJdSubmissionsResponse
+	nil,                                   // 94: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	nil,                                   // 95: career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	(*Me)(nil),                            // 96: career.v1.Me
+	(*timestamppb.Timestamp)(nil),         // 97: google.protobuf.Timestamp
+	(MemberStatus)(0),                     // 98: career.v1.MemberStatus
+	(*PageRequest)(nil),                   // 99: career.v1.PageRequest
+	(*PageResponse)(nil),                  // 100: career.v1.PageResponse
+	(*ActivityEvent)(nil),                 // 101: career.v1.ActivityEvent
+	(*Conversation)(nil),                  // 102: career.v1.Conversation
+	(*Message)(nil),                       // 103: career.v1.Message
+	(*ContentSummary)(nil),                // 104: career.v1.ContentSummary
+	(SupportCategory)(0),                  // 105: career.v1.SupportCategory
+	(JdStatus)(0),                         // 106: career.v1.JdStatus
+	(JdSource)(0),                         // 107: career.v1.JdSource
 }
 var file_career_v1_admin_proto_depIdxs = []int32{
-	94,  // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
+	96,  // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
 	8,   // 1: career.v1.MemberRecord.counts:type_name -> career.v1.MemberCounts
-	95,  // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
-	96,  // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
+	97,  // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
+	98,  // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
 	7,   // 4: career.v1.ListMembersRequest.sort:type_name -> career.v1.ListMembersRequest.Sort
-	97,  // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
+	99,  // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
 	9,   // 6: career.v1.ListMembersResponse.members:type_name -> career.v1.MemberRecord
-	98,  // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
-	95,  // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
+	100, // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
+	97,  // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
 	9,   // 9: career.v1.GetMemberResponse.member:type_name -> career.v1.MemberRecord
-	99,  // 10: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
-	100, // 11: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
+	101, // 10: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
+	102, // 11: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
 	13,  // 12: career.v1.GetMemberResponse.notes:type_name -> career.v1.AdminNote
 	13,  // 13: career.v1.AddMemberNoteResponse.note:type_name -> career.v1.AdminNote
-	96,  // 14: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
+	98,  // 14: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
 	9,   // 15: career.v1.SetMemberStatusResponse.member:type_name -> career.v1.MemberRecord
 	0,   // 16: career.v1.GetReviewQueueRequest.kind:type_name -> career.v1.ReviewKind
 	1,   // 17: career.v1.GetReviewQueueRequest.status:type_name -> career.v1.ReviewStatus
-	97,  // 18: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
+	99,  // 18: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
 	0,   // 19: career.v1.ReviewItem.kind:type_name -> career.v1.ReviewKind
 	1,   // 20: career.v1.ReviewItem.status:type_name -> career.v1.ReviewStatus
-	94,  // 21: career.v1.ReviewItem.member:type_name -> career.v1.Me
-	95,  // 22: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
+	96,  // 21: career.v1.ReviewItem.member:type_name -> career.v1.Me
+	97,  // 22: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
 	20,  // 23: career.v1.GetReviewQueueResponse.items:type_name -> career.v1.ReviewItem
-	98,  // 24: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
+	100, // 24: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
 	1,   // 25: career.v1.ResolveReviewItemRequest.resolution:type_name -> career.v1.ReviewStatus
-	101, // 26: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
-	94,  // 27: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
-	100, // 28: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
-	101, // 29: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
-	92,  // 30: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	95,  // 31: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
+	103, // 26: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
+	96,  // 27: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
+	102, // 28: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
+	103, // 29: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
+	94,  // 30: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	97,  // 31: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
 	31,  // 32: career.v1.TestRetrievalResponse.hits:type_name -> career.v1.RetrievalHit
-	102, // 33: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
+	104, // 33: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
 	2,   // 34: career.v1.RunJobRequest.kind:type_name -> career.v1.JobKind
 	2,   // 35: career.v1.GetJobResponse.kind:type_name -> career.v1.JobKind
 	3,   // 36: career.v1.GetJobResponse.status:type_name -> career.v1.JobStatus
-	95,  // 37: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	95,  // 38: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
-	95,  // 39: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
+	97,  // 37: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	97,  // 38: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	97,  // 39: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
 	38,  // 40: career.v1.GetPersonaResponse.active:type_name -> career.v1.PersonaVersion
 	38,  // 41: career.v1.GetPersonaResponse.history:type_name -> career.v1.PersonaVersion
-	95,  // 42: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
-	95,  // 43: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
-	95,  // 44: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
-	102, // 45: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
+	97,  // 42: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
+	97,  // 43: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
+	97,  // 44: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
+	104, // 45: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
 	41,  // 46: career.v1.GetAnalyticsResponse.registrations:type_name -> career.v1.DailyCount
 	41,  // 47: career.v1.GetAnalyticsResponse.verifications:type_name -> career.v1.DailyCount
 	41,  // 48: career.v1.GetAnalyticsResponse.active_members:type_name -> career.v1.DailyCount
@@ -6874,56 +7043,56 @@ var file_career_v1_admin_proto_depIdxs = []int32{
 	42,  // 51: career.v1.GetAnalyticsResponse.top_downloads:type_name -> career.v1.RankedContent
 	43,  // 52: career.v1.GetAnalyticsResponse.top_questions:type_name -> career.v1.RankedQuestion
 	44,  // 53: career.v1.GetAnalyticsResponse.assistant:type_name -> career.v1.AssistantUsage
-	93,  // 54: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	95,  // 55: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
-	95,  // 56: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
-	97,  // 57: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
-	95,  // 58: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
+	95,  // 54: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	97,  // 55: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
+	97,  // 56: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
+	99,  // 57: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
+	97,  // 58: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
 	47,  // 59: career.v1.GetAuditResponse.entries:type_name -> career.v1.AuditEntry
-	98,  // 60: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
-	103, // 61: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
+	100, // 60: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
+	105, // 61: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
 	4,   // 62: career.v1.SupportMessage.status:type_name -> career.v1.SupportStatus
-	95,  // 63: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 64: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
-	95,  // 65: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
+	97,  // 63: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
+	97,  // 64: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
+	97,  // 65: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
 	4,   // 66: career.v1.ListContactMessagesRequest.status:type_name -> career.v1.SupportStatus
-	103, // 67: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
-	97,  // 68: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
+	105, // 67: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
+	99,  // 68: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
 	49,  // 69: career.v1.ListContactMessagesResponse.messages:type_name -> career.v1.SupportMessage
-	98,  // 70: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
+	100, // 70: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
 	4,   // 71: career.v1.ResolveContactMessageRequest.status:type_name -> career.v1.SupportStatus
 	49,  // 72: career.v1.ResolveContactMessageResponse.message:type_name -> career.v1.SupportMessage
 	9,   // 73: career.v1.ApproveRegistrationResponse.member:type_name -> career.v1.MemberRecord
 	9,   // 74: career.v1.DeclineRegistrationResponse.member:type_name -> career.v1.MemberRecord
-	95,  // 75: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
+	97,  // 75: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
 	9,   // 76: career.v1.ExtendAccessResponse.member:type_name -> career.v1.MemberRecord
 	60,  // 77: career.v1.DbTable.columns:type_name -> career.v1.DbColumn
 	61,  // 78: career.v1.ListDbTablesResponse.tables:type_name -> career.v1.DbTable
 	65,  // 79: career.v1.RunDbQueryResponse.rows:type_name -> career.v1.DbRow
 	5,   // 80: career.v1.AccessGrant.default_ttl:type_name -> career.v1.GrantTTL
-	95,  // 81: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
-	95,  // 82: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 83: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
+	97,  // 81: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
+	97,  // 82: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
+	97,  // 83: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
 	67,  // 84: career.v1.ListAccessGrantsResponse.grants:type_name -> career.v1.AccessGrant
 	5,   // 85: career.v1.UpsertAccessGrantRequest.default_ttl:type_name -> career.v1.GrantTTL
-	95,  // 86: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
+	97,  // 86: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
 	67,  // 87: career.v1.UpsertAccessGrantResponse.grant:type_name -> career.v1.AccessGrant
-	95,  // 88: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 89: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
+	97,  // 88: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
+	97,  // 89: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
 	74,  // 90: career.v1.ListSavedQueriesResponse.queries:type_name -> career.v1.SavedQuery
 	74,  // 91: career.v1.UpsertSavedQueryResponse.query:type_name -> career.v1.SavedQuery
-	96,  // 92: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
-	95,  // 93: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
+	98,  // 92: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
+	97,  // 93: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
 	6,   // 94: career.v1.ListMemberActivityRequest.sort:type_name -> career.v1.ActivitySort
 	81,  // 95: career.v1.ListMemberActivityResponse.members:type_name -> career.v1.MemberActivitySummary
-	95,  // 96: career.v1.CorpusDocumentRow.ingested_at:type_name -> google.protobuf.Timestamp
-	95,  // 97: career.v1.CorpusDocumentRow.updated_at:type_name -> google.protobuf.Timestamp
+	97,  // 96: career.v1.CorpusDocumentRow.ingested_at:type_name -> google.protobuf.Timestamp
+	97,  // 97: career.v1.CorpusDocumentRow.updated_at:type_name -> google.protobuf.Timestamp
 	87,  // 98: career.v1.ListCorpusDocumentsResponse.documents:type_name -> career.v1.CorpusDocumentRow
-	104, // 99: career.v1.JdSubmissionRow.status:type_name -> career.v1.JdStatus
-	105, // 100: career.v1.JdSubmissionRow.source:type_name -> career.v1.JdSource
-	95,  // 101: career.v1.JdSubmissionRow.created_at:type_name -> google.protobuf.Timestamp
-	95,  // 102: career.v1.JdSubmissionRow.completed_at:type_name -> google.protobuf.Timestamp
-	90,  // 103: career.v1.ListJdSubmissionsResponse.submissions:type_name -> career.v1.JdSubmissionRow
+	106, // 99: career.v1.JdSubmissionRow.status:type_name -> career.v1.JdStatus
+	107, // 100: career.v1.JdSubmissionRow.source:type_name -> career.v1.JdSource
+	97,  // 101: career.v1.JdSubmissionRow.created_at:type_name -> google.protobuf.Timestamp
+	97,  // 102: career.v1.JdSubmissionRow.completed_at:type_name -> google.protobuf.Timestamp
+	92,  // 103: career.v1.ListJdSubmissionsResponse.submissions:type_name -> career.v1.JdSubmissionRow
 	10,  // 104: career.v1.AdminService.ListMembers:input_type -> career.v1.ListMembersRequest
 	12,  // 105: career.v1.AdminService.GetMember:input_type -> career.v1.GetMemberRequest
 	15,  // 106: career.v1.AdminService.AddMemberNote:input_type -> career.v1.AddMemberNoteRequest
@@ -6955,41 +7124,43 @@ var file_career_v1_admin_proto_depIdxs = []int32{
 	82,  // 132: career.v1.AdminService.ListMemberActivity:input_type -> career.v1.ListMemberActivityRequest
 	84,  // 133: career.v1.AdminService.IngestCorpusText:input_type -> career.v1.IngestCorpusTextRequest
 	86,  // 134: career.v1.AdminService.ListCorpusDocuments:input_type -> career.v1.ListCorpusDocumentsRequest
-	89,  // 135: career.v1.AdminService.ListJdSubmissions:input_type -> career.v1.ListJdSubmissionsRequest
-	11,  // 136: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
-	14,  // 137: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
-	16,  // 138: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
-	18,  // 139: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
-	21,  // 140: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
-	23,  // 141: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
-	25,  // 142: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
-	27,  // 143: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
-	29,  // 144: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
-	32,  // 145: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
-	34,  // 146: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
-	36,  // 147: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
-	39,  // 148: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
-	45,  // 149: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
-	48,  // 150: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
-	51,  // 151: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
-	53,  // 152: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
-	55,  // 153: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
-	57,  // 154: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
-	59,  // 155: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
-	63,  // 156: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
-	66,  // 157: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
-	69,  // 158: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
-	71,  // 159: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
-	73,  // 160: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
-	76,  // 161: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
-	78,  // 162: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
-	80,  // 163: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
-	83,  // 164: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
-	85,  // 165: career.v1.AdminService.IngestCorpusText:output_type -> career.v1.IngestCorpusTextResponse
-	88,  // 166: career.v1.AdminService.ListCorpusDocuments:output_type -> career.v1.ListCorpusDocumentsResponse
-	91,  // 167: career.v1.AdminService.ListJdSubmissions:output_type -> career.v1.ListJdSubmissionsResponse
-	136, // [136:168] is the sub-list for method output_type
-	104, // [104:136] is the sub-list for method input_type
+	89,  // 135: career.v1.AdminService.ReindexCorpus:input_type -> career.v1.ReindexCorpusRequest
+	91,  // 136: career.v1.AdminService.ListJdSubmissions:input_type -> career.v1.ListJdSubmissionsRequest
+	11,  // 137: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
+	14,  // 138: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
+	16,  // 139: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
+	18,  // 140: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
+	21,  // 141: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
+	23,  // 142: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
+	25,  // 143: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
+	27,  // 144: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
+	29,  // 145: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
+	32,  // 146: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
+	34,  // 147: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
+	36,  // 148: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
+	39,  // 149: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
+	45,  // 150: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
+	48,  // 151: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
+	51,  // 152: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
+	53,  // 153: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
+	55,  // 154: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
+	57,  // 155: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
+	59,  // 156: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
+	63,  // 157: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
+	66,  // 158: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
+	69,  // 159: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
+	71,  // 160: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
+	73,  // 161: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
+	76,  // 162: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
+	78,  // 163: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
+	80,  // 164: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
+	83,  // 165: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
+	85,  // 166: career.v1.AdminService.IngestCorpusText:output_type -> career.v1.IngestCorpusTextResponse
+	88,  // 167: career.v1.AdminService.ListCorpusDocuments:output_type -> career.v1.ListCorpusDocumentsResponse
+	90,  // 168: career.v1.AdminService.ReindexCorpus:output_type -> career.v1.ReindexCorpusResponse
+	93,  // 169: career.v1.AdminService.ListJdSubmissions:output_type -> career.v1.ListJdSubmissionsResponse
+	137, // [137:170] is the sub-list for method output_type
+	104, // [104:137] is the sub-list for method input_type
 	104, // [104:104] is the sub-list for extension type_name
 	104, // [104:104] is the sub-list for extension extendee
 	0,   // [0:104] is the sub-list for field type_name
@@ -7005,14 +7176,14 @@ func file_career_v1_admin_proto_init() {
 	file_career_v1_contact_proto_init()
 	file_career_v1_jd_proto_init()
 	file_career_v1_options_proto_init()
-	file_career_v1_admin_proto_msgTypes[82].OneofWrappers = []any{}
+	file_career_v1_admin_proto_msgTypes[84].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_admin_proto_rawDesc), len(file_career_v1_admin_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   86,
+			NumMessages:   88,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

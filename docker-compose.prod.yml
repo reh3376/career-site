@@ -76,6 +76,14 @@ services:
       PWNED_CHECK_ENABLED: "1"
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       CAREER_SITE_ADMIN_PW: ${CAREER_SITE_ADMIN_PW}
+      # Corpus reindex reads markdown from here. The bind-mount below
+      # exposes the deployed apps/web/content directory (checked-out
+      # by the deploy user under /opt/career-site) into the api
+      # container as read-only, so /admin/corpus "Reindex articles"
+      # walks the same files that shipped with this deploy.
+      CORPUS_ROOT: /corpus
+    volumes:
+      - ./apps/web/content:/corpus:ro
 
   sidecar:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
