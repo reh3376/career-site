@@ -173,10 +173,59 @@ jobs:
         working-directory: apps/web
         run: pnpm build
 
+  changes:
+    name: detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Need diff history so we can compare against the base ref
+          # for a PR or the previous commit for a push.
+          fetch-depth: 0
+      # Emit `code=true` when the diff touches ANY file outside the
+      # docs/markdown allow-list. Doc-only PRs get `code=false`, which
+      # skips the (slow) images build. Deliberately permissive on the
+      # regex — a false "code=true" costs a normal build; a false
+      # "code=false" would ship an unbuilt image which would fail loud
+      # at deploy time (image tag missing on GHCR) so no silent bad
+      # state.
+      - id: filter
+        name: any code changed?
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif git rev-parse HEAD~1 >/dev/null 2>&1; then
+            base=$(git rev-parse HEAD~1)
+          else
+            base=""
+          fi
+          if [ -z "$base" ]; then
+            # First commit on a branch we can't diff against — build.
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base"..HEAD)
+          echo "changed files:"
+          echo "$changed"
+          # Everything matching this pattern is doc-only.
+          doc_re='^(docs/|.*\.md$|LICENSE(-CONTENT)?$|\.github/PULL_REQUEST_TEMPLATE\.md)$'
+          if [ -z "$changed" ] || ! echo "$changed" | grep -vE "$doc_re" | grep -q .; then
+            echo "→ doc-only change; skipping images build"
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "→ code change detected; building images"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   images:
     name: images (docker build + push)
     runs-on: ubuntu-latest
-    needs: [proto, api, sidecar, web]
+    needs: [proto, api, sidecar, web, changes]
+    # Skip when the change is doc-only — the build is expensive and
+    # a README edit never invalidates an image.
+    if: needs.changes.outputs.code == 'true'
     env:
       # Push on push-to-main; PRs and other events build-only so a forked
       # PR cannot poison the registry.

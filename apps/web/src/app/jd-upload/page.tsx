@@ -18,14 +18,15 @@ export default function JdUploadPage() {
         className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
         style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
       >
-        Paste your JD.
+        Upload JD for review.
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
-        Roger keeps one master corpus — 30 years across control-room
-        engineering, manufacturing AI, and decision infrastructure —
-        and produces a 2-page résumé tailored to whatever role
-        you&rsquo;re considering him for. Drop the posting below;
-        if the match clears the threshold, you get the tailored PDF.
+        Roger keeps a master career corpus &mdash; 30 years across
+        control rooms, manufacturing plants, decision infrastructure,
+        and AI/ML. This JD review evaluates his skill set against the
+        JD criteria and produces a skills-match confidence score. If
+        the score is &ge; 0.65, a 2-page r&eacute;sum&eacute; custom
+        built for the uploaded JD is generated as a PDF.
       </p>
 
       <section className="mt-12 grid gap-4 border-l-2 border-line pl-5 text-sm leading-relaxed text-ink-2">
