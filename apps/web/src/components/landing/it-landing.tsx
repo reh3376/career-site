@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { GithubReposIt } from "@/components/github-repos";
+import { getSocialLinks } from "@/lib/social-links";
 
 // Landing. Editorial, one column, with image bands set into the reading
 // gutter rather than filling the viewport. The type does most of the
@@ -284,16 +285,7 @@ export function ItLanding() {
               <span className="font-mono text-ink">Forge</span> live on GitHub,
               free for use.
             </p>
-            <p className="mt-8">
-              <a
-                href="https://github.com/reh3376"
-                rel="noopener noreferrer"
-                target="_blank"
-                className="text-sm text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-              >
-                github.com/reh3376
-              </a>
-            </p>
+            <SocialInline />
           </div>
         </div>
       </section>
@@ -494,5 +486,38 @@ export function ItLanding() {
         </div>
       </section>
     </>
+  );
+}
+
+// SocialInline renders the outbound social links inside the "writing"
+// section: GitHub always (falls back to reh3376's profile), LinkedIn
+// only when NEXT_PUBLIC_LINKEDIN_URL is set. Order is deliberate —
+// the site's story is code first, professional network second.
+function SocialInline() {
+  const s = getSocialLinks();
+  if (!s.github && !s.linkedin) return null;
+  return (
+    <p className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+      {s.github ? (
+        <a
+          href={s.github}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+        >
+          {s.githubHandle ?? "GitHub"}
+        </a>
+      ) : null}
+      {s.linkedin ? (
+        <a
+          href={s.linkedin}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+        >
+          LinkedIn
+        </a>
+      ) : null}
+    </p>
   );
 }

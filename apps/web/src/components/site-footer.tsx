@@ -1,10 +1,13 @@
 import Link from "next/link";
 
+import { getSocialLinks } from "@/lib/social-links";
+
 // Multi-column footer. Colophon on the left (what this site IS), site
 // nav in the middle, community links on the right (GitHub repos +
 // contributor request — public repo, so make that surface deliberate).
 export function SiteFooter() {
   const year = new Date().getFullYear();
+  const social = getSocialLinks();
   return (
     <footer className="border-t border-line bg-paper-2">
       <div className="mx-auto max-w-6xl px-6 py-14 sm:px-10">
@@ -53,22 +56,36 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          {/* Community */}
+          {/* Elsewhere on the internet */}
           <div className="text-sm">
             <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              Public code
+              Elsewhere
             </p>
             <ul className="space-y-2">
-              <li>
-                <a
-                  href="https://github.com/reh3376"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  className="text-ink-2 no-underline hover:text-accent"
-                >
-                  github.com/reh3376
-                </a>
-              </li>
+              {social.github ? (
+                <li>
+                  <a
+                    href={social.github}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    className="text-ink-2 no-underline hover:text-accent"
+                  >
+                    {social.githubHandle ?? "GitHub"}
+                  </a>
+                </li>
+              ) : null}
+              {social.linkedin ? (
+                <li>
+                  <a
+                    href={social.linkedin}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    className="text-ink-2 no-underline hover:text-accent"
+                  >
+                    LinkedIn
+                  </a>
+                </li>
+              ) : null}
               <li>
                 <a
                   href="https://github.com/reh3376/career-site"
