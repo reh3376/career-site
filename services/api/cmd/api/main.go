@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
+	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
@@ -168,7 +169,14 @@ func main() {
 		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
 	)
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
-	jdHandler := handlers.NewJd(log, userRepo)
+	// JD scorer reuses the sidecar's embedder. Skipped when the
+	// sidecar isn't dialled (rare — dev only) so /jd-upload still
+	// stores submissions even without scoring wired.
+	var jdScorer *jd.Scorer
+	if sc != nil {
+		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc})
+	}
+	jdHandler := handlers.NewJd(log, userRepo, jdScorer)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,

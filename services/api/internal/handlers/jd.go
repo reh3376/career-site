@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -27,15 +29,17 @@ type Jd struct {
 	log     *slog.Logger
 	users   *users.Repo
 	limiter *ratelimit.Limiter
+	scorer  *jd.Scorer // nil in dev without a sidecar; SubmitJd skips scoring.
 }
 
-func NewJd(log *slog.Logger, repo *users.Repo) *Jd {
+func NewJd(log *slog.Logger, repo *users.Repo, scorer *jd.Scorer) *Jd {
 	return &Jd{
 		log:   log,
 		users: repo,
 		// 5-burst per (ip, jd_hash), refill to 5 over 15 min. Blocks
 		// a paster hammering "Submit" and a botnet trying to fuzz.
 		limiter: ratelimit.New(5, 5.0/(15*60)),
+		scorer:  scorer,
 	}
 }
 
@@ -102,6 +106,19 @@ func (h *Jd) SubmitJd(
 		slog.Int("chars", len(text)),
 		slog.String("role_hint", s.RoleHint),
 	)
+
+	// Fire-and-forget score in the background so the RPC returns
+	// immediately. Uses a fresh context (not `ctx`, which cancels
+	// as soon as the caller disconnects) with a 2-minute cap that
+	// bounds a stuck sidecar. Nil scorer (dev without sidecar)
+	// leaves the row in RECEIVED for manual triage.
+	if h.scorer != nil {
+		go func(id int64, jdText string) {
+			bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			h.scorer.ScoreAndPersist(bg, id, jdText)
+		}(s.ID, text)
+	}
 
 	return connect.NewResponse(&v1.SubmitJdResponse{
 		SubmissionId: strconv.FormatInt(s.ID, 10),

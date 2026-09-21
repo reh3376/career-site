@@ -4,6 +4,7 @@ from buf.validate import validate_pb2 as _validate_pb2
 from career.v1 import chat_pb2 as _chat_pb2
 from career.v1 import common_pb2 as _common_pb2
 from career.v1 import contact_pb2 as _contact_pb2
+from career.v1 import jd_pb2 as _jd_pb2
 from career.v1 import options_pb2 as _options_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
@@ -975,3 +976,49 @@ class ListCorpusDocumentsResponse(_message.Message):
     total_chunks: int
     total_embedded: int
     def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ...) -> None: ...
+
+class ListJdSubmissionsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class JdSubmissionRow(_message.Message):
+    __slots__ = ("id", "status", "match_score", "text_head", "role_hint", "employer_hint", "contact_email", "source", "error_message", "generated_resume_url", "created_at", "completed_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
+    TEXT_HEAD_FIELD_NUMBER: _ClassVar[int]
+    ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
+    EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
+    CONTACT_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_RESUME_URL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    status: _jd_pb2.JdStatus
+    match_score: float
+    text_head: str
+    role_hint: str
+    employer_hint: str
+    contact_email: str
+    source: _jd_pb2.JdSource
+    error_message: str
+    generated_resume_url: str
+    created_at: _timestamp_pb2.Timestamp
+    completed_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ..., match_score: _Optional[float] = ..., text_head: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., source: _Optional[_Union[_jd_pb2.JdSource, str]] = ..., error_message: _Optional[str] = ..., generated_resume_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListJdSubmissionsResponse(_message.Message):
+    __slots__ = ("submissions", "ready_count", "below_threshold_count", "failed_count", "in_flight_count")
+    SUBMISSIONS_FIELD_NUMBER: _ClassVar[int]
+    READY_COUNT_FIELD_NUMBER: _ClassVar[int]
+    BELOW_THRESHOLD_COUNT_FIELD_NUMBER: _ClassVar[int]
+    FAILED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    IN_FLIGHT_COUNT_FIELD_NUMBER: _ClassVar[int]
+    submissions: _containers.RepeatedCompositeFieldContainer[JdSubmissionRow]
+    ready_count: int
+    below_threshold_count: int
+    failed_count: int
+    in_flight_count: int
+    def __init__(self, submissions: _Optional[_Iterable[_Union[JdSubmissionRow, _Mapping]]] = ..., ready_count: _Optional[int] = ..., below_threshold_count: _Optional[int] = ..., failed_count: _Optional[int] = ..., in_flight_count: _Optional[int] = ...) -> None: ...

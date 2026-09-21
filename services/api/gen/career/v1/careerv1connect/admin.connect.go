@@ -126,6 +126,9 @@ const (
 	// AdminServiceListCorpusDocumentsProcedure is the fully-qualified name of the AdminService's
 	// ListCorpusDocuments RPC.
 	AdminServiceListCorpusDocumentsProcedure = "/career.v1.AdminService/ListCorpusDocuments"
+	// AdminServiceListJdSubmissionsProcedure is the fully-qualified name of the AdminService's
+	// ListJdSubmissions RPC.
+	AdminServiceListJdSubmissionsProcedure = "/career.v1.AdminService/ListJdSubmissions"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -233,6 +236,10 @@ type AdminServiceClient interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
+	// Returns every JD submission with score + status. Backs
+	// /admin/jd — Roger's triage view for the JD-upload flow. Full
+	// JD body is elided from the list; the detail lookup returns it.
+	ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -432,6 +439,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
 			connect.WithClientOptions(opts...),
 		),
+		listJdSubmissions: connect.NewClient[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse](
+			httpClient,
+			baseURL+AdminServiceListJdSubmissionsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListJdSubmissions")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -468,6 +481,7 @@ type adminServiceClient struct {
 	listMemberActivity    *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
 	ingestCorpusText      *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
 	listCorpusDocuments   *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
+	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -625,6 +639,11 @@ func (c *adminServiceClient) ListCorpusDocuments(ctx context.Context, req *conne
 	return c.listCorpusDocuments.CallUnary(ctx, req)
 }
 
+// ListJdSubmissions calls career.v1.AdminService.ListJdSubmissions.
+func (c *adminServiceClient) ListJdSubmissions(ctx context.Context, req *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
+	return c.listJdSubmissions.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -730,6 +749,10 @@ type AdminServiceHandler interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
+	// Returns every JD submission with score + status. Backs
+	// /admin/jd — Roger's triage view for the JD-upload flow. Full
+	// JD body is elided from the list; the detail lookup returns it.
+	ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -925,6 +948,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListCorpusDocuments")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListJdSubmissionsHandler := connect.NewUnaryHandler(
+		AdminServiceListJdSubmissionsProcedure,
+		svc.ListJdSubmissions,
+		connect.WithSchema(adminServiceMethods.ByName("ListJdSubmissions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -989,6 +1018,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceIngestCorpusTextHandler.ServeHTTP(w, r)
 		case AdminServiceListCorpusDocumentsProcedure:
 			adminServiceListCorpusDocumentsHandler.ServeHTTP(w, r)
+		case AdminServiceListJdSubmissionsProcedure:
+			adminServiceListJdSubmissionsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1120,4 +1151,8 @@ func (UnimplementedAdminServiceHandler) IngestCorpusText(context.Context, *conne
 
 func (UnimplementedAdminServiceHandler) ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListCorpusDocuments is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListJdSubmissions is not implemented"))
 }

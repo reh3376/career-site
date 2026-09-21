@@ -560,6 +560,78 @@ func (a *Admin) ListCorpusDocuments(
 }
 
 // ---------------------------------------------------------------
+// ListJdSubmissions — /admin/jd triage table
+// ---------------------------------------------------------------
+
+func (a *Admin) ListJdSubmissions(
+	ctx context.Context,
+	req *connect.Request[v1.ListJdSubmissionsRequest],
+) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	rows, err := a.users.ListJdSubmissions(ctx)
+	if err != nil {
+		a.log.Error("ListJdSubmissions failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListJdSubmissionsResponse{
+		Submissions: make([]*v1.JdSubmissionRow, 0, len(rows)),
+	}
+	for i := range rows {
+		r := &rows[i]
+		row := &v1.JdSubmissionRow{
+			Id:                 strconv.FormatInt(r.ID, 10),
+			Status:             jdStatusRepoToProto(r.Status),
+			TextHead:           r.TextHead,
+			RoleHint:           r.RoleHint,
+			EmployerHint:       r.EmployerHint,
+			ContactEmail:       r.ContactEmail,
+			Source:             jdSourceRepoToProto(r.SourceKind),
+			ErrorMessage:       r.Error,
+			GeneratedResumeUrl: r.GeneratedResumeURL,
+			CreatedAt:          timestamppb.New(r.CreatedAt),
+		}
+		if r.MatchScore != nil {
+			score := *r.MatchScore
+			row.MatchScore = &score
+		}
+		if r.CompletedAt != nil {
+			row.CompletedAt = timestamppb.New(*r.CompletedAt)
+		}
+		out.Submissions = append(out.Submissions, row)
+
+		switch r.Status {
+		case "ready":
+			out.ReadyCount++
+		case "below_threshold":
+			out.BelowThresholdCount++
+		case "failed":
+			out.FailedCount++
+		default:
+			out.InFlightCount++
+		}
+	}
+	return connect.NewResponse(out), nil
+}
+
+// jdSourceRepoToProto is the reverse of the mapper in handlers/jd.go —
+// kept local so admin.go doesn't leak into the jd handler's export
+// surface.
+func jdSourceRepoToProto(kind string) v1.JdSource {
+	switch kind {
+	case "paste":
+		return v1.JdSource_JD_SOURCE_PASTE
+	case "pdf":
+		return v1.JdSource_JD_SOURCE_PDF
+	case "text_upload":
+		return v1.JdSource_JD_SOURCE_TEXT_UPLOAD
+	default:
+		return v1.JdSource_JD_SOURCE_UNSPECIFIED
+	}
+}
+
+// ---------------------------------------------------------------
 // ListMemberActivity — /admin/activity aggregate table
 // ---------------------------------------------------------------
 
