@@ -137,12 +137,31 @@ func (a *Admin) GetMember(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
 	}
-	// Activity events + conversations + notes come online with the
-	// activity ingest work (Phase 3+). For now the detail page has
-	// enough for status-transition actions on the member itself.
-	return connect.NewResponse(&v1.GetMemberResponse{
-		Member: memberRecordRepoToProto(u),
-	}), nil
+	rec := memberRecordRepoToProto(u)
+	// Populate real activity counts + the 50 most-recent events.
+	// Best-effort — if the activity table isn't yet migrated in a
+	// dev DB, the caller still gets the base member record.
+	if counts, err := a.users.ActivityCountsFor(ctx, u.ID); err == nil {
+		rec.Counts = &v1.MemberCounts{
+			Views:        counts.Views,
+			Downloads:    counts.Downloads,
+			ChatMessages: counts.ChatMessages,
+			Escalations:  counts.Escalations,
+			Saved:        counts.Saved,
+		}
+	} else {
+		a.log.Warn("activity counts failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+	resp := &v1.GetMemberResponse{Member: rec}
+	if events, err := a.users.RecentActivity(ctx, u.ID, 50); err == nil {
+		resp.RecentActivity = make([]*v1.ActivityEvent, 0, len(events))
+		for i := range events {
+			resp.RecentActivity = append(resp.RecentActivity, activityEventRepoToProto(&events[i]))
+		}
+	} else {
+		a.log.Warn("recent activity failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (a *Admin) SetMemberStatus(

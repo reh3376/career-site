@@ -90,6 +90,17 @@ func (h *Auth) Login(
 		h.log.Error("session create failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("session create failed"))
 	}
+	// Log the login as an activity event so the admin console has
+	// something to render on member detail pages. Best-effort — a
+	// failure here shouldn't fail the login.
+	if _, err := h.users.RecordActivity(ctx, users.ActivityEvent{
+		UserID: u.ID,
+		Kind:   "login",
+	}); err != nil {
+		h.log.Warn("record login activity failed",
+			slog.Int64("user_id", u.ID), slog.String("error", err.Error()),
+		)
+	}
 
 	resp := connect.NewResponse(&v1.LoginResponse{
 		Me:          h.buildMe(u),

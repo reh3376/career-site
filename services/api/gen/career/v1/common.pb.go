@@ -366,6 +366,10 @@ const (
 	ActivityEvent_KIND_CHAT ActivityEvent_Kind = 5
 	// Escalated a question to the owner (recorded server-side).
 	ActivityEvent_KIND_ESCALATE ActivityEvent_Kind = 6
+	// Signed in via the /login form (recorded server-side).
+	ActivityEvent_KIND_LOGIN ActivityEvent_Kind = 7
+	// Signed out via /logout (recorded server-side).
+	ActivityEvent_KIND_LOGOUT ActivityEvent_Kind = 8
 )
 
 // Enum value maps for ActivityEvent_Kind.
@@ -378,6 +382,8 @@ var (
 		4: "KIND_SAVE",
 		5: "KIND_CHAT",
 		6: "KIND_ESCALATE",
+		7: "KIND_LOGIN",
+		8: "KIND_LOGOUT",
 	}
 	ActivityEvent_Kind_value = map[string]int32{
 		"KIND_UNSPECIFIED": 0,
@@ -387,6 +393,8 @@ var (
 		"KIND_SAVE":        4,
 		"KIND_CHAT":        5,
 		"KIND_ESCALATE":    6,
+		"KIND_LOGIN":       7,
+		"KIND_LOGOUT":      8,
 	}
 )
 
@@ -1413,7 +1421,7 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"expires_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x124\n" +
 	"\x16last_notification_kind\x18\x10 \x01(\tR\x14lastNotificationKind\x12L\n" +
 	"\x14last_notification_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\x12lastNotificationAt\x126\n" +
-	"\x17last_notification_error\x18\x12 \x01(\tR\x15lastNotificationError\"\xb6\x04\n" +
+	"\x17last_notification_error\x18\x12 \x01(\tR\x15lastNotificationError\"\xd7\x04\n" +
 	"\rActivityEvent\x12=\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.career.v1.ActivityEvent.KindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12'\n" +
@@ -1426,7 +1434,7 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"\x0fconversation_id\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18@R\x0econversationId\x12!\n" +
 	"\avariant\x18\a \x01(\tB\a\xbaH\x04r\x02\x18@R\avariant\x12/\n" +
 	"\x0fclient_event_id\x18\b \x01(\tB\a\xbaH\x04r\x02\x18@R\rclientEventId\x123\n" +
-	"\acontent\x18\t \x01(\v2\x19.career.v1.ContentSummaryR\acontent\"\x80\x01\n" +
+	"\acontent\x18\t \x01(\v2\x19.career.v1.ContentSummaryR\acontent\"\xa1\x01\n" +
 	"\x04Kind\x12\x14\n" +
 	"\x10KIND_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tKIND_VIEW\x10\x01\x12\x11\n" +
@@ -1434,7 +1442,10 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"\vKIND_SEARCH\x10\x03\x12\r\n" +
 	"\tKIND_SAVE\x10\x04\x12\r\n" +
 	"\tKIND_CHAT\x10\x05\x12\x11\n" +
-	"\rKIND_ESCALATE\x10\x06*\x90\x02\n" +
+	"\rKIND_ESCALATE\x10\x06\x12\x0e\n" +
+	"\n" +
+	"KIND_LOGIN\x10\a\x12\x0f\n" +
+	"\vKIND_LOGOUT\x10\b*\x90\x02\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_ROLE\x10\x01\x12\x18\n" +

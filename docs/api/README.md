@@ -5091,6 +5091,8 @@ Kinds of activity.
 | `KIND_SAVE` | 4 | Saved an item. |
 | `KIND_CHAT` | 5 | Sent a message to the assistant (recorded server-side; clients need not send it). |
 | `KIND_ESCALATE` | 6 | Escalated a question to the owner (recorded server-side). |
+| `KIND_LOGIN` | 7 | Signed in via the /login form (recorded server-side). |
+| `KIND_LOGOUT` | 8 | Signed out via /logout (recorded server-side). |
 
 ### ContentType
 
