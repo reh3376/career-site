@@ -63,6 +63,12 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PWNED_CHECK_ENABLED: "0"
+      # Corpus reindex reads markdown from here. Bind-mounted below
+      # so `/admin/corpus` → "Reindex articles" walks the same files
+      # that ship with the web bundle.
+      CORPUS_ROOT: /corpus
+    volumes:
+      - ./apps/web/content:/corpus:ro
     depends_on:
       sidecar:
         condition: service_healthy

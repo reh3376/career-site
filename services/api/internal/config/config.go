@@ -18,7 +18,14 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	SidecarAddr     string
 	SidecarTimeout  time.Duration
-	DatabaseURL     string
+	// CorpusRoot is the base directory the corpus filesystem walker
+	// reads from when an admin hits ReindexCorpus. Each source_kind
+	// resolves to a subdirectory (e.g. `article` → `<root>/articles`).
+	// In prod this is a docker bind-mount of `apps/web/content` to
+	// `/corpus:ro`, so the walker sees the same markdown that ships
+	// with the web bundle.
+	CorpusRoot  string
+	DatabaseURL string
 	// DatabaseURLReadonly is an optional DSN used by the /admin/db
 	// surface. When set, the SQL console runs through this pool
 	// instead of the write-capable app pool, so the SELECT-only guard
@@ -80,6 +87,7 @@ func Load() (Config, error) {
 		ShutdownTimeout:     10 * time.Second,
 		SidecarAddr:         envOr("SIDECAR_ADDR", "localhost:50051"),
 		SidecarTimeout:      2 * time.Second,
+		CorpusRoot:          envOr("CORPUS_ROOT", "/corpus"),
 		DatabaseURL:         envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
 		DatabaseURLReadonly: os.Getenv("DATABASE_URL_READONLY"),
 		DBReadonlyPassword:  os.Getenv("DB_READONLY_PASSWORD"),

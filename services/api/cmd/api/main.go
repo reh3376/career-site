@@ -166,7 +166,7 @@ func main() {
 		)
 	}
 	adminHandler := handlers.NewAdmin(
-		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
+		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester, cfg.CorpusRoot,
 	)
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
 	// JD scorer reuses the sidecar's embedder. Skipped when the

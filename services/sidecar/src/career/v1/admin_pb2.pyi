@@ -977,6 +977,30 @@ class ListCorpusDocumentsResponse(_message.Message):
     total_embedded: int
     def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ...) -> None: ...
 
+class ReindexCorpusRequest(_message.Message):
+    __slots__ = ("source_kind",)
+    SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
+    source_kind: str
+    def __init__(self, source_kind: _Optional[str] = ...) -> None: ...
+
+class ReindexCorpusResponse(_message.Message):
+    __slots__ = ("root", "files_scanned", "docs_ingested", "docs_skipped", "chunks_inserted", "chunks_embedded", "errors")
+    ROOT_FIELD_NUMBER: _ClassVar[int]
+    FILES_SCANNED_FIELD_NUMBER: _ClassVar[int]
+    DOCS_INGESTED_FIELD_NUMBER: _ClassVar[int]
+    DOCS_SKIPPED_FIELD_NUMBER: _ClassVar[int]
+    CHUNKS_INSERTED_FIELD_NUMBER: _ClassVar[int]
+    CHUNKS_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    ERRORS_FIELD_NUMBER: _ClassVar[int]
+    root: str
+    files_scanned: int
+    docs_ingested: int
+    docs_skipped: int
+    chunks_inserted: int
+    chunks_embedded: int
+    errors: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, root: _Optional[str] = ..., files_scanned: _Optional[int] = ..., docs_ingested: _Optional[int] = ..., docs_skipped: _Optional[int] = ..., chunks_inserted: _Optional[int] = ..., chunks_embedded: _Optional[int] = ..., errors: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class ListJdSubmissionsRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

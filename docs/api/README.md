@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 32 |
+| [`AdminService`](#adminservice) | Owner console. | 33 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
@@ -1640,6 +1640,7 @@ Owner console.
 | [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin (fresh MFA) | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
 | [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin (fresh MFA) | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
 | [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin (fresh MFA) | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
+| [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a filesystem tree for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed article content instead of paste-by-paste. |
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 
 ### AdminService.ListMembers
@@ -2666,6 +2667,46 @@ _No fields; send `{}`._
 
 ```json
 {}
+```
+
+</details>
+
+### AdminService.ReindexCorpus
+
+`POST /api/career.v1.AdminService/ReindexCorpus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Walks a filesystem tree for markdown files and runs each through
+IngestCorpusText, so the corpus can be seeded from committed
+article content instead of paste-by-paste. Idempotent — files
+whose content_hash matches the stored row are skipped. Root is
+resolved from CORPUS_ROOT + a subdirectory per source_kind
+(e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
+"Reindex articles" button on /admin/corpus.
+
+**Request** — [`ReindexCorpusRequest`](#reindexcorpusrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Which corpus subtree to walk. Free-text so a new kind is a one-line handler change, not a proto edit. Validated against the handler's allow-list. |
+
+**Response** — [`ReindexCorpusResponse`](#reindexcorpusresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `root` | `string` | string |  | Absolute path the handler actually walked. |
+| `filesScanned` | `int32` | number |  | Number of `.md` files the walker saw. |
+| `docsIngested` | `int32` | number |  | Number of files handed to the ingester without error. Includes skipped-because-unchanged. |
+| `docsSkipped` | `int32` | number |  | Subset of docs_ingested whose content_hash matched the stored row and did no chunk / embed work this run. |
+| `chunksInserted` | `int32` | number |  | Sum of newly-inserted chunk rows across all files this run. |
+| `chunksEmbedded` | `int32` | number |  | Sum of chunks successfully embedded across all files this run. |
+| `errors` | `string`[] | array of string |  | Per-file error strings from files that failed mid-walk. Capped at 20 entries so a broken directory can't produce an unbounded response. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sourceKind": "string"
+}
 ```
 
 </details>
@@ -4560,6 +4601,31 @@ List-corpus-documents response.
 | `totalDocuments` | `int32` | number |  | Aggregate document count across the whole corpus (rendered as a header chip on /admin/corpus). |
 | `totalChunks` | `int32` | number |  | Aggregate chunk count across every stored document. |
 | `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
+
+### ReindexCorpusRequest
+
+Reindex-corpus request. `source_kind` picks which subdirectory
+under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
+Currently the handler only knows about `article`; adding a kind is
+a code edit + a compose bind-mount, not a proto change.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Which corpus subtree to walk. Free-text so a new kind is a one-line handler change, not a proto edit. Validated against the handler's allow-list. |
+
+### ReindexCorpusResponse
+
+Reindex-corpus response — mirrors ingest.WalkResult.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `root` | `string` | string |  | Absolute path the handler actually walked. |
+| `filesScanned` | `int32` | number |  | Number of `.md` files the walker saw. |
+| `docsIngested` | `int32` | number |  | Number of files handed to the ingester without error. Includes skipped-because-unchanged. |
+| `docsSkipped` | `int32` | number |  | Subset of docs_ingested whose content_hash matched the stored row and did no chunk / embed work this run. |
+| `chunksInserted` | `int32` | number |  | Sum of newly-inserted chunk rows across all files this run. |
+| `chunksEmbedded` | `int32` | number |  | Sum of chunks successfully embedded across all files this run. |
+| `errors` | `string`[] | array of string |  | Per-file error strings from files that failed mid-walk. Capped at 20 entries so a broken directory can't produce an unbounded response. |
 
 ### ListJdSubmissionsRequest
 
