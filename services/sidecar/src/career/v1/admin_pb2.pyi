@@ -952,16 +952,18 @@ class ListMemberActivityResponse(_message.Message):
     def __init__(self, members: _Optional[_Iterable[_Union[MemberActivitySummary, _Mapping]]] = ...) -> None: ...
 
 class IngestCorpusTextRequest(_message.Message):
-    __slots__ = ("source_kind", "source_path", "title", "body")
+    __slots__ = ("source_kind", "source_path", "title", "body", "visibility")
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
     SOURCE_PATH_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     source_kind: str
     source_path: str
     title: str
     body: str
-    def __init__(self, source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., body: _Optional[str] = ...) -> None: ...
+    visibility: str
+    def __init__(self, source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., body: _Optional[str] = ..., visibility: _Optional[str] = ...) -> None: ...
 
 class IngestCorpusTextResponse(_message.Message):
     __slots__ = ("document_id", "chunks_inserted", "chunks_embedded", "skipped", "chunker_name", "embedder_model")
@@ -984,7 +986,7 @@ class ListCorpusDocumentsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class CorpusDocumentRow(_message.Message):
-    __slots__ = ("id", "source_kind", "source_path", "title", "chunk_count", "embedded_count", "ingested_at", "updated_at")
+    __slots__ = ("id", "source_kind", "source_path", "title", "chunk_count", "embedded_count", "ingested_at", "updated_at", "visibility")
     ID_FIELD_NUMBER: _ClassVar[int]
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
     SOURCE_PATH_FIELD_NUMBER: _ClassVar[int]
@@ -993,6 +995,7 @@ class CorpusDocumentRow(_message.Message):
     EMBEDDED_COUNT_FIELD_NUMBER: _ClassVar[int]
     INGESTED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     id: str
     source_kind: str
     source_path: str
@@ -1001,29 +1004,38 @@ class CorpusDocumentRow(_message.Message):
     embedded_count: int
     ingested_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., chunk_count: _Optional[int] = ..., embedded_count: _Optional[int] = ..., ingested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    visibility: str
+    def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., chunk_count: _Optional[int] = ..., embedded_count: _Optional[int] = ..., ingested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[str] = ...) -> None: ...
 
 class ListCorpusDocumentsResponse(_message.Message):
-    __slots__ = ("documents", "total_documents", "total_chunks", "total_embedded")
+    __slots__ = ("documents", "total_documents", "total_chunks", "total_embedded", "total_public", "total_corpus_only")
     DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_CHUNKS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_PUBLIC_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_CORPUS_ONLY_FIELD_NUMBER: _ClassVar[int]
     documents: _containers.RepeatedCompositeFieldContainer[CorpusDocumentRow]
     total_documents: int
     total_chunks: int
     total_embedded: int
-    def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ...) -> None: ...
+    total_public: int
+    total_corpus_only: int
+    def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ..., total_public: _Optional[int] = ..., total_corpus_only: _Optional[int] = ...) -> None: ...
 
 class ReindexCorpusRequest(_message.Message):
-    __slots__ = ("source_kind",)
+    __slots__ = ("source_kind", "scope")
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_FIELD_NUMBER: _ClassVar[int]
     source_kind: str
-    def __init__(self, source_kind: _Optional[str] = ...) -> None: ...
+    scope: str
+    def __init__(self, source_kind: _Optional[str] = ..., scope: _Optional[str] = ...) -> None: ...
 
 class ReindexCorpusResponse(_message.Message):
-    __slots__ = ("root", "files_scanned", "docs_ingested", "docs_skipped", "chunks_inserted", "chunks_embedded", "errors")
+    __slots__ = ("root", "visibility", "kinds_walked", "files_scanned", "docs_ingested", "docs_skipped", "chunks_inserted", "chunks_embedded", "errors")
     ROOT_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_FIELD_NUMBER: _ClassVar[int]
+    KINDS_WALKED_FIELD_NUMBER: _ClassVar[int]
     FILES_SCANNED_FIELD_NUMBER: _ClassVar[int]
     DOCS_INGESTED_FIELD_NUMBER: _ClassVar[int]
     DOCS_SKIPPED_FIELD_NUMBER: _ClassVar[int]
@@ -1031,13 +1043,15 @@ class ReindexCorpusResponse(_message.Message):
     CHUNKS_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]
     root: str
+    visibility: str
+    kinds_walked: _containers.RepeatedScalarFieldContainer[str]
     files_scanned: int
     docs_ingested: int
     docs_skipped: int
     chunks_inserted: int
     chunks_embedded: int
     errors: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, root: _Optional[str] = ..., files_scanned: _Optional[int] = ..., docs_ingested: _Optional[int] = ..., docs_skipped: _Optional[int] = ..., chunks_inserted: _Optional[int] = ..., chunks_embedded: _Optional[int] = ..., errors: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, root: _Optional[str] = ..., visibility: _Optional[str] = ..., kinds_walked: _Optional[_Iterable[str]] = ..., files_scanned: _Optional[int] = ..., docs_ingested: _Optional[int] = ..., docs_skipped: _Optional[int] = ..., chunks_inserted: _Optional[int] = ..., chunks_embedded: _Optional[int] = ..., errors: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListJdSubmissionsRequest(_message.Message):
     __slots__ = ()

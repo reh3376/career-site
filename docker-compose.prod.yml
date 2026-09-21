@@ -82,8 +82,13 @@ services:
       # container as read-only, so /admin/corpus "Reindex articles"
       # walks the same files that shipped with this deploy.
       CORPUS_ROOT: /corpus
-    volumes:
+      # Curated private corpus, synced from the owner's docs/personal by
+      # `make sync-corpus` (never part of the repo checkout). Every
+      # document ingested from here is visibility=corpus_only.
+      CORPUS_PRIVATE_ROOT: /corpus-private
+    volumes: !override
       - ./apps/web/content:/corpus:ro
+      - ${CORPUS_PRIVATE_HOST_DIR:-/opt/career-site-private/corpus}:/corpus-private:ro
 
   sidecar:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}

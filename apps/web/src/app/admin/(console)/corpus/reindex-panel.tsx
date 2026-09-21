@@ -4,57 +4,66 @@ import { useState, useTransition } from "react";
 
 import { reindexCorpusAction, type ReindexResult } from "./actions";
 
-const KINDS = [{ key: "article", label: "Reindex articles" }] as const;
+const SCOPES = [
+  {
+    key: "public",
+    label: "Reindex public content",
+    hint: "apps/web/content, ships with the deploy. Documents land as public.",
+  },
+  {
+    key: "private",
+    label: "Reindex private corpus",
+    hint: "the make sync-corpus mount. Documents land as corpus-only and are never quoted on the site.",
+  },
+] as const;
 
-// Walks a filesystem subdirectory (mounted into the api container
-// at /corpus) and runs each markdown file through the corpus
-// ingester. Idempotent, so re-running after a re-deploy only touches
-// files whose content actually changed.
+// Walks a mounted directory and runs each markdown / text file
+// through the corpus ingester. Idempotent, so re-running after a
+// re-deploy or a sync only touches files whose content changed.
 export function ReindexPanel() {
-  const [busyKind, setBusyKind] = useState<string | null>(null);
+  const [busyScope, setBusyScope] = useState<string | null>(null);
   const [result, setResult] = useState<{
-    kind: string;
+    scope: string;
     res: ReindexResult;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function run(kind: string): void {
+  function run(scope: string): void {
     setResult(null);
-    setBusyKind(kind);
+    setBusyScope(scope);
     startTransition(async () => {
-      const res = await reindexCorpusAction(kind);
-      setResult({ kind, res });
-      setBusyKind(null);
+      const res = await reindexCorpusAction(scope);
+      setResult({ scope, res });
+      setBusyScope(null);
     });
   }
 
   return (
     <div className="grid gap-4 border border-line-strong bg-canvas p-5">
-      <div className="flex flex-wrap gap-3">
-        {KINDS.map((k) => {
-          const busy = busyKind === k.key && isPending;
+      <div className="grid gap-4 sm:grid-cols-2">
+        {SCOPES.map((s) => {
+          const busy = busyScope === s.key && isPending;
           return (
-            <button
-              key={k.key}
-              type="button"
-              disabled={isPending}
-              onClick={() => run(k.key)}
-              className="inline-flex h-9 items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? "Walking..." : k.label}
-            </button>
+            <div key={s.key}>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => run(s.key)}
+                className="inline-flex h-9 items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy ? "Walking..." : s.label}
+              </button>
+              <p className="mt-2 text-[11px] leading-relaxed text-ink-3">
+                {s.hint}
+              </p>
+            </div>
           );
         })}
       </div>
-      <p className="text-[11px] text-ink-3">
-        Walks the mounted content directory for that source_kind and
-        re-runs the ingester on every markdown file. Files whose
-        content_hash matches the stored row are skipped.
-      </p>
 
       {result ? (
         result.res.ok ? (
-          <ResultPanel kind={result.kind} r={result.res} />
+          <ResultPanel scope={result.scope} r={result.res} />
         ) : (
           <div className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
             {result.res.error}
@@ -66,10 +75,10 @@ export function ReindexPanel() {
 }
 
 function ResultPanel({
-  kind,
+  scope,
   r,
 }: {
-  kind: string;
+  scope: string;
   r: Extract<ReindexResult, { ok: true }>;
 }): React.ReactElement {
   const embedComplete =
@@ -81,15 +90,18 @@ function ResultPanel({
   return (
     <div className={"border-l-2 px-4 py-3 text-sm text-ink " + tone}>
       <p className="font-mono text-[11px] uppercase tracking-[0.14em]">
-        walked · {kind} · {r.root || "(root unknown)"}
+        walked · {scope} · {r.visibility || "?"} · {r.root || "(root unknown)"}
       </p>
+      {r.kinds_walked.length > 0 ? (
+        <p className="mt-1 font-mono text-xs text-ink-2">
+          kinds {r.kinds_walked.join(", ")}
+        </p>
+      ) : null}
       <p className="mt-1 font-mono text-xs">
         files {r.files_scanned}
         <span className="text-ink-4"> · </span>
         ingested {r.docs_ingested}
-        {r.docs_skipped > 0 ? (
-          <> (skipped {r.docs_skipped})</>
-        ) : null}
+        {r.docs_skipped > 0 ? <> (skipped {r.docs_skipped})</> : null}
         <span className="text-ink-4"> · </span>
         chunks {r.chunks_inserted}
         <span className="text-ink-4"> · </span>
@@ -98,6 +110,12 @@ function ResultPanel({
           {r.chunks_embedded}
         </span>
       </p>
+      {r.files_scanned === 0 && r.errors.length === 0 ? (
+        <p className="mt-2 text-xs text-ink-3">
+          Nothing to walk. For the private scope, run make sync-corpus
+          first; for public, check that apps/web/content is mounted.
+        </p>
+      ) : null}
       {r.errors.length > 0 ? (
         <details className="mt-3">
           <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-signal">

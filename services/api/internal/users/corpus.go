@@ -17,10 +17,22 @@ type CorpusDocument struct {
 	SourcePath  string
 	Title       string
 	MIME        string
+	Visibility  string // VisibilityPublic | VisibilityCorpusOnly
 	Meta        []byte // raw jsonb; caller owns parsing
 	ContentHash []byte
 	IngestedAt  time.Time
 	UpdatedAt   time.Time
+}
+
+// Visibility values for corpus_documents.visibility (CHECK-constrained).
+const (
+	VisibilityPublic     = "public"
+	VisibilityCorpusOnly = "corpus_only"
+)
+
+// ValidVisibility reports whether v is one of the accepted values.
+func ValidVisibility(v string) bool {
+	return v == VisibilityPublic || v == VisibilityCorpusOnly
 }
 
 // CorpusChunk mirrors corpus_chunks. Embedding is nil when the
@@ -44,6 +56,7 @@ type CorpusHit struct {
 	Title      string
 	SourceKind string
 	SourcePath string
+	Visibility string
 	Similarity float32
 }
 
@@ -55,7 +68,7 @@ func (r *Repo) GetCorpusDocumentByPath(
 	ctx context.Context, sourceKind, sourcePath string,
 ) (*CorpusDocument, error) {
 	const q = `
-    SELECT id, source_kind, source_path, title, mime,
+    SELECT id, source_kind, source_path, title, mime, visibility,
            COALESCE(meta::text, '{}'), content_hash, ingested_at, updated_at
     FROM corpus_documents
     WHERE source_kind = $1 AND source_path = $2
@@ -63,7 +76,7 @@ func (r *Repo) GetCorpusDocumentByPath(
 	d := &CorpusDocument{}
 	var metaText string
 	err := r.pool.QueryRow(ctx, q, sourceKind, sourcePath).Scan(
-		&d.ID, &d.SourceKind, &d.SourcePath, &d.Title, &d.MIME,
+		&d.ID, &d.SourceKind, &d.SourcePath, &d.Title, &d.MIME, &d.Visibility,
 		&metaText, &d.ContentHash, &d.IngestedAt, &d.UpdatedAt,
 	)
 	if err != nil {
@@ -87,13 +100,20 @@ func (r *Repo) UpsertCorpusDocument(
 	if in.Meta == nil {
 		in.Meta = []byte("{}")
 	}
+	if in.Visibility == "" {
+		in.Visibility = VisibilityPublic
+	}
+	if !ValidVisibility(in.Visibility) {
+		return nil, fmt.Errorf("invalid visibility %q", in.Visibility)
+	}
 	const q = `
     INSERT INTO corpus_documents
-      (source_kind, source_path, title, mime, meta, content_hash)
-    VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+      (source_kind, source_path, title, mime, visibility, meta, content_hash)
+    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
     ON CONFLICT (source_kind, source_path) DO UPDATE
       SET title        = EXCLUDED.title,
           mime         = EXCLUDED.mime,
+          visibility   = EXCLUDED.visibility,
           meta         = EXCLUDED.meta,
           content_hash = EXCLUDED.content_hash,
           updated_at   = now()
@@ -101,7 +121,7 @@ func (r *Repo) UpsertCorpusDocument(
   `
 	out := in
 	err := r.pool.QueryRow(ctx, q,
-		in.SourceKind, in.SourcePath, in.Title, in.MIME, string(in.Meta), in.ContentHash,
+		in.SourceKind, in.SourcePath, in.Title, in.MIME, in.Visibility, string(in.Meta), in.ContentHash,
 	).Scan(&out.ID, &out.IngestedAt, &out.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("upsert corpus doc: %w", err)
@@ -182,7 +202,7 @@ func (r *Repo) SearchCorpus(
 	const q = `
     SELECT c.id, c.document_id, c.chunk_index, c.text,
            COALESCE(c.token_count, 0),
-           d.title, d.source_kind, d.source_path,
+           d.title, d.source_kind, d.source_path, d.visibility,
            1 - (c.embedding <=> $1) AS similarity
     FROM corpus_chunks c
     JOIN corpus_documents d ON d.id = c.document_id
@@ -202,7 +222,7 @@ func (r *Repo) SearchCorpus(
 		if err := rows.Scan(
 			&h.Chunk.ID, &h.Chunk.DocumentID, &h.Chunk.ChunkIndex, &h.Chunk.Text,
 			&h.Chunk.TokenCount,
-			&h.Title, &h.SourceKind, &h.SourcePath,
+			&h.Title, &h.SourceKind, &h.SourcePath, &h.Visibility,
 			&h.Similarity,
 		); err != nil {
 			return nil, fmt.Errorf("scan corpus hit: %w", err)
@@ -230,10 +250,12 @@ type CorpusListRow struct {
 
 // CorpusListSummary is the whole-corpus header the admin page shows.
 type CorpusListSummary struct {
-	Rows           []CorpusListRow
-	TotalDocuments int32
-	TotalChunks    int32
-	TotalEmbedded  int32
+	Rows            []CorpusListRow
+	TotalDocuments  int32
+	TotalChunks     int32
+	TotalEmbedded   int32
+	TotalPublic     int32
+	TotalCorpusOnly int32
 }
 
 // ListCorpusDocuments returns every document with chunk + embedded
@@ -242,7 +264,7 @@ type CorpusListSummary struct {
 // today — the corpus is a handful of docs).
 func (r *Repo) ListCorpusDocuments(ctx context.Context) (*CorpusListSummary, error) {
 	const q = `
-    SELECT d.id, d.source_kind, d.source_path, d.title, d.mime,
+    SELECT d.id, d.source_kind, d.source_path, d.title, d.mime, d.visibility,
            d.ingested_at, d.updated_at,
            COUNT(c.id)::int                                     AS chunk_count,
            COUNT(c.id) FILTER (WHERE c.embedding IS NOT NULL)::int AS embedded_count
@@ -263,7 +285,7 @@ func (r *Repo) ListCorpusDocuments(ctx context.Context) (*CorpusListSummary, err
 		var row CorpusListRow
 		if err := rows.Scan(
 			&row.Document.ID, &row.Document.SourceKind, &row.Document.SourcePath,
-			&row.Document.Title, &row.Document.MIME,
+			&row.Document.Title, &row.Document.MIME, &row.Document.Visibility,
 			&row.Document.IngestedAt, &row.Document.UpdatedAt,
 			&row.ChunkCount, &row.EmbeddedCount,
 		); err != nil {
@@ -272,6 +294,11 @@ func (r *Repo) ListCorpusDocuments(ctx context.Context) (*CorpusListSummary, err
 		out.Rows = append(out.Rows, row)
 		out.TotalChunks += row.ChunkCount
 		out.TotalEmbedded += row.EmbeddedCount
+		if row.Document.Visibility == VisibilityCorpusOnly {
+			out.TotalCorpusOnly++
+		} else {
+			out.TotalPublic++
+		}
 	}
 	out.TotalDocuments = int32(len(out.Rows))
 	return out, rows.Err()

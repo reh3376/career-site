@@ -14,7 +14,11 @@ BUILD := build
 
 GEN_PATHS := services/api/gen apps/web/src/gen services/sidecar/src/career services/sidecar/src/buf docs/api
 
-.PHONY: help tools gen lint-proto breaking docs-api check-gen clean
+.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus
+
+CORPUS_MANIFEST ?= docs/personal/corpus-manifest.txt
+CORPUS_HOST     ?= career@5.161.62.205
+CORPUS_DEST     ?= /opt/career-site-private/corpus
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -44,3 +48,6 @@ check-gen: gen docs-api ## Fail if committed generated code or docs drift from p
 
 clean: ## Remove build artifacts
 	rm -rf $(BUILD)
+
+sync-corpus: ## Rsync the curated private corpus (docs/personal manifest) to the server
+	deploy/corpus-sync.sh $(CORPUS_MANIFEST) $(CORPUS_HOST) $(CORPUS_DEST)

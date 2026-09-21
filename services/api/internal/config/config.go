@@ -24,8 +24,13 @@ type Config struct {
 	// In prod this is a docker bind-mount of `apps/web/content` to
 	// `/corpus:ro`, so the walker sees the same markdown that ships
 	// with the web bundle.
-	CorpusRoot  string
-	DatabaseURL string
+	CorpusRoot string
+	// CorpusPrivateRoot is the bind-mount of the curated private corpus
+	// (synced from docs/personal by `make sync-corpus`). Each top-level
+	// directory under it is a source_kind; everything ingested from it
+	// is visibility=corpus_only.
+	CorpusPrivateRoot string
+	DatabaseURL       string
 	// DatabaseURLReadonly is an optional DSN used by the /admin/db
 	// surface. When set, the SQL console runs through this pool
 	// instead of the write-capable app pool, so the SELECT-only guard
@@ -88,6 +93,7 @@ func Load() (Config, error) {
 		SidecarAddr:         envOr("SIDECAR_ADDR", "localhost:50051"),
 		SidecarTimeout:      2 * time.Second,
 		CorpusRoot:          envOr("CORPUS_ROOT", "/corpus"),
+		CorpusPrivateRoot:   envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
 		DatabaseURL:         envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
 		DatabaseURLReadonly: os.Getenv("DATABASE_URL_READONLY"),
 		DBReadonlyPassword:  os.Getenv("DB_READONLY_PASSWORD"),

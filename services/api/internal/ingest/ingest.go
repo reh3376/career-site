@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -56,8 +57,24 @@ type IngestInput struct {
 	SourceKind string
 	SourcePath string
 	Title      string
+	Visibility string // users.VisibilityPublic (default) | users.VisibilityCorpusOnly
 	Body       string // raw text (post-front-matter for markdown)
 	Meta       []byte // jsonb, optional
+}
+
+// KnownKinds is the allow-list of source_kind slugs. The private
+// corpus walker maps each top-level directory to a kind and refuses
+// anything not listed, so a typo in a sync manifest can't create a
+// stray kind. Adding a kind is a one-line edit here plus a UI label.
+var KnownKinds = []string{
+	"article", "talk", "speaker_notes", "readme", "worksheet",
+	"post_mortem", "strategy_doc", "interview_prep", "career_note",
+	"resume", "adr", "other",
+}
+
+// IsKnownKind reports whether k is in KnownKinds.
+func IsKnownKind(k string) bool {
+	return slices.Contains(KnownKinds, k)
 }
 
 // IngestResult reports what the ingester did with one document.
@@ -90,6 +107,12 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 	if in.SourceKind == "" || in.SourcePath == "" {
 		return nil, errors.New("ingest: source_kind and source_path are required")
 	}
+	if in.Visibility == "" {
+		in.Visibility = users.VisibilityPublic
+	}
+	if !users.ValidVisibility(in.Visibility) {
+		return nil, fmt.Errorf("ingest: invalid visibility %q", in.Visibility)
+	}
 	title := strings.TrimSpace(in.Title)
 	if title == "" {
 		title = firstNonEmptyLine(body)
@@ -104,8 +127,11 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 	// (source_kind, source_path) already exists AND its content_hash
 	// equals what we're about to store, nothing has changed —
 	// re-ingest is a no-op. Callers pay the SELECT but nothing else.
+	// A visibility change on unchanged text still needs the upsert
+	// (it's a metadata write, no re-chunk), so the short-circuit also
+	// requires visibility to match.
 	if existing, err := i.users.GetCorpusDocumentByPath(ctx, in.SourceKind, in.SourcePath); err == nil {
-		if existing != nil && bytes.Equal(existing.ContentHash, newHash) {
+		if existing != nil && bytes.Equal(existing.ContentHash, newHash) && existing.Visibility == in.Visibility {
 			res.DocumentID = existing.ID
 			res.Skipped = true
 			res.CompletedAt = time.Now().UTC()
@@ -122,6 +148,7 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 		SourceKind:  in.SourceKind,
 		SourcePath:  in.SourcePath,
 		Title:       title,
+		Visibility:  in.Visibility,
 		Meta:        in.Meta,
 		ContentHash: newHash,
 	})

@@ -29,6 +29,9 @@ next-env.d.ts
 # owner's private local notes / deploy cheat sheet
 /career-site-deploy-readme.md
 
+# local staging dir for the private corpus mount (dev compose)
+/.corpus-private/
+
 # editor and OS
 .DS_Store
 .idea/

@@ -7,8 +7,15 @@ import { ingestCorpusTextAction, type IngestResult } from "./actions";
 
 const SOURCE_KINDS = [
   { key: "article", label: "Article" },
-  { key: "resume", label: "Résumé variant" },
+  { key: "talk", label: "Talk / deck" },
+  { key: "speaker_notes", label: "Speaker notes" },
+  { key: "readme", label: "Repo README" },
+  { key: "worksheet", label: "Worksheet" },
+  { key: "post_mortem", label: "Post-mortem" },
+  { key: "strategy_doc", label: "Strategy doc" },
+  { key: "interview_prep", label: "Interview prep" },
   { key: "career_note", label: "Career note" },
+  { key: "resume", label: "Résumé variant" },
   { key: "adr", label: "ADR / decision" },
   { key: "other", label: "Other" },
 ] as const;
@@ -31,7 +38,7 @@ export function IngestForm() {
       action={onSubmit}
       className="grid gap-5 border border-line-strong bg-canvas p-5"
     >
-      <div className="grid gap-4 sm:grid-cols-[180px_1fr_1fr]">
+      <div className="grid gap-4 sm:grid-cols-[180px_150px_1fr_1fr]">
         <label className="block text-xs">
           <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
             source kind
@@ -46,6 +53,19 @@ export function IngestForm() {
                 {k.label}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="block text-xs">
+          <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
+            visibility
+          </span>
+          <select
+            name="visibility"
+            defaultValue="public"
+            className="mt-1 block w-full border border-line-strong bg-canvas px-2 py-1.5 font-mono text-sm text-ink outline-none focus:border-accent"
+          >
+            <option value="public">public</option>
+            <option value="corpus_only">corpus-only</option>
           </select>
         </label>
         <label className="block text-xs">
