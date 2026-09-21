@@ -155,6 +155,7 @@ func main() {
 	)
 	adminHandler := handlers.NewAdmin(log, userRepo, authHandler, decisionHandler, pool, readonlyPool)
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
+	jdHandler := handlers.NewJd(log, userRepo)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,
@@ -165,6 +166,7 @@ func main() {
 		Decision: decisionHandler,
 		Admin:    adminHandler,
 		Activity: activityHandler,
+		Jd:       jdHandler,
 	})
 
 	// Expiry + auto-decline jobs run in-process; interval configurable so

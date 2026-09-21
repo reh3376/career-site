@@ -125,6 +125,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
 | [`AdminService`](#adminservice) | Owner console. | 29 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
+| [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
 ## AuthService
@@ -2654,6 +2655,90 @@ _No fields; send `{}`._
 
 </details>
 
+## JdService
+
+JD-upload flow, public.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Public | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Public | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
+
+### JdService.SubmitJd
+
+`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Public · **Rate limit:** 3/min
+
+Accepts a job description and stores it for scoring. Returns the
+submission id the caller uses to poll GetJdResult. Never blocks
+on the actual scoring / generation — those run out of band.
+
+**Request** — [`SubmitJdRequest`](#submitjdrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
+| `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
+| `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+
+**Response** — [`SubmitJdResponse`](#submitjdresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
+| `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "jdText": "string",
+  "source": "JD_SOURCE_PASTE",
+  "roleHint": "string",
+  "employerHint": "string",
+  "contactEmail": "string"
+}
+```
+
+</details>
+
+### JdService.GetJdResult
+
+`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Public · **Rate limit:** 30/min
+
+Returns the current state of a submission — queued / scoring /
+below-threshold / generating / ready / failed — plus the
+generated résumé URL when status is `ready`.
+
+**Request** — [`GetJdResultRequest`](#getjdresultrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
+
+**Response** — [`GetJdResultResponse`](#getjdresultresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
+| `generatedResumeUrl` | `string` | string |  | Absolute URL of the generated résumé when status is READY. |
+| `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
+| `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string"
+}
+```
+
+</details>
+
 ## SidecarService
 
 Embedding, reranking, classification, and batch jobs.
@@ -4863,6 +4948,53 @@ Home page payload.
 | `questionnairePending` | `bool` | boolean |  | True when the first-visit questionnaire is still pending. |
 | `tailored` | `bool` | boolean |  | True when the page was tailored (tailoring on and interests present). |
 
+### SubmitJdRequest
+
+Submission request. Exactly one of jd_text (paste) OR
+jd_pdf_bytes (uploaded PDF) OR jd_text_upload_bytes (uploaded .txt)
+is expected — the handler surfaces InvalidArgument otherwise.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
+| `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
+| `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+
+### SubmitJdResponse
+
+Submission response. Deliberately minimal — the async scoring +
+generation happens in the background; the caller polls
+GetJdResult with this id.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
+| `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
+
+### GetJdResultRequest
+
+Poll request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
+
+### GetJdResultResponse
+
+Poll response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
+| `generatedResumeUrl` | `string` | string |  | Absolute URL of the generated résumé when status is READY. |
+| `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
+| `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
+
 ### GetMeRequest
 
 Empty.
@@ -5439,6 +5571,33 @@ Credential kinds.
 | `KIND_EDUCATION` | 2 | Degree or certificate. |
 | `KIND_SERVICE` | 3 | Military or public service. |
 | `KIND_ELIGIBILITY` | 4 | Eligibility statement (citizenship, clearance eligibility). |
+
+### JdSource
+
+Where the JD text came from — mirrors jd_submissions.source_kind.
+New sources are added here as the frontend gains upload paths;
+nothing in the schema breaks when this list grows.
+
+| Value | Number | Description |
+|---|---|---|
+| `JD_SOURCE_UNSPECIFIED` | 0 | Not set (proto3 requires a zero value). Rejected in requests. |
+| `JD_SOURCE_PASTE` | 1 | Pasted directly into the textarea on /jd-upload. |
+| `JD_SOURCE_PDF` | 2 | Uploaded PDF; text extracted server-side (sidecar). |
+| `JD_SOURCE_TEXT_UPLOAD` | 3 | Uploaded plain-text file (.txt, .md). |
+
+### JdStatus
+
+Lifecycle of a submission — mirrors jd_submissions.status.
+
+| Value | Number | Description |
+|---|---|---|
+| `JD_STATUS_UNSPECIFIED` | 0 | Not set. Servers never return this; callers never send it. |
+| `JD_STATUS_RECEIVED` | 1 | Stored, waiting to be scored. |
+| `JD_STATUS_SCORING` | 2 | Retrieval + scoring is running. |
+| `JD_STATUS_BELOW_THRESHOLD` | 3 | Score < 0.65; the caller gets the polite fallback response. |
+| `JD_STATUS_GENERATING` | 4 | Score ≥ 0.65; résumé generation is running. |
+| `JD_STATUS_READY` | 5 | Résumé is ready; generated_resume_url is populated. |
+| `JD_STATUS_FAILED` | 6 | Anything above raised an error; see error_message for detail. |
 
 ### GetExportResponse.Status
 

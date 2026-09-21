@@ -1,0 +1,133 @@
+// JD-upload → tailored-résumé pipeline. Public visitors submit a job
+// description and receive either (a) a tailored 2-page résumé
+// generated from Roger's private career corpus, or (b) a polite
+// fallback when the match score is below threshold.
+//
+// This proto ships the request/response surface; the underlying
+// scoring + generation is built in follow-up PRs behind the same
+// interface — SubmitJd is a fire-and-forget that returns an id the
+// caller polls via GetJdResult.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// JD-upload flow, public.
+service JdService {
+  // Accepts a job description and stores it for scoring. Returns the
+  // submission id the caller uses to poll GetJdResult. Never blocks
+  // on the actual scoring / generation — those run out of band.
+  rpc SubmitJd(SubmitJdRequest) returns (SubmitJdResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 3;
+  }
+  // Returns the current state of a submission — queued / scoring /
+  // below-threshold / generating / ready / failed — plus the
+  // generated résumé URL when status is `ready`.
+  rpc GetJdResult(GetJdResultRequest) returns (GetJdResultResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 30;
+  }
+}
+
+// Where the JD text came from — mirrors jd_submissions.source_kind.
+// New sources are added here as the frontend gains upload paths;
+// nothing in the schema breaks when this list grows.
+enum JdSource {
+  // Not set (proto3 requires a zero value). Rejected in requests.
+  JD_SOURCE_UNSPECIFIED = 0;
+  // Pasted directly into the textarea on /jd-upload.
+  JD_SOURCE_PASTE = 1;
+  // Uploaded PDF; text extracted server-side (sidecar).
+  JD_SOURCE_PDF = 2;
+  // Uploaded plain-text file (.txt, .md).
+  JD_SOURCE_TEXT_UPLOAD = 3;
+}
+
+// Lifecycle of a submission — mirrors jd_submissions.status.
+enum JdStatus {
+  // Not set. Servers never return this; callers never send it.
+  JD_STATUS_UNSPECIFIED = 0;
+  // Stored, waiting to be scored.
+  JD_STATUS_RECEIVED = 1;
+  // Retrieval + scoring is running.
+  JD_STATUS_SCORING = 2;
+  // Score < 0.65; the caller gets the polite fallback response.
+  JD_STATUS_BELOW_THRESHOLD = 3;
+  // Score ≥ 0.65; résumé generation is running.
+  JD_STATUS_GENERATING = 4;
+  // Résumé is ready; generated_resume_url is populated.
+  JD_STATUS_READY = 5;
+  // Anything above raised an error; see error_message for detail.
+  JD_STATUS_FAILED = 6;
+}
+
+// Submission request. Exactly one of jd_text (paste) OR
+// jd_pdf_bytes (uploaded PDF) OR jd_text_upload_bytes (uploaded .txt)
+// is expected — the handler surfaces InvalidArgument otherwise.
+message SubmitJdRequest {
+  // Full JD text pasted into the textarea. Capped at 50 000 chars
+  // by the RPC. Mutually exclusive with the byte-body fields below.
+  string jd_text = 1 [(buf.validate.field).string.max_len = 50000];
+  // Where the text came from — the frontend sets this so the
+  // backend knows what to record.
+  JdSource source = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Optional role / title the visitor is considering Roger for.
+  // Free-form; used for admin triage and to steer the tailored
+  // résumé prompt when scoring lands.
+  string role_hint = 3 [(buf.validate.field).string.max_len = 200];
+  // Optional employer name (e.g. "Anthropic"). Same free-form
+  // triage aid as role_hint.
+  string employer_hint = 4 [(buf.validate.field).string.max_len = 200];
+  // Optional email so the visitor can be notified when the résumé
+  // is ready without keeping the tab open. Never surfaced publicly.
+  string contact_email = 5 [(buf.validate.field).string.max_len = 254];
+}
+
+// Submission response. Deliberately minimal — the async scoring +
+// generation happens in the background; the caller polls
+// GetJdResult with this id.
+message SubmitJdResponse {
+  // Server-issued id (numeric, stringified over the wire).
+  string submission_id = 1;
+  // Current status — usually RECEIVED right at submit time.
+  JdStatus status = 2;
+  // Fixed human-readable acknowledgement text the /jd-upload page
+  // renders back to the caller so the copy stays server-controlled.
+  string message = 3;
+}
+
+// Poll request.
+message GetJdResultRequest {
+  // ID from SubmitJdResponse.
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+}
+
+// Poll response.
+message GetJdResultResponse {
+  // Current status.
+  JdStatus status = 1;
+  // Match score in [0, 1] once known; unset before scoring runs
+  // and after a failure.
+  optional double match_score = 2;
+  // Absolute URL of the generated résumé when status is READY.
+  string generated_resume_url = 3;
+  // Human-readable error text when status is FAILED; empty otherwise.
+  string error_message = 4;
+  // When the submission was first accepted.
+  google.protobuf.Timestamp created_at = 5;
+  // When the terminal state (ready / below_threshold / failed) was
+  // reached. Unset while the pipeline is still running.
+  google.protobuf.Timestamp completed_at = 6;
+}
