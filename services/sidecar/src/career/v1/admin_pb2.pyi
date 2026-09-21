@@ -1053,6 +1053,30 @@ class SweepCorpusEmbeddingsResponse(_message.Message):
     remaining: int
     def __init__(self, model: _Optional[str] = ..., considered: _Optional[int] = ..., embedded: _Optional[int] = ..., failed: _Optional[int] = ..., remaining: _Optional[int] = ...) -> None: ...
 
+class GetJdSubmissionRequest(_message.Message):
+    __slots__ = ("submission_id",)
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    submission_id: str
+    def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
+
+class GetJdSubmissionResponse(_message.Message):
+    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version")
+    ROW_FIELD_NUMBER: _ClassVar[int]
+    JD_TEXT_FIELD_NUMBER: _ClassVar[int]
+    ASSESSMENT_JSON_FIELD_NUMBER: _ClassVar[int]
+    RESUME_MARKDOWN_FIELD_NUMBER: _ClassVar[int]
+    LLM_MODEL_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    row: JdSubmissionRow
+    jd_text: str
+    assessment_json: str
+    resume_markdown: str
+    llm_model: str
+    prompt_id: str
+    prompt_version: int
+    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ...) -> None: ...
+
 class ReindexCorpusRequest(_message.Message):
     __slots__ = ("source_kind", "scope")
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
@@ -1088,7 +1112,7 @@ class ListJdSubmissionsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class JdSubmissionRow(_message.Message):
-    __slots__ = ("id", "status", "match_score", "text_head", "role_hint", "employer_hint", "contact_email", "source", "error_message", "generated_resume_url", "created_at", "completed_at")
+    __slots__ = ("id", "status", "match_score", "text_head", "role_hint", "employer_hint", "contact_email", "source", "error_message", "generated_resume_url", "created_at", "completed_at", "retrieval_score")
     ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
@@ -1101,6 +1125,7 @@ class JdSubmissionRow(_message.Message):
     GENERATED_RESUME_URL_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
+    RETRIEVAL_SCORE_FIELD_NUMBER: _ClassVar[int]
     id: str
     status: _jd_pb2.JdStatus
     match_score: float
@@ -1113,7 +1138,8 @@ class JdSubmissionRow(_message.Message):
     generated_resume_url: str
     created_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ..., match_score: _Optional[float] = ..., text_head: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., source: _Optional[_Union[_jd_pb2.JdSource, str]] = ..., error_message: _Optional[str] = ..., generated_resume_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    retrieval_score: float
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[_jd_pb2.JdStatus, str]] = ..., match_score: _Optional[float] = ..., text_head: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., source: _Optional[_Union[_jd_pb2.JdSource, str]] = ..., error_message: _Optional[str] = ..., generated_resume_url: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., retrieval_score: _Optional[float] = ...) -> None: ...
 
 class ListJdSubmissionsResponse(_message.Message):
     __slots__ = ("submissions", "ready_count", "below_threshold_count", "failed_count", "in_flight_count")

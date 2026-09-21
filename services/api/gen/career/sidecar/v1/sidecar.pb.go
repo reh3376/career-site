@@ -1062,6 +1062,202 @@ func (x *GetJobResponse) GetLogTail() []string {
 	return nil
 }
 
+// One chat completion.
+type GenerateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// System prompt (persona, rules, output format). Owned by the API's
+	// prompt registry; pinned by (prompt_id, prompt_version) there.
+	System string `protobuf:"bytes,1,opt,name=system,proto3" json:"system,omitempty"`
+	// User turn: the task plus any retrieved evidence, with untrusted text
+	// already wrapped in delimiters by the caller.
+	User string `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	// Completion cap in tokens; 0 uses the provider default.
+	MaxTokens int32 `protobuf:"varint,3,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	// Sampling temperature; 0 is deterministic where the provider allows.
+	Temperature float32 `protobuf:"fixed32,4,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	// Ask the provider for a JSON object response.
+	Json bool `protobuf:"varint,5,opt,name=json,proto3" json:"json,omitempty"`
+	// Caller trace id for log correlation (e.g. `jd:42`).
+	TraceId string `protobuf:"bytes,6,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// JSON Schema (draft 2020-12 subset) the response must satisfy.
+	// Providers that support constrained decoding (Ollama `format`)
+	// enforce it; others fall back to plain JSON mode and the caller
+	// validates. Implies json=true.
+	JsonSchema    string `protobuf:"bytes,7,opt,name=json_schema,json=jsonSchema,proto3" json:"json_schema,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateRequest) Reset() {
+	*x = GenerateRequest{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateRequest) ProtoMessage() {}
+
+func (x *GenerateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateRequest.ProtoReflect.Descriptor instead.
+func (*GenerateRequest) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GenerateRequest) GetSystem() string {
+	if x != nil {
+		return x.System
+	}
+	return ""
+}
+
+func (x *GenerateRequest) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *GenerateRequest) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
+	}
+	return 0
+}
+
+func (x *GenerateRequest) GetTemperature() float32 {
+	if x != nil {
+		return x.Temperature
+	}
+	return 0
+}
+
+func (x *GenerateRequest) GetJson() bool {
+	if x != nil {
+		return x.Json
+	}
+	return false
+}
+
+func (x *GenerateRequest) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+func (x *GenerateRequest) GetJsonSchema() string {
+	if x != nil {
+		return x.JsonSchema
+	}
+	return ""
+}
+
+// Completion result plus the accounting the API's usage ledger needs.
+type GenerateResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Generated text with any reasoning scaffolding stripped.
+	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	// Provider model identifier (e.g. `ollama:qwen3:14b`).
+	Model string `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
+	// Prompt tokens as reported by the provider; 0 if unknown.
+	PromptTokens int32 `protobuf:"varint,3,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
+	// Completion tokens as reported by the provider; 0 if unknown.
+	CompletionTokens int32 `protobuf:"varint,4,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	// Wall-clock time of the provider call in milliseconds.
+	LatencyMs int64 `protobuf:"varint,5,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`
+	// Provider finish reason (`stop`, `length`, ...), empty if unknown.
+	FinishReason  string `protobuf:"bytes,6,opt,name=finish_reason,json=finishReason,proto3" json:"finish_reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateResponse) Reset() {
+	*x = GenerateResponse{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateResponse) ProtoMessage() {}
+
+func (x *GenerateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateResponse.ProtoReflect.Descriptor instead.
+func (*GenerateResponse) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GenerateResponse) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *GenerateResponse) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *GenerateResponse) GetPromptTokens() int32 {
+	if x != nil {
+		return x.PromptTokens
+	}
+	return 0
+}
+
+func (x *GenerateResponse) GetCompletionTokens() int32 {
+	if x != nil {
+		return x.CompletionTokens
+	}
+	return 0
+}
+
+func (x *GenerateResponse) GetLatencyMs() int64 {
+	if x != nil {
+		return x.LatencyMs
+	}
+	return 0
+}
+
+func (x *GenerateResponse) GetFinishReason() string {
+	if x != nil {
+		return x.FinishReason
+	}
+	return ""
+}
+
 // Empty.
 type HealthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1071,7 +1267,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[13]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1083,7 +1279,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[13]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1292,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{13}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{15}
 }
 
 // Readiness.
@@ -1111,14 +1307,19 @@ type HealthResponse struct {
 	// Object storage reachable.
 	StorageReady bool `protobuf:"varint,4,opt,name=storage_ready,json=storageReady,proto3" json:"storage_ready,omitempty"`
 	// Sidecar version.
-	Version       string `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Version string `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	// LLM provider configured (does not probe the model).
+	LlmReady bool `protobuf:"varint,6,opt,name=llm_ready,json=llmReady,proto3" json:"llm_ready,omitempty"`
+	// LLM provider name (`stub`, `ollama:<model>`) so the API can decide
+	// whether structured pipelines are meaningful.
+	LlmProvider   string `protobuf:"bytes,7,opt,name=llm_provider,json=llmProvider,proto3" json:"llm_provider,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[14]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1331,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[14]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1344,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{14}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *HealthResponse) GetReady() bool {
@@ -1177,6 +1378,20 @@ func (x *HealthResponse) GetStorageReady() bool {
 func (x *HealthResponse) GetVersion() string {
 	if x != nil {
 		return x.Version
+	}
+	return ""
+}
+
+func (x *HealthResponse) GetLlmReady() bool {
+	if x != nil {
+		return x.LlmReady
+	}
+	return false
+}
+
+func (x *HealthResponse) GetLlmProvider() string {
+	if x != nil {
+		return x.LlmProvider
 	}
 	return ""
 }
@@ -1250,14 +1465,37 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\vfinished_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"finishedAt\x12\x18\n" +
 	"\asummary\x18\a \x01(\tR\asummary\x12\x19\n" +
-	"\blog_tail\x18\b \x03(\tR\alogTail\"\x0f\n" +
-	"\rHealthRequest\"\xb3\x01\n" +
+	"\blog_tail\x18\b \x03(\tR\alogTail\"\x97\x02\n" +
+	"\x0fGenerateRequest\x12!\n" +
+	"\x06system\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x18\x80\xfa\x01R\x06system\x12\x1f\n" +
+	"\x04user\x18\x02 \x01(\tB\v\xbaH\br\x06\x10\x01\x18\xc0\x9a\fR\x04user\x12)\n" +
+	"\n" +
+	"max_tokens\x18\x03 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x80@(\x00R\tmaxTokens\x121\n" +
+	"\vtemperature\x18\x04 \x01(\x02B\x0f\xbaH\f\n" +
+	"\n" +
+	"\x1d\x00\x00\x00@-\x00\x00\x00\x00R\vtemperature\x12\x12\n" +
+	"\x04json\x18\x05 \x01(\bR\x04json\x12\"\n" +
+	"\btrace_id\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18@R\atraceId\x12*\n" +
+	"\vjson_schema\x18\a \x01(\tB\t\xbaH\x06r\x04\x18\x80\xfa\x01R\n" +
+	"jsonSchema\"\xd2\x01\n" +
+	"\x10GenerateResponse\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\x12\x14\n" +
+	"\x05model\x18\x02 \x01(\tR\x05model\x12#\n" +
+	"\rprompt_tokens\x18\x03 \x01(\x05R\fpromptTokens\x12+\n" +
+	"\x11completion_tokens\x18\x04 \x01(\x05R\x10completionTokens\x12\x1d\n" +
+	"\n" +
+	"latency_ms\x18\x05 \x01(\x03R\tlatencyMs\x12#\n" +
+	"\rfinish_reason\x18\x06 \x01(\tR\ffinishReason\"\x0f\n" +
+	"\rHealthRequest\"\xf3\x01\n" +
 	"\x0eHealthResponse\x12\x14\n" +
 	"\x05ready\x18\x01 \x01(\bR\x05ready\x12%\n" +
 	"\x0eembedder_ready\x18\x02 \x01(\bR\rembedderReady\x12%\n" +
 	"\x0ereranker_ready\x18\x03 \x01(\bR\rrerankerReady\x12#\n" +
 	"\rstorage_ready\x18\x04 \x01(\bR\fstorageReady\x12\x18\n" +
-	"\aversion\x18\x05 \x01(\tR\aversion*b\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x1b\n" +
+	"\tllm_ready\x18\x06 \x01(\bR\bllmReady\x12!\n" +
+	"\fllm_provider\x18\a \x01(\tR\vllmProvider*b\n" +
 	"\fEmbedPurpose\x12\x1d\n" +
 	"\x19EMBED_PURPOSE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13EMBED_PURPOSE_QUERY\x10\x01\x12\x1a\n" +
@@ -1283,14 +1521,15 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x11JOB_STATUS_QUEUED\x10\x01\x12\x16\n" +
 	"\x12JOB_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14JOB_STATUS_SUCCEEDED\x10\x03\x12\x15\n" +
-	"\x11JOB_STATUS_FAILED\x10\x042\xed\x03\n" +
+	"\x11JOB_STATUS_FAILED\x10\x042\xc2\x04\n" +
 	"\x0eSidecarService\x12J\n" +
 	"\x05Embed\x12\x1f.career.sidecar.v1.EmbedRequest\x1a .career.sidecar.v1.EmbedResponse\x12M\n" +
 	"\x06Rerank\x12 .career.sidecar.v1.RerankRequest\x1a!.career.sidecar.v1.RerankResponse\x12S\n" +
 	"\bClassify\x12\".career.sidecar.v1.ClassifyRequest\x1a#.career.sidecar.v1.ClassifyResponse\x12M\n" +
 	"\x06RunJob\x12 .career.sidecar.v1.RunJobRequest\x1a!.career.sidecar.v1.RunJobResponse\x12M\n" +
 	"\x06GetJob\x12 .career.sidecar.v1.GetJobRequest\x1a!.career.sidecar.v1.GetJobResponse\x12M\n" +
-	"\x06Health\x12 .career.sidecar.v1.HealthRequest\x1a!.career.sidecar.v1.HealthResponseB\xd8\x01\n" +
+	"\x06Health\x12 .career.sidecar.v1.HealthRequest\x1a!.career.sidecar.v1.HealthResponse\x12S\n" +
+	"\bGenerate\x12\".career.sidecar.v1.GenerateRequest\x1a#.career.sidecar.v1.GenerateResponseB\xd8\x01\n" +
 	"\x15com.career.sidecar.v1B\fSidecarProtoP\x01ZKgithub.com/reh3376/career-site/services/api/gen/career/sidecar/v1;sidecarv1\xa2\x02\x03CSX\xaa\x02\x11Career.Sidecar.V1\xca\x02\x11Career\\Sidecar\\V1\xe2\x02\x1dCareer\\Sidecar\\V1\\GPBMetadata\xea\x02\x13Career::Sidecar::V1b\x06proto3"
 
 var (
@@ -1306,7 +1545,7 @@ func file_career_sidecar_v1_sidecar_proto_rawDescGZIP() []byte {
 }
 
 var file_career_sidecar_v1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_career_sidecar_v1_sidecar_proto_goTypes = []any{
 	(EmbedPurpose)(0),             // 0: career.sidecar.v1.EmbedPurpose
 	(Scope)(0),                    // 1: career.sidecar.v1.Scope
@@ -1325,10 +1564,12 @@ var file_career_sidecar_v1_sidecar_proto_goTypes = []any{
 	(*RunJobResponse)(nil),        // 14: career.sidecar.v1.RunJobResponse
 	(*GetJobRequest)(nil),         // 15: career.sidecar.v1.GetJobRequest
 	(*GetJobResponse)(nil),        // 16: career.sidecar.v1.GetJobResponse
-	(*HealthRequest)(nil),         // 17: career.sidecar.v1.HealthRequest
-	(*HealthResponse)(nil),        // 18: career.sidecar.v1.HealthResponse
-	nil,                           // 19: career.sidecar.v1.RunJobRequest.ArgsEntry
-	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
+	(*GenerateRequest)(nil),       // 17: career.sidecar.v1.GenerateRequest
+	(*GenerateResponse)(nil),      // 18: career.sidecar.v1.GenerateResponse
+	(*HealthRequest)(nil),         // 19: career.sidecar.v1.HealthRequest
+	(*HealthResponse)(nil),        // 20: career.sidecar.v1.HealthResponse
+	nil,                           // 21: career.sidecar.v1.RunJobRequest.ArgsEntry
+	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
 }
 var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	0,  // 0: career.sidecar.v1.EmbedRequest.purpose:type_name -> career.sidecar.v1.EmbedPurpose
@@ -1337,25 +1578,27 @@ var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	9,  // 3: career.sidecar.v1.RerankResponse.scores:type_name -> career.sidecar.v1.RerankScore
 	1,  // 4: career.sidecar.v1.ClassifyResponse.scope:type_name -> career.sidecar.v1.Scope
 	2,  // 5: career.sidecar.v1.RunJobRequest.kind:type_name -> career.sidecar.v1.JobKind
-	19, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
+	21, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
 	2,  // 7: career.sidecar.v1.GetJobResponse.kind:type_name -> career.sidecar.v1.JobKind
 	3,  // 8: career.sidecar.v1.GetJobResponse.status:type_name -> career.sidecar.v1.JobStatus
-	20, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	20, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	22, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	22, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
 	4,  // 11: career.sidecar.v1.SidecarService.Embed:input_type -> career.sidecar.v1.EmbedRequest
 	8,  // 12: career.sidecar.v1.SidecarService.Rerank:input_type -> career.sidecar.v1.RerankRequest
 	11, // 13: career.sidecar.v1.SidecarService.Classify:input_type -> career.sidecar.v1.ClassifyRequest
 	13, // 14: career.sidecar.v1.SidecarService.RunJob:input_type -> career.sidecar.v1.RunJobRequest
 	15, // 15: career.sidecar.v1.SidecarService.GetJob:input_type -> career.sidecar.v1.GetJobRequest
-	17, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
-	6,  // 17: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
-	10, // 18: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
-	12, // 19: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
-	14, // 20: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
-	16, // 21: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
-	18, // 22: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
+	19, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
+	17, // 17: career.sidecar.v1.SidecarService.Generate:input_type -> career.sidecar.v1.GenerateRequest
+	6,  // 18: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
+	10, // 19: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
+	12, // 20: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
+	14, // 21: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
+	16, // 22: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
+	20, // 23: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
+	18, // 24: career.sidecar.v1.SidecarService.Generate:output_type -> career.sidecar.v1.GenerateResponse
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -1372,7 +1615,7 @@ func file_career_sidecar_v1_sidecar_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_sidecar_v1_sidecar_proto_rawDesc), len(file_career_sidecar_v1_sidecar_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

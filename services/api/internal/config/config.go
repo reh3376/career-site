@@ -30,7 +30,18 @@ type Config struct {
 	// directory under it is a source_kind; everything ingested from it
 	// is visibility=corpus_only.
 	CorpusPrivateRoot string
-	DatabaseURL       string
+	// LLMMonthlyCallCap bounds LLM gateway calls per calendar month
+	// (Phase 4 guardrail #8). 0 = unlimited; set it in prod once a
+	// metered provider is in play.
+	LLMMonthlyCallCap int64
+	// JDPipelineTimeout bounds one submission's score + generate run.
+	// CPU inference of a two-page résumé can take minutes.
+	JDPipelineTimeout time.Duration
+	// LLMAllowStub lets the structured JD assessor run against the
+	// sidecar's stub provider (schema-valid, meaningless output). Off
+	// by default so a stub never gates real submissions.
+	LLMAllowStub bool
+	DatabaseURL  string
 	// DatabaseURLReadonly is an optional DSN used by the /admin/db
 	// surface. When set, the SQL console runs through this pool
 	// instead of the write-capable app pool, so the SELECT-only guard
@@ -94,6 +105,9 @@ func Load() (Config, error) {
 		SidecarTimeout:      2 * time.Second,
 		CorpusRoot:          envOr("CORPUS_ROOT", "/corpus"),
 		CorpusPrivateRoot:   envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
+		LLMMonthlyCallCap:   int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
+		JDPipelineTimeout:   time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
+		LLMAllowStub:        os.Getenv("LLM_ALLOW_STUB") == "1",
 		DatabaseURL:         envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),
 		DatabaseURLReadonly: os.Getenv("DATABASE_URL_READONLY"),
 		DBReadonlyPassword:  os.Getenv("DB_READONLY_PASSWORD"),

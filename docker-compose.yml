@@ -67,6 +67,12 @@ services:
       # (gitignored) to sign into /admin without the email approval flow.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       CAREER_SITE_ADMIN_PW: ${CAREER_SITE_ADMIN_PW:-}
+      # JD pipeline: per-submission wall-clock budget and the LLM call
+      # cap per month (0 = unlimited). LLM_ALLOW_STUB=1 runs the
+      # requirement assessor against the stub provider (CI / e2e).
+      JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-900}
+      LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-0}
+      LLM_ALLOW_STUB: ${LLM_ALLOW_STUB:-0}
       # Corpus reindex reads markdown from here. Bind-mounted below
       # so `/admin/corpus` → "Reindex articles" walks the same files
       # that ship with the web bundle.
@@ -100,6 +106,11 @@ services:
       SIDECAR_EMBED_PROVIDER: ${SIDECAR_EMBED_PROVIDER:-stub}
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      # LLM gateway. `ollama` uses OLLAMA_LLM_MODEL on the same server;
+      # `stub` returns schema-valid canned JSON.
+      SIDECAR_LLM_PROVIDER: ${SIDECAR_LLM_PROVIDER:-stub}
+      OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:14b}
+      SIDECAR_LLM_TIMEOUT_SECONDS: ${SIDECAR_LLM_TIMEOUT_SECONDS:-600}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

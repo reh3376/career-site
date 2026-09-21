@@ -10,6 +10,7 @@ import grpc
 from career.sidecar.v1 import sidecar_pb2_grpc
 from career_sidecar.config import Config
 from career_sidecar.embed import build_embedder
+from career_sidecar.llm import build_llm
 from career_sidecar.servicer import SidecarServicer
 
 log = logging.getLogger(__name__)
@@ -37,8 +38,15 @@ def build_server(cfg: Config) -> tuple[grpc.Server, str]:
         "sidecar embedder ready",
         extra={"provider": embedder.name, "dimensions": embedder.dimensions},
     )
+    llm = build_llm(
+        provider=cfg.llm_provider,
+        ollama_url=cfg.ollama_url,
+        model=cfg.ollama_llm_model,
+        timeout_seconds=cfg.llm_timeout_seconds,
+    )
+    log.info("sidecar llm ready", extra={"provider": llm.name})
     sidecar_pb2_grpc.add_SidecarServiceServicer_to_server(
-        SidecarServicer(embedder=embedder), server
+        SidecarServicer(embedder=embedder, llm=llm), server
     )
     bound_port = server.add_insecure_port(cfg.addr)
     bound_addr = _rewrite_port(cfg.addr, bound_port)

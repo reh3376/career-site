@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -15,14 +16,14 @@ import (
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
 // Jd implements careerv1connect.JdServiceHandler for the public
-// JD-upload flow. Today only the persistence + fallback shape is
-// live; retrieval + scoring + résumé generation land in follow-up
-// PRs behind the same interface (see backlog #12).
+// JD-upload flow: persist, then score + assess (and later generate)
+// out of band while the caller polls GetJdResult.
 type Jd struct {
 	careerv1connect.UnimplementedJdServiceHandler
 
@@ -30,16 +31,23 @@ type Jd struct {
 	users   *users.Repo
 	limiter *ratelimit.Limiter
 	scorer  *jd.Scorer // nil in dev without a sidecar; SubmitJd skips scoring.
+	// pipelineTimeout bounds one submission's background run. CPU
+	// inference can take minutes per LLM call.
+	pipelineTimeout time.Duration
 }
 
-func NewJd(log *slog.Logger, repo *users.Repo, scorer *jd.Scorer) *Jd {
+func NewJd(log *slog.Logger, repo *users.Repo, scorer *jd.Scorer, pipelineTimeout time.Duration) *Jd {
+	if pipelineTimeout <= 0 {
+		pipelineTimeout = 15 * time.Minute
+	}
 	return &Jd{
 		log:   log,
 		users: repo,
 		// 5-burst per (ip, jd_hash), refill to 5 over 15 min. Blocks
 		// a paster hammering "Submit" and a botnet trying to fuzz.
-		limiter: ratelimit.New(5, 5.0/(15*60)),
-		scorer:  scorer,
+		limiter:         ratelimit.New(5, 5.0/(15*60)),
+		scorer:          scorer,
+		pipelineTimeout: pipelineTimeout,
 	}
 }
 
@@ -109,14 +117,15 @@ func (h *Jd) SubmitJd(
 
 	// Fire-and-forget score in the background so the RPC returns
 	// immediately. Uses a fresh context (not `ctx`, which cancels
-	// as soon as the caller disconnects) with a 2-minute cap that
-	// bounds a stuck sidecar. Nil scorer (dev without sidecar)
-	// leaves the row in RECEIVED for manual triage.
+	// as soon as the caller disconnects) bounded by the pipeline
+	// timeout. Nil scorer (dev without sidecar) leaves the row in
+	// RECEIVED for manual triage.
 	if h.scorer != nil {
+		hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
 		go func(id int64, jdText string) {
-			bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			bg, cancel := context.WithTimeout(context.Background(), h.pipelineTimeout)
 			defer cancel()
-			h.scorer.ScoreAndPersist(bg, id, jdText)
+			h.scorer.ScoreAndPersist(bg, id, jdText, hints)
 		}(s.ID, text)
 	}
 
@@ -124,6 +133,7 @@ func (h *Jd) SubmitJd(
 		SubmissionId: strconv.FormatInt(s.ID, 10),
 		Status:       jdStatusRepoToProto(s.Status),
 		Message:      fixedSubmitAckMessage(),
+		ResultToken:  hex.EncodeToString(s.ResultToken),
 	}), nil
 }
 
@@ -157,6 +167,14 @@ func (h *Jd) GetJdResult(
 	if s.CompletedAt != nil {
 		out.CompletedAt = timestamppb.New(*s.CompletedAt)
 	}
+	// The résumé is only released to a caller holding the token that
+	// was issued at submit time; the numeric id alone reveals nothing
+	// beyond status and score.
+	if s.ResumeMarkdown != "" {
+		if presented, err := hex.DecodeString(strings.TrimSpace(req.Msg.ResultToken)); err == nil && s.TokenMatches(presented) {
+			out.ResumeMarkdown = s.ResumeMarkdown
+		}
+	}
 	return connect.NewResponse(out), nil
 }
 
@@ -164,7 +182,7 @@ func (h *Jd) GetJdResult(
 // successful submission. Kept server-side so an update lands on
 // every caller without a frontend rebuild.
 func fixedSubmitAckMessage() string {
-	return "Got it — the JD is stored. Roger's tailored-résumé pipeline is being built out; today the acknowledgement is manual, so he'll follow up personally if the fit looks right. For a faster path today, use the contact form."
+	return "Got it, the JD is stored. Scoring runs now: the posting is broken into requirements, each is checked against Roger's career corpus, and the match score is computed from those checks. Keep this page open, or come back with your reference number."
 }
 
 func jdSourceProtoToRepo(s v1.JdSource) string {

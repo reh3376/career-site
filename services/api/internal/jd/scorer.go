@@ -1,7 +1,9 @@
 // Package jd wires the JD-upload flow through the Ask Roger corpus:
-// embed the submitted JD → retrieve top-K chunks → aggregate to a
-// match score → update the jd_submissions row → return the hits
-// so a follow-up LLM pass can generate the tailored résumé.
+// embed the submitted JD → retrieve → pre-score, then (when an LLM is
+// available) extract requirements, judge each against retrieved
+// evidence, and compute the match score in code from the verdicts.
+// The résumé itself is generated in a follow-up step behind the same
+// interface.
 //
 // The threshold (0.65) is the gate Roger set for the "generate a
 // tailored résumé" path. Below that, the caller sees a polite
@@ -10,22 +12,22 @@ package jd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/ingest"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
-// Threshold above which a JD is considered a match. Anything below
-// takes the fallback path (no résumé generation, human triage).
-// Chosen in the /jd-upload copy — change here + on the page.
+// MatchThreshold is the gate above which a JD is considered a match.
+// Applies to the requirement-weighted score when the assessor is
+// wired, else to the retrieval pre-score.
 const MatchThreshold = 0.65
 
-// TopK caps how many chunks influence the score. Small enough that
-// a JD hitting a couple of strong career notes doesn't get drowned
-// by a long tail of low-similarity noise; large enough that we
-// aren't over-fitting to one chunk.
+// TopK caps how many chunks feed the retrieval pre-score.
 const TopK = 8
 
 // Scorer runs the JD → score pipeline. Depends on the same
@@ -35,18 +37,20 @@ type Scorer struct {
 	log   *slog.Logger
 	users *users.Repo
 	embed ingest.EmbedClient
+	// assessor is optional; nil means the retrieval pre-score is the
+	// gate (dev without an LLM provider, or stub provider).
+	assessor *Assessor
 }
 
-// NewScorer wires the deps.
-func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient) *Scorer {
-	return &Scorer{log: log, users: repo, embed: embed}
+// NewScorer wires the deps. assessor may be nil.
+func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor) *Scorer {
+	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor}
 }
 
-// Score embeds the JD, retrieves top-K corpus chunks, aggregates to
-// a match score, and returns both. Aggregation is the mean of the
-// top-K similarity values — simple, monotonic in the strength and
-// breadth of the match. When the corpus has fewer than TopK
-// embedded chunks the mean is over what exists.
+// Score embeds the JD, retrieves top-K corpus chunks, and returns the
+// mean of their similarities: a cheap retrieval pre-score, monotonic
+// in the strength and breadth of the match, kept for diagnostics
+// alongside the requirement-weighted score.
 func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits []users.CorpusHit, err error) {
 	if s.embed == nil {
 		return 0, nil, errors.New("scorer: no embed client wired")
@@ -72,42 +76,64 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 	return float64(sum) / float64(len(hits)), hits, nil
 }
 
-// ScoreAndPersist runs the scoring pass for one jd_submissions row
-// and writes the outcome. Best-effort — swallows persistence
-// failures (they're logged) since the row already exists and a
-// re-score can retry. Called from a goroutine by the JD handler.
-func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string) {
+// ScoreAndPersist runs the pipeline for one jd_submissions row and
+// writes the outcome. Best-effort: persistence failures are logged,
+// the row already exists and a re-score can retry. Called from a
+// goroutine by the JD handler.
+func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
 	if err := s.users.UpdateJdScoring(ctx, submissionID, "scoring", nil, ""); err != nil {
 		s.log.Warn("jd: failed to mark scoring", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
 
-	score, hits, err := s.Score(ctx, jdText)
+	retrieval, hits, err := s.Score(ctx, jdText)
 	if err != nil {
-		s.log.Warn("jd: score failed",
-			slog.Int64("id", submissionID),
-			slog.String("error", err.Error()),
-		)
+		s.log.Warn("jd: score failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", nil, truncErr(err.Error())); uErr != nil {
 			s.log.Warn("jd: failed to record failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
 	}
-
-	// If the corpus is empty (no embedded chunks), fall through to
-	// below_threshold with an explanatory note so the admin knows
-	// this wasn't a real "poor match" verdict.
 	if len(hits) == 0 {
 		s.log.Info("jd: no corpus hits", slog.Int64("id", submissionID))
-		_ = s.users.UpdateJdScoring(ctx, submissionID, "below_threshold", &score,
-			"corpus is empty — no chunks available to score against")
+		_ = s.users.UpdateJdScoring(ctx, submissionID, "below_threshold", &retrieval,
+			"corpus is empty: no chunks available to score against")
 		return
+	}
+
+	score := retrieval
+	var assessment *Assessment
+	if s.assessor != nil {
+		started := time.Now()
+		assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints)
+		if err != nil {
+			// Fall back to the retrieval pre-score but keep the failure
+			// on the record so the admin can see the gate was degraded.
+			s.log.Warn("jd: assessment failed, using retrieval score",
+				slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			assessment = &Assessment{Error: truncErr(err.Error())}
+		} else {
+			score = assessment.Score
+			s.log.Info("jd: assessed",
+				slog.Int64("id", submissionID),
+				slog.Int("requirements", len(assessment.Requirements)),
+				slog.Float64("score", assessment.Score),
+				slog.Float64("retrieval_score", retrieval),
+				slog.Duration("took", time.Since(started)),
+			)
+		}
+		if raw, mErr := json.Marshal(assessment); mErr == nil {
+			if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, raw); uErr != nil {
+				s.log.Warn("jd: failed to store assessment", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+			}
+		}
+	} else if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, nil); uErr != nil {
+		s.log.Warn("jd: failed to store retrieval score", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 	}
 
 	next := "below_threshold"
 	if score >= MatchThreshold {
-		// Cross the threshold → mark generating. LLM résumé
-		// generation lands in a follow-up PR; until then, the
-		// admin view flags these for manual attention.
+		// Above the gate: résumé generation lands in the next slice;
+		// until then the row waits here for manual attention.
 		next = "generating"
 	}
 	if err := s.users.UpdateJdScoring(ctx, submissionID, next, &score, ""); err != nil {
@@ -126,8 +152,8 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	)
 }
 
-// truncErr keeps a persisted error short — the row's `error`
-// column is UI-facing on /admin/jd; a stack trace is out of place.
+// truncErr keeps a persisted error short: the row's `error` column is
+// UI-facing on /admin/jd; a stack trace is out of place.
 func truncErr(s string) string {
 	const max = 500
 	if len(s) <= max {

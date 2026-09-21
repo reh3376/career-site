@@ -2,7 +2,9 @@ package users
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"fmt"
 	"strings"
 	"time"
@@ -24,6 +26,23 @@ type JdSubmission struct {
 	Error              string
 	CreatedAt          time.Time
 	CompletedAt        *time.Time
+	// ResultToken is issued once at submit; the public poll must present
+	// it to read ResumeMarkdown.
+	ResultToken    []byte
+	ResumeMarkdown string
+	LLMModel       string
+	PromptID       string
+	PromptVersion  int32
+	// RetrievalScore is the cheap cosine pre-score; MatchScore is the
+	// requirement-weighted gate. Assessment is the raw jsonb derivation.
+	RetrievalScore *float64
+	Assessment     []byte
+}
+
+// TokenMatches reports whether presented equals the stored token,
+// in constant time. A row without a token never matches.
+func (s *JdSubmission) TokenMatches(presented []byte) bool {
+	return len(s.ResultToken) > 0 && subtle.ConstantTimeCompare(s.ResultToken, presented) == 1
 }
 
 // JdSubmitInput is what the handler passes to CreateJdSubmission.
@@ -77,12 +96,16 @@ func (r *Repo) CreateJdSubmission(
 		head = head[:400]
 	}
 	hash := NormaliseJdHash(in.JdText)
+	token := make([]byte, 16)
+	if _, err := rand.Read(token); err != nil {
+		return nil, fmt.Errorf("result token: %w", err)
+	}
 
 	const q = `
     INSERT INTO jd_submissions (
       ip_hash, ua_hash, source_kind, jd_text, jd_hash, text_head,
-      role_hint, employer_hint, contact_email
-    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''))
+      role_hint, employer_hint, contact_email, result_token
+    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10)
     RETURNING id, created_at, status
   `
 	s := &JdSubmission{
@@ -93,10 +116,11 @@ func (r *Repo) CreateJdSubmission(
 		RoleHint:     in.RoleHint,
 		EmployerHint: in.EmployerHint,
 		ContactEmail: in.ContactEmail,
+		ResultToken:  token,
 	}
 	err := r.pool.QueryRow(ctx, q,
 		in.IPHash, in.UAHash, in.SourceKind, in.JdText, hash, head,
-		in.RoleHint, in.EmployerHint, in.ContactEmail,
+		in.RoleHint, in.EmployerHint, in.ContactEmail, token,
 	).Scan(&s.ID, &s.CreatedAt, &s.Status)
 	if err != nil {
 		return nil, fmt.Errorf("insert jd submission: %w", err)
@@ -108,8 +132,54 @@ const jdCols = `
     id, source_kind, jd_text, jd_hash, text_head,
     COALESCE(role_hint, ''), COALESCE(employer_hint, ''), COALESCE(contact_email, ''),
     status, match_score, COALESCE(generated_resume_url, ''), COALESCE(error, ''),
-    created_at, completed_at
+    created_at, completed_at,
+    result_token, COALESCE(resume_markdown, ''), COALESCE(llm_model, ''),
+    COALESCE(prompt_id, ''), COALESCE(prompt_version, 0),
+    retrieval_score, COALESCE(assessment::text, '')
 `
+
+// SetJdAssessment stores the retrieval pre-score and the assessment
+// derivation (nil clears it). Called before the status flip so a
+// reader never sees a score without its explanation.
+func (r *Repo) SetJdAssessment(ctx context.Context, id int64, retrievalScore float64, assessment []byte) error {
+	var doc any
+	if len(assessment) > 0 {
+		doc = string(assessment)
+	}
+	const q = `
+    UPDATE jd_submissions
+    SET retrieval_score = $2, assessment = $3::jsonb
+    WHERE id = $1
+  `
+	tag, err := r.pool.Exec(ctx, q, id, retrievalScore, doc)
+	if err != nil {
+		return fmt.Errorf("set jd assessment: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetJdResume stores the generated résumé and flips the row to ready.
+func (r *Repo) SetJdResume(
+	ctx context.Context, id int64, markdown, model, promptID string, promptVersion int,
+) error {
+	const q = `
+    UPDATE jd_submissions
+    SET status = 'ready', resume_markdown = $2, llm_model = $3,
+        prompt_id = $4, prompt_version = $5, error = NULL, completed_at = now()
+    WHERE id = $1
+  `
+	tag, err := r.pool.Exec(ctx, q, id, markdown, model, promptID, promptVersion)
+	if err != nil {
+		return fmt.Errorf("set jd resume: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
 
 // UpdateJdScoring records the outcome of the scoring pass. status
 // should be one of the JdSubmission state values; error stays
@@ -148,7 +218,10 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
            COALESCE(contact_email, ''),
            status, match_score, COALESCE(generated_resume_url, ''),
            COALESCE(error, ''),
-           created_at, completed_at
+           created_at, completed_at,
+           CASE WHEN resume_markdown IS NULL THEN '' ELSE 'y' END /* presence only */,
+           COALESCE(llm_model, ''), COALESCE(prompt_id, ''), COALESCE(prompt_version, 0),
+           retrieval_score
     FROM jd_submissions
     ORDER BY created_at DESC
     LIMIT 500
@@ -166,6 +239,8 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 			&s.RoleHint, &s.EmployerHint, &s.ContactEmail,
 			&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 			&s.CreatedAt, &s.CompletedAt,
+			&s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
+			&s.RetrievalScore,
 		); err != nil {
 			return nil, fmt.Errorf("scan jd row: %w", err)
 		}
@@ -182,6 +257,8 @@ func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, er
 		&s.RoleHint, &s.EmployerHint, &s.ContactEmail,
 		&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 		&s.CreatedAt, &s.CompletedAt,
+		&s.ResultToken, &s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
+		&s.RetrievalScore, &s.Assessment,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get jd submission: %w", err)

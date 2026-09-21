@@ -35,6 +35,13 @@ service SidecarService {
   rpc GetJob(GetJobRequest) returns (GetJobResponse);
   // Reports readiness: models loaded, storage reachable, version.
   rpc Health(HealthRequest) returns (HealthResponse);
+  // Runs one chat completion with the configured LLM provider (Ollama
+  // locally / on-host, a hosted API later, stub in CI). Non-streaming;
+  // the API uses it for background generation (JD-tailored résumés).
+  // The API owns the prompt text and its version; the sidecar is a
+  // provider gateway and never rewrites prompts. Deadline is set by the
+  // caller and can be minutes on CPU inference.
+  rpc Generate(GenerateRequest) returns (GenerateResponse);
 }
 
 // Why a text is being embedded; some models use different instructions for
@@ -252,6 +259,54 @@ message GetJobResponse {
   repeated string log_tail = 8;
 }
 
+// One chat completion.
+message GenerateRequest {
+  // System prompt (persona, rules, output format). Owned by the API's
+  // prompt registry; pinned by (prompt_id, prompt_version) there.
+  string system = 1 [(buf.validate.field).string.max_len = 32000];
+  // User turn: the task plus any retrieved evidence, with untrusted text
+  // already wrapped in delimiters by the caller.
+  string user = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200000
+  }];
+  // Completion cap in tokens; 0 uses the provider default.
+  int32 max_tokens = 3 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 8192
+  }];
+  // Sampling temperature; 0 is deterministic where the provider allows.
+  float temperature = 4 [(buf.validate.field).float = {
+    gte: 0
+    lte: 2
+  }];
+  // Ask the provider for a JSON object response.
+  bool json = 5;
+  // Caller trace id for log correlation (e.g. `jd:42`).
+  string trace_id = 6 [(buf.validate.field).string.max_len = 64];
+  // JSON Schema (draft 2020-12 subset) the response must satisfy.
+  // Providers that support constrained decoding (Ollama `format`)
+  // enforce it; others fall back to plain JSON mode and the caller
+  // validates. Implies json=true.
+  string json_schema = 7 [(buf.validate.field).string.max_len = 32000];
+}
+
+// Completion result plus the accounting the API's usage ledger needs.
+message GenerateResponse {
+  // Generated text with any reasoning scaffolding stripped.
+  string text = 1;
+  // Provider model identifier (e.g. `ollama:qwen3:14b`).
+  string model = 2;
+  // Prompt tokens as reported by the provider; 0 if unknown.
+  int32 prompt_tokens = 3;
+  // Completion tokens as reported by the provider; 0 if unknown.
+  int32 completion_tokens = 4;
+  // Wall-clock time of the provider call in milliseconds.
+  int64 latency_ms = 5;
+  // Provider finish reason (`stop`, `length`, ...), empty if unknown.
+  string finish_reason = 6;
+}
+
 // Empty.
 message HealthRequest {}
 
@@ -267,4 +322,9 @@ message HealthResponse {
   bool storage_ready = 4;
   // Sidecar version.
   string version = 5;
+  // LLM provider configured (does not probe the model).
+  bool llm_ready = 6;
+  // LLM provider name (`stub`, `ollama:<model>`) so the API can decide
+  // whether structured pipelines are meaningful.
+  string llm_provider = 7;
 }

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitJdAction, type SubmitState } from "./actions";
+import { JdResult } from "./result";
 
 const initial: SubmitState = {};
 
@@ -29,16 +30,21 @@ export function JdForm() {
             keep this if you want to check back later.
           </p>
         ) : null}
+        {state.submission_id ? (
+          <JdResult
+            submissionId={state.submission_id}
+            resultToken={state.result_token ?? ""}
+          />
+        ) : null}
         <p className="text-sm leading-relaxed text-ink-2">
-          Roger will follow up personally if the fit looks right.
           Prefer a quick reply?{" "}
           <a
             href="/contact"
             className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
           >
             Use the contact form
-          </a>{" "}
-         , same inbox.
+          </a>
+          , same inbox.
         </p>
       </div>
     );

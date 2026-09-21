@@ -262,7 +262,11 @@ type SubmitJdResponse struct {
 	Status JdStatus `protobuf:"varint,2,opt,name=status,proto3,enum=career.v1.JdStatus" json:"status,omitempty"`
 	// Fixed human-readable acknowledgement text the /jd-upload page
 	// renders back to the caller so the copy stays server-controlled.
-	Message       string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	// Secret issued once per submission (hex). Present it on
+	// GetJdResult to receive the generated résumé; without it the poll
+	// returns status and score only.
+	ResultToken   string `protobuf:"bytes,4,opt,name=result_token,json=resultToken,proto3" json:"result_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -318,11 +322,20 @@ func (x *SubmitJdResponse) GetMessage() string {
 	return ""
 }
 
+func (x *SubmitJdResponse) GetResultToken() string {
+	if x != nil {
+		return x.ResultToken
+	}
+	return ""
+}
+
 // Poll request.
 type GetJdResultRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// ID from SubmitJdResponse.
-	SubmissionId  string `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	SubmissionId string `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	// Token from SubmitJdResponse; optional, gates the résumé body.
+	ResultToken   string `protobuf:"bytes,2,opt,name=result_token,json=resultToken,proto3" json:"result_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -364,6 +377,13 @@ func (x *GetJdResultRequest) GetSubmissionId() string {
 	return ""
 }
 
+func (x *GetJdResultRequest) GetResultToken() string {
+	if x != nil {
+		return x.ResultToken
+	}
+	return ""
+}
+
 // Poll response.
 type GetJdResultResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -380,9 +400,12 @@ type GetJdResultResponse struct {
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// When the terminal state (ready / below_threshold / failed) was
 	// reached. Unset while the pipeline is still running.
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	// Generated résumé in markdown, only when status is READY and the
+	// request carried the submission's result_token.
+	ResumeMarkdown string `protobuf:"bytes,7,opt,name=resume_markdown,json=resumeMarkdown,proto3" json:"resume_markdown,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetJdResultResponse) Reset() {
@@ -457,6 +480,13 @@ func (x *GetJdResultResponse) GetCompletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *GetJdResultResponse) GetResumeMarkdown() string {
+	if x != nil {
+		return x.ResumeMarkdown
+	}
+	return ""
+}
+
 var File_career_v1_jd_proto protoreflect.FileDescriptor
 
 const file_career_v1_jd_proto_rawDesc = "" +
@@ -468,13 +498,15 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06source\x12%\n" +
 	"\trole_hint\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\broleHint\x12-\n" +
 	"\remployer_hint\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\femployerHint\x12-\n" +
-	"\rcontact_email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\fcontactEmail\"~\n" +
+	"\rcontact_email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\fcontactEmail\"\xa1\x01\n" +
 	"\x10SubmitJdResponse\x12#\n" +
 	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"D\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12!\n" +
+	"\fresult_token\x18\x04 \x01(\tR\vresultToken\"p\n" +
 	"\x12GetJdResultRequest\x12.\n" +
-	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"\xc9\x02\n" +
+	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12*\n" +
+	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xf2\x02\n" +
 	"\x13GetJdResultResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
 	"\vmatch_score\x18\x02 \x01(\x01H\x00R\n" +
@@ -483,7 +515,8 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\x129\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
-	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAtB\x0e\n" +
+	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12'\n" +
+	"\x0fresume_markdown\x18\a \x01(\tR\x0eresumeMarkdownB\x0e\n" +
 	"\f_match_score*h\n" +
 	"\bJdSource\x12\x19\n" +
 	"\x15JD_SOURCE_UNSPECIFIED\x10\x00\x12\x13\n" +
