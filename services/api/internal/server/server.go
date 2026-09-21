@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
@@ -207,11 +208,24 @@ func withLogging(log *slog.Logger, next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 		log.Info("http",
 			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
+			slog.String("path", sanitizeForLog(r.URL.Path)),
 			slog.Int("status", rw.status),
 			slog.Duration("elapsed", time.Since(start)),
 		)
 	})
+}
+
+// sanitizeForLog strips CR/LF from a value before it goes into a
+// structured-log field. An attacker who controls URL path bytes (a
+// crafted request against the plain-HTTP mux) could otherwise inject
+// a newline and forge a fake log line that log aggregators would
+// treat as a separate record — CodeQL js/nodejs-log-injection style.
+// slog's JSON handler already escapes special characters, so this is
+// belt-and-suspenders against a future switch to a text handler.
+func sanitizeForLog(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	return s
 }
 
 type recorder struct {
