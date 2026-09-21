@@ -81,6 +81,14 @@ services:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
     build: !reset null
     pull_policy: always
+    environment:
+      # Ask Roger Phase 4 groundwork. `stub` gives a deterministic
+      # pseudo-embedder that works with no external deps (safe default
+      # for a fresh deploy). Flip to `ollama` and set OLLAMA_URL /
+      # OLLAMA_EMBED_MODEL once an Ollama service is running.
+      SIDECAR_EMBED_PROVIDER: ${SIDECAR_EMBED_PROVIDER:-stub}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
 
   postgres:
     ports: !override [] # no host port in prod
