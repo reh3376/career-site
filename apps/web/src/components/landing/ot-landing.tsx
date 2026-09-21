@@ -73,6 +73,7 @@ export function OtLanding() {
             <NavPill active>OVERVIEW</NavPill>
             <NavPill>PRACTICE</NavPill>
             <NavPill>TIMELINE</NavPill>
+            <NavPill href="/jd-upload">JD.INPUT</NavPill>
             <NavPill href="/contact">CONTACT</NavPill>
             <NavPill href="/register">ACCESS</NavPill>
           </div>
@@ -153,6 +154,12 @@ export function OtLanding() {
           <div className="border border-line-strong bg-paper-2 p-4">
             <ul className="space-y-1 font-mono text-[12px]">
               <NavRow tag="/" label="HOME.IT" href="/" note="switch surface" />
+              <NavRow
+                tag="/jd-upload"
+                label="JD.INPUT"
+                href="/jd-upload"
+                note="hiring managers"
+              />
               <NavRow tag="/register" label="ACCESS.REQ" href="/register" />
               <NavRow tag="/login" label="SESSION.NEW" href="/login" />
               <NavRow tag="/contact" label="MSG.OUT" href="/contact" />
