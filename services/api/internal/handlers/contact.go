@@ -112,16 +112,29 @@ func (h *Contact) SubmitContact(
 		replyChannel = "linkedin"
 	}
 
+	// Hiring-inquiry extras. Persisted only when the category is
+	// HIRING_INQUIRY; a submitter with a different category who
+	// happens to send these fields sees them dropped silently.
+	var hiringRole, hiringJDURL, hiringTargetStart string
+	if msg.Category == v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY {
+		hiringRole = strings.TrimSpace(msg.HiringRole)
+		hiringJDURL = strings.TrimSpace(msg.HiringJdUrl)
+		hiringTargetStart = strings.TrimSpace(msg.HiringTargetStart)
+	}
+
 	stored, err := h.users.CreateSupport(ctx, users.CreateSupportInput{
-		Category:     categoryFromProto(msg.Category),
-		Subject:      subject,
-		Body:         body,
-		UserID:       userID,
-		SenderName:   senderName,
-		SenderEmail:  senderEmail,
-		ReplyChannel: replyChannel,
-		IPHash:       hashIPBytes(req.Peer().Addr),
-		UserAgent:    req.Header().Get("User-Agent"),
+		Category:          categoryFromProto(msg.Category),
+		Subject:           subject,
+		Body:              body,
+		UserID:            userID,
+		SenderName:        senderName,
+		SenderEmail:       senderEmail,
+		ReplyChannel:      replyChannel,
+		IPHash:            hashIPBytes(req.Peer().Addr),
+		UserAgent:         req.Header().Get("User-Agent"),
+		HiringRole:        hiringRole,
+		HiringJDURL:       hiringJDURL,
+		HiringTargetStart: hiringTargetStart,
 	})
 	if err != nil {
 		h.log.Error("support insert failed", slog.String("error", err.Error()))
@@ -186,6 +199,8 @@ func categoryFromProto(c v1.SupportCategory) users.SupportCategory {
 		return users.SupportCategoryContributorAccess
 	case v1.SupportCategory_SUPPORT_CATEGORY_PRESS_INQUIRY:
 		return users.SupportCategoryPressInquiry
+	case v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY:
+		return users.SupportCategoryHiringInquiry
 	default:
 		return users.SupportCategoryOther
 	}
@@ -202,6 +217,8 @@ func categoryDisplay(c users.SupportCategory) string {
 		return "Feature request"
 	case users.SupportCategoryContributorAccess:
 		return "Contributor access request"
+	case users.SupportCategoryHiringInquiry:
+		return "Hiring inquiry"
 	case users.SupportCategoryPressInquiry:
 		return "Press / interview inquiry"
 	default:

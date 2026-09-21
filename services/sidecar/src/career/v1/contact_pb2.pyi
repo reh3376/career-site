@@ -18,6 +18,7 @@ class SupportCategory(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS: _ClassVar[SupportCategory]
     SUPPORT_CATEGORY_PRESS_INQUIRY: _ClassVar[SupportCategory]
     SUPPORT_CATEGORY_OTHER: _ClassVar[SupportCategory]
+    SUPPORT_CATEGORY_HIRING_INQUIRY: _ClassVar[SupportCategory]
 SUPPORT_CATEGORY_UNSPECIFIED: SupportCategory
 SUPPORT_CATEGORY_GENERAL_QUESTION: SupportCategory
 SUPPORT_CATEGORY_BUG_REPORT: SupportCategory
@@ -25,6 +26,7 @@ SUPPORT_CATEGORY_FEATURE_REQUEST: SupportCategory
 SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS: SupportCategory
 SUPPORT_CATEGORY_PRESS_INQUIRY: SupportCategory
 SUPPORT_CATEGORY_OTHER: SupportCategory
+SUPPORT_CATEGORY_HIRING_INQUIRY: SupportCategory
 
 class GetContactOptionsRequest(_message.Message):
     __slots__ = ()
@@ -51,7 +53,7 @@ class GetContactOptionsResponse(_message.Message):
     def __init__(self, availability: _Optional[str] = ..., location_preferences: _Optional[str] = ..., channels: _Optional[_Iterable[_Union[ContactChannel, _Mapping]]] = ...) -> None: ...
 
 class SubmitContactRequest(_message.Message):
-    __slots__ = ("subject", "message", "reply_channel", "conversation_id", "category", "name", "email", "turnstile_token")
+    __slots__ = ("subject", "message", "reply_channel", "conversation_id", "category", "name", "email", "turnstile_token", "hiring_role", "hiring_jd_url", "hiring_target_start")
     class ReplyChannel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         REPLY_CHANNEL_UNSPECIFIED: _ClassVar[SubmitContactRequest.ReplyChannel]
@@ -68,6 +70,9 @@ class SubmitContactRequest(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     TURNSTILE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    HIRING_ROLE_FIELD_NUMBER: _ClassVar[int]
+    HIRING_JD_URL_FIELD_NUMBER: _ClassVar[int]
+    HIRING_TARGET_START_FIELD_NUMBER: _ClassVar[int]
     subject: str
     message: str
     reply_channel: SubmitContactRequest.ReplyChannel
@@ -76,7 +81,10 @@ class SubmitContactRequest(_message.Message):
     name: str
     email: str
     turnstile_token: str
-    def __init__(self, subject: _Optional[str] = ..., message: _Optional[str] = ..., reply_channel: _Optional[_Union[SubmitContactRequest.ReplyChannel, str]] = ..., conversation_id: _Optional[str] = ..., category: _Optional[_Union[SupportCategory, str]] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., turnstile_token: _Optional[str] = ...) -> None: ...
+    hiring_role: str
+    hiring_jd_url: str
+    hiring_target_start: str
+    def __init__(self, subject: _Optional[str] = ..., message: _Optional[str] = ..., reply_channel: _Optional[_Union[SubmitContactRequest.ReplyChannel, str]] = ..., conversation_id: _Optional[str] = ..., category: _Optional[_Union[SupportCategory, str]] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., turnstile_token: _Optional[str] = ..., hiring_role: _Optional[str] = ..., hiring_jd_url: _Optional[str] = ..., hiring_target_start: _Optional[str] = ...) -> None: ...
 
 class SubmitContactResponse(_message.Message):
     __slots__ = ("ticket_id",)

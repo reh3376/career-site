@@ -15,17 +15,30 @@ export const dynamic = "force-dynamic";
 // cookie via callApi.
 type SupportMessage = {
   id: string;
-  ticket_id: string;
+  ticket_id?: string;
+  ticketId?: string;
   category: string;
   status: string;
   subject: string;
   body: string;
-  sender_name: string;
-  sender_email: string;
+  sender_name?: string;
+  senderName?: string;
+  sender_email?: string;
+  senderEmail?: string;
   user_id?: string;
+  userId?: string;
   created_at?: string;
+  createdAt?: string;
   updated_at?: string;
+  updatedAt?: string;
   resolved_at?: string;
+  resolvedAt?: string;
+  hiring_role?: string;
+  hiringRole?: string;
+  hiring_jd_url?: string;
+  hiringJdUrl?: string;
+  hiring_target_start?: string;
+  hiringTargetStart?: string;
 };
 
 type ListResp = {
@@ -67,6 +80,7 @@ async function fetchMessages(
 
 const CATEGORY_LABEL: Record<string, string> = {
   SUPPORT_CATEGORY_GENERAL_QUESTION: "General question",
+  SUPPORT_CATEGORY_HIRING_INQUIRY: "Hiring inquiry",
   SUPPORT_CATEGORY_BUG_REPORT: "Bug report",
   SUPPORT_CATEGORY_FEATURE_REQUEST: "Feature request",
   SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS: "Contributor access",
@@ -201,14 +215,24 @@ function FilterTab({
 }
 
 function MessageRow({ m }: { m: SupportMessage }) {
-  const created = m.created_at ? new Date(m.created_at) : null;
+  const createdIso = m.created_at ?? m.createdAt;
+  const created = createdIso ? new Date(createdIso) : null;
   const when = created ? formatWhen(created) : "-";
   const resolved = m.status === "SUPPORT_STATUS_RESOLVED";
+  const ticket = m.ticket_id ?? m.ticketId ?? "";
+  const senderName = m.sender_name ?? m.senderName ?? "";
+  const senderEmail = m.sender_email ?? m.senderEmail ?? "";
+  const hiringRole = m.hiring_role ?? m.hiringRole ?? "";
+  const hiringUrl = m.hiring_jd_url ?? m.hiringJdUrl ?? "";
+  const hiringStart = m.hiring_target_start ?? m.hiringTargetStart ?? "";
+  const isHiring = m.category === "SUPPORT_CATEGORY_HIRING_INQUIRY";
   return (
     <li className="py-5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <span className="text-ink">{m.ticket_id}</span>
-        <span>{CATEGORY_LABEL[m.category] ?? m.category}</span>
+        <span className="text-ink">{ticket}</span>
+        <span className={isHiring ? "text-accent" : ""}>
+          {CATEGORY_LABEL[m.category] ?? m.category}
+        </span>
         <span>{when}</span>
         {resolved ? (
           <span className="text-success">· resolved</span>
@@ -223,16 +247,49 @@ function MessageRow({ m }: { m: SupportMessage }) {
         {m.subject}
       </p>
       <p className="mt-1 text-sm text-ink-2">
-        <span className="text-ink">{m.sender_name}</span>{" "}
+        <span className="text-ink">{senderName}</span>{" "}
         <a
-          href={`mailto:${m.sender_email}?subject=Re%3A%20${encodeURIComponent(
+          href={`mailto:${senderEmail}?subject=Re%3A%20${encodeURIComponent(
             m.subject,
-          )}%20%5B${m.ticket_id}%5D`}
+          )}%20%5B${ticket}%5D`}
           className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
         >
-          &lt;{m.sender_email}&gt;
+          &lt;{senderEmail}&gt;
         </a>
       </p>
+      {isHiring && (hiringRole || hiringUrl || hiringStart) ? (
+        <dl className="mt-3 grid gap-1 border-l-2 border-accent bg-accent-soft/30 py-2 pl-3 pr-2 font-mono text-[11px] text-ink-2 sm:grid-cols-[7rem_1fr]">
+          {hiringRole ? (
+            <>
+              <dt className="uppercase tracking-[0.14em] text-ink-3">role</dt>
+              <dd className="m-0 text-ink">{hiringRole}</dd>
+            </>
+          ) : null}
+          {hiringStart ? (
+            <>
+              <dt className="uppercase tracking-[0.14em] text-ink-3">
+                target start
+              </dt>
+              <dd className="m-0 text-ink">{hiringStart}</dd>
+            </>
+          ) : null}
+          {hiringUrl ? (
+            <>
+              <dt className="uppercase tracking-[0.14em] text-ink-3">jd</dt>
+              <dd className="m-0">
+                <a
+                  href={hiringUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+                >
+                  {hiringUrl}
+                </a>
+              </dd>
+            </>
+          ) : null}
+        </dl>
+      ) : null}
       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-2">
         {m.body}
       </p>
@@ -240,7 +297,7 @@ function MessageRow({ m }: { m: SupportMessage }) {
         <ResolveButton
           id={m.id}
           currentlyResolved={resolved}
-          ticketId={m.ticket_id}
+          ticketId={ticket}
         />
       </div>
     </li>

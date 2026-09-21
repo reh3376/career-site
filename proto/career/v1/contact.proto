@@ -82,6 +82,19 @@ message SubmitContactRequest {
   // Cloudflare Turnstile response token. Required on anonymous
   // submissions; ignored for members.
   string turnstile_token = 8 [(buf.validate.field).string.max_len = 4096];
+  // The role the sender is considering Roger for. Populated by the
+  // form when category = HIRING_INQUIRY; ignored otherwise. Free
+  // text; used for admin triage.
+  string hiring_role = 9 [(buf.validate.field).string.max_len = 200];
+  // Absolute URL of the job posting. Populated by the form when
+  // category = HIRING_INQUIRY; ignored otherwise. Not validated
+  // beyond length so recruiters can drop URLs from ATS systems that
+  // include tokens / query strings.
+  string hiring_jd_url = 10 [(buf.validate.field).string.max_len = 2000];
+  // Free-text "target start" the sender's hiring cycle is aiming
+  // at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form
+  // when category = HIRING_INQUIRY; ignored otherwise.
+  string hiring_target_start = 11 [(buf.validate.field).string.max_len = 100];
 
   // How the member wants a reply.
   enum ReplyChannel {
@@ -112,6 +125,10 @@ enum SupportCategory {
   SUPPORT_CATEGORY_PRESS_INQUIRY = 5;
   // Anything not covered above.
   SUPPORT_CATEGORY_OTHER = 6;
+  // Hiring manager reaching out about a specific role. The web
+  // form reveals dedicated fields (role, JD URL, target start) when
+  // this is selected; those land on SubmitContactRequest.hiring_*.
+  SUPPORT_CATEGORY_HIRING_INQUIRY = 7;
 }
 
 // Submission receipt.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitContactAction, type ContactState } from "./actions";
@@ -9,6 +9,7 @@ const initial: ContactState = {};
 
 const CATEGORIES = [
   { key: "general_question", label: "General question" },
+  { key: "hiring_inquiry", label: "Hiring inquiry (has a role in mind)" },
   { key: "bug_report", label: "Bug report" },
   { key: "feature_request", label: "Feature request" },
   { key: "contributor_access", label: "Contributor access on a GitHub repo" },
@@ -40,6 +41,14 @@ export function ContactForm({
 }) {
   const [state, action] = useActionState(submitContactAction, initial);
   const v = state.values ?? {};
+  // Track the current category client-side so the hiring-inquiry
+  // extras (role / JD URL / target start) can reveal without a
+  // round-trip. Initial state honours a validation replay
+  // (state.values.category), a ?category= URL param, or empty.
+  const [category, setCategory] = useState<string>(
+    v.category ?? initialCategory ?? "",
+  );
+  const isHiring = category === "hiring_inquiry";
 
   if (state.ok) {
     return (
@@ -81,7 +90,8 @@ export function ContactForm({
           id="category"
           name="category"
           required
-          defaultValue={v.category ?? initialCategory ?? ""}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           className={inputClass}
         >
           <option value="" disabled>
@@ -94,6 +104,69 @@ export function ContactForm({
           ))}
         </select>
       </div>
+
+      {isHiring ? (
+        <div className="grid gap-8 border-l-2 border-accent bg-accent-soft/30 py-5 pl-5 pr-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+              hiring inquiry
+            </p>
+            <p className={helpClass}>
+              Bit of context so Roger can triage. All optional; a JD
+              URL below is nice, but pasting the full posting at{" "}
+              <a
+                href="/jd-upload"
+                className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+              >
+                /jd-upload
+              </a>{" "}
+              is what triggers the tailored-résumé pipeline.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="hiring_role" className={labelClass}>
+              Role
+            </label>
+            <input
+              id="hiring_role"
+              name="hiring_role"
+              type="text"
+              maxLength={200}
+              defaultValue={v.hiring_role ?? ""}
+              placeholder="e.g. Sr. Manager, Manufacturing AI"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="hiring_target_start" className={labelClass}>
+              Target start
+            </label>
+            <input
+              id="hiring_target_start"
+              name="hiring_target_start"
+              type="text"
+              maxLength={100}
+              defaultValue={v.hiring_target_start ?? ""}
+              placeholder="ASAP, Q1 2027, flexible…"
+              className={inputClass}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor="hiring_jd_url" className={labelClass}>
+              JD link
+            </label>
+            <input
+              id="hiring_jd_url"
+              name="hiring_jd_url"
+              type="url"
+              maxLength={2000}
+              defaultValue={v.hiring_jd_url ?? ""}
+              placeholder="https://your-ats.example.com/jobs/12345"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {!signedIn && (
         <div className="grid gap-8 sm:grid-cols-2">

@@ -43,6 +43,10 @@ const (
 	SupportCategory_SUPPORT_CATEGORY_PRESS_INQUIRY SupportCategory = 5
 	// Anything not covered above.
 	SupportCategory_SUPPORT_CATEGORY_OTHER SupportCategory = 6
+	// Hiring manager reaching out about a specific role. The web
+	// form reveals dedicated fields (role, JD URL, target start) when
+	// this is selected; those land on SubmitContactRequest.hiring_*.
+	SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY SupportCategory = 7
 )
 
 // Enum value maps for SupportCategory.
@@ -55,6 +59,7 @@ var (
 		4: "SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS",
 		5: "SUPPORT_CATEGORY_PRESS_INQUIRY",
 		6: "SUPPORT_CATEGORY_OTHER",
+		7: "SUPPORT_CATEGORY_HIRING_INQUIRY",
 	}
 	SupportCategory_value = map[string]int32{
 		"SUPPORT_CATEGORY_UNSPECIFIED":        0,
@@ -64,6 +69,7 @@ var (
 		"SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS": 4,
 		"SUPPORT_CATEGORY_PRESS_INQUIRY":      5,
 		"SUPPORT_CATEGORY_OTHER":              6,
+		"SUPPORT_CATEGORY_HIRING_INQUIRY":     7,
 	}
 )
 
@@ -336,8 +342,21 @@ type SubmitContactRequest struct {
 	// Cloudflare Turnstile response token. Required on anonymous
 	// submissions; ignored for members.
 	TurnstileToken string `protobuf:"bytes,8,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The role the sender is considering Roger for. Populated by the
+	// form when category = HIRING_INQUIRY; ignored otherwise. Free
+	// text; used for admin triage.
+	HiringRole string `protobuf:"bytes,9,opt,name=hiring_role,json=hiringRole,proto3" json:"hiring_role,omitempty"`
+	// Absolute URL of the job posting. Populated by the form when
+	// category = HIRING_INQUIRY; ignored otherwise. Not validated
+	// beyond length so recruiters can drop URLs from ATS systems that
+	// include tokens / query strings.
+	HiringJdUrl string `protobuf:"bytes,10,opt,name=hiring_jd_url,json=hiringJdUrl,proto3" json:"hiring_jd_url,omitempty"`
+	// Free-text "target start" the sender's hiring cycle is aiming
+	// at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form
+	// when category = HIRING_INQUIRY; ignored otherwise.
+	HiringTargetStart string `protobuf:"bytes,11,opt,name=hiring_target_start,json=hiringTargetStart,proto3" json:"hiring_target_start,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SubmitContactRequest) Reset() {
@@ -426,6 +445,27 @@ func (x *SubmitContactRequest) GetTurnstileToken() string {
 	return ""
 }
 
+func (x *SubmitContactRequest) GetHiringRole() string {
+	if x != nil {
+		return x.HiringRole
+	}
+	return ""
+}
+
+func (x *SubmitContactRequest) GetHiringJdUrl() string {
+	if x != nil {
+		return x.HiringJdUrl
+	}
+	return ""
+}
+
+func (x *SubmitContactRequest) GetHiringTargetStart() string {
+	if x != nil {
+		return x.HiringTargetStart
+	}
+	return ""
+}
+
 // Submission receipt.
 type SubmitContactResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -485,7 +525,7 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"\x19GetContactOptionsResponse\x12\"\n" +
 	"\favailability\x18\x01 \x01(\tR\favailability\x121\n" +
 	"\x14location_preferences\x18\x02 \x01(\tR\x13locationPreferences\x125\n" +
-	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\x8c\x04\n" +
+	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\x9e\x05\n" +
 	"\x14SubmitContactRequest\x12$\n" +
 	"\asubject\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\asubject\x12$\n" +
@@ -498,13 +538,18 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bcategory\x12\x1c\n" +
 	"\x04name\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x04name\x12\x1e\n" +
 	"\x05email\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\xc0\x02R\x05email\x121\n" +
-	"\x0fturnstile_token\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80 R\x0eturnstileToken\"b\n" +
+	"\x0fturnstile_token\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80 R\x0eturnstileToken\x12)\n" +
+	"\vhiring_role\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\n" +
+	"hiringRole\x12,\n" +
+	"\rhiring_jd_url\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vhiringJdUrl\x127\n" +
+	"\x13hiring_target_start\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dR\x11hiringTargetStart\"b\n" +
 	"\fReplyChannel\x12\x1d\n" +
 	"\x19REPLY_CHANNEL_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13REPLY_CHANNEL_EMAIL\x10\x01\x12\x1a\n" +
 	"\x16REPLY_CHANNEL_LINKEDIN\x10\x02\"4\n" +
 	"\x15SubmitContactResponse\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId*\x8a\x02\n" +
+	"\tticket_id\x18\x01 \x01(\tR\bticketId*\xaf\x02\n" +
 	"\x0fSupportCategory\x12 \n" +
 	"\x1cSUPPORT_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
 	"!SUPPORT_CATEGORY_GENERAL_QUESTION\x10\x01\x12\x1f\n" +
@@ -512,7 +557,8 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	" SUPPORT_CATEGORY_FEATURE_REQUEST\x10\x03\x12'\n" +
 	"#SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS\x10\x04\x12\"\n" +
 	"\x1eSUPPORT_CATEGORY_PRESS_INQUIRY\x10\x05\x12\x1a\n" +
-	"\x16SUPPORT_CATEGORY_OTHER\x10\x062\xd4\x01\n" +
+	"\x16SUPPORT_CATEGORY_OTHER\x10\x06\x12#\n" +
+	"\x1fSUPPORT_CATEGORY_HIRING_INQUIRY\x10\a2\xd4\x01\n" +
 	"\x0eContactService\x12d\n" +
 	"\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12\\\n" +
 	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03B\xa6\x01\n" +

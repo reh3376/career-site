@@ -3331,9 +3331,18 @@ type SupportMessage struct {
 	// status changes).
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Set only for resolved messages.
-	ResolvedAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ResolvedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
+	// Role the sender is considering Roger for; populated only when
+	// category is HIRING_INQUIRY.
+	HiringRole string `protobuf:"bytes,13,opt,name=hiring_role,json=hiringRole,proto3" json:"hiring_role,omitempty"`
+	// URL of the job posting; populated only when category is
+	// HIRING_INQUIRY.
+	HiringJdUrl string `protobuf:"bytes,14,opt,name=hiring_jd_url,json=hiringJdUrl,proto3" json:"hiring_jd_url,omitempty"`
+	// Free-text target start date; populated only when category is
+	// HIRING_INQUIRY.
+	HiringTargetStart string `protobuf:"bytes,15,opt,name=hiring_target_start,json=hiringTargetStart,proto3" json:"hiring_target_start,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SupportMessage) Reset() {
@@ -3448,6 +3457,27 @@ func (x *SupportMessage) GetResolvedAt() *timestamppb.Timestamp {
 		return x.ResolvedAt
 	}
 	return nil
+}
+
+func (x *SupportMessage) GetHiringRole() string {
+	if x != nil {
+		return x.HiringRole
+	}
+	return ""
+}
+
+func (x *SupportMessage) GetHiringJdUrl() string {
+	if x != nil {
+		return x.HiringJdUrl
+	}
+	return ""
+}
+
+func (x *SupportMessage) GetHiringTargetStart() string {
+	if x != nil {
+		return x.HiringTargetStart
+	}
+	return ""
 }
 
 // Contact-message list request.
@@ -5708,7 +5738,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"occurredAt\"p\n" +
 	"\x10GetAuditResponse\x12/\n" +
 	"\aentries\x18\x01 \x03(\v2\x15.career.v1.AuditEntryR\aentries\x12+\n" +
-	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\"\xe5\x03\n" +
+	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\"\xda\x04\n" +
 	"\x0eSupportMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tticket_id\x18\x02 \x01(\tR\bticketId\x126\n" +
@@ -5726,7 +5756,11 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12;\n" +
 	"\vresolved_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"resolvedAt\"\xe6\x01\n" +
+	"resolvedAt\x12\x1f\n" +
+	"\vhiring_role\x18\r \x01(\tR\n" +
+	"hiringRole\x12\"\n" +
+	"\rhiring_jd_url\x18\x0e \x01(\tR\vhiringJdUrl\x12.\n" +
+	"\x13hiring_target_start\x18\x0f \x01(\tR\x11hiringTargetStart\"\xe6\x01\n" +
 	"\x1aListContactMessagesRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12:\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x18.career.v1.SupportStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x12@\n" +
