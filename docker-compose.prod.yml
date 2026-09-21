@@ -46,6 +46,10 @@ services:
       NEXT_TELEMETRY_DISABLED: "1"
       API_URL: http://api:8080
       NEXT_PUBLIC_API_URL: https://${SITE_DOMAIN}
+      # Outbound social links surfaced in the footer + IT landing.
+      # Empty values hide the corresponding link on the site.
+      NEXT_PUBLIC_LINKEDIN_URL: ${NEXT_PUBLIC_LINKEDIN_URL:-}
+      NEXT_PUBLIC_GITHUB_URL: ${NEXT_PUBLIC_GITHUB_URL:-https://github.com/reh3376}
 
   api:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
