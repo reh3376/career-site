@@ -43,6 +43,9 @@ services:
       HOSTNAME: 0.0.0.0
       API_URL: http://api:8080
       NEXT_TELEMETRY_DISABLED: "1"
+      # Outbound links, read at request time (empty hides the link).
+      LINKEDIN_URL: ${LINKEDIN_URL:-}
+      GITHUB_URL: ${GITHUB_URL:-https://github.com/reh3376}
     networks: [app]
 
   api:

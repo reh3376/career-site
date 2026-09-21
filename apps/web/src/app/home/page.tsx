@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { OtPanel } from "@/components/ot-panel";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
+import { getSocialLinks } from "@/lib/social-links";
 import { getUiMode } from "@/lib/ui-mode";
 
 import { ActivityBeacon } from "./activity-beacon";
@@ -202,6 +203,7 @@ export default async function HomePage() {
             </Link>{" "}
             <span className="text-ink-3">: on-the-floor photos with context</span>
           </li>
+          <SocialSurfaceRows />
           <li>
             <span className="text-ink-3">ASK.ROGER</span>{" "}
             <span className="text-ink-3">·</span>{" "}
@@ -280,6 +282,8 @@ export default async function HomePage() {
           body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources. Available Q4 2026."
         />
       </section>
+
+      <SocialLine />
 
       <section className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-[1fr_1.4fr]">
         <div>
@@ -409,6 +413,79 @@ function ComingSoonCard({
       </p>
       <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
     </div>
+  );
+}
+
+// Outbound profile links for the OT surfaces list; only configured
+// links render (see lib/social-links).
+function SocialSurfaceRows() {
+  const s = getSocialLinks();
+  return (
+    <>
+      {s.linkedin ? (
+        <li>
+          <span className="text-signal">LINKEDIN</span>{" "}
+          <span className="text-ink-3">·</span>{" "}
+          <a
+            href={s.linkedin}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="text-accent no-underline hover:text-accent-hover"
+          >
+            {s.linkedinHandle ?? "profile"}
+          </a>{" "}
+          <span className="text-ink-3">: profile, opens in a new tab</span>
+        </li>
+      ) : null}
+      {s.github ? (
+        <li>
+          <span className="text-signal">GITHUB</span>{" "}
+          <span className="text-ink-3">·</span>{" "}
+          <a
+            href={s.github}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="text-accent no-underline hover:text-accent-hover"
+          >
+            {s.githubHandle ?? "repos"}
+          </a>{" "}
+          <span className="text-ink-3">: public repositories</span>
+        </li>
+      ) : null}
+    </>
+  );
+}
+
+// Outbound profile links for the IT layout, under the live cards.
+function SocialLine() {
+  const s = getSocialLinks();
+  if (!s.linkedin && !s.github) return null;
+  return (
+    <p className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        elsewhere
+      </span>
+      {s.linkedin ? (
+        <a
+          href={s.linkedin}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+        >
+          LinkedIn
+        </a>
+      ) : null}
+      {s.github ? (
+        <a
+          href={s.github}
+          rel="noopener noreferrer"
+          target="_blank"
+          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+        >
+          {s.githubHandle ?? "GitHub"}
+        </a>
+      ) : null}
+    </p>
   );
 }
 
