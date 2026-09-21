@@ -61,6 +61,11 @@ export default async function ArticleReaderPage({
           {article.subtitle}
         </p>
       ) : null}
+      {article.date ? (
+        <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          {article.date}
+        </p>
+      ) : null}
 
       <div className="prose-article mt-10 text-ink-2">
         <ReactMarkdown

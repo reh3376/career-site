@@ -18,6 +18,12 @@ export default function HowAskRogerWorksPage() {
       >
         How Ask Roger works.
       </h1>
+      <p className="mt-6 inline-flex items-center gap-2 border border-signal bg-signal-soft/40 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+        <span className="pilot text-signal" aria-hidden="true" />
+        status: not yet live
+        <span className="text-ink-4">·</span>
+        <span className="text-ink-2">available Q4 2026</span>
+      </p>
       <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
           This page is under construction. When Ask Roger launches (late

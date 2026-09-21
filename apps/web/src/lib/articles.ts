@@ -49,6 +49,11 @@ export type ArticleSummary = {
   slug: string;
   title: string;
   subtitle?: string;
+  // Raw `date:` value from the article's YAML front matter — either a
+  // year ("2026") or an ISO-like string ("2026-09-20"). Undefined
+  // when the article has no date. The renderer decides how to
+  // format it.
+  date?: string;
   order: number;
 };
 
@@ -113,6 +118,7 @@ async function readOne(spec: ArticleSpec): Promise<Article> {
     slug: spec.slug,
     title,
     subtitle: meta.subtitle || undefined,
+    date: meta.date || undefined,
     order: spec.order,
     body,
   };
@@ -131,6 +137,7 @@ export async function listArticles(): Promise<ArticleSummary[]> {
         slug: a.slug,
         title: a.title,
         subtitle: a.subtitle,
+        date: a.date,
         order: a.order,
       });
     } catch {
