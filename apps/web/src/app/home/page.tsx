@@ -7,6 +7,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 import { getUiMode } from "@/lib/ui-mode";
 
+import { ActivityBeacon } from "./activity-beacon";
 import { logoutAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -53,6 +54,7 @@ export default async function HomePage() {
         title={`SESSION.ACTIVE · ${me.email}`}
         note={me.role === "MEMBER_ROLE_ADMIN" ? "role admin" : "role member"}
       >
+        <ActivityBeacon contentId="/home" />
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
             under construction · ships late 2026
@@ -115,6 +117,7 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-16 sm:px-10 sm:py-20">
+      <ActivityBeacon contentId="/home" />
       <div className="mb-14 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           signed in as <span className="text-ink">{me.email}</span>
