@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listArticles } from "@/lib/articles";
 
 // A three-tile strip surfacing the newest publishable articles on the
-// public landing page. Server component — reads the filesystem
+// public landing page. Server component, reads the filesystem
 // allow-list at request time. Renders nothing when there are zero
 // articles, so a stripped-back build doesn't leave an empty section.
 export async function RecentWritingStrip() {

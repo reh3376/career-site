@@ -15,7 +15,7 @@ export type SessionUser = {
 };
 
 // Resolve the calling browser's session to a SessionUser, or null when
-// there is no session or the API rejects it. Server-only — do not call
+// there is no session or the API rejects it. Server-only, do not call
 // from client components. Cheap enough to invoke from every layout that
 // needs role-aware navigation (the whole request already fans out from
 // the RSC render).

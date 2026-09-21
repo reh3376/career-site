@@ -52,7 +52,7 @@ export default async function ResetPasswordPage({
       </h1>
       <p className="mt-6 max-w-md text-base leading-relaxed text-ink-2">
         Once you save, every other browser signed into this account
-        will be logged out — including any lingering session from
+        will be logged out, including any lingering session from
         whoever asked for the reset link.
       </p>
       <div className="mt-12">

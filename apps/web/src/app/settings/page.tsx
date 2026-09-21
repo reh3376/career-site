@@ -32,10 +32,10 @@ export default async function SettingsPage() {
       </h1>
       <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
         Site and account preferences. More lands here as features come
-        online &mdash; the IT / OT display mode is next.
+        online, the IT / OT display mode is next.
       </p>
 
-      {/* Account block — signed-in only. Kept intentionally spartan;
+      {/* Account block, signed-in only. Kept intentionally spartan;
           the real account-edit surface (change email, change password,
           delete account) ships alongside the admin console rewrite. */}
       {me ? (
@@ -55,7 +55,7 @@ export default async function SettingsPage() {
           </h2>
           <dl className="mt-6 grid gap-4 font-mono text-sm text-ink-2 sm:grid-cols-[8rem_1fr]">
             <dt className="text-ink-3">name</dt>
-            <dd className="m-0 text-ink">{me.name || "—"}</dd>
+            <dd className="m-0 text-ink">{me.name || "-"}</dd>
             <dt className="text-ink-3">email</dt>
             <dd className="m-0 text-ink">{me.email}</dd>
             <dt className="text-ink-3">role</dt>
@@ -124,7 +124,7 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      {/* Display block — always shown. The mode toggle is a client
+      {/* Display block, always shown. The mode toggle is a client
           component that flips <html data-mode> optimistically and then
           persists via a server action; every page across the site
           re-tokens off the same attribute. */}
@@ -146,8 +146,8 @@ export default async function SettingsPage() {
           Two visual modes are available. <strong className="text-ink">IT</strong>
           {" "}is the standard editorial presentation. <strong className="text-ink">OT</strong>
           {" "}re-renders the front-end to feel like a plant HMI /
-          SCADA screen &mdash; dark panels, mono type, tag names,
-          status chips &mdash; the kind of surface Roger builds for
+          SCADA screen, dark panels, mono type, tag names,
+          status chips, the kind of surface Roger builds for
           control rooms.
         </p>
         <div className="mt-6 flex items-center gap-4">

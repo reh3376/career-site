@@ -92,7 +92,7 @@ export default async function VerifyPage({
       </Heading>
       <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
         Your email is verified. Roger has been notified and will review your
-        request &mdash; usually within a day.
+        request, usually within a day.
       </p>
       <p className="mt-3 text-sm text-ink-3">
         You&rsquo;ll receive an email either way. Nothing else you need to do

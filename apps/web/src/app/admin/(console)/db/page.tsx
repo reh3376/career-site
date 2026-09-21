@@ -5,7 +5,7 @@ import { getSessionCookie } from "@/lib/session";
 
 import { QueryConsole } from "./query-console";
 
-export const metadata: Metadata = { title: "Admin — DB query" };
+export const metadata: Metadata = { title: "Admin · DB query" };
 export const dynamic = "force-dynamic";
 
 type DbColumn = {

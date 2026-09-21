@@ -6,7 +6,7 @@
 //
 // Reads use `process.env.NEXT_PUBLIC_*`, inlined at build time by
 // Next.js, so these values are baked into the client bundle. Do not
-// put anything sensitive here — treat any value as public.
+// put anything sensitive here, treat any value as public.
 
 const LINKEDIN_URL_RE = /^https:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9-]+\/?$/;
 const GITHUB_URL_RE = /^https:\/\/github\.com\/[A-Za-z0-9._-]+\/?$/;
@@ -19,7 +19,7 @@ export type SocialLinks = {
 
 // getSocialLinks returns only the links whose env values look
 // well-formed. An invalid value falls back to undefined rather than
-// rendering a broken link — a typo on prod is safer that way.
+// rendering a broken link, a typo on prod is safer that way.
 export function getSocialLinks(): SocialLinks {
   const gh = (process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/reh3376").trim();
   const li = (process.env.NEXT_PUBLIC_LINKEDIN_URL ?? "").trim();

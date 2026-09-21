@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Admin — Overview" };
+export const metadata: Metadata = { title: "Admin · Overview" };
 
 // Landing page for the admin console. Right now it's a directory of
 // what lives under /admin. As each surface goes live (contacts,
 // registrations, access), it gets a real dashboard tile with counts
-// pulled from the AdminService RPCs — no proto for those yet, so this
+// pulled from the AdminService RPCs, no proto for those yet, so this
 // stays a text list until the next PR.
 export default function AdminOverviewPage() {
   return (
@@ -17,9 +17,9 @@ export default function AdminOverviewPage() {
         Overview.
       </h1>
       <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
-        Everything you do to keep this site running — reviewing
+        Everything you do to keep this site running, reviewing
         registrations, replying to contact messages, managing access
-        grants — routes through here. Each surface is being built out
+        grants, routes through here. Each surface is being built out
         one PR at a time.
       </p>
 

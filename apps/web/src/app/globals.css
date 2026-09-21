@@ -22,12 +22,12 @@
   --color-line: #d4d5d1;
   --color-line-strong: #b5b6b1;
 
-  /* Accent — deep teal-blue, reads as technical / blueprint */
+  /* Accent, deep teal-blue, reads as technical / blueprint */
   --color-accent: #164e63;
   --color-accent-hover: #0e3b4a;
   --color-accent-soft: #e3eef2;
 
-  /* Signal — safety orange. Used only for live-status indicators. */
+  /* Signal, safety orange. Used only for live-status indicators. */
   --color-signal: #c2410c;
   --color-signal-soft: #fce8dd;
 
@@ -36,7 +36,7 @@
   --color-warning: #92400e;
   --color-danger: #991b1b;
 
-  /* Type — assigned in layout.tsx via next/font */
+  /* Type, assigned in layout.tsx via next/font */
   --font-display: var(--font-fraunces, serif);
   --font-sans: var(--font-inter-tight, -apple-system, BlinkMacSystemFont, sans-serif);
   --font-mono: var(--font-jetbrains-mono, ui-monospace, monospace);
@@ -69,7 +69,7 @@ body {
   color: var(--color-paper);
 }
 
-/* Considered focus ring — slightly offset, uses accent */
+/* Considered focus ring, slightly offset, uses accent */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
@@ -93,9 +93,9 @@ body {
 }
 
 /* -----------------------------------------------------------------------
- * The single motion moment — a slow, considered pulse used behind the
+ * The single motion moment, a slow, considered pulse used behind the
  * "system · nominal" indicator in the header. Not a fade-in, not a
- * scroll effect — just one live element that ties the brand back to
+ * scroll effect, just one live element that ties the brand back to
  * Roger's actual work (running 24/7 systems).
  * ----------------------------------------------------------------------- */
 @keyframes pulse-signal {
@@ -112,7 +112,7 @@ body {
 }
 
 /* -----------------------------------------------------------------------
- * A hairline rule with structural meaning — thicker on one side to
+ * A hairline rule with structural meaning, thicker on one side to
  * suggest a plotted line, not a divider. Used sparingly to break the
  * hero from the sections below.
  * ----------------------------------------------------------------------- */
@@ -143,7 +143,7 @@ body {
  * mode-specific structure on top of the token switch.
  * ----------------------------------------------------------------------- */
 html[data-mode="ot"] {
-  --color-paper: #10141a;         /* deep graphite — the plant screen */
+  --color-paper: #10141a;         /* deep graphite, the plant screen */
   --color-paper-2: #171d26;       /* panel surface */
   --color-paper-3: #1f2733;       /* panel elevation */
   --color-ink: #e6ebf2;           /* HMI foreground text */
@@ -162,7 +162,7 @@ html[data-mode="ot"] {
   --color-signal: #f59e0b;
   --color-signal-soft: rgba(245, 158, 11, 0.16);
 
-  /* Semantic — HMI-legible saturations */
+  /* Semantic, HMI-legible saturations */
   --color-success: #22c55e;       /* RUNNING */
   --color-warning: #f59e0b;       /* WARN */
   --color-danger:  #ef4444;       /* FAULT / E-STOP */
@@ -184,7 +184,7 @@ html[data-mode="ot"] ::selection {
 }
 
 /* Small "LED" pilot for status chips in OT-mode UIs. Not tied to the
-   pulse-signal keyframe on purpose — pilots stay on. */
+   pulse-signal keyframe on purpose, pilots stay on. */
 html[data-mode="ot"] .pilot {
   display: inline-block;
   width: 8px;

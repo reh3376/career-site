@@ -103,7 +103,7 @@ export function RegisterForm() {
       <SubmitButton />
 
       <p className="text-xs leading-relaxed text-ink-3">
-        Registration is reviewed by Roger &mdash; usually within a day.
+        Registration is reviewed by Roger, usually within a day.
         You&rsquo;ll receive an email when he decides.
       </p>
     </form>

@@ -15,7 +15,7 @@ export type SubmitState = {
   };
 };
 
-// Server action for the /jd-upload textarea. Public — no session
+// Server action for the /jd-upload textarea. Public, no session
 // cookie needed. Forwards to career.v1.JdService.SubmitJd; the
 // endpoint is rate-limited server-side (5 per 15 min per IP+JD).
 export async function submitJdAction(
@@ -33,7 +33,7 @@ export async function submitJdAction(
 
   if (jdText.length < 100) {
     return {
-      error: "Paste the full JD — we need at least 100 characters to work with.",
+      error: "Paste the full JD, we need at least 100 characters to work with.",
       values,
     };
   }

@@ -205,7 +205,7 @@ export default async function HomePage() {
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
         You&rsquo;re in. Articles, projects, and Ask Roger land in the
-        coming iterations — the two cards below preview what&rsquo;s coming
+        coming iterations, the two cards below preview what&rsquo;s coming
         next.
       </p>
 
@@ -220,7 +220,7 @@ export default async function HomePage() {
         <ComingSoonCard
           label="ask roger"
           title="Ask Roger anything"
-          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks — with citations back to primary sources."
+          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources."
         />
       </section>
 
@@ -399,7 +399,7 @@ function HistoryLine({
 }) {
   const at = e.occurred_at ?? e.occurredAt;
   const contentId = e.content_id ?? e.contentId;
-  const when = at ? relative(new Date(at), nowMs) : "—";
+  const when = at ? relative(new Date(at), nowMs) : "-";
   return (
     <li className="text-ink-2">
       <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

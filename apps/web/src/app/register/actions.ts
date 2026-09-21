@@ -67,7 +67,7 @@ export async function registerAction(
     return { error: message, values };
   }
 
-  // Same landing for happy path and duplicate email — the API returns the
+  // Same landing for happy path and duplicate email, the API returns the
   // generic "Check your email" response either way, so nothing to leak.
   redirect(`/register/check-email?email=${encodeURIComponent(email)}`);
 }

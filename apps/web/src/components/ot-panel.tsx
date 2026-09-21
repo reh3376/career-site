@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 // OT-mode panel wrapper. Renders a plant-HMI-style tag/title band
 // above the child content. Callers pass the tag (e.g. "MSG-01"), the
 // title (e.g. "MESSAGE OUT · CONTACT"), and an optional right-side
-// note. The wrapper doesn't change the existing page body — it just
+// note. The wrapper doesn't change the existing page body, it just
 // adds framing so the OT-mode page feels like a discrete HMI screen
 // rather than a re-toned web page. Pages should render this ONLY
 // when getUiMode() returns "ot"; the IT surface stays unchanged.

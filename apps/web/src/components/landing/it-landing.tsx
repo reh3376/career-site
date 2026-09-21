@@ -7,7 +7,7 @@ import { getSocialLinks } from "@/lib/social-links";
 
 // Landing. Editorial, one column, with image bands set into the reading
 // gutter rather than filling the viewport. The type does most of the
-// work — Fraunces variable at display sizes for the hero, real numbers
+// work, Fraunces variable at display sizes for the hero, real numbers
 // set in the display face too so "30" and "8" carry weight instead of
 // being data points glued next to prose.
 //
@@ -19,7 +19,7 @@ import { getSocialLinks } from "@/lib/social-links";
 const OFFERINGS = [
   {
     title: "Digital transformation",
-    body: "Take a plant from paper logbooks and disconnected historians to a data-first operation — instrumentation, data model, ontology, event streams — without stopping production.",
+    body: "Take a plant from paper logbooks and disconnected historians to a data-first operation, instrumentation, data model, ontology, event streams, without stopping production.",
   },
   {
     title: "Process optimization",
@@ -31,7 +31,7 @@ const OFFERINGS = [
   },
   {
     title: "IT / OT convergence",
-    body: "Bridge the plant network to the enterprise stack — safely. Segmented architectures, historian federation, MES / ERP integration, and the governance that keeps ops teams sleeping through the night.",
+    body: "Bridge the plant network to the enterprise stack, safely. Segmented architectures, historian federation, MES / ERP integration, and the governance that keeps ops teams sleeping through the night.",
   },
   {
     title: "Industrial DataOps + applied AI",
@@ -44,7 +44,7 @@ export function ItLanding() {
     <>
       {/* -----------------------------------------------------------------
        * HERO
-       * A single big Fraunces headline. The em-dash break is not decoration —
+       * A single big Fraunces headline. The em-dash break is not decoration,
        * it's the point where the persona ("Roger Henley") stops and the
        * practice ("Industrial automation…") starts. The eyebrow is deliberately
        * lowercase mono; the AI default here would be tracked-out ALL CAPS.
@@ -71,7 +71,7 @@ export function ItLanding() {
         </h1>
         <p className="mt-10 max-w-2xl text-lg leading-relaxed text-ink-2">
           Thirty years running regulated, 24-hour manufacturing. The last eight
-          in bourbon &mdash; commissioning distillery startups from concrete pour
+          in bourbon, commissioning distillery startups from concrete pour
           to steady-state, in the kind of shifts you don&rsquo;t brag about. This
           site is the working version of that practice: what I do, the projects
           behind it, and how to reach me.
@@ -104,14 +104,14 @@ export function ItLanding() {
         </p>
       </section>
 
-      {/* Rule with a thicker cap on one side — reads as a plotted trend
+      {/* Rule with a thicker cap on one side, reads as a plotted trend
           starting, which is the right visual metaphor for this site. */}
       <div className="mx-auto max-w-5xl px-6 sm:px-10">
         <div className="rule-plot" />
       </div>
 
       {/* -----------------------------------------------------------------
-       * NUMBERS BAND — real values used typographically. Not a stats
+       * NUMBERS BAND, real values used typographically. Not a stats
        * row of identical cards; a set of three assertions with a big
        * Fraunces number and a plain-language second line.
        * ----------------------------------------------------------------- */}
@@ -172,7 +172,7 @@ export function ItLanding() {
       </section>
 
       {/* -----------------------------------------------------------------
-       * IMAGE + PULL QUOTE — top bubble tray of a continuous distillation
+       * IMAGE + PULL QUOTE, top bubble tray of a continuous distillation
        * column, post-run. Set at full-column width, offset with a Fraunces
        * pull quote so the image reads as evidence, not decoration.
        * ----------------------------------------------------------------- */}
@@ -182,7 +182,7 @@ export function ItLanding() {
             <div className="relative aspect-[4/3] overflow-hidden">
               <Image
                 src="/images/bubble-tray.jpeg"
-                alt="Top bubble tray of a continuous distillation column, viewed through the sight glass — rows of vapor caps against a wet copper wash."
+                alt="Top bubble tray of a continuous distillation column, viewed through the sight glass, rows of vapor caps against a wet copper wash."
                 fill
                 sizes="(min-width: 768px) 640px, 100vw"
                 className="object-cover"
@@ -202,7 +202,7 @@ export function ItLanding() {
               for eighteen hours.
             </p>
             <footer className="mt-4 text-sm text-ink-3">
-              &mdash; on why control theory and production reality have to meet somewhere
+              On why control theory and production reality have to meet somewhere.
             </footer>
           </blockquote>
         </div>
@@ -229,7 +229,7 @@ export function ItLanding() {
             className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
             style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
           >
-            Five areas &mdash; usually mixed together on one engagement.
+            Five areas, usually mixed together on one engagement.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-ink-2">
             Naming them separately makes it easier for you to decide whether we
@@ -255,7 +255,7 @@ export function ItLanding() {
       </section>
 
       {/* -----------------------------------------------------------------
-       * IMAGE BAND — Roger speaking at UK podium (paired with a note
+       * IMAGE BAND, Roger speaking at UK podium (paired with a note
        * about writing, speaking, teaching). Explicit human-context image.
        * ----------------------------------------------------------------- */}
       <section aria-label="Talks and teaching" className="border-y border-line bg-paper">
@@ -286,7 +286,7 @@ export function ItLanding() {
             </h2>
             <p className="mt-6 text-base leading-relaxed text-ink-2">
               I write about the parts of digital transformation that don&rsquo;t
-              survive the vendor slides &mdash; how a control room actually
+              survive the vendor slides, how a control room actually
               adopts a new tool, how &ldquo;citizen developer&rdquo; enablement
               works when the citizens have wrenches on their belts, why the
               plant historian is a distributed database whether IT knows it
@@ -303,14 +303,14 @@ export function ItLanding() {
       </section>
 
       {/* -----------------------------------------------------------------
-       * RECENT WRITING — proof that the "notes" claim above isn't
+       * RECENT WRITING, proof that the "notes" claim above isn't
        * empty. Three most-recent articles as tiles, with a link into
        * the full archive.
        * ----------------------------------------------------------------- */}
       <RecentWritingStrip />
 
       {/* -----------------------------------------------------------------
-       * HERO IMAGE BAND — the Hobet dragline, edge-to-edge, as the
+       * HERO IMAGE BAND, the Hobet dragline, edge-to-edge, as the
        * anchor for the "background" section. Not the same treatment
        * as the smaller images above; this one is meant to feel like
        * standing on a bench at dusk.
@@ -341,7 +341,7 @@ export function ItLanding() {
           </h2>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-paper/80">
             Coal draglines, telecom central offices, high-voltage substations,
-            SCADA rooms, and &mdash; for the last eight &mdash; distillery
+            SCADA rooms, and, for the last eight, distillery
             fermentation floors. The photograph is one of a long list. More
             ship with the gallery in a later phase.
           </p>
@@ -349,7 +349,7 @@ export function ItLanding() {
       </section>
 
       {/* -----------------------------------------------------------------
-       * IMAGE BAND — home office. Explicitly personal: the dog is in
+       * IMAGE BAND, home office. Explicitly personal: the dog is in
        * the frame on purpose. This is the "professional with a life"
        * moment Roger asked for; not decorated up.
        * ----------------------------------------------------------------- */}
@@ -382,7 +382,7 @@ export function ItLanding() {
             <p className="mt-6 text-base leading-relaxed text-ink-2">
               Long hours in industrial jobs are only sustainable if the rest of
               a life is real. The workshop above is where the R&amp;D happens
-              between shifts &mdash; frameworks written, models trained, papers
+              between shifts, frameworks written, models trained, papers
               read, and the occasional deploy at midnight. The goldendoodle
               supervises.
             </p>
@@ -392,7 +392,7 @@ export function ItLanding() {
 
       {/* -----------------------------------------------------------------
        * TEAM IMAGE + LEADERSHIP NOTE
-       * Whiskey House team meeting — makes the "distillery startups"
+       * Whiskey House team meeting, makes the "distillery startups"
        * claim tangible with a real leadership scene.
        * ----------------------------------------------------------------- */}
       <section aria-label="Leadership" className="bg-paper-2/60">
@@ -426,21 +426,21 @@ export function ItLanding() {
               instrument techs, safety officers, IT, quality, and a couple of
               contractors you learn to trust. The best days on this job are the
               ones where the team fixes something the org didn&rsquo;t know it
-              had &mdash; and no one takes the credit.
+              had, and no one takes the credit.
             </p>
           </div>
         </div>
       </section>
 
       {/* -----------------------------------------------------------------
-       * PUBLIC REPOSITORIES — Roger's GitHub. Server-rendered, cached
+       * PUBLIC REPOSITORIES, Roger's GitHub. Server-rendered, cached
        * for an hour. Fails soft: if api.github.com is unreachable the
        * component renders a direct link and moves on.
        * ----------------------------------------------------------------- */}
       <GithubReposIt />
 
       {/* -----------------------------------------------------------------
-       * ABOUT THE BUILD — colophon-style closer. Explains the site as a
+       * ABOUT THE BUILD, colophon-style closer. Explains the site as a
        * live work sample and points at the repo. Not a card grid.
        * ----------------------------------------------------------------- */}
       <section
@@ -510,7 +510,7 @@ export function ItLanding() {
 
 // SocialInline renders the outbound social links inside the "writing"
 // section: GitHub always (falls back to reh3376's profile), LinkedIn
-// only when NEXT_PUBLIC_LINKEDIN_URL is set. Order is deliberate —
+// only when NEXT_PUBLIC_LINKEDIN_URL is set. Order is deliberate,
 // the site's story is code first, professional network second.
 function SocialInline() {
   const s = getSocialLinks();

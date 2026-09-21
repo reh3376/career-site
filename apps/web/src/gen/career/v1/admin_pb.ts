@@ -2088,7 +2088,7 @@ export type DbTable = Message<"career.v1.DbTable"> & {
 
   /**
    * Approximate row count from pg_class.reltuples (updated by
-   * ANALYZE; may be stale — the console labels it as such).
+   * ANALYZE; may be stale, the console labels it as such).
    *
    * @generated from field: int64 approx_row_count = 3;
    */
@@ -2160,7 +2160,7 @@ export type RunDbQueryRequest = Message<"career.v1.RunDbQueryRequest"> & {
   timeoutMs: number;
 
   /**
-   * Optional column of the result to sort by (informational only —
+   * Optional column of the result to sort by (informational only,
    * the client can reorder locally; the server passes it back so a
    * caller can round-trip UI state).
    *
@@ -2244,7 +2244,7 @@ export type RunDbQueryResponse = Message<"career.v1.RunDbQueryResponse"> & {
   truncated: boolean;
 
   /**
-   * Number of rows returned (before truncation, if applicable —
+   * Number of rows returned (before truncation, if applicable,
    * matches len(rows) when truncated is false).
    *
    * @generated from field: int32 row_count = 5;
@@ -2554,7 +2554,7 @@ export const SavedQuerySchema: GenMessage<SavedQuery> = /*@__PURE__*/
   messageDesc(file_career_v1_admin, 66);
 
 /**
- * List-saved-queries request. No filters yet — the response is
+ * List-saved-queries request. No filters yet, the response is
  * naturally scoped to the caller and expected to be small.
  *
  * @generated from message career.v1.ListSavedQueriesRequest
@@ -2606,7 +2606,7 @@ export type UpsertSavedQueryRequest = Message<"career.v1.UpsertSavedQueryRequest
 
   /**
    * The SQL text. Enforcement (SELECT-only, single statement) is
-   * applied at execute time by RunDbQuery, not on save — so an
+   * applied at execute time by RunDbQuery, not on save, so an
    * admin can save a draft and finish it later.
    *
    * @generated from field: string sql = 2;
@@ -3111,7 +3111,7 @@ export enum GrantTTL {
   GRANT_TTL_30D = 4,
 
   /**
-   * No expiry — access does not auto-lapse.
+   * No expiry, access does not auto-lapse.
    *
    * @generated from enum value: GRANT_TTL_PERMANENT = 5;
    */
@@ -3449,7 +3449,7 @@ export const AdminService: GenService<{
   },
   /**
    * Removes a whitelist entry. Existing accounts already granted
-   * access are unaffected — this only stops future auto-approvals.
+   * access are unaffected, this only stops future auto-approvals.
    *
    * @generated from rpc career.v1.AdminService.DeleteAccessGrant
    */
@@ -3460,7 +3460,7 @@ export const AdminService: GenService<{
   },
   /**
    * Returns the calling admin's saved SQL statements from /admin/db.
-   * Scoped to the caller — one admin never sees another's slots.
+   * Scoped to the caller, one admin never sees another's slots.
    *
    * @generated from rpc career.v1.AdminService.ListSavedQueries
    */
@@ -3494,7 +3494,7 @@ export const AdminService: GenService<{
   /**
    * Returns one row per member with engagement aggregates (session
    * count, total active time, ask-roger count, last event). Backs
-   * /admin/activity — Roger's request for a sortable "who's using
+   * /admin/activity, Roger's request for a sortable "who's using
    * the site" surface.
    *
    * @generated from rpc career.v1.AdminService.ListMemberActivity

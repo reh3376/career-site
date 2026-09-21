@@ -21,7 +21,7 @@ export async function SiteHeader() {
             doesn't overpower a page whose real headline is the hero. */}
         <Link
           href="/"
-          aria-label="Roger Henley — home"
+          aria-label="Roger Henley · home"
           className="group flex items-baseline gap-3 no-underline"
         >
           <span className="font-display text-[22px] font-semibold leading-none tracking-tight text-ink transition-colors group-hover:text-accent">
@@ -35,17 +35,17 @@ export async function SiteHeader() {
           </span>
         </Link>
 
-        {/* Right cluster — system indicator + primary CTA + hamburger.
+        {/* Right cluster, system indicator + primary CTA + hamburger.
             The hamburger is always the last item so it lands under the
             same thumb on every viewport. */}
         <div className="flex items-center gap-3 sm:gap-5">
-          {/* Live status indicator. The one motion moment on the page —
+          {/* Live status indicator. The one motion moment on the page,
               see globals.css `pulse-signal`. Hidden below md so the
               header stays a two-thing header on phones. */}
           <div
             className="hidden items-center gap-2 md:flex"
             aria-label="Site status: nominal"
-            title="system.nominal — the site itself is a working plant"
+            title="system.nominal, the site itself is a working plant"
           >
             <span className="relative inline-flex h-2.5 w-2.5">
               <span className="pulse-signal absolute inline-flex h-full w-full rounded-full bg-signal" />
@@ -60,7 +60,7 @@ export async function SiteHeader() {
               conversion path is one click on any viewport. Signed-in
               members already have Sign out inside the hamburger; we
               don't repeat it out here. On mobile we hide the anon CTA
-              too — the hamburger carries it. */}
+              too, the hamburger carries it. */}
           {signedIn ? null : (
             <Link
               href="/register"

@@ -57,7 +57,7 @@ export type Article = ArticleSummary & {
 };
 
 // Points at apps/web/content/articles/. process.cwd() is the app
-// root in `next dev` and inside the Next.js standalone runtime — the
+// root in `next dev` and inside the Next.js standalone runtime, the
 // `outputFileTracingIncludes` block in next.config.ts pulls the
 // content dir into the standalone bundle so runtime reads work.
 function contentRoot(): string {
@@ -69,7 +69,7 @@ function contentRoot(): string {
 //   title: "..."
 //   subtitle: "..."
 //   ---
-// Minimal parser — only key: value (with optional quotes) at the top,
+// Minimal parser, only key: value (with optional quotes) at the top,
 // terminated by a `---` line. Anything more complex than that is out
 // of scope; front matter is authored by Roger, not user input.
 function parseFrontMatter(raw: string): { meta: Record<string, string>; body: string } {
@@ -121,7 +121,7 @@ async function readOne(spec: ArticleSpec): Promise<Article> {
 // listArticles returns every publishable article's summary, in
 // declared order. Silently skips a spec whose file has gone missing
 // so a rename in docs/personal/ doesn't 500 the whole /articles
-// page — the caller sees whatever survives.
+// page, the caller sees whatever survives.
 export async function listArticles(): Promise<ArticleSummary[]> {
   const summaries: ArticleSummary[] = [];
   for (const spec of PUBLIC_ARTICLES) {
@@ -134,7 +134,7 @@ export async function listArticles(): Promise<ArticleSummary[]> {
         order: a.order,
       });
     } catch {
-      /* file missing / unreadable — skip */
+      /* file missing / unreadable, skip */
     }
   }
   summaries.sort((a, b) => a.order - b.order);

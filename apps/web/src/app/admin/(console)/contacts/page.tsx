@@ -5,10 +5,10 @@ import { getSessionCookie } from "@/lib/session";
 
 import { ResolveButton } from "./resolve-button";
 
-export const metadata: Metadata = { title: "Admin — Contact messages" };
+export const metadata: Metadata = { title: "Admin · Contact messages" };
 export const dynamic = "force-dynamic";
 
-// Shape mirrors the SupportMessage proto — snake_case as it arrives
+// Shape mirrors the SupportMessage proto, snake_case as it arrives
 // from the ConnectRPC JSON response, hand-rolled here rather than
 // hooking the buf-generated client because the admin console is
 // server-rendered and each page fetches with the caller's session
@@ -107,7 +107,7 @@ export default async function AdminContactsPage({
           Contact messages.
         </h1>
         <p className="mt-6 max-w-lg border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-          Couldn&rsquo;t load messages — {result.message}.
+          Couldn&rsquo;t load messages, {result.message}.
         </p>
       </>
     );
@@ -202,7 +202,7 @@ function FilterTab({
 
 function MessageRow({ m }: { m: SupportMessage }) {
   const created = m.created_at ? new Date(m.created_at) : null;
-  const when = created ? formatWhen(created) : "—";
+  const when = created ? formatWhen(created) : "-";
   const resolved = m.status === "SUPPORT_STATUS_RESOLVED";
   return (
     <li className="py-5">

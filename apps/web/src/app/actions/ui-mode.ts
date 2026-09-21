@@ -17,7 +17,7 @@ export async function setUiModeAction(formData: FormData): Promise<void> {
   jar.set(UI_MODE_COOKIE, mode, {
     path: "/",
     sameSite: "lax",
-    // Not HttpOnly on purpose — the client toggle applies the change
+    // Not HttpOnly on purpose, the client toggle applies the change
     // optimistically to the DOM before the server round-trip so the
     // switch feels immediate, and reading the cookie is what lets it.
     httpOnly: false,

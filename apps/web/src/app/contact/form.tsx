@@ -16,7 +16,7 @@ const CATEGORIES = [
   { key: "other", label: "Other" },
 ] as const;
 
-// Inputs sit on the paper background with a single hairline bottom rule —
+// Inputs sit on the paper background with a single hairline bottom rule,
 // no full-box border, no shadow. Closer to a form filled in on a
 // clipboard than one clicked in a SaaS admin. The border-color flip on
 // focus does the accent work without ring bloom.
@@ -29,7 +29,7 @@ const helpClass = "mt-2 text-xs text-ink-3";
 // signedIn is passed from the server component so the anonymous name/email
 // fields render only when relevant. initialCategory pre-selects the
 // <select> (typically from a ?category=... URL param on the /contact
-// route — e.g. the GitHub-cards CTA points at
+// route, e.g. the GitHub-cards CTA points at
 // /contact?category=contributor_access).
 export function ContactForm({
   signedIn,
@@ -51,7 +51,7 @@ export function ContactForm({
           className="font-display mt-3 text-2xl leading-snug text-ink"
           style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
         >
-          Thanks &mdash; I&rsquo;ll get back to you.
+          Thanks, I&rsquo;ll get back to you.
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-ink-2">
           Your message reached my inbox. Reference{" "}

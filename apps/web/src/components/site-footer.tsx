@@ -4,7 +4,7 @@ import { getSocialLinks } from "@/lib/social-links";
 
 // Multi-column footer. Colophon on the left (what this site IS), site
 // nav in the middle, community links on the right (GitHub repos +
-// contributor request — public repo, so make that surface deliberate).
+// contributor request, public repo, so make that surface deliberate).
 export function SiteFooter() {
   const year = new Date().getFullYear();
   const social = getSocialLinks();
@@ -12,7 +12,7 @@ export function SiteFooter() {
     <footer className="border-t border-line bg-paper-2">
       <div className="mx-auto max-w-6xl px-6 py-14 sm:px-10">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
-          {/* Colophon — the site is a work sample; say so plainly */}
+          {/* Colophon, the site is a work sample; say so plainly */}
           <div className="max-w-md">
             <p className="font-display text-lg leading-snug text-ink">
               A practice, not a portfolio.

@@ -146,7 +146,7 @@ export default async function DecisionPage({
           <Heading>Something went wrong.</Heading>
           <Body>
             {result.detail ?? "Unknown error."}
-            {result.message ? ` — ${result.message}` : null}
+            {result.message ? `, ${result.message}` : null}
           </Body>
           <p className="mt-8">
             <Link

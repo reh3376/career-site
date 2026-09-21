@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <p className="mt-10 text-xs leading-relaxed text-ink-3">
           Signed in as{" "}
           <span className="font-mono text-ink">{me.email}</span>
-          {" — "}admin role. Everything on this surface is auth-gated
+          {", "}admin role. Everything on this surface is auth-gated
           server-side.
         </p>
       </aside>

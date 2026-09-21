@@ -40,7 +40,7 @@ export default async function CheckEmailPage({
       </p>
       <p className="mt-4 text-sm text-ink-3">
         The link expires in 24 hours. Not seeing it? Check spam, or try
-        registering again &mdash; the email is sent fresh every time.
+        registering again, the email is sent fresh every time.
       </p>
       <p className="mt-10">
         <Link

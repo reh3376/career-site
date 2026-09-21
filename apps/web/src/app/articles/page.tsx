@@ -23,7 +23,7 @@ export default async function ArticlesIndexPage() {
       </h1>
       <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-2">
         Pieces about the parts of digital transformation that don&rsquo;t
-        survive the vendor slides — control-room adoption, decision
+        survive the vendor slides, control-room adoption, decision
         infrastructure, and why the plant historian is a distributed
         database whether IT knows it or not.
       </p>
