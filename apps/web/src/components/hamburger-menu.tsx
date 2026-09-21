@@ -16,18 +16,29 @@ type MenuItem =
 
 type MenuGroup = { label: string; items: MenuItem[] };
 
+// Outbound profile links, resolved on the server (lib/social-links)
+// and passed in because this is a client component.
+export type SocialProps = {
+  linkedinUrl?: string;
+  linkedinHandle?: string;
+  githubUrl?: string;
+  githubHandle?: string;
+};
+
 export function HamburgerMenu({
   signedIn,
   isAdmin,
   memberName,
   memberEmail,
   mode,
+  social,
 }: {
   signedIn: boolean;
   isAdmin: boolean;
   memberName?: string;
   memberEmail?: string;
   mode: UiMode;
+  social?: SocialProps;
 }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,7 +76,7 @@ export function HamburgerMenu({
     };
   }, [open]);
 
-  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin });
+  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin, social });
 
   return (
     <>
@@ -202,9 +213,11 @@ function renderItem(item: MenuItem, close: () => void) {
 function buildGroups({
   signedIn,
   isAdmin,
+  social,
 }: {
   signedIn: boolean;
   isAdmin: boolean;
+  social?: SocialProps;
 }): MenuGroup[] {
   // Anonymous visitors see only the public surface: landing, contact,
   // and the way in. Everything else is members-only.
@@ -256,10 +269,20 @@ function buildGroups({
   groups.push({
     label: "elsewhere",
     items: [
+      ...(social?.linkedinUrl
+        ? [
+            {
+              kind: "link" as const,
+              label: `LinkedIn, ${social.linkedinHandle?.replace(/^linkedin\.com\/in\//, "") ?? "profile"}`,
+              href: social.linkedinUrl,
+              external: true,
+            },
+          ]
+        : []),
       {
         kind: "link",
-        label: "GitHub, reh3376",
-        href: "https://github.com/reh3376",
+        label: `GitHub, ${social?.githubHandle?.replace(/^github\.com\//, "") ?? "reh3376"}`,
+        href: social?.githubUrl ?? "https://github.com/reh3376",
         external: true,
       },
       {
