@@ -78,18 +78,29 @@ export function ItLanding() {
 
         <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
           <Link
-            href="/register"
+            href="/jd-upload"
             className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
           >
-            Request access
+            Considering me for a role? Paste the JD →
           </Link>
           <Link
             href="/contact"
             className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
           >
-            Or just get in touch
+            Or reach out directly
+          </Link>
+          <Link
+            href="/register"
+            className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
+          >
+            Request member access
           </Link>
         </div>
+        <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
+          The JD upload scores fit against thirty years of manufacturing
+          and applied-AI work; if it clears the threshold, you get a
+          two-page résumé tailored to that specific posting.
+        </p>
       </section>
 
       {/* Rule with a thicker cap on one side — reads as a plotted trend
