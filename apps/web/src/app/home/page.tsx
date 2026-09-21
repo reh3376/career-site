@@ -256,6 +256,13 @@ export default async function HomePage() {
           href="/articles"
           cta="Read the archive →"
         />
+        <LiveCard
+          label="gallery · live"
+          title="On the floor"
+          body="Control rooms, columns, tank farms, greenfield builds, and the desk the writing comes from. Every photo carries its context and the year."
+          href="/gallery"
+          cta="Open the gallery →"
+        />
         <ComingSoonCard
           label="ask roger"
           title="Ask Roger anything"

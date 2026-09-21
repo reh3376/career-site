@@ -14,7 +14,7 @@ BUILD := build
 
 GEN_PATHS := services/api/gen apps/web/src/gen services/sidecar/src/career services/sidecar/src/buf docs/api
 
-.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus stage-corpus
+.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus stage-corpus photos
 
 CORPUS_MANIFEST ?= docs/personal/corpus-manifest.txt
 CORPUS_HOST     ?= career@5.161.62.205
@@ -54,3 +54,6 @@ sync-corpus: ## Rsync the curated private corpus (docs/personal manifest) to the
 
 stage-corpus: ## Stage the private corpus into ./.corpus-private for the local dev stack
 	deploy/corpus-sync.sh $(CORPUS_MANIFEST) local ./.corpus-private
+
+photos: ## Build gallery derivatives (WebP, EXIF stripped) from docs/personal/images per apps/web/content/photos
+	cd apps/web && node scripts/photos-build.mjs
