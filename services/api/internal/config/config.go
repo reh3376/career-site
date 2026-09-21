@@ -24,8 +24,8 @@ type Config struct {
 	// In prod this is a docker bind-mount of `apps/web/content` to
 	// `/corpus:ro`, so the walker sees the same markdown that ships
 	// with the web bundle.
-	CorpusRoot string
-	DatabaseURL     string
+	CorpusRoot  string
+	DatabaseURL string
 	// DatabaseURLReadonly is an optional DSN used by the /admin/db
 	// surface. When set, the SQL console runs through this pool
 	// instead of the write-capable app pool, so the SELECT-only guard
