@@ -166,6 +166,39 @@ export default async function HomePage() {
         ) : null}
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          SURFACES
+        </p>
+        <ul className="mt-3 space-y-1 border-l border-line pl-3 font-mono text-[12px]">
+          <li>
+            <span className="text-signal">JD.INPUT</span>{" "}
+            <span className="text-ink-3">·</span>{" "}
+            <Link
+              href="/jd-upload"
+              className="text-accent no-underline hover:text-accent-hover"
+            >
+              /jd-upload
+            </Link>{" "}
+            <span className="text-ink-3">— paste a role, get a scored résumé</span>
+          </li>
+          <li>
+            <span className="text-signal">ARTICLES</span>{" "}
+            <span className="text-ink-3">·</span>{" "}
+            <Link
+              href="/articles"
+              className="text-accent no-underline hover:text-accent-hover"
+            >
+              /articles
+            </Link>{" "}
+            <span className="text-ink-3">— five pieces from the corpus</span>
+          </li>
+          <li>
+            <span className="text-ink-3">ASK.ROGER</span>{" "}
+            <span className="text-ink-3">·</span>{" "}
+            <span className="text-ink-3">available Q4 2026</span>
+          </li>
+        </ul>
+
+        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           questions?{" "}
           <a
             href="mailto:rogerhenley345@gmail.com"
@@ -204,12 +237,18 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. Articles, projects, and Ask Roger land in the
-        coming iterations, the two cards below preview what&rsquo;s coming
-        next.
+        You&rsquo;re in. Two surfaces are live today; the third
+        (Ask Roger) lands with Phase 4.
       </p>
 
-      <section className="mt-14 grid gap-6 md:grid-cols-2">
+      <section className="mt-14 grid gap-6 md:grid-cols-3">
+        <LiveCard
+          label="jd upload · live"
+          title="Have a role in mind?"
+          body="Paste a JD and Roger&rsquo;s pipeline scores fit against thirty years of manufacturing and applied-AI work. If the score clears the threshold, a two-page résumé tailored to that posting is generated."
+          href="/jd-upload"
+          cta="Upload a JD →"
+        />
         <LiveCard
           label="articles · live"
           title="Roger's writing"
@@ -220,7 +259,7 @@ export default async function HomePage() {
         <ComingSoonCard
           label="ask roger"
           title="Ask Roger anything"
-          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources."
+          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources. Available Q4 2026."
         />
       </section>
 
