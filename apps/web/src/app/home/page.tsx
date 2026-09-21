@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { OtPanel } from "@/components/ot-panel";
@@ -10,14 +9,7 @@ import { getUiMode } from "@/lib/ui-mode";
 import { ActivityBeacon } from "./activity-beacon";
 import { logoutAction } from "./actions";
 
-export const metadata: Metadata = {
-  title: "Member home",
-};
-
-// The gated member home. Today it's the "under construction" screen an
-// approved member sees; Phases 2+ replace this with the tailored home
-// (roles, projects, articles, Ask Roger). Server-side session check
-// bounces anonymous visitors to /login.
+export const metadata: Metadata = { title: "Member home" };
 export const dynamic = "force-dynamic";
 
 type Me = {
@@ -26,6 +18,21 @@ type Me = {
   email: string;
   status: string;
   role: string;
+  organization?: string;
+  stated_role?: string;
+  statedRole?: string;
+  created_at?: string;
+  createdAt?: string;
+  expires_at?: string;
+  expiresAt?: string;
+};
+
+type ActivityEvent = {
+  kind: string;
+  content_id?: string;
+  contentId?: string;
+  occurred_at?: string;
+  occurredAt?: string;
 };
 
 async function fetchMe(): Promise<Me | null> {
@@ -41,11 +48,45 @@ async function fetchMe(): Promise<Me | null> {
   return j.me ?? null;
 }
 
+async function fetchHistory(): Promise<ActivityEvent[]> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return [];
+  const resp = await callApi({
+    path: "/api/career.v1.MemberService/GetHistory",
+    body: { page: { pageSize: 10 } },
+    cookie,
+  });
+  if (!resp.ok) return [];
+  const j = (await resp.json()) as { events?: ActivityEvent[] };
+  return j.events ?? [];
+}
+
+const KIND_LABEL: Record<string, string> = {
+  KIND_LOGIN: "signed in",
+  KIND_LOGOUT: "signed out",
+  KIND_VIEW: "viewed",
+  KIND_DOWNLOAD: "downloaded",
+  KIND_SEARCH: "searched",
+  KIND_SAVE: "saved",
+  KIND_CHAT: "asked Roger",
+  KIND_ESCALATE: "escalated",
+};
+
 export default async function HomePage() {
-  const [me, mode] = await Promise.all([fetchMe(), getUiMode()]);
+  const [me, mode, history] = await Promise.all([
+    fetchMe(),
+    getUiMode(),
+    fetchHistory(),
+  ]);
   if (!me) redirect("/login");
 
   const firstName = me.name?.split(" ")[0] ?? "there";
+  const expiresAtIso = me.expires_at ?? me.expiresAt;
+  const expiresAt = expiresAtIso ? new Date(expiresAtIso) : null;
+  const createdIso = me.created_at ?? me.createdAt;
+  const memberSince = createdIso ? new Date(createdIso) : null;
+  const statedRole = me.stated_role ?? me.statedRole;
+  const nowMs = getNowMs();
 
   if (mode === "ot") {
     return (
@@ -56,9 +97,7 @@ export default async function HomePage() {
       >
         <ActivityBeacon contentId="/home" />
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
-            under construction · ships late 2026
-          </p>
+          <AccessPill expiresAt={expiresAt} nowMs={nowMs} tone="ot" />
           <form action={logoutAction} className="m-0">
             <button
               type="submit"
@@ -74,35 +113,58 @@ export default async function HomePage() {
         >
           Welcome, <span className="italic text-accent">{firstName}</span>.
         </h1>
-        <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
-          You&rsquo;re in. The personalized dashboard lands ahead of the
-          late-2026 launch.
-        </p>
 
         <dl className="mt-10 grid gap-3 border-t border-line pt-6 font-mono text-[12px] text-ink-2 sm:grid-cols-[10rem_1fr]">
           <dt className="text-ink-3">STATUS</dt>
           <dd className="m-0 text-success">
             <span className="pilot mr-2 align-middle text-success" aria-hidden="true" />
-            ACTIVE
+            {me.status === "MEMBER_STATUS_ACTIVE" ? "ACTIVE" : me.status.replace("MEMBER_STATUS_", "")}
           </dd>
           <dt className="text-ink-3">EMAIL</dt>
           <dd className="m-0 text-ink">{me.email}</dd>
-          <dt className="text-ink-3">ROLE</dt>
-          <dd className="m-0 text-ink">
-            {me.role === "MEMBER_ROLE_ADMIN" ? "admin" : "member"}
-          </dd>
-          <dt className="text-ink-3">BACKEND</dt>
-          <dd className="m-0">
-            <Link
-              href="/version"
-              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-            >
-              /version
-            </Link>
-          </dd>
+          {me.organization ? (
+            <>
+              <dt className="text-ink-3">ORG</dt>
+              <dd className="m-0 text-ink">{me.organization}</dd>
+            </>
+          ) : null}
+          {statedRole ? (
+            <>
+              <dt className="text-ink-3">ROLE</dt>
+              <dd className="m-0 text-ink">{statedRole}</dd>
+            </>
+          ) : null}
+          {memberSince ? (
+            <>
+              <dt className="text-ink-3">MEMBER SINCE</dt>
+              <dd className="m-0 text-ink">{memberSince.toISOString().slice(0, 10)}</dd>
+            </>
+          ) : null}
+          {expiresAt ? (
+            <>
+              <dt className="text-ink-3">EXPIRES</dt>
+              <dd className="m-0 text-ink">
+                {expiresAt.toISOString().slice(0, 10)}{" "}
+                <span className="text-ink-3">· {formatDaysUntil(expiresAt, nowMs)}</span>
+              </dd>
+            </>
+          ) : null}
         </dl>
 
-        <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        {history.length > 0 ? (
+          <>
+            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              RECENT ACTIVITY
+            </p>
+            <ul className="mt-3 space-y-2 border-l border-line pl-3 font-mono text-[12px]">
+              {history.slice(0, 5).map((e, i) => (
+                <HistoryLine key={i} e={e} nowMs={nowMs} />
+              ))}
+            </ul>
+          </>
+        ) : null}
+
+        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           questions?{" "}
           <a
             href="mailto:rogerhenley345@gmail.com"
@@ -132,9 +194,8 @@ export default async function HomePage() {
         </form>
       </div>
 
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
-        under construction <span className="text-ink-4">·</span> ships late 2026
-      </p>
+      <AccessPill expiresAt={expiresAt} nowMs={nowMs} tone="it" />
+
       <h1
         className="font-display mt-4 text-5xl leading-[0.98] tracking-tight text-ink sm:text-6xl"
         style={{ fontVariationSettings: '"opsz" 144, "SOFT" 40' }}
@@ -142,47 +203,85 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. The personalized home, projects, writing, and Ask Roger
-        all land ahead of the late-2026 launch. This page becomes your tailored
-        dashboard when it does.
+        You&rsquo;re in. Articles, projects, and Ask Roger land in the
+        coming iterations — the two cards below preview what&rsquo;s coming
+        next.
       </p>
 
-      <section className="mt-16 grid gap-10 border-t border-line pt-10 md:grid-cols-[1fr_1.4fr]">
+      <section className="mt-14 grid gap-6 md:grid-cols-2">
+        <ComingSoonCard
+          label="articles"
+          title="Roger's writing"
+          body="Read pieces on digital transformation, control-room adoption, plant-historian architecture, and how vendor slides survive first contact with reality."
+        />
+        <ComingSoonCard
+          label="ask roger"
+          title="Ask Roger anything"
+          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks — with citations back to primary sources."
+        />
+      </section>
+
+      <section className="mt-14 grid gap-10 border-t border-line pt-10 md:grid-cols-[1fr_1.4fr]">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            currently live
+            your account
           </p>
           <h2
             className="font-display mt-3 text-2xl leading-snug text-ink"
             style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
           >
-            The scaffolding is real.
+            Details on file.
           </h2>
         </div>
-        <ul className="space-y-4 text-base leading-relaxed text-ink-2">
-          <li className="flex gap-3">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            <span>Approval-gated registration with one-click admin review.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            <span>Member sign-in with 30-day sessions.</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            <span>
-              Backend health at{" "}
-              <Link
-                href="/version"
-                className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-              >
-                /version
-              </Link>
-              .
-            </span>
-          </li>
-        </ul>
+        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr]">
+          <dt className="text-ink-3">Email</dt>
+          <dd className="m-0 text-ink">{me.email}</dd>
+          {me.organization ? (
+            <>
+              <dt className="text-ink-3">Organization</dt>
+              <dd className="m-0 text-ink">{me.organization}</dd>
+            </>
+          ) : null}
+          {statedRole ? (
+            <>
+              <dt className="text-ink-3">Role</dt>
+              <dd className="m-0 text-ink">{statedRole}</dd>
+            </>
+          ) : null}
+          {memberSince ? (
+            <>
+              <dt className="text-ink-3">Member since</dt>
+              <dd className="m-0 text-ink">
+                {memberSince.toISOString().slice(0, 10)}
+              </dd>
+            </>
+          ) : null}
+          {expiresAt ? (
+            <>
+              <dt className="text-ink-3">Access expires</dt>
+              <dd className="m-0 text-ink">
+                {expiresAt.toISOString().slice(0, 10)}
+                <span className="ml-2 text-ink-3">
+                  ({formatDaysUntil(expiresAt, nowMs)})
+                </span>
+              </dd>
+            </>
+          ) : null}
+        </dl>
       </section>
+
+      {history.length > 0 ? (
+        <section className="mt-14 border-t border-line pt-10">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            recent activity
+          </p>
+          <ul className="mt-4 space-y-2 border-l border-line pl-4 text-sm">
+            {history.slice(0, 8).map((e, i) => (
+              <HistoryLine key={i} e={e} nowMs={nowMs} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <p className="mt-14 text-sm text-ink-3">
         Questions or feedback? Reach me at{" "}
@@ -196,4 +295,125 @@ export default async function HomePage() {
       </p>
     </div>
   );
+}
+
+function AccessPill({
+  expiresAt,
+  nowMs,
+  tone,
+}: {
+  expiresAt: Date | null;
+  nowMs: number;
+  tone: "it" | "ot";
+}) {
+  const base =
+    tone === "ot"
+      ? "font-mono text-[11px] uppercase tracking-[0.14em]"
+      : "font-mono text-[11px] uppercase tracking-[0.14em]";
+  if (!expiresAt) {
+    return (
+      <p className={base + " text-success"}>
+        access · permanent
+      </p>
+    );
+  }
+  const days = daysUntil(expiresAt, nowMs);
+  const tone2 =
+    days < 0 ? "text-signal" : days <= 7 ? "text-signal" : "text-success";
+  return (
+    <p className={base + " " + tone2}>
+      access · {formatDaysUntil(expiresAt, nowMs)}
+    </p>
+  );
+}
+
+function ComingSoonCard({
+  label,
+  title,
+  body,
+}: {
+  label: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="border border-line p-5">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        {label} · coming soon
+      </p>
+      <p
+        className="font-display mt-2 text-xl leading-snug text-ink"
+        style={{ fontVariationSettings: '"opsz" 40, "SOFT" 50' }}
+      >
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
+    </div>
+  );
+}
+
+function HistoryLine({
+  e,
+  nowMs,
+}: {
+  e: ActivityEvent;
+  nowMs: number;
+}) {
+  const at = e.occurred_at ?? e.occurredAt;
+  const contentId = e.content_id ?? e.contentId;
+  const when = at ? relative(new Date(at), nowMs) : "—";
+  return (
+    <li className="text-ink-2">
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        {when}
+      </span>{" "}
+      <span className="text-ink">
+        {KIND_LABEL[e.kind] ?? e.kind.toLowerCase()}
+      </span>
+      {contentId ? (
+        <>
+          {" "}
+          <span className="text-ink-3">·</span>{" "}
+          <span className="font-mono text-xs">{contentId}</span>
+        </>
+      ) : null}
+    </li>
+  );
+}
+
+function getNowMs(): number {
+  return Date.now();
+}
+
+function daysUntil(d: Date, nowMs: number): number {
+  return Math.round((d.getTime() - nowMs) / 86_400_000);
+}
+
+function formatDaysUntil(d: Date, nowMs: number): string {
+  const n = daysUntil(d, nowMs);
+  if (n === 0) return "expires today";
+  if (n > 0) {
+    if (n === 1) return "1d remaining";
+    if (n < 30) return `${n}d remaining`;
+    if (n < 365) return `${Math.round(n / 30)}mo remaining`;
+    return `${Math.round(n / 365)}y remaining`;
+  }
+  const ago = -n;
+  if (ago === 1) return "expired 1d ago";
+  if (ago < 30) return `expired ${ago}d ago`;
+  return `expired ${Math.round(ago / 30)}mo ago`;
+}
+
+function relative(d: Date, nowMs: number): string {
+  const ms = nowMs - d.getTime();
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h}h ago`;
+  const days = Math.round(h / 24);
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.round(days / 30)}mo ago`;
+  return `${Math.round(days / 365)}y ago`;
 }
