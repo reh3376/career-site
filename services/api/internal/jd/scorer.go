@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/ingest"
@@ -89,6 +90,17 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 
 	retrieval, hits, err := s.Score(ctx, jdText)
+	if err != nil && isTransient(err) {
+		// One retry after a short pause covers the sidecar restarting or
+		// a momentary network blip, which is what has actually failed
+		// submissions so far.
+		s.log.Warn("jd: score transient failure, retrying once", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		if !sleepCtx(ctx, retryDelay) {
+			err = ctx.Err()
+		} else {
+			retrieval, hits, err = s.Score(ctx, jdText)
+		}
+	}
 	if err != nil {
 		s.log.Warn("jd: score failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", nil, truncErr(err.Error())); uErr != nil {
@@ -108,6 +120,12 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	if s.assessor != nil {
 		started := time.Now()
 		assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints)
+		if err != nil && isTransient(err) {
+			s.log.Warn("jd: assessment transient failure, retrying once", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			if sleepCtx(ctx, retryDelay) {
+				assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints)
+			}
+		}
 		if err != nil {
 			// Fall back to the retrieval pre-score but keep the failure
 			// on the record so the admin can see the gate was degraded.
@@ -197,6 +215,42 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 		return
 	}
 	s.log.Info("jd: pdf ready", slog.Int64("id", submissionID), slog.Int("bytes", len(pdf)), slog.Int("pages", int(pages)))
+}
+
+// retryDelay is the pause before the single automatic retry.
+const retryDelay = 8 * time.Second
+
+// isTransient reports whether an error looks like a sidecar or network
+// hiccup worth one retry, as opposed to a bad input or a logic error.
+func isTransient(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	for _, needle := range []string{
+		"unavailable", "network is unreachable", "connection refused", "connection reset",
+		"broken pipe", "eof", "timeout", "temporarily", "no such host", "503", "502",
+	} {
+		if strings.Contains(msg, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// sleepCtx waits for d unless ctx ends first; returns false when it did.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
 }
 
 // truncErr keeps a persisted error short: the row's `error` column is

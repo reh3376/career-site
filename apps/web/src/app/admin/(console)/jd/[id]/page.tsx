@@ -7,6 +7,8 @@ import remarkGfm from "remark-gfm";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
+import { RescoreButton } from "../rescore-button";
+
 export const metadata: Metadata = { title: "Admin · JD submission" };
 export const dynamic = "force-dynamic";
 
@@ -163,6 +165,15 @@ export default async function AdminJdDetailPage({
           {errorMsg}
         </p>
       ) : null}
+
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+        <RescoreButton submissionId={r.id} />
+        <p className="text-xs text-ink-3">
+          Re-runs retrieval, assessment, and (above threshold) the résumé
+          and PDF with the current prompts. Use after a transient failure
+          or a prompt change; the previous derivation is replaced.
+        </p>
+      </div>
 
       <section className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

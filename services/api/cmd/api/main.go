@@ -173,10 +173,6 @@ func main() {
 			log, userRepo, ingest.SidecarEmbed{Client: sc}, nil,
 		)
 	}
-	adminHandler := handlers.NewAdmin(
-		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
-		handlers.CorpusRoots{Public: cfg.CorpusRoot, Private: cfg.CorpusPrivateRoot},
-	)
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
 	// JD scorer reuses the sidecar's embedder. Skipped when the
 	// sidecar isn't dialled (rare — dev only) so /jd-upload still
@@ -208,6 +204,12 @@ func main() {
 		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer)
 	}
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
+	// Admin comes after the JD scorer so RescoreJd can reuse it.
+	adminHandler := handlers.NewAdmin(
+		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
+		handlers.CorpusRoots{Public: cfg.CorpusRoot, Private: cfg.CorpusPrivateRoot},
+		jdScorer, cfg.JDPipelineTimeout,
+	)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,

@@ -141,6 +141,8 @@ const (
 	// AdminServiceGetJdSubmissionProcedure is the fully-qualified name of the AdminService's
 	// GetJdSubmission RPC.
 	AdminServiceGetJdSubmissionProcedure = "/career.v1.AdminService/GetJdSubmission"
+	// AdminServiceRescoreJdProcedure is the fully-qualified name of the AdminService's RescoreJd RPC.
+	AdminServiceRescoreJdProcedure = "/career.v1.AdminService/RescoreJd"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -276,6 +278,11 @@ type AdminServiceClient interface {
 	// assessment derivation (requirements, evidence, verdicts) and the
 	// generated résumé when present. Backs /admin/jd/[id].
 	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
+	// Re-runs the scoring pipeline (retrieval pre-score, assessment,
+	// résumé and PDF when above threshold) for one submission in the
+	// background, e.g. after a transient sidecar failure or a prompt
+	// change. Returns immediately; poll GetJdSubmission for the outcome.
+	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -505,6 +512,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetJdSubmission")),
 			connect.WithClientOptions(opts...),
 		),
+		rescoreJd: connect.NewClient[v1.RescoreJdRequest, v1.RescoreJdResponse](
+			httpClient,
+			baseURL+AdminServiceRescoreJdProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -546,6 +559,7 @@ type adminServiceClient struct {
 	sweepCorpusEmbeddings *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 	getJdSubmission       *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
+	rescoreJd             *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -728,6 +742,11 @@ func (c *adminServiceClient) GetJdSubmission(ctx context.Context, req *connect.R
 	return c.getJdSubmission.CallUnary(ctx, req)
 }
 
+// RescoreJd calls career.v1.AdminService.RescoreJd.
+func (c *adminServiceClient) RescoreJd(ctx context.Context, req *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error) {
+	return c.rescoreJd.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -861,6 +880,11 @@ type AdminServiceHandler interface {
 	// assessment derivation (requirements, evidence, verdicts) and the
 	// generated résumé when present. Backs /admin/jd/[id].
 	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
+	// Re-runs the scoring pipeline (retrieval pre-score, assessment,
+	// résumé and PDF when above threshold) for one submission in the
+	// background, e.g. after a transient sidecar failure or a prompt
+	// change. Returns immediately; poll GetJdSubmission for the outcome.
+	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1086,6 +1110,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetJdSubmission")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceRescoreJdHandler := connect.NewUnaryHandler(
+		AdminServiceRescoreJdProcedure,
+		svc.RescoreJd,
+		connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -1160,6 +1190,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListJdSubmissionsHandler.ServeHTTP(w, r)
 		case AdminServiceGetJdSubmissionProcedure:
 			adminServiceGetJdSubmissionHandler.ServeHTTP(w, r)
+		case AdminServiceRescoreJdProcedure:
+			adminServiceRescoreJdHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1311,4 +1343,8 @@ func (UnimplementedAdminServiceHandler) ListJdSubmissions(context.Context, *conn
 
 func (UnimplementedAdminServiceHandler) GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetJdSubmission is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RescoreJd is not implemented"))
 }

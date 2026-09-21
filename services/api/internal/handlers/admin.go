@@ -18,6 +18,8 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
+	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -42,6 +44,9 @@ type Admin struct {
 	roPool   *db.Pool         // read-only pool used by the /admin/db surface
 	ingest   *ingest.Ingester // Ask Roger corpus ingest
 	corpus   CorpusRoots
+	// jdScorer and jdTimeout back RescoreJd; nil scorer disables it.
+	jdScorer  *jd.Scorer
+	jdTimeout time.Duration
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -59,19 +64,26 @@ func NewAdmin(
 	roPool *db.Pool,
 	ingester *ingest.Ingester,
 	corpus CorpusRoots,
+	jdScorer *jd.Scorer,
+	jdTimeout time.Duration,
 ) *Admin {
 	if roPool == nil {
 		roPool = pool
 	}
+	if jdTimeout <= 0 {
+		jdTimeout = 15 * time.Minute
+	}
 	return &Admin{
-		log:      log,
-		users:    repo,
-		auth:     auth,
-		decision: decision,
-		pool:     pool,
-		roPool:   roPool,
-		ingest:   ingester,
-		corpus:   corpus,
+		log:       log,
+		users:     repo,
+		auth:      auth,
+		decision:  decision,
+		pool:      pool,
+		roPool:    roPool,
+		ingest:    ingester,
+		corpus:    corpus,
+		jdScorer:  jdScorer,
+		jdTimeout: jdTimeout,
 		// 20-query burst, refills to 20 across a minute. Enough for
 		// interactive exploration; well below what a hung client loop
 		// would produce.
@@ -1273,6 +1285,45 @@ func (a *Admin) GetJdSubmission(
 		out.DownloadUrl = s.GeneratedResumeURL + "?t=" + hex.EncodeToString(s.ResultToken)
 	}
 	return connect.NewResponse(out), nil
+}
+
+// ---------------------------------------------------------------
+// RescoreJd — /admin/jd/[id] re-score button
+// ---------------------------------------------------------------
+
+func (a *Admin) RescoreJd(
+	ctx context.Context,
+	req *connect.Request[v1.RescoreJdRequest],
+) (*connect.Response[v1.RescoreJdResponse], error) {
+	admin, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if a.jdScorer == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("jd scorer not wired"))
+	}
+	id, err := strconv.ParseInt(req.Msg.SubmissionId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid submission_id"))
+	}
+	s, err := a.users.GetJdSubmission(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("submission not found"))
+	}
+	if s.Status == "scoring" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("already scoring"))
+	}
+	if err := a.users.UpdateJdScoring(ctx, id, "scoring", nil, ""); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not mark scoring"))
+	}
+	a.log.Info("jd rescore queued", slog.Int64("id", id), slog.Int64("admin_id", admin.ID))
+	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
+	go func(id int64, text string) {
+		bg, cancel := context.WithTimeout(context.Background(), a.jdTimeout)
+		defer cancel()
+		a.jdScorer.ScoreAndPersist(bg, id, text, hints)
+	}(id, s.JdText)
+	return connect.NewResponse(&v1.RescoreJdResponse{Status: v1.JdStatus_JD_STATUS_SCORING}), nil
 }
 
 // ---------------------------------------------------------------
