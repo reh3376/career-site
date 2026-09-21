@@ -80,6 +80,53 @@ export async function reindexCorpusAction(
   };
 }
 
+export type SweepResult =
+  | {
+      ok: true;
+      model: string;
+      considered: number;
+      embedded: number;
+      failed: number;
+      remaining: number;
+    }
+  | { ok: false; error: string };
+
+export async function sweepCorpusEmbeddingsAction(): Promise<SweepResult> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/SweepCorpusEmbeddings",
+    body: { maxChunks: 512 },
+    cookie,
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { ok: false, error: msg };
+  }
+  const j = (await resp.json()) as {
+    model?: string;
+    considered?: number;
+    embedded?: number;
+    failed?: number;
+    remaining?: number;
+  };
+  revalidatePath("/admin/corpus", "layout");
+  return {
+    ok: true,
+    model: j.model ?? "",
+    considered: j.considered ?? 0,
+    embedded: j.embedded ?? 0,
+    failed: j.failed ?? 0,
+    remaining: j.remaining ?? 0,
+  };
+}
+
 export type IngestResult =
   | {
       ok: true;

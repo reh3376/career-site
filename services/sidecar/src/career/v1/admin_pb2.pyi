@@ -1008,20 +1008,50 @@ class CorpusDocumentRow(_message.Message):
     def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., source_path: _Optional[str] = ..., title: _Optional[str] = ..., chunk_count: _Optional[int] = ..., embedded_count: _Optional[int] = ..., ingested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., visibility: _Optional[str] = ...) -> None: ...
 
 class ListCorpusDocumentsResponse(_message.Message):
-    __slots__ = ("documents", "total_documents", "total_chunks", "total_embedded", "total_public", "total_corpus_only")
+    __slots__ = ("documents", "total_documents", "total_chunks", "total_embedded", "total_public", "total_corpus_only", "embedder_counts")
     DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_CHUNKS_FIELD_NUMBER: _ClassVar[int]
     TOTAL_EMBEDDED_FIELD_NUMBER: _ClassVar[int]
     TOTAL_PUBLIC_FIELD_NUMBER: _ClassVar[int]
     TOTAL_CORPUS_ONLY_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDER_COUNTS_FIELD_NUMBER: _ClassVar[int]
     documents: _containers.RepeatedCompositeFieldContainer[CorpusDocumentRow]
     total_documents: int
     total_chunks: int
     total_embedded: int
     total_public: int
     total_corpus_only: int
-    def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ..., total_public: _Optional[int] = ..., total_corpus_only: _Optional[int] = ...) -> None: ...
+    embedder_counts: _containers.RepeatedCompositeFieldContainer[EmbedderCount]
+    def __init__(self, documents: _Optional[_Iterable[_Union[CorpusDocumentRow, _Mapping]]] = ..., total_documents: _Optional[int] = ..., total_chunks: _Optional[int] = ..., total_embedded: _Optional[int] = ..., total_public: _Optional[int] = ..., total_corpus_only: _Optional[int] = ..., embedder_counts: _Optional[_Iterable[_Union[EmbedderCount, _Mapping]]] = ...) -> None: ...
+
+class EmbedderCount(_message.Message):
+    __slots__ = ("model", "count")
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    model: str
+    count: int
+    def __init__(self, model: _Optional[str] = ..., count: _Optional[int] = ...) -> None: ...
+
+class SweepCorpusEmbeddingsRequest(_message.Message):
+    __slots__ = ("max_chunks",)
+    MAX_CHUNKS_FIELD_NUMBER: _ClassVar[int]
+    max_chunks: int
+    def __init__(self, max_chunks: _Optional[int] = ...) -> None: ...
+
+class SweepCorpusEmbeddingsResponse(_message.Message):
+    __slots__ = ("model", "considered", "embedded", "failed", "remaining")
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    CONSIDERED_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    FAILED_FIELD_NUMBER: _ClassVar[int]
+    REMAINING_FIELD_NUMBER: _ClassVar[int]
+    model: str
+    considered: int
+    embedded: int
+    failed: int
+    remaining: int
+    def __init__(self, model: _Optional[str] = ..., considered: _Optional[int] = ..., embedded: _Optional[int] = ..., failed: _Optional[int] = ..., remaining: _Optional[int] = ...) -> None: ...
 
 class ReindexCorpusRequest(_message.Message):
     __slots__ = ("source_kind", "scope")

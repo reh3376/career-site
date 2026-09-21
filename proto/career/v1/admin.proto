@@ -235,6 +235,16 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Re-embeds every chunk whose vector is missing or was produced by a
+  // different embedder than the sidecar's current one. Bounded per call
+  // (max_chunks); the response's `remaining` says whether to call again.
+  // This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
+  // changing the embedding model: nothing is deleted, the corpus is
+  // walked until every chunk carries the current model's vector.
+  rpc SweepCorpusEmbeddings(SweepCorpusEmbeddingsRequest) returns (SweepCorpusEmbeddingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Returns every JD submission with score + status. Backs
   // /admin/jd — Roger's triage view for the JD-upload flow. Full
   // JD body is elided from the list; the detail lookup returns it.
@@ -1392,6 +1402,42 @@ message ListCorpusDocumentsResponse {
   int32 total_public = 5;
   // Documents with visibility=corpus_only.
   int32 total_corpus_only = 6;
+  // Chunk counts grouped by the embedder that produced their vector.
+  repeated EmbedderCount embedder_counts = 7;
+}
+
+// One row of the per-embedder chunk breakdown.
+message EmbedderCount {
+  // Embedder name as reported by the sidecar (e.g. `stub`,
+  // `ollama:nomic-embed-text`); empty for chunks with no vector yet,
+  // `untracked` for vectors written before per-chunk tracking existed.
+  string model = 1;
+  // Number of chunks.
+  int32 count = 2;
+}
+
+// Sweep-corpus-embeddings request.
+message SweepCorpusEmbeddingsRequest {
+  // Upper bound on chunks to (re)embed in this call. 0 → 512.
+  int32 max_chunks = 1 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 5000
+  }];
+}
+
+// Sweep-corpus-embeddings response — mirrors ingest.SweepResult.
+message SweepCorpusEmbeddingsResponse {
+  // Embedder the sidecar is currently serving; every chunk is
+  // converged onto this.
+  string model = 1;
+  // Chunks selected as stale this call.
+  int32 considered = 2;
+  // Chunks successfully re-embedded this call.
+  int32 embedded = 3;
+  // Chunks that failed (left stale for the next sweep).
+  int32 failed = 4;
+  // Chunks still stale after this call; zero means converged.
+  int32 remaining = 5;
 }
 
 // Reindex-corpus request. `scope` picks the mount: `public` walks the
