@@ -9,12 +9,12 @@ truth for the LLM rollout.
 
 ## 1. Where things stand
 
-| Layer | Local (owner's Mac) | Production (CPX11, 2 vCPU / 2 GB) |
+| Layer | Local (owner's Mac) | Production (CPX31, 4 vCPU / 8 GB, since 2026-09-21) |
 |---|---|---|
-| Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container in the stack, model pulled, **provider still `stub`** |
+| Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container, `SIDECAR_EMBED_PROVIDER=ollama`, corpus fully on `ollama:nomic-embed-text#p1` (Phase A done 2026-09-21) |
 | LLM gateway | Ollama on the host, `qwen3:14b` (`SIDECAR_LLM_PROVIDER=ollama`) | **`stub`** (schema-valid placeholder JSON; api keeps the retrieval score as the gate) |
 | Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus` |
-| JD scoring | requirements → per-requirement retrieval → verdicts → weighted score in code | retrieval pre-score only (assessor disabled on stub) |
+| JD scoring | requirements → per-requirement retrieval → verdicts → weighted score in code | real cosine retrieval pre-score (assessor disabled on stub); above-threshold rows park at `generating` |
 | Résumé | JSON with source ids, code-side verification, markdown render, Typst PDF locked with `RESUME_PDF_OWNER_PASSWORD` | not generated; above-threshold rows wait at `generating` |
 | Adapter | LoRA experiments on the Mac (`reh3376/mdemg-llm-*` in local Ollama) | none |
 
@@ -59,16 +59,18 @@ are proven locally. Until then production stays on `stub` for the LLM and
 
 ## 4. Order of operations
 
-### Phase A: embeddings on prod (no resize needed)
+### Phase A: embeddings on prod (done 2026-09-21)
 
-1. `.env.prod`: `SIDECAR_EMBED_PROVIDER=ollama`, `OLLAMA_MEM_LIMIT=900m`,
-   `OLLAMA_KEEP_ALIVE=5m` (defaults already match).
-2. `cs up -d ollama sidecar` (alias from `deploy/README.md`); wait for the
-   model pull in `cs logs -f ollama`.
+1. `.env.prod`: `SIDECAR_EMBED_PROVIDER=ollama`, `OLLAMA_MEM_LIMIT=2g`,
+   `OLLAMA_KEEP_ALIVE=10m` (the CPX31 has the headroom).
+2. `cs up -d ollama sidecar api`; wait for the model pull in `cs logs -f ollama`.
 3. `/admin/corpus`: **Reindex public content**, **Reindex private corpus**
    (after `make sync-corpus`), then **Embed sweep** until `remaining` is 0.
-4. Submit a known JD and confirm `retrieval_score` is populated on
-   `/admin/jd/[id]`.
+   On the CPX31 CPU the private reindex took ~150 s and outran the proxy /
+   api write timeout (the server still finished); use small sweep batches
+   (`maxChunks` 16) until the async-job follow-up lands.
+4. `deploy/live-check.sh --submit` confirms a real `retrieval_score`
+   (0.701 for the labelled strong JD on the first run).
 
 ### Phase B: prove the model locally (current work)
 
@@ -89,9 +91,10 @@ are proven locally. Until then production stays on `stub` for the LLM and
 
 ### Phase C: resize and flip the LLM on prod
 
-1. Hetzner console: power off, rescale CPX11 to the tier chosen from the
-   sizing table (keep disk), power on. `deploy/setup-server.sh` is not
-   rerun; the stack comes back via systemd.
+1. Hetzner console: power off (`sudo poweroff`, never `compose stop`),
+   rescale (CPX31 done 2026-09-21; CPX41 if `qwen3:14b` is the target),
+   keep disk, power on. `deploy/setup-server.sh` is not rerun; the stack
+   comes back on Docker's restart policy. Verify with `deploy/live-check.sh`.
 2. Raise `OLLAMA_MEM_LIMIT` (e.g. `12g` on CPX41) and `OLLAMA_KEEP_ALIVE`
    (`30m`) in `.env.prod`. Set `OLLAMA_LLM_MODEL` to the proven model name.
 3. Publish the model to the box. Two options:
