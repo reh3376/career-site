@@ -207,7 +207,7 @@ func main() {
 		}
 		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer)
 	}
-	jdHandler := handlers.NewJd(log, userRepo, jdScorer, cfg.JDPipelineTimeout)
+	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,

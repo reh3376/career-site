@@ -206,16 +206,20 @@ function buildGroups({
   signedIn: boolean;
   isAdmin: boolean;
 }): MenuGroup[] {
-  const groups: MenuGroup[] = [
-    {
-      label: "browse",
-      items: [
-        { kind: "link", label: "Home", href: "/" },
-        { kind: "link", label: "Contact", href: "/contact" },
-        { kind: "link", label: "How Ask Roger works", href: "/how-ask-roger-works" },
-      ],
-    },
+  // Anonymous visitors see only the public surface: landing, contact,
+  // and the way in. Everything else is members-only.
+  const browse: MenuItem[] = [
+    { kind: "link", label: "Home", href: "/" },
+    { kind: "link", label: "Contact", href: "/contact" },
   ];
+  if (signedIn) {
+    browse.push(
+      { kind: "link", label: "Articles", href: "/articles" },
+      { kind: "link", label: "JD upload", href: "/jd-upload" },
+      { kind: "link", label: "How Ask Roger works", href: "/how-ask-roger-works" },
+    );
+  }
+  const groups: MenuGroup[] = [{ label: "browse", items: browse }];
 
   if (isAdmin) {
     groups.push({
@@ -244,7 +248,6 @@ function buildGroups({
       items: [
         { kind: "link", label: "Sign in", href: "/login" },
         { kind: "link", label: "Request access", href: "/register" },
-        { kind: "link", label: "Settings", href: "/settings" },
       ],
     });
   }

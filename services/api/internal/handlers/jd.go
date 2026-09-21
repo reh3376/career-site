@@ -32,6 +32,7 @@ type Jd struct {
 
 	log     *slog.Logger
 	users   *users.Repo
+	auth    *Auth // session lookup; JD upload is members-only
 	limiter *ratelimit.Limiter
 	scorer  *jd.Scorer // nil in dev without a sidecar; SubmitJd skips scoring.
 	// pipelineTimeout bounds one submission's background run. CPU
@@ -39,13 +40,14 @@ type Jd struct {
 	pipelineTimeout time.Duration
 }
 
-func NewJd(log *slog.Logger, repo *users.Repo, scorer *jd.Scorer, pipelineTimeout time.Duration) *Jd {
+func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration) *Jd {
 	if pipelineTimeout <= 0 {
 		pipelineTimeout = 15 * time.Minute
 	}
 	return &Jd{
 		log:   log,
 		users: repo,
+		auth:  auth,
 		// 5-burst per (ip, jd_hash), refill to 5 over 15 min. Blocks
 		// a paster hammering "Submit" and a botnet trying to fuzz.
 		limiter:         ratelimit.New(5, 5.0/(15*60)),
@@ -63,6 +65,10 @@ func (h *Jd) SubmitJd(
 	ctx context.Context,
 	req *connect.Request[v1.SubmitJdRequest],
 ) (*connect.Response[v1.SubmitJdResponse], error) {
+	member, err := h.requireMember(ctx, req)
+	if err != nil {
+		return nil, err
+	}
 	msg := req.Msg
 	text := strings.TrimSpace(msg.JdText)
 	if text == "" {
@@ -80,11 +86,11 @@ func (h *Jd) SubmitJd(
 			errors.New("source is required"))
 	}
 
-	// Rate-limit on (peer addr, jd_hash) so a submitter cannot
-	// hammer, and the same JD can't be re-submitted many times to
-	// game future scoring.
+	// Rate-limit on (member, jd_hash) so a submitter cannot hammer,
+	// and the same JD can't be re-submitted many times to game
+	// future scoring.
 	hash := users.NormaliseJdHash(text)
-	key := "jd:" + req.Peer().Addr + "|" + string(hash)
+	key := "jd:" + strconv.FormatInt(member.ID, 10) + "|" + string(hash)
 	if ok, retry := h.limiter.Allow(key); !ok {
 		h.log.Warn("jd submit rate limited",
 			slog.String("peer", req.Peer().Addr),
@@ -105,6 +111,7 @@ func (h *Jd) SubmitJd(
 		ContactEmail: strings.ToLower(strings.TrimSpace(msg.ContactEmail)),
 		IPHash:       ipHash,
 		UAHash:       uaHash,
+		UserID:       member.ID,
 	})
 	if err != nil {
 		h.log.Error("CreateJdSubmission failed", slog.String("error", err.Error()))
@@ -113,6 +120,7 @@ func (h *Jd) SubmitJd(
 
 	h.log.Info("jd submitted",
 		slog.Int64("id", s.ID),
+		slog.Int64("user_id", member.ID),
 		slog.String("source", source),
 		slog.Int("chars", len(text)),
 		slog.String("role_hint", s.RoleHint),
@@ -148,6 +156,10 @@ func (h *Jd) GetJdResult(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdResultRequest],
 ) (*connect.Response[v1.GetJdResultResponse], error) {
+	member, err := h.requireMember(ctx, req)
+	if err != nil {
+		return nil, err
+	}
 	id, err := strconv.ParseInt(req.Msg.SubmissionId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid submission_id"))
@@ -155,7 +167,11 @@ func (h *Jd) GetJdResult(
 	s, err := h.users.GetJdSubmission(ctx, id)
 	if err != nil {
 		// Any DB error, including no-rows, comes back as NotFound
-		// so the public endpoint doesn't leak internal detail.
+		// so the endpoint doesn't leak internal detail.
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("submission not found"))
+	}
+	// A member sees only their own submissions; admins see all.
+	if s.UserID != member.ID && member.Role != users.RoleAdmin {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("submission not found"))
 	}
 	out := &v1.GetJdResultResponse{
@@ -186,8 +202,29 @@ func (h *Jd) GetJdResult(
 	return connect.NewResponse(out), nil
 }
 
+// requireMember resolves the caller's session or fails the RPC. JD
+// upload is members-only; the proto declares AUTH_LEVEL_MEMBER but
+// enforcement lives here until the auth interceptor lands.
+func (h *Jd) requireMember(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
+	if h.auth == nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("auth not wired"))
+	}
+	u, err := h.auth.LookupSessionUser(ctx, req)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
+	}
+	if u == nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("sign in to use the JD upload"))
+	}
+	if u.Status != users.StatusActive {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("account is not active"))
+	}
+	return u, nil
+}
+
 // ServeResumePDF streams a submission's locked PDF. Plain HTTP (a
-// browser download link), gated by the result token in `t`.
+// browser download link), gated by a signed-in session that owns the
+// submission (or an admin) AND the result token in `t`.
 // Route: GET /api/jd/resume/{file} where file is "<id>.pdf".
 func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 	file := r.PathValue("file")
@@ -201,13 +238,22 @@ func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	member, err := h.auth.LookupSessionUserHTTP(r.Context(), r)
+	if err != nil || member == nil || member.Status != users.StatusActive {
+		http.Error(w, "sign in to download", http.StatusUnauthorized)
+		return
+	}
 	presented, err := hex.DecodeString(strings.TrimSpace(r.URL.Query().Get("t")))
 	if err != nil || len(presented) == 0 {
 		http.Error(w, "missing result token", http.StatusForbidden)
 		return
 	}
-	pdf, token, err := h.users.GetJdResumePDF(r.Context(), id)
+	pdf, token, ownerID, err := h.users.GetJdResumePDF(r.Context(), id)
 	if err != nil || pdf == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if ownerID != member.ID && member.Role != users.RoleAdmin {
 		http.NotFound(w, r)
 		return
 	}

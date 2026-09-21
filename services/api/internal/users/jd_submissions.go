@@ -37,6 +37,10 @@ type JdSubmission struct {
 	// requirement-weighted gate. Assessment is the raw jsonb derivation.
 	RetrievalScore *float64
 	Assessment     []byte
+	// UserID is the submitting member (0 for pre-gate rows);
+	// SubmitterEmail is joined for the admin views.
+	UserID         int64
+	SubmitterEmail string
 }
 
 // TokenMatches reports whether presented equals the stored token,
@@ -55,6 +59,7 @@ type JdSubmitInput struct {
 	ContactEmail string
 	IPHash       []byte
 	UAHash       []byte
+	UserID       int64 // submitting member; required
 }
 
 // NormaliseJdHash returns the sha256 of the whitespace-collapsed,
@@ -104,8 +109,8 @@ func (r *Repo) CreateJdSubmission(
 	const q = `
     INSERT INTO jd_submissions (
       ip_hash, ua_hash, source_kind, jd_text, jd_hash, text_head,
-      role_hint, employer_hint, contact_email, result_token
-    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10)
+      role_hint, employer_hint, contact_email, result_token, user_id
+    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11, 0))
     RETURNING id, created_at, status
   `
 	s := &JdSubmission{
@@ -117,10 +122,11 @@ func (r *Repo) CreateJdSubmission(
 		EmployerHint: in.EmployerHint,
 		ContactEmail: in.ContactEmail,
 		ResultToken:  token,
+		UserID:       in.UserID,
 	}
 	err := r.pool.QueryRow(ctx, q,
 		in.IPHash, in.UAHash, in.SourceKind, in.JdText, hash, head,
-		in.RoleHint, in.EmployerHint, in.ContactEmail, token,
+		in.RoleHint, in.EmployerHint, in.ContactEmail, token, in.UserID,
 	).Scan(&s.ID, &s.CreatedAt, &s.Status)
 	if err != nil {
 		return nil, fmt.Errorf("insert jd submission: %w", err)
@@ -129,13 +135,14 @@ func (r *Repo) CreateJdSubmission(
 }
 
 const jdCols = `
-    id, source_kind, jd_text, jd_hash, text_head,
-    COALESCE(role_hint, ''), COALESCE(employer_hint, ''), COALESCE(contact_email, ''),
-    status, match_score, COALESCE(generated_resume_url, ''), COALESCE(error, ''),
-    created_at, completed_at,
-    result_token, COALESCE(resume_markdown, ''), COALESCE(llm_model, ''),
-    COALESCE(prompt_id, ''), COALESCE(prompt_version, 0),
-    retrieval_score, COALESCE(assessment::text, '')
+    s.id, s.source_kind, s.jd_text, s.jd_hash, s.text_head,
+    COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''), COALESCE(s.contact_email, ''),
+    s.status, s.match_score, COALESCE(s.generated_resume_url, ''), COALESCE(s.error, ''),
+    s.created_at, s.completed_at,
+    s.result_token, COALESCE(s.resume_markdown, ''), COALESCE(s.llm_model, ''),
+    COALESCE(s.prompt_id, ''), COALESCE(s.prompt_version, 0),
+    s.retrieval_score, COALESCE(s.assessment::text, ''),
+    COALESCE(s.user_id, 0), COALESCE(u.email, '')
 `
 
 // SetJdAssessment stores the retrieval pre-score and the assessment
@@ -179,14 +186,15 @@ func (r *Repo) SetJdResumePDF(ctx context.Context, id int64, pdf []byte, pages i
 	return nil
 }
 
-// GetJdResumePDF returns the PDF bytes and the row's result token so
-// the download handler can gate on it. pdf is nil when not rendered.
-func (r *Repo) GetJdResumePDF(ctx context.Context, id int64) (pdf []byte, token []byte, err error) {
-	const q = `SELECT resume_pdf, result_token FROM jd_submissions WHERE id = $1`
-	if err := r.pool.QueryRow(ctx, q, id).Scan(&pdf, &token); err != nil {
-		return nil, nil, fmt.Errorf("get jd resume pdf: %w", err)
+// GetJdResumePDF returns the PDF bytes, the row's result token, and the
+// submitting member id so the download handler can gate on both. pdf
+// is nil when not rendered.
+func (r *Repo) GetJdResumePDF(ctx context.Context, id int64) (pdf []byte, token []byte, userID int64, err error) {
+	const q = `SELECT resume_pdf, result_token, COALESCE(user_id, 0) FROM jd_submissions WHERE id = $1`
+	if err := r.pool.QueryRow(ctx, q, id).Scan(&pdf, &token, &userID); err != nil {
+		return nil, nil, 0, fmt.Errorf("get jd resume pdf: %w", err)
 	}
-	return pdf, token, nil
+	return pdf, token, userID, nil
 }
 
 // SetJdResume stores the verified résumé (structured JSON plus the
@@ -246,17 +254,18 @@ func (r *Repo) UpdateJdScoring(
 // loads on the detail view). Capped at 500 rows.
 func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 	const q = `
-    SELECT id, source_kind, ''::text /* jd_text elided */, jd_hash, text_head,
-           COALESCE(role_hint, ''), COALESCE(employer_hint, ''),
-           COALESCE(contact_email, ''),
-           status, match_score, COALESCE(generated_resume_url, ''),
-           COALESCE(error, ''),
-           created_at, completed_at,
-           CASE WHEN resume_markdown IS NULL THEN '' ELSE 'y' END /* presence only */,
-           COALESCE(llm_model, ''), COALESCE(prompt_id, ''), COALESCE(prompt_version, 0),
-           retrieval_score
-    FROM jd_submissions
-    ORDER BY created_at DESC
+    SELECT s.id, s.source_kind, ''::text /* jd_text elided */, s.jd_hash, s.text_head,
+           COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''),
+           COALESCE(s.contact_email, ''),
+           s.status, s.match_score, COALESCE(s.generated_resume_url, ''),
+           COALESCE(s.error, ''),
+           s.created_at, s.completed_at,
+           CASE WHEN s.resume_markdown IS NULL THEN '' ELSE 'y' END /* presence only */,
+           COALESCE(s.llm_model, ''), COALESCE(s.prompt_id, ''), COALESCE(s.prompt_version, 0),
+           s.retrieval_score, COALESCE(s.user_id, 0), COALESCE(u.email, '')
+    FROM jd_submissions s
+    LEFT JOIN users u ON u.id = s.user_id
+    ORDER BY s.created_at DESC
     LIMIT 500
   `
 	rows, err := r.pool.Query(ctx, q)
@@ -273,7 +282,7 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 			&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 			&s.CreatedAt, &s.CompletedAt,
 			&s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
-			&s.RetrievalScore,
+			&s.RetrievalScore, &s.UserID, &s.SubmitterEmail,
 		); err != nil {
 			return nil, fmt.Errorf("scan jd row: %w", err)
 		}
@@ -285,13 +294,15 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 // GetJdSubmission looks up one row by id.
 func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, error) {
 	s := &JdSubmission{}
-	err := r.pool.QueryRow(ctx, `SELECT `+jdCols+` FROM jd_submissions WHERE id = $1`, id).Scan(
+	err := r.pool.QueryRow(ctx,
+		`SELECT `+jdCols+` FROM jd_submissions s LEFT JOIN users u ON u.id = s.user_id WHERE s.id = $1`, id,
+	).Scan(
 		&s.ID, &s.SourceKind, &s.JdText, &s.JdHash, &s.TextHead,
 		&s.RoleHint, &s.EmployerHint, &s.ContactEmail,
 		&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 		&s.CreatedAt, &s.CompletedAt,
 		&s.ResultToken, &s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
-		&s.RetrievalScore, &s.Assessment,
+		&s.RetrievalScore, &s.Assessment, &s.UserID, &s.SubmitterEmail,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get jd submission: %w", err)

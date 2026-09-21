@@ -128,7 +128,20 @@ func (h *Auth) Logout(
 // caller's session cookie to a *users.User. Returns nil, nil for
 // "no session" and nil, err for a hard failure the caller should surface.
 func (h *Auth) LookupSessionUser(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
-	token := sessionTokenFromRequest(req)
+	return h.lookupSessionToken(ctx, sessionTokenFromRequest(req))
+}
+
+// LookupSessionUserHTTP is LookupSessionUser for plain net/http
+// handlers (file downloads) that are not Connect RPCs.
+func (h *Auth) LookupSessionUserHTTP(ctx context.Context, r *http.Request) (*users.User, error) {
+	c, err := r.Cookie(SessionCookieName)
+	if err != nil {
+		return nil, nil
+	}
+	return h.lookupSessionToken(ctx, c.Value)
+}
+
+func (h *Auth) lookupSessionToken(ctx context.Context, token string) (*users.User, error) {
 	if token == "" {
 		return nil, nil
 	}

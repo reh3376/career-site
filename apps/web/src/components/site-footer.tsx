@@ -34,23 +34,13 @@ export function SiteFooter() {
             </p>
             <ul className="space-y-2">
               <li>
-                <Link href="/articles" className="text-ink-2 no-underline hover:text-accent">
-                  Articles
-                </Link>
-              </li>
-              <li>
-                <Link href="/jd-upload" className="text-ink-2 no-underline hover:text-accent">
-                  Have a role for Roger?
-                </Link>
-              </li>
-              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>
               </li>
               <li>
-                <Link href="/how-ask-roger-works" className="text-ink-2 no-underline hover:text-accent">
-                  How Ask Roger works
+                <Link href="/register" className="text-ink-2 no-underline hover:text-accent">
+                  Request access
                 </Link>
               </li>
               <li>
