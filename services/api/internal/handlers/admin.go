@@ -783,6 +783,8 @@ func supportCategoryProtoToRepo(c v1.SupportCategory) users.SupportCategory {
 		return users.SupportCategoryPressInquiry
 	case v1.SupportCategory_SUPPORT_CATEGORY_OTHER:
 		return users.SupportCategoryOther
+	case v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY:
+		return users.SupportCategoryHiringInquiry
 	default:
 		return "" // unspecified = "any"
 	}
@@ -802,6 +804,8 @@ func supportCategoryRepoToProto(c users.SupportCategory) v1.SupportCategory {
 		return v1.SupportCategory_SUPPORT_CATEGORY_PRESS_INQUIRY
 	case users.SupportCategoryOther:
 		return v1.SupportCategory_SUPPORT_CATEGORY_OTHER
+	case users.SupportCategoryHiringInquiry:
+		return v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY
 	default:
 		return v1.SupportCategory_SUPPORT_CATEGORY_UNSPECIFIED
 	}
@@ -891,16 +895,19 @@ func memberRecordRepoToProto(u *users.User) *v1.MemberRecord {
 
 func supportMessageRepoToProto(m *users.SupportMessage) *v1.SupportMessage {
 	out := &v1.SupportMessage{
-		Id:          strconv.FormatInt(m.ID, 10),
-		TicketId:    m.TicketID,
-		Category:    supportCategoryRepoToProto(m.Category),
-		Status:      supportStatusRepoToProto(m.Status),
-		Subject:     m.Subject,
-		Body:        m.Body,
-		SenderName:  m.SenderName,
-		SenderEmail: m.SenderEmail,
-		CreatedAt:   timestamppb.New(m.CreatedAt),
-		UpdatedAt:   timestamppb.New(m.UpdatedAt),
+		Id:                strconv.FormatInt(m.ID, 10),
+		TicketId:          m.TicketID,
+		Category:          supportCategoryRepoToProto(m.Category),
+		Status:            supportStatusRepoToProto(m.Status),
+		Subject:           m.Subject,
+		Body:              m.Body,
+		SenderName:        m.SenderName,
+		SenderEmail:       m.SenderEmail,
+		CreatedAt:         timestamppb.New(m.CreatedAt),
+		UpdatedAt:         timestamppb.New(m.UpdatedAt),
+		HiringRole:        m.HiringRole,
+		HiringJdUrl:       m.HiringJDURL,
+		HiringTargetStart: m.HiringTargetStart,
 	}
 	if m.UserID != nil {
 		out.UserId = strconv.FormatInt(*m.UserID, 10)

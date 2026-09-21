@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/contact.proto.
  */
 export const file_career_v1_contact: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXJlZXIvdjEvY29udGFjdC5wcm90bxIJY2FyZWVyLnYxIhoKGEdldENvbnRhY3RPcHRpb25zUmVxdWVzdCI6Cg5Db250YWN0Q2hhbm5lbBIMCgRraW5kGAEgASgJEg0KBWxhYmVsGAIgASgJEgsKA3VybBgDIAEoCSJ8ChlHZXRDb250YWN0T3B0aW9uc1Jlc3BvbnNlEhQKDGF2YWlsYWJpbGl0eRgBIAEoCRIcChRsb2NhdGlvbl9wcmVmZXJlbmNlcxgCIAEoCRIrCghjaGFubmVscxgDIAMoCzIZLmNhcmVlci52MS5Db250YWN0Q2hhbm5lbCK1AwoUU3VibWl0Q29udGFjdFJlcXVlc3QSGwoHc3ViamVjdBgBIAEoCUIKukgHcgUQARjIARIbCgdtZXNzYWdlGAIgASgJQgq6SAdyBRABGIgnEk8KDXJlcGx5X2NoYW5uZWwYAyABKA4yLC5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlcXVlc3QuUmVwbHlDaGFubmVsQgq6SAeCAQQQASAAEiAKD2NvbnZlcnNhdGlvbl9pZBgEIAEoCUIHukgEcgIYQBI4CghjYXRlZ29yeRgFIAEoDjIaLmNhcmVlci52MS5TdXBwb3J0Q2F0ZWdvcnlCCrpIB4IBBBABIAASFgoEbmFtZRgGIAEoCUIIukgFcgMYyAESFwoFZW1haWwYByABKAlCCLpIBXIDGMACEiEKD3R1cm5zdGlsZV90b2tlbhgIIAEoCUIIukgFcgMYgCAiYgoMUmVwbHlDaGFubmVsEh0KGVJFUExZX0NIQU5ORUxfVU5TUEVDSUZJRUQQABIXChNSRVBMWV9DSEFOTkVMX0VNQUlMEAESGgoWUkVQTFlfQ0hBTk5FTF9MSU5LRURJThACIioKFVN1Ym1pdENvbnRhY3RSZXNwb25zZRIRCgl0aWNrZXRfaWQYASABKAkqigIKD1N1cHBvcnRDYXRlZ29yeRIgChxTVVBQT1JUX0NBVEVHT1JZX1VOU1BFQ0lGSUVEEAASJQohU1VQUE9SVF9DQVRFR09SWV9HRU5FUkFMX1FVRVNUSU9OEAESHwobU1VQUE9SVF9DQVRFR09SWV9CVUdfUkVQT1JUEAISJAogU1VQUE9SVF9DQVRFR09SWV9GRUFUVVJFX1JFUVVFU1QQAxInCiNTVVBQT1JUX0NBVEVHT1JZX0NPTlRSSUJVVE9SX0FDQ0VTUxAEEiIKHlNVUFBPUlRfQ0FURUdPUllfUFJFU1NfSU5RVUlSWRAFEhoKFlNVUFBPUlRfQ0FURUdPUllfT1RIRVIQBjLUAQoOQ29udGFjdFNlcnZpY2USZAoRR2V0Q29udGFjdE9wdGlvbnMSIy5jYXJlZXIudjEuR2V0Q29udGFjdE9wdGlvbnNSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldENvbnRhY3RPcHRpb25zUmVzcG9uc2UiBIC1GAISXAoNU3VibWl0Q29udGFjdBIfLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVxdWVzdBogLmNhcmVlci52MS5TdWJtaXRDb250YWN0UmVzcG9uc2UiCIC1GAGQtRgDQqYBCg1jb20uY2FyZWVyLnYxQgxDb250YWN0UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options]);
+  fileDesc("ChdjYXJlZXIvdjEvY29udGFjdC5wcm90bxIJY2FyZWVyLnYxIhoKGEdldENvbnRhY3RPcHRpb25zUmVxdWVzdCI6Cg5Db250YWN0Q2hhbm5lbBIMCgRraW5kGAEgASgJEg0KBWxhYmVsGAIgASgJEgsKA3VybBgDIAEoCSJ8ChlHZXRDb250YWN0T3B0aW9uc1Jlc3BvbnNlEhQKDGF2YWlsYWJpbGl0eRgBIAEoCRIcChRsb2NhdGlvbl9wcmVmZXJlbmNlcxgCIAEoCRIrCghjaGFubmVscxgDIAMoCzIZLmNhcmVlci52MS5Db250YWN0Q2hhbm5lbCKbBAoUU3VibWl0Q29udGFjdFJlcXVlc3QSGwoHc3ViamVjdBgBIAEoCUIKukgHcgUQARjIARIbCgdtZXNzYWdlGAIgASgJQgq6SAdyBRABGIgnEk8KDXJlcGx5X2NoYW5uZWwYAyABKA4yLC5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlcXVlc3QuUmVwbHlDaGFubmVsQgq6SAeCAQQQASAAEiAKD2NvbnZlcnNhdGlvbl9pZBgEIAEoCUIHukgEcgIYQBI4CghjYXRlZ29yeRgFIAEoDjIaLmNhcmVlci52MS5TdXBwb3J0Q2F0ZWdvcnlCCrpIB4IBBBABIAASFgoEbmFtZRgGIAEoCUIIukgFcgMYyAESFwoFZW1haWwYByABKAlCCLpIBXIDGMACEiEKD3R1cm5zdGlsZV90b2tlbhgIIAEoCUIIukgFcgMYgCASHQoLaGlyaW5nX3JvbGUYCSABKAlCCLpIBXIDGMgBEh8KDWhpcmluZ19qZF91cmwYCiABKAlCCLpIBXIDGNAPEiQKE2hpcmluZ190YXJnZXRfc3RhcnQYCyABKAlCB7pIBHICGGQiYgoMUmVwbHlDaGFubmVsEh0KGVJFUExZX0NIQU5ORUxfVU5TUEVDSUZJRUQQABIXChNSRVBMWV9DSEFOTkVMX0VNQUlMEAESGgoWUkVQTFlfQ0hBTk5FTF9MSU5LRURJThACIioKFVN1Ym1pdENvbnRhY3RSZXNwb25zZRIRCgl0aWNrZXRfaWQYASABKAkqrwIKD1N1cHBvcnRDYXRlZ29yeRIgChxTVVBQT1JUX0NBVEVHT1JZX1VOU1BFQ0lGSUVEEAASJQohU1VQUE9SVF9DQVRFR09SWV9HRU5FUkFMX1FVRVNUSU9OEAESHwobU1VQUE9SVF9DQVRFR09SWV9CVUdfUkVQT1JUEAISJAogU1VQUE9SVF9DQVRFR09SWV9GRUFUVVJFX1JFUVVFU1QQAxInCiNTVVBQT1JUX0NBVEVHT1JZX0NPTlRSSUJVVE9SX0FDQ0VTUxAEEiIKHlNVUFBPUlRfQ0FURUdPUllfUFJFU1NfSU5RVUlSWRAFEhoKFlNVUFBPUlRfQ0FURUdPUllfT1RIRVIQBhIjCh9TVVBQT1JUX0NBVEVHT1JZX0hJUklOR19JTlFVSVJZEAcy1AEKDkNvbnRhY3RTZXJ2aWNlEmQKEUdldENvbnRhY3RPcHRpb25zEiMuY2FyZWVyLnYxLkdldENvbnRhY3RPcHRpb25zUmVxdWVzdBokLmNhcmVlci52MS5HZXRDb250YWN0T3B0aW9uc1Jlc3BvbnNlIgSAtRgCElwKDVN1Ym1pdENvbnRhY3QSHy5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlcXVlc3QaIC5jYXJlZXIudjEuU3VibWl0Q29udGFjdFJlc3BvbnNlIgiAtRgBkLUYA0KmAQoNY29tLmNhcmVlci52MUIMQ29udGFjdFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options]);
 
 /**
  * Empty.
@@ -166,6 +166,34 @@ export type SubmitContactRequest = Message<"career.v1.SubmitContactRequest"> & {
    * @generated from field: string turnstile_token = 8;
    */
   turnstileToken: string;
+
+  /**
+   * The role the sender is considering Roger for. Populated by the
+   * form when category = HIRING_INQUIRY; ignored otherwise. Free
+   * text; used for admin triage.
+   *
+   * @generated from field: string hiring_role = 9;
+   */
+  hiringRole: string;
+
+  /**
+   * Absolute URL of the job posting. Populated by the form when
+   * category = HIRING_INQUIRY; ignored otherwise. Not validated
+   * beyond length so recruiters can drop URLs from ATS systems that
+   * include tokens / query strings.
+   *
+   * @generated from field: string hiring_jd_url = 10;
+   */
+  hiringJdUrl: string;
+
+  /**
+   * Free-text "target start" the sender's hiring cycle is aiming
+   * at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form
+   * when category = HIRING_INQUIRY; ignored otherwise.
+   *
+   * @generated from field: string hiring_target_start = 11;
+   */
+  hiringTargetStart: string;
 };
 
 /**
@@ -286,6 +314,15 @@ export enum SupportCategory {
    * @generated from enum value: SUPPORT_CATEGORY_OTHER = 6;
    */
   OTHER = 6,
+
+  /**
+   * Hiring manager reaching out about a specific role. The web
+   * form reveals dedicated fields (role, JD URL, target start) when
+   * this is selected; those land on SubmitContactRequest.hiring_*.
+   *
+   * @generated from enum value: SUPPORT_CATEGORY_HIRING_INQUIRY = 7;
+   */
+  HIRING_INQUIRY = 7,
 }
 
 /**

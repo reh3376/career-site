@@ -24,6 +24,7 @@ const KNOWN_CATEGORIES = new Set([
   "contributor_access",
   "press_inquiry",
   "other",
+  "hiring_inquiry",
 ]);
 
 export default async function ContactPage({

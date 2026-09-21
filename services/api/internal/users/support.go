@@ -15,6 +15,7 @@ const (
 	SupportCategoryContributorAccess SupportCategory = "contributor_access"
 	SupportCategoryPressInquiry      SupportCategory = "press_inquiry"
 	SupportCategoryOther             SupportCategory = "other"
+	SupportCategoryHiringInquiry     SupportCategory = "hiring_inquiry"
 )
 
 type SupportMessage struct {
@@ -31,6 +32,11 @@ type SupportMessage struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	ResolvedAt   *time.Time
+	// Hiring-inquiry fields; populated only when Category is
+	// "hiring_inquiry", empty for every other category.
+	HiringRole        string
+	HiringJDURL       string
+	HiringTargetStart string
 }
 
 // ListSupportFilter narrows a ListSupport call. Zero values mean "no
@@ -65,6 +71,10 @@ type CreateSupportInput struct {
 	ReplyChannel string
 	IPHash       []byte
 	UserAgent    string
+	// Only meaningful when Category is "hiring_inquiry".
+	HiringRole        string
+	HiringJDURL       string
+	HiringTargetStart string
 }
 
 // CreateSupport inserts a support-message row and returns it with the
@@ -73,23 +83,33 @@ func (r *Repo) CreateSupport(ctx context.Context, in CreateSupportInput) (*Suppo
 	const q = `
     INSERT INTO support_messages
       (category, subject, body, user_id, sender_name, sender_email,
-       reply_channel, ip_hash, user_agent, ticket_id)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+       reply_channel, ip_hash, user_agent, ticket_id,
+       hiring_role, hiring_jd_url, hiring_target_start)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending',
+       NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''))
     RETURNING id, created_at
   `
 	m := &SupportMessage{
-		Category:     in.Category,
-		Subject:      in.Subject,
-		Body:         in.Body,
-		UserID:       in.UserID,
-		SenderName:   in.SenderName,
-		SenderEmail:  in.SenderEmail,
-		ReplyChannel: in.ReplyChannel,
-		Status:       "open",
+		Category:          in.Category,
+		Subject:           in.Subject,
+		Body:              in.Body,
+		UserID:            in.UserID,
+		SenderName:        in.SenderName,
+		SenderEmail:       in.SenderEmail,
+		ReplyChannel:      in.ReplyChannel,
+		Status:            "open",
+		HiringRole:        in.HiringRole,
+		HiringJDURL:       in.HiringJDURL,
+		HiringTargetStart: in.HiringTargetStart,
 	}
+	// Ticket id ($10 in the INSERT is unused; goose sets ticket_id to
+	// 'pending' inline and the UPDATE below rewrites it). The bind
+	// list carries only $1..$9 for the core row + $10..$12 for the
+	// hiring fields.
 	if err := r.pool.QueryRow(ctx, q,
 		string(in.Category), in.Subject, in.Body, in.UserID, in.SenderName,
 		in.SenderEmail, in.ReplyChannel, in.IPHash, in.UserAgent,
+		in.HiringRole, in.HiringJDURL, in.HiringTargetStart,
 	).Scan(&m.ID, &m.CreatedAt); err != nil {
 		return nil, fmt.Errorf("insert support: %w", err)
 	}
@@ -155,7 +175,9 @@ func (r *Repo) ListSupport(ctx context.Context, f ListSupportFilter) (*ListSuppo
 	q := `
     SELECT id, category::text, status::text, subject, body, user_id,
            sender_name, sender_email, reply_channel, ticket_id,
-           created_at, updated_at, resolved_at
+           created_at, updated_at, resolved_at,
+           COALESCE(hiring_role, ''), COALESCE(hiring_jd_url, ''),
+           COALESCE(hiring_target_start, '')
     FROM support_messages
   ` + where + " ORDER BY created_at DESC LIMIT " + limArg + " OFFSET " + offArg
 
@@ -173,6 +195,7 @@ func (r *Repo) ListSupport(ctx context.Context, f ListSupportFilter) (*ListSuppo
 			&m.ID, &cat, &status, &m.Subject, &m.Body, &m.UserID,
 			&m.SenderName, &m.SenderEmail, &m.ReplyChannel, &m.TicketID,
 			&m.CreatedAt, &m.UpdatedAt, &m.ResolvedAt,
+			&m.HiringRole, &m.HiringJDURL, &m.HiringTargetStart,
 		); err != nil {
 			return nil, fmt.Errorf("scan support row: %w", err)
 		}
@@ -210,7 +233,9 @@ func (r *Repo) SetSupportStatus(ctx context.Context, id int64, status string) (*
     WHERE id = $1
     RETURNING id, category::text, status::text, subject, body, user_id,
               sender_name, sender_email, reply_channel, ticket_id,
-              created_at, updated_at, resolved_at
+              created_at, updated_at, resolved_at,
+              COALESCE(hiring_role, ''), COALESCE(hiring_jd_url, ''),
+              COALESCE(hiring_target_start, '')
   `
 	var m SupportMessage
 	var cat, st string
@@ -218,6 +243,7 @@ func (r *Repo) SetSupportStatus(ctx context.Context, id int64, status string) (*
 		&m.ID, &cat, &st, &m.Subject, &m.Body, &m.UserID,
 		&m.SenderName, &m.SenderEmail, &m.ReplyChannel, &m.TicketID,
 		&m.CreatedAt, &m.UpdatedAt, &m.ResolvedAt,
+		&m.HiringRole, &m.HiringJDURL, &m.HiringTargetStart,
 	); err != nil {
 		return nil, fmt.Errorf("set support status: %w", err)
 	}

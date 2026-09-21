@@ -807,6 +807,15 @@ message SupportMessage {
   google.protobuf.Timestamp updated_at = 11;
   // Set only for resolved messages.
   google.protobuf.Timestamp resolved_at = 12;
+  // Role the sender is considering Roger for; populated only when
+  // category is HIRING_INQUIRY.
+  string hiring_role = 13;
+  // URL of the job posting; populated only when category is
+  // HIRING_INQUIRY.
+  string hiring_jd_url = 14;
+  // Free-text target start date; populated only when category is
+  // HIRING_INQUIRY.
+  string hiring_target_start = 15;
 }
 
 // Contact-message list request.

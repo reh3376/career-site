@@ -18,6 +18,9 @@ export type ContactState = {
     message?: string;
     name?: string;
     email?: string;
+    hiring_role?: string;
+    hiring_jd_url?: string;
+    hiring_target_start?: string;
   };
 };
 
@@ -28,6 +31,21 @@ const CATEGORY_BY_KEY: Record<string, SupportCategory> = {
   contributor_access: SupportCategory.CONTRIBUTOR_ACCESS,
   press_inquiry: SupportCategory.PRESS_INQUIRY,
   other: SupportCategory.OTHER,
+  hiring_inquiry: SupportCategory.HIRING_INQUIRY,
+};
+
+// Server-side wire name for the enum. The proto codec expects the
+// full SUPPORT_CATEGORY_* form, not the short one the enum object
+// exposes; keep this map so the switch to another enum doesn't need
+// two touches.
+const CATEGORY_WIRE: Record<string, string> = {
+  general_question: "SUPPORT_CATEGORY_GENERAL_QUESTION",
+  bug_report: "SUPPORT_CATEGORY_BUG_REPORT",
+  feature_request: "SUPPORT_CATEGORY_FEATURE_REQUEST",
+  contributor_access: "SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS",
+  press_inquiry: "SUPPORT_CATEGORY_PRESS_INQUIRY",
+  other: "SUPPORT_CATEGORY_OTHER",
+  hiring_inquiry: "SUPPORT_CATEGORY_HIRING_INQUIRY",
 };
 
 export async function submitContactAction(
@@ -39,7 +57,21 @@ export async function submitContactAction(
   const message = String(formData.get("message") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
-  const values = { category, subject, message, name, email };
+  const hiring_role = String(formData.get("hiring_role") ?? "").trim();
+  const hiring_jd_url = String(formData.get("hiring_jd_url") ?? "").trim();
+  const hiring_target_start = String(
+    formData.get("hiring_target_start") ?? "",
+  ).trim();
+  const values = {
+    category,
+    subject,
+    message,
+    name,
+    email,
+    hiring_role,
+    hiring_jd_url,
+    hiring_target_start,
+  };
 
   const categoryEnum = CATEGORY_BY_KEY[category];
   if (categoryEnum === undefined || categoryEnum === SupportCategory.UNSPECIFIED) {
@@ -64,6 +96,9 @@ export async function submitContactAction(
     name,
     email,
     replyChannel: 1, // REPLY_CHANNEL_EMAIL
+    hiringRole: hiring_role,
+    hiringJdUrl: hiring_jd_url,
+    hiringTargetStart: hiring_target_start,
   });
 
   // Serialize the message manually because callApi wants a JSON body.
@@ -71,10 +106,13 @@ export async function submitContactAction(
   const body: Record<string, unknown> = {
     subject: req.subject,
     message: req.message,
-    category: category.toUpperCase(),
+    category: CATEGORY_WIRE[category] ?? "SUPPORT_CATEGORY_OTHER",
     name: req.name,
     email: req.email,
     replyChannel: "REPLY_CHANNEL_EMAIL",
+    hiringRole: req.hiringRole,
+    hiringJdUrl: req.hiringJdUrl,
+    hiringTargetStart: req.hiringTargetStart,
   };
 
   const resp = await callApi({
