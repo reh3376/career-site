@@ -1329,6 +1329,8 @@ message IngestCorpusTextRequest {
     min_len: 1
     max_len: 204800
   }];
+  // `public` (default) or `corpus_only`.
+  string visibility = 5 [(buf.validate.field).string.max_len = 16];
 }
 
 // Ingest response — mirrors ingest.IngestResult.
@@ -1370,6 +1372,9 @@ message CorpusDocumentRow {
   google.protobuf.Timestamp ingested_at = 7;
   // When any field changed (title / hash / meta).
   google.protobuf.Timestamp updated_at = 8;
+  // `public` (citable on the site) or `corpus_only` (informs answers,
+  // never quoted or named).
+  string visibility = 9;
 }
 
 // List-corpus-documents response.
@@ -1383,26 +1388,34 @@ message ListCorpusDocumentsResponse {
   int32 total_chunks = 3;
   // Aggregate count of chunks that have an embedding populated.
   int32 total_embedded = 4;
+  // Documents with visibility=public.
+  int32 total_public = 5;
+  // Documents with visibility=corpus_only.
+  int32 total_corpus_only = 6;
 }
 
-// Reindex-corpus request. `source_kind` picks which subdirectory
-// under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
-// Currently the handler only knows about `article`; adding a kind is
-// a code edit + a compose bind-mount, not a proto change.
+// Reindex-corpus request. `scope` picks the mount: `public` walks the
+// committed content under CORPUS_ROOT (documents land as
+// visibility=public); `private` walks CORPUS_PRIVATE_ROOT, where each
+// top-level directory is a source_kind and every document lands as
+// visibility=corpus_only. `source_kind` optionally narrows either
+// scope to one kind.
 message ReindexCorpusRequest {
-  // Which corpus subtree to walk. Free-text so a new kind is a
-  // one-line handler change, not a proto edit. Validated against the
-  // handler's allow-list.
-  string source_kind = 1 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 40
-  }];
+  // Optional kind filter (e.g. `article`, `worksheet`). Empty walks
+  // every kind in the scope. Validated against the ingest allow-list.
+  string source_kind = 1 [(buf.validate.field).string.max_len = 40];
+  // `public` (default) or `private`.
+  string scope = 2 [(buf.validate.field).string.max_len = 16];
 }
 
 // Reindex-corpus response — mirrors ingest.WalkResult.
 message ReindexCorpusResponse {
   // Absolute path the handler actually walked.
   string root = 1;
+  // Visibility stamped on every document this run: public or corpus_only.
+  string visibility = 8;
+  // Source kinds that were walked, sorted.
+  repeated string kinds_walked = 9;
   // Number of `.md` files the walker saw.
   int32 files_scanned = 2;
   // Number of files handed to the ingester without error. Includes

@@ -67,8 +67,13 @@ services:
       # so `/admin/corpus` → "Reindex articles" walks the same files
       # that ship with the web bundle.
       CORPUS_ROOT: /corpus
+      # Curated private corpus (visibility=corpus_only). In dev, point
+      # CORPUS_PRIVATE_HOST_DIR at a local staging folder; default is
+      # the gitignored ./.corpus-private.
+      CORPUS_PRIVATE_ROOT: /corpus-private
     volumes:
       - ./apps/web/content:/corpus:ro
+      - ${CORPUS_PRIVATE_HOST_DIR:-./.corpus-private}:/corpus-private:ro
     depends_on:
       sidecar:
         condition: service_healthy

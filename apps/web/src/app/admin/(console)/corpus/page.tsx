@@ -16,6 +16,7 @@ type CorpusDoc = {
   source_path?: string;
   sourcePath?: string;
   title: string;
+  visibility?: string;
   chunk_count?: number;
   chunkCount?: number;
   embedded_count?: number;
@@ -34,6 +35,10 @@ type ListResp = {
   totalChunks?: number;
   total_embedded?: number;
   totalEmbedded?: number;
+  total_public?: number;
+  totalPublic?: number;
+  total_corpus_only?: number;
+  totalCorpusOnly?: number;
 };
 
 type FetchResult =
@@ -68,8 +73,10 @@ export default async function AdminCorpusPage() {
         Corpus.
       </h1>
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
-        The Ask Roger corpus. Paste a document below to chunk +
-        embed it, or check what&rsquo;s already stored. Chunking is
+        The Ask Roger corpus. Reindex from the two mounts, or paste a
+        document to chunk + embed it. Public documents can be quoted
+        and cited on the site; corpus-only documents inform answers
+        and JD scoring but are never quoted or named. Chunking is
         deterministic (paragraph.v1) and embedding runs through the
         sidecar (stub by default, ollama in prod when configured).
       </p>
@@ -79,11 +86,23 @@ export default async function AdminCorpusPage() {
           Couldn&rsquo;t load corpus, {result.error}.
         </p>
       ) : (
-        <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-3">
+        <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-5">
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">documents</dt>
             <dd className="m-0 tabular text-ink text-2xl">
               {result.data.total_documents ?? result.data.totalDocuments ?? 0}
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-3">
+            <dt className="text-ink-3">public</dt>
+            <dd className="m-0 tabular text-ink text-2xl">
+              {result.data.total_public ?? result.data.totalPublic ?? 0}
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-3">
+            <dt className="text-ink-3">corpus-only</dt>
+            <dd className="m-0 tabular text-ink text-2xl">
+              {result.data.total_corpus_only ?? result.data.totalCorpusOnly ?? 0}
             </dd>
           </div>
           <div className="flex items-baseline gap-3">
@@ -149,6 +168,13 @@ function DocRow({ d, nowMs }: { d: CorpusDoc; nowMs: number }) {
     <li className="py-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <span className="text-ink">{sourceKind}</span>
+        <span
+          className={
+            d.visibility === "corpus_only" ? "text-signal" : "text-success"
+          }
+        >
+          {d.visibility === "corpus_only" ? "corpus-only" : "public"}
+        </span>
         <span>{sourcePath}</span>
         {ingested ? <span>added {relative(ingested, nowMs)}</span> : null}
       </div>

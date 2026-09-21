@@ -5761,7 +5761,9 @@ type IngestCorpusTextRequest struct {
 	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	// The document text, post-front-matter for markdown. Capped at
 	// 200 KiB so the form doesn't paste in an unbounded blob.
-	Body          string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	Body string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	// `public` (default) or `corpus_only`.
+	Visibility    string `protobuf:"bytes,5,opt,name=visibility,proto3" json:"visibility,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5820,6 +5822,13 @@ func (x *IngestCorpusTextRequest) GetTitle() string {
 func (x *IngestCorpusTextRequest) GetBody() string {
 	if x != nil {
 		return x.Body
+	}
+	return ""
+}
+
+func (x *IngestCorpusTextRequest) GetVisibility() string {
+	if x != nil {
+		return x.Visibility
 	}
 	return ""
 }
@@ -5972,7 +5981,10 @@ type CorpusDocumentRow struct {
 	// When the row was first written.
 	IngestedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=ingested_at,json=ingestedAt,proto3" json:"ingested_at,omitempty"`
 	// When any field changed (title / hash / meta).
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// `public` (citable on the site) or `corpus_only` (informs answers,
+	// never quoted or named).
+	Visibility    string `protobuf:"bytes,9,opt,name=visibility,proto3" json:"visibility,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6063,6 +6075,13 @@ func (x *CorpusDocumentRow) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CorpusDocumentRow) GetVisibility() string {
+	if x != nil {
+		return x.Visibility
+	}
+	return ""
+}
+
 // List-corpus-documents response.
 type ListCorpusDocumentsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6075,8 +6094,12 @@ type ListCorpusDocumentsResponse struct {
 	TotalChunks int32 `protobuf:"varint,3,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
 	// Aggregate count of chunks that have an embedding populated.
 	TotalEmbedded int32 `protobuf:"varint,4,opt,name=total_embedded,json=totalEmbedded,proto3" json:"total_embedded,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Documents with visibility=public.
+	TotalPublic int32 `protobuf:"varint,5,opt,name=total_public,json=totalPublic,proto3" json:"total_public,omitempty"`
+	// Documents with visibility=corpus_only.
+	TotalCorpusOnly int32 `protobuf:"varint,6,opt,name=total_corpus_only,json=totalCorpusOnly,proto3" json:"total_corpus_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ListCorpusDocumentsResponse) Reset() {
@@ -6137,16 +6160,33 @@ func (x *ListCorpusDocumentsResponse) GetTotalEmbedded() int32 {
 	return 0
 }
 
-// Reindex-corpus request. `source_kind` picks which subdirectory
-// under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
-// Currently the handler only knows about `article`; adding a kind is
-// a code edit + a compose bind-mount, not a proto change.
+func (x *ListCorpusDocumentsResponse) GetTotalPublic() int32 {
+	if x != nil {
+		return x.TotalPublic
+	}
+	return 0
+}
+
+func (x *ListCorpusDocumentsResponse) GetTotalCorpusOnly() int32 {
+	if x != nil {
+		return x.TotalCorpusOnly
+	}
+	return 0
+}
+
+// Reindex-corpus request. `scope` picks the mount: `public` walks the
+// committed content under CORPUS_ROOT (documents land as
+// visibility=public); `private` walks CORPUS_PRIVATE_ROOT, where each
+// top-level directory is a source_kind and every document lands as
+// visibility=corpus_only. `source_kind` optionally narrows either
+// scope to one kind.
 type ReindexCorpusRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Which corpus subtree to walk. Free-text so a new kind is a
-	// one-line handler change, not a proto edit. Validated against the
-	// handler's allow-list.
-	SourceKind    string `protobuf:"bytes,1,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	// Optional kind filter (e.g. `article`, `worksheet`). Empty walks
+	// every kind in the scope. Validated against the ingest allow-list.
+	SourceKind string `protobuf:"bytes,1,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	// `public` (default) or `private`.
+	Scope         string `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6188,11 +6228,22 @@ func (x *ReindexCorpusRequest) GetSourceKind() string {
 	return ""
 }
 
+func (x *ReindexCorpusRequest) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
 // Reindex-corpus response — mirrors ingest.WalkResult.
 type ReindexCorpusResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Absolute path the handler actually walked.
 	Root string `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty"`
+	// Visibility stamped on every document this run: public or corpus_only.
+	Visibility string `protobuf:"bytes,8,opt,name=visibility,proto3" json:"visibility,omitempty"`
+	// Source kinds that were walked, sorted.
+	KindsWalked []string `protobuf:"bytes,9,rep,name=kinds_walked,json=kindsWalked,proto3" json:"kinds_walked,omitempty"`
 	// Number of `.md` files the walker saw.
 	FilesScanned int32 `protobuf:"varint,2,opt,name=files_scanned,json=filesScanned,proto3" json:"files_scanned,omitempty"`
 	// Number of files handed to the ingester without error. Includes
@@ -6248,6 +6299,20 @@ func (x *ReindexCorpusResponse) GetRoot() string {
 		return x.Root
 	}
 	return ""
+}
+
+func (x *ReindexCorpusResponse) GetVisibility() string {
+	if x != nil {
+		return x.Visibility
+	}
+	return ""
+}
+
+func (x *ReindexCorpusResponse) GetKindsWalked() []string {
+	if x != nil {
+		return x.KindsWalked
+	}
+	return nil
 }
 
 func (x *ReindexCorpusResponse) GetFilesScanned() int32 {
@@ -6956,7 +7021,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x19ListMemberActivityRequest\x125\n" +
 	"\x04sort\x18\x01 \x01(\x0e2\x17.career.v1.ActivitySortB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04sort\"X\n" +
 	"\x1aListMemberActivityResponse\x12:\n" +
-	"\amembers\x18\x01 \x03(\v2 .career.v1.MemberActivitySummaryR\amembers\"\xb3\x01\n" +
+	"\amembers\x18\x01 \x03(\v2 .career.v1.MemberActivitySummaryR\amembers\"\xdc\x01\n" +
 	"\x17IngestCorpusTextRequest\x12*\n" +
 	"\vsource_kind\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18(R\n" +
 	"sourceKind\x12+\n" +
@@ -6964,7 +7029,10 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\n" +
 	"sourcePath\x12\x1e\n" +
 	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xac\x02R\x05title\x12\x1f\n" +
-	"\x04body\x18\x04 \x01(\tB\v\xbaH\br\x06\x10\x01\x18\x80\xc0\fR\x04body\"\xf1\x01\n" +
+	"\x04body\x18\x04 \x01(\tB\v\xbaH\br\x06\x10\x01\x18\x80\xc0\fR\x04body\x12'\n" +
+	"\n" +
+	"visibility\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\n" +
+	"visibility\"\xf1\x01\n" +
 	"\x18IngestCorpusTextResponse\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\tR\n" +
 	"documentId\x12'\n" +
@@ -6973,7 +7041,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\askipped\x18\x04 \x01(\bR\askipped\x12!\n" +
 	"\fchunker_name\x18\x05 \x01(\tR\vchunkerName\x12%\n" +
 	"\x0eembedder_model\x18\x06 \x01(\tR\rembedderModel\"\x1c\n" +
-	"\x1aListCorpusDocumentsRequest\"\xbb\x02\n" +
+	"\x1aListCorpusDocumentsRequest\"\xdb\x02\n" +
 	"\x11CorpusDocumentRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vsource_kind\x18\x02 \x01(\tR\n" +
@@ -6987,17 +7055,27 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\vingested_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"ingestedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcc\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1e\n" +
+	"\n" +
+	"visibility\x18\t \x01(\tR\n" +
+	"visibility\"\x9b\x02\n" +
 	"\x1bListCorpusDocumentsResponse\x12:\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x1c.career.v1.CorpusDocumentRowR\tdocuments\x12'\n" +
 	"\x0ftotal_documents\x18\x02 \x01(\x05R\x0etotalDocuments\x12!\n" +
 	"\ftotal_chunks\x18\x03 \x01(\x05R\vtotalChunks\x12%\n" +
-	"\x0etotal_embedded\x18\x04 \x01(\x05R\rtotalEmbedded\"B\n" +
-	"\x14ReindexCorpusRequest\x12*\n" +
-	"\vsource_kind\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18(R\n" +
-	"sourceKind\"\x82\x02\n" +
+	"\x0etotal_embedded\x18\x04 \x01(\x05R\rtotalEmbedded\x12!\n" +
+	"\ftotal_public\x18\x05 \x01(\x05R\vtotalPublic\x12*\n" +
+	"\x11total_corpus_only\x18\x06 \x01(\x05R\x0ftotalCorpusOnly\"_\n" +
+	"\x14ReindexCorpusRequest\x12(\n" +
+	"\vsource_kind\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18(R\n" +
+	"sourceKind\x12\x1d\n" +
+	"\x05scope\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\x05scope\"\xc5\x02\n" +
 	"\x15ReindexCorpusResponse\x12\x12\n" +
-	"\x04root\x18\x01 \x01(\tR\x04root\x12#\n" +
+	"\x04root\x18\x01 \x01(\tR\x04root\x12\x1e\n" +
+	"\n" +
+	"visibility\x18\b \x01(\tR\n" +
+	"visibility\x12!\n" +
+	"\fkinds_walked\x18\t \x03(\tR\vkindsWalked\x12#\n" +
 	"\rfiles_scanned\x18\x02 \x01(\x05R\ffilesScanned\x12#\n" +
 	"\rdocs_ingested\x18\x03 \x01(\x05R\fdocsIngested\x12!\n" +
 	"\fdocs_skipped\x18\x04 \x01(\x05R\vdocsSkipped\x12'\n" +

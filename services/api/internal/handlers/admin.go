@@ -40,9 +40,7 @@ type Admin struct {
 	pool     *db.Pool         // write-capable app pool
 	roPool   *db.Pool         // read-only pool used by the /admin/db surface
 	ingest   *ingest.Ingester // Ask Roger corpus ingest
-	// corpusRoot is the filesystem root the reindex walker reads from.
-	// Each source_kind resolves to a subdirectory under this root.
-	corpusRoot string
+	corpus   CorpusRoots
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -59,20 +57,20 @@ func NewAdmin(
 	pool *db.Pool,
 	roPool *db.Pool,
 	ingester *ingest.Ingester,
-	corpusRoot string,
+	corpus CorpusRoots,
 ) *Admin {
 	if roPool == nil {
 		roPool = pool
 	}
 	return &Admin{
-		log:        log,
-		users:      repo,
-		auth:       auth,
-		decision:   decision,
-		pool:       pool,
-		roPool:     roPool,
-		ingest:     ingester,
-		corpusRoot: corpusRoot,
+		log:      log,
+		users:    repo,
+		auth:     auth,
+		decision: decision,
+		pool:     pool,
+		roPool:   roPool,
+		ingest:   ingester,
+		corpus:   corpus,
 		// 20-query burst, refills to 20 across a minute. Enough for
 		// interactive exploration; well below what a hung client loop
 		// would produce.
@@ -521,6 +519,7 @@ func (a *Admin) IngestCorpusText(
 		SourceKind: strings.TrimSpace(msg.SourceKind),
 		SourcePath: strings.TrimSpace(msg.SourcePath),
 		Title:      strings.TrimSpace(msg.Title),
+		Visibility: strings.TrimSpace(msg.Visibility),
 		Body:       msg.Body,
 	})
 	if err != nil {
@@ -550,10 +549,12 @@ func (a *Admin) ListCorpusDocuments(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
 	}
 	out := &v1.ListCorpusDocumentsResponse{
-		TotalDocuments: summary.TotalDocuments,
-		TotalChunks:    summary.TotalChunks,
-		TotalEmbedded:  summary.TotalEmbedded,
-		Documents:      make([]*v1.CorpusDocumentRow, 0, len(summary.Rows)),
+		TotalDocuments:  summary.TotalDocuments,
+		TotalChunks:     summary.TotalChunks,
+		TotalEmbedded:   summary.TotalEmbedded,
+		TotalPublic:     summary.TotalPublic,
+		TotalCorpusOnly: summary.TotalCorpusOnly,
+		Documents:       make([]*v1.CorpusDocumentRow, 0, len(summary.Rows)),
 	}
 	for i := range summary.Rows {
 		row := &summary.Rows[i]
@@ -562,6 +563,7 @@ func (a *Admin) ListCorpusDocuments(
 			SourceKind:    row.Document.SourceKind,
 			SourcePath:    row.Document.SourcePath,
 			Title:         row.Document.Title,
+			Visibility:    row.Document.Visibility,
 			ChunkCount:    row.ChunkCount,
 			EmbeddedCount: row.EmbeddedCount,
 			IngestedAt:    timestamppb.New(row.Document.IngestedAt),
@@ -571,13 +573,19 @@ func (a *Admin) ListCorpusDocuments(
 	return connect.NewResponse(out), nil
 }
 
-// corpusSubdirs maps a source_kind slug to its subdirectory under
-// corpusRoot. Adding a new kind is a one-line edit here plus a
-// filesystem-level decision about where its content lives. Keeping
-// this in-code (not env-var-driven) makes the allow-list explicit —
-// an arbitrary source_kind can't be walked, and the walker never
-// escapes the configured root.
-var corpusSubdirs = map[string]string{
+// CorpusRoots are the two filesystem mounts the reindex walker reads.
+// Public is the committed content (documents land as visibility=public);
+// Private is the curated docs/personal sync (every document lands as
+// visibility=corpus_only, fail-closed).
+type CorpusRoots struct {
+	Public  string
+	Private string
+}
+
+// publicCorpusSubdirs maps a source_kind to its subdirectory under the
+// public root. The committed content tree predates the kind naming, so
+// it keeps its own layout here; the private root uses kind = directory.
+var publicCorpusSubdirs = map[string]string{
 	"article": "articles",
 }
 
@@ -592,23 +600,60 @@ func (a *Admin) ReindexCorpus(
 		return nil, connect.NewError(connect.CodeUnavailable,
 			errors.New("corpus ingester not wired"))
 	}
-	if a.corpusRoot == "" {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("CORPUS_ROOT is not configured"))
-	}
 	kind := strings.TrimSpace(req.Msg.SourceKind)
-	subdir, ok := corpusSubdirs[kind]
-	if !ok {
+	if kind != "" && !ingest.IsKnownKind(kind) {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("unknown source_kind %q; known: article", kind))
+			fmt.Errorf("unknown source_kind %q; known: %s", kind, strings.Join(ingest.KnownKinds, ", ")))
 	}
-	root := a.corpusRoot + "/" + subdir
-	res, err := a.ingest.WalkDirectory(ctx, root, kind)
-	if err != nil {
-		a.log.Error("ReindexCorpus failed", slog.String("root", root),
-			slog.String("error", err.Error()))
-		return nil, connect.NewError(connect.CodeInternal, err)
+
+	var (
+		res   *ingest.WalkResult
+		kinds []string
+		err   error
+	)
+	switch scope := strings.TrimSpace(req.Msg.Scope); scope {
+	case "", "public":
+		if a.corpus.Public == "" {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("CORPUS_ROOT is not configured"))
+		}
+		res = &ingest.WalkResult{Root: a.corpus.Public, Visibility: users.VisibilityPublic}
+		for k, subdir := range publicCorpusSubdirs {
+			if kind != "" && k != kind {
+				continue
+			}
+			one, werr := a.ingest.WalkDirectory(ctx, ingest.WalkOptions{
+				Root:       a.corpus.Public + "/" + subdir,
+				SourceKind: k,
+				Visibility: users.VisibilityPublic,
+			})
+			if werr != nil {
+				res.Errors = append(res.Errors, fmt.Sprintf("%s: %s", k, werr.Error()))
+				continue
+			}
+			res.Add(one)
+			kinds = append(kinds, k)
+		}
+		if kind != "" && len(kinds) == 0 && len(res.Errors) == 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("source_kind %q has no public content directory", kind))
+		}
+	case "private":
+		if a.corpus.Private == "" {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("CORPUS_PRIVATE_ROOT is not configured"))
+		}
+		res, kinds, err = a.ingest.WalkKinds(ctx, a.corpus.Private, users.VisibilityCorpusOnly, kind)
+		if err != nil {
+			a.log.Error("ReindexCorpus private failed", slog.String("root", a.corpus.Private),
+				slog.String("error", err.Error()))
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("scope %q must be public or private", scope))
 	}
+
 	// Cap error list so a broken directory doesn't produce an
 	// unbounded response. Twenty is enough to diagnose without
 	// blowing up the admin UI.
@@ -618,6 +663,8 @@ func (a *Admin) ReindexCorpus(
 	}
 	return connect.NewResponse(&v1.ReindexCorpusResponse{
 		Root:           res.Root,
+		Visibility:     res.Visibility,
+		KindsWalked:    kinds,
 		FilesScanned:   int32(res.FilesScanned),
 		DocsIngested:   int32(res.DocsIngested),
 		DocsSkipped:    int32(res.DocsSkipped),

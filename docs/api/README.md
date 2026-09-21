@@ -2653,6 +2653,7 @@ the paste-a-document form on /admin/corpus.
 | `sourcePath` | `string` | string | `string: min_len: 1 max_len: 200` | Stable per-source_kind key. Filesystem sources pass the relative path; pasted documents pass a slug like `paste/2026-09-21-notes`. |
 | `title` | `string` | string | `string: max_len: 300` | Human-readable title. Empty falls back to the first non-blank line of the body (with a leading `#` stripped) at ingest time. |
 | `body` | `string` | string | `string: min_len: 1 max_len: 204800` | The document text, post-front-matter for markdown. Capped at 200 KiB so the form doesn't paste in an unbounded blob. |
+| `visibility` | `string` | string | `string: max_len: 16` | `public` (default) or `corpus_only`. |
 
 **Response** — [`IngestCorpusTextResponse`](#ingestcorpustextresponse)
 
@@ -2672,7 +2673,8 @@ the paste-a-document form on /admin/corpus.
   "sourceKind": "string",
   "sourcePath": "string",
   "title": "string",
-  "body": "string"
+  "body": "string",
+  "visibility": "string"
 }
 ```
 
@@ -2697,6 +2699,8 @@ _No fields; send `{}`._
 | `totalDocuments` | `int32` | number |  | Aggregate document count across the whole corpus (rendered as a header chip on /admin/corpus). |
 | `totalChunks` | `int32` | number |  | Aggregate chunk count across every stored document. |
 | `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
+| `totalPublic` | `int32` | number |  | Documents with visibility=public. |
+| `totalCorpusOnly` | `int32` | number |  | Documents with visibility=corpus_only. |
 
 <details><summary>Example request body</summary>
 
@@ -2722,13 +2726,16 @@ resolved from CORPUS_ROOT + a subdirectory per source_kind
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Which corpus subtree to walk. Free-text so a new kind is a one-line handler change, not a proto edit. Validated against the handler's allow-list. |
+| `sourceKind` | `string` | string | `string: max_len: 40` | Optional kind filter (e.g. `article`, `worksheet`). Empty walks every kind in the scope. Validated against the ingest allow-list. |
+| `scope` | `string` | string | `string: max_len: 16` | `public` (default) or `private`. |
 
 **Response** — [`ReindexCorpusResponse`](#reindexcorpusresponse)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `root` | `string` | string |  | Absolute path the handler actually walked. |
+| `visibility` | `string` | string |  | Visibility stamped on every document this run: public or corpus_only. |
+| `kindsWalked` | `string`[] | array of string |  | Source kinds that were walked, sorted. |
 | `filesScanned` | `int32` | number |  | Number of `.md` files the walker saw. |
 | `docsIngested` | `int32` | number |  | Number of files handed to the ingester without error. Includes skipped-because-unchanged. |
 | `docsSkipped` | `int32` | number |  | Subset of docs_ingested whose content_hash matched the stored row and did no chunk / embed work this run. |
@@ -2740,7 +2747,8 @@ resolved from CORPUS_ROOT + a subdirectory per source_kind
 
 ```json
 {
-  "sourceKind": "string"
+  "sourceKind": "string",
+  "scope": "string"
 }
 ```
 
@@ -4624,6 +4632,7 @@ Ingest one document into the Ask Roger corpus.
 | `sourcePath` | `string` | string | `string: min_len: 1 max_len: 200` | Stable per-source_kind key. Filesystem sources pass the relative path; pasted documents pass a slug like `paste/2026-09-21-notes`. |
 | `title` | `string` | string | `string: max_len: 300` | Human-readable title. Empty falls back to the first non-blank line of the body (with a leading `#` stripped) at ingest time. |
 | `body` | `string` | string | `string: min_len: 1 max_len: 204800` | The document text, post-front-matter for markdown. Capped at 200 KiB so the form doesn't paste in an unbounded blob. |
+| `visibility` | `string` | string | `string: max_len: 16` | `public` (default) or `corpus_only`. |
 
 ### IngestCorpusTextResponse
 
@@ -4659,6 +4668,7 @@ One row in the corpus with a computed chunk count.
 | `embeddedCount` | `int32` | number |  | Count of chunks that have an embedding populated. |
 | `ingestedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row was first written. |
 | `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When any field changed (title / hash / meta). |
+| `visibility` | `string` | string |  | `public` (citable on the site) or `corpus_only` (informs answers, never quoted or named). |
 
 ### ListCorpusDocumentsResponse
 
@@ -4670,17 +4680,22 @@ List-corpus-documents response.
 | `totalDocuments` | `int32` | number |  | Aggregate document count across the whole corpus (rendered as a header chip on /admin/corpus). |
 | `totalChunks` | `int32` | number |  | Aggregate chunk count across every stored document. |
 | `totalEmbedded` | `int32` | number |  | Aggregate count of chunks that have an embedding populated. |
+| `totalPublic` | `int32` | number |  | Documents with visibility=public. |
+| `totalCorpusOnly` | `int32` | number |  | Documents with visibility=corpus_only. |
 
 ### ReindexCorpusRequest
 
-Reindex-corpus request. `source_kind` picks which subdirectory
-under CORPUS_ROOT to walk (e.g. `article` → `${CORPUS_ROOT}/articles`).
-Currently the handler only knows about `article`; adding a kind is
-a code edit + a compose bind-mount, not a proto change.
+Reindex-corpus request. `scope` picks the mount: `public` walks the
+committed content under CORPUS_ROOT (documents land as
+visibility=public); `private` walks CORPUS_PRIVATE_ROOT, where each
+top-level directory is a source_kind and every document lands as
+visibility=corpus_only. `source_kind` optionally narrows either
+scope to one kind.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `sourceKind` | `string` | string | `string: min_len: 1 max_len: 40` | Which corpus subtree to walk. Free-text so a new kind is a one-line handler change, not a proto edit. Validated against the handler's allow-list. |
+| `sourceKind` | `string` | string | `string: max_len: 40` | Optional kind filter (e.g. `article`, `worksheet`). Empty walks every kind in the scope. Validated against the ingest allow-list. |
+| `scope` | `string` | string | `string: max_len: 16` | `public` (default) or `private`. |
 
 ### ReindexCorpusResponse
 
@@ -4689,6 +4704,8 @@ Reindex-corpus response — mirrors ingest.WalkResult.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `root` | `string` | string |  | Absolute path the handler actually walked. |
+| `visibility` | `string` | string |  | Visibility stamped on every document this run: public or corpus_only. |
+| `kindsWalked` | `string`[] | array of string |  | Source kinds that were walked, sorted. |
 | `filesScanned` | `int32` | number |  | Number of `.md` files the walker saw. |
 | `docsIngested` | `int32` | number |  | Number of files handed to the ingester without error. Includes skipped-because-unchanged. |
 | `docsSkipped` | `int32` | number |  | Subset of docs_ingested whose content_hash matched the stored row and did no chunk / embed work this run. |

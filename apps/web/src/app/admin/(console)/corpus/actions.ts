@@ -9,6 +9,8 @@ export type ReindexResult =
   | {
       ok: true;
       root: string;
+      visibility: string;
+      kinds_walked: string[];
       files_scanned: number;
       docs_ingested: number;
       docs_skipped: number;
@@ -18,18 +20,22 @@ export type ReindexResult =
     }
   | { ok: false; error: string };
 
+// scope is "public" or "private"; sourceKind optionally narrows to one kind.
 export async function reindexCorpusAction(
-  sourceKind: string,
+  scope: string,
+  sourceKind = "",
 ): Promise<ReindexResult> {
-  const kind = sourceKind.trim();
-  if (!kind) return { ok: false, error: "source_kind is required." };
+  const s = scope.trim();
+  if (s !== "public" && s !== "private") {
+    return { ok: false, error: "scope must be public or private." };
+  }
 
   const cookie = await getSessionCookie();
   if (!cookie) return { ok: false, error: "Not signed in." };
 
   const resp = await callApi({
     path: "/api/career.v1.AdminService/ReindexCorpus",
-    body: { sourceKind: kind },
+    body: { scope: s, sourceKind: sourceKind.trim() },
     cookie,
   });
   if (!resp.ok) {
@@ -44,6 +50,9 @@ export async function reindexCorpusAction(
   }
   const j = (await resp.json()) as {
     root?: string;
+    visibility?: string;
+    kindsWalked?: string[];
+    kinds_walked?: string[];
     filesScanned?: number;
     files_scanned?: number;
     docsIngested?: number;
@@ -60,6 +69,8 @@ export async function reindexCorpusAction(
   return {
     ok: true,
     root: j.root ?? "",
+    visibility: j.visibility ?? "",
+    kinds_walked: j.kindsWalked ?? j.kinds_walked ?? [],
     files_scanned: j.filesScanned ?? j.files_scanned ?? 0,
     docs_ingested: j.docsIngested ?? j.docs_ingested ?? 0,
     docs_skipped: j.docsSkipped ?? j.docs_skipped ?? 0,
@@ -89,6 +100,7 @@ export async function ingestCorpusTextAction(
   const sourceKind = String(formData.get("source_kind") ?? "").trim();
   const sourcePath = String(formData.get("source_path") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
+  const visibility = String(formData.get("visibility") ?? "public").trim();
   const body = String(formData.get("body") ?? "");
 
   if (!sourceKind || !sourcePath) {
@@ -113,6 +125,7 @@ export async function ingestCorpusTextAction(
       sourceKind,
       sourcePath,
       title,
+      visibility,
       body,
     },
     cookie,

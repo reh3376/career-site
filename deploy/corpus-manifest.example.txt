@@ -1,0 +1,24 @@
+# Private corpus manifest. Copy to docs/personal/corpus-manifest.txt
+# (gitignored) and edit. One entry per line: <path>|<kind>
+#
+#   path  relative to docs/personal; a file or a directory. Only .md
+#         and .txt sources are synced today (docx/pdf/pptx extraction
+#         arrives with the content-management work).
+#   kind  one of: article talk speaker_notes readme worksheet
+#         post_mortem strategy_doc interview_prep career_note resume
+#         adr other
+#
+# Everything synced through this file is ingested as visibility=
+# corpus_only: it informs Ask Roger and JD scoring but is never quoted
+# on the public site. Leave client-confidential material out entirely.
+
+articles/emergence_by_design_notes.md|talk
+articles/ontology-driven-hub-ref02.md|article
+dev-docs/repo-mdemg-readme.md|readme
+dev-docs/UXTS_DEVELOPER_GUIDE.md|readme
+dev-docs/LnL-01-MDEMG|speaker_notes
+worksheets/sdlc-high 1.md|worksheet
+worksheets/wms-downtime-reduction-plan.md|post_mortem
+amazon-interview-prep-v23.md|interview_prep
+application-playbook.md|career_note
+reh-resume-Master.md|resume

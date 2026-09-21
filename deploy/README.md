@@ -125,6 +125,28 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 
 To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations are additive.
 
+## Private corpus
+
+The Ask Roger corpus has two mounts inside the api container:
+
+| Mount | Host source | Visibility | How it gets there |
+|---|---|---|---|
+| `/corpus` | `/opt/career-site/apps/web/content` (repo checkout) | `public` | ships with every deploy |
+| `/corpus-private` | `/opt/career-site-private/corpus` (outside the checkout) | `corpus_only` | `make sync-corpus` from the owner's machine |
+
+`docs/personal` is gitignored and never reaches the server on its own. To feed
+the private corpus, keep a manifest at `docs/personal/corpus-manifest.txt`
+(gitignored; shape in `deploy/corpus-manifest.example.txt`) listing which
+files or folders to sync and the `source_kind` each lands under, then:
+
+```bash
+make sync-corpus          # rsync .md/.txt sources to <host>:/opt/career-site-private/corpus/<kind>/
+```
+
+Then in the admin console: `/admin/corpus` → **Reindex private corpus**.
+Everything under the private mount is ingested as `visibility=corpus_only`;
+front matter cannot loosen that. The sync never deletes on the server.
+
 ## Backups (next)
 
 Not in this deploy. Follow-ups:
