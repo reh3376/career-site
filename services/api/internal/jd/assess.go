@@ -17,7 +17,10 @@ import (
 )
 
 // EvidencePerRequirement is how many corpus chunks each requirement
-// is judged against.
+// is judged against. Four is the setting the calibration set was
+// scored with (0.79 / 0.36 / 0.00 / 0.00); reducing it moved the
+// strong JD below the gate. Context pressure is handled by batching
+// requirements per call, not by thinning evidence.
 const EvidencePerRequirement = 4
 
 // ErrMonthlyCap is returned when the LLM call cap for the current
@@ -45,6 +48,9 @@ type Assessment struct {
 	WeightTotal int                `json:"weight_total"`
 	Model       string             `json:"model"`
 	Prompts     map[string]int     `json:"prompts"` // prompt id → version
+	// JudgeBatches is how many model calls the judgment took (context
+	// budgeting on a small box splits it).
+	JudgeBatches int `json:"judge_batches,omitempty"`
 	// Error is set when the pipeline could not complete and the caller
 	// fell back to the retrieval score.
 	Error string `json:"error,omitempty"`
@@ -57,11 +63,53 @@ type Assessor struct {
 	embed      ingest.EmbedClient
 	llm        llm.Client
 	monthlyCap int64 // 0 = unlimited
+	// numCtx is the model context window the sidecar requests. The
+	// judgment prompt is split into batches that fit it, so the same
+	// pipeline runs on an 8 GB box (8k) and a workstation (16k+).
+	numCtx int
 }
 
-// NewAssessor wires the deps.
-func NewAssessor(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, client llm.Client, monthlyCap int64) *Assessor {
-	return &Assessor{log: log, users: repo, embed: embed, llm: client, monthlyCap: monthlyCap}
+// judgeReserve is the context kept free for the system prompt and the
+// JSON verdicts when sizing a judgment batch.
+const judgeReserve = 1800
+
+// judgeBatchMax caps how many requirements share one judge call. The
+// verdicts qwen3:14b reaches for a requirement change with how many
+// other requirements are in the same prompt (the calibration JD moved
+// from 0.79 in one 12-requirement call to 0.625 in three or four
+// smaller ones with identical evidence). One requirement per call
+// makes every verdict independent of grouping, so an 8k box and a
+// 16k workstation reach the same score. See docs/llm-tuning-log.md.
+const judgeBatchMax = 1
+
+// NewAssessor wires the deps. numCtx <= 0 falls back to 16384.
+func NewAssessor(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, client llm.Client, monthlyCap int64, numCtx int) *Assessor {
+	if numCtx <= 0 {
+		numCtx = 16384
+	}
+	return &Assessor{log: log, users: repo, embed: embed, llm: client, monthlyCap: monthlyCap, numCtx: numCtx}
+}
+
+// batchRequirements groups requirements so each rendered judgment
+// prompt stays under the context budget. A single oversized
+// requirement still gets its own batch (the renderer caps chunk text).
+func (a *Assessor) batchRequirements(reqs []prompts.Requirement, evidence map[string][]users.CorpusHit) [][]prompts.Requirement {
+	budget := a.numCtx - judgeReserve - prompts.EstimateTokens(prompts.RequirementJudge.System)
+	var batches [][]prompts.Requirement
+	var cur []prompts.Requirement
+	for _, r := range reqs {
+		trial := append(append([]prompts.Requirement{}, cur...), r)
+		if len(cur) >= judgeBatchMax || (len(cur) > 0 && prompts.EstimateTokens(prompts.RenderJudgeUser(trial, evidence)) > budget) {
+			batches = append(batches, cur)
+			cur = []prompts.Requirement{r}
+			continue
+		}
+		cur = trial
+	}
+	if len(cur) > 0 {
+		batches = append(batches, cur)
+	}
+	return batches
 }
 
 // Assess produces the assessment for one JD. Two LLM calls, N
@@ -118,21 +166,31 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		}
 	}
 
-	// 3. Judgments.
-	var judgeDoc struct {
-		Judgments []struct {
-			RequirementID string   `json:"requirement_id"`
-			Verdict       string   `json:"verdict"`
-			EvidenceIDs   []string `json:"evidence_ids"`
-			Rationale     string   `json:"rationale"`
-		} `json:"judgments"`
+	// 3. Judgments, in batches sized to the context window.
+	type rawJudgment struct {
+		RequirementID string   `json:"requirement_id"`
+		Verdict       string   `json:"verdict"`
+		EvidenceIDs   []string `json:"evidence_ids"`
+		Rationale     string   `json:"rationale"`
 	}
-	if _, err := a.call(ctx, submissionID, prompts.RequirementJudge,
-		prompts.RenderJudgeUser(reqs, evidence), 2000, &judgeDoc); err != nil {
-		return nil, fmt.Errorf("judge: %w", err)
+	var all []rawJudgment
+	batches := a.batchRequirements(reqs, evidence)
+	if err := a.checkCapN(ctx, int64(len(batches))); err != nil {
+		return nil, err
 	}
+	for bi, batch := range batches {
+		var judgeDoc struct {
+			Judgments []rawJudgment `json:"judgments"`
+		}
+		if _, err := a.call(ctx, submissionID, prompts.RequirementJudge,
+			prompts.RenderJudgeUser(batch, evidence), 1200, &judgeDoc); err != nil {
+			return nil, fmt.Errorf("judge batch %d/%d: %w", bi+1, len(batches), err)
+		}
+		all = append(all, judgeDoc.Judgments...)
+	}
+	out.JudgeBatches = len(batches)
 	byReq := map[string]Judgment{}
-	for _, j := range judgeDoc.Judgments {
+	for _, j := range all {
 		if _, dup := byReq[j.RequirementID]; dup {
 			continue
 		}
@@ -266,6 +324,11 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 }
 
 func (a *Assessor) checkCap(ctx context.Context) error {
+	// One requirements call plus at least one judgment call.
+	return a.checkCapN(ctx, 2)
+}
+
+func (a *Assessor) checkCapN(ctx context.Context, calls int64) error {
 	if a.monthlyCap <= 0 {
 		return nil
 	}
@@ -275,8 +338,7 @@ func (a *Assessor) checkCap(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Two calls per assessment.
-	if n+2 > a.monthlyCap {
+	if n+calls > a.monthlyCap {
 		return ErrMonthlyCap
 	}
 	return nil

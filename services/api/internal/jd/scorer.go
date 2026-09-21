@@ -5,9 +5,9 @@
 // The résumé itself is generated in a follow-up step behind the same
 // interface.
 //
-// The threshold (0.65) is the gate Roger set for the "generate a
-// tailored résumé" path. Below that, the caller sees a polite
-// fallback and Roger sees the row in /admin/jd for manual triage.
+// The threshold is the gate for the "generate a tailored résumé"
+// path. Below that, the caller sees a polite fallback and Roger sees
+// the row in /admin/jd for manual triage.
 package jd
 
 import (
@@ -26,7 +26,14 @@ import (
 // MatchThreshold is the gate above which a JD is considered a match.
 // Applies to the requirement-weighted score when the assessor is
 // wired, else to the retrieval pre-score.
-const MatchThreshold = 0.65
+//
+// Calibrated 2026-09-21 with one requirement per judge call
+// (qwen3:14b): strong 0.604, mid 0.333, weak 0.020, unrelated 0.000.
+// 0.55 sits below the strong JD with margin and well above the mid
+// one. Recalibrate (docs/llm-tuning-log.md) whenever the judge prompt
+// version, the model or the batching changes; the frontend copy in
+// apps/web/src/app/jd-upload quotes the same number.
+const MatchThreshold = 0.55
 
 // TopK caps how many chunks feed the retrieval pre-score.
 const TopK = 8

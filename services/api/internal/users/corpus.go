@@ -270,7 +270,7 @@ func (r *Repo) CountChunksByEmbedder(ctx context.Context) ([]EmbedderCount, erro
 // SearchCorpus returns the top-k chunks nearest to the query
 // embedding by cosine distance. Similarity in the result is
 // (1 - distance) so callers see a "higher = closer" number they can
-// threshold against directly (e.g. score ≥ 0.65 gates the JD flow).
+// threshold against directly (jd.MatchThreshold gates the JD flow).
 //
 // The HNSW index on corpus_chunks.embedding makes this fast even
 // as the corpus grows; the query below is what pgvector's docs

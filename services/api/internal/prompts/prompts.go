@@ -245,7 +245,10 @@ type Verdict struct {
 // RenderResumeUser builds the user turn for ResumeTailor: the JD,
 // the verdicts, then the evidence with the résumé chunks first.
 func RenderResumeUser(jd string, hints Hints, verdicts []Verdict, evidence []users.CorpusHit) string {
-	const maxChunkRunes = 2000
+	// Same cap as the judge prompt: the writer needs the gist of a
+	// supporting chunk, and a tighter cap lets more of the cited
+	// evidence fit an 8k window next to the full master résumé.
+	const maxChunkRunes = 1200
 	var b strings.Builder
 	b.WriteString("Write the tailored résumé as JSON for this job description.\n\n")
 	if hints.Role != "" || hints.Employer != "" {
@@ -277,6 +280,18 @@ func RenderResumeUser(jd string, hints Hints, verdicts []Verdict, evidence []use
 	}
 	b.WriteString("</evidence>\n")
 	return b.String()
+}
+
+// EstimateTokens sizes a prompt before it is sent so every call fits
+// the model's context window on a small box. Calibrated 2026-09-21
+// against Ollama's reported prompt_tokens for qwen3:14b: the judge and
+// résumé prompts measured 4.3 to 4.4 bytes per token (English prose
+// with light XML markup). Four is ~10% pessimistic. The sidecar's
+// truncation guard (0.6 x len/3.6) only fires below ~6 bytes per
+// token, so this estimate can never trip it on a prompt that fit.
+// See docs/llm-tuning-log.md.
+func EstimateTokens(s string) int {
+	return len(s)/4 + 1
 }
 
 func clean(s string) string {

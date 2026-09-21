@@ -76,6 +76,8 @@ services:
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-900}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-0}
       LLM_ALLOW_STUB: ${LLM_ALLOW_STUB:-0}
+      # Must match SIDECAR_LLM_NUM_CTX; the api budgets prompts to it.
+      LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}
       # Owner password that locks editing on generated résumé PDFs. Set
       # in the repo-root .env (gitignored); empty skips PDF rendering.
       RESUME_PDF_OWNER_PASSWORD: ${RESUME_PDF_OWNER_PASSWORD:-}
@@ -115,8 +117,10 @@ services:
       # LLM gateway. `ollama` uses OLLAMA_LLM_MODEL on the same server;
       # `stub` returns schema-valid canned JSON.
       SIDECAR_LLM_PROVIDER: ${SIDECAR_LLM_PROVIDER:-stub}
+      OLLAMA_LLM_URL: ${OLLAMA_LLM_URL:-http://host.docker.internal:11434}
       OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:14b}
       SIDECAR_LLM_TIMEOUT_SECONDS: ${SIDECAR_LLM_TIMEOUT_SECONDS:-600}
+      SIDECAR_LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

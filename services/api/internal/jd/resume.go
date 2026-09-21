@@ -67,11 +67,26 @@ type ResumeWriter struct {
 	// the markdown as the deliverable and logs why.
 	renderer      Renderer
 	ownerPassword string
+	// numCtx bounds the résumé prompt: evidence is added in priority
+	// order until the budget is spent (see Write).
+	numCtx int
 }
 
-// NewResumeWriter wires the deps. renderer may be nil.
-func NewResumeWriter(log *slog.Logger, repo *users.Repo, client llm.Client, monthlyCap int64, renderer Renderer, ownerPassword string) *ResumeWriter {
-	return &ResumeWriter{log: log, users: repo, llm: client, monthlyCap: monthlyCap, renderer: renderer, ownerPassword: ownerPassword}
+// resumeReserve is the context kept free for the system prompt and the
+// JSON résumé output when trimming evidence.
+const resumeReserve = 2600
+
+// jdHeadRunes is how much of the posting the writer keeps when the
+// posting and the full master résumé cannot both fit the window.
+const jdHeadRunes = 1500
+
+// NewResumeWriter wires the deps. renderer may be nil; numCtx <= 0 falls
+// back to 16384.
+func NewResumeWriter(log *slog.Logger, repo *users.Repo, client llm.Client, monthlyCap int64, renderer Renderer, ownerPassword string, numCtx int) *ResumeWriter {
+	if numCtx <= 0 {
+		numCtx = 16384
+	}
+	return &ResumeWriter{log: log, users: repo, llm: client, monthlyCap: monthlyCap, renderer: renderer, ownerPassword: ownerPassword, numCtx: numCtx}
 }
 
 // RenderPDF renders the verified résumé to a locked PDF. Returns nil,
@@ -98,31 +113,19 @@ func (w *ResumeWriter) Write(
 		return nil, "", err
 	}
 
-	// Evidence: master résumé first (roles and dates), then the chunks
-	// the judge cited, then the JD retrieval. De-duplicated by id.
-	var evidence []users.CorpusHit
-	seen := map[int64]bool{}
-	add := func(hits []users.CorpusHit) {
-		for _, h := range hits {
-			if !seen[h.Chunk.ID] {
-				seen[h.Chunk.ID] = true
-				evidence = append(evidence, h)
-			}
-		}
-	}
-	if resume, err := w.users.ListChunksByKind(ctx, "resume", 40); err == nil {
-		add(resume)
-	} else {
-		w.log.Warn("resume chunks unavailable", slog.String("error", err.Error()))
-	}
+	// Evidence in priority order: master résumé first (roles and
+	// dates), then the chunks the judge cited, then the JD retrieval.
+	// De-duplicated by id and cut off once the rendered prompt would
+	// exceed the context budget, so the call fits the box.
 	var verdicts []prompts.Verdict
+	var cited []users.CorpusHit
 	if assessment != nil {
-		var cited []int64
+		var ids []int64
 		for _, j := range assessment.Judgments {
-			cited = append(cited, j.EvidenceIDs...)
+			ids = append(ids, j.EvidenceIDs...)
 		}
-		if hits, err := w.users.GetCorpusChunks(ctx, cited); err == nil {
-			add(hits)
+		if hits, err := w.users.GetCorpusChunks(ctx, ids); err == nil {
+			cited = hits
 		}
 		reqText := map[string]string{}
 		for _, r := range assessment.Requirements {
@@ -132,15 +135,54 @@ func (w *ResumeWriter) Write(
 			verdicts = append(verdicts, prompts.Verdict{RequirementID: j.RequirementID, Text: reqText[j.RequirementID], Verdict: j.Verdict})
 		}
 	}
+	resumeChunks, err := w.users.ListChunksByKind(ctx, "resume", 40)
+	if err != nil {
+		w.log.Warn("resume chunks unavailable", slog.String("error", err.Error()))
+	}
 	if len(jdHits) > ResumeTopK {
 		jdHits = jdHits[:ResumeTopK]
 	}
-	add(jdHits)
+
+	p := prompts.ResumeTailor
+	budget := w.numCtx - resumeReserve - prompts.EstimateTokens(p.System)
+
+	// The master résumé outranks the posting body. The writer already
+	// holds every requirement with its verdict, so when a long posting
+	// and the full résumé cannot share the window, the posting is cut
+	// to its head rather than dropping roles, dates or education.
+	if prompts.EstimateTokens(prompts.RenderResumeUser(jdText, hints, verdicts, resumeChunks)) > budget {
+		if r := []rune(jdText); len(r) > jdHeadRunes {
+			jdText = string(r[:jdHeadRunes]) + "\n[posting truncated to fit the context window; the verdicts list every requirement]"
+			w.log.Info("resume prompt: posting truncated to keep the full master résumé",
+				slog.Int64("jd_id", submissionID), slog.Int("kept_runes", jdHeadRunes), slog.Int("num_ctx", w.numCtx))
+		}
+	}
+
+	var evidence []users.CorpusHit
+	seen := map[int64]bool{}
+	dropped := 0
+	for _, group := range [][]users.CorpusHit{resumeChunks, cited, jdHits} {
+		for _, h := range group {
+			if seen[h.Chunk.ID] {
+				continue
+			}
+			trial := append(append([]users.CorpusHit{}, evidence...), h)
+			if len(evidence) > 0 && prompts.EstimateTokens(prompts.RenderResumeUser(jdText, hints, verdicts, trial)) > budget {
+				dropped++
+				continue
+			}
+			seen[h.Chunk.ID] = true
+			evidence = trial
+		}
+	}
 	if len(evidence) == 0 {
 		return nil, "", errors.New("resume: no evidence available")
 	}
+	if dropped > 0 {
+		w.log.Info("resume evidence trimmed to context budget",
+			slog.Int64("jd_id", submissionID), slog.Int("kept", len(evidence)), slog.Int("dropped", dropped), slog.Int("num_ctx", w.numCtx))
+	}
 
-	p := prompts.ResumeTailor
 	started := time.Now()
 	resp, err := w.llm.Generate(ctx, llm.Request{
 		System:      p.System,

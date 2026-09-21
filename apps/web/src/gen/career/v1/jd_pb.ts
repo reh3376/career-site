@@ -295,14 +295,14 @@ export enum JdStatus {
   SCORING = 2,
 
   /**
-   * Score < 0.65; the caller gets the polite fallback response.
+   * Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response.
    *
    * @generated from enum value: JD_STATUS_BELOW_THRESHOLD = 3;
    */
   BELOW_THRESHOLD = 3,
 
   /**
-   * Score ≥ 0.65; résumé generation is running.
+   * Score at or above the match gate; résumé generation is running.
    *
    * @generated from enum value: JD_STATUS_GENERATING = 4;
    */

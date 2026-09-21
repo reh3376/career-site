@@ -6152,8 +6152,8 @@ Lifecycle of a submission — mirrors jd_submissions.status.
 | `JD_STATUS_UNSPECIFIED` | 0 | Not set. Servers never return this; callers never send it. |
 | `JD_STATUS_RECEIVED` | 1 | Stored, waiting to be scored. |
 | `JD_STATUS_SCORING` | 2 | Retrieval + scoring is running. |
-| `JD_STATUS_BELOW_THRESHOLD` | 3 | Score < 0.65; the caller gets the polite fallback response. |
-| `JD_STATUS_GENERATING` | 4 | Score ≥ 0.65; résumé generation is running. |
+| `JD_STATUS_BELOW_THRESHOLD` | 3 | Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response. |
+| `JD_STATUS_GENERATING` | 4 | Score at or above the match gate; résumé generation is running. |
 | `JD_STATUS_READY` | 5 | Résumé is ready; generated_resume_url is populated. |
 | `JD_STATUS_FAILED` | 6 | Anything above raised an error; see error_message for detail. |
 

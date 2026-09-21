@@ -58,9 +58,9 @@ enum JdStatus {
   JD_STATUS_RECEIVED = 1;
   // Retrieval + scoring is running.
   JD_STATUS_SCORING = 2;
-  // Score < 0.65; the caller gets the polite fallback response.
+  // Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response.
   JD_STATUS_BELOW_THRESHOLD = 3;
-  // Score ≥ 0.65; résumé generation is running.
+  // Score at or above the match gate; résumé generation is running.
   JD_STATUS_GENERATING = 4;
   // Résumé is ready; generated_resume_url is populated.
   JD_STATUS_READY = 5;
