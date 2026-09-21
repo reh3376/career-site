@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { GithubReposOt } from "@/components/github-repos";
+import { getSocialLinks } from "@/lib/social-links";
 
 // OT-mode landing. Renders the site as a plant HMI overview screen.
 // Layout draws on Roger's actual distillery HMIs: a title bar with
@@ -156,6 +157,7 @@ export function OtLanding() {
               <NavRow tag="/register" label="ACCESS.REQ" href="/register" note="hiring managers" />
               <NavRow tag="/login" label="SESSION.NEW" href="/login" />
               <NavRow tag="/contact" label="MSG.OUT" href="/contact" />
+              <SocialNavRows />
             </ul>
           </div>
         </section>
@@ -348,6 +350,48 @@ function StatusChip({
       <span className={`pilot text-${color}`} aria-hidden="true" />
       <span>{children}</span>
     </span>
+  );
+}
+
+// Outbound profile links, rendered only when configured (see
+// lib/social-links). External targets open in a new tab.
+function SocialNavRows() {
+  const s = getSocialLinks();
+  return (
+    <>
+      {s.linkedin ? (
+        <li>
+          <a
+            href={s.linkedin}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
+          >
+            <span className="flex items-center gap-3">
+              <span className="text-ink-3">ext</span>
+              <span>LINKEDIN</span>
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.14em] text-ink-3">profile</span>
+          </a>
+        </li>
+      ) : null}
+      {s.github ? (
+        <li>
+          <a
+            href={s.github}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
+          >
+            <span className="flex items-center gap-3">
+              <span className="text-ink-3">ext</span>
+              <span>GITHUB</span>
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.14em] text-ink-3">public repos</span>
+          </a>
+        </li>
+      ) : null}
+    </>
   );
 }
 
