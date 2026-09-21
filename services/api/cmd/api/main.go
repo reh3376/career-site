@@ -144,7 +144,7 @@ func main() {
 		SessionTTL:          cfg.SessionTTL,
 		CookieSecure:        cfg.CookieSecure,
 	})
-	memberHandler := handlers.NewMember(authHandler)
+	memberHandler := handlers.NewMember(authHandler, userRepo)
 	contactHandler := handlers.NewContact(
 		log, userRepo, authHandler, mailer,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
