@@ -7,18 +7,32 @@ import { getSessionCookie } from "@/lib/session";
 export const metadata: Metadata = { title: "Admin — Activity" };
 export const dynamic = "force-dynamic";
 
+// ConnectRPC's default JSON codec emits camelCase field names.
+// Accept both so the type is robust to a future codec flip and so
+// dev tools showing snake_case (proto view) don't confuse anyone.
 type MemberActivity = {
-  user_id: string;
+  user_id?: string;
+  userId?: string;
   name: string;
   email: string;
   status: string;
   total_sessions?: number;
-  total_active_secs?: string; // int64 arrives as a string
+  totalSessions?: number;
+  total_active_secs?: string;
+  totalActiveSecs?: string;
   ask_roger_count?: number;
+  askRogerCount?: number;
   total_events?: number;
+  totalEvents?: number;
   last_kind?: string;
+  lastKind?: string;
   last_event_at?: string;
+  lastEventAt?: string;
 };
+
+// Field accessors that don't care about casing.
+const pick = <T,>(a: T | undefined, b: T | undefined, fallback: T): T =>
+  a ?? b ?? fallback;
 
 type ListResp = { members?: MemberActivity[] };
 
@@ -189,13 +203,20 @@ function SortTab({
 }
 
 function Row({ m, nowMs }: { m: MemberActivity; nowMs: number }) {
+  const userId = pick(m.user_id, m.userId, "");
+  const totalSessions = pick(m.total_sessions, m.totalSessions, 0);
+  const totalActive = Number(pick(m.total_active_secs, m.totalActiveSecs, "0"));
+  const askRoger = pick(m.ask_roger_count, m.askRogerCount, 0);
+  const totalEvents = pick(m.total_events, m.totalEvents, 0);
+  const lastKind = pick(m.last_kind, m.lastKind, "");
+  const lastEventAt = pick(m.last_event_at, m.lastEventAt, "");
+  const lastAt = lastEventAt ? new Date(lastEventAt) : null;
   const statusCls = STATUS_TONE[m.status] ?? "text-ink-3";
-  const lastAt = m.last_event_at ? new Date(m.last_event_at) : null;
   return (
     <tr className="border-b border-line last:border-b-0 odd:bg-paper-2/40">
       <td className="px-3 py-2 align-top">
         <Link
-          href={`/admin/registrations/${m.user_id}`}
+          href={`/admin/registrations/${userId}`}
           className="text-ink no-underline hover:text-accent"
         >
           <span className="block">{m.name || "(no name)"}</span>
@@ -208,22 +229,22 @@ function Row({ m, nowMs }: { m: MemberActivity; nowMs: number }) {
         {STATUS_LABEL[m.status] ?? m.status}
       </td>
       <td className="px-3 py-2 align-top text-right tabular text-ink">
-        {m.total_sessions ?? 0}
+        {totalSessions}
       </td>
       <td className="px-3 py-2 align-top text-right tabular text-ink">
-        {formatDuration(Number(m.total_active_secs ?? "0"))}
+        {formatDuration(totalActive)}
       </td>
       <td className="px-3 py-2 align-top text-right tabular text-ink">
-        {m.ask_roger_count ?? 0}
+        {askRoger}
       </td>
       <td className="px-3 py-2 align-top text-right tabular text-ink-2">
-        {m.total_events ?? 0}
+        {totalEvents}
       </td>
       <td className="px-3 py-2 align-top text-ink-2">
         {lastAt ? (
           <>
             <span className="text-ink">
-              {KIND_LABEL[m.last_kind ?? ""] ?? m.last_kind ?? "—"}
+              {KIND_LABEL[lastKind] ?? lastKind ?? "—"}
             </span>{" "}
             <span className="text-ink-3">·</span>{" "}
             <span className="font-mono text-[11px]">
