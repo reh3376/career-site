@@ -53,7 +53,7 @@ export type DownloadItem = Message<"career.v1.DownloadItem"> & {
   variant: string;
 
   /**
-   * Display title, e.g. "Résumé, Industrial automation & process control".
+   * Display title, e.g. "Résumé — Industrial automation & process control".
    *
    * @generated from field: string title = 2;
    */

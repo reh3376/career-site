@@ -252,7 +252,7 @@ export enum SupportCategory {
   GENERAL_QUESTION = 1,
 
   /**
-   * Bug report, something on the site isn't working.
+   * Bug report — something on the site isn't working.
    *
    * @generated from enum value: SUPPORT_CATEGORY_BUG_REPORT = 2;
    */
