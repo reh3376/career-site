@@ -52,10 +52,10 @@ type User struct {
 	ExpiresAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	// Set by RecordNotification when a notification email is
-	// dispatched. LastNotificationError is nil on success and holds
-	// the truncated provider error on failure — the admin UI shows
-	// a green pill when nil, a red one when set.
+	// Stamped by RecordDelivery (via the email.Audited decorator) on
+	// every member-bound send. LastNotificationError is nil on success
+	// and holds the truncated provider error on failure. Full history
+	// lives in notification_deliveries.
 	LastNotificationKind  string
 	LastNotificationAt    *time.Time
 	LastNotificationError *string
@@ -231,30 +231,6 @@ func (r *Repo) SetPasswordHash(ctx context.Context, id int64, hash string) error
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
-	}
-	return nil
-}
-
-// RecordNotification stamps the last-notification columns for a user
-// after we hand a message to the mail provider. Kind is a short slug
-// (e.g. "user_approved"). errText should be the truncated provider
-// error on failure, or empty on success. The write is best-effort:
-// callers should not fail the request if this returns an error, since
-// the email itself has already gone (or already failed) — the audit
-// info is a nice-to-have.
-func (r *Repo) RecordNotification(
-	ctx context.Context, userID int64, kind string, errText string,
-) error {
-	const q = `
-    UPDATE users
-    SET last_notification_kind  = $2,
-        last_notification_at    = now(),
-        last_notification_error = NULLIF($3, '')
-    WHERE id = $1
-  `
-	_, err := r.pool.Exec(ctx, q, userID, kind, errText)
-	if err != nil {
-		return fmt.Errorf("record notification: %w", err)
 	}
 	return nil
 }

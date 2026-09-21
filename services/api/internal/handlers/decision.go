@@ -187,7 +187,7 @@ func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via stri
 			slog.Int64("user_id", u.ID), slog.Int64("count", n),
 		)
 	}
-	go h.sendUserDeclined(u, referenceID(u))
+	go h.sendUserDeclined(u)
 	return nil
 }
 
@@ -219,9 +219,29 @@ func (h *AdminDecision) decline(w http.ResponseWriter, ctx context.Context, u *u
 	})
 }
 
+// Background wrappers used by ApproveUser / DeclineUser. Delivery
+// outcome is audited by the email.Audited decorator, so these only
+// need to log.
 func (h *AdminDecision) sendUserApproved(u *users.User) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	if err := h.SendApproved(ctx, u, email.TriggeredBySystem); err != nil {
+		h.log.Warn("send user_approved failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+}
+
+func (h *AdminDecision) sendUserDeclined(u *users.User) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := h.SendDeclined(ctx, u, email.TriggeredBySystem); err != nil {
+		h.log.Warn("send user_declined failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+}
+
+// SendApproved renders and sends the approval email synchronously.
+// Exported so the admin console's ResendNotification can re-fire it
+// with triggeredBy = "admin:<id>" and report the outcome inline.
+func (h *AdminDecision) SendApproved(ctx context.Context, u *users.User, triggeredBy string) error {
 	summary := "permanent"
 	if u.ExpiresAt != nil {
 		summary = "through " + u.ExpiresAt.UTC().Format("Mon, 02 Jan 2006 15:04 UTC")
@@ -233,69 +253,45 @@ func (h *AdminDecision) sendUserApproved(u *users.User) {
 		"OwnerEmail":    h.ownerAddr,
 	})
 	if err != nil {
-		h.log.Warn("render user_approved failed", slog.String("error", err.Error()))
-		return
+		return fmt.Errorf("render user_approved: %w", err)
 	}
-	sendErr := h.email.Send(ctx, email.Message{
-		To:       u.Email,
-		From:     h.from,
-		Subject:  "Your career-site access is approved",
-		TextBody: text,
-		HTMLBody: html,
+	return h.email.Send(ctx, email.Message{
+		To:          u.Email,
+		From:        h.from,
+		Subject:     "Your career-site access is approved",
+		TextBody:    text,
+		HTMLBody:    html,
+		Kind:        "user_approved",
+		UserID:      u.ID,
+		TriggeredBy: triggeredBy,
 	})
-	errText := ""
-	if sendErr != nil {
-		h.log.Warn("send user_approved failed", slog.Int64("user_id", u.ID), slog.String("error", sendErr.Error()))
-		errText = truncErr(sendErr.Error())
-	}
-	if recErr := h.users.RecordNotification(ctx, u.ID, "user_approved", errText); recErr != nil {
-		h.log.Warn("record user_approved notification failed", slog.Int64("user_id", u.ID), slog.String("error", recErr.Error()))
-	}
 }
 
-func (h *AdminDecision) sendUserDeclined(u *users.User, ref string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
+// SendDeclined is the decline counterpart of SendApproved.
+func (h *AdminDecision) SendDeclined(ctx context.Context, u *users.User, triggeredBy string) error {
 	text, html, err := email.UserDeclinedTemplate.Render(map[string]any{
 		"Name":         u.Name,
 		"Email":        u.Email,
 		"Organization": nonEmpty(u.Organization, "(not provided)"),
 		"StatedRole":   nonEmpty(u.StatedRole, "(not provided)"),
 		"SubmittedAt":  u.CreatedAt.UTC().Format(time.RFC1123),
-		"ReferenceID":  ref,
+		"ReferenceID":  referenceID(u),
 		"OwnerEmail":   h.ownerAddr,
 		"ReviewURL":    h.webBase + "/admin/pending",
 	})
 	if err != nil {
-		h.log.Warn("render user_declined failed", slog.String("error", err.Error()))
-		return
+		return fmt.Errorf("render user_declined: %w", err)
 	}
-	sendErr := h.email.Send(ctx, email.Message{
-		To:       u.Email,
-		From:     h.from,
-		Subject:  "Your career-site access request",
-		TextBody: text,
-		HTMLBody: html,
+	return h.email.Send(ctx, email.Message{
+		To:          u.Email,
+		From:        h.from,
+		Subject:     "Your career-site access request",
+		TextBody:    text,
+		HTMLBody:    html,
+		Kind:        "user_declined",
+		UserID:      u.ID,
+		TriggeredBy: triggeredBy,
 	})
-	errText := ""
-	if sendErr != nil {
-		h.log.Warn("send user_declined failed", slog.Int64("user_id", u.ID), slog.String("error", sendErr.Error()))
-		errText = truncErr(sendErr.Error())
-	}
-	if recErr := h.users.RecordNotification(ctx, u.ID, "user_declined", errText); recErr != nil {
-		h.log.Warn("record user_declined notification failed", slog.Int64("user_id", u.ID), slog.String("error", recErr.Error()))
-	}
-}
-
-// truncErr keeps the provider's error string short so a single row's
-// last_notification_error column never grows unbounded. 500 chars is
-// well past the useful signal (Resend / SMTP errors are short).
-func truncErr(s string) string {
-	const max = 500
-	if len(s) <= max {
-		return s
-	}
-	return s[:max]
 }
 
 // SendUserAutoDeclined is called from the auto-decline scheduler.
@@ -314,6 +310,8 @@ func (h *AdminDecision) SendUserAutoDeclined(ctx context.Context, u *users.User)
 		Subject:  "Your career-site request timed out",
 		TextBody: text,
 		HTMLBody: html,
+		Kind:     "user_auto_declined",
+		UserID:   u.ID,
 	})
 }
 

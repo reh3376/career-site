@@ -169,6 +169,13 @@ func (a *Admin) GetMember(
 		a.log.Warn("activity counts failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 	}
 	resp := &v1.GetMemberResponse{Member: rec}
+	if dels, err := a.users.ListDeliveries(ctx, u.ID, 20); err == nil {
+		for i := range dels {
+			resp.Deliveries = append(resp.Deliveries, deliveryRepoToProto(&dels[i]))
+		}
+	} else {
+		a.log.Warn("list deliveries failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
 	if events, err := a.users.RecentActivity(ctx, u.ID, 50); err == nil {
 		resp.RecentActivity = make([]*v1.ActivityEvent, 0, len(events))
 		for i := range events {
@@ -1045,6 +1052,80 @@ func supportStatusRepoToProto(s string) v1.SupportStatus {
 	default:
 		return v1.SupportStatus_SUPPORT_STATUS_UNSPECIFIED
 	}
+}
+
+// ---------------------------------------------------------------
+// ResendNotification — /admin/registrations/[id] resend button
+// ---------------------------------------------------------------
+
+func (a *Admin) ResendNotification(
+	ctx context.Context,
+	req *connect.Request[v1.ResendNotificationRequest],
+) (*connect.Response[v1.ResendNotificationResponse], error) {
+	admin, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	triggeredBy := "admin:" + strconv.FormatInt(admin.ID, 10)
+	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	var sendErr error
+	switch req.Msg.Kind {
+	case "user_approved":
+		if u.Status != users.StatusActive {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("approval email only resends to an active member"))
+		}
+		sendErr = a.decision.SendApproved(sendCtx, u, triggeredBy)
+	case "user_declined":
+		if u.Status != users.StatusDeclined {
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("decline email only resends to a declined member"))
+		}
+		sendErr = a.decision.SendDeclined(sendCtx, u, triggeredBy)
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("kind %q is not resendable", req.Msg.Kind))
+	}
+	if sendErr != nil {
+		a.log.Warn("resend failed", slog.Int64("user_id", u.ID),
+			slog.String("kind", req.Msg.Kind), slog.String("error", sendErr.Error()))
+	}
+	// The Audited provider recorded the attempt either way; return the
+	// row so the UI shows the provider's verdict without a refetch.
+	dels, err := a.users.ListDeliveries(ctx, u.ID, 1)
+	if err != nil || len(dels) == 0 {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("delivery record not found"))
+	}
+	return connect.NewResponse(&v1.ResendNotificationResponse{
+		Delivery: deliveryRepoToProto(&dels[0]),
+	}), nil
+}
+
+func deliveryRepoToProto(d *users.NotificationDelivery) *v1.NotificationDelivery {
+	out := &v1.NotificationDelivery{
+		Id:          strconv.FormatInt(d.ID, 10),
+		Kind:        d.Kind,
+		Recipient:   d.Recipient,
+		Provider:    d.Provider,
+		TriggeredBy: d.TriggeredBy,
+		DurationMs:  d.DurationMs,
+		Ok:          d.Error == nil,
+		SentAt:      timestamppb.New(d.CreatedAt),
+	}
+	if d.Error != nil {
+		out.Error = *d.Error
+	}
+	return out
 }
 
 // ---------------------------------------------------------------

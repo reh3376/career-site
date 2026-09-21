@@ -52,6 +52,23 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/registrations", "layout");
 }
 
+// Re-fire the approval / decline email. The API audits the attempt
+// and the page re-renders with the new delivery row at the top of
+// the history, so the admin sees the provider's verdict inline.
+export async function resendNotificationAction(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("member_id") ?? "");
+  const kind = String(formData.get("kind") ?? "");
+  if (!memberId || !kind) return;
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  await callApi({
+    path: "/api/career.v1.AdminService/ResendNotification",
+    body: { memberId, kind },
+    cookie,
+  }).catch(() => undefined);
+  revalidatePath("/admin/registrations", "layout");
+}
+
 // Extend a member's access. `mode` picks which of the three ExtendAccess
 // request fields to populate: "days" (relative), "permanent" (clears
 // expires_at). "days" reads from formData.get("days"), the button

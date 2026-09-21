@@ -9,6 +9,7 @@ import {
   approveRegistrationAction,
   declineRegistrationAction,
   extendAccessAction,
+  resendNotificationAction,
   setMemberStatusAction,
 } from "../actions";
 
@@ -50,6 +51,21 @@ type ActivityEvent = {
   occurred_at?: string;
 };
 
+type Delivery = {
+  id: string;
+  kind: string;
+  recipient?: string;
+  provider?: string;
+  triggered_by?: string;
+  triggeredBy?: string;
+  duration_ms?: number | string;
+  durationMs?: number | string;
+  ok?: boolean;
+  error?: string;
+  sent_at?: string;
+  sentAt?: string;
+};
+
 type GetMemberResp = {
   member?: {
     me?: Me;
@@ -57,6 +73,7 @@ type GetMemberResp = {
     counts?: ActivityCounts;
   };
   recent_activity?: ActivityEvent[];
+  deliveries?: Delivery[];
 };
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -227,7 +244,10 @@ export default async function AdminMemberDetailPage({
         >
           last notification email
         </p>
-        <NotificationPill me={me} />
+        <DeliveryBlock
+          me={me}
+          deliveries={data?.deliveries ?? []}
+        />
       </section>
 
       <section
@@ -460,53 +480,138 @@ const NOTIF_LABEL: Record<string, string> = {
   user_approved: "approval",
   user_declined: "decline",
   user_auto_declined: "auto-decline",
+  welcome_whitelist: "whitelist welcome",
+  verify_email: "email verification",
+  password_reset: "password reset",
   expiry_warn: "expiry warning",
   expired: "expiry notice",
 };
 
-// Small pill showing whether the last outbound email actually
-// landed with the provider. Green (success), red (failure), or
-// muted (never sent).
-function NotificationPill({ me }: { me: Me }) {
-  const kind = me.last_notification_kind ?? "";
-  const at = me.last_notification_at ? new Date(me.last_notification_at) : null;
-  const failed = Boolean(me.last_notification_error);
+// Which resend the member's current status permits, if any.
+function resendKindFor(status: string): string | null {
+  if (status === "MEMBER_STATUS_ACTIVE") return "user_approved";
+  if (status === "MEMBER_STATUS_DECLINED") return "user_declined";
+  return null;
+}
 
-  if (!kind || !at) {
+// Email delivery history for the member: the latest attempt as a
+// verdict line, the rest as a compact list, and a resend button when
+// the member's status has a resendable mail.
+function DeliveryBlock({
+  me,
+  deliveries,
+}: {
+  me: Me;
+  deliveries: Delivery[];
+}) {
+  const resendKind = resendKindFor(me.status);
+  const latest = deliveries[0];
+
+  return (
+    <div className="mt-3">
+      {latest ? (
+        <Verdict d={latest} />
+      ) : (
+        <p className="text-sm text-ink-3">
+          No notification email has been sent to this member yet. Approve
+          / decline / extend actions dispatch one automatically.
+        </p>
+      )}
+
+      {resendKind ? (
+        <div className="mt-3">
+          <ActionButton
+            action={resendNotificationAction}
+            memberId={me.id}
+            extra={{ kind: resendKind }}
+            tone="accent"
+            label={`Resend ${NOTIF_LABEL[resendKind]} email`}
+          />
+        </div>
+      ) : null}
+
+      {deliveries.length > 1 ? (
+        <details className="mt-4">
+          <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            {deliveries.length} attempts
+          </summary>
+          <ul className="mt-2 divide-y divide-line border-y border-line">
+            {deliveries.map((d) => (
+              <DeliveryRow key={d.id} d={d} />
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function Verdict({ d }: { d: Delivery }) {
+  const label = NOTIF_LABEL[d.kind] ?? d.kind;
+  const atIso = d.sent_at ?? d.sentAt;
+  const when = atIso ? relative(new Date(atIso)) : "";
+  if (d.ok === false || d.error) {
     return (
-      <p className="mt-3 text-sm text-ink-3">
-        No notification email has been sent to this member yet. Approve
-        / decline / extend actions dispatch one automatically.
-      </p>
-    );
-  }
-  const label = NOTIF_LABEL[kind] ?? kind;
-  const when = relative(at);
-  if (failed) {
-    return (
-      <div className="mt-3 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+      <div className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
         <p>
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
             send failed
           </span>{" "}
           <span className="text-ink-2">
-           , {label} email, {when}
+            , {label} email, {when}
           </span>
         </p>
         <p className="mt-2 whitespace-pre-wrap font-mono text-[11px] text-ink-3">
-          {me.last_notification_error}
+          {d.error}
         </p>
       </div>
     );
   }
   return (
-    <p className="mt-3 text-sm text-ink-2">
+    <p className="text-sm text-ink-2">
       <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-success">
         sent
       </span>{" "}
-     , {label} email, {when}. If the member reports not receiving it,
+      , {label} email, {when}. If the member reports not receiving it,
       check their spam folder and the provider dashboard.
     </p>
+  );
+}
+
+function DeliveryRow({ d }: { d: Delivery }) {
+  const label = NOTIF_LABEL[d.kind] ?? d.kind;
+  const atIso = d.sent_at ?? d.sentAt;
+  const when = atIso ? relative(new Date(atIso)) : "";
+  const failed = d.ok === false || Boolean(d.error);
+  const by = d.triggered_by ?? d.triggeredBy ?? "system";
+  const ms = Number(d.duration_ms ?? d.durationMs ?? 0);
+  return (
+    <li className="py-2 font-mono text-[11px] text-ink-2">
+      <span className={failed ? "text-signal" : "text-success"}>
+        {failed ? "failed" : "sent"}
+      </span>
+      <span className="text-ink-4"> · </span>
+      {label}
+      <span className="text-ink-4"> · </span>
+      {when}
+      <span className="text-ink-4"> · </span>
+      {by === "system" ? "automatic" : "resend"}
+      {ms > 0 ? (
+        <>
+          <span className="text-ink-4"> · </span>
+          {ms}ms
+        </>
+      ) : null}
+      {d.provider ? (
+        <>
+          <span className="text-ink-4"> · </span>
+          {d.provider}
+        </>
+      ) : null}
+      {failed && d.error ? (
+        <p className="mt-1 whitespace-pre-wrap text-ink-3">{d.error}</p>
+      ) : null}
+    </li>
   );
 }
 

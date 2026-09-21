@@ -24,7 +24,15 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
-  // Returns one member with recent activity, conversations, and admin notes.
+  // Re-sends the approval or decline email to a member and returns
+  // the audited attempt so the console can show the provider's verdict
+  // inline. Backs the "Resend" button on /admin/registrations/[id].
+  rpc ResendNotification(ResendNotificationRequest) returns (ResendNotificationResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns one member with recent activity, conversations, admin notes,
+  // and email delivery history.
   rpc GetMember(GetMemberRequest) returns (GetMemberResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
@@ -315,6 +323,29 @@ message AdminNote {
   google.protobuf.Timestamp created_at = 3;
 }
 
+// One audited email attempt for a member.
+message NotificationDelivery {
+  // Delivery row id.
+  string id = 1;
+  // Slug of the mail: user_approved, user_declined, welcome_whitelist,
+  // verify_email, password_reset, expiry_warn, expired, user_auto_declined.
+  string kind = 2;
+  // Address the mail was sent to.
+  string recipient = 3;
+  // Provider that handled it (resend / smtp).
+  string provider = 4;
+  // "system" for automatic sends; "admin:<id>" for console resends.
+  string triggered_by = 5;
+  // Provider round-trip in milliseconds.
+  int64 duration_ms = 6;
+  // True when the provider accepted the message.
+  bool ok = 7;
+  // Truncated provider error when ok is false; empty otherwise.
+  string error = 8;
+  // When the attempt happened.
+  google.protobuf.Timestamp sent_at = 9;
+}
+
 // Member detail.
 message GetMemberResponse {
   // The member.
@@ -325,6 +356,30 @@ message GetMemberResponse {
   repeated Conversation conversations = 3;
   // Admin notes, newest first.
   repeated AdminNote notes = 4;
+  // Most recent 20 email attempts, newest first.
+  repeated NotificationDelivery deliveries = 5;
+}
+
+// Resend-notification request.
+message ResendNotificationRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Which mail to re-fire. Only `user_approved` (member must be
+  // active) and `user_declined` (member must be declined) are
+  // resendable; token-bearing mails (verify, reset) are not.
+  string kind = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 40
+  }];
+}
+
+// Resend-notification response.
+message ResendNotificationResponse {
+  // The audited attempt, including any provider error.
+  NotificationDelivery delivery = 1;
 }
 
 // Note request.
