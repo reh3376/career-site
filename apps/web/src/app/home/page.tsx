@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { OtPanel } from "@/components/ot-panel";
@@ -209,10 +210,12 @@ export default async function HomePage() {
       </p>
 
       <section className="mt-14 grid gap-6 md:grid-cols-2">
-        <ComingSoonCard
-          label="articles"
+        <LiveCard
+          label="articles · live"
           title="Roger's writing"
-          body="Read pieces on digital transformation, control-room adoption, plant-historian architecture, and how vendor slides survive first contact with reality."
+          body="Pieces on digital transformation, control-room adoption, plant-historian architecture, and why manufacturing AI programs die in the pilot."
+          href="/articles"
+          cta="Read the archive →"
         />
         <ComingSoonCard
           label="ask roger"
@@ -349,6 +352,41 @@ function ComingSoonCard({
       </p>
       <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
     </div>
+  );
+}
+
+function LiveCard({
+  label,
+  title,
+  body,
+  href,
+  cta,
+}: {
+  label: string;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group block border border-line p-5 no-underline transition-colors hover:border-accent"
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+        {label}
+      </p>
+      <p
+        className="font-display mt-2 text-xl leading-snug text-ink transition-colors group-hover:text-accent"
+        style={{ fontVariationSettings: '"opsz" 40, "SOFT" 50' }}
+      >
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
+      <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+        {cta}
+      </p>
+    </Link>
   );
 }
 
