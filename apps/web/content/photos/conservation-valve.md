@@ -1,7 +1,7 @@
 ---
 title: "Conservation vent"
-caption: "A tank-top conservation vent valve and the piping around it."
-context: "Instrumentation and safeguarding detail on a fermentation tank farm."
+caption: "A conservation vent valve on top of an outdoor distillate holding tank, with the piping around it."
+context: "Instrumentation and safeguarding detail on the distillate tank farm."
 taken: "2023"
 alt: "A conservation vent valve mounted on top of a tank with piping and fittings around it."
 permission: "Roger Henley (owner photo, no client marks)"
