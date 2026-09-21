@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/contacts", label: "Contact messages" },
   { href: "/admin/registrations", label: "Registrations" },
   { href: "/admin/access", label: "Access & whitelist" },
+  { href: "/admin/activity", label: "Activity" },
   { href: "/admin/db", label: "DB query" },
 ];
 

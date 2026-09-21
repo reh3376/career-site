@@ -139,6 +139,107 @@ func (r *Repo) ActivityCountsFor(ctx context.Context, userID int64) (*ActivityCo
 	return c, nil
 }
 
+// MemberActivitySummary is one row of the /admin/activity aggregate
+// view: everything a sortable overview table needs to render a user's
+// engagement without a per-user round-trip.
+type MemberActivitySummary struct {
+	UserID          int64
+	Name            string
+	Email           string
+	Status          Status
+	TotalSessions   int32
+	TotalActiveSecs int64 // sum of (LEAST(revoked_at, last_active_at, now) − created_at)
+	AskRogerCount   int32
+	TotalEvents     int32
+	LastKind        string     // empty when the user has no events yet
+	LastEventAt     *time.Time // NULL when no events
+}
+
+// ActivitySort picks the ORDER BY column for ListMemberActivity.
+type ActivitySort int
+
+const (
+	ActivitySortName ActivitySort = iota
+	ActivitySortLastEventDesc
+	ActivitySortSessionsDesc
+	ActivitySortActiveSecsDesc
+	ActivitySortAskRogerDesc
+)
+
+// ListMemberActivity returns the /admin/activity aggregate: one row
+// per user with counts + last-event + active-time, JOINed across
+// users, sessions, and activity_events. LEFT JOIN so a member with
+// zero events / sessions still appears (with zeros).
+//
+// The active-time expression sums per-session (LEAST(revoked_at,
+// last_active_at, now()) − created_at) which is a good proxy for
+// wall-clock time the user was reachable in that session.
+func (r *Repo) ListMemberActivity(ctx context.Context, sort ActivitySort) ([]MemberActivitySummary, error) {
+	order := "u.name COLLATE \"C\" ASC"
+	switch sort {
+	case ActivitySortLastEventDesc:
+		order = "last_event_at DESC NULLS LAST, u.name ASC"
+	case ActivitySortSessionsDesc:
+		order = "total_sessions DESC, u.name ASC"
+	case ActivitySortActiveSecsDesc:
+		order = "total_active_secs DESC, u.name ASC"
+	case ActivitySortAskRogerDesc:
+		order = "ask_roger_count DESC, u.name ASC"
+	}
+	// The two aggregates over sessions / events are computed in
+	// subqueries so the outer LEFT JOIN doesn't multiply rows.
+	// COALESCE keeps the zero-event / zero-session case clean.
+	q := `
+    SELECT
+      u.id, u.name, u.email, u.status,
+      COALESCE(s.total_sessions,   0)::int    AS total_sessions,
+      COALESCE(s.total_active_secs, 0)::bigint AS total_active_secs,
+      COALESCE(a.ask_roger_count,  0)::int    AS ask_roger_count,
+      COALESCE(a.total_events,     0)::int    AS total_events,
+      COALESCE(a.last_kind, '')                AS last_kind,
+      a.last_event_at
+    FROM users u
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)                                                                             AS total_sessions,
+        EXTRACT(EPOCH FROM SUM(LEAST(COALESCE(revoked_at, last_active_at, now()), now()) - created_at))
+          AS total_active_secs
+      FROM sessions
+      WHERE user_id = u.id
+    ) s ON true
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)                                          AS total_events,
+        COUNT(*) FILTER (WHERE kind = 'chat')             AS ask_roger_count,
+        (ARRAY_AGG(kind        ORDER BY occurred_at DESC))[1] AS last_kind,
+        MAX(occurred_at)                                  AS last_event_at
+      FROM activity_events
+      WHERE user_id = u.id
+    ) a ON true
+    ORDER BY ` + order + `
+    LIMIT 500
+  `
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list member activity: %w", err)
+	}
+	defer rows.Close()
+	var out []MemberActivitySummary
+	for rows.Next() {
+		var m MemberActivitySummary
+		if err := rows.Scan(
+			&m.UserID, &m.Name, &m.Email, &m.Status,
+			&m.TotalSessions, &m.TotalActiveSecs,
+			&m.AskRogerCount, &m.TotalEvents,
+			&m.LastKind, &m.LastEventAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan member activity: %w", err)
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil

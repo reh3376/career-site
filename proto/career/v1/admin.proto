@@ -192,6 +192,14 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns one row per member with engagement aggregates (session
+  // count, total active time, ask-roger count, last event). Backs
+  // /admin/activity — Roger's request for a sortable "who's using
+  // the site" surface.
+  rpc ListMemberActivity(ListMemberActivityRequest) returns (ListMemberActivityResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1142,3 +1150,59 @@ message DeleteSavedQueryRequest {
 
 // Delete-saved-query response.
 message DeleteSavedQueryResponse {}
+
+// One row of the /admin/activity aggregate view: per-member counts
+// + the last recorded event. `last_event_at` is unset for members
+// with no recorded activity yet.
+message MemberActivitySummary {
+  // Member id (numeric, stringified over the wire).
+  string user_id = 1;
+  // Display name.
+  string name = 2;
+  // Email address.
+  string email = 3;
+  // Current lifecycle state.
+  MemberStatus status = 4;
+  // Number of sessions ever created for this member.
+  int32 total_sessions = 5;
+  // Sum of session wall-clock time in seconds, approximated as
+  // (LEAST(revoked_at, last_active_at, now()) − created_at) per
+  // session.
+  int64 total_active_secs = 6;
+  // Number of `chat` events (Ask Roger interactions).
+  int32 ask_roger_count = 7;
+  // Total number of activity_events rows for this member.
+  int32 total_events = 8;
+  // Kind of the most-recent event (matching ActivityEvent.Kind
+  // values as a slug: "view", "login", …). Empty for members with
+  // no events yet.
+  string last_kind = 9;
+  // Timestamp of the most-recent event; unset when no events.
+  google.protobuf.Timestamp last_event_at = 10;
+}
+
+// Sort order for ListMemberActivity.
+enum ActivitySort {
+  // Default: name (case-insensitive ascending).
+  ACTIVITY_SORT_UNSPECIFIED = 0;
+  // Newest activity first.
+  ACTIVITY_SORT_LAST_EVENT_DESC = 1;
+  // Highest total session count first.
+  ACTIVITY_SORT_SESSIONS_DESC = 2;
+  // Highest total active-time first.
+  ACTIVITY_SORT_ACTIVE_TIME_DESC = 3;
+  // Most Ask Roger interactions first.
+  ACTIVITY_SORT_ASK_ROGER_DESC = 4;
+}
+
+// List-member-activity request.
+message ListMemberActivityRequest {
+  // Which column to sort by.
+  ActivitySort sort = 1 [(buf.validate.field).enum.defined_only = true];
+}
+
+// List-member-activity response.
+message ListMemberActivityResponse {
+  // One row per member (up to 500).
+  repeated MemberActivitySummary members = 1;
+}

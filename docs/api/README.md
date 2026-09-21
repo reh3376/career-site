@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 28 |
+| [`AdminService`](#adminservice) | Owner console. | 29 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
 
@@ -1630,6 +1630,7 @@ Owner console.
 | [`ListSavedQueries`](#adminservice-listsavedqueries) | `/api/career.v1.AdminService/ListSavedQueries` | Admin (fresh MFA) | default | `ListSavedQueriesRequest` → `ListSavedQueriesResponse` | Returns the calling admin's saved SQL statements from /admin/db. |
 | [`UpsertSavedQuery`](#adminservice-upsertsavedquery) | `/api/career.v1.AdminService/UpsertSavedQuery` | Admin (fresh MFA) | default | `UpsertSavedQueryRequest` → `UpsertSavedQueryResponse` | Creates or updates a saved query for the caller. |
 | [`DeleteSavedQuery`](#adminservice-deletesavedquery) | `/api/career.v1.AdminService/DeleteSavedQuery` | Admin (fresh MFA) | default | `DeleteSavedQueryRequest` → `DeleteSavedQueryResponse` | Removes one of the caller's saved queries by id. |
+| [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin (fresh MFA) | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
 
 ### AdminService.ListMembers
 
@@ -2552,6 +2553,37 @@ _No fields; send `{}`._
 ```json
 {
   "id": "string"
+}
+```
+
+</details>
+
+### AdminService.ListMemberActivity
+
+`POST /api/career.v1.AdminService/ListMemberActivity` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns one row per member with engagement aggregates (session
+count, total active time, ask-roger count, last event). Backs
+/admin/activity — Roger's request for a sortable "who's using
+the site" surface.
+
+**Request** — [`ListMemberActivityRequest`](#listmemberactivityrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sort` | [`ActivitySort`](#activitysort) | string (enum name) | `enum: defined_only: true` | Which column to sort by. |
+
+**Response** — [`ListMemberActivityResponse`](#listmemberactivityresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `members` | [`MemberActivitySummary`](#memberactivitysummary)[] | array of object |  | One row per member (up to 500). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sort": "ACTIVITY_SORT_LAST_EVENT_DESC"
 }
 ```
 
@@ -4189,6 +4221,41 @@ Delete-saved-query response.
 
 _No fields._
 
+### MemberActivitySummary
+
+One row of the /admin/activity aggregate view: per-member counts
++ the last recorded event. `last_event_at` is unset for members
+with no recorded activity yet.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `userId` | `string` | string |  | Member id (numeric, stringified over the wire). |
+| `name` | `string` | string |  | Display name. |
+| `email` | `string` | string |  | Email address. |
+| `status` | [`MemberStatus`](#memberstatus) | string (enum name) |  | Current lifecycle state. |
+| `totalSessions` | `int32` | number |  | Number of sessions ever created for this member. |
+| `totalActiveSecs` | `int64` | string (decimal) |  | Sum of session wall-clock time in seconds, approximated as (LEAST(revoked_at, last_active_at, now()) − created_at) per session. |
+| `askRogerCount` | `int32` | number |  | Number of `chat` events (Ask Roger interactions). |
+| `totalEvents` | `int32` | number |  | Total number of activity_events rows for this member. |
+| `lastKind` | `string` | string |  | Kind of the most-recent event (matching ActivityEvent.Kind values as a slug: "view", "login", …). Empty for members with no events yet. |
+| `lastEventAt` | `Timestamp` | string (RFC 3339, UTC) |  | Timestamp of the most-recent event; unset when no events. |
+
+### ListMemberActivityRequest
+
+List-member-activity request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sort` | [`ActivitySort`](#activitysort) | string (enum name) | `enum: defined_only: true` | Which column to sort by. |
+
+### ListMemberActivityResponse
+
+List-member-activity response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `members` | [`MemberActivitySummary`](#memberactivitysummary)[] | array of object |  | One row per member (up to 500). |
+
 ### RegisterRequest
 
 Registration form.
@@ -5325,6 +5392,18 @@ the `access_ttl` enum type in the DB (`1d` / `3d` / `7d` / `30d`
 | `GRANT_TTL_7D` | 3 | 7 days. |
 | `GRANT_TTL_30D` | 4 | 30 days. |
 | `GRANT_TTL_PERMANENT` | 5 | No expiry — access does not auto-lapse. |
+
+### ActivitySort
+
+Sort order for ListMemberActivity.
+
+| Value | Number | Description |
+|---|---|---|
+| `ACTIVITY_SORT_UNSPECIFIED` | 0 | Default: name (case-insensitive ascending). |
+| `ACTIVITY_SORT_LAST_EVENT_DESC` | 1 | Newest activity first. |
+| `ACTIVITY_SORT_SESSIONS_DESC` | 2 | Highest total session count first. |
+| `ACTIVITY_SORT_ACTIVE_TIME_DESC` | 3 | Highest total active-time first. |
+| `ACTIVITY_SORT_ASK_ROGER_DESC` | 4 | Most Ask Roger interactions first. |
 
 ### ListContentRequest.Order
 

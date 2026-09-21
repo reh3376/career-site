@@ -117,6 +117,9 @@ const (
 	// AdminServiceDeleteSavedQueryProcedure is the fully-qualified name of the AdminService's
 	// DeleteSavedQuery RPC.
 	AdminServiceDeleteSavedQueryProcedure = "/career.v1.AdminService/DeleteSavedQuery"
+	// AdminServiceListMemberActivityProcedure is the fully-qualified name of the AdminService's
+	// ListMemberActivity RPC.
+	AdminServiceListMemberActivityProcedure = "/career.v1.AdminService/ListMemberActivity"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -210,6 +213,11 @@ type AdminServiceClient interface {
 	UpsertSavedQuery(context.Context, *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error)
 	// Removes one of the caller's saved queries by id.
 	DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error)
+	// Returns one row per member with engagement aggregates (session
+	// count, total active time, ask-roger count, last event). Backs
+	// /admin/activity — Roger's request for a sortable "who's using
+	// the site" surface.
+	ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -391,6 +399,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeleteSavedQuery")),
 			connect.WithClientOptions(opts...),
 		),
+		listMemberActivity: connect.NewClient[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse](
+			httpClient,
+			baseURL+AdminServiceListMemberActivityProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListMemberActivity")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -424,6 +438,7 @@ type adminServiceClient struct {
 	listSavedQueries      *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
 	upsertSavedQuery      *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
 	deleteSavedQuery      *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
+	listMemberActivity    *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -566,6 +581,11 @@ func (c *adminServiceClient) DeleteSavedQuery(ctx context.Context, req *connect.
 	return c.deleteSavedQuery.CallUnary(ctx, req)
 }
 
+// ListMemberActivity calls career.v1.AdminService.ListMemberActivity.
+func (c *adminServiceClient) ListMemberActivity(ctx context.Context, req *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error) {
+	return c.listMemberActivity.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -657,6 +677,11 @@ type AdminServiceHandler interface {
 	UpsertSavedQuery(context.Context, *connect.Request[v1.UpsertSavedQueryRequest]) (*connect.Response[v1.UpsertSavedQueryResponse], error)
 	// Removes one of the caller's saved queries by id.
 	DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error)
+	// Returns one row per member with engagement aggregates (session
+	// count, total active time, ask-roger count, last event). Backs
+	// /admin/activity — Roger's request for a sortable "who's using
+	// the site" surface.
+	ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -834,6 +859,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DeleteSavedQuery")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListMemberActivityHandler := connect.NewUnaryHandler(
+		AdminServiceListMemberActivityProcedure,
+		svc.ListMemberActivity,
+		connect.WithSchema(adminServiceMethods.ByName("ListMemberActivity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -892,6 +923,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceUpsertSavedQueryHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteSavedQueryProcedure:
 			adminServiceDeleteSavedQueryHandler.ServeHTTP(w, r)
+		case AdminServiceListMemberActivityProcedure:
+			adminServiceListMemberActivityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1011,4 +1044,8 @@ func (UnimplementedAdminServiceHandler) UpsertSavedQuery(context.Context, *conne
 
 func (UnimplementedAdminServiceHandler) DeleteSavedQuery(context.Context, *connect.Request[v1.DeleteSavedQueryRequest]) (*connect.Response[v1.DeleteSavedQueryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteSavedQuery is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListMemberActivity(context.Context, *connect.Request[v1.ListMemberActivityRequest]) (*connect.Response[v1.ListMemberActivityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListMemberActivity is not implemented"))
 }
