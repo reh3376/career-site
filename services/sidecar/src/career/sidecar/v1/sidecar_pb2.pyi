@@ -192,20 +192,58 @@ class GetJobResponse(_message.Message):
     log_tail: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, job_id: _Optional[str] = ..., kind: _Optional[_Union[JobKind, str]] = ..., status: _Optional[_Union[JobStatus, str]] = ..., progress_pct: _Optional[int] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., summary: _Optional[str] = ..., log_tail: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class GenerateRequest(_message.Message):
+    __slots__ = ("system", "user", "max_tokens", "temperature", "json", "trace_id", "json_schema")
+    SYSTEM_FIELD_NUMBER: _ClassVar[int]
+    USER_FIELD_NUMBER: _ClassVar[int]
+    MAX_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
+    JSON_FIELD_NUMBER: _ClassVar[int]
+    TRACE_ID_FIELD_NUMBER: _ClassVar[int]
+    JSON_SCHEMA_FIELD_NUMBER: _ClassVar[int]
+    system: str
+    user: str
+    max_tokens: int
+    temperature: float
+    json: bool
+    trace_id: str
+    json_schema: str
+    def __init__(self, system: _Optional[str] = ..., user: _Optional[str] = ..., max_tokens: _Optional[int] = ..., temperature: _Optional[float] = ..., json: _Optional[bool] = ..., trace_id: _Optional[str] = ..., json_schema: _Optional[str] = ...) -> None: ...
+
+class GenerateResponse(_message.Message):
+    __slots__ = ("text", "model", "prompt_tokens", "completion_tokens", "latency_ms", "finish_reason")
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    COMPLETION_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
+    FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: int
+    finish_reason: str
+    def __init__(self, text: _Optional[str] = ..., model: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., finish_reason: _Optional[str] = ...) -> None: ...
+
 class HealthRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
 class HealthResponse(_message.Message):
-    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version")
+    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version", "llm_ready", "llm_provider")
     READY_FIELD_NUMBER: _ClassVar[int]
     EMBEDDER_READY_FIELD_NUMBER: _ClassVar[int]
     RERANKER_READY_FIELD_NUMBER: _ClassVar[int]
     STORAGE_READY_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
+    LLM_READY_FIELD_NUMBER: _ClassVar[int]
+    LLM_PROVIDER_FIELD_NUMBER: _ClassVar[int]
     ready: bool
     embedder_ready: bool
     reranker_ready: bool
     storage_ready: bool
     version: str
-    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ...) -> None: ...
+    llm_ready: bool
+    llm_provider: str
+    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ..., llm_ready: _Optional[bool] = ..., llm_provider: _Optional[str] = ...) -> None: ...

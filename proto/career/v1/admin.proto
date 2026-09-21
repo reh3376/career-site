@@ -252,6 +252,13 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns one JD submission in full: the JD text, both scores, the
+  // assessment derivation (requirements, evidence, verdicts) and the
+  // generated résumé when present. Backs /admin/jd/[id].
+  rpc GetJdSubmission(GetJdSubmissionRequest) returns (GetJdSubmissionResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1440,6 +1447,35 @@ message SweepCorpusEmbeddingsResponse {
   int32 remaining = 5;
 }
 
+// Get-jd-submission request.
+message GetJdSubmissionRequest {
+  // Submission id (numeric, stringified).
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+}
+
+// Get-jd-submission response.
+message GetJdSubmissionResponse {
+  // The list row for this submission (status, scores, hints).
+  JdSubmissionRow row = 1;
+  // Full JD text as submitted.
+  string jd_text = 2;
+  // Assessment derivation as JSON (requirements, evidence chunk ids,
+  // verdicts, prompt versions); empty before scoring or when the
+  // assessor was not wired.
+  string assessment_json = 3;
+  // Generated résumé in markdown; empty until generation lands.
+  string resume_markdown = 4;
+  // Model that produced the résumé.
+  string llm_model = 5;
+  // Prompt id that produced the résumé.
+  string prompt_id = 6;
+  // Prompt version that produced the résumé.
+  int32 prompt_version = 7;
+}
+
 // Reindex-corpus request. `scope` picks the mount: `public` walks the
 // committed content under CORPUS_ROOT (documents land as
 // visibility=public); `private` walks CORPUS_PRIVATE_ROOT, where each
@@ -1511,6 +1547,9 @@ message JdSubmissionRow {
   google.protobuf.Timestamp created_at = 11;
   // When the terminal state was reached; unset while in-flight.
   google.protobuf.Timestamp completed_at = 12;
+  // Retrieval pre-score (mean top-K cosine); unset before scoring.
+  // match_score is the requirement-weighted gate when the assessor ran.
+  optional double retrieval_score = 13;
 }
 
 // List-jd-submissions response.

@@ -54,33 +54,39 @@ class SubmitJdRequest(_message.Message):
     def __init__(self, jd_text: _Optional[str] = ..., source: _Optional[_Union[JdSource, str]] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ...) -> None: ...
 
 class SubmitJdResponse(_message.Message):
-    __slots__ = ("submission_id", "status", "message")
+    __slots__ = ("submission_id", "status", "message", "result_token")
     SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    RESULT_TOKEN_FIELD_NUMBER: _ClassVar[int]
     submission_id: str
     status: JdStatus
     message: str
-    def __init__(self, submission_id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., message: _Optional[str] = ...) -> None: ...
+    result_token: str
+    def __init__(self, submission_id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., message: _Optional[str] = ..., result_token: _Optional[str] = ...) -> None: ...
 
 class GetJdResultRequest(_message.Message):
-    __slots__ = ("submission_id",)
+    __slots__ = ("submission_id", "result_token")
     SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    RESULT_TOKEN_FIELD_NUMBER: _ClassVar[int]
     submission_id: str
-    def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
+    result_token: str
+    def __init__(self, submission_id: _Optional[str] = ..., result_token: _Optional[str] = ...) -> None: ...
 
 class GetJdResultResponse(_message.Message):
-    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at")
+    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at", "resume_markdown")
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
     GENERATED_RESUME_URL_FIELD_NUMBER: _ClassVar[int]
     ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
+    RESUME_MARKDOWN_FIELD_NUMBER: _ClassVar[int]
     status: JdStatus
     match_score: float
     generated_resume_url: str
     error_message: str
     created_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
-    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    resume_markdown: str
+    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ...) -> None: ...

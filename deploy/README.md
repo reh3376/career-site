@@ -178,6 +178,10 @@ Finally `/admin/corpus` → **Embed sweep**, repeated until `remaining` reads
 live one, so nothing needs deleting; the same button handles a future model
 change.
 
+The LLM side (JD assessment, résumé generation) is a separate rollout with
+its own sizing and order of operations: see
+[`docs/cutover-local-to-prod.md`](../docs/cutover-local-to-prod.md).
+
 ## Backups (next)
 
 Not in this deploy. Follow-ups:

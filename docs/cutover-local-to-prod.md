@@ -1,0 +1,142 @@
+# Cutover: local LLM testing to production
+
+This is the runbook and the engineering checklist for taking the Ask Roger
+model path from "proven on the owner's Mac" to "serving on the Hetzner box".
+It covers what is different between the two environments today, the exact
+order of operations, and the code changes that have to land before each
+step is possible. Update it whenever a step changes; it is the source of
+truth for the LLM rollout.
+
+## 1. Where things stand
+
+| Layer | Local (owner's Mac) | Production (CPX11, 2 vCPU / 2 GB) |
+|---|---|---|
+| Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container in the stack, model pulled, **provider still `stub`** |
+| LLM gateway | Ollama on the host, `qwen3:14b` (`SIDECAR_LLM_PROVIDER=ollama`) | **`stub`** (schema-valid placeholder JSON; api keeps the retrieval score as the gate) |
+| Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus` |
+| JD scoring | requirements → per-requirement retrieval → verdicts → weighted score in code | retrieval pre-score only (assessor disabled on stub) |
+| Résumé | JSON with source ids (PR 3b), markdown render; PDF via sidecar (PR 4) | not generated; above-threshold rows wait at `generating` |
+| Adapter | LoRA experiments on the Mac (`reh3376/mdemg-llm-*` in local Ollama) | none |
+
+The api decides at boot whether to run the structured assessor: it calls the
+sidecar's `Health` and enables the assessor only when `llm_provider` is not
+`stub` (or `LLM_ALLOW_STUB=1`). Flipping `SIDECAR_LLM_PROVIDER` on the
+sidecar and restarting both containers is therefore the whole switch on the
+application side.
+
+## 2. Principles the rollout must keep
+
+From the owner's design notes (see `project_llm_design_principles` memory):
+
+1. Retrieve, don't memorize: facts live in pgvector, the model handles format
+   and judgment.
+2. The model never emits the score. Requirements and verdicts are
+   schema-constrained JSON; the weighted score is computed and stored with
+   its derivation (`jd_submissions.assessment`).
+3. The résumé is grounded: every bullet carries source chunk ids and code
+   drops anything unsourced.
+4. PDF is rendered outside the model (sidecar, Typst).
+
+## 3. Sizing and the hardware step
+
+| Workload | Model | Disk | RAM while loaded | Fits |
+|---|---|---|---|---|
+| Embeddings | `nomic-embed-text` | ~275 MB | ~600 MB | CPX11 with `OLLAMA_MEM_LIMIT=900m` and swap |
+| Assess + résumé | `qwen3:14b` (Q4_K_M) | ~9.3 GB | ~10 to 11 GB | **CPX41 (16 GB)** or better; not CPX31 |
+| Assess + résumé, smaller | `qwen3:8b` (Q4_K_M) | ~5 GB | ~6 GB | CPX31 (8 GB) |
+| Adapter-merged model | as published to Ollama | same as base | same as base | same as base |
+
+CPU inference of a 14B model on 4 or 8 shared vCPUs runs at a few tokens per
+second. The JD pipeline is asynchronous and bounded by
+`JD_PIPELINE_TIMEOUT_SECONDS` (1200 s in prod), so a slow answer is
+acceptable; a timed-out one is recorded as `failed` with the error visible in
+`/admin/jd`. Budget roughly: two assessment calls (~1.5k output tokens
+total) plus one résumé call (~1.4k tokens) per above-threshold JD.
+
+The owner has said the CPX upgrade happens only once the model and adapter
+are proven locally. Until then production stays on `stub` for the LLM and
+`ollama` (once flipped) for embeddings only.
+
+## 4. Order of operations
+
+### Phase A: embeddings on prod (no resize needed)
+
+1. `.env.prod`: `SIDECAR_EMBED_PROVIDER=ollama`, `OLLAMA_MEM_LIMIT=900m`,
+   `OLLAMA_KEEP_ALIVE=5m` (defaults already match).
+2. `cs up -d ollama sidecar` (alias from `deploy/README.md`); wait for the
+   model pull in `cs logs -f ollama`.
+3. `/admin/corpus`: **Reindex public content**, **Reindex private corpus**
+   (after `make sync-corpus`), then **Embed sweep** until `remaining` is 0.
+4. Submit a known JD and confirm `retrieval_score` is populated on
+   `/admin/jd/[id]`.
+
+### Phase B: prove the model locally (current work)
+
+1. `SIDECAR_EMBED_PROVIDER=ollama SIDECAR_LLM_PROVIDER=ollama docker compose up -d --build`.
+2. `make stage-corpus`, reindex both scopes, embed sweep.
+3. Submit the calibration set (strong / mid / weak / unrelated JDs) and
+   review `/admin/jd/[id]`: requirements extracted, verdicts cite evidence,
+   score separates the set. Adjust prompts by bumping their `Version` in
+   `services/api/internal/prompts`.
+4. When an adapter is ready, publish it to local Ollama
+   (`ollama create <name> -f Modelfile` with `FROM qwen3:14b` and
+   `ADAPTER ./adapter`), set `OLLAMA_LLM_MODEL=<name>`, rerun step 3 and
+   compare `llm_usage` latency and the assessment quality side by side.
+5. Exit criteria: the calibration set orders correctly with a gap of at
+   least 0.15 between "mid" and "strong", no unsourced résumé bullets, and
+   p95 pipeline time under the prod timeout at prod-equivalent CPU speed
+   (measure with `OLLAMA_NUM_THREAD=4` locally to approximate the box).
+
+### Phase C: resize and flip the LLM on prod
+
+1. Hetzner console: power off, rescale CPX11 to the tier chosen from the
+   sizing table (keep disk), power on. `deploy/setup-server.sh` is not
+   rerun; the stack comes back via systemd.
+2. Raise `OLLAMA_MEM_LIMIT` (e.g. `12g` on CPX41) and `OLLAMA_KEEP_ALIVE`
+   (`30m`) in `.env.prod`. Set `OLLAMA_LLM_MODEL` to the proven model name.
+3. Publish the model to the box. Two options:
+   - registry: `ollama push reh3376/<name>` from the Mac, then on the box
+     `docker compose exec ollama ollama pull reh3376/<name>`;
+   - file copy: `rsync` the `~/.ollama/models` blobs for that model into the
+     `ollama_models` volume.
+4. `.env.prod`: `SIDECAR_LLM_PROVIDER=ollama`. `cs up -d sidecar api` (the
+   api re-reads the sidecar `Health` at boot and enables the assessor; the
+   log line is `jd assessor enabled`).
+5. Re-submit the calibration set on prod and compare scores with the local
+   run. Existing rows are not rescored automatically; use the admin
+   re-score action once it lands (backlog).
+6. Watch `llm_usage` latency for a day; if p95 exceeds the pipeline timeout,
+   drop to the smaller model or raise the tier.
+
+### Phase D: résumé PDFs (PR 4)
+
+Sidecar gains Typst and a `RenderResume` RPC; the api stores the PDF in
+MinIO and fills `generated_resume_url`. No model change involved.
+
+## 5. Programmatic changes required, by step
+
+| Step | Change | Status |
+|---|---|---|
+| A | `ollama` service, `embedder_model` tracking, embed sweep | shipped (PR 2) |
+| A | purpose-aware prefixes for nomic | shipped (PR 64) |
+| B/C | sidecar `Generate` RPC with JSON-schema constrained output, `SIDECAR_LLM_PROVIDER` | PR 3a |
+| B/C | api `llm` gateway, versioned prompt registry, `llm_usage` ledger, monthly call cap | PR 3a |
+| B/C | requirements → retrieval → judgment assessor, `assessment` jsonb, `retrieval_score` | PR 3a |
+| B/C | api enables the assessor from sidecar `Health.llm_provider` | PR 3a |
+| B/C | result token on submissions; public poll releases the résumé only with it | PR 3a |
+| B | grounded résumé JSON with source ids, verification, markdown render | PR 3b |
+| C | admin "re-score" action + one automatic retry on transient LLM errors | backlog |
+| C | `OLLAMA_MEM_LIMIT` / `KEEP_ALIVE` raise, model publish path | runbook only |
+| D | Typst render in sidecar, MinIO upload, `generated_resume_url` | PR 4 |
+| later | Ask Roger chat on the same gateway (streaming `Generate`, `chat_usage` kind) | PR 5 |
+| later | adapter Modelfile + publish step in `deploy/` | when the local evaluation passes |
+
+## 6. Rollback
+
+- LLM: set `SIDECAR_LLM_PROVIDER=stub`, `cs up -d sidecar api`. The api falls
+  back to the retrieval pre-score; nothing else changes.
+- Embeddings: set `SIDECAR_EMBED_PROVIDER=stub` and run an embed sweep; the
+  recorded `embedder_model` makes the switch reversible without deleting
+  anything.
+- Box: Hetzner rescale down is the same console operation in reverse; the
+  compose stack does not care.

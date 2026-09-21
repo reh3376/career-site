@@ -123,10 +123,10 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 35 |
+| [`AdminService`](#adminservice) | Owner console. | 36 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, public. | 2 |
-| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 6 |
+| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 7 |
 
 ## AuthService
 
@@ -1644,6 +1644,7 @@ Owner console.
 | [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a filesystem tree for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed article content instead of paste-by-paste. |
 | [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin (fresh MFA) | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
+| [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
 
 ### AdminService.ListMembers
 
@@ -2823,6 +2824,42 @@ _No fields; send `{}`._
 
 </details>
 
+### AdminService.GetJdSubmission
+
+`POST /api/career.v1.AdminService/GetJdSubmission` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns one JD submission in full: the JD text, both scores, the
+assessment derivation (requirements, evidence, verdicts) and the
+generated résumé when present. Backs /admin/jd/[id].
+
+**Request** — [`GetJdSubmissionRequest`](#getjdsubmissionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+
+**Response** — [`GetJdSubmissionResponse`](#getjdsubmissionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `row` | [`JdSubmissionRow`](#jdsubmissionrow) | object |  | The list row for this submission (status, scores, hints). |
+| `jdText` | `string` | string |  | Full JD text as submitted. |
+| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, verdicts, prompt versions); empty before scoring or when the assessor was not wired. |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown; empty until generation lands. |
+| `llmModel` | `string` | string |  | Model that produced the résumé. |
+| `promptId` | `string` | string |  | Prompt id that produced the résumé. |
+| `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string"
+}
+```
+
+</details>
+
 ## SystemService
 
 Version and governance status.
@@ -2922,6 +2959,7 @@ on the actual scoring / generation — those run out of band.
 | `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
+| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the generated résumé; without it the poll returns status and score only. |
 
 <details><summary>Example request body</summary>
 
@@ -2950,6 +2988,7 @@ generated résumé URL when status is `ready`.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
+| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional, gates the résumé body. |
 
 **Response** — [`GetJdResultResponse`](#getjdresultresponse)
 
@@ -2961,12 +3000,14 @@ generated résumé URL when status is `ready`.
 | `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
 
 <details><summary>Example request body</summary>
 
 ```json
 {
-  "submissionId": "string"
+  "submissionId": "string",
+  "resultToken": "string"
 }
 ```
 
@@ -2986,6 +3027,7 @@ Embedding, reranking, classification, and batch jobs.
 | [`RunJob`](#sidecarservice-runjob) | `/career.sidecar.v1.SidecarService/RunJob (gRPC)` | — | — | `RunJobRequest` → `RunJobResponse` | Starts a batch job (the same operations as `career-cli`). |
 | [`GetJob`](#sidecarservice-getjob) | `/career.sidecar.v1.SidecarService/GetJob (gRPC)` | — | — | `GetJobRequest` → `GetJobResponse` | Returns a job's status. |
 | [`Health`](#sidecarservice-health) | `/career.sidecar.v1.SidecarService/Health (gRPC)` | — | — | `HealthRequest` → `HealthResponse` | Reports readiness: models loaded, storage reachable, version. |
+| [`Generate`](#sidecarservice-generate) | `/career.sidecar.v1.SidecarService/Generate (gRPC)` | — | — | `GenerateRequest` → `GenerateResponse` | Runs one chat completion with the configured LLM provider (Ollama locally / on-host, a hosted API later, stub in CI). |
 
 ### SidecarService.Embed
 
@@ -3186,11 +3228,63 @@ _No fields; send `{}`._
 | `rerankerReady` | `bool` | boolean |  | Reranker loaded (optional component). |
 | `storageReady` | `bool` | boolean |  | Object storage reachable. |
 | `version` | `string` | string |  | Sidecar version. |
+| `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
+| `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
 
 <details><summary>Example request body</summary>
 
 ```json
 {}
+```
+
+</details>
+
+### SidecarService.Generate
+
+`/career.sidecar.v1.SidecarService/Generate` (gRPC)
+
+Runs one chat completion with the configured LLM provider (Ollama
+locally / on-host, a hosted API later, stub in CI). Non-streaming;
+the API uses it for background generation (JD-tailored résumés).
+The API owns the prompt text and its version; the sidecar is a
+provider gateway and never rewrites prompts. Deadline is set by the
+caller and can be minutes on CPU inference.
+
+**Request** — [`GenerateRequest`](#generaterequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `system` | `string` | string | `string: max_len: 32000` | System prompt (persona, rules, output format). Owned by the API's prompt registry; pinned by (prompt_id, prompt_version) there. |
+| `user` | `string` | string | `string: min_len: 1 max_len: 200000` | User turn: the task plus any retrieved evidence, with untrusted text already wrapped in delimiters by the caller. |
+| `maxTokens` | `int32` | number | `int32: lte: 8192 gte: 0` | Completion cap in tokens; 0 uses the provider default. |
+| `temperature` | `float` | number | `float: lte: 2.0 gte: 0.0` | Sampling temperature; 0 is deterministic where the provider allows. |
+| `json` | `bool` | boolean |  | Ask the provider for a JSON object response. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `jd:42`). |
+| `jsonSchema` | `string` | string | `string: max_len: 32000` | JSON Schema (draft 2020-12 subset) the response must satisfy. Providers that support constrained decoding (Ollama `format`) enforce it; others fall back to plain JSON mode and the caller validates. Implies json=true. |
+
+**Response** — [`GenerateResponse`](#generateresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `text` | `string` | string |  | Generated text with any reasoning scaffolding stripped. |
+| `model` | `string` | string |  | Provider model identifier (e.g. `ollama:qwen3:14b`). |
+| `promptTokens` | `int32` | number |  | Prompt tokens as reported by the provider; 0 if unknown. |
+| `completionTokens` | `int32` | number |  | Completion tokens as reported by the provider; 0 if unknown. |
+| `latencyMs` | `int64` | string (decimal) |  | Wall-clock time of the provider call in milliseconds. |
+| `finishReason` | `string` | string |  | Provider finish reason (`stop`, `length`, ...), empty if unknown. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "system": "string",
+  "user": "string",
+  "maxTokens": 0,
+  "temperature": 0.5,
+  "json": true,
+  "traceId": "string",
+  "jsonSchema": "string"
+}
 ```
 
 </details>
@@ -3323,6 +3417,33 @@ Job status.
 | `summary` | `string` | string |  | Summary or error text. |
 | `logTail` | `string`[] | array of string |  | Last 50 log lines. |
 
+### GenerateRequest
+
+One chat completion.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `system` | `string` | string | `string: max_len: 32000` | System prompt (persona, rules, output format). Owned by the API's prompt registry; pinned by (prompt_id, prompt_version) there. |
+| `user` | `string` | string | `string: min_len: 1 max_len: 200000` | User turn: the task plus any retrieved evidence, with untrusted text already wrapped in delimiters by the caller. |
+| `maxTokens` | `int32` | number | `int32: lte: 8192 gte: 0` | Completion cap in tokens; 0 uses the provider default. |
+| `temperature` | `float` | number | `float: lte: 2.0 gte: 0.0` | Sampling temperature; 0 is deterministic where the provider allows. |
+| `json` | `bool` | boolean |  | Ask the provider for a JSON object response. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `jd:42`). |
+| `jsonSchema` | `string` | string | `string: max_len: 32000` | JSON Schema (draft 2020-12 subset) the response must satisfy. Providers that support constrained decoding (Ollama `format`) enforce it; others fall back to plain JSON mode and the caller validates. Implies json=true. |
+
+### GenerateResponse
+
+Completion result plus the accounting the API's usage ledger needs.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `text` | `string` | string |  | Generated text with any reasoning scaffolding stripped. |
+| `model` | `string` | string |  | Provider model identifier (e.g. `ollama:qwen3:14b`). |
+| `promptTokens` | `int32` | number |  | Prompt tokens as reported by the provider; 0 if unknown. |
+| `completionTokens` | `int32` | number |  | Completion tokens as reported by the provider; 0 if unknown. |
+| `latencyMs` | `int64` | string (decimal) |  | Wall-clock time of the provider call in milliseconds. |
+| `finishReason` | `string` | string |  | Provider finish reason (`stop`, `length`, ...), empty if unknown. |
+
 ### HealthRequest
 
 Empty.
@@ -3340,6 +3461,8 @@ Readiness.
 | `rerankerReady` | `bool` | boolean |  | Reranker loaded (optional component). |
 | `storageReady` | `bool` | boolean |  | Object storage reachable. |
 | `version` | `string` | string |  | Sidecar version. |
+| `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
+| `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
 
 ### TrackWeight
 
@@ -3831,6 +3954,7 @@ GetJdResult with this id.
 | `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
+| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the generated résumé; without it the poll returns status and score only. |
 
 ### GetJdResultRequest
 
@@ -3839,6 +3963,7 @@ Poll request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
+| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional, gates the résumé body. |
 
 ### GetJdResultResponse
 
@@ -3852,6 +3977,7 @@ Poll response.
 | `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
 
 ### MemberCounts
 
@@ -4752,6 +4878,28 @@ Sweep-corpus-embeddings response — mirrors ingest.SweepResult.
 | `failed` | `int32` | number |  | Chunks that failed (left stale for the next sweep). |
 | `remaining` | `int32` | number |  | Chunks still stale after this call; zero means converged. |
 
+### GetJdSubmissionRequest
+
+Get-jd-submission request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+
+### GetJdSubmissionResponse
+
+Get-jd-submission response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `row` | [`JdSubmissionRow`](#jdsubmissionrow) | object |  | The list row for this submission (status, scores, hints). |
+| `jdText` | `string` | string |  | Full JD text as submitted. |
+| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, verdicts, prompt versions); empty before scoring or when the assessor was not wired. |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown; empty until generation lands. |
+| `llmModel` | `string` | string |  | Model that produced the résumé. |
+| `promptId` | `string` | string |  | Prompt id that produced the résumé. |
+| `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
+
 ### ReindexCorpusRequest
 
 Reindex-corpus request. `scope` picks the mount: `public` walks the
@@ -4806,6 +4954,7 @@ One row of the /admin/jd triage table.
 | `generatedResumeUrl` | `string` | string |  | Generated résumé URL when status is READY; empty until then. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was received. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state was reached; unset while in-flight. |
+| `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Retrieval pre-score (mean top-K cosine); unset before scoring. match_score is the requirement-weighted gate when the assessor ran. |
 
 ### ListJdSubmissionsResponse
 

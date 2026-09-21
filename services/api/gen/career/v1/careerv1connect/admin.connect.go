@@ -138,6 +138,9 @@ const (
 	// AdminServiceListJdSubmissionsProcedure is the fully-qualified name of the AdminService's
 	// ListJdSubmissions RPC.
 	AdminServiceListJdSubmissionsProcedure = "/career.v1.AdminService/ListJdSubmissions"
+	// AdminServiceGetJdSubmissionProcedure is the fully-qualified name of the AdminService's
+	// GetJdSubmission RPC.
+	AdminServiceGetJdSubmissionProcedure = "/career.v1.AdminService/GetJdSubmission"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -269,6 +272,10 @@ type AdminServiceClient interface {
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
 	ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error)
+	// Returns one JD submission in full: the JD text, both scores, the
+	// assessment derivation (requirements, evidence, verdicts) and the
+	// generated résumé when present. Backs /admin/jd/[id].
+	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -492,6 +499,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ListJdSubmissions")),
 			connect.WithClientOptions(opts...),
 		),
+		getJdSubmission: connect.NewClient[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse](
+			httpClient,
+			baseURL+AdminServiceGetJdSubmissionProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetJdSubmission")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -532,6 +545,7 @@ type adminServiceClient struct {
 	reindexCorpus         *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
 	sweepCorpusEmbeddings *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
+	getJdSubmission       *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -709,6 +723,11 @@ func (c *adminServiceClient) ListJdSubmissions(ctx context.Context, req *connect
 	return c.listJdSubmissions.CallUnary(ctx, req)
 }
 
+// GetJdSubmission calls career.v1.AdminService.GetJdSubmission.
+func (c *adminServiceClient) GetJdSubmission(ctx context.Context, req *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error) {
+	return c.getJdSubmission.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -838,6 +857,10 @@ type AdminServiceHandler interface {
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
 	// JD body is elided from the list; the detail lookup returns it.
 	ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error)
+	// Returns one JD submission in full: the JD text, both scores, the
+	// assessment derivation (requirements, evidence, verdicts) and the
+	// generated résumé when present. Backs /admin/jd/[id].
+	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1057,6 +1080,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ListJdSubmissions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetJdSubmissionHandler := connect.NewUnaryHandler(
+		AdminServiceGetJdSubmissionProcedure,
+		svc.GetJdSubmission,
+		connect.WithSchema(adminServiceMethods.ByName("GetJdSubmission")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -1129,6 +1158,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSweepCorpusEmbeddingsHandler.ServeHTTP(w, r)
 		case AdminServiceListJdSubmissionsProcedure:
 			adminServiceListJdSubmissionsHandler.ServeHTTP(w, r)
+		case AdminServiceGetJdSubmissionProcedure:
+			adminServiceGetJdSubmissionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1276,4 +1307,8 @@ func (UnimplementedAdminServiceHandler) SweepCorpusEmbeddings(context.Context, *
 
 func (UnimplementedAdminServiceHandler) ListJdSubmissions(context.Context, *connect.Request[v1.ListJdSubmissionsRequest]) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListJdSubmissions is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetJdSubmission is not implemented"))
 }

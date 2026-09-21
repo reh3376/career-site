@@ -24,7 +24,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/jd.proto.
  */
 export const file_career_v1_jd: GenFile = /*@__PURE__*/
-  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSK9AQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ASJfChBTdWJtaXRKZFJlc3BvbnNlEhUKDXN1Ym1pc3Npb25faWQYASABKAkSIwoGc3RhdHVzGAIgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkiNgoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYICL7AQoTR2V0SmRSZXN1bHRSZXNwb25zZRIjCgZzdGF0dXMYASABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSGAoLbWF0Y2hfc2NvcmUYAiABKAFIAIgBARIcChRnZW5lcmF0ZWRfcmVzdW1lX3VybBgDIAEoCRIVCg1lcnJvcl9tZXNzYWdlGAQgASgJEi4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCDgoMX21hdGNoX3Njb3JlKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyq4AQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYysgEKCUpkU2VydmljZRJNCghTdWJtaXRKZBIaLmNhcmVlci52MS5TdWJtaXRKZFJlcXVlc3QaGy5jYXJlZXIudjEuU3VibWl0SmRSZXNwb25zZSIIgLUYAZC1GAMSVgoLR2V0SmRSZXN1bHQSHS5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXF1ZXN0Gh4uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVzcG9uc2UiCIC1GAGQtRgeQqEBCg1jb20uY2FyZWVyLnYxQgdKZFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSK9AQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ASJ1ChBTdWJtaXRKZFJlc3BvbnNlEhUKDXN1Ym1pc3Npb25faWQYASABKAkSIwoGc3RhdHVzGAIgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkSFAoMcmVzdWx0X3Rva2VuGAQgASgJIlUKEkdldEpkUmVzdWx0UmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCASHQoMcmVzdWx0X3Rva2VuGAIgASgJQge6SARyAhhAIpQCChNHZXRKZFJlc3VsdFJlc3BvbnNlEiMKBnN0YXR1cxgBIAEoDjITLmNhcmVlci52MS5KZFN0YXR1cxIYCgttYXRjaF9zY29yZRgCIAEoAUgAiAEBEhwKFGdlbmVyYXRlZF9yZXN1bWVfdXJsGAMgASgJEhUKDWVycm9yX21lc3NhZ2UYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMY29tcGxldGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9yZXN1bWVfbWFya2Rvd24YByABKAlCDgoMX21hdGNoX3Njb3JlKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyq4AQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYysgEKCUpkU2VydmljZRJNCghTdWJtaXRKZBIaLmNhcmVlci52MS5TdWJtaXRKZFJlcXVlc3QaGy5jYXJlZXIudjEuU3VibWl0SmRSZXNwb25zZSIIgLUYAZC1GAMSVgoLR2V0SmRSZXN1bHQSHS5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXF1ZXN0Gh4uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVzcG9uc2UiCIC1GAGQtRgeQqEBCg1jb20uY2FyZWVyLnYxQgdKZFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Submission request. Exactly one of jd_text (paste) OR
@@ -112,6 +112,15 @@ export type SubmitJdResponse = Message<"career.v1.SubmitJdResponse"> & {
    * @generated from field: string message = 3;
    */
   message: string;
+
+  /**
+   * Secret issued once per submission (hex). Present it on
+   * GetJdResult to receive the generated résumé; without it the poll
+   * returns status and score only.
+   *
+   * @generated from field: string result_token = 4;
+   */
+  resultToken: string;
 };
 
 /**
@@ -133,6 +142,13 @@ export type GetJdResultRequest = Message<"career.v1.GetJdResultRequest"> & {
    * @generated from field: string submission_id = 1;
    */
   submissionId: string;
+
+  /**
+   * Token from SubmitJdResponse; optional, gates the résumé body.
+   *
+   * @generated from field: string result_token = 2;
+   */
+  resultToken: string;
 };
 
 /**
@@ -191,6 +207,14 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
    * @generated from field: google.protobuf.Timestamp completed_at = 6;
    */
   completedAt?: Timestamp | undefined;
+
+  /**
+   * Generated résumé in markdown, only when status is READY and the
+   * request carried the submission's result_token.
+   *
+   * @generated from field: string resume_markdown = 7;
+   */
+  resumeMarkdown: string;
 };
 
 /**

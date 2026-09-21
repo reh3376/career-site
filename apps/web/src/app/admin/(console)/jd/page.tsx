@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
@@ -92,9 +93,10 @@ export default async function AdminJdPage() {
         JD submissions.
       </h1>
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
-        Every JD submitted at /jd-upload, with the automatic match
-        score. Threshold is 0.65; above it, the résumé pipeline runs
-        (LLM generation lands next). Below, Roger triages manually.
+        Every JD submitted at /jd-upload. The match score is computed
+        in code from per-requirement verdicts (open a row for the
+        derivation). Threshold is 0.65; above it, the résumé pipeline
+        runs. Below, Roger triages manually.
       </p>
 
       {!result.ok ? (
@@ -183,7 +185,12 @@ function Row({ r, nowMs }: { r: JdRow; nowMs: number }) {
   return (
     <li className="py-5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        <span className="text-ink">#{r.id}</span>
+        <Link
+          href={`/admin/jd/${r.id}`}
+          className="text-accent no-underline hover:text-accent-strong"
+        >
+          #{r.id}
+        </Link>
         <span className={statusCls}>· {label}</span>
         <span>
           score <span className="text-ink">{scoreText}</span>

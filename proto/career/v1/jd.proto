@@ -103,6 +103,10 @@ message SubmitJdResponse {
   // Fixed human-readable acknowledgement text the /jd-upload page
   // renders back to the caller so the copy stays server-controlled.
   string message = 3;
+  // Secret issued once per submission (hex). Present it on
+  // GetJdResult to receive the generated résumé; without it the poll
+  // returns status and score only.
+  string result_token = 4;
 }
 
 // Poll request.
@@ -112,6 +116,8 @@ message GetJdResultRequest {
     min_len: 1
     max_len: 32
   }];
+  // Token from SubmitJdResponse; optional, gates the résumé body.
+  string result_token = 2 [(buf.validate.field).string.max_len = 64];
 }
 
 // Poll response.
@@ -130,4 +136,7 @@ message GetJdResultResponse {
   // When the terminal state (ready / below_threshold / failed) was
   // reached. Unset while the pipeline is still running.
   google.protobuf.Timestamp completed_at = 6;
+  // Generated résumé in markdown, only when status is READY and the
+  // request carried the submission's result_token.
+  string resume_markdown = 7;
 }

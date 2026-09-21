@@ -718,6 +718,10 @@ func (a *Admin) ListJdSubmissions(
 			score := *r.MatchScore
 			row.MatchScore = &score
 		}
+		if r.RetrievalScore != nil {
+			rs := *r.RetrievalScore
+			row.RetrievalScore = &rs
+		}
 		if r.CompletedAt != nil {
 			row.CompletedAt = timestamppb.New(*r.CompletedAt)
 		}
@@ -1209,6 +1213,59 @@ func deliveryRepoToProto(d *users.NotificationDelivery) *v1.NotificationDelivery
 		out.Error = *d.Error
 	}
 	return out
+}
+
+// ---------------------------------------------------------------
+// GetJdSubmission — /admin/jd/[id]
+// ---------------------------------------------------------------
+
+func (a *Admin) GetJdSubmission(
+	ctx context.Context,
+	req *connect.Request[v1.GetJdSubmissionRequest],
+) (*connect.Response[v1.GetJdSubmissionResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.SubmissionId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid submission_id"))
+	}
+	s, err := a.users.GetJdSubmission(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("submission not found"))
+	}
+	row := &v1.JdSubmissionRow{
+		Id:                 strconv.FormatInt(s.ID, 10),
+		Status:             jdStatusRepoToProto(s.Status),
+		TextHead:           s.TextHead,
+		RoleHint:           s.RoleHint,
+		EmployerHint:       s.EmployerHint,
+		ContactEmail:       s.ContactEmail,
+		Source:             jdSourceRepoToProto(s.SourceKind),
+		ErrorMessage:       s.Error,
+		GeneratedResumeUrl: s.GeneratedResumeURL,
+		CreatedAt:          timestamppb.New(s.CreatedAt),
+	}
+	if s.MatchScore != nil {
+		v := *s.MatchScore
+		row.MatchScore = &v
+	}
+	if s.RetrievalScore != nil {
+		v := *s.RetrievalScore
+		row.RetrievalScore = &v
+	}
+	if s.CompletedAt != nil {
+		row.CompletedAt = timestamppb.New(*s.CompletedAt)
+	}
+	return connect.NewResponse(&v1.GetJdSubmissionResponse{
+		Row:            row,
+		JdText:         s.JdText,
+		AssessmentJson: string(s.Assessment),
+		ResumeMarkdown: s.ResumeMarkdown,
+		LlmModel:       s.LLMModel,
+		PromptId:       s.PromptID,
+		PromptVersion:  s.PromptVersion,
+	}), nil
 }
 
 // ---------------------------------------------------------------

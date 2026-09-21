@@ -27,6 +27,9 @@ def running_server() -> Iterator[str]:
         ollama_url="http://ollama:11434",
         ollama_embed_model="nomic-embed-text",
         embed_dimensions=768,
+        llm_provider="stub",
+        ollama_llm_model="qwen3:14b",
+        llm_timeout_seconds=30,
     )
     server, addr = build_server(cfg)
     server.start()
@@ -48,6 +51,53 @@ def test_health_returns_ready(running_server: str) -> None:
     assert resp.reranker_ready is False
     assert resp.storage_ready is False
     assert resp.version != ""
+    assert resp.llm_ready is True
+    assert resp.llm_provider == "stub"
+
+
+def test_generate_honours_json_schema(running_server: str) -> None:
+    import json
+
+    schema = json.dumps(
+        {
+            "type": "object",
+            "required": ["judgments"],
+            "properties": {
+                "judgments": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": ["requirement_id", "verdict"],
+                        "properties": {
+                            "requirement_id": {"type": "string"},
+                            "verdict": {"type": "string", "enum": ["met", "partial", "unmet"]},
+                        },
+                    },
+                }
+            },
+        }
+    )
+    with grpc.insecure_channel(running_server) as channel:
+        stub = sidecar_pb2_grpc.SidecarServiceStub(channel)
+        resp = stub.Generate(
+            sidecar_pb2.GenerateRequest(system="s", user="judge", json_schema=schema),
+            timeout=5.0,
+        )
+
+    assert resp.model == "stub"
+    assert resp.finish_reason == "stop"
+    doc = json.loads(resp.text)
+    assert doc["judgments"][0]["verdict"] == "met"
+
+
+def test_generate_rejects_empty_user(running_server: str) -> None:
+    with grpc.insecure_channel(running_server) as channel:
+        stub = sidecar_pb2_grpc.SidecarServiceStub(channel)
+        with pytest.raises(grpc.RpcError) as exc_info:
+            stub.Generate(sidecar_pb2.GenerateRequest(system="s", user="  "), timeout=5.0)
+
+    assert exc_info.value.code() == grpc.StatusCode.INVALID_ARGUMENT
 
 
 def test_embed_returns_vectors_of_the_configured_dimension(running_server: str) -> None:

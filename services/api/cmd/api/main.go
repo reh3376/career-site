@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/reh3376/career-site/services/api/internal/auth"
@@ -16,6 +17,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
@@ -181,9 +183,26 @@ func main() {
 	// stores submissions even without scoring wired.
 	var jdScorer *jd.Scorer
 	if sc != nil {
-		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc})
+		// The requirement-judgment assessor only makes sense with a
+		// real LLM behind the sidecar. The stub provider produces
+		// schema-valid but meaningless output, so on stub the retrieval
+		// pre-score stays the gate unless LLM_ALLOW_STUB is set (CI and
+		// end-to-end exercises of the pipeline).
+		var assessor *jd.Assessor
+		provider := ""
+		if h, err := sc.Health(ctx); err == nil {
+			provider = h.LlmProvider
+		}
+		if provider != "" && (cfg.LLMAllowStub || !strings.HasPrefix(provider, "stub")) {
+			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc},
+				llm.SidecarLLM{Client: sc}, cfg.LLMMonthlyCallCap)
+			log.Info("jd assessor enabled", slog.String("llm_provider", provider))
+		} else {
+			log.Info("jd assessor disabled; retrieval score is the gate", slog.String("llm_provider", provider))
+		}
+		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor)
 	}
-	jdHandler := handlers.NewJd(log, userRepo, jdScorer)
+	jdHandler := handlers.NewJd(log, userRepo, jdScorer, cfg.JDPipelineTimeout)
 
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,

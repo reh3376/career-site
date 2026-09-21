@@ -45,6 +45,11 @@ class SidecarServiceStub:
                 request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthRequest.SerializeToString,
                 response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthResponse.FromString,
                 _registered_method=True)
+        self.Generate = channel.unary_unary(
+                '/career.sidecar.v1.SidecarService/Generate',
+                request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.SerializeToString,
+                response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.FromString,
+                _registered_method=True)
 
 
 class SidecarServiceServicer:
@@ -100,6 +105,18 @@ class SidecarServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Generate(self, request, context):
+        """Runs one chat completion with the configured LLM provider (Ollama
+        locally / on-host, a hosted API later, stub in CI). Non-streaming;
+        the API uses it for background generation (JD-tailored résumés).
+        The API owns the prompt text and its version; the sidecar is a
+        provider gateway and never rewrites prompts. Deadline is set by the
+        caller and can be minutes on CPU inference.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SidecarServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -132,6 +149,11 @@ def add_SidecarServiceServicer_to_server(servicer, server):
                     servicer.Health,
                     request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthRequest.FromString,
                     response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthResponse.SerializeToString,
+            ),
+            'Generate': grpc.unary_unary_rpc_method_handler(
+                    servicer.Generate,
+                    request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.FromString,
+                    response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -297,6 +319,33 @@ class SidecarService:
             '/career.sidecar.v1.SidecarService/Health',
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthRequest.SerializeToString,
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.HealthResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Generate(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/career.sidecar.v1.SidecarService/Generate',
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateRequest.SerializeToString,
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.GenerateResponse.FromString,
             options,
             channel_credentials,
             insecure,

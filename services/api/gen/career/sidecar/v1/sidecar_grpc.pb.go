@@ -33,6 +33,7 @@ const (
 	SidecarService_RunJob_FullMethodName   = "/career.sidecar.v1.SidecarService/RunJob"
 	SidecarService_GetJob_FullMethodName   = "/career.sidecar.v1.SidecarService/GetJob"
 	SidecarService_Health_FullMethodName   = "/career.sidecar.v1.SidecarService/Health"
+	SidecarService_Generate_FullMethodName = "/career.sidecar.v1.SidecarService/Generate"
 )
 
 // SidecarServiceClient is the client API for SidecarService service.
@@ -60,6 +61,13 @@ type SidecarServiceClient interface {
 	GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc.CallOption) (*GetJobResponse, error)
 	// Reports readiness: models loaded, storage reachable, version.
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
+	// Runs one chat completion with the configured LLM provider (Ollama
+	// locally / on-host, a hosted API later, stub in CI). Non-streaming;
+	// the API uses it for background generation (JD-tailored résumés).
+	// The API owns the prompt text and its version; the sidecar is a
+	// provider gateway and never rewrites prompts. Deadline is set by the
+	// caller and can be minutes on CPU inference.
+	Generate(ctx context.Context, in *GenerateRequest, opts ...grpc.CallOption) (*GenerateResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -130,6 +138,16 @@ func (c *sidecarServiceClient) Health(ctx context.Context, in *HealthRequest, op
 	return out, nil
 }
 
+func (c *sidecarServiceClient) Generate(ctx context.Context, in *GenerateRequest, opts ...grpc.CallOption) (*GenerateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GenerateResponse)
+	err := c.cc.Invoke(ctx, SidecarService_Generate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
@@ -155,6 +173,13 @@ type SidecarServiceServer interface {
 	GetJob(context.Context, *GetJobRequest) (*GetJobResponse, error)
 	// Reports readiness: models loaded, storage reachable, version.
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
+	// Runs one chat completion with the configured LLM provider (Ollama
+	// locally / on-host, a hosted API later, stub in CI). Non-streaming;
+	// the API uses it for background generation (JD-tailored résumés).
+	// The API owns the prompt text and its version; the sidecar is a
+	// provider gateway and never rewrites prompts. Deadline is set by the
+	// caller and can be minutes on CPU inference.
+	Generate(context.Context, *GenerateRequest) (*GenerateResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -182,6 +207,9 @@ func (UnimplementedSidecarServiceServer) GetJob(context.Context, *GetJobRequest)
 }
 func (UnimplementedSidecarServiceServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedSidecarServiceServer) Generate(context.Context, *GenerateRequest) (*GenerateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Generate not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
 func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
@@ -312,6 +340,24 @@ func _SidecarService_Health_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SidecarService_Generate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).Generate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_Generate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).Generate(ctx, req.(*GenerateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +388,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Health",
 			Handler:    _SidecarService_Health_Handler,
+		},
+		{
+			MethodName: "Generate",
+			Handler:    _SidecarService_Generate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

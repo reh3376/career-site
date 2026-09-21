@@ -54,3 +54,10 @@ func (c *Client) Embed(ctx context.Context, texts []string, purpose sidecarv1.Em
 	defer cancel()
 	return c.stub.Embed(ctx, &sidecarv1.EmbedRequest{Texts: texts, Purpose: purpose})
 }
+
+// Generate runs one chat completion. No client-side timeout beyond the
+// caller's ctx: CPU inference of a page of text can take minutes, and
+// the background callers bound it themselves.
+func (c *Client) Generate(ctx context.Context, req *sidecarv1.GenerateRequest) (*sidecarv1.GenerateResponse, error) {
+	return c.stub.Generate(ctx, req)
+}

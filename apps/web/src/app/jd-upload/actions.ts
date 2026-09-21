@@ -5,6 +5,7 @@ import { callApi } from "@/lib/api-fetch";
 export type SubmitState = {
   ok?: boolean;
   submission_id?: string;
+  result_token?: string;
   message?: string;
   error?: string;
   values?: {
@@ -63,11 +64,14 @@ export async function submitJdAction(
   const j = (await resp.json()) as {
     submissionId?: string;
     submission_id?: string;
+    resultToken?: string;
+    result_token?: string;
     message?: string;
   };
   return {
     ok: true,
     submission_id: j.submissionId ?? j.submission_id ?? "",
+    result_token: j.resultToken ?? j.result_token ?? "",
     message: j.message,
     values,
   };

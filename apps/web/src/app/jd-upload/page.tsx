@@ -47,13 +47,15 @@ export default function JdUploadPage() {
           </li>
         </ol>
         <p className="text-xs text-ink-3">
-          The scoring + generation pipeline is being built out;
-          today the acknowledgement is manual. See{" "}
+          Scoring is requirement by requirement: the posting is broken
+          into checkable asks, each is judged against Roger&rsquo;s
+          career corpus, and the score is computed from those verdicts
+          rather than guessed by a model. See{" "}
           <a
             href="/how-ask-roger-works"
             className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
           >
-            how this will work
+            how this works
           </a>
           .
         </p>
