@@ -27,3 +27,9 @@ Three related decisions came in together and are resolved together:
 - **Dependabot grouping.** One PR per ecosystem per week instead of a dozen. Security updates ship immediately regardless of the interval.
 - **CodeQL cost.** SAST across three languages adds ~5–10 minutes to CI per push. Acceptable for the security signal; may parallelize or scope to `main`-only later if it becomes a bottleneck.
 - **The `AGENTS.md` file is now load-bearing** for AI-assisted contributors, not just aspirational. It carries the branch workflow, the docs-discipline checklist, and the coding conventions per language.
+
+## Status update (2026-09-22)
+
+- **Branch protection is a ruleset.** `main` is protected by the GitHub ruleset `protect-main`: PR required, required checks `api` (Go), `web` (TypeScript), `sidecar` (Python), `proto` (lint, breaking, drift) and `gitleaks`, no force push, no deletion. The auto-pr workflow opens the PR from `claude_dev01`; the owner merges. The Settings-side "Add rule" step described above is therefore done, in ruleset form.
+- **Docs discipline covers more than the FSD, ADRs and API reference.** In practice every LLM-path PR also updates, in the same PR: `docs/llm-tuning-log.md` (every experiment, measurement and decision, dated), `docs/decision-log.md` (what the decision log records and how it is reviewed), `docs/jd-submitter-workflow.md` (what the submitter sees) and `docs/cutover-local-to-prod.md` (the runbook). The PR template checklist and `AGENTS.md` do not yet name these four files; the requirement is enforced by review, not by the template.
+- The rest of the record (LICENSE, SECURITY, CONTRIBUTING, CODEOWNERS, templates, Dependabot, CodeQL, squash-only merges) stands.

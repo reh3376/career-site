@@ -48,3 +48,10 @@ A single design system, checked in as CSS tokens (`apps/web/src/app/globals.css`
 - **`next/font` requires Fraunces to load as a true variable font** (no explicit `weight` array) so the `opsz` and `SOFT` axes are accepted. Documented in `apps/web/src/app/layout.tsx`.
 - **Images under `apps/web/public/images/` are EXIF-stripped and downsized** at ingest via a one-off Python + Pillow script kept in the session scratchpad. If more images ship, add them the same way — a light `make images` target is the natural next step but is not blocking today.
 - **This ADR does not close the topic.** A Phase 2 gallery, a projects surface, and the `/home` member dashboard will all extend the system — each with its own follow-up ADR if the visual language changes materially.
+
+## Status update (2026-09-22)
+
+- **Fonts are self-hosted.** Fraunces, Inter Tight and JetBrains Mono load through `next/font/local` from variable WOFF2 files in `apps/web/src/fonts` (latin subset, SIL OFL 1.1; see the README there), so a build never contacts Google Fonts. The `next/font/google` wording in the Decision section is superseded; the requirement that Fraunces load as a true variable font with `opsz` and `SOFT` axes still holds and is met by the bundled file.
+- **A second landing mode exists.** The OT "HMI" mode is a cookie-selected token override under `html[data-mode="ot"]` in `globals.css`, on top of the same `@theme` block; the IT editorial mode described here is unchanged. The OT mode has interaction parity with IT mode (PR 86).
+- **Later surfaces shipped on these tokens:** the members-only `/gallery`, the `/home` member dashboard, the admin console and the JD review pages. No new design ADR was written for them; palette, type and motion are as decided here.
+- **User-visible text avoids em dashes** (use `,` `.` `:` `·` `-`); this rule postdates the record and applies to all frontend copy.

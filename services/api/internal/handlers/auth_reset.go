@@ -36,7 +36,7 @@ func (h *Auth) ForgotPassword(
 	// bucket so an attacker can't split their budget between login
 	// and reset flows on the same target.
 	if h.loginLimiter != nil {
-		key := "reset:" + req.Peer().Addr + "|" + addr
+		key := "reset:" + ClientIP(req) + "|" + addr
 		if ok, retry := h.loginLimiter.Allow(key); !ok {
 			h.log.Warn("reset rate limited", slog.String("email", addr), slog.Duration("retry_after", retry))
 			// Same fixed response — do not signal to the caller
@@ -70,7 +70,7 @@ func (h *Auth) ForgotPassword(
 // fixedResetMessage is the exact response the caller sees whether
 // their email matched an account or not.
 func fixedResetMessage() string {
-	return "If an account exists for that email, we've sent a reset link. Check your inbox — the link is valid for 60 minutes."
+	return "If an account exists for that email, we've sent a reset link. Check your inbox: the link is valid for 60 minutes."
 }
 
 func (h *Auth) sendPasswordResetEmail(ctx context.Context, u *users.User) error {
@@ -123,7 +123,7 @@ func (h *Auth) ResetPassword(
 	if err != nil {
 		if errors.Is(err, users.ErrTokenExpired) {
 			return nil, connect.NewError(connect.CodeInvalidArgument,
-				errors.New("this reset link has expired or already been used — request a new one"))
+				errors.New("this reset link has expired or already been used; request a new one"))
 		}
 		h.log.Error("consume reset token failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("reset failed"))
@@ -146,7 +146,7 @@ func (h *Auth) ResetPassword(
 		h.log.Warn("pwned check on reset failed", slog.String("error", err.Error()))
 	} else if breached {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("this password appears in a known breach — please pick a different one"))
+			errors.New("this password appears in a known breach; please pick a different one"))
 	}
 	newHash, err := auth.HashPassword(msg.NewPassword)
 	if err != nil {
@@ -175,7 +175,7 @@ func (h *Auth) ResetPassword(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("session mint failed"))
 	}
-	ipHash := hashIPBytes(req.Peer().Addr)
+	ipHash := hashIPBytes(ClientIP(req))
 	if _, err := h.users.CreateSession(ctx, u.ID, sessionHash, h.cfg.SessionTTL, ipHash, req.Header().Get("User-Agent")); err != nil {
 		h.log.Error("session create failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("session create failed"))

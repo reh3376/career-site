@@ -39,7 +39,12 @@ function isPublic(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (isPublic(pathname)) return NextResponse.next();
-  if (request.cookies.get(SESSION_COOKIE)?.value) return NextResponse.next();
+  if (request.cookies.get(SESSION_COOKIE)?.value) {
+    // Member pages are never indexed, whatever a crawler holds.
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
+  }
 
   const login = new URL("/login", request.url);
   login.searchParams.set("next", pathname + request.nextUrl.search);

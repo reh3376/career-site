@@ -16,28 +16,32 @@ evaluation set for the Ask Roger adapter.
 
 | kind | one row per | input (what it was decided from) | output (what was decided) |
 |---|---|---|---|
-| `jd_requirement_verdict` | requirement judged | requirement (id, text, category, weight) and the evidence chunks as rendered to the model (chunk id, kind, access, title, similarity, capped text) | `verdict` (validated), `evidence_ids` (validated against what was offered), `rationale`, `raw_verdict` (before validation) |
-| `jd_gate` | submission scored | match score, retrieval score, threshold, weight total, verdict counts, whether the assessor ran | `outcome` (`ready` or `below_threshold`) |
+| `jd_requirement_verdict` | requirement judged | requirement (id, text, category, weight) and the evidence as rendered to the model: the career facts sheet chunks (`source_kind = profile`, first, whole) then the retrieved chunks (chunk id, kind, access, title, similarity, capped text) | `verdict` (validated), `evidence_ids` (validated against what was offered), `rationale`, `raw_verdict` and `raw_evidence_ids` (before validation) |
+| `jd_gate` | submission scored | match score, retrieval score, threshold (the live "strong" fit band), requirement count, weight total, verdict counts, whether the assessor ran | `outcome` (`above_threshold` or `below_threshold`) |
 
-Every row also carries: `model`, `prompt_id`, `prompt_version`,
-`num_ctx`, `prompt_text` (system + user, exactly as sent),
-`response_text` (raw model output), token counts, latency, and the
-submission it belongs to (`ref_kind = jd_submission`, `ref_id`, `key`
-= requirement id).
+Every row also carries: `model` (for example `ollama:qwen3:4b-q8_0`),
+`prompt_id`, `prompt_version`, `num_ctx`, `prompt_text` (system + user,
+exactly as sent), `response_text` (raw model output), token counts,
+latency, and the submission it belongs to (`ref_kind = jd_submission`,
+`ref_id`, `key` = requirement id).
 
 Code decisions (`jd_gate`) have `model = code` and empty prompt text.
 
-Later kinds (`resume_item`, `chat_answer`) use the same table and the
-same review flow; nothing here is JD-specific except the input shape.
+Later kinds (`resume_item`, `chat_answer`) are planned to use the same
+table and the same review flow; nothing here is JD-specific except the
+input shape. Neither is written yet.
 
 ## Review
 
 `/admin/decisions` lists unreviewed rows newest first, grouped by
-submission. For each verdict the reviewer sees the requirement, the
-evidence excerpts, the model's verdict and rationale, and sets his
-own verdict (`met` / `partial` / `unmet`) with an optional note. A row
-is "reviewed" once `reviewed_at` is set; the reviewer's id is kept.
-Reviewing is idempotent: saving again overwrites the label.
+submission (`?all=1` includes reviewed rows; `?kind=` and `?ref=` filter
+by kind and submission). For each verdict the reviewer sees the
+requirement, the evidence excerpts, the model's verdict and rationale,
+and sets his own verdict (`met` / `partial` / `unmet`) with an optional
+note. A row is "reviewed" once `reviewed_at` is set; the reviewer's id
+is kept. Reviewing is idempotent: saving again overwrites the label.
+The owner's `jd_outcome` email links straight to the decision review
+for that submission.
 
 Rules the review surface keeps:
 
@@ -52,11 +56,11 @@ Rules the review surface keeps:
 ## Export
 
 `/admin/decisions/export?reviewed=1` streams JSONL, one decision per
-line:
+line (`/admin/decisions/export` without the flag exports every row):
 
 ```json
 {"id":"123","kind":"jd_requirement_verdict","ref":{"kind":"jd_submission","id":"25","key":"r4"},
- "model":"ollama:qwen3:14b","prompt":{"id":"requirement_judge","version":1,"num_ctx":8192},
+ "model":"ollama:qwen3:4b-q8_0","prompt":{"id":"requirement_judge","version":2,"num_ctx":8192},
  "input":{...},"output":{"verdict":"unmet","evidence_ids":[],"rationale":"..."},
  "human":{"verdict":"met","note":"Columbia Gas telecom work is exactly this","reviewed_at":"..."},
  "prompt_text":"...","response_text":"...","created_at":"..."}
@@ -75,7 +79,7 @@ future prompt version be re-run offline against the same evidence.
   judge call; `scorer.go` writes the gate row.
 - `AdminService.ListDecisionLog`, `ReviewDecision`, `ExportDecisionLog`
   in `proto/career/v1/admin.proto`; handlers in
-  `services/api/internal/handlers/admin.go`.
+  `services/api/internal/handlers/admin_decisions.go`.
 - `apps/web/src/app/admin/(console)/decisions/`: page, server action,
   export route.
 
@@ -86,4 +90,12 @@ first number to watch: it says whether the judge is too strict (many
 `unmet` → `met` overrides), too lenient, or wrong on a specific kind of
 evidence (soft skills, for example). That, not the match score, is
 what decides whether the next step is a prompt revision, a corpus
-addition, or adapter training.
+addition, or adapter training. `/admin/decisions` shows this as an
+agreement panel (percent agreed, a judge-versus-owner matrix, and the
+split by prompt version and model) computed from the graded rows.
+
+Status (2026-09-22): the log is live on prod with the 4b model, prompts
+v2 and score formula v2 (see `docs/llm-tuning-log.md`). Rows produced
+by earlier models and prompt versions carry those versions in
+`model` / `prompt_version` and stay in the table; filter on them when
+measuring agreement. Adapter training has not started.

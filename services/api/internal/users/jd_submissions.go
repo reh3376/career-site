@@ -101,8 +101,10 @@ func (r *Repo) CreateJdSubmission(
 		return nil, fmt.Errorf("source_kind and jd_text required")
 	}
 	head := in.JdText
-	if len(head) > 400 {
-		head = head[:400]
+	// Slice runes, not bytes: a multi-byte character on the boundary
+	// produced invalid UTF-8 and a failed insert.
+	if r := []rune(head); len(r) > 400 {
+		head = string(r[:400])
 	}
 	hash := NormaliseJdHash(in.JdText)
 	token := make([]byte, 16)
@@ -381,4 +383,21 @@ func (r *Repo) FinishJdProgress(ctx context.Context, id int64) error {
 		return fmt.Errorf("finish jd progress: %w", err)
 	}
 	return nil
+}
+
+// FailStrandedJd marks rows still in flight as failed. The api runs as a
+// single instance and its pipelines are goroutines, so any row at
+// scoring/generating when the api boots was killed by the restart;
+// Re-score runs it again. Returns how many were reconciled.
+func (r *Repo) FailStrandedJd(ctx context.Context) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `
+    UPDATE jd_submissions
+       SET status = 'failed',
+           error = 'the api restarted mid-run; re-score to retry',
+           completed_at = now(), progress_pct = 100, progress_stage = 'finished'
+     WHERE status IN ('scoring', 'generating')`)
+	if err != nil {
+		return 0, fmt.Errorf("fail stranded jd: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

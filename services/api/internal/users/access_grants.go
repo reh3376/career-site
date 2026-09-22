@@ -371,3 +371,32 @@ func (r *Repo) DeleteGrant(ctx context.Context, id int64) error {
 	}
 	return nil
 }
+
+// ActivatePending flips a pending user to active with the given expiry
+// and reports ErrNotFound when the row was not pending any more (a
+// second click, a scanner prefetch, or a console decision racing an
+// email decision), so the caller can say "already decided".
+func (r *Repo) ActivatePending(ctx context.Context, id int64, expiresAt *time.Time) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE users SET status = 'active', expires_at = $2 WHERE id = $1 AND status = 'pending_approval'`, id, expiresAt)
+	if err != nil {
+		return fmt.Errorf("activate pending: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// DeclinePending is the decline counterpart of ActivatePending.
+func (r *Repo) DeclinePending(ctx context.Context, id int64) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE users SET status = 'declined' WHERE id = $1 AND status = 'pending_approval'`, id)
+	if err != nil {
+		return fmt.Errorf("decline pending: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

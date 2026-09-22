@@ -3,7 +3,7 @@ package auth
 import (
 	"bufio"
 	"context"
-	"crypto/sha256"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net/http"
@@ -58,14 +58,15 @@ func (NoopPwnedChecker) IsBreached(_ context.Context, _ string) (bool, error) {
 // new Go file that hashes password-like data must audit whether that
 // call site needs the same justification.
 type HIBPChecker struct {
-	Client *http.Client
+	Client   *http.Client
+	Endpoint string // defaults to hibpEndpoint; tests point it at a fake
 }
 
-// The `?mode=sha256` param switches HIBP's response from SHA-1 suffixes
-// to SHA-256 suffixes. Same body format (SUFFIX:COUNT lines) so the
-// scanner below is unchanged apart from suffix length.
+// HIBP's range API is keyed on the SHA-1 of the password: the first five
+// hex characters are sent, the response lists 35-character suffixes with
+// counts. The service ignores a "?mode=sha256" query (verified live on
+// 2026-09-22; the code compared SHA-256 suffixes and could never match).
 const hibpEndpoint = "https://api.pwnedpasswords.com/range/"
-const hibpModeParam = "?mode=sha256"
 
 func NewHIBPChecker() *HIBPChecker {
 	return &HIBPChecker{
@@ -74,11 +75,15 @@ func NewHIBPChecker() *HIBPChecker {
 }
 
 func (h *HIBPChecker) IsBreached(ctx context.Context, password string) (bool, error) {
-	sum := sha256.Sum256([]byte(password))
+	sum := sha1.Sum([]byte(password))
 	hex := fmt.Sprintf("%X", sum[:])
 	prefix, suffix := hex[:5], hex[5:]
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hibpEndpoint+prefix+hibpModeParam, nil)
+	endpoint := h.Endpoint
+	if endpoint == "" {
+		endpoint = hibpEndpoint
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+prefix, nil)
 	if err != nil {
 		return false, fmt.Errorf("hibp request: %w", err)
 	}

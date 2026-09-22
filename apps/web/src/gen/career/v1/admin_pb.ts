@@ -1,5 +1,11 @@
-// The owner's console: members, activity, conversation review, escalation
-// replies, corpus inspection, persona, analytics, and the audit log.
+// The owner's console: members, registrations, access whitelist,
+// activity, contact messages, corpus (reindex and embed sweep as jobs,
+// paste-ingest), JD submissions and fit bands, decision review, and the
+// read-only DB query surface.
+//
+// The conversation-review, escalation, persona, analytics and audit
+// RPCs below belong to Ask Roger (Phase 4) and have no handler yet: the
+// api answers them with Unimplemented until the chat surface ships.
 //
 // Every method requires an admin session with a fresh TOTP verification. All
 // admin actions are written to the audit log (FSD FR-ADM-09).
@@ -3401,8 +3407,8 @@ export type GetJdSubmissionResponse = Message<"career.v1.GetJdSubmissionResponse
 
   /**
    * Assessment derivation as JSON (requirements, evidence chunk ids,
-   * verdicts, prompt versions); empty before scoring or when the
-   * assessor was not wired.
+   * per-requirement verdicts, prompt versions, score formula); empty
+   * before scoring or when the assessor was not wired.
    *
    * @generated from field: string assessment_json = 3;
    */
@@ -3697,7 +3703,8 @@ export type JdSubmissionRow = Message<"career.v1.JdSubmissionRow"> & {
   errorMessage: string;
 
   /**
-   * Generated résumé URL when status is READY; empty until then.
+   * Download path of the locked résumé PDF (without the token) when
+   * status is READY; empty until then.
    *
    * @generated from field: string generated_resume_url = 10;
    */
@@ -3718,8 +3725,9 @@ export type JdSubmissionRow = Message<"career.v1.JdSubmissionRow"> & {
   completedAt?: Timestamp | undefined;
 
   /**
-   * Retrieval pre-score (mean top-K cosine); unset before scoring.
-   * match_score is the requirement-weighted gate when the assessor ran.
+   * Retrieval pre-score (mean top-K cosine), diagnostics only, never a
+   * gate; unset before scoring. match_score is the requirement-weighted
+   * score the gate is applied to.
    *
    * @generated from field: optional double retrieval_score = 13;
    */
@@ -3769,7 +3777,7 @@ export type ListJdSubmissionsResponse = Message<"career.v1.ListJdSubmissionsResp
   readyCount: number;
 
   /**
-   * Number that scored below the threshold.
+   * Number that scored below the résumé gate (the strong band).
    *
    * @generated from field: int32 below_threshold_count = 3;
    */
@@ -4313,7 +4321,8 @@ export const ReviewStatusSchema: GenEnum<ReviewStatus> = /*@__PURE__*/
   enumDesc(file_career_v1_admin, 1);
 
 /**
- * Sidecar jobs the owner can start.
+ * Jobs the owner can start. Kinds 1 to 7 are reserved for sidecar jobs
+ * and are not runnable yet; kinds 8 to 10 run inside the api.
  *
  * @generated from enum career.v1.JobKind
  */
@@ -4718,7 +4727,10 @@ export const AdminService: GenService<{
     output: typeof TestRetrievalResponseSchema;
   },
   /**
-   * Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
+   * Starts a background job inside the api (corpus reindex of the public
+   * or private mount, embed sweep) and returns its id at once; the
+   * console polls GetJob for progress. The sidecar JobKind values are
+   * reserved and rejected as not runnable here. One job at a time.
    *
    * @generated from rpc career.v1.AdminService.RunJob
    */
@@ -4728,7 +4740,7 @@ export const AdminService: GenService<{
     output: typeof RunJobResponseSchema;
   },
   /**
-   * Returns the status of a job started by RunJob or the scheduler.
+   * Returns the status and progress of a job started by RunJob.
    *
    * @generated from rpc career.v1.AdminService.GetJob
    */
@@ -4962,13 +4974,14 @@ export const AdminService: GenService<{
     output: typeof ListCorpusDocumentsResponseSchema;
   },
   /**
-   * Walks a filesystem tree for markdown files and runs each through
+   * Walks a corpus mount for markdown files and runs each through
    * IngestCorpusText, so the corpus can be seeded from committed
-   * article content instead of paste-by-paste. Idempotent — files
-   * whose content_hash matches the stored row are skipped. Root is
-   * resolved from CORPUS_ROOT + a subdirectory per source_kind
-   * (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
-   * "Reindex articles" button on /admin/corpus.
+   * content instead of paste-by-paste. Idempotent: files whose
+   * content_hash matches the stored row are skipped. Root is resolved
+   * from CORPUS_ROOT (public) or CORPUS_PRIVATE_ROOT (private) plus a
+   * subdirectory per source_kind. Synchronous; the console now runs
+   * the same walk as a job through RunJob (JOB_KIND_CORPUS_REINDEX_*)
+   * because a private reindex outlives the proxy's response timeout.
    *
    * @generated from rpc career.v1.AdminService.ReindexCorpus
    */
@@ -4984,6 +4997,8 @@ export const AdminService: GenService<{
    * This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
    * changing the embedding model: nothing is deleted, the corpus is
    * walked until every chunk carries the current model's vector.
+   * Synchronous and bounded; the console runs the sweep to completion
+   * as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
    *
    * @generated from rpc career.v1.AdminService.SweepCorpusEmbeddings
    */
@@ -5017,10 +5032,11 @@ export const AdminService: GenService<{
     output: typeof GetJdSubmissionResponseSchema;
   },
   /**
-   * Re-runs the scoring pipeline (retrieval pre-score, assessment,
-   * résumé and PDF when above threshold) for one submission in the
-   * background, e.g. after a transient sidecar failure or a prompt
-   * change. Returns immediately; poll GetJdSubmission for the outcome.
+   * Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
+   * per-requirement assessment, score in code, résumé and locked PDF
+   * when the fit is strong or better) for one submission in the
+   * background, e.g. after a failed run or a prompt change. Returns
+   * immediately; poll GetJdSubmission for the outcome.
    *
    * @generated from rpc career.v1.AdminService.RescoreJd
    */
@@ -5076,8 +5092,9 @@ export const AdminService: GenService<{
     output: typeof GetJdFitBandsResponseSchema;
   },
   /**
-   * Sets the JD fit bands. Takes effect for the next submission within
-   * seconds; existing scores are re-classified on read.
+   * Sets the JD fit bands (stored in app_settings; the api caches them
+   * for 15 s). Takes effect for the next submission within seconds;
+   * existing scores are re-classified on read.
    *
    * @generated from rpc career.v1.AdminService.SetJdFitBands
    */

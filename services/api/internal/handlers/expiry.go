@@ -143,7 +143,7 @@ func (j *ExpiryJobs) sendEnded(ctx context.Context, u *users.User) error {
 // with Roger's address pre-filled plus a subject that identifies who's
 // asking. Body is left generic; the user can add context.
 func extensionMailto(u *users.User, ownerAddr, subjectPrefix string) string {
-	subject := url.QueryEscape(fmt.Sprintf("%s — %s", subjectPrefix, u.Name))
+	subject := url.QueryEscape(fmt.Sprintf("%s: %s", subjectPrefix, u.Name))
 	body := url.QueryEscape(fmt.Sprintf(
 		"Hi Roger,\n\nI'd like to request an extension of my career-site access (%s).\n\nThanks,\n%s",
 		u.Email, u.Name,

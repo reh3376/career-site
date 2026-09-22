@@ -79,7 +79,7 @@ func (h *Jd) SubmitJd(
 	}
 	if len(text) < 100 {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("that JD looks awfully short — need at least 100 characters to work with"))
+			errors.New("that JD looks awfully short; we need at least 100 characters to work with"))
 	}
 
 	applyURL, err := cleanApplyURL(msg.ApplyUrl)
@@ -100,14 +100,14 @@ func (h *Jd) SubmitJd(
 	key := "jd:" + strconv.FormatInt(member.ID, 10) + "|" + string(hash)
 	if ok, retry := h.limiter.Allow(key); !ok {
 		h.log.Warn("jd submit rate limited",
-			slog.String("peer", req.Peer().Addr),
+			slog.String("peer", ClientIP(req)),
 			slog.Duration("retry_after", retry),
 		)
 		return nil, connect.NewError(connect.CodeResourceExhausted,
-			errors.New("too many submissions from your address — try again shortly"))
+			errors.New("too many submissions from your address; try again shortly"))
 	}
 
-	ipHash := hashIPBytes(req.Peer().Addr)
+	ipHash := hashIPBytes(ClientIP(req))
 	uaHash := shortHash(req.Header().Get("User-Agent"))
 
 	s, err := h.users.CreateJdSubmission(ctx, users.JdSubmitInput{

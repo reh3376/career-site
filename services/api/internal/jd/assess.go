@@ -323,6 +323,15 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	// ATS that subtracts for a missing PMP or a preferred Master's is
 	// exactly the filter this reviewer is meant not to be. Verdict
 	// values are unchanged (met 1, partial 0.5, unmet 0).
+	// Floor: a posting with no "must" lines would otherwise score 1.0
+	// from a single evidenced preference; then every requirement counts.
+	anyMust := false
+	for _, r := range reqs {
+		if r.Category == "must" {
+			anyMust = true
+			break
+		}
+	}
 	var weighted float64
 	for _, r := range reqs {
 		j, ok := byReq[r.ID]
@@ -331,7 +340,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		}
 		out.Judgments = append(out.Judgments, j)
 		v := verdictValue(j.Verdict)
-		if r.Category == "must" || v > 0 {
+		if !anyMust || r.Category == "must" || v > 0 {
 			out.WeightTotal += r.Weight
 		}
 		weighted += float64(r.Weight) * v

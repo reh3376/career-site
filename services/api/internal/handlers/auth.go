@@ -247,7 +247,7 @@ func (h *Auth) Verify(
 		return h.applyWhitelistAutoApprove(ctx, u, grant)
 	case errors.Is(err, users.ErrNotFound):
 		// No whitelist entry — standard pending_approval flow.
-		return h.applyPendingApproval(ctx, u, req.Peer().Addr, req.Header().Get("User-Agent"))
+		return h.applyPendingApproval(ctx, u, ClientIP(req), req.Header().Get("User-Agent"))
 	default:
 		h.log.Error("whitelist lookup failed",
 			slog.Int64("user_id", u.ID), slog.String("error", err.Error()))

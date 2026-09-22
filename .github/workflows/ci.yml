@@ -210,7 +210,7 @@ jobs:
           echo "changed files:"
           echo "$changed"
           # Everything matching this pattern is doc-only.
-          doc_re='^(docs/|.*\.md$|LICENSE(-CONTENT)?$|\.github/PULL_REQUEST_TEMPLATE\.md)$'
+          doc_re='^(docs/|[^/]*\.md$|deploy/README\.md$|services/[^/]*/README\.md$|LICENSE(-CONTENT)?$|\.github/PULL_REQUEST_TEMPLATE\.md)$'
           if [ -z "$changed" ] || ! echo "$changed" | grep -vE "$doc_re" | grep -q .; then
             echo "→ doc-only change; skipping images build"
             echo "code=false" >> "$GITHUB_OUTPUT"

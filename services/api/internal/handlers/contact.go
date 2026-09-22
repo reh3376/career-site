@@ -130,7 +130,7 @@ func (h *Contact) SubmitContact(
 		SenderName:        senderName,
 		SenderEmail:       senderEmail,
 		ReplyChannel:      replyChannel,
-		IPHash:            hashIPBytes(req.Peer().Addr),
+		IPHash:            hashIPBytes(ClientIP(req)),
 		UserAgent:         req.Header().Get("User-Agent"),
 		HiringRole:        hiringRole,
 		HiringJDURL:       hiringJDURL,

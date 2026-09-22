@@ -17,9 +17,7 @@ Open an issue using one of the templates: **Bug report**, **Feature request**, o
 
 ### 2. Ask to be added as a repo collaborator
 
-Sign in at **https://rogerhenley.dev/**, open the "Contribute to my code" page (Phase 2), and use the "Request contributor access" form. It emails Roger with your GitHub username; if he approves, you're added as a collaborator on the specific repo(s) you asked about.
-
-(Until that form ships, email `rogerhenley345@gmail.com` with subject `[career-site] contributor request` and your GitHub username.)
+Email `rogerhenley345@gmail.com` with subject `[career-site] contributor request` and your GitHub username, or use the contact form at **https://rogerhenley.dev/contact**. If Roger approves, you're added as a collaborator on the specific repo(s) you asked about. (A "Request contributor access" form inside the site is still on the roadmap and has not shipped.)
 
 ### 3. Send a pull request
 
@@ -30,8 +28,10 @@ Sign in at **https://rogerhenley.dev/**, open the "Contribute to my code" page (
    scripts/dev-push.sh
    ```
    It mirrors what CI runs and refuses to push if anything fails.
-4. Push. A draft PR opens automatically against `main` (see `.github/workflows/auto-pr.yml`).
-5. Flip the PR to Ready-for-review when it's done. CI must be green; the owner reviews.
+4. Push. For `feat/*`, `fix/*` and `claude_dev*` branches a draft PR opens automatically against `main` (see `.github/workflows/auto-pr.yml`); don't race it with a manual `gh pr create`.
+5. Flip the PR to Ready-for-review when it's done. The owner reviews and merges.
+
+`main` is protected by the `protect-main` ruleset: a PR is required, the checks **api (go)**, **web (typescript)**, **sidecar (python)**, **proto (lint, breaking, drift)** and **gitleaks** must pass, and force-pushes and branch deletion are blocked. A red check is fixed in the PR, not skipped or excepted.
 
 Merge policy: **Squash and merge** — `main` stays a linear history of shipped features. Your commits on the branch can be as messy as you like; the squash keeps the record clean.
 
@@ -39,7 +39,8 @@ Merge policy: **Squash and merge** — `main` stays a linear history of shipped 
 
 - Small and focused. One PR does one thing. If the change is >~500 lines of hand-written code, propose it in an issue first so the shape is agreed before you write it.
 - **Tests included.** New API handlers get unit tests; new UI paths get at least a smoke check.
-- **Docs updated.** See "Docs discipline" in `AGENTS.md`. Every RPC change touches the proto and the generated `docs/api/README.md`; every new decision writes an ADR; every new env var lands in `.env.example`.
+- **Docs updated.** See "Docs discipline" in `AGENTS.md`. Every RPC change touches the proto and the generated `docs/api/README.md` (`make docs-api`, or CI's drift check fails); every new decision writes an ADR; every new env var lands in `.env.example` (dev), `.env.prod.example` (prod) and the table in `SERVICES.md`; every migration gets a row in `SERVICES.md`. Anything that touches the JD pipeline (prompts, score formula, gate, model, context budget) is logged in `docs/llm-tuning-log.md` in the same PR, with the calibration numbers, so the owner can review it asynchronously.
+- **Frontend copy has no em dashes.** Use `,` `.` `:` `·` or `-` in user-visible text.
 - **Commit messages** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `db:`, `api:`, `web:`, `sidecar:`, `compose:`) with a one-line summary + body explaining *why*.
 - **Do not commit generated files by hand.** `services/api/gen/`, `apps/web/src/gen/`, and `services/sidecar/src/{career,buf}/` are drift-checked; the fix goes in the `.proto` and `make gen`.
 
@@ -53,7 +54,9 @@ docker compose up -d
 curl http://localhost/api/readyz
 ```
 
-See `README.md` for standalone-service dev commands. See `deploy/README.md` for the production deploy flow (owner only).
+The default dev stack runs the sidecar with `stub` providers: every interface works but embeddings are meaningless, and the JD assessor refuses the stub unless `LLM_ALLOW_STUB=1` (schema-valid, meaningless verdicts; CI only). To exercise the real pipeline, run Ollama on your host with `nomic-embed-text` and `qwen3:4b-q8_0` pulled and start with `SIDECAR_EMBED_PROVIDER=ollama SIDECAR_LLM_PROVIDER=ollama`; the compose file already points the sidecar at `host.docker.internal:11434`. Generated résumé PDFs need `RESUME_PDF_OWNER_PASSWORD` in your repo-root `.env`.
+
+See `README.md` for standalone-service dev commands and `SERVICES.md` for every env var. See `deploy/README.md` for the production deploy flow (owner only).
 
 ## Code of conduct
 

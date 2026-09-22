@@ -1620,8 +1620,8 @@ Owner console.
 | [`GetMemberConversation`](#adminservice-getmemberconversation) | `/api/career.v1.AdminService/GetMemberConversation` | Admin (fresh MFA) | default | `GetMemberConversationRequest` → `GetMemberConversationResponse` | Returns any member's conversation with messages, sources, and persona versions (read-only). |
 | [`GetCorpusStatus`](#adminservice-getcorpusstatus) | `/api/career.v1.AdminService/GetCorpusStatus` | Admin (fresh MFA) | default | `GetCorpusStatusRequest` → `GetCorpusStatusResponse` | Returns corpus statistics: documents, chunks, Q&A entries, last ingest, embedding model, and persona version. |
 | [`TestRetrieval`](#adminservice-testretrieval) | `/api/career.v1.AdminService/TestRetrieval` | Admin (fresh MFA) | default | `TestRetrievalRequest` → `TestRetrievalResponse` | Runs retrieval for a question and returns the chunks the assistant would see, with scores ("what would the assistant retrieve?"). |
-| [`RunJob`](#adminservice-runjob) | `/api/career.v1.AdminService/RunJob` | Admin (fresh MFA) | default | `RunJobRequest` → `RunJobResponse` | Starts a sidecar job (re-ingest, content index, résumé build, evaluation). |
-| [`GetJob`](#adminservice-getjob) | `/api/career.v1.AdminService/GetJob` | Admin (fresh MFA) | default | `GetJobRequest` → `GetJobResponse` | Returns the status of a job started by RunJob or the scheduler. |
+| [`RunJob`](#adminservice-runjob) | `/api/career.v1.AdminService/RunJob` | Admin (fresh MFA) | default | `RunJobRequest` → `RunJobResponse` | Starts a background job inside the api (corpus reindex of the public or private mount, embed sweep) and returns its id at once; the console polls GetJob for progress. |
+| [`GetJob`](#adminservice-getjob) | `/api/career.v1.AdminService/GetJob` | Admin (fresh MFA) | default | `GetJobRequest` → `GetJobResponse` | Returns the status and progress of a job started by RunJob. |
 | [`GetPersona`](#adminservice-getpersona) | `/api/career.v1.AdminService/GetPersona` | Admin (fresh MFA) | default | `GetPersonaRequest` → `GetPersonaResponse` | Returns the active persona version and its history. |
 | [`GetAnalytics`](#adminservice-getanalytics) | `/api/career.v1.AdminService/GetAnalytics` | Admin (fresh MFA) | default | `GetAnalyticsRequest` → `GetAnalyticsResponse` | Returns aggregate analytics for a date range. |
 | [`GetAudit`](#adminservice-getaudit) | `/api/career.v1.AdminService/GetAudit` | Admin (fresh MFA) | default | `GetAuditRequest` → `GetAuditResponse` | Lists audit-log entries. |
@@ -1641,16 +1641,16 @@ Owner console.
 | [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin (fresh MFA) | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
 | [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin (fresh MFA) | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
 | [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin (fresh MFA) | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
-| [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a filesystem tree for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed article content instead of paste-by-paste. |
+| [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a corpus mount for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed content instead of paste-by-paste. |
 | [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin (fresh MFA) | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 | [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
-| [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score, assessment, résumé and PDF when above threshold) for one submission in the background, e.g. |
+| [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score for diagnostics, per-requirement assessment, score in code, résumé and locked PDF when the fit is strong or better) for one submission in the background, e.g. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
 | [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
-| [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands. |
+| [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
 
 ### AdminService.ListMembers
 
@@ -2026,7 +2026,10 @@ would see, with scores ("what would the assistant retrieve?").
 
 `POST /api/career.v1.AdminService/RunJob` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
+Starts a background job inside the api (corpus reindex of the public
+or private mount, embed sweep) and returns its id at once; the
+console polls GetJob for progress. The sidecar JobKind values are
+reserved and rejected as not runnable here. One job at a time.
 
 **Request** — [`RunJobRequest`](#runjobrequest)
 
@@ -2056,7 +2059,7 @@ Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
 
 `POST /api/career.v1.AdminService/GetJob` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Returns the status of a job started by RunJob or the scheduler.
+Returns the status and progress of a job started by RunJob.
 
 **Request** — [`GetJobRequest`](#getjobrequest)
 
@@ -2725,13 +2728,14 @@ _No fields; send `{}`._
 
 `POST /api/career.v1.AdminService/ReindexCorpus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Walks a filesystem tree for markdown files and runs each through
+Walks a corpus mount for markdown files and runs each through
 IngestCorpusText, so the corpus can be seeded from committed
-article content instead of paste-by-paste. Idempotent — files
-whose content_hash matches the stored row are skipped. Root is
-resolved from CORPUS_ROOT + a subdirectory per source_kind
-(e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
-"Reindex articles" button on /admin/corpus.
+content instead of paste-by-paste. Idempotent: files whose
+content_hash matches the stored row are skipped. Root is resolved
+from CORPUS_ROOT (public) or CORPUS_PRIVATE_ROOT (private) plus a
+subdirectory per source_kind. Synchronous; the console now runs
+the same walk as a job through RunJob (JOB_KIND_CORPUS_REINDEX_*)
+because a private reindex outlives the proxy's response timeout.
 
 **Request** — [`ReindexCorpusRequest`](#reindexcorpusrequest)
 
@@ -2775,6 +2779,8 @@ different embedder than the sidecar's current one. Bounded per call
 This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
 changing the embedding model: nothing is deleted, the corpus is
 walked until every chunk carries the current model's vector.
+Synchronous and bounded; the console runs the sweep to completion
+as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
 
 **Request** — [`SweepCorpusEmbeddingsRequest`](#sweepcorpusembeddingsrequest)
 
@@ -2820,7 +2826,7 @@ _No fields; send `{}`._
 |---|---|---|---|---|
 | `submissions` | [`JdSubmissionRow`](#jdsubmissionrow)[] | array of object |  | Rows, newest first (up to 500). |
 | `readyCount` | `int32` | number |  | Number of rows currently in a terminal READY state. |
-| `belowThresholdCount` | `int32` | number |  | Number that scored below the threshold. |
+| `belowThresholdCount` | `int32` | number |  | Number that scored below the résumé gate (the strong band). |
 | `failedCount` | `int32` | number |  | Number that failed during scoring / generation. |
 | `inFlightCount` | `int32` | number |  | Number still in flight (received / scoring / generating). |
 
@@ -2852,7 +2858,7 @@ generated résumé when present. Backs /admin/jd/[id].
 |---|---|---|---|---|
 | `row` | [`JdSubmissionRow`](#jdsubmissionrow) | object |  | The list row for this submission (status, scores, hints). |
 | `jdText` | `string` | string |  | Full JD text as submitted. |
-| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, verdicts, prompt versions); empty before scoring or when the assessor was not wired. |
+| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, per-requirement verdicts, prompt versions, score formula); empty before scoring or when the assessor was not wired. |
 | `resumeMarkdown` | `string` | string |  | Generated résumé in markdown; empty until generation lands. |
 | `llmModel` | `string` | string |  | Model that produced the résumé. |
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
@@ -2873,10 +2879,11 @@ generated résumé when present. Backs /admin/jd/[id].
 
 `POST /api/career.v1.AdminService/RescoreJd` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Re-runs the scoring pipeline (retrieval pre-score, assessment,
-résumé and PDF when above threshold) for one submission in the
-background, e.g. after a transient sidecar failure or a prompt
-change. Returns immediately; poll GetJdSubmission for the outcome.
+Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
+per-requirement assessment, score in code, résumé and locked PDF
+when the fit is strong or better) for one submission in the
+background, e.g. after a failed run or a prompt change. Returns
+immediately; poll GetJdSubmission for the outcome.
 
 **Request** — [`RescoreJdRequest`](#rescorejdrequest)
 
@@ -3029,8 +3036,9 @@ _No fields; send `{}`._
 
 `POST /api/career.v1.AdminService/SetJdFitBands` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
 
-Sets the JD fit bands. Takes effect for the next submission within
-seconds; existing scores are re-classified on read.
+Sets the JD fit bands (stored in app_settings; the api caches them
+for 15 s). Takes effect for the next submission within seconds;
+existing scores are re-classified on read.
 
 **Request** — [`SetJdFitBandsRequest`](#setjdfitbandsrequest)
 
@@ -3132,7 +3140,7 @@ submit or poll, and the submitting member is recorded on the row.
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
 | [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
-| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
 | [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
 | [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
 
@@ -3150,9 +3158,9 @@ on the actual scoring / generation — those run out of band.
 |---|---|---|---|---|
 | `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
 | `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
-| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
-| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
-| `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the member is considering Roger for. Free-form; shown in admin triage and passed as a hint to the requirement and résumé prompts. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid and prompt hint as role_hint. |
+| `contactEmail` | `string` | string | `string: max_len: 254` | Optional extra address for the finished-review email; the member's account email always receives it. Never surfaced publicly. |
 | `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
 
 **Response** — [`SubmitJdResponse`](#submitjdresponse)
@@ -3162,7 +3170,7 @@ on the actual scoring / generation — those run out of band.
 | `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
-| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the generated résumé; without it the poll returns status and score only. |
+| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
 
 <details><summary>Example request body</summary>
 
@@ -3183,16 +3191,18 @@ on the actual scoring / generation — those run out of band.
 
 `POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
 
-Returns the current state of a submission — queued / scoring /
-below-threshold / generating / ready / failed — plus the
-generated résumé URL when status is `ready`.
+Returns the current state of a submission (received / scoring /
+below-threshold / generating / ready / failed) with progress, the
+score and fit category once known, and, for the submitting member
+or a caller holding the result token, the requirement verdicts plus
+the résumé and its PDF link when status is `ready`.
 
 **Request** — [`GetJdResultRequest`](#getjdresultrequest)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
-| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional, gates the résumé body. |
+| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional. Gates the verdicts and the résumé body unless the caller is the submitting member. |
 
 **Response** — [`GetJdResultResponse`](#getjdresultresponse)
 
@@ -3200,16 +3210,16 @@ generated résumé URL when status is `ready`.
 |---|---|---|---|---|
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
 | `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
-| `generatedResumeUrl` | `string` | string |  | Absolute URL of the generated résumé when status is READY. |
+| `generatedResumeUrl` | `string` | string |  | Download path of the locked résumé PDF, with the result token appended, when status is READY and the caller may see the résumé; empty otherwise. |
 | `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
-| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
-| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released with the result_token whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the caller is the submitting member or carried the result_token. |
+| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released to the submitting member (or with the result_token) whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
 | `metCount` | `int32` | number |  | Number of requirements judged met. |
 | `partialCount` | `int32` | number |  | Number judged partially met. |
 | `unmetCount` | `int32` | number |  | Number judged not evidenced. |
-| `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+| `matchThreshold` | `double` | number |  | The résumé gate in force: the "strong" fit band (owner-editable; JD_MATCH_THRESHOLD only seeds it the first time). |
 | `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
 | `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
 | `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
@@ -4260,9 +4270,9 @@ is expected — the handler surfaces InvalidArgument otherwise.
 |---|---|---|---|---|
 | `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
 | `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
-| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
-| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
-| `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the member is considering Roger for. Free-form; shown in admin triage and passed as a hint to the requirement and résumé prompts. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid and prompt hint as role_hint. |
+| `contactEmail` | `string` | string | `string: max_len: 254` | Optional extra address for the finished-review email; the member's account email always receives it. Never surfaced publicly. |
 | `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
 
 ### SubmitJdResponse
@@ -4276,7 +4286,7 @@ GetJdResult with this id.
 | `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
-| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the generated résumé; without it the poll returns status and score only. |
+| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
 
 ### GetJdResultRequest
 
@@ -4285,7 +4295,7 @@ Poll request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
-| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional, gates the résumé body. |
+| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional. Gates the verdicts and the résumé body unless the caller is the submitting member. |
 
 ### GetJdResultResponse
 
@@ -4295,16 +4305,16 @@ Poll response.
 |---|---|---|---|---|
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
 | `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
-| `generatedResumeUrl` | `string` | string |  | Absolute URL of the generated résumé when status is READY. |
+| `generatedResumeUrl` | `string` | string |  | Download path of the locked résumé PDF, with the result token appended, when status is READY and the caller may see the résumé; empty otherwise. |
 | `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
-| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
-| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released with the result_token whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the caller is the submitting member or carried the result_token. |
+| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released to the submitting member (or with the result_token) whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
 | `metCount` | `int32` | number |  | Number of requirements judged met. |
 | `partialCount` | `int32` | number |  | Number judged partially met. |
 | `unmetCount` | `int32` | number |  | Number judged not evidenced. |
-| `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+| `matchThreshold` | `double` | number |  | The résumé gate in force: the "strong" fit band (owner-editable; JD_MATCH_THRESHOLD only seeds it the first time). |
 | `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
 | `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
 | `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
@@ -4312,7 +4322,8 @@ Poll response.
 ### JdFitBands
 
 Lower edges of the fit categories; scores below weak are very weak.
-Owner-editable from /admin/jd.
+Owner-editable from /admin/jd (stored in app_settings, cached briefly
+by the api); the strong edge is the résumé gate.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
@@ -4376,8 +4387,8 @@ verdict it reached from the candidate's records.
 | `id` | `string` | string |  | Requirement id within the submission (r1, r2, ...). |
 | `text` | `string` | string |  | The requirement in the posting's own words. |
 | `category` | `string` | string |  | "must" or "nice", as the posting stated it. |
-| `weight` | `int32` | number |  | Weight 1 to 3 used in the score. |
-| `verdict` | `string` | string |  | "met", "partial" or "unmet". |
+| `weight` | `int32` | number |  | Weight 1 to 3 used in the score. Must items always count in the denominator; nice items only when evidenced. |
+| `verdict` | `string` | string |  | "met", "partial" or "unmet" (scored 1, 0.5 and 0 in code). |
 | `rationale` | `string` | string |  | One-sentence reason, grounded in the evidence the judge saw. |
 
 ### MemberCounts
@@ -5296,7 +5307,7 @@ Get-jd-submission response.
 |---|---|---|---|---|
 | `row` | [`JdSubmissionRow`](#jdsubmissionrow) | object |  | The list row for this submission (status, scores, hints). |
 | `jdText` | `string` | string |  | Full JD text as submitted. |
-| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, verdicts, prompt versions); empty before scoring or when the assessor was not wired. |
+| `assessmentJson` | `string` | string |  | Assessment derivation as JSON (requirements, evidence chunk ids, per-requirement verdicts, prompt versions, score formula); empty before scoring or when the assessor was not wired. |
 | `resumeMarkdown` | `string` | string |  | Generated résumé in markdown; empty until generation lands. |
 | `llmModel` | `string` | string |  | Model that produced the résumé. |
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
@@ -5370,10 +5381,10 @@ One row of the /admin/jd triage table.
 | `contactEmail` | `string` | string |  | Optional email the submitter provided for the tailored-résumé handoff. |
 | `source` | [`JdSource`](#jdsource) | string (enum name) |  | Where the JD text came from (paste / pdf / text_upload). |
 | `errorMessage` | `string` | string |  | Truncated provider error when status is FAILED; empty otherwise. |
-| `generatedResumeUrl` | `string` | string |  | Generated résumé URL when status is READY; empty until then. |
+| `generatedResumeUrl` | `string` | string |  | Download path of the locked résumé PDF (without the token) when status is READY; empty until then. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was received. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state was reached; unset while in-flight. |
-| `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Retrieval pre-score (mean top-K cosine); unset before scoring. match_score is the requirement-weighted gate when the assessor ran. |
+| `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Retrieval pre-score (mean top-K cosine), diagnostics only, never a gate; unset before scoring. match_score is the requirement-weighted score the gate is applied to. |
 | `submitterEmail` | `string` | string |  | Email of the signed-in member who submitted; empty for rows created before JD upload became members-only. |
 | `applyUrl` | `string` | string |  | Optional link to apply for the position, as given by the submitter. |
 
@@ -5385,7 +5396,7 @@ List-jd-submissions response.
 |---|---|---|---|---|
 | `submissions` | [`JdSubmissionRow`](#jdsubmissionrow)[] | array of object |  | Rows, newest first (up to 500). |
 | `readyCount` | `int32` | number |  | Number of rows currently in a terminal READY state. |
-| `belowThresholdCount` | `int32` | number |  | Number that scored below the threshold. |
+| `belowThresholdCount` | `int32` | number |  | Number that scored below the résumé gate (the strong band). |
 | `failedCount` | `int32` | number |  | Number that failed during scoring / generation. |
 | `inFlightCount` | `int32` | number |  | Number still in flight (received / scoring / generating). |
 
@@ -6563,8 +6574,8 @@ nothing in the schema breaks when this list grows.
 |---|---|---|
 | `JD_SOURCE_UNSPECIFIED` | 0 | Not set (proto3 requires a zero value). Rejected in requests. |
 | `JD_SOURCE_PASTE` | 1 | Pasted directly into the textarea on /jd-upload. |
-| `JD_SOURCE_PDF` | 2 | Uploaded PDF; text extracted server-side (sidecar). |
-| `JD_SOURCE_TEXT_UPLOAD` | 3 | Uploaded plain-text file (.txt, .md). |
+| `JD_SOURCE_PDF` | 2 | Uploaded PDF; text extracted server-side. Reserved: the form only sends PASTE today. |
+| `JD_SOURCE_TEXT_UPLOAD` | 3 | Uploaded plain-text file (.txt, .md). Reserved: the form only sends PASTE today. |
 
 ### JdStatus
 
@@ -6575,8 +6586,8 @@ Lifecycle of a submission — mirrors jd_submissions.status.
 | `JD_STATUS_UNSPECIFIED` | 0 | Not set. Servers never return this; callers never send it. |
 | `JD_STATUS_RECEIVED` | 1 | Stored, waiting to be scored. |
 | `JD_STATUS_SCORING` | 2 | Retrieval + scoring is running. |
-| `JD_STATUS_BELOW_THRESHOLD` | 3 | Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response. |
-| `JD_STATUS_GENERATING` | 4 | Score at or above the match gate; résumé generation is running. |
+| `JD_STATUS_BELOW_THRESHOLD` | 3 | Score below the résumé gate (the "strong" fit band in force, see JdFitBands); the caller still gets the verdict breakdown. |
+| `JD_STATUS_GENERATING` | 4 | Score at or above the gate; résumé generation is running. |
 | `JD_STATUS_READY` | 5 | Résumé is ready; generated_resume_url is populated. |
 | `JD_STATUS_FAILED` | 6 | Anything above raised an error; see error_message for detail. |
 
@@ -6617,7 +6628,8 @@ Review item lifecycle.
 
 ### JobKind
 
-Sidecar jobs the owner can start.
+Jobs the owner can start. Kinds 1 to 7 are reserved for sidecar jobs
+and are not runnable yet; kinds 8 to 10 run inside the api.
 
 | Value | Number | Description |
 |---|---|---|

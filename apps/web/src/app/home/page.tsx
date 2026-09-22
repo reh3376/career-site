@@ -179,7 +179,7 @@ export default async function HomePage() {
             >
               /jd-upload
             </Link>{" "}
-            <span className="text-ink-3">: paste a role, get a scored résumé</span>
+            <span className="text-ink-3">: paste a posting, get a scored review</span>
           </li>
           <li>
             <span className="text-signal">ARTICLES</span>{" "}
@@ -207,7 +207,7 @@ export default async function HomePage() {
           <li>
             <span className="text-ink-3">ASK.ROGER</span>{" "}
             <span className="text-ink-3">·</span>{" "}
-            <span className="text-ink-3">available Q4 2026</span>
+            <span className="text-ink-3">not built yet · available Q4 2026</span>
           </li>
         </ul>
 
@@ -250,15 +250,16 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. Two surfaces are live today; the third
-        (Ask Roger) lands with Phase 4.
+        You&rsquo;re in. Three surfaces are live today: the JD review,
+        the articles, and the gallery. Ask Roger, the fourth, lands with
+        Phase 4.
       </p>
 
       <section className="mt-14 grid gap-6 md:grid-cols-3">
         <LiveCard
           label="jd upload · live"
           title="Have a role in mind?"
-          body="Paste a JD and Roger&rsquo;s pipeline scores fit against thirty years of manufacturing and applied-AI work. If the score clears the threshold, a two-page résumé tailored to that posting is generated."
+          body="Paste a JD and Roger&rsquo;s reviewer scores it, requirement by requirement, against thirty years of manufacturing and applied-AI work. A strong fit or better gets a two-page résumé tailored to that posting, as a locked PDF."
           href="/jd-upload"
           cta="Upload a JD →"
         />
@@ -279,7 +280,7 @@ export default async function HomePage() {
         <ComingSoonCard
           label="ask roger"
           title="Ask Roger anything"
-          body="A retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources. Available Q4 2026."
+          body="Planned: a retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources. Not built yet; available Q4 2026."
         />
       </section>
 

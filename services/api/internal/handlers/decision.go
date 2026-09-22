@@ -98,7 +98,7 @@ func (h *AdminDecision) Handle(w http.ResponseWriter, r *http.Request) {
 		// "something went wrong".
 		writeJSON(w, http.StatusNotFound, decisionResponse{
 			Status:  "user_gone",
-			Message: "This request no longer exists — the applicant's account was removed.",
+			Message: "This request no longer exists: the applicant's account was removed.",
 		})
 		return
 	}
@@ -135,7 +135,7 @@ func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via stri
 	d := ttl.Duration()
 	expiresAt := time.Now().UTC().Add(d)
 
-	if err := h.users.Activate(ctx, u.ID, &expiresAt); err != nil {
+	if err := h.users.ActivatePending(ctx, u.ID, &expiresAt); err != nil {
 		h.log.Error("activate failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		return ttl, fmt.Errorf("activate: %w", err)
 	}
@@ -161,7 +161,7 @@ func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via stri
 // distinguishes them in the audit log and `tokenHash` is nil for
 // console-initiated declines.
 func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via string, tokenHash []byte) error {
-	if err := h.users.SetStatus(ctx, u.ID, users.StatusDeclined); err != nil {
+	if err := h.users.DeclinePending(ctx, u.ID); err != nil {
 		h.log.Error("decline failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		return fmt.Errorf("set status: %w", err)
 	}
