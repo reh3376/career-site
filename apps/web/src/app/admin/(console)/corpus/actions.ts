@@ -5,128 +5,6 @@ import { revalidatePath } from "next/cache";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
-export type ReindexResult =
-  | {
-      ok: true;
-      root: string;
-      visibility: string;
-      kinds_walked: string[];
-      files_scanned: number;
-      docs_ingested: number;
-      docs_skipped: number;
-      chunks_inserted: number;
-      chunks_embedded: number;
-      errors: string[];
-    }
-  | { ok: false; error: string };
-
-// scope is "public" or "private"; sourceKind optionally narrows to one kind.
-export async function reindexCorpusAction(
-  scope: string,
-  sourceKind = "",
-): Promise<ReindexResult> {
-  const s = scope.trim();
-  if (s !== "public" && s !== "private") {
-    return { ok: false, error: "scope must be public or private." };
-  }
-
-  const cookie = await getSessionCookie();
-  if (!cookie) return { ok: false, error: "Not signed in." };
-
-  const resp = await callApi({
-    path: "/api/career.v1.AdminService/ReindexCorpus",
-    body: { scope: s, sourceKind: sourceKind.trim() },
-    cookie,
-  });
-  if (!resp.ok) {
-    let msg = `HTTP ${resp.status}`;
-    try {
-      const j = (await resp.json()) as { message?: string };
-      if (j.message) msg = j.message;
-    } catch {
-      /* keep default */
-    }
-    return { ok: false, error: msg };
-  }
-  const j = (await resp.json()) as {
-    root?: string;
-    visibility?: string;
-    kindsWalked?: string[];
-    kinds_walked?: string[];
-    filesScanned?: number;
-    files_scanned?: number;
-    docsIngested?: number;
-    docs_ingested?: number;
-    docsSkipped?: number;
-    docs_skipped?: number;
-    chunksInserted?: number;
-    chunks_inserted?: number;
-    chunksEmbedded?: number;
-    chunks_embedded?: number;
-    errors?: string[];
-  };
-  revalidatePath("/admin/corpus", "layout");
-  return {
-    ok: true,
-    root: j.root ?? "",
-    visibility: j.visibility ?? "",
-    kinds_walked: j.kindsWalked ?? j.kinds_walked ?? [],
-    files_scanned: j.filesScanned ?? j.files_scanned ?? 0,
-    docs_ingested: j.docsIngested ?? j.docs_ingested ?? 0,
-    docs_skipped: j.docsSkipped ?? j.docs_skipped ?? 0,
-    chunks_inserted: j.chunksInserted ?? j.chunks_inserted ?? 0,
-    chunks_embedded: j.chunksEmbedded ?? j.chunks_embedded ?? 0,
-    errors: j.errors ?? [],
-  };
-}
-
-export type SweepResult =
-  | {
-      ok: true;
-      model: string;
-      considered: number;
-      embedded: number;
-      failed: number;
-      remaining: number;
-    }
-  | { ok: false; error: string };
-
-export async function sweepCorpusEmbeddingsAction(): Promise<SweepResult> {
-  const cookie = await getSessionCookie();
-  if (!cookie) return { ok: false, error: "Not signed in." };
-  const resp = await callApi({
-    path: "/api/career.v1.AdminService/SweepCorpusEmbeddings",
-    body: { maxChunks: 512 },
-    cookie,
-  });
-  if (!resp.ok) {
-    let msg = `HTTP ${resp.status}`;
-    try {
-      const j = (await resp.json()) as { message?: string };
-      if (j.message) msg = j.message;
-    } catch {
-      /* keep default */
-    }
-    return { ok: false, error: msg };
-  }
-  const j = (await resp.json()) as {
-    model?: string;
-    considered?: number;
-    embedded?: number;
-    failed?: number;
-    remaining?: number;
-  };
-  revalidatePath("/admin/corpus", "layout");
-  return {
-    ok: true,
-    model: j.model ?? "",
-    considered: j.considered ?? 0,
-    embedded: j.embedded ?? 0,
-    failed: j.failed ?? 0,
-    remaining: j.remaining ?? 0,
-  };
-}
-
 export type IngestResult =
   | {
       ok: true;
@@ -211,3 +89,88 @@ export async function ingestCorpusTextAction(
     embedder_model: j.embedderModel ?? j.embedder_model ?? "",
   };
 }
+
+// ---------------------------------------------------------------
+// Jobs: long corpus operations run out of band; the panel polls.
+// ---------------------------------------------------------------
+
+export type JobState = {
+  jobId: string;
+  kind: string;
+  status: string;
+  progressPct: number;
+  summary: string;
+};
+
+export async function runJobAction(
+  kind: string,
+  sourceKind = "",
+): Promise<{ ok: true; jobId: string } | { ok: false; error: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/RunJob",
+    body: { kind, sourceKind: sourceKind.trim() },
+    cookie,
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { ok: false, error: msg };
+  }
+  const j = (await resp.json()) as { jobId?: string; job_id?: string };
+  const jobId = j.jobId ?? j.job_id ?? "";
+  if (!jobId) return { ok: false, error: "No job id returned." };
+  return { ok: true, jobId };
+}
+
+export async function getJobAction(
+  jobId: string,
+): Promise<{ ok: true; job: JobState } | { ok: false; error: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetJob",
+    body: { jobId },
+    cookie,
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { ok: false, error: msg };
+  }
+  const j = (await resp.json()) as {
+    jobId?: string;
+    job_id?: string;
+    kind?: string;
+    status?: string;
+    progressPct?: number;
+    progress_pct?: number;
+    summary?: string;
+  };
+  const status = j.status ?? "";
+  if (status === "JOB_STATUS_SUCCEEDED" || status === "JOB_STATUS_FAILED") {
+    revalidatePath("/admin/corpus", "layout");
+  }
+  return {
+    ok: true,
+    job: {
+      jobId: j.jobId ?? j.job_id ?? jobId,
+      kind: j.kind ?? "",
+      status,
+      progressPct: Number(j.progressPct ?? j.progress_pct ?? 0),
+      summary: j.summary ?? "",
+    },
+  };
+}
+

@@ -19,6 +19,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/jobs"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -47,6 +48,8 @@ type Admin struct {
 	// jdScorer and jdTimeout back RescoreJd; nil scorer disables it.
 	jdScorer  *jd.Scorer
 	jdTimeout time.Duration
+	// jobs runs the long admin operations (reindex, sweep) out of band.
+	jobs *jobs.Runner
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -88,6 +91,7 @@ func NewAdmin(
 		// interactive exploration; well below what a hung client loop
 		// would produce.
 		queryLimiter: ratelimit.New(20, 20.0/60.0),
+		jobs:         jobs.New(log, 24*time.Hour, 2*time.Hour),
 	}
 }
 
@@ -626,52 +630,15 @@ func (a *Admin) ReindexCorpus(
 			fmt.Errorf("unknown source_kind %q; known: %s", kind, strings.Join(ingest.KnownKinds, ", ")))
 	}
 
-	var (
-		res   *ingest.WalkResult
-		kinds []string
-		err   error
-	)
-	switch scope := strings.TrimSpace(req.Msg.Scope); scope {
-	case "", "public":
-		if a.corpus.Public == "" {
-			return nil, connect.NewError(connect.CodeFailedPrecondition,
-				errors.New("CORPUS_ROOT is not configured"))
-		}
-		res = &ingest.WalkResult{Root: a.corpus.Public, Visibility: users.VisibilityPublic}
-		for k, subdir := range publicCorpusSubdirs {
-			if kind != "" && k != kind {
-				continue
-			}
-			one, werr := a.ingest.WalkDirectory(ctx, ingest.WalkOptions{
-				Root:       a.corpus.Public + "/" + subdir,
-				SourceKind: k,
-				Visibility: users.VisibilityPublic,
-			})
-			if werr != nil {
-				res.Errors = append(res.Errors, fmt.Sprintf("%s: %s", k, werr.Error()))
-				continue
-			}
-			res.Add(one)
-			kinds = append(kinds, k)
-		}
-		if kind != "" && len(kinds) == 0 && len(res.Errors) == 0 {
-			return nil, connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("source_kind %q has no public content directory", kind))
-		}
-	case "private":
-		if a.corpus.Private == "" {
-			return nil, connect.NewError(connect.CodeFailedPrecondition,
-				errors.New("CORPUS_PRIVATE_ROOT is not configured"))
-		}
-		res, kinds, err = a.ingest.WalkKinds(ctx, a.corpus.Private, users.VisibilityCorpusOnly, kind)
-		if err != nil {
-			a.log.Error("ReindexCorpus private failed", slog.String("root", a.corpus.Private),
-				slog.String("error", err.Error()))
+	res, kinds, err := a.reindexCorpus(ctx, strings.TrimSpace(req.Msg.Scope), kind)
+	if err != nil {
+		a.log.Error("ReindexCorpus failed", slog.String("error", err.Error()))
+		switch {
+		case strings.Contains(err.Error(), "not configured"), strings.Contains(err.Error(), "not accessible"):
 			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("scope %q must be public or private", scope))
 	}
 
 	// Cap error list so a broken directory doesn't produce an

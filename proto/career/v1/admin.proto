@@ -696,6 +696,12 @@ enum JobKind {
   JOB_KIND_EVAL_QUICK = 6;
   // Refresh GitHub repository metadata.
   JOB_KIND_GITHUB_SYNC = 7;
+  // Walk the public content mount into the corpus (api-side job).
+  JOB_KIND_CORPUS_REINDEX_PUBLIC = 8;
+  // Walk the private corpus mount into the corpus (api-side job).
+  JOB_KIND_CORPUS_REINDEX_PRIVATE = 9;
+  // Re-embed every stale chunk until none remain (api-side job).
+  JOB_KIND_EMBED_SWEEP = 10;
 }
 
 // Job lifecycle.
@@ -719,6 +725,9 @@ message RunJobRequest {
     defined_only: true
     not_in: [0]
   }];
+  // For the corpus reindex jobs: restrict the walk to one source_kind;
+  // empty walks every kind.
+  string source_kind = 2 [(buf.validate.field).string.max_len = 40];
 }
 
 // Job handle.

@@ -171,29 +171,41 @@ const (
 	JobKind_JOB_KIND_EVAL_QUICK JobKind = 6
 	// Refresh GitHub repository metadata.
 	JobKind_JOB_KIND_GITHUB_SYNC JobKind = 7
+	// Walk the public content mount into the corpus (api-side job).
+	JobKind_JOB_KIND_CORPUS_REINDEX_PUBLIC JobKind = 8
+	// Walk the private corpus mount into the corpus (api-side job).
+	JobKind_JOB_KIND_CORPUS_REINDEX_PRIVATE JobKind = 9
+	// Re-embed every stale chunk until none remain (api-side job).
+	JobKind_JOB_KIND_EMBED_SWEEP JobKind = 10
 )
 
 // Enum value maps for JobKind.
 var (
 	JobKind_name = map[int32]string{
-		0: "JOB_KIND_UNSPECIFIED",
-		1: "JOB_KIND_CONTENT_VALIDATE",
-		2: "JOB_KIND_CONTENT_INDEX",
-		3: "JOB_KIND_INGEST_CHANGED",
-		4: "JOB_KIND_INGEST_FULL",
-		5: "JOB_KIND_RESUME_BUILD",
-		6: "JOB_KIND_EVAL_QUICK",
-		7: "JOB_KIND_GITHUB_SYNC",
+		0:  "JOB_KIND_UNSPECIFIED",
+		1:  "JOB_KIND_CONTENT_VALIDATE",
+		2:  "JOB_KIND_CONTENT_INDEX",
+		3:  "JOB_KIND_INGEST_CHANGED",
+		4:  "JOB_KIND_INGEST_FULL",
+		5:  "JOB_KIND_RESUME_BUILD",
+		6:  "JOB_KIND_EVAL_QUICK",
+		7:  "JOB_KIND_GITHUB_SYNC",
+		8:  "JOB_KIND_CORPUS_REINDEX_PUBLIC",
+		9:  "JOB_KIND_CORPUS_REINDEX_PRIVATE",
+		10: "JOB_KIND_EMBED_SWEEP",
 	}
 	JobKind_value = map[string]int32{
-		"JOB_KIND_UNSPECIFIED":      0,
-		"JOB_KIND_CONTENT_VALIDATE": 1,
-		"JOB_KIND_CONTENT_INDEX":    2,
-		"JOB_KIND_INGEST_CHANGED":   3,
-		"JOB_KIND_INGEST_FULL":      4,
-		"JOB_KIND_RESUME_BUILD":     5,
-		"JOB_KIND_EVAL_QUICK":       6,
-		"JOB_KIND_GITHUB_SYNC":      7,
+		"JOB_KIND_UNSPECIFIED":            0,
+		"JOB_KIND_CONTENT_VALIDATE":       1,
+		"JOB_KIND_CONTENT_INDEX":          2,
+		"JOB_KIND_INGEST_CHANGED":         3,
+		"JOB_KIND_INGEST_FULL":            4,
+		"JOB_KIND_RESUME_BUILD":           5,
+		"JOB_KIND_EVAL_QUICK":             6,
+		"JOB_KIND_GITHUB_SYNC":            7,
+		"JOB_KIND_CORPUS_REINDEX_PUBLIC":  8,
+		"JOB_KIND_CORPUS_REINDEX_PRIVATE": 9,
+		"JOB_KIND_EMBED_SWEEP":            10,
 	}
 )
 
@@ -2423,7 +2435,10 @@ func (x *TestRetrievalResponse) GetLatencyMs() int32 {
 type RunJobRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Which job.
-	Kind          JobKind `protobuf:"varint,1,opt,name=kind,proto3,enum=career.v1.JobKind" json:"kind,omitempty"`
+	Kind JobKind `protobuf:"varint,1,opt,name=kind,proto3,enum=career.v1.JobKind" json:"kind,omitempty"`
+	// For the corpus reindex jobs: restrict the walk to one source_kind;
+	// empty walks every kind.
+	SourceKind    string `protobuf:"bytes,2,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2463,6 +2478,13 @@ func (x *RunJobRequest) GetKind() JobKind {
 		return x.Kind
 	}
 	return JobKind_JOB_KIND_UNSPECIFIED
+}
+
+func (x *RunJobRequest) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
 }
 
 // Job handle.
@@ -7822,10 +7844,12 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\bqa_match\x18\x02 \x01(\v2\x19.career.v1.ContentSummaryR\aqaMatch\x12#\n" +
 	"\rqa_similarity\x18\x03 \x01(\x02R\fqaSimilarity\x12\x1d\n" +
 	"\n" +
-	"latency_ms\x18\x04 \x01(\x05R\tlatencyMs\"C\n" +
+	"latency_ms\x18\x04 \x01(\x05R\tlatencyMs\"m\n" +
 	"\rRunJobRequest\x122\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x12.career.v1.JobKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\"'\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12(\n" +
+	"\vsource_kind\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18(R\n" +
+	"sourceKind\"'\n" +
 	"\x0eRunJobResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"1\n" +
 	"\rGetJobRequest\x12 \n" +
@@ -8250,7 +8274,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x12REVIEW_STATUS_OPEN\x10\x01\x12\x1a\n" +
 	"\x16REVIEW_STATUS_RESOLVED\x10\x02\x12!\n" +
 	"\x1dREVIEW_STATUS_CONVERTED_TO_QA\x10\x03\x12\x19\n" +
-	"\x15REVIEW_STATUS_REPLIED\x10\x04*\xe3\x01\n" +
+	"\x15REVIEW_STATUS_REPLIED\x10\x04*\xc6\x02\n" +
 	"\aJobKind\x12\x18\n" +
 	"\x14JOB_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19JOB_KIND_CONTENT_VALIDATE\x10\x01\x12\x1a\n" +
@@ -8259,7 +8283,11 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x14JOB_KIND_INGEST_FULL\x10\x04\x12\x19\n" +
 	"\x15JOB_KIND_RESUME_BUILD\x10\x05\x12\x17\n" +
 	"\x13JOB_KIND_EVAL_QUICK\x10\x06\x12\x18\n" +
-	"\x14JOB_KIND_GITHUB_SYNC\x10\a*\x87\x01\n" +
+	"\x14JOB_KIND_GITHUB_SYNC\x10\a\x12\"\n" +
+	"\x1eJOB_KIND_CORPUS_REINDEX_PUBLIC\x10\b\x12#\n" +
+	"\x1fJOB_KIND_CORPUS_REINDEX_PRIVATE\x10\t\x12\x18\n" +
+	"\x14JOB_KIND_EMBED_SWEEP\x10\n" +
+	"*\x87\x01\n" +
 	"\tJobStatus\x12\x1a\n" +
 	"\x16JOB_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11JOB_STATUS_QUEUED\x10\x01\x12\x16\n" +
