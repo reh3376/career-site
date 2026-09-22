@@ -51,6 +51,8 @@ services:
       # Empty values hide the corresponding link on the site.
       LINKEDIN_URL: ${LINKEDIN_URL:-}
       GITHUB_URL: ${GITHUB_URL:-https://github.com/reh3376}
+      # Quoted on the JD pages; must match the api (same variable).
+      JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
 
   api:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
@@ -88,6 +90,9 @@ services:
       # document ingested from here is visibility=corpus_only.
       CORPUS_PRIVATE_ROOT: /corpus-private
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-1200}
+      # Match gate; model-dependent, calibrated per OLLAMA_LLM_MODEL in
+      # docs/llm-tuning-log.md (qwen3:14b 0.55, qwen3:4b-q8_0 0.72).
+      JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-2000}
       # Must match SIDECAR_LLM_NUM_CTX; the api budgets prompts to it.
       LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}

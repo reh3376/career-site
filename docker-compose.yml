@@ -45,6 +45,7 @@ services:
       NEXT_TELEMETRY_DISABLED: "1"
       # Outbound links, read at request time (empty hides the link).
       LINKEDIN_URL: ${LINKEDIN_URL:-}
+      JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
       GITHUB_URL: ${GITHUB_URL:-https://github.com/reh3376}
     networks: [app]
 
@@ -74,6 +75,7 @@ services:
       # cap per month (0 = unlimited). LLM_ALLOW_STUB=1 runs the
       # requirement assessor against the stub provider (CI / e2e).
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-900}
+      JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-0}
       LLM_ALLOW_STUB: ${LLM_ALLOW_STUB:-0}
       # Must match SIDECAR_LLM_NUM_CTX; the api budgets prompts to it.

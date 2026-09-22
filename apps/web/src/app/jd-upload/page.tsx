@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { getJdThreshold } from "@/lib/jd-threshold";
 import { getSessionUser } from "@/lib/session-user";
 
 import { JdForm } from "./form";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 // Members only: the API rejects anonymous submissions too, this just
 // sends a visitor to sign in instead of showing a form that cannot work.
 export default async function JdUploadPage() {
+  const threshold = getJdThreshold();
   const me = await getSessionUser();
   if (!me) redirect("/login?next=/jd-upload");
   return (
@@ -33,7 +35,7 @@ export default async function JdUploadPage() {
         control rooms, manufacturing plants, decision infrastructure,
         and AI/ML. This JD review evaluates his skill set against the
         JD criteria and produces a skills-match confidence score. If
-        the score is &ge; 0.55, a 2-page r&eacute;sum&eacute; custom
+        the score is &ge; {threshold}, a 2-page r&eacute;sum&eacute; custom
         built for the uploaded JD is generated as a PDF.
       </p>
 
@@ -46,7 +48,7 @@ export default async function JdUploadPage() {
         <ol className="ml-4 list-decimal space-y-1.5 text-sm">
           <li>The full JD text lands in Roger&rsquo;s inbox with a match score.</li>
           <li>
-            <span className="text-ink">Score ≥ 0.55:</span> a 2-page résumé is
+            <span className="text-ink">Score ≥ {threshold}:</span> a 2-page résumé is
             generated from the master corpus, tailored to the posting.
           </li>
           <li>
@@ -70,7 +72,7 @@ export default async function JdUploadPage() {
       </section>
 
       <div className="mt-14">
-        <JdForm />
+        <JdForm threshold={threshold} />
       </div>
 
       <p className="mt-14 border-t border-line pt-6 text-sm text-ink-3">

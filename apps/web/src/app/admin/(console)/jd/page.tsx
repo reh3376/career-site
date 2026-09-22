@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
+import { getJdThreshold } from "@/lib/jd-threshold";
 import { getSessionCookie } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Admin · JD submissions" };
@@ -95,7 +96,7 @@ export default async function AdminJdPage() {
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
         Every JD submitted at /jd-upload. The match score is computed
         in code from per-requirement verdicts (open a row for the
-        derivation). Threshold is 0.55; above it, the résumé pipeline
+        derivation). Threshold is {getJdThreshold()}; above it, the résumé pipeline
         runs. Below, Roger triages manually.
       </p>
 

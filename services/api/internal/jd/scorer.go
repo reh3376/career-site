@@ -23,17 +23,15 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
-// MatchThreshold is the gate above which a JD is considered a match.
-// Applies to the requirement-weighted score when the assessor is
-// wired, else to the retrieval pre-score.
-//
-// Calibrated 2026-09-21 with one requirement per judge call
-// (qwen3:14b): strong 0.604, mid 0.333, weak 0.020, unrelated 0.000.
-// 0.55 sits below the strong JD with margin and well above the mid
-// one. Recalibrate (docs/llm-tuning-log.md) whenever the judge prompt
-// version, the model or the batching changes; the frontend copy in
-// apps/web/src/app/jd-upload quotes the same number.
-const MatchThreshold = 0.55
+// DefaultMatchThreshold is the gate used when JD_MATCH_THRESHOLD is
+// not set. The gate is model-dependent: each judge model reads the
+// same evidence with its own strictness, so the calibrated value lives
+// in .env.prod next to OLLAMA_LLM_MODEL (api and web read the same
+// variable) and docs/llm-tuning-log.md records it per model:
+// qwen3:14b 0.55 (strong 0.604 / mid 0.333), qwen3:4b-q8_0 0.72
+// (strong 0.842 / mid 0.625). Recalibrate whenever the judge prompt
+// version, the model or the batching changes.
+const DefaultMatchThreshold = 0.55
 
 // TopK caps how many chunks feed the retrieval pre-score.
 const TopK = 8
@@ -51,12 +49,21 @@ type Scorer struct {
 	// resume is optional; nil leaves above-threshold rows at
 	// `generating` for manual attention.
 	resume *ResumeWriter
+	// threshold is the match gate (see DefaultMatchThreshold).
+	threshold float64
 }
 
-// NewScorer wires the deps. assessor and resume may be nil.
-func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter) *Scorer {
-	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor, resume: resume}
+// NewScorer wires the deps. assessor and resume may be nil; a
+// threshold outside (0, 1] falls back to DefaultMatchThreshold.
+func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter, threshold float64) *Scorer {
+	if threshold <= 0 || threshold > 1 {
+		threshold = DefaultMatchThreshold
+	}
+	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor, resume: resume, threshold: threshold}
 }
+
+// Threshold returns the configured match gate.
+func (s *Scorer) Threshold() float64 { return s.threshold }
 
 // logGate records the gate decision (a code decision, no model) in the
 // decision log so the owner can review the threshold call alongside
@@ -74,7 +81,7 @@ func (s *Scorer) logGate(ctx context.Context, submissionID int64, score, retriev
 	input, _ := json.Marshal(map[string]any{
 		"score":           score,
 		"retrieval_score": retrieval,
-		"threshold":       MatchThreshold,
+		"threshold":       s.threshold,
 		"assessor_ran":    assessed,
 		"requirements":    nReq,
 		"weight_total":    weightTotal,
@@ -208,7 +215,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 
 	next := "below_threshold"
-	if score >= MatchThreshold {
+	if score >= s.threshold {
 		next = "generating"
 	}
 	s.logGate(ctx, submissionID, score, retrieval, assessment, next)
