@@ -293,6 +293,38 @@ tokens, or raise `SIDECAR_LLM_NUM_CTX` to 10240 (KV cache for
 On the Mac backend (16k) the same code admits the whole cited set with
 no change. Not done today; the PDF is already correct and grounded.
 
+## 2026-09-21: prod flip and the first CPX31 numbers
+
+Deployed `06f7067cd5da` (PR 76) and set `SIDECAR_LLM_PROVIDER=ollama`,
+`SIDECAR_LLM_NUM_CTX=8192`, `qwen3:8b`, `JD_PIPELINE_TIMEOUT_SECONDS=2400`
+on the box. Live check (`deploy/live-check.sh --submit`, now updated for
+the members-only policy: it submits as the admin member from the
+server):
+
+- Prod submission 5 (the script's terse synthetic JD, 9 requirements):
+  **0.444**, below the gate. Judge calls 66 to 91 s each on the CPX31
+  CPU; the whole assessment about 12 minutes. `qwen3:8b` marked
+  "Rockwell ControlLogix and Ignition standards" unmet where `qwen3:14b`
+  marked it met with the same corpus.
+- Prod submission 6 (the calibration strong JD, like-for-like with the
+  Mac's 0.604): result recorded in the next entry when it lands.
+
+Budget note: at ~90 s per judge call a 14-requirement posting plus the
+résumé needs ~25 minutes, which is why the pipeline timeout went to
+2400 s. The Mac backend over Tailscale does the same work in under a
+minute; that comparison is what decides the default backend.
+
+## 2026-09-21: decision log for human-in-the-loop labels
+
+The owner: "collect logs on decisions, then I will review the decision
+logs to create human-in-the-loop training data." Design and schema in
+`docs/decision-log.md`: every verdict and every gate outcome is logged
+with the evidence it was made from and the raw prompt/response; the
+owner labels rows in `/admin/decisions`; reviewed rows export as JSONL.
+Agreement between `output.verdict` and `human_verdict` becomes the
+metric that decides between prompt revision, corpus additions and
+adapter training.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

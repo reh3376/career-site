@@ -146,11 +146,25 @@ type Requirement struct {
 	Weight   int    `json:"weight"`
 }
 
+// JudgeChunkRunes caps the evidence text shown per chunk in the judge
+// prompt. Exported so the decision log can record exactly what the
+// model saw (docs/decision-log.md).
+const JudgeChunkRunes = 1200
+
+// CapRunes truncates s to at most n runes.
+func CapRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) > n {
+		return string(r[:n])
+	}
+	return s
+}
+
 // RenderJudgeUser builds the user turn for RequirementJudge: every
 // requirement followed by its own retrieved evidence. Chunk text is
 // capped so a long corpus cannot blow the context window.
 func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit) string {
-	const maxChunkRunes = 1200
+	const maxChunkRunes = JudgeChunkRunes
 	var b strings.Builder
 	b.WriteString("Judge each requirement against its evidence.\n\n")
 	for _, r := range reqs {

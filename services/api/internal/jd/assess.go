@@ -27,6 +27,24 @@ const EvidencePerRequirement = 4
 // calendar month has been reached (Phase 4 guardrail #8).
 var ErrMonthlyCap = errors.New("llm monthly call cap reached")
 
+// rawJudgment is the model's verdict as decoded, before validation.
+type rawJudgment struct {
+	RequirementID string   `json:"requirement_id"`
+	Verdict       string   `json:"verdict"`
+	EvidenceIDs   []string `json:"evidence_ids"`
+	Rationale     string   `json:"rationale"`
+}
+
+// callResult is what one gateway call returned, kept for the ledger
+// and the decision log.
+type callResult struct {
+	Model            string
+	Text             string
+	PromptTokens     int32
+	CompletionTokens int32
+	LatencyMs        int64
+}
+
 // Judgment is the model's verdict on one requirement, validated.
 type Judgment struct {
 	RequirementID string  `json:"requirement_id"`
@@ -130,12 +148,12 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	var reqDoc struct {
 		Requirements []prompts.Requirement `json:"requirements"`
 	}
-	model, err := a.call(ctx, submissionID, prompts.JDRequirements,
+	reqCall, err := a.call(ctx, submissionID, prompts.JDRequirements,
 		prompts.RenderRequirementsUser(jdText, hints), 1200, &reqDoc)
 	if err != nil {
 		return nil, fmt.Errorf("requirements: %w", err)
 	}
-	out.Model = model
+	out.Model = reqCall.Model
 	reqs, err := validateRequirements(reqDoc.Requirements)
 	if err != nil {
 		return nil, fmt.Errorf("requirements: %w", err)
@@ -167,30 +185,39 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	}
 
 	// 3. Judgments, in batches sized to the context window.
-	type rawJudgment struct {
-		RequirementID string   `json:"requirement_id"`
-		Verdict       string   `json:"verdict"`
-		EvidenceIDs   []string `json:"evidence_ids"`
-		Rationale     string   `json:"rationale"`
-	}
 	var all []rawJudgment
 	batches := a.batchRequirements(reqs, evidence)
 	if err := a.checkCapN(ctx, int64(len(batches))); err != nil {
 		return nil, err
 	}
+	// Per requirement: which call produced its verdict, so the decision
+	// log can carry the exact prompt and raw response for each one.
+	calls := make([]callResult, 0, len(batches))
+	userPrompts := make([]string, 0, len(batches))
+	batchOf := map[string]int{}
 	for bi, batch := range batches {
 		var judgeDoc struct {
 			Judgments []rawJudgment `json:"judgments"`
 		}
-		if _, err := a.call(ctx, submissionID, prompts.RequirementJudge,
-			prompts.RenderJudgeUser(batch, evidence), 1200, &judgeDoc); err != nil {
+		user := prompts.RenderJudgeUser(batch, evidence)
+		res, err := a.call(ctx, submissionID, prompts.RequirementJudge, user, 1200, &judgeDoc)
+		if err != nil {
 			return nil, fmt.Errorf("judge batch %d/%d: %w", bi+1, len(batches), err)
+		}
+		calls = append(calls, res)
+		userPrompts = append(userPrompts, user)
+		for _, r := range batch {
+			batchOf[r.ID] = bi
 		}
 		all = append(all, judgeDoc.Judgments...)
 	}
 	out.JudgeBatches = len(batches)
+	rawByReq := map[string]rawJudgment{}
 	byReq := map[string]Judgment{}
 	for _, j := range all {
+		if _, dup := rawByReq[j.RequirementID]; !dup {
+			rawByReq[j.RequirementID] = j
+		}
 		if _, dup := byReq[j.RequirementID]; dup {
 			continue
 		}
@@ -236,7 +263,79 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	if out.WeightTotal > 0 {
 		out.Score = weighted / float64(out.WeightTotal)
 	}
+
+	// 5. Decision log: one row per verdict with everything the owner
+	// needs to judge it himself (docs/decision-log.md). Best-effort.
+	a.logVerdicts(ctx, submissionID, out, evidence, rawByReq, calls, userPrompts, batchOf)
 	return out, nil
+}
+
+// logVerdicts writes one decision_log row per requirement.
+func (a *Assessor) logVerdicts(
+	ctx context.Context, submissionID int64, out *Assessment,
+	evidence map[string][]users.CorpusHit, raw map[string]rawJudgment,
+	calls []callResult, userPrompts []string, batchOf map[string]int,
+) {
+	type evidenceRow struct {
+		ChunkID    int64   `json:"chunk_id"`
+		SourceKind string  `json:"source_kind"`
+		Access     string  `json:"access"`
+		Title      string  `json:"title,omitempty"`
+		Similarity float32 `json:"similarity"`
+		Text       string  `json:"text"`
+	}
+	rows := make([]users.Decision, 0, len(out.Requirements))
+	for _, r := range out.Requirements {
+		var ev []evidenceRow
+		for _, h := range evidence[r.ID] {
+			access, title := "public", h.Title
+			if h.Visibility == users.VisibilityCorpusOnly {
+				access, title = "private", ""
+			}
+			ev = append(ev, evidenceRow{
+				ChunkID: h.Chunk.ID, SourceKind: h.SourceKind, Access: access, Title: title,
+				Similarity: h.Similarity, Text: prompts.CapRunes(h.Chunk.Text, prompts.JudgeChunkRunes),
+			})
+		}
+		var j Judgment
+		for _, cand := range out.Judgments {
+			if cand.RequirementID == r.ID {
+				j = cand
+				break
+			}
+		}
+		input, _ := json.Marshal(map[string]any{
+			"requirement": r,
+			"evidence":    ev,
+		})
+		outDoc := map[string]any{
+			"verdict":      j.Verdict,
+			"evidence_ids": j.EvidenceIDs,
+			"rationale":    j.Rationale,
+		}
+		if rj, ok := raw[r.ID]; ok {
+			outDoc["raw_verdict"] = rj.Verdict
+			outDoc["raw_evidence_ids"] = rj.EvidenceIDs
+		} else {
+			outDoc["raw_verdict"] = ""
+		}
+		output, _ := json.Marshal(outDoc)
+		d := users.Decision{
+			Kind: "jd_requirement_verdict", RefKind: "jd_submission", RefID: submissionID, Key: r.ID,
+			Model: out.Model, PromptID: prompts.RequirementJudge.ID, PromptVersion: prompts.RequirementJudge.Version,
+			NumCtx: a.numCtx, Input: input, Output: output,
+		}
+		if bi, ok := batchOf[r.ID]; ok && bi < len(calls) {
+			c := calls[bi]
+			d.PromptText = prompts.RequirementJudge.System + "\n\n---\n\n" + userPrompts[bi]
+			d.ResponseText = c.Text
+			d.PromptTokens, d.CompletionTok, d.LatencyMs = c.PromptTokens, c.CompletionTokens, c.LatencyMs
+		}
+		rows = append(rows, d)
+	}
+	if err := a.users.InsertDecisions(context.WithoutCancel(ctx), rows); err != nil {
+		a.log.Warn("decision log write failed", slog.Int64("jd_id", submissionID), slog.String("error", err.Error()))
+	}
 }
 
 func verdictValue(v string) float64 {
@@ -283,8 +382,8 @@ func validateRequirements(in []prompts.Requirement) ([]prompts.Requirement, erro
 }
 
 // call runs one schema-constrained generation, records usage, and
-// decodes the JSON into dst. Returns the model name.
-func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Prompt, user string, maxTokens int, dst any) (string, error) {
+// decodes the JSON into dst. Returns what the call produced.
+func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Prompt, user string, maxTokens int, dst any) (callResult, error) {
 	started := time.Now()
 	resp, err := a.llm.Generate(ctx, llm.Request{
 		System:      p.System,
@@ -315,12 +414,17 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 		a.log.Warn("llm usage record failed", slog.Int64("jd_id", submissionID), slog.String("error", rErr.Error()))
 	}
 	if err != nil {
-		return "", err
+		return callResult{}, err
+	}
+	res := callResult{
+		Model: resp.Model, Text: resp.Text,
+		PromptTokens: resp.PromptTokens, CompletionTokens: resp.CompletionTokens,
+		LatencyMs: usage.LatencyMs,
 	}
 	if err := json.Unmarshal([]byte(resp.Text), dst); err != nil {
-		return resp.Model, fmt.Errorf("decode %s output: %w", p.ID, err)
+		return res, fmt.Errorf("decode %s output: %w", p.ID, err)
 	}
-	return resp.Model, nil
+	return res, nil
 }
 
 func (a *Assessor) checkCap(ctx context.Context) error {

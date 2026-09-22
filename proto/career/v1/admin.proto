@@ -267,6 +267,26 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Lists logged reviewer decisions (per-requirement verdicts, gate
+  // outcomes) with the evidence each was made from, for the owner's
+  // human-in-the-loop review. Backs /admin/decisions.
+  rpc ListDecisionLog(ListDecisionLogRequest) returns (ListDecisionLogResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Records the owner's own verdict and note on one logged decision.
+  // Saving again overwrites the label; the model's output is never
+  // changed.
+  rpc ReviewDecision(ReviewDecisionRequest) returns (ReviewDecisionResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Exports decisions as JSON Lines for adapter training and
+  // evaluation; reviewed rows carry the human label.
+  rpc ExportDecisionLog(ExportDecisionLogRequest) returns (ExportDecisionLogResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1594,4 +1614,104 @@ message ListJdSubmissionsResponse {
   int32 failed_count = 4;
   // Number still in flight (received / scoring / generating).
   int32 in_flight_count = 5;
+}
+
+// ---------------------------------------------------------------
+// Decision log (human-in-the-loop review of the JD reviewer)
+// ---------------------------------------------------------------
+
+// One logged decision: what the model (or the code) decided, from
+// what, and the owner's review of it. See docs/decision-log.md.
+message DecisionLogRow {
+  // Row id (numeric, stringified).
+  string id = 1;
+  // Decision kind: jd_requirement_verdict, jd_gate, ...
+  string kind = 2;
+  // What the decision belongs to (e.g. jd_submission).
+  string ref_kind = 3;
+  // Id of the ref (numeric, stringified).
+  string ref_id = 4;
+  // Item within the ref (requirement id); empty when per-ref.
+  string key = 5;
+  // Who decided: the gateway model name, or "code".
+  string model = 6;
+  // Prompt id that produced it; empty for code decisions.
+  string prompt_id = 7;
+  // Prompt version that produced it; 0 for code decisions.
+  int32 prompt_version = 8;
+  // Context window requested for the call; 0 for code decisions.
+  int32 num_ctx = 9;
+  // What it was decided from, as JSON (shape depends on kind).
+  string input_json = 10;
+  // What was decided, as JSON (shape depends on kind).
+  string output_json = 11;
+  // Exact system + user prompt sent; empty for code decisions.
+  string prompt_text = 12;
+  // Raw model output; empty for code decisions.
+  string response_text = 13;
+  // Prompt tokens as reported by the provider.
+  int32 prompt_tokens = 14;
+  // Completion tokens as reported by the provider.
+  int32 completion_tokens = 15;
+  // Call latency in milliseconds.
+  int64 latency_ms = 16;
+  // When the decision was made.
+  google.protobuf.Timestamp created_at = 17;
+  // The owner's verdict in the same vocabulary as the output; empty
+  // until reviewed.
+  string human_verdict = 18;
+  // The owner's free-text note on the review.
+  string human_note = 19;
+  // User id of the reviewer (numeric, stringified); empty until reviewed.
+  string reviewed_by = 20;
+  // When the review was saved; unset until reviewed.
+  google.protobuf.Timestamp reviewed_at = 21;
+}
+
+// Filters for the decision-review list.
+message ListDecisionLogRequest {
+  // Restrict to one kind; empty for all kinds.
+  string kind = 1;
+  // Restrict to one ref id (e.g. a JD submission); empty for all.
+  string ref_id = 2;
+  // Only rows the owner has not reviewed yet.
+  bool unreviewed_only = 3;
+  // Page size, newest first; server caps at 500 (default 200).
+  int32 limit = 4;
+}
+// A page of logged decisions plus table-wide counts.
+message ListDecisionLogResponse {
+  // Rows, newest first.
+  repeated DecisionLogRow decisions = 1;
+  // Rows in the whole table, any kind.
+  int64 total_count = 2;
+  // Rows the owner has reviewed.
+  int64 reviewed_count = 3;
+}
+
+// The owner's label for one decision.
+message ReviewDecisionRequest {
+  // Row id to label.
+  string id = 1;
+  // The owner's verdict; the vocabulary of the row's output (met /
+  // partial / unmet for requirement verdicts).
+  string human_verdict = 2;
+  // Optional note explaining the label.
+  string human_note = 3;
+}
+// Empty: success is the absence of an error.
+message ReviewDecisionResponse {}
+
+// Selects which rows the JSONL export includes.
+message ExportDecisionLogRequest {
+  // Only rows the owner has reviewed (the training set); false exports
+  // everything.
+  bool reviewed_only = 1;
+}
+// The rendered export.
+message ExportDecisionLogResponse {
+  // JSON Lines, one decision per line, oldest first.
+  string jsonl = 1;
+  // Number of lines in jsonl.
+  int32 row_count = 2;
 }
