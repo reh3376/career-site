@@ -201,6 +201,15 @@ func (h *Jd) GetJdResult(
 	tok := strings.TrimSpace(req.Msg.ResultToken)
 	presented, tokErr := hex.DecodeString(tok)
 	holdsToken := tokErr == nil && tok != "" && s.TokenMatches(presented)
+	// The member who submitted it may reopen the review from a fresh
+	// session (the token only ever lived in the tab that submitted).
+	// Ownership releases the same things the token does, and the PDF
+	// link is built with the stored token so the download route,
+	// which still checks it, accepts it.
+	if s.UserID != 0 && s.UserID == member.ID {
+		holdsToken = true
+		tok = hex.EncodeToString(s.ResultToken)
+	}
 	if s.ResumeMarkdown != "" && holdsToken {
 		out.ResumeMarkdown = s.ResumeMarkdown
 		if s.GeneratedResumeURL != "" {
@@ -217,6 +226,43 @@ func (h *Jd) GetJdResult(
 	}
 	if h.scorer != nil {
 		out.MatchThreshold = h.scorer.Threshold()
+	}
+	return connect.NewResponse(out), nil
+}
+
+// ListMySubmissions returns the caller's own submissions, newest first.
+func (h *Jd) ListMySubmissions(
+	ctx context.Context,
+	req *connect.Request[v1.ListMySubmissionsRequest],
+) (*connect.Response[v1.ListMySubmissionsResponse], error) {
+	member, err := h.requireMember(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := h.users.ListJdSubmissionsByUser(ctx, member.ID, 100)
+	if err != nil {
+		h.log.Error("ListMySubmissions failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("list failed"))
+	}
+	out := &v1.ListMySubmissionsResponse{Submissions: make([]*v1.MySubmission, 0, len(rows))}
+	for i := range rows {
+		r := &rows[i]
+		m := &v1.MySubmission{
+			Id:           strconv.FormatInt(r.ID, 10),
+			Status:       jdStatusRepoToProto(r.Status),
+			RoleHint:     r.RoleHint,
+			EmployerHint: r.EmployerHint,
+			CreatedAt:    timestamppb.New(r.CreatedAt),
+			HasResume:    r.ResumeMarkdown != "",
+		}
+		if r.MatchScore != nil {
+			score := *r.MatchScore
+			m.MatchScore = &score
+		}
+		if r.CompletedAt != nil {
+			m.CompletedAt = timestamppb.New(*r.CompletedAt)
+		}
+		out.Submissions = append(out.Submissions, m)
 	}
 	return connect.NewResponse(out), nil
 }
@@ -342,7 +388,7 @@ func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 // successful submission. Kept server-side so an update lands on
 // every caller without a frontend rebuild.
 func fixedSubmitAckMessage() string {
-	return "Got it, the JD is stored. Scoring runs now: the posting is broken into requirements, each is checked against Roger's career corpus, and the match score is computed from those checks. Keep this page open, or come back with your reference number."
+	return "Got it, the JD is stored. Scoring runs now: the posting is broken into requirements, each is checked against Roger's records, and the match score is computed from those checks. It usually takes 15 to 30 minutes. You can close this page: the review stays under your submissions on this page, and you get an email when it finishes."
 }
 
 func jdSourceProtoToRepo(s v1.JdSource) string {

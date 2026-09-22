@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -24,10 +25,16 @@ export function JdForm({ threshold }: { threshold: string }) {
           {state.message ?? "Submission received."}
         </p>
         {state.submission_id ? (
-          <p className="font-mono text-xs text-ink-3">
-            ref{" "}
-            <span className="text-ink">#{state.submission_id}</span>,
-            keep this if you want to check back later.
+          <p className="text-sm text-ink-2">
+            This review lives at{" "}
+            <Link
+              href={`/jd-upload/${state.submission_id}`}
+              className="font-mono text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+            >
+              /jd-upload/{state.submission_id}
+            </Link>
+            . You can close this tab; it is listed under your submissions and
+            you get an email when it finishes.
           </p>
         ) : null}
         {state.submission_id ? (

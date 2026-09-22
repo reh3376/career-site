@@ -49,6 +49,7 @@ var (
 	SupportNotificationTemplate = mustLoad("support_notification")
 	PasswordResetTemplate       = mustLoad("password_reset")
 	JdOutcomeTemplate           = mustLoad("jd_outcome")
+	JdResultTemplate            = mustLoad("jd_result")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the

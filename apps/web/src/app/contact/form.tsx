@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -114,12 +115,12 @@ export function ContactForm({
             <p className={helpClass}>
               Bit of context so Roger can triage. All optional. Members
               can paste the full posting at{" "}
-              <a
+              <Link
                 href="/jd-upload"
                 className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
               >
                 /jd-upload
-              </a>{" "}
+              </Link>{" "}
               after signing in; that is what triggers the scored,
               tailored-résumé pipeline.
             </p>

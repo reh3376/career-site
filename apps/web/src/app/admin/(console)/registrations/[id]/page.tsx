@@ -27,7 +27,10 @@ type Me = {
   status: string;
   role: string;
   created_at?: string;
+  createdAt?: string;
   expires_at?: string;
+  expiresAt?: string;
+  statedRole?: string;
   last_notification_kind?: string;
   last_notification_at?: string;
   last_notification_error?: string;
@@ -131,8 +134,13 @@ export default async function AdminMemberDetailPage({
   const label = STATUS_LABEL[status] ?? status;
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const isAdmin = me.role === "MEMBER_ROLE_ADMIN";
-  const created = me.created_at ? new Date(me.created_at) : null;
-  const expires = me.expires_at ? new Date(me.expires_at) : null;
+  // Connect JSON is camelCase; older fixtures were snake_case. Reading
+  // only the snake spelling once showed every active member as
+  // "permanent" (the expiry was in the response, under expiresAt).
+  const createdRaw = me.created_at ?? me.createdAt;
+  const expiresRaw = me.expires_at ?? me.expiresAt;
+  const created = createdRaw ? new Date(createdRaw) : null;
+  const expires = expiresRaw ? new Date(expiresRaw) : null;
 
   return (
     <>
@@ -178,7 +186,7 @@ export default async function AdminMemberDetailPage({
           <dt className="text-ink-3">organization</dt>
           <dd className="m-0 text-ink">{me.organization || "-"}</dd>
           <dt className="text-ink-3">stated role</dt>
-          <dd className="m-0 text-ink">{me.stated_role || "-"}</dd>
+          <dd className="m-0 text-ink">{me.stated_role || me.statedRole || "-"}</dd>
           <dt className="text-ink-3">status</dt>
           <dd className={"m-0 " + tone}>
             <span className="pilot mr-2 align-middle" aria-hidden="true" />

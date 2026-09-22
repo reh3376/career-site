@@ -57,7 +57,7 @@ export function GrantForm({
         </span>
         <select
           name="default_ttl"
-          defaultValue={initial?.defaultTtl ?? "GRANT_TTL_30D"}
+          defaultValue={initial?.defaultTtl ?? "GRANT_TTL_7D"}
           className="mt-1 block w-full border border-line-strong bg-canvas px-2 py-1.5 font-mono text-sm text-ink outline-none focus:border-accent"
         >
           <option value="GRANT_TTL_1D">1 day</option>

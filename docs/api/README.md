@@ -125,7 +125,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
 | [`AdminService`](#adminservice) | Owner console. | 40 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
-| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 2 |
+| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 3 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -3070,6 +3070,7 @@ submit or poll, and the submitting member is recorded on the row.
 |---|---|---|---|---|---|
 | [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
 | [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
+| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
 
 ### JdService.SubmitJd
 
@@ -3153,6 +3154,31 @@ generated résumé URL when status is `ready`.
   "submissionId": "string",
   "resultToken": "string"
 }
+```
+
+</details>
+
+### JdService.ListMySubmissions
+
+`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** 30/min
+
+Lists the signed-in member's own submissions, newest first, so a
+review can be reopened after the tab that submitted it is gone.
+
+**Request** — [`ListMySubmissionsRequest`](#listmysubmissionsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListMySubmissionsResponse`](#listmysubmissionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissions` | [`MySubmission`](#mysubmission)[] | array of object |  | Up to 100 rows. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
 ```
 
 </details>
@@ -4187,6 +4213,35 @@ Poll response.
 | `partialCount` | `int32` | number |  | Number judged partially met. |
 | `unmetCount` | `int32` | number |  | Number judged not evidenced. |
 | `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+
+### ListMySubmissionsRequest
+
+List request; the member is the session.
+
+_No fields._
+
+### ListMySubmissionsResponse
+
+The member's submissions, newest first.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissions` | [`MySubmission`](#mysubmission)[] | array of object |  | Up to 100 rows. |
+
+### MySubmission
+
+One of the member's own submissions, enough to pick it from a list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Submission id (numeric, stringified); opens /jd-upload/<id>. |
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score once known. |
+| `roleHint` | `string` | string |  | Role the member typed on the form, if any. |
+| `employerHint` | `string` | string |  | Employer the member typed on the form, if any. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was submitted. |
+| `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it reached a terminal state; unset while running. |
+| `hasResume` | `bool` | boolean |  | True when a tailored résumé exists for it. |
 
 ### RequirementVerdict
 

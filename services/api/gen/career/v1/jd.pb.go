@@ -545,6 +545,198 @@ func (x *GetJdResultResponse) GetMatchThreshold() float64 {
 	return 0
 }
 
+// List request; the member is the session.
+type ListMySubmissionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMySubmissionsRequest) Reset() {
+	*x = ListMySubmissionsRequest{}
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMySubmissionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMySubmissionsRequest) ProtoMessage() {}
+
+func (x *ListMySubmissionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMySubmissionsRequest.ProtoReflect.Descriptor instead.
+func (*ListMySubmissionsRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+}
+
+// The member's submissions, newest first.
+type ListMySubmissionsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Up to 100 rows.
+	Submissions   []*MySubmission `protobuf:"bytes,1,rep,name=submissions,proto3" json:"submissions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMySubmissionsResponse) Reset() {
+	*x = ListMySubmissionsResponse{}
+	mi := &file_career_v1_jd_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMySubmissionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMySubmissionsResponse) ProtoMessage() {}
+
+func (x *ListMySubmissionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMySubmissionsResponse.ProtoReflect.Descriptor instead.
+func (*ListMySubmissionsResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListMySubmissionsResponse) GetSubmissions() []*MySubmission {
+	if x != nil {
+		return x.Submissions
+	}
+	return nil
+}
+
+// One of the member's own submissions, enough to pick it from a list.
+type MySubmission struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Submission id (numeric, stringified); opens /jd-upload/<id>.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Current status.
+	Status JdStatus `protobuf:"varint,2,opt,name=status,proto3,enum=career.v1.JdStatus" json:"status,omitempty"`
+	// Match score once known.
+	MatchScore *float64 `protobuf:"fixed64,3,opt,name=match_score,json=matchScore,proto3,oneof" json:"match_score,omitempty"`
+	// Role the member typed on the form, if any.
+	RoleHint string `protobuf:"bytes,4,opt,name=role_hint,json=roleHint,proto3" json:"role_hint,omitempty"`
+	// Employer the member typed on the form, if any.
+	EmployerHint string `protobuf:"bytes,5,opt,name=employer_hint,json=employerHint,proto3" json:"employer_hint,omitempty"`
+	// When it was submitted.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// When it reached a terminal state; unset while running.
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	// True when a tailored résumé exists for it.
+	HasResume     bool `protobuf:"varint,8,opt,name=has_resume,json=hasResume,proto3" json:"has_resume,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MySubmission) Reset() {
+	*x = MySubmission{}
+	mi := &file_career_v1_jd_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MySubmission) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MySubmission) ProtoMessage() {}
+
+func (x *MySubmission) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MySubmission.ProtoReflect.Descriptor instead.
+func (*MySubmission) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MySubmission) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MySubmission) GetStatus() JdStatus {
+	if x != nil {
+		return x.Status
+	}
+	return JdStatus_JD_STATUS_UNSPECIFIED
+}
+
+func (x *MySubmission) GetMatchScore() float64 {
+	if x != nil && x.MatchScore != nil {
+		return *x.MatchScore
+	}
+	return 0
+}
+
+func (x *MySubmission) GetRoleHint() string {
+	if x != nil {
+		return x.RoleHint
+	}
+	return ""
+}
+
+func (x *MySubmission) GetEmployerHint() string {
+	if x != nil {
+		return x.EmployerHint
+	}
+	return ""
+}
+
+func (x *MySubmission) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *MySubmission) GetCompletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return nil
+}
+
+func (x *MySubmission) GetHasResume() bool {
+	if x != nil {
+		return x.HasResume
+	}
+	return false
+}
+
 // One requirement the reviewer extracted from the posting and the
 // verdict it reached from the candidate's records.
 type RequirementVerdict struct {
@@ -567,7 +759,7 @@ type RequirementVerdict struct {
 
 func (x *RequirementVerdict) Reset() {
 	*x = RequirementVerdict{}
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -579,7 +771,7 @@ func (x *RequirementVerdict) String() string {
 func (*RequirementVerdict) ProtoMessage() {}
 
 func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -592,7 +784,7 @@ func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequirementVerdict.ProtoReflect.Descriptor instead.
 func (*RequirementVerdict) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RequirementVerdict) GetId() string {
@@ -675,6 +867,22 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\vunmet_count\x18\v \x01(\x05R\n" +
 	"unmetCount\x12'\n" +
 	"\x0fmatch_threshold\x18\f \x01(\x01R\x0ematchThresholdB\x0e\n" +
+	"\f_match_score\"\x1a\n" +
+	"\x18ListMySubmissionsRequest\"V\n" +
+	"\x19ListMySubmissionsResponse\x129\n" +
+	"\vsubmissions\x18\x01 \x03(\v2\x17.career.v1.MySubmissionR\vsubmissions\"\xdc\x02\n" +
+	"\fMySubmission\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
+	"\vmatch_score\x18\x03 \x01(\x01H\x00R\n" +
+	"matchScore\x88\x01\x01\x12\x1b\n" +
+	"\trole_hint\x18\x04 \x01(\tR\broleHint\x12#\n" +
+	"\remployer_hint\x18\x05 \x01(\tR\femployerHint\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
+	"\fcompleted_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12\x1d\n" +
+	"\n" +
+	"has_resume\x18\b \x01(\bR\thasResumeB\x0e\n" +
 	"\f_match_score\"\xa4\x01\n" +
 	"\x12RequirementVerdict\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -695,10 +903,11 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x19JD_STATUS_BELOW_THRESHOLD\x10\x03\x12\x18\n" +
 	"\x14JD_STATUS_GENERATING\x10\x04\x12\x13\n" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
-	"\x10JD_STATUS_FAILED\x10\x062\xb2\x01\n" +
+	"\x10JD_STATUS_FAILED\x10\x062\x9c\x02\n" +
 	"\tJdService\x12M\n" +
 	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12V\n" +
-	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1eB\xa1\x01\n" +
+	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +
+	"\x11ListMySubmissions\x12#.career.v1.ListMySubmissionsRequest\x1a$.career.v1.ListMySubmissionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1eB\xa1\x01\n" +
 	"\rcom.career.v1B\aJdProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -715,33 +924,42 @@ func file_career_v1_jd_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_jd_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_career_v1_jd_proto_goTypes = []any{
-	(JdSource)(0),                 // 0: career.v1.JdSource
-	(JdStatus)(0),                 // 1: career.v1.JdStatus
-	(*SubmitJdRequest)(nil),       // 2: career.v1.SubmitJdRequest
-	(*SubmitJdResponse)(nil),      // 3: career.v1.SubmitJdResponse
-	(*GetJdResultRequest)(nil),    // 4: career.v1.GetJdResultRequest
-	(*GetJdResultResponse)(nil),   // 5: career.v1.GetJdResultResponse
-	(*RequirementVerdict)(nil),    // 6: career.v1.RequirementVerdict
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(JdSource)(0),                     // 0: career.v1.JdSource
+	(JdStatus)(0),                     // 1: career.v1.JdStatus
+	(*SubmitJdRequest)(nil),           // 2: career.v1.SubmitJdRequest
+	(*SubmitJdResponse)(nil),          // 3: career.v1.SubmitJdResponse
+	(*GetJdResultRequest)(nil),        // 4: career.v1.GetJdResultRequest
+	(*GetJdResultResponse)(nil),       // 5: career.v1.GetJdResultResponse
+	(*ListMySubmissionsRequest)(nil),  // 6: career.v1.ListMySubmissionsRequest
+	(*ListMySubmissionsResponse)(nil), // 7: career.v1.ListMySubmissionsResponse
+	(*MySubmission)(nil),              // 8: career.v1.MySubmission
+	(*RequirementVerdict)(nil),        // 9: career.v1.RequirementVerdict
+	(*timestamppb.Timestamp)(nil),     // 10: google.protobuf.Timestamp
 }
 var file_career_v1_jd_proto_depIdxs = []int32{
-	0, // 0: career.v1.SubmitJdRequest.source:type_name -> career.v1.JdSource
-	1, // 1: career.v1.SubmitJdResponse.status:type_name -> career.v1.JdStatus
-	1, // 2: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
-	7, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
-	7, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
-	6, // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
-	2, // 6: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
-	4, // 7: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
-	3, // 8: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
-	5, // 9: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
-	8, // [8:10] is the sub-list for method output_type
-	6, // [6:8] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	0,  // 0: career.v1.SubmitJdRequest.source:type_name -> career.v1.JdSource
+	1,  // 1: career.v1.SubmitJdResponse.status:type_name -> career.v1.JdStatus
+	1,  // 2: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
+	10, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
+	10, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
+	9,  // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
+	8,  // 6: career.v1.ListMySubmissionsResponse.submissions:type_name -> career.v1.MySubmission
+	1,  // 7: career.v1.MySubmission.status:type_name -> career.v1.JdStatus
+	10, // 8: career.v1.MySubmission.created_at:type_name -> google.protobuf.Timestamp
+	10, // 9: career.v1.MySubmission.completed_at:type_name -> google.protobuf.Timestamp
+	2,  // 10: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
+	4,  // 11: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
+	6,  // 12: career.v1.JdService.ListMySubmissions:input_type -> career.v1.ListMySubmissionsRequest
+	3,  // 13: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
+	5,  // 14: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
+	7,  // 15: career.v1.JdService.ListMySubmissions:output_type -> career.v1.ListMySubmissionsResponse
+	13, // [13:16] is the sub-list for method output_type
+	10, // [10:13] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_jd_proto_init() }
@@ -751,13 +969,14 @@ func file_career_v1_jd_proto_init() {
 	}
 	file_career_v1_options_proto_init()
 	file_career_v1_jd_proto_msgTypes[3].OneofWrappers = []any{}
+	file_career_v1_jd_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_jd_proto_rawDesc), len(file_career_v1_jd_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   5,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
