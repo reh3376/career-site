@@ -139,11 +139,11 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   Mac that also takes `.env.prod` and fails loudly if the newest dump
   goes stale. Proven end to end on the server and the Mac the same day:
   a 1.4 MB dump of 271 objects restored with every table matching.
-  **One step left:** the systemd timers install from the deploy
-  checkout, so run
-  `ssh career@5.161.62.205 'cd /opt/career-site && sudo deploy/backup/install-server.sh'`
-  once this lands on `main` and the server has pulled it. Until then the
-  only copies are the one taken by hand on 2026-09-22.
+  **Live since the 2026-09-22 evening deploy:** both timers are armed
+  (dump 03:15 UTC daily, restore test Sunday 04:30 UTC), one of each has
+  run green through systemd, and the Mac holds a copy. Nothing left to
+  do here; re-run `deploy/backup/install-server.sh` after any deploy
+  that changes the scripts or the schedule.
 
 ## 5. Hardening (public repo)
 
