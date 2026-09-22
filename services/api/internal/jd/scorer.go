@@ -51,6 +51,13 @@ type Scorer struct {
 	resume *ResumeWriter
 	// threshold is the match gate (see DefaultMatchThreshold).
 	threshold float64
+	// slots serialises pipelines. On the CPX31 two concurrent JDs made
+	// the embedder and the LLM swap in and out (one resident model at a
+	// time) until an embed call timed out; one JD at a time is also
+	// simply faster on four vCPUs than two interleaved. Submissions
+	// wait in `scoring` for their turn; the pipeline timeout still
+	// bounds each one from the moment it starts.
+	slots chan struct{}
 }
 
 // NewScorer wires the deps. assessor and resume may be nil; a
@@ -59,8 +66,28 @@ func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, ass
 	if threshold <= 0 || threshold > 1 {
 		threshold = DefaultMatchThreshold
 	}
-	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor, resume: resume, threshold: threshold}
+	return &Scorer{
+		log: log, users: repo, embed: embed, assessor: assessor, resume: resume, threshold: threshold,
+		slots: make(chan struct{}, PipelineConcurrency),
+	}
 }
+
+// PipelineConcurrency is how many JD pipelines may run at once. One,
+// because the model host is a single small box; raise it only with a
+// GPU backend that can serve concurrent requests.
+const PipelineConcurrency = 1
+
+// acquire waits for a pipeline slot or gives up when ctx ends.
+func (s *Scorer) acquire(ctx context.Context) bool {
+	select {
+	case s.slots <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (s *Scorer) release() { <-s.slots }
 
 // Threshold returns the configured match gate.
 func (s *Scorer) Threshold() float64 { return s.threshold }
@@ -137,6 +164,18 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
 	if err := s.users.UpdateJdScoring(ctx, submissionID, "scoring", nil, ""); err != nil {
 		s.log.Warn("jd: failed to mark scoring", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+	}
+	queued := time.Now()
+	if !s.acquire(ctx) {
+		s.log.Warn("jd: gave up waiting for a pipeline slot", slog.Int64("id", submissionID))
+		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", nil, "timed out waiting for the pipeline; re-score to retry"); uErr != nil {
+			s.log.Warn("jd: failed to record queue timeout", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+		}
+		return
+	}
+	defer s.release()
+	if waited := time.Since(queued); waited > time.Second {
+		s.log.Info("jd: pipeline slot acquired", slog.Int64("id", submissionID), slog.Duration("waited", waited))
 	}
 
 	retrieval, hits, err := s.Score(ctx, jdText)
@@ -296,7 +335,7 @@ func isTransient(err error) bool {
 	msg := strings.ToLower(err.Error())
 	for _, needle := range []string{
 		"unavailable", "network is unreachable", "connection refused", "connection reset",
-		"broken pipe", "eof", "timeout", "temporarily", "no such host", "503", "502",
+		"broken pipe", "eof", "timeout", "timed out", "temporarily", "no such host", "503", "502",
 		// Ollama restarts its model runner after a crash (an OOM kill on
 		// a tight box); the next call succeeds, so treat it as transient.
 		"unexpectedly stopped", "http 500",

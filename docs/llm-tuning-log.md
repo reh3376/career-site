@@ -472,6 +472,32 @@ evidenced, not evidenced: X, Y" above or below the gate.
 `jd_requirements` v2 (keep the posting's alternative-qualification
 clauses in the extracted requirement) is next.
 
+## 2026-09-22: prod on the 4b with the facts sheet
+
+Deployed PR 80 (`c0498e034f75`), reindexed the facts sheet on the box
+(`profile`, 1 chunk), and re-scored the two prod submissions so the
+decision review queue has rows.
+
+- Submission 6 (calibration strong JD): **ready, 0.974**, 7
+  requirements (6 met, 1 partial), résumé and PDF produced. Identical
+  to the Mac run on the same model, as the one-requirement-per-call
+  design predicts. 8 decision rows landed in `/admin/decisions`.
+- Submission 5 (the live-check JD): **failed**, "embed requirements:
+  embed failed: timed out". Both re-scores ran concurrently; with
+  `OLLAMA_MAX_LOADED_MODELS=1` the embedder and the LLM swapped in and
+  out on every alternate call until an embed exceeded the sidecar's
+  timeout.
+
+**Fix (PR 82).** JD pipelines run one at a time (`PipelineConcurrency
+= 1`, a slot the pipeline acquires before its first model call;
+queued submissions sit in `scoring` until their turn) and "timed out"
+counts as transient, so a swap that overruns once is retried rather
+than failed. One JD at a time is also faster on four vCPUs than two
+interleaved.
+
+Deployed PR 81 (`64aafef17421`): the result panel now shows the
+requirement-by-requirement verdicts to the submitter.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with
