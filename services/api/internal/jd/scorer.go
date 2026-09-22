@@ -27,10 +27,10 @@ import (
 // not set. The gate is model-dependent: each judge model reads the
 // same evidence with its own strictness, so the calibrated value lives
 // in .env.prod next to OLLAMA_LLM_MODEL (api and web read the same
-// variable) and docs/llm-tuning-log.md records it per model:
-// qwen3:14b 0.55 (strong 0.604 / mid 0.333), qwen3:4b-q8_0 0.72
-// (strong 0.842 / mid 0.625). Recalibrate whenever the judge prompt
-// version, the model or the batching changes.
+// variable) and docs/llm-tuning-log.md records it per model and
+// prompt version (qwen3:4b-q8_0, prompts v2, facts sheet: 0.70 with
+// strong 0.857 / mid 0.591). Recalibrate whenever the judge prompt
+// version, the model, the score formula or the batching changes.
 const DefaultMatchThreshold = 0.55
 
 // TopK caps how many chunks feed the retrieval pre-score.
@@ -58,30 +58,46 @@ type Scorer struct {
 	// wait in `scoring` for their turn; the pipeline timeout still
 	// bounds each one from the moment it starts.
 	slots chan struct{}
+	// pipelineTimeout bounds one run from the moment it holds the slot.
+	pipelineTimeout time.Duration
 }
 
 // NewScorer wires the deps. assessor and resume may be nil; a
 // threshold outside (0, 1] falls back to DefaultMatchThreshold.
-func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter, threshold float64) *Scorer {
+func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter, threshold float64, pipelineTimeout time.Duration) *Scorer {
 	if threshold <= 0 || threshold > 1 {
 		threshold = DefaultMatchThreshold
 	}
+	if pipelineTimeout <= 0 {
+		pipelineTimeout = 15 * time.Minute
+	}
 	return &Scorer{
 		log: log, users: repo, embed: embed, assessor: assessor, resume: resume, threshold: threshold,
-		slots: make(chan struct{}, PipelineConcurrency),
+		slots:           make(chan struct{}, PipelineConcurrency),
+		pipelineTimeout: pipelineTimeout,
 	}
 }
+
+// maxQueueWait caps how long a submission may wait for a slot before
+// it is failed as "re-score to retry". Separate from the pipeline
+// timeout: waiting in line must not eat a submission's own budget.
+const maxQueueWait = 3 * time.Hour
 
 // PipelineConcurrency is how many JD pipelines may run at once. One,
 // because the model host is a single small box; raise it only with a
 // GPU backend that can serve concurrent requests.
 const PipelineConcurrency = 1
 
-// acquire waits for a pipeline slot or gives up when ctx ends.
+// acquire waits for a pipeline slot, up to maxQueueWait or until ctx
+// ends.
 func (s *Scorer) acquire(ctx context.Context) bool {
+	t := time.NewTimer(maxQueueWait)
+	defer t.Stop()
 	select {
 	case s.slots <- struct{}{}:
 		return true
+	case <-t.C:
+		return false
 	case <-ctx.Done():
 		return false
 	}
@@ -161,14 +177,22 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 // writes the outcome. Best-effort: persistence failures are logged,
 // the row already exists and a re-score can retry. Called from a
 // goroutine by the JD handler.
+// The caller's ctx should carry no deadline of its own (the handlers
+// pass a background context): the queue wait is capped by
+// maxQueueWait and the run by pipelineTimeout, applied here once the
+// slot is held. Status writes use a context that survives either
+// deadline, so a timed-out run is recorded as failed instead of being
+// left at `scoring` forever (which is what happened on prod on
+// 2026-09-22 when a submission queued for 28 minutes behind another).
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
-	if err := s.users.UpdateJdScoring(ctx, submissionID, "scoring", nil, ""); err != nil {
+	persist := context.WithoutCancel(ctx)
+	if err := s.users.UpdateJdScoring(persist, submissionID, "scoring", nil, ""); err != nil {
 		s.log.Warn("jd: failed to mark scoring", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
 	queued := time.Now()
 	if !s.acquire(ctx) {
 		s.log.Warn("jd: gave up waiting for a pipeline slot", slog.Int64("id", submissionID))
-		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", nil, "timed out waiting for the pipeline; re-score to retry"); uErr != nil {
+		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", nil, "timed out waiting for the pipeline; re-score to retry"); uErr != nil {
 			s.log.Warn("jd: failed to record queue timeout", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
@@ -177,6 +201,8 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	if waited := time.Since(queued); waited > time.Second {
 		s.log.Info("jd: pipeline slot acquired", slog.Int64("id", submissionID), slog.Duration("waited", waited))
 	}
+	ctx, cancel := context.WithTimeout(ctx, s.pipelineTimeout)
+	defer cancel()
 
 	retrieval, hits, err := s.Score(ctx, jdText)
 	if err != nil && isTransient(err) {
@@ -192,14 +218,14 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 	if err != nil {
 		s.log.Warn("jd: score failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
-		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", nil, truncErr(err.Error())); uErr != nil {
+		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", nil, truncErr(err.Error())); uErr != nil {
 			s.log.Warn("jd: failed to record failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
 	}
 	if len(hits) == 0 {
 		s.log.Info("jd: no corpus hits", slog.Int64("id", submissionID))
-		_ = s.users.UpdateJdScoring(ctx, submissionID, "below_threshold", &retrieval,
+		_ = s.users.UpdateJdScoring(persist, submissionID, "below_threshold", &retrieval,
 			"corpus is empty: no chunks available to score against")
 		return
 	}
@@ -226,11 +252,11 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 			s.log.Warn("jd: assessment failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 			assessment = &Assessment{Error: truncErr(err.Error())}
 			if raw, mErr := json.Marshal(assessment); mErr == nil {
-				if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, raw); uErr != nil {
+				if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, raw); uErr != nil {
 					s.log.Warn("jd: failed to store assessment", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 				}
 			}
-			if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", &retrieval, "assessment failed: "+truncErr(err.Error())); uErr != nil {
+			if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", &retrieval, "assessment failed: "+truncErr(err.Error())); uErr != nil {
 				s.log.Warn("jd: failed to record assessment failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 			}
 			return
@@ -245,11 +271,11 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 			)
 		}
 		if raw, mErr := json.Marshal(assessment); mErr == nil {
-			if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, raw); uErr != nil {
+			if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, raw); uErr != nil {
 				s.log.Warn("jd: failed to store assessment", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 			}
 		}
-	} else if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, nil); uErr != nil {
+	} else if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, nil); uErr != nil {
 		s.log.Warn("jd: failed to store retrieval score", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 	}
 
@@ -258,7 +284,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 		next = "generating"
 	}
 	s.logGate(ctx, submissionID, score, retrieval, assessment, next)
-	if err := s.users.UpdateJdScoring(ctx, submissionID, next, &score, ""); err != nil {
+	if err := s.users.UpdateJdScoring(persist, submissionID, next, &score, ""); err != nil {
 		s.log.Warn("jd: failed to record score",
 			slog.Int64("id", submissionID),
 			slog.Float64("score", score),
@@ -285,13 +311,13 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	res, markdown, err := s.resume.Write(ctx, submissionID, jdText, hints, usable, hits)
 	if err != nil {
 		s.log.Warn("jd: résumé failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
-		if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", &score, "résumé generation failed: "+truncErr(err.Error())); uErr != nil {
+		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", &score, "résumé generation failed: "+truncErr(err.Error())); uErr != nil {
 			s.log.Warn("jd: failed to record résumé failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
 	}
 	raw, _ := json.Marshal(res)
-	if err := s.users.SetJdResume(ctx, submissionID, raw, markdown, res.Model, res.PromptID, res.PromptVers); err != nil {
+	if err := s.users.SetJdResume(persist, submissionID, raw, markdown, res.Model, res.PromptID, res.PromptVers); err != nil {
 		s.log.Warn("jd: failed to store résumé", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 		return
 	}
@@ -313,7 +339,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	if pdf == nil {
 		return
 	}
-	if err := s.users.SetJdResumePDF(ctx, submissionID, pdf, pages, s.resume.DownloadPath(submissionID)); err != nil {
+	if err := s.users.SetJdResumePDF(persist, submissionID, pdf, pages, s.resume.DownloadPath(submissionID)); err != nil {
 		s.log.Warn("jd: failed to store pdf", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 		return
 	}

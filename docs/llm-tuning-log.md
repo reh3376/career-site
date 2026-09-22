@@ -566,6 +566,63 @@ certifications that no longer count against him.
 Bosch 0.917 clear it with margin; mid 0.500 sits 0.20 below. Every
 verdict on these runs is in the decision log for the owner to grade.
 
+## 2026-09-22: prod on v2 (PR 82, `e346ee994bb5`)
+
+Re-scored submissions 6 and 5 after the deploy, one at a time (the
+slot logic held: submission 5 waited 1,670 s for its turn).
+
+- Submission 6 (calibration strong JD): **ready, 0.857**, 8
+  requirements, identical to the Mac run. Judge calls 8 × 102 s
+  (1,991 prompt tokens each); requirements call 79 s; **résumé call
+  772 s** (5,021 prompt tokens, about 1,600 output tokens at roughly
+  3 tokens/s). Whole pipeline about 28 minutes.
+- Submission 5: judging at 95 s per call at the time of writing.
+- 27 decision rows in `/admin/decisions`.
+
+**Two findings.**
+
+1. The profile-first judge layout gave no measurable speedup on the
+   box (102 s vs 106 s before). The ollama log explains it: every
+   judge call reports `cached n_tokens = 715` and then evaluates
+   ~1,160 new tokens (72 s) and generates ~90 (18 s). So the prompt
+   cache works and the shared prefix is simply short, because of a
+   bug: `writeJudgeChunk` capped every chunk at 1,200 runes, the facts
+   sheet included. The judge had been seeing only the first 1,200
+   characters of the sheet (the roles); the education, safety and
+   standards lines never reached it (the "Degree requirements" line
+   is absent from every logged v2 prompt; the degree passed at run 53
+   only because the résumé's education chunk was retrieved). Fixed:
+   profile chunks are never capped, and the decision log records what
+   the judge saw. Consequence for speed: the per-call cost is the four
+   retrieved chunks (~1,150 tokens), not the sheet; the honest lever
+   is fewer or shorter retrieved chunks, measured against verdict
+   quality.
+2. The résumé call is now the long pole: 13 minutes of generation.
+   Levers, cheapest first: a shorter target length in `resume_tailor`
+   (550–700 words is ~1,600 output tokens; 450–550 would save ~4
+   minutes), or `MaxTokens` below 2,200. Not changed yet; the PDF
+   quality at the current length is what the owner has approved.
+
+**Operational change.** `JD_PIPELINE_TIMEOUT_SECONDS=3600` and
+`SIDECAR_LLM_TIMEOUT_SECONDS=3000` in `.env.prod` (takes effect on the
+next api/sidecar restart): a 14-requirement posting plus the résumé
+is ~37 minutes at these speeds, over the old 2,400 s budget.
+
+**Submission 5 stalled, and why (PR 84).** It waited 1,670 s for the
+slot behind submission 6, then failed at judge call 7 of 9 with
+`DeadlineExceeded`: the 2,400 s pipeline deadline had started at
+submit time, so the queue wait consumed most of it. The failure path
+then tried to write `failed` with the same expired context and could
+not, leaving the row at `scoring`. Fixed: the pipeline timeout starts
+when the slot is acquired (queue wait has its own 3-hour cap), and
+every status write uses a context that survives the deadline. The row
+was marked failed by hand with the reason.
+
+**With the whole sheet in the judge prompt (local, 4b):** Bosch
+0.917, strong 0.857, mid 0.591. Mid rose from 0.500 because the sheet
+now states standards and methodologies the mid posting asks about;
+the 0.70 gate keeps a 0.11 margin below and 0.16 above.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

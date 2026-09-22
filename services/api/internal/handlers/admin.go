@@ -1320,10 +1320,10 @@ func (a *Admin) RescoreJd(
 	}
 	a.log.Info("jd rescore queued", slog.Int64("id", id), slog.Int64("admin_id", admin.ID))
 	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
+	// No deadline here: the scorer caps the queue wait and applies the
+	// pipeline timeout once the submission holds its slot.
 	go func(id int64, text string) {
-		bg, cancel := context.WithTimeout(context.Background(), a.jdTimeout)
-		defer cancel()
-		a.jdScorer.ScoreAndPersist(bg, id, text, hints)
+		a.jdScorer.ScoreAndPersist(context.Background(), id, text, hints)
 	}(id, s.JdText)
 	return connect.NewResponse(&v1.RescoreJdResponse{Status: v1.JdStatus_JD_STATUS_SCORING}), nil
 }

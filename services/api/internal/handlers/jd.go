@@ -141,10 +141,10 @@ func (h *Jd) SubmitJd(
 	// RECEIVED for manual triage.
 	if h.scorer != nil {
 		hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
+		// No deadline here: the scorer caps the queue wait and applies the
+		// pipeline timeout itself once the submission holds its slot.
 		go func(id int64, jdText string) {
-			bg, cancel := context.WithTimeout(context.Background(), h.pipelineTimeout)
-			defer cancel()
-			h.scorer.ScoreAndPersist(bg, id, jdText, hints)
+			h.scorer.ScoreAndPersist(context.Background(), id, jdText, hints)
 		}(s.ID, text)
 	}
 
