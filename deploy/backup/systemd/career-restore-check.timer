@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the career-site restore test weekly
+Documentation=file:///opt/career-site/deploy/backup/README.md
+
+[Timer]
+# Sunday 04:30 UTC, after that morning's dump has landed.
+OnCalendar=Sun *-*-* 04:30:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+Unit=career-restore-check.service
+
+[Install]
+WantedBy=timers.target

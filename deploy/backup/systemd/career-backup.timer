@@ -1,0 +1,15 @@
+[Unit]
+Description=Run the career-site Postgres dump nightly
+Documentation=file:///opt/career-site/deploy/backup/README.md
+
+[Timer]
+# 03:15 UTC, off the back of the daily jobs the api runs and well clear
+# of any evening deploy.
+OnCalendar=*-*-* 03:15:00 UTC
+# Catch up after a reboot or a box that was down at 03:15.
+Persistent=true
+RandomizedDelaySec=300
+Unit=career-backup.service
+
+[Install]
+WantedBy=timers.target
