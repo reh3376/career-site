@@ -623,6 +623,21 @@ was marked failed by hand with the reason.
 now states standards and methodologies the mid posting asks about;
 the 0.70 gate keeps a 0.11 margin below and 0.16 above.
 
+**Prod on PR 84 (`2fabaa16c6d7`), submission 5 re-scored alone:**
+below threshold at **0.667** (the live-check script's synthetic
+posting), 9 requirements, 9 judge calls at 116 s each with ~2,380
+prompt tokens, no stall, finished in about 18 minutes. Ollama now
+reports `cached n_tokens = 1130` (system prompt plus the whole facts
+sheet) on every judge call, so the shared prefix is served from the
+cache as intended; the remaining ~1,250 tokens per call are the four
+retrieved chunks. 43 decision rows in `/admin/decisions`.
+
+**Owner email (PR 85).** Every finished submission now mails the
+owner: score against the gate, the verdict table with rationales,
+the application link, and links to the admin detail, the decision
+review and the PDF. Verified locally against Mailpit; audited as
+`jd_outcome` in `notification_deliveries`.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with
