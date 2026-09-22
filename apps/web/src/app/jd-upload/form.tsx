@@ -42,6 +42,7 @@ export function JdForm({ threshold }: { threshold: string }) {
             submissionId={state.submission_id}
             resultToken={state.result_token ?? ""}
             threshold={threshold}
+            watch
           />
         ) : null}
         <p className="text-sm leading-relaxed text-ink-2">

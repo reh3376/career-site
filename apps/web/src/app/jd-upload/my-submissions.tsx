@@ -16,6 +16,18 @@ type Row = {
   createdAt?: string;
   has_resume?: boolean;
   hasResume?: boolean;
+  fit_category?: string;
+  fitCategory?: string;
+  progress_pct?: number;
+  progressPct?: number;
+};
+
+const FIT: Record<string, string> = {
+  very_strong: "very strong",
+  strong: "strong",
+  possible: "possible",
+  weak: "weak",
+  very_weak: "very weak",
 };
 
 const LABEL: Record<string, string> = {
@@ -61,6 +73,8 @@ export async function MySubmissions() {
           const role = r.role_hint ?? r.roleHint ?? "";
           const employer = r.employer_hint ?? r.employerHint ?? "";
           const created = (r.created_at ?? r.createdAt ?? "").slice(0, 10);
+          const fit = r.fit_category ?? r.fitCategory ?? "";
+          const pct = Number(r.progress_pct ?? r.progressPct ?? 0);
           const live =
             status === "JD_STATUS_RECEIVED" ||
             status === "JD_STATUS_SCORING" ||
@@ -95,7 +109,7 @@ export async function MySubmissions() {
                           : "text-ink-3")
                   }
                 >
-                  {LABEL[status] ?? status.toLowerCase()}
+                  {live ? `${LABEL[status] ?? status.toLowerCase()} · ${pct}%` : fit ? `${FIT[fit] ?? fit} fit` : (LABEL[status] ?? status.toLowerCase())}
                 </span>
                 <span className="font-mono text-sm text-ink">
                   {typeof score === "number" ? score.toFixed(2) : ""}

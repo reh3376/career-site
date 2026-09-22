@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
-import { getJdThreshold } from "@/lib/jd-threshold";
+
+import { FitBandsForm } from "./fit-bands-form";
+import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Admin · JD submissions" };
@@ -83,6 +85,7 @@ const STATUS_TONE: Record<string, string> = {
 export default async function AdminJdPage() {
   const result = await fetchList();
   const nowMs = getNowMs();
+  const bands = await getJdBands(await getSessionCookie());
 
   return (
     <>
@@ -98,9 +101,30 @@ export default async function AdminJdPage() {
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-ink-3">
         Every JD submitted at /jd-upload. The match score is computed
         in code from per-requirement verdicts (open a row for the
-        derivation). Threshold is {getJdThreshold()}; above it, the résumé pipeline
+        derivation). The gate is {bands.strong.toFixed(2)}; above it, the résumé pipeline
         runs. Below, Roger triages manually.
       </p>
+
+      <section aria-labelledby="fit-bands-heading" className="mt-10">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          fit bands
+        </p>
+        <h2
+          id="fit-bands-heading"
+          className="font-display mt-3 text-2xl leading-tight text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          What a score means.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
+          Very strong and strong: the submitter gets the tailored résumé attached.
+          Possible and weak: they are told you will review and get back to them.
+          Very weak: they are told no further action is needed.
+        </p>
+        <div className="mt-4">
+          <FitBandsForm initial={bands} />
+        </div>
+      </section>
 
       {!result.ok ? (
         <p className="mt-8 max-w-lg border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">

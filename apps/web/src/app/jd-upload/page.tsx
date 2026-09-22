@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { getJdThreshold } from "@/lib/jd-threshold";
+import { getJdBands } from "@/lib/jd-bands";
+import { getSessionCookie } from "@/lib/session";
 import { getSessionUser } from "@/lib/session-user";
 
 import { JdForm } from "./form";
@@ -17,9 +18,10 @@ export const dynamic = "force-dynamic";
 // Members only: the API rejects anonymous submissions too, this just
 // sends a visitor to sign in instead of showing a form that cannot work.
 export default async function JdUploadPage() {
-  const threshold = getJdThreshold();
   const me = await getSessionUser();
   if (!me) redirect("/login?next=/jd-upload");
+  const bands = await getJdBands(await getSessionCookie());
+  const threshold = bands.strong.toFixed(2);
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">

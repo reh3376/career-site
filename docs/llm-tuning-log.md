@@ -638,6 +638,34 @@ the application link, and links to the admin detail, the decision
 review and the PDF. Verified locally against Mailpit; audited as
 `jd_outcome` in `notification_deliveries`.
 
+## 2026-09-22: fit categories, progress, and the review email by category
+
+Owner's spec: a modal on submit with 0 to 100% progress the submitter
+can keep open or close; a finished-review email that classifies the
+fit as very strong / strong / possible / weak / very weak, attaches
+the two-page PDF for very strong and strong, says "I will review and
+get back to you" for possible and weak, and needs no further action
+for very weak. And: "add a section in the admin console that will
+allow me to change the confidence numbers to classify the review."
+
+**Implemented (PR 89).** `jd_submissions.progress_pct` /
+`progress_stage`, written by the pipeline (reading the posting 5%,
+gathering evidence 12%, judging requirement i of N from 15% to 75%,
+computing the score 76%, writing the résumé 80%, rendering the PDF
+94%, finished 100%); `GetJdResult` returns them plus `fit_category`.
+Bands live in `app_settings` (`jd_fit_bands`), edited on `/admin/jd`,
+cached 15 s in the api; "strong" is the résumé gate, so
+`JD_MATCH_THRESHOLD` now only seeds the setting on first use. The
+member RPC `GetJdReviewConfig` lets the JD pages quote the live gate.
+Email providers gained attachments (Resend base64, SMTP
+multipart/mixed).
+
+**Seed bands** (from the 4b calibration with the facts sheet: strong
+0.857, mid 0.591, weak 0.100, Bosch 0.917): very strong 0.85, strong
+0.70, possible 0.55, weak 0.35. Under these, Bosch and the strong JD
+are very strong, mid is possible, weak is very weak. The owner tunes
+them from the console; changes never rewrite a stored score.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

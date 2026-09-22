@@ -40,6 +40,12 @@ service JdService {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 30;
   }
+  // Returns the fit bands in force (the gate is the "strong" edge), so
+  // the JD pages quote the numbers the pipeline actually uses.
+  rpc GetJdReviewConfig(GetJdReviewConfigRequest) returns (GetJdReviewConfigResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
 }
 
 // Where the JD text came from — mirrors jd_submissions.source_kind.
@@ -162,6 +168,36 @@ message GetJdResultResponse {
   int32 unmet_count = 11;
   // The gate the score was compared against (JD_MATCH_THRESHOLD).
   double match_threshold = 12;
+  // Pipeline progress, 0 to 100, while the submission is live; 100
+  // once it has finished.
+  int32 progress_pct = 13;
+  // Short human-readable stage ("judging requirement 4 of 12").
+  string progress_stage = 14;
+  // Fit category derived from the score once known: very_strong,
+  // strong, possible, weak, very_weak; empty before scoring.
+  string fit_category = 15;
+}
+
+// Lower edges of the fit categories; scores below weak are very weak.
+// Owner-editable from /admin/jd.
+message JdFitBands {
+  // Very strong at or above this score.
+  double very_strong = 1;
+  // Strong at or above this score; also the résumé gate.
+  double strong = 2;
+  // Possible at or above this score.
+  double possible = 3;
+  // Weak at or above this score.
+  double weak = 4;
+}
+
+// Config request; the member is the session.
+message GetJdReviewConfigRequest {}
+
+// The bands in force.
+message GetJdReviewConfigResponse {
+  // Current bands.
+  JdFitBands bands = 1;
 }
 
 // List request; the member is the session.
@@ -191,6 +227,10 @@ message MySubmission {
   google.protobuf.Timestamp completed_at = 7;
   // True when a tailored résumé exists for it.
   bool has_resume = 8;
+  // Fit category once scored (see GetJdResultResponse.fit_category).
+  string fit_category = 9;
+  // Pipeline progress, 0 to 100.
+  int32 progress_pct = 10;
 }
 
 // One requirement the reviewer extracted from the posting and the

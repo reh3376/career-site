@@ -49,8 +49,8 @@ type Scorer struct {
 	// resume is optional; nil leaves above-threshold rows at
 	// `generating` for manual attention.
 	resume *ResumeWriter
-	// threshold is the match gate (see DefaultMatchThreshold).
-	threshold float64
+	// bands hold the fit categories; the "strong" edge is the gate.
+	bands *BandsStore
 	// slots serialises pipelines. On the CPX31 two concurrent JDs made
 	// the embedder and the LLM swap in and out (one resident model at a
 	// time) until an embed call timed out; one JD at a time is also
@@ -66,15 +66,15 @@ type Scorer struct {
 
 // NewScorer wires the deps. assessor and resume may be nil; a
 // threshold outside (0, 1] falls back to DefaultMatchThreshold.
-func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter, threshold float64, pipelineTimeout time.Duration) *Scorer {
-	if threshold <= 0 || threshold > 1 {
-		threshold = DefaultMatchThreshold
+func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, assessor *Assessor, resume *ResumeWriter, bands *BandsStore, pipelineTimeout time.Duration) *Scorer {
+	if bands == nil {
+		bands = NewBandsStore(log, repo, DefaultBands(0))
 	}
 	if pipelineTimeout <= 0 {
 		pipelineTimeout = 15 * time.Minute
 	}
 	return &Scorer{
-		log: log, users: repo, embed: embed, assessor: assessor, resume: resume, threshold: threshold,
+		log: log, users: repo, embed: embed, assessor: assessor, resume: resume, bands: bands,
 		slots:           make(chan struct{}, PipelineConcurrency),
 		pipelineTimeout: pipelineTimeout,
 	}
@@ -107,8 +107,14 @@ func (s *Scorer) acquire(ctx context.Context) bool {
 
 func (s *Scorer) release() { <-s.slots }
 
-// Threshold returns the configured match gate.
-func (s *Scorer) Threshold() float64 { return s.threshold }
+// Threshold returns the match gate in force (the "strong" band edge).
+func (s *Scorer) Threshold() float64 { return s.bands.Get(context.Background()).Strong }
+
+// Bands returns the fit bands in force.
+func (s *Scorer) Bands(ctx context.Context) Bands { return s.bands.Get(ctx) }
+
+// BandsStore exposes the store for the admin surface.
+func (s *Scorer) BandsStore() *BandsStore { return s.bands }
 
 // logGate records the gate decision (a code decision, no model) in the
 // decision log so the owner can review the threshold call alongside
@@ -126,7 +132,7 @@ func (s *Scorer) logGate(ctx context.Context, submissionID int64, score, retriev
 	input, _ := json.Marshal(map[string]any{
 		"score":           score,
 		"retrieval_score": retrieval,
-		"threshold":       s.threshold,
+		"threshold":       s.Threshold(),
 		"assessor_ran":    assessed,
 		"requirements":    nReq,
 		"weight_total":    weightTotal,
@@ -188,12 +194,19 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 // 2026-09-22 when a submission queued for 28 minutes behind another).
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
 	persist := context.WithoutCancel(ctx)
-	// Whatever path the run takes, the owner hears about the outcome.
+	// Whatever path the run takes, the owner hears about the outcome,
+	// and the progress column reads 100 once the row is terminal.
 	defer s.notifyOutcome(persist, submissionID)
+	defer func() {
+		if err := s.users.FinishJdProgress(persist, submissionID); err != nil {
+			s.log.Warn("jd: finish progress failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		}
+	}()
 	if err := s.users.UpdateJdScoring(persist, submissionID, "scoring", nil, ""); err != nil {
 		s.log.Warn("jd: failed to mark scoring", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
 	queued := time.Now()
+	_ = s.users.UpdateJdProgress(persist, submissionID, 1, "queued behind another review")
 	if !s.acquire(ctx) {
 		s.log.Warn("jd: gave up waiting for a pipeline slot", slog.Int64("id", submissionID))
 		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", nil, "timed out waiting for the pipeline; re-score to retry"); uErr != nil {
@@ -207,6 +220,12 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 	ctx, cancel := context.WithTimeout(ctx, s.pipelineTimeout)
 	defer cancel()
+	progress := Progress(func(pct int32, stage string) {
+		if err := s.users.UpdateJdProgress(persist, submissionID, pct, stage); err != nil {
+			s.log.Warn("jd: progress write failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		}
+	})
+	progress(2, "starting")
 
 	retrieval, hits, err := s.Score(ctx, jdText)
 	if err != nil && isTransient(err) {
@@ -238,11 +257,11 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	var assessment *Assessment
 	if s.assessor != nil {
 		started := time.Now()
-		assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints)
+		assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints, progress)
 		if err != nil && isTransient(err) {
 			s.log.Warn("jd: assessment transient failure, retrying once", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 			if sleepCtx(ctx, retryDelay) {
-				assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints)
+				assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints, progress)
 			}
 		}
 		if err != nil {
@@ -284,7 +303,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 
 	next := "below_threshold"
-	if score >= s.threshold {
+	if score >= s.Threshold() {
 		next = "generating"
 	}
 	s.logGate(ctx, submissionID, score, retrieval, assessment, next)
@@ -305,6 +324,8 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	if next != "generating" || s.resume == nil {
 		return
 	}
+
+	progress(80, "writing the tailored résumé")
 
 	// Grounded résumé: one model call, sources verified in code.
 	var usable *Assessment
@@ -332,6 +353,8 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 		slog.Int("chars", len(markdown)),
 		slog.Duration("took", time.Since(started)),
 	)
+
+	progress(94, "rendering the PDF")
 
 	// PDF is optional: the markdown is already deliverable, so a render
 	// failure is logged and the row stays ready.

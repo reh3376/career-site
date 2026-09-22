@@ -287,6 +287,18 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Reads the JD fit bands (the numbers that classify a review as very
+  // strong / strong / possible / weak / very weak; "strong" is the gate).
+  rpc GetJdFitBands(GetJdFitBandsRequest) returns (GetJdFitBandsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Sets the JD fit bands. Takes effect for the next submission within
+  // seconds; existing scores are re-classified on read.
+  rpc SetJdFitBands(SetJdFitBandsRequest) returns (SetJdFitBandsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -1726,3 +1738,29 @@ message ExportDecisionLogResponse {
   // Number of lines in jsonl.
   int32 row_count = 2;
 }
+
+// ---------------------------------------------------------------
+// JD fit bands
+// ---------------------------------------------------------------
+
+// Read request.
+message GetJdFitBandsRequest {}
+
+// The bands in force and who last changed them.
+message GetJdFitBandsResponse {
+  // Current bands.
+  JdFitBands bands = 1;
+}
+
+// New bands; must satisfy 0 < weak < possible < strong < very_strong <= 1.
+message SetJdFitBandsRequest {
+  // The bands to store.
+  JdFitBands bands = 1;
+}
+
+// The bands as stored.
+message SetJdFitBandsResponse {
+  // Stored bands.
+  JdFitBands bands = 1;
+}
+

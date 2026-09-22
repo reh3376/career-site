@@ -226,8 +226,32 @@ func (h *Jd) GetJdResult(
 	}
 	if h.scorer != nil {
 		out.MatchThreshold = h.scorer.Threshold()
+		if s.MatchScore != nil {
+			out.FitCategory = h.scorer.Bands(ctx).Category(*s.MatchScore)
+		}
 	}
+	out.ProgressPct = s.ProgressPct
+	out.ProgressStage = s.ProgressStage
 	return connect.NewResponse(out), nil
+}
+
+// GetJdReviewConfig returns the fit bands in force.
+func (h *Jd) GetJdReviewConfig(
+	ctx context.Context,
+	req *connect.Request[v1.GetJdReviewConfigRequest],
+) (*connect.Response[v1.GetJdReviewConfigResponse], error) {
+	if _, err := h.requireMember(ctx, req); err != nil {
+		return nil, err
+	}
+	b := jd.DefaultBands(0)
+	if h.scorer != nil {
+		b = h.scorer.Bands(ctx)
+	}
+	return connect.NewResponse(&v1.GetJdReviewConfigResponse{Bands: bandsToProto(b)}), nil
+}
+
+func bandsToProto(b jd.Bands) *v1.JdFitBands {
+	return &v1.JdFitBands{VeryStrong: b.VeryStrong, Strong: b.Strong, Possible: b.Possible, Weak: b.Weak}
 }
 
 // ListMySubmissions returns the caller's own submissions, newest first.
@@ -258,7 +282,11 @@ func (h *Jd) ListMySubmissions(
 		if r.MatchScore != nil {
 			score := *r.MatchScore
 			m.MatchScore = &score
+			if h.scorer != nil {
+				m.FitCategory = h.scorer.Bands(ctx).Category(score)
+			}
 		}
+		m.ProgressPct = r.ProgressPct
 		if r.CompletedAt != nil {
 			m.CompletedAt = timestamppb.New(*r.CompletedAt)
 		}

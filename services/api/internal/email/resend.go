@@ -3,6 +3,7 @@ package email
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,11 +33,18 @@ func NewResend(apiKey, from string) (*Resend, error) {
 func (r *Resend) Name() string { return "resend" }
 
 type resendPayload struct {
-	From    string `json:"from"`
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Text    string `json:"text,omitempty"`
-	HTML    string `json:"html,omitempty"`
+	From        string             `json:"from"`
+	To          string             `json:"to"`
+	Subject     string             `json:"subject"`
+	Text        string             `json:"text,omitempty"`
+	HTML        string             `json:"html,omitempty"`
+	Attachments []resendAttachment `json:"attachments,omitempty"`
+}
+
+type resendAttachment struct {
+	Filename    string `json:"filename"`
+	Content     string `json:"content"` // base64
+	ContentType string `json:"content_type,omitempty"`
 }
 
 func (r *Resend) Send(ctx context.Context, msg Message) error {
@@ -44,13 +52,19 @@ func (r *Resend) Send(ctx context.Context, msg Message) error {
 	if from == "" {
 		from = r.from
 	}
-	body, err := json.Marshal(resendPayload{
+	payload := resendPayload{
 		From:    from,
 		To:      msg.To,
 		Subject: msg.Subject,
 		Text:    msg.TextBody,
 		HTML:    msg.HTMLBody,
-	})
+	}
+	for _, a := range msg.Attachments {
+		payload.Attachments = append(payload.Attachments, resendAttachment{
+			Filename: a.Filename, Content: base64.StdEncoding.EncodeToString(a.Data), ContentType: a.ContentType,
+		})
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}

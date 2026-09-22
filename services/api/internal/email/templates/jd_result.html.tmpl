@@ -7,12 +7,20 @@
       <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">Your review is finished: {{.Headline}}</h1>
 
       {{if .Score}}
-      <p style="margin:0 0 16px;font-size:15px">Match score <strong style="font-family:ui-monospace,monospace">{{.Score}}</strong> <span style="color:#737373">(the gate for a tailored résumé is {{.Threshold}})</span></p>
+      <p style="margin:0 0 16px;font-size:16px">Fit: <strong>{{.CategoryLabel}}</strong> <span style="color:#737373;font-family:ui-monospace,monospace;font-size:13px">(match score {{.Score}})</span></p>
       {{else}}
       <p style="margin:0 0 16px;font-size:15px">The review could not be completed.</p>
       {{end}}
 
       {{if .Error}}<p style="margin:0 0 16px;padding:10px 12px;background:#fff7ed;border-left:3px solid #c2410c;font-size:13px">{{.Error}}<br>Roger has the submission and will follow up.</p>{{end}}
+
+      {{if .GoodFit}}
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.5">This posting is a <strong>{{.CategoryLabel}}</strong> fit. A two-page résumé written for it is attached as a PDF; it opens without a password and is locked against editing.</p>
+      {{else if .WillReview}}
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.5">This posting is a <strong>{{.CategoryLabel}}</strong> fit on the automated read. Roger will review it himself and get back to you.</p>
+      {{else if .Category}}
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.5">On the automated read this posting is a <strong>{{.CategoryLabel}}</strong> fit for Roger's record. No further action is needed on your side.</p>
+      {{end}}
 
       {{if .Requirements}}
       <p style="margin:0 0 8px;font-size:14px"><strong>{{.Met}} of {{.Requirements}}</strong> requirements evidenced in Roger's records{{if .Partial}}, {{.Partial}} partly{{end}}{{if .Unmet}}, {{.Unmet}} not evidenced{{end}}.</p>
@@ -30,7 +38,7 @@
         </tr>
       </table>
 
-      <p style="margin:24px 0 0;font-size:13px;color:#737373">Each requirement, its verdict and the reason are on the review page. Roger sees every submission and replies personally when a role looks worth a conversation.</p>
+      <p style="margin:24px 0 0;font-size:13px;color:#737373">Each requirement, its verdict and the reason are on the review page.</p>
     </td></tr>
   </table>
 </body>

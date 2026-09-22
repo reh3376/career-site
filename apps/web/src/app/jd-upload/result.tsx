@@ -31,6 +31,28 @@ type Poll = {
   partial_count?: number;
   unmetCount?: number;
   unmet_count?: number;
+  progressPct?: number;
+  progress_pct?: number;
+  progressStage?: string;
+  progress_stage?: string;
+  fitCategory?: string;
+  fit_category?: string;
+};
+
+const FIT_LABEL: Record<string, string> = {
+  very_strong: "very strong fit",
+  strong: "strong fit",
+  possible: "possible fit",
+  weak: "weak fit",
+  very_weak: "very weak fit",
+};
+
+const FIT_NOTE: Record<string, string> = {
+  very_strong: "A two-page résumé written for this posting is ready below and in your email.",
+  strong: "A two-page résumé written for this posting is ready below and in your email.",
+  possible: "Roger will review this one himself and get back to you.",
+  weak: "Roger will review this one himself and get back to you.",
+  very_weak: "No further action is needed; the breakdown below shows why.",
 };
 
 const VERDICT_LABEL: Record<string, string> = {
@@ -109,13 +131,18 @@ export function JdResult({
   submissionId,
   resultToken,
   threshold,
+  watch = false,
 }: {
   submissionId: string;
   resultToken: string;
   threshold: string;
+  // Open the progress panel as a modal the submitter can keep open or
+  // close (they get an email either way). Used right after submit.
+  watch?: boolean;
 }) {
   const [poll, setPoll] = useState<Poll | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(watch);
 
   useEffect(() => {
     let stop = false;
@@ -174,9 +201,83 @@ export function JdResult({
   const met = Number(poll.metCount ?? poll.met_count ?? 0);
   const partial = Number(poll.partialCount ?? poll.partial_count ?? 0);
   const unmet = Number(poll.unmetCount ?? poll.unmet_count ?? 0);
+  const pct = Math.max(0, Math.min(100, Number(poll.progressPct ?? poll.progress_pct ?? 0)));
+  const stage = poll.progressStage ?? poll.progress_stage ?? "";
+  const fit = poll.fitCategory ?? poll.fit_category ?? "";
 
   return (
     <div className="space-y-5">
+      {modalOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="jd-progress-title"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4 sm:items-center"
+        >
+          <div className="w-full max-w-lg border border-line-strong bg-canvas p-6 shadow-xl">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+              jd review <span className="text-ink-4">·</span> #{submissionId}
+            </p>
+            {live ? (
+              <>
+                <h2 id="jd-progress-title" className="mt-2 text-lg text-ink">
+                  Reviewing the posting
+                </h2>
+                <div className="mt-4 h-2 w-full bg-line" aria-hidden="true">
+                  <div className="h-2 bg-accent transition-all duration-700" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="mt-2 flex items-baseline justify-between font-mono text-xs text-ink-2">
+                  <span>{stage || STEP_LABEL[status] || "working"}</span>
+                  <span className="text-ink">{pct}%</span>
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-ink-2">
+                  Each requirement is judged one at a time; this usually takes 15 to 30
+                  minutes. Keep this open to watch, or close it: you get an email when
+                  the review is finished, with the résumé attached if the fit is strong.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+                  >
+                    Close, email me when it is done
+                  </button>
+                  <span className="inline-flex items-center text-sm text-ink-3">or keep watching</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 id="jd-progress-title" className="mt-2 text-lg text-ink">
+                  {status === "JD_STATUS_FAILED"
+                    ? "The review hit an error"
+                    : fit
+                      ? `Finished: ${FIT_LABEL[fit] ?? fit}`
+                      : "Finished"}
+                </h2>
+                {typeof score === "number" ? (
+                  <p className="mt-2 font-mono text-sm text-ink-2">
+                    match score <span className="text-ink">{score.toFixed(2)}</span>
+                  </p>
+                ) : null}
+                {fit && FIT_NOTE[fit] ? (
+                  <p className="mt-3 text-sm leading-relaxed text-ink-2">{FIT_NOTE[fit]}</p>
+                ) : null}
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+                  >
+                    View the review
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         status{" "}
         <span className={live ? "text-signal" : status === "JD_STATUS_FAILED" ? "text-danger" : "text-ink"}>
@@ -188,7 +289,31 @@ export function JdResult({
             match score <span className="text-ink">{score.toFixed(2)}</span>
           </>
         ) : null}
+        {fit && !live ? (
+          <>
+            <span className="text-ink-4"> · </span>
+            <span className={fit === "very_strong" || fit === "strong" ? "text-signal" : "text-ink"}>
+              {FIT_LABEL[fit] ?? fit}
+            </span>
+          </>
+        ) : null}
       </p>
+
+      {live ? (
+        <div>
+          <div className="h-1.5 w-full bg-line" aria-hidden="true">
+            <div className="h-1.5 bg-accent transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+          <p className="mt-1 flex items-baseline justify-between font-mono text-[11px] text-ink-3">
+            <span>{stage}</span>
+            <span>{pct}%</span>
+          </p>
+        </div>
+      ) : null}
+
+      {fit && !live && FIT_NOTE[fit] ? (
+        <p className="text-sm leading-relaxed text-ink-2">{FIT_NOTE[fit]}</p>
+      ) : null}
 
       {live ? (
         <p className="text-sm leading-relaxed text-ink-2">

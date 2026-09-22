@@ -15,10 +15,10 @@ for review").
 | 3 | email | `user_approved` mail with a sign-in link | Access granted |
 | 4 | `/login` → `/home` | Member home; "Upload a JD" card | Two live surfaces |
 | 5 | `/jd-upload` | Paste the posting; optional role, employer, contact email, application link; the gate is quoted from `JD_MATCH_THRESHOLD` | What the score means, what happens above the gate |
-| 6 | submit | Row stored; pipeline queued (one at a time on the box) | Acknowledgement: 15 to 30 minutes, the review lives at `/jd-upload/<id>`, an email follows |
-| 7 | waiting | Result panel polls for up to an hour (5 s, then 20 s) | Status: queued / scoring / writing the résumé |
-| 8 | finished | Score, "N of M evidenced", every requirement with its verdict and reason; above the gate the résumé and the locked PDF | Below the gate: what was and was not evidenced; Roger still sees it |
-| 9 | email | `jd_result` mail to the member's address (and the contact address if different): score, summary, link to the review, PDF link when there is one | |
+| 6 | submit | Row stored; pipeline queued (one at a time on the box) | A modal opens with a 0 to 100% progress bar and the current stage ("judging requirement 4 of 12"); keep it open or close it, the email comes either way |
+| 7 | waiting | Result panel polls for up to an hour (5 s, then 20 s); the pipeline writes `progress_pct` / `progress_stage` as it goes | Progress bar and stage; "15 to 30 minutes" |
+| 8 | finished | Fit category (very strong / strong / possible / weak / very weak), score, "N of M evidenced", every requirement with its verdict and reason; strong or better: the résumé and the locked PDF | The category's meaning in one line; below the gate: what was and was not evidenced |
+| 9 | email | `jd_result` mail to the member's address (and the contact address if different), by category: very strong / strong carry the résumé PDF as an attachment; possible / weak say Roger will review and reply; very weak says no further action is needed | |
 | 10 | later | `/jd-upload` lists all their submissions; `/jd-upload/<id>` reopens any of them from any signed-in session | |
 
 The owner gets the `jd_outcome` mail at step 8 as well (score, verdicts
@@ -47,6 +47,14 @@ with rationales, application link, admin and decision-review links).
   close this page" message; the acknowledgement links the review page.
 - `jd_result` email to the submitter on every terminal state (ready,
   below the gate, failed), audited in `notification_deliveries`.
+
+## Fit categories
+
+The bands are the owner's numbers, edited on `/admin/jd` (stored in
+`app_settings` as `jd_fit_bands`, in force within seconds, existing
+scores re-classified on read). "Strong" is also the résumé gate.
+Defaults seeded from the calibration: very strong 0.85, strong 0.70
+(the gate), possible 0.55, weak 0.35, very weak below.
 
 ## Still to look at
 
