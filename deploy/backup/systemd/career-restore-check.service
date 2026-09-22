@@ -1,0 +1,15 @@
+[Unit]
+Description=Weekly restore test of the newest career-site backup
+Documentation=file:///opt/career-site/deploy/backup/README.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=career
+Group=career
+WorkingDirectory=/opt/career-site
+ExecStart=/opt/career-site/deploy/backup/restore-check.sh
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=idle

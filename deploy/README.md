@@ -137,7 +137,19 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 deploy/live-check.sh https://rogerhenley.dev          # compare with the baseline
 ```
 
-`git pull` matters: `apps/web/content` is bind-mounted into the api as the public corpus and the Caddyfile is read from the checkout. To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations (goose, currently up to `00022`) are additive and run on api boot. Pulling the sidecar image can take longer than the default compose timeout on a slow pull; if `pull` times out, run it again.
+`git pull` matters: `apps/web/content` is bind-mounted into the api as the public corpus and the Caddyfile is read from the checkout. To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations (goose, currently up to `00023`) are additive and run on api boot. Pulling the sidecar image can take longer than the default compose timeout on a slow pull; if `pull` times out, run it again.
+
+Every merge to `main` adds three images to the box, and they are never removed on their own. On 2026-09-22 that reached 159 stale deploy tags and 93 % disk, and one image layer failed to extract mid-deploy because of it. Finish each rollout by dropping the build cache (a pull-only box never reads it) and every career-site tag except the one running and the one before it, so a rollback is still a local `up`:
+
+```bash
+KEEP=" <current-sha> <previous-sha> latest "
+for img in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/reh3376/career-site-'); do
+  tag=${img##*:}
+  case "$KEEP" in *" $tag "*) ;; *) docker rmi "$img" >/dev/null 2>&1 ;; esac
+done
+docker builder prune -af && docker image prune -f
+df -h /
+```
 
 ## Private corpus
 

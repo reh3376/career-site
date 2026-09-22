@@ -6,39 +6,56 @@ landed. Shipped items are dropped from this file; their history is in
 Items are grouped, and ordered within a group by how much they unblock.
 Nothing here names a member or carries a credential.
 
-## 1. Owner decisions waiting on Roger
+## 1. Owner decisions
 
-These block or shape work below; each needs a yes, a no, or a number.
+Answered 2026-09-22 unless marked open. Each decided item is now work
+in the sections below.
 
-- **Postgres app role split.** Run the api as `career_api` with only
-  the grants it needs; keep `career_admin_readonly` for `/admin/db`.
-  Recommendation: yes, one migration plus a `.env.prod` change.
-- **Backups.** Nothing backs up the database today. Recommendation: a
-  nightly `pg_dump` pulled to the Mac over ssh (zero server spend), with
-  a restore rehearsal documented in `deploy/README.md`.
-- **Admin TOTP.** Second factor on the admin account. Yes or later.
-- **Registration friction.** Whether to keep the organization and
-  stated-role fields required, and whether verified but unapproved
-  users should see anything beyond the "pending" page.
-- **Pre-gate landing evidence.** How much of the practice, timeline and
-  writing to show anonymously before the access gate.
-- **OT mode contrast tokens.** The dark theme's body and muted text
-  contrast; the review flagged it, the fix is a token change.
-- **Résumé length.** Two pages is the current target; confirm.
-- **Facts sheet.** Whether the "robotics and vision" line belongs in
-  `docs/personal/career-facts.md` (it steers the judge on those
-  requirements).
-- **Gallery.** Are the three `reh-shot0x` portraits real or generated;
-  which `whk-*` / `bbc-*` client photos have permission; captions for
-  the personal and event photos.
+- **Postgres app role split. DECIDED: yes, as recommended.** Run the
+  api as `career_api` holding only the grants it needs, keep
+  `career_admin_readonly` for `/admin/db`. One migration and one
+  `.env.prod` change.
+- **Backups. DECIDED 2026-09-22: yes, build it.** Open detail: the
+  server cannot reach the Mac (Starlink CGNAT gives no inbound), so the
+  Mac has to pull. Plan unless Roger says otherwise: nightly `pg_dump`
+  on the server with seven days kept there, a launchd job on the Mac
+  pulling over ssh whenever it is awake, a restore rehearsal written
+  into `deploy/README.md`. Dumps include the résumé PDFs stored on
+  `jd_submissions`, so they are treated as secrets at rest.
+- **Admin second factor. DECIDED 2026-09-22: yes, with the admin
+  choosing email or SMS per sign-in.** Open detail: email codes cost
+  nothing and reuse the existing provider; SMS needs a paid number and
+  a provider account, so the SMS path ships behind a flag and stays off
+  until Roger funds it. Same phone column and provider then serve the
+  SMS password reset already in section 4.
+- **Registration friction. DECIDED: organization and stated role become
+  optional.** Only name, email and password are required. The fields
+  stay on the form because they are useful when they are filled in.
+- **Anonymous access. DECIDED in principle: registration is still
+  required for the reviewer, but more evidence is shown before the
+  gate.** The shape is in section 6; the remaining call is how far to
+  go, which Roger picks from the tiers written there.
+- **OT mode contrast tokens.** Not a decision; treated as a fix and
+  scheduled in section 6.
+- **Résumé length. DECIDED: two pages is the maximum.** Shorter is
+  fine. Anything that does not fit becomes a link to a page on
+  rogerhenley.dev rather than a third page.
+- **Facts sheet. DECIDED: the "robotics and vision" line stays.**
+- **Gallery. DECIDED: the `reh-shot0x` portraits are real professional
+  headshots, and any image under `docs/personal` may be published.**
+  That covers the client photos as the owner's call; captions still
+  need writing per photo.
+- **Articles. DECIDED: public.** Most were posted publicly on LinkedIn
+  already, so gating them buys nothing and costs discovery.
 
 ## 2. Data layer (Roger's stated priority)
 
 D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 - **D1 follow-ups.**
-  - Set `EVENT_IP_SALT` in `.env.prod` before the deploy that carries
-    migration 00023, or the api hashes with the development salt.
+  - `EVENT_IP_SALT` was generated and set on the server during the
+    2026-09-22 deploy. Done, listed here so the next environment knows
+    it exists.
   - Retire `ActivityService.RecordEvents` and the `/home` activity
     beacon; they still write `activity_events` while the new beacon
     writes `events`, so `/home` views are recorded twice. The admin
@@ -105,6 +122,29 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   variant needs a verified phone column and a provider (Twilio or SNS,
   Roger to pick).
 
+## 4b. Server operations
+
+- **Disk. Cleared 2026-09-22**, from 93 percent full to 68 percent
+  (2.7 GB free to 12 GB), by dropping the build cache and 159 stale
+  deploy image tags; the current and previous tags were kept so a
+  rollback is still a local `up`, and all seven containers stayed up.
+  The prune is now the last step of the rollout in `deploy/README.md`.
+  Roger is also enlarging the Hetzner volume. Left to do: make the
+  prune automatic rather than a step someone remembers, either in a
+  deploy script or a weekly timer on the box.
+- **Backups. Built 2026-09-22**, see `deploy/backup/README.md`. Nightly
+  dump plus cluster roles, verified by reading the archive, pruned to 14
+  daily, 8 weekly and 6 monthly; a weekly restore into a scratch
+  database that compares row counts against live; a launchd pull to the
+  Mac that also takes `.env.prod` and fails loudly if the newest dump
+  goes stale. Proven end to end on the server and the Mac the same day:
+  a 1.4 MB dump of 271 objects restored with every table matching.
+  **One step left:** the systemd timers install from the deploy
+  checkout, so run
+  `ssh career@5.161.62.205 'cd /opt/career-site && sudo deploy/backup/install-server.sh'`
+  once this lands on `main` and the server has pulled it. Until then the
+  only copies are the one taken by hand on 2026-09-22.
+
 ## 5. Hardening (public repo)
 
 Shipped so far: ruleset on `main` with required checks, gitleaks in
@@ -126,12 +166,35 @@ Still open:
 
 ## 6. Site and content
 
-- **OT mode.** First pass shipped (PR 86); check on a real phone,
-  then the contrast tokens once Roger decides.
-- **Gallery.** Re-add the two originals that were missing at build
-  (ControlLogix editor screenshot, grain-tower install) and their front
-  matter; hero-by-track (FR-CNT-12) after the portrait and permission
-  questions are answered.
+- **Anonymous access, the shape agreed 2026-09-22.** Registration stays
+  required for anything that costs compute or reveals contact detail;
+  evidence that helps a hiring manager decide to register moves in
+  front of the gate. Always public: the landing page in full, the
+  practice and timeline detail, the articles list and reader, the
+  contact form, the legal pages. Always gated: the JD reviewer and its
+  results, résumé PDFs, `/home`, the admin console, anything naming a
+  member. The open call is the middle tier, in ascending order of how
+  much is given away:
+  **DECIDED 2026-09-22: the middle tier.** Public becomes the full
+  landing with practice and timeline detail, the articles list and
+  reader, and a gallery subset of six to eight photos carrying no
+  client marks. The reviewer, the résumé PDFs, the rest of the gallery,
+  `/home` and the admin console stay behind the gate. The landing also
+  needs one line naming what registering buys: submit a posting and get
+  a résumé written against it.
+- **OT mode.** First pass shipped (PR 86); check on a real phone, and
+  raise the body and muted text contrast to meet WCAG AA in the dark
+  tokens (treated as a fix, no decision needed).
+- **Gallery.** Every image under `docs/personal` is cleared for use
+  (owner, 2026-09-22), including the portraits and the client photos.
+  Work: re-add the two originals missing at build (ControlLogix editor
+  screenshot, grain-tower install) with their front matter, write a
+  caption and alt text per photo, pick the public subset for the tier
+  above, then hero-by-track (FR-CNT-12).
+- **Articles public.** Move `/articles` and `/articles/[slug]` out of
+  the gated set, drop the server session check, index them, and put an
+  access call to action at the foot of each. Watch that the gallery
+  and JD pages stay gated when the public-path list changes.
 - **Shared public-path constant** used by the proxy, the sitemap and
   the header nav, so a new public page is added once.
 - **Ask Roger (Phase 4).** Retrieval, persona, streaming chat with
