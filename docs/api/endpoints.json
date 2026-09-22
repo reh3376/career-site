@@ -1378,6 +1378,22 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.JdService",
+      "method": "ListMySubmissions",
+      "path": "/api/career.v1.JdService/ListMySubmissions",
+      "grpc_full_method": "/career.v1.JdService/ListMySubmissions",
+      "internal": false,
+      "request": "career.v1.ListMySubmissionsRequest",
+      "response": "career.v1.ListMySubmissionsResponse",
+      "summary": "Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone.",
+      "auth": "member",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 30,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.sidecar.v1.SidecarService",
       "method": "Embed",
       "path": null,

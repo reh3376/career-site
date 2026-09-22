@@ -34,6 +34,12 @@ service JdService {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 30;
   }
+  // Lists the signed-in member's own submissions, newest first, so a
+  // review can be reopened after the tab that submitted it is gone.
+  rpc ListMySubmissions(ListMySubmissionsRequest) returns (ListMySubmissionsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 30;
+  }
 }
 
 // Where the JD text came from — mirrors jd_submissions.source_kind.
@@ -156,6 +162,35 @@ message GetJdResultResponse {
   int32 unmet_count = 11;
   // The gate the score was compared against (JD_MATCH_THRESHOLD).
   double match_threshold = 12;
+}
+
+// List request; the member is the session.
+message ListMySubmissionsRequest {}
+
+// The member's submissions, newest first.
+message ListMySubmissionsResponse {
+  // Up to 100 rows.
+  repeated MySubmission submissions = 1;
+}
+
+// One of the member's own submissions, enough to pick it from a list.
+message MySubmission {
+  // Submission id (numeric, stringified); opens /jd-upload/<id>.
+  string id = 1;
+  // Current status.
+  JdStatus status = 2;
+  // Match score once known.
+  optional double match_score = 3;
+  // Role the member typed on the form, if any.
+  string role_hint = 4;
+  // Employer the member typed on the form, if any.
+  string employer_hint = 5;
+  // When it was submitted.
+  google.protobuf.Timestamp created_at = 6;
+  // When it reached a terminal state; unset while running.
+  google.protobuf.Timestamp completed_at = 7;
+  // True when a tailored résumé exists for it.
+  bool has_resume = 8;
 }
 
 // One requirement the reviewer extracted from the posting and the

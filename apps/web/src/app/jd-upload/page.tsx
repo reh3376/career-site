@@ -5,6 +5,7 @@ import { getJdThreshold } from "@/lib/jd-threshold";
 import { getSessionUser } from "@/lib/session-user";
 
 import { JdForm } from "./form";
+import { MySubmissions } from "./my-submissions";
 
 export const metadata: Metadata = {
   title: "JD upload",
@@ -74,6 +75,8 @@ export default async function JdUploadPage() {
       <div className="mt-14">
         <JdForm threshold={threshold} />
       </div>
+
+      <MySubmissions />
 
       <p className="mt-14 border-t border-line pt-6 text-sm text-ink-3">
         Rather email?{" "}

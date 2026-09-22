@@ -93,6 +93,8 @@ type jdOutcomeData struct {
 	AdminURL       string
 	DecisionsURL   string
 	PDFURL         string
+	// ReviewURL is the submitter's own page for this review.
+	ReviewURL string
 }
 
 type jdOutcomeVerdict struct {
@@ -120,6 +122,7 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 		SubmittedAt:    s.CreatedAt.UTC().Format(time.RFC1123),
 		AdminURL:       m.webBase + "/admin/jd/" + id,
 		DecisionsURL:   m.webBase + "/admin/decisions?ref=" + id,
+		ReviewURL:      m.webBase + "/jd-upload/" + id,
 		Threshold:      fmt.Sprintf("%.2f", threshold),
 	}
 	if s.MatchScore != nil {
@@ -177,7 +180,7 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 	if err != nil {
 		return fmt.Errorf("render jd outcome: %w", err)
 	}
-	return m.email.Send(ctx, email.Message{
+	ownerErr := m.email.Send(ctx, email.Message{
 		From:     m.from,
 		To:       m.to,
 		Subject:  subject,
@@ -186,6 +189,46 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 		Kind:     "jd_outcome",
 		UserID:   s.UserID,
 	})
+
+	// The submitter hears too: their account address, plus the contact
+	// address from the form when it differs. The mail carries the score,
+	// the summary and the link to their own review page (which works
+	// from any signed-in session), never the admin links.
+	for _, to := range submitterAddresses(s) {
+		rt, rh, err := email.JdResultTemplate.Render(d)
+		if err != nil {
+			return fmt.Errorf("render jd result: %w", err)
+		}
+		if err := m.email.Send(ctx, email.Message{
+			From:     m.from,
+			To:       to,
+			Subject:  fmt.Sprintf("Your JD review is finished: %s", what),
+			TextBody: rt,
+			HTMLBody: rh,
+			Kind:     "jd_result",
+			UserID:   s.UserID,
+		}); err != nil {
+			m.log.Warn("jd: submitter mail failed", slog.Int64("jd_id", s.ID), slog.String("to", to), slog.String("error", err.Error()))
+		}
+	}
+	return ownerErr
+}
+
+// submitterAddresses returns the distinct addresses a finished review
+// is sent to: the member's account email, then the form's contact
+// email when it differs.
+func submitterAddresses(s *users.JdSubmission) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, a := range []string{s.SubmitterEmail, s.ContactEmail} {
+		a = strings.ToLower(strings.TrimSpace(a))
+		if a == "" || seen[a] || !strings.Contains(a, "@") {
+			continue
+		}
+		seen[a] = true
+		out = append(out, a)
+	}
+	return out
 }
 
 func nonEmpty(parts ...string) []string {

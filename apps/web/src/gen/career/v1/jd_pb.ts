@@ -24,7 +24,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/jd.proto.
  */
 export const file_career_v1_jd: GenFile = /*@__PURE__*/
-  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQInUKEFN1Ym1pdEpkUmVzcG9uc2USFQoNc3VibWlzc2lvbl9pZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRIUCgxyZXN1bHRfdG9rZW4YBCABKAkiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAinQMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBQg4KDF9tYXRjaF9zY29yZSJ0ChJSZXF1aXJlbWVudFZlcmRpY3QSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCRIOCgZ3ZWlnaHQYBCABKAUSDwoHdmVyZGljdBgFIAEoCRIRCglyYXRpb25hbGUYBiABKAkqaAoISmRTb3VyY2USGQoVSkRfU09VUkNFX1VOU1BFQ0lGSUVEEAASEwoPSkRfU09VUkNFX1BBU1RFEAESEQoNSkRfU09VUkNFX1BERhACEhkKFUpEX1NPVVJDRV9URVhUX1VQTE9BRBADKrgBCghKZFN0YXR1cxIZChVKRF9TVEFUVVNfVU5TUEVDSUZJRUQQABIWChJKRF9TVEFUVVNfUkVDRUlWRUQQARIVChFKRF9TVEFUVVNfU0NPUklORxACEh0KGUpEX1NUQVRVU19CRUxPV19USFJFU0hPTEQQAxIYChRKRF9TVEFUVVNfR0VORVJBVElORxAEEhMKD0pEX1NUQVRVU19SRUFEWRAFEhQKEEpEX1NUQVRVU19GQUlMRUQQBjKyAQoJSmRTZXJ2aWNlEk0KCFN1Ym1pdEpkEhouY2FyZWVyLnYxLlN1Ym1pdEpkUmVxdWVzdBobLmNhcmVlci52MS5TdWJtaXRKZFJlc3BvbnNlIgiAtRgCkLUYAxJWCgtHZXRKZFJlc3VsdBIdLmNhcmVlci52MS5HZXRKZFJlc3VsdFJlcXVlc3QaHi5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXNwb25zZSIIgLUYApC1GB5CoQEKDWNvbS5jYXJlZXIudjFCB0pkUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQInUKEFN1Ym1pdEpkUmVzcG9uc2USFQoNc3VibWlzc2lvbl9pZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRIUCgxyZXN1bHRfdG9rZW4YBCABKAkiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAinQMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBQg4KDF9tYXRjaF9zY29yZSIaChhMaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QiSQoZTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZRIsCgtzdWJtaXNzaW9ucxgBIAMoCzIXLmNhcmVlci52MS5NeVN1Ym1pc3Npb24iiQIKDE15U3VibWlzc2lvbhIKCgJpZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSGAoLbWF0Y2hfc2NvcmUYAyABKAFIAIgBARIRCglyb2xlX2hpbnQYBCABKAkSFQoNZW1wbG95ZXJfaGludBgFIAEoCRIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmhhc19yZXN1bWUYCCABKAhCDgoMX21hdGNoX3Njb3JlInQKElJlcXVpcmVtZW50VmVyZGljdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCGNhdGVnb3J5GAMgASgJEg4KBndlaWdodBgEIAEoBRIPCgd2ZXJkaWN0GAUgASgJEhEKCXJhdGlvbmFsZRgGIAEoCSpoCghKZFNvdXJjZRIZChVKRF9TT1VSQ0VfVU5TUEVDSUZJRUQQABITCg9KRF9TT1VSQ0VfUEFTVEUQARIRCg1KRF9TT1VSQ0VfUERGEAISGQoVSkRfU09VUkNFX1RFWFRfVVBMT0FEEAMquAEKCEpkU3RhdHVzEhkKFUpEX1NUQVRVU19VTlNQRUNJRklFRBAAEhYKEkpEX1NUQVRVU19SRUNFSVZFRBABEhUKEUpEX1NUQVRVU19TQ09SSU5HEAISHQoZSkRfU1RBVFVTX0JFTE9XX1RIUkVTSE9MRBADEhgKFEpEX1NUQVRVU19HRU5FUkFUSU5HEAQSEwoPSkRfU1RBVFVTX1JFQURZEAUSFAoQSkRfU1RBVFVTX0ZBSUxFRBAGMpwCCglKZFNlcnZpY2USTQoIU3VibWl0SmQSGi5jYXJlZXIudjEuU3VibWl0SmRSZXF1ZXN0GhsuY2FyZWVyLnYxLlN1Ym1pdEpkUmVzcG9uc2UiCIC1GAKQtRgDElYKC0dldEpkUmVzdWx0Eh0uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVxdWVzdBoeLmNhcmVlci52MS5HZXRKZFJlc3VsdFJlc3BvbnNlIgiAtRgCkLUYHhJoChFMaXN0TXlTdWJtaXNzaW9ucxIjLmNhcmVlci52MS5MaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZSIIgLUYApC1GB5CoQEKDWNvbS5jYXJlZXIudjFCB0pkUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Submission request. Exactly one of jd_text (paste) OR
@@ -271,6 +271,112 @@ export const GetJdResultResponseSchema: GenMessage<GetJdResultResponse> = /*@__P
   messageDesc(file_career_v1_jd, 3);
 
 /**
+ * List request; the member is the session.
+ *
+ * @generated from message career.v1.ListMySubmissionsRequest
+ */
+export type ListMySubmissionsRequest = Message<"career.v1.ListMySubmissionsRequest"> & {
+};
+
+/**
+ * Describes the message career.v1.ListMySubmissionsRequest.
+ * Use `create(ListMySubmissionsRequestSchema)` to create a new message.
+ */
+export const ListMySubmissionsRequestSchema: GenMessage<ListMySubmissionsRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 4);
+
+/**
+ * The member's submissions, newest first.
+ *
+ * @generated from message career.v1.ListMySubmissionsResponse
+ */
+export type ListMySubmissionsResponse = Message<"career.v1.ListMySubmissionsResponse"> & {
+  /**
+   * Up to 100 rows.
+   *
+   * @generated from field: repeated career.v1.MySubmission submissions = 1;
+   */
+  submissions: MySubmission[];
+};
+
+/**
+ * Describes the message career.v1.ListMySubmissionsResponse.
+ * Use `create(ListMySubmissionsResponseSchema)` to create a new message.
+ */
+export const ListMySubmissionsResponseSchema: GenMessage<ListMySubmissionsResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 5);
+
+/**
+ * One of the member's own submissions, enough to pick it from a list.
+ *
+ * @generated from message career.v1.MySubmission
+ */
+export type MySubmission = Message<"career.v1.MySubmission"> & {
+  /**
+   * Submission id (numeric, stringified); opens /jd-upload/<id>.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Current status.
+   *
+   * @generated from field: career.v1.JdStatus status = 2;
+   */
+  status: JdStatus;
+
+  /**
+   * Match score once known.
+   *
+   * @generated from field: optional double match_score = 3;
+   */
+  matchScore?: number | undefined;
+
+  /**
+   * Role the member typed on the form, if any.
+   *
+   * @generated from field: string role_hint = 4;
+   */
+  roleHint: string;
+
+  /**
+   * Employer the member typed on the form, if any.
+   *
+   * @generated from field: string employer_hint = 5;
+   */
+  employerHint: string;
+
+  /**
+   * When it was submitted.
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 6;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * When it reached a terminal state; unset while running.
+   *
+   * @generated from field: google.protobuf.Timestamp completed_at = 7;
+   */
+  completedAt?: Timestamp | undefined;
+
+  /**
+   * True when a tailored résumé exists for it.
+   *
+   * @generated from field: bool has_resume = 8;
+   */
+  hasResume: boolean;
+};
+
+/**
+ * Describes the message career.v1.MySubmission.
+ * Use `create(MySubmissionSchema)` to create a new message.
+ */
+export const MySubmissionSchema: GenMessage<MySubmission> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 6);
+
+/**
  * One requirement the reviewer extracted from the posting and the
  * verdict it reached from the candidate's records.
  *
@@ -325,7 +431,7 @@ export type RequirementVerdict = Message<"career.v1.RequirementVerdict"> & {
  * Use `create(RequirementVerdictSchema)` to create a new message.
  */
 export const RequirementVerdictSchema: GenMessage<RequirementVerdict> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 4);
+  messageDesc(file_career_v1_jd, 7);
 
 /**
  * Where the JD text came from — mirrors jd_submissions.source_kind.
@@ -462,6 +568,17 @@ export const JdService: GenService<{
     methodKind: "unary";
     input: typeof GetJdResultRequestSchema;
     output: typeof GetJdResultResponseSchema;
+  },
+  /**
+   * Lists the signed-in member's own submissions, newest first, so a
+   * review can be reopened after the tab that submitted it is gone.
+   *
+   * @generated from rpc career.v1.JdService.ListMySubmissions
+   */
+  listMySubmissions: {
+    methodKind: "unary";
+    input: typeof ListMySubmissionsRequestSchema;
+    output: typeof ListMySubmissionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_jd, 0);

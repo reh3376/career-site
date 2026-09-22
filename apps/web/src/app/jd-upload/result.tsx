@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -133,8 +134,13 @@ export function JdResult({
         if (stop) return;
         setPoll(j);
         const live = LIVE.has(j.status ?? "");
-        const withinBudget = Date.now() - started < 20 * 60 * 1000;
-        if (live && withinBudget) timer = setTimeout(tick, 5000);
+        // The pipeline on the production box takes 15 to 30 minutes and
+        // may queue behind another submission; keep polling for an hour,
+        // quickly at first, then every 20 s.
+        const elapsed = Date.now() - started;
+        const withinBudget = elapsed < 60 * 60 * 1000;
+        const interval = elapsed < 3 * 60 * 1000 ? 5000 : 20000;
+        if (live && withinBudget) timer = setTimeout(tick, interval);
       } catch (e) {
         if (!stop) setFailed(e instanceof Error ? e.message : "poll failed");
       }
@@ -187,8 +193,15 @@ export function JdResult({
       {live ? (
         <p className="text-sm leading-relaxed text-ink-2">
           This runs a language model over each requirement in the
-          posting and can take a few minutes. You can leave this page;
-          the reference number brings you back.
+          posting, one at a time, and usually takes 15 to 30 minutes. You
+          can close this page: the review stays at{" "}
+          <Link
+            href={`/jd-upload/${submissionId}`}
+            className="font-mono text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            /jd-upload/{submissionId}
+          </Link>{" "}
+          and you get an email when it finishes.
         </p>
       ) : null}
 

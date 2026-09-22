@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fafafa;color:#0a0a0a;margin:0;padding:24px">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px">
+    <tr><td style="padding:32px">
+      <p style="margin:0 0 8px;font-size:14px;color:#525252">rogerhenley.dev · JD review</p>
+      <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">Your review is finished: {{.Headline}}</h1>
+
+      {{if .Score}}
+      <p style="margin:0 0 16px;font-size:15px">Match score <strong style="font-family:ui-monospace,monospace">{{.Score}}</strong> <span style="color:#737373">(the gate for a tailored résumé is {{.Threshold}})</span></p>
+      {{else}}
+      <p style="margin:0 0 16px;font-size:15px">The review could not be completed.</p>
+      {{end}}
+
+      {{if .Error}}<p style="margin:0 0 16px;padding:10px 12px;background:#fff7ed;border-left:3px solid #c2410c;font-size:13px">{{.Error}}<br>Roger has the submission and will follow up.</p>{{end}}
+
+      {{if .Requirements}}
+      <p style="margin:0 0 8px;font-size:14px"><strong>{{.Met}} of {{.Requirements}}</strong> requirements evidenced in Roger's records{{if .Partial}}, {{.Partial}} partly{{end}}{{if .Unmet}}, {{.Unmet}} not evidenced{{end}}.</p>
+      {{if .UnmetList}}<p style="margin:0 0 16px;font-size:13px;color:#525252">Not evidenced: {{range $i, $t := .UnmetList}}{{if $i}}; {{end}}{{$t}}{{end}}.</p>{{end}}
+      {{end}}
+
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px">
+        <tr>
+          <td style="padding-right:12px">
+            <a href="{{.ReviewURL}}" style="display:inline-block;background:#0f3d5c;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600">Open the full review</a>
+          </td>
+          {{if .PDFURL}}<td>
+            <a href="{{.PDFURL}}" style="display:inline-block;background:transparent;color:#0f3d5c;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;border:1px solid #0f3d5c">Résumé PDF</a>
+          </td>{{end}}
+        </tr>
+      </table>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#737373">Each requirement, its verdict and the reason are on the review page. Roger sees every submission and replies personally when a role looks worth a conversation.</p>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -104,6 +104,36 @@ class GetJdResultResponse(_message.Message):
     match_threshold: float
     def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ..., verdicts: _Optional[_Iterable[_Union[RequirementVerdict, _Mapping]]] = ..., met_count: _Optional[int] = ..., partial_count: _Optional[int] = ..., unmet_count: _Optional[int] = ..., match_threshold: _Optional[float] = ...) -> None: ...
 
+class ListMySubmissionsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListMySubmissionsResponse(_message.Message):
+    __slots__ = ("submissions",)
+    SUBMISSIONS_FIELD_NUMBER: _ClassVar[int]
+    submissions: _containers.RepeatedCompositeFieldContainer[MySubmission]
+    def __init__(self, submissions: _Optional[_Iterable[_Union[MySubmission, _Mapping]]] = ...) -> None: ...
+
+class MySubmission(_message.Message):
+    __slots__ = ("id", "status", "match_score", "role_hint", "employer_hint", "created_at", "completed_at", "has_resume")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
+    ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
+    EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
+    HAS_RESUME_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    status: JdStatus
+    match_score: float
+    role_hint: str
+    employer_hint: str
+    created_at: _timestamp_pb2.Timestamp
+    completed_at: _timestamp_pb2.Timestamp
+    has_resume: bool
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., has_resume: _Optional[bool] = ...) -> None: ...
+
 class RequirementVerdict(_message.Message):
     __slots__ = ("id", "text", "category", "weight", "verdict", "rationale")
     ID_FIELD_NUMBER: _ClassVar[int]

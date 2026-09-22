@@ -313,3 +313,37 @@ func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, er
 	}
 	return s, nil
 }
+
+// ListJdSubmissionsByUser returns one member's submissions, newest
+// first, without the JD body, for the "your submissions" list.
+func (r *Repo) ListJdSubmissionsByUser(ctx context.Context, userID int64, limit int) ([]JdSubmission, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	const q = `
+    SELECT s.id, s.status, s.match_score,
+           COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''),
+           s.created_at, s.completed_at,
+           CASE WHEN s.resume_markdown IS NULL THEN '' ELSE 'y' END
+    FROM jd_submissions s
+    WHERE s.user_id = $1
+    ORDER BY s.created_at DESC
+    LIMIT $2
+  `
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list jd submissions by user: %w", err)
+	}
+	defer rows.Close()
+	var out []JdSubmission
+	for rows.Next() {
+		var s JdSubmission
+		if err := rows.Scan(&s.ID, &s.Status, &s.MatchScore, &s.RoleHint, &s.EmployerHint,
+			&s.CreatedAt, &s.CompletedAt, &s.ResumeMarkdown); err != nil {
+			return nil, fmt.Errorf("scan jd row: %w", err)
+		}
+		s.UserID = userID
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
