@@ -2865,6 +2865,7 @@ generated résumé when present. Backs /admin/jd/[id].
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
+| `runs` | [`JdRun`](#jdrun)[] | array of object |  | Every pipeline run for this submission, newest attempt first. The fields above reflect only the most recent run, because a re-score overwrites them; these rows survive it, so a superseded verdict can still be read and compared with the one that replaced it. |
 
 <details><summary>Example request body</summary>
 
@@ -5364,6 +5365,44 @@ Get-jd-submission response.
 | `promptId` | `string` | string |  | Prompt id that produced the résumé. |
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
+| `runs` | [`JdRun`](#jdrun)[] | array of object |  | Every pipeline run for this submission, newest attempt first. The fields above reflect only the most recent run, because a re-score overwrites them; these rows survive it, so a superseded verdict can still be read and compared with the one that replaced it. |
+
+### JdRun
+
+One pipeline run: what produced a verdict and what it decided
+(data layer D2, table `jd_runs`).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string |  | Stable run identifier; `llm_usage` and `decision_log` rows carry it. |
+| `attempt` | `int32` | number |  | 1 for the first run, 2 for the first re-score, and so on. |
+| `trigger` | `string` | string |  | `submit` or `rescore`. |
+| `triggeredBy` | `int64` | string (decimal) |  | Admin who triggered a re-score; 0 for a submission. |
+| `status` | `string` | string |  | running | ready | below_threshold | failed. |
+| `error` | `string` | string |  | Why it failed, empty otherwise. |
+| `appCommit` | `string` | string |  | Build the api was running. |
+| `host` | `string` | string |  | Where the model ran. |
+| `model` | `string` | string |  | Judge model as the gateway reported it. |
+| `numCtx` | `int32` | number |  | Context window the sidecar was asked for. |
+| `embedderModel` | `string` | string |  | Embedding model the corpus chunks were built with. |
+| `promptsJson` | `string` | string |  | Prompt id to "version:hash" as JSON, so an edited prompt is visible even when its version did not change. |
+| `corpusFingerprint` | `string` | string |  | Hash over the corpus documents this run could retrieve from. |
+| `corpusDocuments` | `int32` | number |  | Documents in the corpus at run time. |
+| `corpusChunks` | `int32` | number |  | Chunks in the corpus at run time. |
+| `scoreFormula` | `string` | string |  | Name of the arithmetic that produced the score. |
+| `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Mean top-K cosine, the cheap pre-score. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Requirement-weighted score, the one the gate reads. |
+| `threshold` | `double` | number |  | _(oneof `_threshold`)_ Gate in force for this run. |
+| `fit` | `string` | string |  | Fit band the score fell in. |
+| `requirementCount` | `int32` | number |  | Requirements the posting was broken into. |
+| `metCount` | `int32` | number |  | Requirements judged met. |
+| `partialCount` | `int32` | number |  | Requirements judged partly met. |
+| `unmetCount` | `int32` | number |  | Requirements judged unmet. |
+| `resumeGenerated` | `bool` | boolean |  | Whether this run produced a tailored résumé. |
+| `queuedMs` | `int64` | string (decimal) |  | Time spent waiting for a pipeline slot. |
+| `durationMs` | `int64` | string (decimal) |  | Time spent working, once it held the slot. |
+| `startedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the run opened. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the run closed; unset while it is still running. |
 
 ### RescoreJdRequest
 

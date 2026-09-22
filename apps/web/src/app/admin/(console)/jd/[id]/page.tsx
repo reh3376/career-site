@@ -9,6 +9,8 @@ import { getSessionCookie } from "@/lib/session";
 
 import { RescoreButton } from "../rescore-button";
 
+import { RunHistory, type Run } from "./run-history";
+
 export const metadata: Metadata = { title: "Admin · JD submission" };
 export const dynamic = "force-dynamic";
 
@@ -49,9 +51,15 @@ type Detail = {
   promptVersion?: number;
   download_url?: string;
   downloadUrl?: string;
+  runs?: Run[];
 };
 
-type Requirement = { id: string; text: string; category: string; weight: number };
+type Requirement = {
+  id: string;
+  text: string;
+  category: string;
+  weight: number;
+};
 type Judgment = {
   requirement_id: string;
   verdict: string;
@@ -108,6 +116,7 @@ export default async function AdminJdDetailPage({
 
   const score = r.match_score ?? r.matchScore;
   const retrieval = r.retrieval_score ?? r.retrievalScore;
+  const runs: Run[] = d.runs ?? [];
   const jdText = d.jd_text ?? d.jdText ?? "";
   const resume = d.resume_markdown ?? d.resumeMarkdown ?? "";
   const model = d.llm_model ?? d.llmModel ?? "";
@@ -127,12 +136,16 @@ export default async function AdminJdDetailPage({
     }
   }
   const judgmentsByReq = new Map<string, Judgment>();
-  for (const j of assessment?.judgments ?? []) judgmentsByReq.set(j.requirement_id, j);
+  for (const j of assessment?.judgments ?? [])
+    judgmentsByReq.set(j.requirement_id, j);
 
   return (
     <>
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
-        <Link href="/admin/jd" className="no-underline hover:text-accent-strong">
+        <Link
+          href="/admin/jd"
+          className="no-underline hover:text-accent-strong"
+        >
           JD submissions
         </Link>
         <span className="text-ink-4"> / </span>#{r.id}
@@ -147,8 +160,15 @@ export default async function AdminJdDetailPage({
 
       <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-4">
         <Chip label="status" value={STATUS_LABEL[r.status] ?? r.status} />
-        <Chip label="match" value={typeof score === "number" ? score.toFixed(3) : "-"} tone="text-ink" />
-        <Chip label="retrieval" value={typeof retrieval === "number" ? retrieval.toFixed(3) : "-"} />
+        <Chip
+          label="match"
+          value={typeof score === "number" ? score.toFixed(3) : "-"}
+          tone="text-ink"
+        />
+        <Chip
+          label="retrieval"
+          value={typeof retrieval === "number" ? retrieval.toFixed(3) : "-"}
+        />
         <Chip label="model" value={assessment?.model || model || "-"} />
       </dl>
 
@@ -172,7 +192,9 @@ export default async function AdminJdDetailPage({
           >
             Apply for this position
           </a>
-          <span className="ml-2 font-mono text-[11px] text-ink-3">{applyUrl.replace(/^https?:\/\//, "").slice(0, 60)}</span>
+          <span className="ml-2 font-mono text-[11px] text-ink-3">
+            {applyUrl.replace(/^https?:\/\//, "").slice(0, 60)}
+          </span>
         </p>
       ) : null}
 
@@ -185,9 +207,9 @@ export default async function AdminJdDetailPage({
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <RescoreButton submissionId={r.id} />
         <p className="text-xs text-ink-3">
-          Re-runs retrieval, assessment, and (above threshold) the résumé
-          and PDF with the current prompts. Use after a transient failure
-          or a prompt change; the previous derivation is replaced.
+          Re-runs retrieval, assessment, and (above threshold) the résumé and
+          PDF with the current prompts. Use after a transient failure or a
+          prompt change; the previous derivation is replaced.
         </p>
       </div>
 
@@ -206,8 +228,8 @@ export default async function AdminJdDetailPage({
         </p>
         {!assessment ? (
           <p className="mt-3 text-sm text-ink-3">
-            No assessment stored. Either scoring has not run or the
-            assessor was not wired (retrieval score is the gate).
+            No assessment stored. Either scoring has not run or the assessor was
+            not wired (retrieval score is the gate).
           </p>
         ) : assessment.error && !assessment.requirements?.length ? (
           <p className="mt-3 border-l-2 border-signal bg-signal-soft/40 px-3 py-2 text-sm text-ink">
@@ -225,7 +247,9 @@ export default async function AdminJdDetailPage({
                     <span className="text-ink">{req.id}</span>
                     <span>{req.category}</span>
                     <span>w{req.weight}</span>
-                    <span className={VERDICT_TONE[verdict] ?? "text-ink-3"}>{verdict}</span>
+                    <span className={VERDICT_TONE[verdict] ?? "text-ink-3"}>
+                      {verdict}
+                    </span>
                     {j?.evidence_ids?.length ? (
                       <span>chunks {j.evidence_ids.join(", ")}</span>
                     ) : null}
@@ -251,7 +275,7 @@ export default async function AdminJdDetailPage({
         <section className="mt-10">
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
             generated résumé
-            {d.download_url ?? d.downloadUrl ? (
+            {(d.download_url ?? d.downloadUrl) ? (
               <>
                 <span className="text-ink-4"> · </span>
                 <a
@@ -269,6 +293,8 @@ export default async function AdminJdDetailPage({
         </section>
       ) : null}
 
+      <RunHistory runs={runs} />
+
       <section className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           job description as submitted
@@ -281,7 +307,15 @@ export default async function AdminJdDetailPage({
   );
 }
 
-function Chip({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Chip({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
   return (
     <div className="flex items-baseline gap-3">
       <dt className="text-ink-3">{label}</dt>

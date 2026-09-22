@@ -210,11 +210,22 @@ func main() {
 		}
 		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
 		jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
+		// Recorded on every run so a change in latency or in verdicts can
+		// be attributed to the machine rather than guessed at. One host
+		// today; the provider string is what distinguishes them.
+		jdScorer.SetHost(provider)
 	}
 	if n, err := userRepo.FailStrandedJd(ctx); err != nil {
 		log.Warn("jd: stranded-run reconciliation failed", slog.String("error", err.Error()))
 	} else if n > 0 {
 		log.Info("jd: stranded runs marked failed after restart", slog.Int64("count", n))
+	}
+	// The run records need the same treatment: a row left at `running`
+	// after a restart would otherwise claim work is still in flight.
+	if n, err := userRepo.FailStrandedRuns(ctx); err != nil {
+		log.Warn("jd: stranded run records not reconciled", slog.String("error", err.Error()))
+	} else if n > 0 {
+		log.Info("jd: stranded run records closed after restart", slog.Int64("count", n))
 	}
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.

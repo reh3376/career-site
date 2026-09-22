@@ -124,6 +124,17 @@ type Assessor struct {
 	numCtx int
 }
 
+// NumCtx is the context window this assessor asks the sidecar for. The
+// run record keeps it because the same model at a different context
+// size is, in practice, a different judge: truncation changed a score
+// by 0.6 once already (docs/llm-tuning-log.md, 2026-09-21).
+func (a *Assessor) NumCtx() int {
+	if a == nil {
+		return 0
+	}
+	return a.numCtx
+}
+
 // judgeReserve is the context kept free for the system prompt and the
 // JSON verdicts when sizing a judgment batch.
 const judgeReserve = 1800
