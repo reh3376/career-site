@@ -222,9 +222,18 @@ func writeJudgeChunk(b *strings.Builder, h users.CorpusHit) {
 		access = "private"
 		title = ""
 	}
+	// Retrieved evidence is capped; the facts sheet never is. It is
+	// short by design, it is the one place tenure, degrees and
+	// credentials are stated plainly, and as a shared prefix it is
+	// served from Ollama's prompt cache, so its length costs nothing
+	// per call. (A cap here once cut the sheet to its roles section.)
+	text := h.Chunk.Text
+	if h.SourceKind != ProfileSourceKind {
+		text = CapRunes(text, JudgeChunkRunes)
+	}
 	fmt.Fprintf(b, "<chunk id=\"%d\" kind=%q access=%q title=%q similarity=\"%.2f\">\n%s\n</chunk>\n",
 		h.Chunk.ID, h.SourceKind, access, clean(title), h.Similarity,
-		strings.ReplaceAll(CapRunes(h.Chunk.Text, JudgeChunkRunes), "</chunk>", "< /chunk>"))
+		strings.ReplaceAll(text, "</chunk>", "< /chunk>"))
 }
 
 // ResumeTailor writes a two-page résumé as structured JSON in which

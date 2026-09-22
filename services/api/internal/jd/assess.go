@@ -330,6 +330,15 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	return out, nil
 }
 
+// judgeEvidenceText mirrors what RenderJudgeUser shows the model for a
+// chunk: retrieved evidence capped, the facts sheet whole.
+func judgeEvidenceText(h users.CorpusHit) string {
+	if h.SourceKind == prompts.ProfileSourceKind {
+		return h.Chunk.Text
+	}
+	return prompts.CapRunes(h.Chunk.Text, prompts.JudgeChunkRunes)
+}
+
 // logVerdicts writes one decision_log row per requirement.
 func (a *Assessor) logVerdicts(
 	ctx context.Context, submissionID int64, out *Assessment,
@@ -354,7 +363,7 @@ func (a *Assessor) logVerdicts(
 			}
 			ev = append(ev, evidenceRow{
 				ChunkID: h.Chunk.ID, SourceKind: h.SourceKind, Access: access, Title: title,
-				Similarity: h.Similarity, Text: prompts.CapRunes(h.Chunk.Text, prompts.JudgeChunkRunes),
+				Similarity: h.Similarity, Text: judgeEvidenceText(h),
 			})
 		}
 		var j Judgment
