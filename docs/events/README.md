@@ -28,6 +28,7 @@ never read by script and never sent anywhere but this site.
 
 | Column | Meaning |
 | --- | --- |
+| `tenant_id` | Which site the row belongs to. Always 1, the owner's site, until there is another. See ADR 0029; it is attribution, not isolation. |
 | `event_id` | UUID. Client-minted for browser events so a retried batch de-duplicates; server-minted otherwise. |
 | `name` | Registry name below. Unknown names are dropped at the edge. |
 | `occurred_at` | Server clock at receipt. `client_ts` keeps the browser's clock for skew analysis only. |
