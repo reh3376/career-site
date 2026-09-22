@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // No "x-powered-by: Next.js" on responses.
+  poweredByHeader: false,
   // Build a standalone server bundle so the production Docker image can copy
   // just the .next/standalone directory instead of the full node_modules tree.
   output: "standalone",

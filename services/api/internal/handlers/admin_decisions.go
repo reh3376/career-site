@@ -73,8 +73,11 @@ func (a *Admin) ReviewDecision(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("id must be numeric"))
 	}
 	verdict := strings.ToLower(strings.TrimSpace(req.Msg.GetHumanVerdict()))
-	if verdict == "" || len(verdict) > 40 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("human_verdict is required"))
+	switch verdict {
+	case "met", "partial", "unmet", "above_threshold", "below_threshold":
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("human_verdict must be one of met, partial, unmet (verdicts) or above_threshold, below_threshold (gate)"))
 	}
 	note := strings.TrimSpace(req.Msg.GetHumanNote())
 	if len(note) > 4000 {

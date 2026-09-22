@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { redirect } from "next/navigation";
+
 import { listArticles } from "@/lib/articles";
+import { getSessionUser } from "@/lib/session-user";
 
 export const metadata: Metadata = {
   title: "Articles",
   description: "Roger Henley's writing on industrial digital transformation, decision-making, and manufacturing AI.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ArticlesIndexPage() {
+  if (!(await getSessionUser())) redirect("/login?next=/articles");
   const articles = await listArticles();
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">

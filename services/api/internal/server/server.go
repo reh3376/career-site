@@ -126,7 +126,11 @@ func (s *Server) routes() http.Handler {
 		mount(jdPath, jdHandler)
 	}
 
-	return withLogging(s.log, mux)
+	// Every RPC body is small (the JD text is capped at 50k characters
+	// by the proto); a 1 MB cap stops oversized bodies from being read
+	// into memory and hashed. Verified live on 2026-09-22 that a 2 MB
+	// body to Login was processed before this.
+	return withLogging(s.log, http.MaxBytesHandler(mux, 1<<20))
 }
 
 func (s *Server) Start() error {

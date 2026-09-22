@@ -205,6 +205,11 @@ func main() {
 		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
 		jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
 	}
+	if n, err := userRepo.FailStrandedJd(ctx); err != nil {
+		log.Warn("jd: stranded-run reconciliation failed", slog.String("error", err.Error()))
+	} else if n > 0 {
+		log.Info("jd: stranded runs marked failed after restart", slog.Int64("count", n))
+	}
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
 	adminHandler := handlers.NewAdmin(

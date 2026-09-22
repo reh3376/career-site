@@ -348,10 +348,19 @@ func EstimateTokens(s string) int {
 	return len(s)/4 + 1
 }
 
+// clean makes untrusted text safe inside an attribute or a tagged
+// block: quotes and newlines become spaces and angle brackets are
+// replaced, so a posting cannot close a <requirement> or <jd> tag and
+// inject its own instructions.
 func clean(s string) string {
 	return strings.Map(func(r rune) rune {
-		if r == '"' || r == '\n' || r == '\r' {
+		switch r {
+		case '"', '\n', '\r':
 			return ' '
+		case '<':
+			return '\u2039'
+		case '>':
+			return '\u203a'
 		}
 		return r
 	}, s)

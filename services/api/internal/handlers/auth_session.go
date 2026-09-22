@@ -38,7 +38,7 @@ func (h *Auth) Login(
 	// per-IP, and a single admin who's mistyped their password a few
 	// times doesn't lock out every other user behind the same NAT.
 	if h.loginLimiter != nil {
-		key := "login:" + req.Peer().Addr + "|" + addr
+		key := "login:" + ClientIP(req) + "|" + addr
 		if ok, retry := h.loginLimiter.Allow(key); !ok {
 			h.log.Warn("login rate limited", slog.String("email", addr), slog.Duration("retry_after", retry))
 			return nil, connect.NewError(connect.CodeResourceExhausted,
@@ -84,7 +84,7 @@ func (h *Auth) Login(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("session mint failed"))
 	}
-	ipHash := hashIPBytes(req.Peer().Addr)
+	ipHash := hashIPBytes(ClientIP(req))
 	_, err = h.users.CreateSession(ctx, u.ID, tokenHash, h.cfg.SessionTTL, ipHash, req.Header().Get("User-Agent"))
 	if err != nil {
 		h.log.Error("session create failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
@@ -206,19 +206,19 @@ func statusToLoginError(s users.Status) error {
 		return nil
 	case users.StatusUnverified:
 		return connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("please verify your email address — check your inbox for the link"))
+			errors.New("please verify your email address: check your inbox for the link"))
 	case users.StatusPendingApproval:
 		return connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("your request is with Roger — you'll receive an email when he decides"))
+			errors.New("your request is with Roger; you'll receive an email when he decides"))
 	case users.StatusDeclined:
 		return connect.NewError(connect.CodePermissionDenied,
 			errors.New("this account is not permitted to sign in"))
 	case users.StatusExpired:
 		return connect.NewError(connect.CodePermissionDenied,
-			errors.New("your access has expired — reach out to Roger to renew"))
+			errors.New("your access has expired; reach out to Roger to renew"))
 	case users.StatusDisabled:
 		return connect.NewError(connect.CodePermissionDenied,
-			errors.New("this account is disabled — reach out to Roger for help"))
+			errors.New("this account is disabled; reach out to Roger for help"))
 	default:
 		return badCredentials
 	}
