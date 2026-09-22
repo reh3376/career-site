@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+type Verdict = {
+  id: string;
+  text: string;
+  category?: string;
+  weight?: number;
+  verdict: string;
+  rationale?: string;
+};
+
 type Poll = {
   status?: string;
   matchScore?: number;
@@ -14,7 +23,71 @@ type Poll = {
   resume_markdown?: string;
   generatedResumeUrl?: string;
   generated_resume_url?: string;
+  verdicts?: Verdict[];
+  metCount?: number;
+  met_count?: number;
+  partialCount?: number;
+  partial_count?: number;
+  unmetCount?: number;
+  unmet_count?: number;
 };
+
+const VERDICT_LABEL: Record<string, string> = {
+  met: "evidenced",
+  partial: "partly evidenced",
+  unmet: "not evidenced",
+};
+
+// The requirement-by-requirement reading behind the score. Shown for
+// every finished result, above or below the gate: what a hiring
+// manager needs is which asks were and were not evidenced, not a
+// single number that hides a strong candidate behind two literal
+// misses.
+function VerdictBreakdown({ verdicts, met, partial, unmet }: {
+  verdicts: Verdict[];
+  met: number;
+  partial: number;
+  unmet: number;
+}) {
+  const unmetTexts = verdicts.filter((v) => v.verdict === "unmet").map((v) => v.text);
+  return (
+    <section className="border-t border-line pt-5">
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        requirement by requirement
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-ink">
+        {met} of {verdicts.length} requirements evidenced in Roger&rsquo;s records
+        {partial ? `, ${partial} partly` : ""}
+        {unmet ? `, ${unmet} not evidenced` : ""}.
+        {unmetTexts.length ? (
+          <span className="text-ink-2"> Not evidenced: {unmetTexts.join("; ")}.</span>
+        ) : null}
+      </p>
+      <ul className="mt-4 space-y-3">
+        {verdicts.map((v) => (
+          <li key={v.id} className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[9rem_1fr]">
+            <span
+              className={
+                v.verdict === "met"
+                  ? "font-mono text-[11px] uppercase tracking-[0.14em] text-signal"
+                  : v.verdict === "partial"
+                    ? "font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2"
+                    : "font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3"
+              }
+            >
+              {VERDICT_LABEL[v.verdict] ?? v.verdict}
+              {v.category === "nice" ? " · preferred" : ""}
+            </span>
+            <span className="text-ink-2">
+              <span className="text-ink">{v.text}</span>
+              {v.rationale ? <span className="block text-xs text-ink-3">{v.rationale}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 const LIVE = new Set(["JD_STATUS_RECEIVED", "JD_STATUS_SCORING", "JD_STATUS_GENERATING"]);
 
@@ -91,6 +164,10 @@ export function JdResult({
   const pdfUrl = poll.generatedResumeUrl ?? poll.generated_resume_url ?? "";
   const err = poll.errorMessage ?? poll.error_message ?? "";
   const live = LIVE.has(status);
+  const verdicts = poll.verdicts ?? [];
+  const met = Number(poll.metCount ?? poll.met_count ?? 0);
+  const partial = Number(poll.partialCount ?? poll.partial_count ?? 0);
+  const unmet = Number(poll.unmetCount ?? poll.unmet_count ?? 0);
 
   return (
     <div className="space-y-5">
@@ -117,11 +194,16 @@ export function JdResult({
 
       {status === "JD_STATUS_BELOW_THRESHOLD" ? (
         <p className="text-sm leading-relaxed text-ink-2">
-          The requirement-by-requirement check came in under the {threshold}
-          gate, so no tailored résumé was generated. Roger still sees
-          every submission and will reply personally if the role looks
-          worth a conversation.
+          The weighted score came in under the {threshold} gate, so no
+          tailored résumé was generated automatically. The breakdown
+          below shows what was and was not evidenced; Roger sees every
+          submission and will reply personally if the role looks worth
+          a conversation.
         </p>
+      ) : null}
+
+      {!live && verdicts.length > 0 ? (
+        <VerdictBreakdown verdicts={verdicts} met={met} partial={partial} unmet={unmet} />
       ) : null}
 
       {status === "JD_STATUS_FAILED" ? (

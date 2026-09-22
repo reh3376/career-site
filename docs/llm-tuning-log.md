@@ -465,8 +465,12 @@ the owner sees the submission (he sees all of them); and the result
 page should show the requirement-by-requirement verdicts with their
 rationales to the hiring manager, so a below-threshold result reads
 as "9 of 14 met, 2 not evidenced: X, Y" instead of a rejection.
-Scheduled next, with `jd_requirements` v2 (keep the posting's
-alternative-qualification clauses in the extracted requirement).
+The breakdown shipped in PR 81: `GetJdResult` returns the
+per-requirement verdicts with rationales (released with the result
+token, whatever the outcome) and the result panel renders "N of M
+evidenced, not evidenced: X, Y" above or below the gate.
+`jd_requirements` v2 (keep the posting's alternative-qualification
+clauses in the extracted requirement) is next.
 
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`

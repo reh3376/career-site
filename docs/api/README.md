@@ -3138,6 +3138,11 @@ generated résumé URL when status is `ready`.
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
 | `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
+| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released with the result_token whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
+| `metCount` | `int32` | number |  | Number of requirements judged met. |
+| `partialCount` | `int32` | number |  | Number judged partially met. |
+| `unmetCount` | `int32` | number |  | Number judged not evidenced. |
+| `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
 
 <details><summary>Example request body</summary>
 
@@ -4174,6 +4179,25 @@ Poll response.
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
 | `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the request carried the submission's result_token. |
+| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released with the result_token whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
+| `metCount` | `int32` | number |  | Number of requirements judged met. |
+| `partialCount` | `int32` | number |  | Number judged partially met. |
+| `unmetCount` | `int32` | number |  | Number judged not evidenced. |
+| `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+
+### RequirementVerdict
+
+One requirement the reviewer extracted from the posting and the
+verdict it reached from the candidate's records.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Requirement id within the submission (r1, r2, ...). |
+| `text` | `string` | string |  | The requirement in the posting's own words. |
+| `category` | `string` | string |  | "must" or "nice", as the posting stated it. |
+| `weight` | `int32` | number |  | Weight 1 to 3 used in the score. |
+| `verdict` | `string` | string |  | "met", "partial" or "unmet". |
+| `rationale` | `string` | string |  | One-sentence reason, grounded in the evidence the judge saw. |
 
 ### MemberCounts
 
