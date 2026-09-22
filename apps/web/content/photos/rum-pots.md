@@ -6,7 +6,7 @@ taken: "2024"
 alt: "Several copper pot stills with swan necks in a bright distillery hall."
 permission: "Roger Henley (owner photo, no client marks)"
 hero_tracks: "distilling"
-visibility: "member"
+visibility: "public"
 order: 40
 source: "rum-pots.jpeg"
 ---

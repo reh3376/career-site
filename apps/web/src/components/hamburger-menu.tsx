@@ -219,16 +219,17 @@ function buildGroups({
   isAdmin: boolean;
   social?: SocialProps;
 }): MenuGroup[] {
-  // Anonymous visitors see only the public surface: landing, contact,
-  // and the way in. Everything else is members-only.
+  // Anonymous visitors see the evidence: the landing, the writing, the
+  // work photos, and the way in. The gallery serves them a subset from
+  // the same URL. The reviewer and the member surfaces need an account.
   const browse: MenuItem[] = [
     { kind: "link", label: "Home", href: "/" },
+    { kind: "link", label: "Articles", href: "/articles" },
+    { kind: "link", label: "Gallery", href: "/gallery" },
     { kind: "link", label: "Contact", href: "/contact" },
   ];
   if (signedIn) {
     browse.push(
-      { kind: "link", label: "Articles", href: "/articles" },
-      { kind: "link", label: "Gallery", href: "/gallery" },
       { kind: "link", label: "JD upload", href: "/jd-upload" },
       { kind: "link", label: "How Ask Roger works", href: "/how-ask-roger-works" },
     );

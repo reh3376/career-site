@@ -166,22 +166,20 @@ Still open:
 
 ## 6. Site and content
 
-- **Anonymous access, the shape agreed 2026-09-22.** Registration stays
-  required for anything that costs compute or reveals contact detail;
-  evidence that helps a hiring manager decide to register moves in
-  front of the gate. Always public: the landing page in full, the
-  practice and timeline detail, the articles list and reader, the
-  contact form, the legal pages. Always gated: the JD reviewer and its
-  results, résumé PDFs, `/home`, the admin console, anything naming a
-  member. The open call is the middle tier, in ascending order of how
-  much is given away:
-  **DECIDED 2026-09-22: the middle tier.** Public becomes the full
-  landing with practice and timeline detail, the articles list and
-  reader, and a gallery subset of six to eight photos carrying no
-  client marks. The reviewer, the résumé PDFs, the rest of the gallery,
-  `/home` and the admin console stay behind the gate. The landing also
-  needs one line naming what registering buys: submit a posting and get
-  a résumé written against it.
+- **Anonymous access. SHIPPED 2026-09-22.** The policy is one list,
+  `apps/web/src/lib/public-routes.ts`, shared by the proxy, robots.txt
+  and the new sitemap so the three cannot drift. Public: the landing,
+  the articles list and every article, six of the nine gallery photos,
+  contact and the legal pages. Gated: the reviewer and its results, the
+  résumé PDFs, the three personal gallery photos, `/home` and admin.
+  The gallery serves both audiences from one URL and filters on
+  `visibility` in each photo's front matter, so the split is content
+  rather than code. Articles now prerender instead of running
+  per-request, a sitemap lists them, and each public page ends by
+  naming what an account buys.
+  **Left over:** re-check the split once more photos land, and decide
+  whether the footer should still offer "Request access" to people who
+  are already signed in.
 - **OT mode.** First pass shipped (PR 86); check on a real phone, and
   raise the body and muted text contrast to meet WCAG AA in the dark
   tokens (treated as a fix, no decision needed).
@@ -191,12 +189,8 @@ Still open:
   screenshot, grain-tower install) with their front matter, write a
   caption and alt text per photo, pick the public subset for the tier
   above, then hero-by-track (FR-CNT-12).
-- **Articles public.** Move `/articles` and `/articles/[slug]` out of
-  the gated set, drop the server session check, index them, and put an
-  access call to action at the foot of each. Watch that the gallery
-  and JD pages stay gated when the public-path list changes.
-- **Shared public-path constant** used by the proxy, the sitemap and
-  the header nav, so a new public page is added once.
+- **Gallery captions.** Each photo needs its caption and alt text
+  reviewed now that six of them are public and indexed.
 - **Ask Roger (Phase 4).** Retrieval, persona, streaming chat with
   citations, guardrails, on the same gateway and decision log as the JD
   reviewer. Sized to the CPX31 with the 4b model.

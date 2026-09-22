@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { AccessNote } from "@/components/access-note";
 import { getArticle, listArticles } from "@/lib/articles";
-import { getSessionUser } from "@/lib/session-user";
 
 // Statically prerender each known slug at build time. Combined with
 // force-static, the reader page becomes an edge-cacheable HTML page
-// per article, no per-request markdown parse.
-export const dynamic = "force-dynamic";
+// per article, no per-request markdown parse. Public since 2026-09-22.
+export const dynamic = "force-static";
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const articles = await listArticles();
@@ -36,7 +36,6 @@ export default async function ArticleReaderPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  if (!(await getSessionUser())) redirect("/login?next=/articles");
   const { slug } = await params;
   const article = await getArticle(slug);
   if (!article) notFound();
@@ -163,6 +162,8 @@ export default async function ArticleReaderPage({
           More writing →
         </Link>
       </p>
+
+      <AccessNote />
     </article>
   );
 }

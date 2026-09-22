@@ -6,7 +6,7 @@ taken: "2024"
 alt: "Roger Henley speaking at a podium in a lecture hall at the University of Kentucky."
 permission: "Roger Henley (owner photo, already published on the landing page)"
 hero_tracks: "leadership"
-visibility: "member"
+visibility: "public"
 order: 90
 source: "jbbi-conf-dt-2024.jpeg"
 ---
