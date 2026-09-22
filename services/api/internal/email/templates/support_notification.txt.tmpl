@@ -1,4 +1,4 @@
-{{.Category}} — {{.Subject}}
+{{.Category}}: {{.Subject}}
 
 From:     {{.SenderName}} <{{.SenderEmail}}>
 {{if .Auth}}Signed in: yes ({{.Auth}}){{else}}Signed in: no (anonymous form submission){{end}}
@@ -12,5 +12,4 @@ Received: {{.SubmittedAt}}
 Reply to: {{.SenderEmail}}
 Review in the admin console: {{.ReviewURL}}
 
-—
 career-site (support inbox)

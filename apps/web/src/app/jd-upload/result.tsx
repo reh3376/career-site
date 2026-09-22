@@ -182,8 +182,8 @@ export function JdResult({
   if (failed) {
     return (
       <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-        Could not check progress ({failed}). Keep your reference number
-        and try again later.
+        Could not check progress ({failed}). The review keeps running; reopen it
+        from your submissions on /jd-upload, or wait for the email.
       </p>
     );
   }

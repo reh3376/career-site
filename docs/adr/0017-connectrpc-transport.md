@@ -20,3 +20,9 @@ The browser-facing API needs a contract the frontend can build against, streamin
 - UATS specs address methods as `POST` with JSON bodies; streaming and internal gRPC methods are covered by UDTS instead.
 - `curl` calls need the protocol header; the reference includes the template.
 - Breaking changes to `career.v1` are blocked by `buf breaking` in CI; the package version only changes for an incompatible redesign.
+
+## Status update (2026-09-22)
+
+- The transport decision stands and now carries `JdService` (JD upload, own-submissions list, `GetJdReviewConfig` for the live fit bands) and a much larger `AdminService` (jobs, decision log, fit bands, DB query, access grants) on the same contract.
+- `ChatService` with the streaming `SendMessage` is defined in `proto/career/v1/chat.proto` and generated, but no handler is registered in `services/api/cmd/api/main.go` yet: Ask Roger chat is not built. Streaming has therefore not been exercised on the browser path.
+- `make docs-api` output is drift-checked in CI by `make check-gen`, as this record intended; the proto check also runs `buf lint` and `buf breaking`.

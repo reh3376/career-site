@@ -10,20 +10,28 @@ of that file.
 
 Vocabulary used below:
 
-- **Calibration set**: four labelled JDs kept at
+- **Calibration set**: five labelled JDs kept at
   `docs/personal/calibration-jds.json` on the owner's Mac (gitignored;
-  keys `strong`, `medium`, `weak`, `off`): `strong` (a distillery controls / data-platform lead
-  role that matches the owner closely), `medium` (adjacent), `weak`
-  (loosely related), `off` (unrelated). Expected order: strong > medium >
-  weak ≈ off.
+  keys `strong`, `mid`, `weak`, `unrelated`, `bosch_lead`): `strong` (a
+  distillery controls / data-platform lead role that matches the owner
+  closely), `mid` (adjacent), `weak` (loosely related), `unrelated`,
+  and `bosch_lead` (a real Bosch "Manufacturing Automation Engineering
+  Lead" posting the owner expects above 0.75, added 2026-09-22).
+  Expected order: bosch_lead ≈ strong > mid > weak ≈ unrelated. Older entries below call the keys `medium` and `off`; they
+  are the same JDs.
 - **Retrieval score**: mean cosine similarity of the JD against the top 8
-  corpus chunks. Cheap, no LLM. Stored as `jd_submissions.retrieval_score`.
+  corpus chunks. Cheap, no LLM, diagnostics only (never a gate). Stored
+  as `jd_submissions.retrieval_score`.
 - **Match score**: the weighted requirement score computed in code from
   the model's verdicts (`met` = 1, `partial` = 0.5, `unmet` = 0, weights
   1 to 3). Stored as `jd_submissions.match_score`; the derivation is in
   `jd_submissions.assessment` (jsonb).
-- **Gate**: a JD scores "above threshold" at match score ≥ 0.65. Above
-  the gate the pipeline writes the grounded résumé and the locked PDF.
+- **Gate**: the lower edge of the "strong" fit band, editable by the
+  owner on `/admin/jd` (`app_settings` key `jd_fit_bands`; 0.70 on prod;
+  `JD_MATCH_THRESHOLD` only seeds it). Above the gate the pipeline
+  writes the grounded résumé and the locked PDF. Entries below record
+  the gate's history: a 0.65 constant, then 0.55, then 0.70 as
+  configuration.
 - **num_ctx**: the context window requested from Ollama per call
   (`SIDECAR_LLM_NUM_CTX` on the sidecar, `LLM_NUM_CTX` on the api; the
   two must match). Ollama silently truncates any prompt longer than this.

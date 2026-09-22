@@ -30,3 +30,9 @@ The design goal is therefore: the applicant experience stays low-friction, and t
 - Compromise of the owner's inbox exposes one-click approval, which is why every decision is auditable (`approval_decisions`), tokens are single-use with a 7-day TTL, and the MFA-protected review surface can override any decision made via a one-click link.
 - Invite-code mode (the third option in the original D-02) moves to §7 backlog; if the owner later wants a delegated approval path, an invite grants pre-approval and skips the pending state.
 - The site retains the option to relax to open-with-verification post-launch by defaulting the approval decision to auto-approve; the schema, emails, and admin surface remain useful either way.
+
+## Status update (2026-09-22)
+
+- Extended by ADR-0020: an approval now carries an access window. The one-click Accept in the owner's email grants the default 7-day TTL (`AcceptDefaultTTL` in `services/api/internal/handlers/decision.go`); other windows, including permanent, are chosen on the admin surface.
+- The "Pending approvals" surface is `/admin/registrations`; the detail page shows the member's expiry and offers day-preset extensions and "permanent".
+- Everything else in this record still holds: the pending state, the signed single-use decision links with a 7-day TTL, the scheduler auto-decline after 7 days (`services/api/internal/handlers/expiry.go`), and the audit trail in `approval_decisions`.

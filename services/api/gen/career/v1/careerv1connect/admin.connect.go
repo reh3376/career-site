@@ -1,5 +1,11 @@
-// The owner's console: members, activity, conversation review, escalation
-// replies, corpus inspection, persona, analytics, and the audit log.
+// The owner's console: members, registrations, access whitelist,
+// activity, contact messages, corpus (reindex and embed sweep as jobs,
+// paste-ingest), JD submissions and fit bands, decision review, and the
+// read-only DB query surface.
+//
+// The conversation-review, escalation, persona, analytics and audit
+// RPCs below belong to Ask Roger (Phase 4) and have no handler yet: the
+// api answers them with Unimplemented until the chat surface ships.
 //
 // Every method requires an admin session with a fresh TOTP verification. All
 // admin actions are written to the audit log (FSD FR-ADM-09).
@@ -194,9 +200,12 @@ type AdminServiceClient interface {
 	// Runs retrieval for a question and returns the chunks the assistant
 	// would see, with scores ("what would the assistant retrieve?").
 	TestRetrieval(context.Context, *connect.Request[v1.TestRetrievalRequest]) (*connect.Response[v1.TestRetrievalResponse], error)
-	// Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
+	// Starts a background job inside the api (corpus reindex of the public
+	// or private mount, embed sweep) and returns its id at once; the
+	// console polls GetJob for progress. The sidecar JobKind values are
+	// reserved and rejected as not runnable here. One job at a time.
 	RunJob(context.Context, *connect.Request[v1.RunJobRequest]) (*connect.Response[v1.RunJobResponse], error)
-	// Returns the status of a job started by RunJob or the scheduler.
+	// Returns the status and progress of a job started by RunJob.
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
 	// Returns the active persona version and its history. The prompt text is
 	// governed in the repository and pinned by its ULTS hash; this shows which
@@ -270,13 +279,14 @@ type AdminServiceClient interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
-	// Walks a filesystem tree for markdown files and runs each through
+	// Walks a corpus mount for markdown files and runs each through
 	// IngestCorpusText, so the corpus can be seeded from committed
-	// article content instead of paste-by-paste. Idempotent — files
-	// whose content_hash matches the stored row are skipped. Root is
-	// resolved from CORPUS_ROOT + a subdirectory per source_kind
-	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
-	// "Reindex articles" button on /admin/corpus.
+	// content instead of paste-by-paste. Idempotent: files whose
+	// content_hash matches the stored row are skipped. Root is resolved
+	// from CORPUS_ROOT (public) or CORPUS_PRIVATE_ROOT (private) plus a
+	// subdirectory per source_kind. Synchronous; the console now runs
+	// the same walk as a job through RunJob (JOB_KIND_CORPUS_REINDEX_*)
+	// because a private reindex outlives the proxy's response timeout.
 	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
 	// Re-embeds every chunk whose vector is missing or was produced by a
 	// different embedder than the sidecar's current one. Bounded per call
@@ -284,6 +294,8 @@ type AdminServiceClient interface {
 	// This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
 	// changing the embedding model: nothing is deleted, the corpus is
 	// walked until every chunk carries the current model's vector.
+	// Synchronous and bounded; the console runs the sweep to completion
+	// as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
 	SweepCorpusEmbeddings(context.Context, *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
@@ -293,10 +305,11 @@ type AdminServiceClient interface {
 	// assessment derivation (requirements, evidence, verdicts) and the
 	// generated résumé when present. Backs /admin/jd/[id].
 	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
-	// Re-runs the scoring pipeline (retrieval pre-score, assessment,
-	// résumé and PDF when above threshold) for one submission in the
-	// background, e.g. after a transient sidecar failure or a prompt
-	// change. Returns immediately; poll GetJdSubmission for the outcome.
+	// Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
+	// per-requirement assessment, score in code, résumé and locked PDF
+	// when the fit is strong or better) for one submission in the
+	// background, e.g. after a failed run or a prompt change. Returns
+	// immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
@@ -312,8 +325,9 @@ type AdminServiceClient interface {
 	// Reads the JD fit bands (the numbers that classify a review as very
 	// strong / strong / possible / weak / very weak; "strong" is the gate).
 	GetJdFitBands(context.Context, *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error)
-	// Sets the JD fit bands. Takes effect for the next submission within
-	// seconds; existing scores are re-classified on read.
+	// Sets the JD fit bands (stored in app_settings; the api caches them
+	// for 15 s). Takes effect for the next submission within seconds;
+	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
 }
 
@@ -873,9 +887,12 @@ type AdminServiceHandler interface {
 	// Runs retrieval for a question and returns the chunks the assistant
 	// would see, with scores ("what would the assistant retrieve?").
 	TestRetrieval(context.Context, *connect.Request[v1.TestRetrievalRequest]) (*connect.Response[v1.TestRetrievalResponse], error)
-	// Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
+	// Starts a background job inside the api (corpus reindex of the public
+	// or private mount, embed sweep) and returns its id at once; the
+	// console polls GetJob for progress. The sidecar JobKind values are
+	// reserved and rejected as not runnable here. One job at a time.
 	RunJob(context.Context, *connect.Request[v1.RunJobRequest]) (*connect.Response[v1.RunJobResponse], error)
-	// Returns the status of a job started by RunJob or the scheduler.
+	// Returns the status and progress of a job started by RunJob.
 	GetJob(context.Context, *connect.Request[v1.GetJobRequest]) (*connect.Response[v1.GetJobResponse], error)
 	// Returns the active persona version and its history. The prompt text is
 	// governed in the repository and pinned by its ULTS hash; this shows which
@@ -949,13 +966,14 @@ type AdminServiceHandler interface {
 	// Returns every document currently in the corpus with a per-row
 	// chunk count. Backs the list on /admin/corpus.
 	ListCorpusDocuments(context.Context, *connect.Request[v1.ListCorpusDocumentsRequest]) (*connect.Response[v1.ListCorpusDocumentsResponse], error)
-	// Walks a filesystem tree for markdown files and runs each through
+	// Walks a corpus mount for markdown files and runs each through
 	// IngestCorpusText, so the corpus can be seeded from committed
-	// article content instead of paste-by-paste. Idempotent — files
-	// whose content_hash matches the stored row are skipped. Root is
-	// resolved from CORPUS_ROOT + a subdirectory per source_kind
-	// (e.g. `article` → `${CORPUS_ROOT}/articles`). Backs the
-	// "Reindex articles" button on /admin/corpus.
+	// content instead of paste-by-paste. Idempotent: files whose
+	// content_hash matches the stored row are skipped. Root is resolved
+	// from CORPUS_ROOT (public) or CORPUS_PRIVATE_ROOT (private) plus a
+	// subdirectory per source_kind. Synchronous; the console now runs
+	// the same walk as a job through RunJob (JOB_KIND_CORPUS_REINDEX_*)
+	// because a private reindex outlives the proxy's response timeout.
 	ReindexCorpus(context.Context, *connect.Request[v1.ReindexCorpusRequest]) (*connect.Response[v1.ReindexCorpusResponse], error)
 	// Re-embeds every chunk whose vector is missing or was produced by a
 	// different embedder than the sidecar's current one. Bounded per call
@@ -963,6 +981,8 @@ type AdminServiceHandler interface {
 	// This is the safe path for flipping SIDECAR_EMBED_PROVIDER or
 	// changing the embedding model: nothing is deleted, the corpus is
 	// walked until every chunk carries the current model's vector.
+	// Synchronous and bounded; the console runs the sweep to completion
+	// as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
 	SweepCorpusEmbeddings(context.Context, *connect.Request[v1.SweepCorpusEmbeddingsRequest]) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error)
 	// Returns every JD submission with score + status. Backs
 	// /admin/jd — Roger's triage view for the JD-upload flow. Full
@@ -972,10 +992,11 @@ type AdminServiceHandler interface {
 	// assessment derivation (requirements, evidence, verdicts) and the
 	// generated résumé when present. Backs /admin/jd/[id].
 	GetJdSubmission(context.Context, *connect.Request[v1.GetJdSubmissionRequest]) (*connect.Response[v1.GetJdSubmissionResponse], error)
-	// Re-runs the scoring pipeline (retrieval pre-score, assessment,
-	// résumé and PDF when above threshold) for one submission in the
-	// background, e.g. after a transient sidecar failure or a prompt
-	// change. Returns immediately; poll GetJdSubmission for the outcome.
+	// Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
+	// per-requirement assessment, score in code, résumé and locked PDF
+	// when the fit is strong or better) for one submission in the
+	// background, e.g. after a failed run or a prompt change. Returns
+	// immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
@@ -991,8 +1012,9 @@ type AdminServiceHandler interface {
 	// Reads the JD fit bands (the numbers that classify a review as very
 	// strong / strong / possible / weak / very weak; "strong" is the gate).
 	GetJdFitBands(context.Context, *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error)
-	// Sets the JD fit bands. Takes effect for the next submission within
-	// seconds; existing scores are re-classified on read.
+	// Sets the JD fit bands (stored in app_settings; the api caches them
+	// for 15 s). Takes effect for the next submission within seconds;
+	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
 }
 

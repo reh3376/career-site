@@ -1,6 +1,6 @@
 # apps/web
 
-Next.js 15 (App Router, React Server Components, TypeScript `strict`) frontend for career-site. Uses `@connectrpc/connect-web` against the Go API's ConnectRPC surface. Same-origin in production, so no CORS.
+Next.js 16 (App Router, React Server Components, TypeScript `strict`) frontend for career-site. Uses `@connectrpc/connect-web` against the Go API's ConnectRPC surface. Same-origin in production, so no CORS.
 
 ## Layout
 
@@ -57,7 +57,7 @@ docker build -t career-site/web:dev .
 
 ## What is not here yet
 
-Phase 0 scaffold. Everything visual, functional, and gated lands later:
+Shipped surfaces (2026-09-22): landing in IT and OT modes, members-only articles and gallery, JD upload with progress, review pages and fit categories, the admin console. Still ahead:
 
 - **Phase 1** — the real landing page + "coming soon — late 2026" screen; the registration form; the "your request is with the owner" post-verify screen; the gated under-construction page after approval; Tailwind + design tokens; global layout + header/footer.
 - **Phase 2+** — content sections, personalized home, Ask Roger UI, member profile, admin console.

@@ -1,12 +1,14 @@
-// JD-upload → tailored-résumé pipeline. Public visitors submit a job
-// description and receive either (a) a tailored 2-page résumé
-// generated from Roger's private career corpus, or (b) a polite
-// fallback when the match score is below threshold.
+// JD-upload → tailored-résumé pipeline. Signed-in members submit a job
+// description; the reviewer extracts its requirements, judges each one
+// against Roger's career corpus (one judge call per requirement),
+// computes the score in code, classifies it into a fit category and,
+// when the fit is strong or better, writes a tailored 2-page résumé
+// rendered as a locked PDF. Below the gate the member still sees every
+// verdict, not just a number.
 //
-// This proto ships the request/response surface; the underlying
-// scoring + generation is built in follow-up PRs behind the same
-// interface — SubmitJd is a fire-and-forget that returns an id the
-// caller polls via GetJdResult.
+// SubmitJd is fire-and-forget: it returns an id the caller polls via
+// GetJdResult while the pipeline (15 to 30 minutes on the production
+// box, one submission at a time) runs in the background.
 syntax = "proto3";
 
 package career.v1;
@@ -27,9 +29,11 @@ service JdService {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 3;
   }
-  // Returns the current state of a submission — queued / scoring /
-  // below-threshold / generating / ready / failed — plus the
-  // generated résumé URL when status is `ready`.
+  // Returns the current state of a submission (received / scoring /
+  // below-threshold / generating / ready / failed) with progress, the
+  // score and fit category once known, and, for the submitting member
+  // or a caller holding the result token, the requirement verdicts plus
+  // the résumé and its PDF link when status is `ready`.
   rpc GetJdResult(GetJdResultRequest) returns (GetJdResultResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.rate_limit_per_minute) = 30;
@@ -56,9 +60,11 @@ enum JdSource {
   JD_SOURCE_UNSPECIFIED = 0;
   // Pasted directly into the textarea on /jd-upload.
   JD_SOURCE_PASTE = 1;
-  // Uploaded PDF; text extracted server-side (sidecar).
+  // Uploaded PDF; text extracted server-side. Reserved: the form only
+  // sends PASTE today.
   JD_SOURCE_PDF = 2;
-  // Uploaded plain-text file (.txt, .md).
+  // Uploaded plain-text file (.txt, .md). Reserved: the form only
+  // sends PASTE today.
   JD_SOURCE_TEXT_UPLOAD = 3;
 }
 
@@ -70,9 +76,10 @@ enum JdStatus {
   JD_STATUS_RECEIVED = 1;
   // Retrieval + scoring is running.
   JD_STATUS_SCORING = 2;
-  // Score below the match gate (jd.MatchThreshold); the caller gets the polite fallback response.
+  // Score below the résumé gate (the "strong" fit band in force, see
+  // JdFitBands); the caller still gets the verdict breakdown.
   JD_STATUS_BELOW_THRESHOLD = 3;
-  // Score at or above the match gate; résumé generation is running.
+  // Score at or above the gate; résumé generation is running.
   JD_STATUS_GENERATING = 4;
   // Résumé is ready; generated_resume_url is populated.
   JD_STATUS_READY = 5;
@@ -93,15 +100,15 @@ message SubmitJdRequest {
     defined_only: true
     not_in: [0]
   }];
-  // Optional role / title the visitor is considering Roger for.
-  // Free-form; used for admin triage and to steer the tailored
-  // résumé prompt when scoring lands.
+  // Optional role / title the member is considering Roger for.
+  // Free-form; shown in admin triage and passed as a hint to the
+  // requirement and résumé prompts.
   string role_hint = 3 [(buf.validate.field).string.max_len = 200];
   // Optional employer name (e.g. "Anthropic"). Same free-form
-  // triage aid as role_hint.
+  // triage aid and prompt hint as role_hint.
   string employer_hint = 4 [(buf.validate.field).string.max_len = 200];
-  // Optional email so the visitor can be notified when the résumé
-  // is ready without keeping the tab open. Never surfaced publicly.
+  // Optional extra address for the finished-review email; the member's
+  // account email always receives it. Never surfaced publicly.
   string contact_email = 5 [(buf.validate.field).string.max_len = 254];
   // Optional link to apply for the position (http or https). Shown
   // to Roger in the admin triage view; never surfaced publicly.
@@ -120,8 +127,9 @@ message SubmitJdResponse {
   // renders back to the caller so the copy stays server-controlled.
   string message = 3;
   // Secret issued once per submission (hex). Present it on
-  // GetJdResult to receive the generated résumé; without it the poll
-  // returns status and score only.
+  // GetJdResult to receive the verdicts and the generated résumé. The
+  // submitting member's own session releases the same things without
+  // it, so a review can be reopened from /jd-upload/<id> later.
   string result_token = 4;
 }
 
@@ -132,7 +140,8 @@ message GetJdResultRequest {
     min_len: 1
     max_len: 32
   }];
-  // Token from SubmitJdResponse; optional, gates the résumé body.
+  // Token from SubmitJdResponse; optional. Gates the verdicts and the
+  // résumé body unless the caller is the submitting member.
   string result_token = 2 [(buf.validate.field).string.max_len = 64];
 }
 
@@ -143,7 +152,9 @@ message GetJdResultResponse {
   // Match score in [0, 1] once known; unset before scoring runs
   // and after a failure.
   optional double match_score = 2;
-  // Absolute URL of the generated résumé when status is READY.
+  // Download path of the locked résumé PDF, with the result token
+  // appended, when status is READY and the caller may see the résumé;
+  // empty otherwise.
   string generated_resume_url = 3;
   // Human-readable error text when status is FAILED; empty otherwise.
   string error_message = 4;
@@ -153,12 +164,13 @@ message GetJdResultResponse {
   // reached. Unset while the pipeline is still running.
   google.protobuf.Timestamp completed_at = 6;
   // Generated résumé in markdown, only when status is READY and the
-  // request carried the submission's result_token.
+  // caller is the submitting member or carried the result_token.
   string resume_markdown = 7;
-  // Requirement-by-requirement verdicts behind the score, released
-  // with the result_token whatever the outcome, so a below-threshold
-  // result shows what was and was not evidenced instead of a bare
-  // number (the opposite of an ATS musts-and-misses filter).
+  // Requirement-by-requirement verdicts behind the score, released to
+  // the submitting member (or with the result_token) whatever the
+  // outcome, so a below-threshold result shows what was and was not
+  // evidenced instead of a bare number (the opposite of an ATS
+  // musts-and-misses filter).
   repeated RequirementVerdict verdicts = 8;
   // Number of requirements judged met.
   int32 met_count = 9;
@@ -166,7 +178,8 @@ message GetJdResultResponse {
   int32 partial_count = 10;
   // Number judged not evidenced.
   int32 unmet_count = 11;
-  // The gate the score was compared against (JD_MATCH_THRESHOLD).
+  // The résumé gate in force: the "strong" fit band (owner-editable;
+  // JD_MATCH_THRESHOLD only seeds it the first time).
   double match_threshold = 12;
   // Pipeline progress, 0 to 100, while the submission is live; 100
   // once it has finished.
@@ -179,7 +192,8 @@ message GetJdResultResponse {
 }
 
 // Lower edges of the fit categories; scores below weak are very weak.
-// Owner-editable from /admin/jd.
+// Owner-editable from /admin/jd (stored in app_settings, cached briefly
+// by the api); the strong edge is the résumé gate.
 message JdFitBands {
   // Very strong at or above this score.
   double very_strong = 1;
@@ -242,9 +256,10 @@ message RequirementVerdict {
   string text = 2;
   // "must" or "nice", as the posting stated it.
   string category = 3;
-  // Weight 1 to 3 used in the score.
+  // Weight 1 to 3 used in the score. Must items always count in the
+  // denominator; nice items only when evidenced.
   int32 weight = 4;
-  // "met", "partial" or "unmet".
+  // "met", "partial" or "unmet" (scored 1, 0.5 and 0 in code).
   string verdict = 5;
   // One-sentence reason, grounded in the evidence the judge saw.
   string rationale = 6;

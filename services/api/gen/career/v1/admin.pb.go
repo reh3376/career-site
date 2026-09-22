@@ -1,5 +1,11 @@
-// The owner's console: members, activity, conversation review, escalation
-// replies, corpus inspection, persona, analytics, and the audit log.
+// The owner's console: members, registrations, access whitelist,
+// activity, contact messages, corpus (reindex and embed sweep as jobs,
+// paste-ingest), JD submissions and fit bands, decision review, and the
+// read-only DB query surface.
+//
+// The conversation-review, escalation, persona, analytics and audit
+// RPCs below belong to Ask Roger (Phase 4) and have no handler yet: the
+// api answers them with Unimplemented until the chat surface ships.
 //
 // Every method requires an admin session with a fresh TOTP verification. All
 // admin actions are written to the audit log (FSD FR-ADM-09).
@@ -151,7 +157,8 @@ func (ReviewStatus) EnumDescriptor() ([]byte, []int) {
 	return file_career_v1_admin_proto_rawDescGZIP(), []int{1}
 }
 
-// Sidecar jobs the owner can start.
+// Jobs the owner can start. Kinds 1 to 7 are reserved for sidecar jobs
+// and are not runnable yet; kinds 8 to 10 run inside the api.
 type JobKind int32
 
 const (
@@ -6445,8 +6452,8 @@ type GetJdSubmissionResponse struct {
 	// Full JD text as submitted.
 	JdText string `protobuf:"bytes,2,opt,name=jd_text,json=jdText,proto3" json:"jd_text,omitempty"`
 	// Assessment derivation as JSON (requirements, evidence chunk ids,
-	// verdicts, prompt versions); empty before scoring or when the
-	// assessor was not wired.
+	// per-requirement verdicts, prompt versions, score formula); empty
+	// before scoring or when the assessor was not wired.
 	AssessmentJson string `protobuf:"bytes,3,opt,name=assessment_json,json=assessmentJson,proto3" json:"assessment_json,omitempty"`
 	// Generated résumé in markdown; empty until generation lands.
 	ResumeMarkdown string `protobuf:"bytes,4,opt,name=resume_markdown,json=resumeMarkdown,proto3" json:"resume_markdown,omitempty"`
@@ -6885,14 +6892,16 @@ type JdSubmissionRow struct {
 	Source JdSource `protobuf:"varint,8,opt,name=source,proto3,enum=career.v1.JdSource" json:"source,omitempty"`
 	// Truncated provider error when status is FAILED; empty otherwise.
 	ErrorMessage string `protobuf:"bytes,9,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	// Generated résumé URL when status is READY; empty until then.
+	// Download path of the locked résumé PDF (without the token) when
+	// status is READY; empty until then.
 	GeneratedResumeUrl string `protobuf:"bytes,10,opt,name=generated_resume_url,json=generatedResumeUrl,proto3" json:"generated_resume_url,omitempty"`
 	// When the submission was received.
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// When the terminal state was reached; unset while in-flight.
 	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
-	// Retrieval pre-score (mean top-K cosine); unset before scoring.
-	// match_score is the requirement-weighted gate when the assessor ran.
+	// Retrieval pre-score (mean top-K cosine), diagnostics only, never a
+	// gate; unset before scoring. match_score is the requirement-weighted
+	// score the gate is applied to.
 	RetrievalScore *float64 `protobuf:"fixed64,13,opt,name=retrieval_score,json=retrievalScore,proto3,oneof" json:"retrieval_score,omitempty"`
 	// Email of the signed-in member who submitted; empty for rows created
 	// before JD upload became members-only.
@@ -7045,7 +7054,7 @@ type ListJdSubmissionsResponse struct {
 	Submissions []*JdSubmissionRow `protobuf:"bytes,1,rep,name=submissions,proto3" json:"submissions,omitempty"`
 	// Number of rows currently in a terminal READY state.
 	ReadyCount int32 `protobuf:"varint,2,opt,name=ready_count,json=readyCount,proto3" json:"ready_count,omitempty"`
-	// Number that scored below the threshold.
+	// Number that scored below the résumé gate (the strong band).
 	BelowThresholdCount int32 `protobuf:"varint,3,opt,name=below_threshold_count,json=belowThresholdCount,proto3" json:"below_threshold_count,omitempty"`
 	// Number that failed during scoring / generation.
 	FailedCount int32 `protobuf:"varint,4,opt,name=failed_count,json=failedCount,proto3" json:"failed_count,omitempty"`

@@ -11,7 +11,7 @@ import { MySubmissions } from "./my-submissions";
 export const metadata: Metadata = {
   title: "JD upload",
   description:
-    "Paste a job description; Roger scores it against his experience and, when the fit clears the threshold, sends back a résumé tailored to that specific posting.",
+    "Paste a job description; Roger's reviewer scores it against his experience, requirement by requirement, and when the fit is strong or better sends back a résumé tailored to that specific posting.",
 };
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export default async function JdUploadPage() {
   if (!me) redirect("/login?next=/jd-upload");
   const bands = await getJdBands(await getSessionCookie());
   const threshold = bands.strong.toFixed(2);
+  const weakEdge = bands.weak.toFixed(2);
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
@@ -37,9 +38,11 @@ export default async function JdUploadPage() {
         Roger keeps a master career corpus, 30 years across
         control rooms, manufacturing plants, decision infrastructure,
         and AI/ML. This JD review evaluates his skill set against the
-        JD criteria and produces a skills-match confidence score. If
-        the score is &ge; {threshold}, a 2-page r&eacute;sum&eacute; custom
-        built for the uploaded JD is generated as a PDF.
+        JD criteria, requirement by requirement, and produces a
+        skills-match score in one of five fit categories: very strong,
+        strong, possible, weak, very weak. When the fit is strong or
+        better (score &ge; {threshold}), a 2-page r&eacute;sum&eacute;
+        custom built for the uploaded JD is generated as a locked PDF.
       </p>
 
       <section className="mt-12 grid gap-4 border-l-2 border-line pl-5 text-sm leading-relaxed text-ink-2">
@@ -49,21 +52,33 @@ export default async function JdUploadPage() {
           </span>
         </p>
         <ol className="ml-4 list-decimal space-y-1.5 text-sm">
-          <li>The full JD text lands in Roger&rsquo;s inbox with a match score.</li>
           <li>
-            <span className="text-ink">Score ≥ {threshold}:</span> a 2-page résumé is
-            generated from the master corpus, tailored to the posting.
+            The full JD text lands in Roger&rsquo;s inbox with the score
+            and every requirement verdict.
           </li>
           <li>
-            <span className="text-ink">Below threshold:</span> Roger will still
-            take a look and reply personally if the role looks worth it.
+            <span className="text-ink">Strong or very strong (score &ge; {threshold}):</span>{" "}
+            a 2-page résumé is generated from the master corpus, tailored
+            to the posting, and emailed to you as a locked PDF.
+          </li>
+          <li>
+            <span className="text-ink">Possible or weak (score &ge; {weakEdge}):</span>{" "}
+            no résumé yet. Roger will look at the posting himself and
+            reply personally.
+          </li>
+          <li>
+            <span className="text-ink">Very weak:</span> the review shows
+            what was and was not evidenced, and no further action is
+            taken.
           </li>
         </ol>
         <p className="text-xs text-ink-3">
           Scoring is requirement by requirement: the posting is broken
-          into checkable asks, each is judged against Roger&rsquo;s
-          career corpus, and the score is computed from those verdicts
-          rather than guessed by a model. See{" "}
+          into checkable asks, each is judged in its own call against
+          Roger&rsquo;s career corpus, and the score is computed from
+          those verdicts rather than guessed by a model. A review runs 15
+          to 30 minutes; you can close the page and reopen it from your
+          submissions below, and the outcome is emailed. See{" "}
           <a
             href="/how-ask-roger-works"
             className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"

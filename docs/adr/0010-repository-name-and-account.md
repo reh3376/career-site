@@ -14,3 +14,7 @@ The repository lives at `github.com/reh3376/career-site`, alongside the rest of 
 
 - One account for everything an employer will see.
 - The site's domain is still to be chosen (D-10); nothing in the code depends on it.
+
+## Status update (2026-09-22)
+
+- The domain is chosen and live: https://rogerhenley.dev/ (see `README.md`). Container images are published to `ghcr.io/reh3376/career-site-{web,api,sidecar}` under the same account. The open half of D-10 is closed.

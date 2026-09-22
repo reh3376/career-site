@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | Document ID | CAREER-SITE-FSD-2026-001 |
-| Version | 0.3.5 — Draft for owner review |
-| Date | 2026-09-19 |
+| Version | 0.3.8, draft for owner review, synced to the shipped system |
+| Date | 2026-09-22 |
 | Owner | Roger E. Henley II |
 | Prepared with | Claude (Anthropic), working from the owner's brief, master résumé, and published writing |
-| Status | **Draft** — not yet approved; open decisions listed in §14 |
-| Repository | `github.com/reh3376/career-site` (public; created 2026-09-18) |
+| Status | **Draft** — not yet approved; open decisions listed in §14. Requirements marked **Shipped** are live on rogerhenley.dev as of 2026-09-22; everything else is specification. |
+| Repository | `github.com/reh3376/career-site` (public; created 2026-09-18). Production: `https://rogerhenley.dev` |
 | Canonical location | `docs/FSD.md` in the repository. Amendments go through pull requests; the change log below is the record. |
 
 ### Change log
@@ -27,6 +27,7 @@
 | 0.3.5 | 2026-09-19 | R. Henley / Claude | Owner-added scope + repo-maturity policy. New FR-CNT-22..25 (contact/support form, meeting scheduler, quote of the day, GitHub repo cards + contributor request); FR-CHAT-13/16 amended (narrow tool-use allowlist; Ollama as an on-host LLM/embeddings option); FR-ADM-12..14 (curation surfaces for the new features); §6.11 added (NFR-DOC docs discipline, NFR-SUPP public-repo hygiene); §9.3 branch workflow expanded; §9.7 public-repo hygiene expanded; Phase 2 scope expanded (effort 8-10 → 12-15 days); D-21..26 opened (contact form / scheduler / QoD / contributor access / chatbot tool-use / on-host LLM); D-27 resolved (public-repo maturity policy; ADR-0027) |
 | 0.3.6 | 2026-09-19 | R. Henley / Claude | Frontend design system adopted ("blueprint editorial"). Cool-paper palette + blueprint-teal accent + safety-orange signal; Fraunces variable serif + Inter Tight + JetBrains Mono via `next/font`; editorial layout with real numbers used typographically; four curated work + personal images woven in (Hobet dragline, copper condenser, UK podium, home workshop, Whiskey House team); single motion moment (`system · nominal` pulse in header); underlined form fields on paper. ADR-0028 recorded. Note (§13.1): visual design is a build-phase artifact per this document; the ADR is the source of truth for tokens. |
 | 0.3.7 | 2026-09-19 | R. Henley / Claude | Admin console scaffolded + role-aware hamburger nav. New `/admin` (overview + `/admin/contacts`, `/admin/registrations`, `/admin/access` placeholders) gated server-side by admin role via `AdminLayout`; `/admin/decision` stays public through the `(console)` route group. `SiteHeader` becomes a server component that reads the session and hands role state to a new `HamburgerMenu` client drawer (per-role menu groups: browse / admin / your-account / access / elsewhere). Shared `signOutAction` at `apps/web/src/app/actions/session.ts` deduplicates the sign-out flow. `/login` accepts `?next=<same-origin-path>` for post-auth redirect (validated to prevent open-redirect). No proto changes; real data lands in v0.3.8 when the AdminService handlers ship. |
+| 0.3.8 | 2026-09-22 | R. Henley / Claude | Document synced to the system as shipped through PR 89. New §5.11 FR-JD (the JD reviewer: members-only upload, progress modal, reopenable review page and own-submissions list, owner-editable fit bands with "strong" as the résumé gate, one judge call per requirement, score formula v2, grounded résumé as a locked PDF, category-based submitter email, decision log). New J7 journey. FR-PUB-02, FR-AUTH-14/17/18, FR-ADM-10/11/14, FR-NOTF-05 annotated with shipped behaviour; FR-ADM-15..18 (JD submissions, decision review, corpus jobs, DB query) and FR-NOTF-07 (JD emails) added; FR-CHAT status note (Ask Roger chat not built; its corpus, embeddings, LLM gateway and decision log are live). §3.2 roles, §7.1 sitemap, §7.4 corpus workflow, §8.1 to 8.5 and §8.10 (Next.js 16 with `proxy.ts`, Go 1.26, Python 3.12, Ollama container, `JdService`, sidecar `Generate` and `RenderResume`, 90 public RPCs, migrations to 00022, Hetzner CPX31 at `/opt/career-site`, manual `IMAGE_TAG` rollout), §9.1/9.3/9.4 (workflows actually present, `protect-main` ruleset with five required checks, self-hosted fonts), §11.1, §12 status column, §14 (D-01, D-08, D-10, D-11, D-26 current state), §15.A note, §15.E template kinds. Statements neither in the current-state brief nor verifiable in the code are marked "(unverified)". No em dashes added. |
 
 ---
 
@@ -61,6 +62,7 @@ This document specifies **what** the site must do and, at the architecture level
 **In scope**
 
 - A gated, personalized career-portfolio website with a public landing layer.
+- A members-only job-description (JD) reviewer that scores a posting against the owner's corpus and, for strong fits, writes a tailored two-page résumé as a locked PDF (§5.11; shipped).
 - Member registration, email verification, password and social sign-in, sessions, and account management.
 - Per-member interest profiles that tailor what is surfaced first, and a persistent activity history that welcomes members back.
 - A transparent, first-person conversational assistant ("Ask Roger") grounded in the owner's own material via retrieval-augmented generation.
@@ -177,9 +179,9 @@ A site that acts like a well-briefed representative of the owner: it learns what
 
 | Role | Can do |
 |---|---|
-| Anonymous | View landing page, legal pages, AI-disclosure page; register; sign in. |
-| Member (verified) | Everything Anonymous can do, plus: all content sections, personalization, history, saved items, Ask Roger, downloads, contact, own-data export and deletion. |
-| Member (unverified) | Only the verification screen, resend-verification, and sign-out. |
+| Anonymous | **Shipped:** landing page (`/`, IT editorial mode or OT HMI mode chosen by a cookie), `/contact`, `/register`, `/login`, `/privacy`, `/terms`, the verify and password-reset flows, the one-click approval link, and the LinkedIn and GitHub links. Everything else redirects to sign-in (`apps/web/src/proxy.ts`, `PUBLIC_PATHS`). The AI-disclosure page (`/how-ask-roger-works`) is currently behind the gate, not public as FR-PUB-03 specifies. |
+| Member (approved) | Everything Anonymous can do, plus: **shipped:** `/home`, the JD reviewer (`/jd-upload`, §5.11), `/articles`, `/gallery`, `/settings`; **planned:** personalization, history, saved items, Ask Roger chat, downloads, own-data export and deletion. |
+| Member (unverified or pending approval) | Only the verification screen, resend-verification, and sign-out. |
 | Admin | Everything Member can do, plus the admin console (§5.7). Admin sessions require MFA. |
 
 ---
@@ -230,6 +232,16 @@ A site that acts like a well-briefed representative of the owner: it learns what
 2. Owner opens a member: activity timeline and conversation transcripts (read-only), adds a private note.
 3. Owner converts an unanswered question into a Q&A-bank entry; the assistant uses it after the next ingest.
 
+### J7. Member submits a job description (shipped; see `docs/jd-submitter-workflow.md`)
+
+1. Visitor lands on `/` (IT or OT mode); "Request access" is the primary action. They register, the owner gets the approval email, and the `user_approved` mail carries the sign-in link.
+2. Member signs in and reaches `/home`, which offers the "Upload a JD" card.
+3. On `/jd-upload` the member pastes the posting with optional role, employer, contact email, and application link. The page quotes the live résumé gate and lists the member's own earlier submissions.
+4. On submit a modal shows 0 to 100 % progress and the current stage ("judging requirement 4 of 12"); the member can keep it open or close it. The result panel polls for up to an hour and says "15 to 30 minutes, you can close this page".
+5. When the pipeline finishes, the review at `/jd-upload/<id>` shows the fit category, the score, "N of M evidenced", every requirement with its verdict and rationale, and, for strong or better, the tailored résumé and the locked PDF. The page reopens from any signed-in session of the owning member.
+6. The submitter gets the `jd_result` email by category (very strong and strong attach the PDF; possible and weak say Roger will review and reply; very weak says no further action). The owner gets `jd_outcome` with score, verdicts, apply link, and admin and decision-review links.
+7. The owner reviews the model's verdicts on `/admin/decisions`, records a human verdict and note per row, and can re-score the submission from `/admin/jd/<id>`.
+
 ---
 
 ## 5. Functional requirements
@@ -239,8 +251,8 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | ID | Requirement | Priority | Acceptance criteria / notes |
 |---|---|---|---|
 | FR-PUB-01 | The site shall have a public landing page showing name, headline, one photo, three to five headline accomplishments, and a single sign-in/register call to action. | Should (recommended; pending **D-01**) | Renders without a session; no gated content bodies are included in the HTML. |
-| FR-PUB-02 | All content sections and the assistant shall require a verified member session. | Must | Requesting any gated route without a session redirects to sign-in and preserves the intended destination (`?next=`). |
-| FR-PUB-03 | Legal pages (privacy policy, terms of use, AI disclosure / "How Ask Roger works") shall be public. | Must | Reachable from the landing page footer and the registration form. |
+| FR-PUB-02 | All content sections, the JD reviewer, and the assistant shall require a verified member session. | Must (**Shipped**) | Requesting any gated route without a session redirects to sign-in and preserves the intended destination (`?next=`). Implemented as the `PUBLIC_PATHS` allow-list in `apps/web/src/proxy.ts` (Next.js 16 `proxy`, not `middleware`); the API enforces authorization on every data call. Public today: `/`, `/contact`, `/register`, `/register/check-email`, `/login`, `/verify`, `/forgot-password`, `/reset-password`, `/privacy`, `/terms`, `/admin/decision`. `deploy/live-check.sh` follows the same policy and submits its test JD as the admin member from the server. |
+| FR-PUB-03 | Legal pages (privacy policy, terms of use, AI disclosure / "How Ask Roger works") shall be public. | Must (partially shipped) | Reachable from the landing page footer and the registration form. `/privacy` and `/terms` are public; `/how-ask-roger-works` exists but is not in `PUBLIC_PATHS`, so it is members-only today. |
 | FR-PUB-04 | The landing page shall be search-indexable; gated pages shall carry `noindex` and shall not appear in the sitemap. | Should | `robots.txt` and meta tags verified in e2e tests. |
 | FR-PUB-05 | The site shall render acceptably with JavaScript disabled for the landing and legal pages. | Could | Progressive enhancement; not required for gated app pages. |
 
@@ -261,11 +273,11 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-AUTH-11 | Members shall be able to change email (re-verification required), change password (current password required), and delete their account. | Must | Deletion removes personal data within 30 days; conversations and activity are deleted or irreversibly anonymized (D-13). |
 | FR-AUTH-12 | The admin role shall be granted only to allow-listed emails and shall require TOTP MFA at sign-in. | Must | MFA enrolment enforced on first admin sign-in; recovery codes generated once. |
 | FR-AUTH-13 | Authentication and account events (register, verify, sign-in success/failure, reset, MFA, deletion) shall be recorded in an audit log. | Should | Retained 12 months; visible in admin. |
-| FR-AUTH-14 | The site shall require admin approval for every new registration EXCEPT those whose verified email matches an active entry in `access_grants` (FR-AUTH-17). A verified user in `pending_approval` state has no session and no access to any gated route until an admin approves the account; if declined, the account is marked `declined` and the user is notified. A whitelist-match user skips `pending_approval`, is granted `active` with `users.expires_at` set from the grant's `default_ttl` (or `NULL` for permanent), and receives the "you're in" template (FR-NOTF-06.a) instead. Every approval — admin one-click, admin console, or whitelist auto — is recorded in `approval_decisions` with the effective TTL. This applies equally to password and OIDC registrations. | Must (**D-02** resolved 2026-09-19, ADR-0002; **D-20** amendment 2026-09-19, ADR-0020) | Invite-code mode moves to §7 backlog. |
+| FR-AUTH-14 | The site shall require admin approval for every new registration EXCEPT those whose verified email matches an active entry in `access_grants` (FR-AUTH-17). A verified user in `pending_approval` state has no session and no access to any gated route until an admin approves the account; if declined, the account is marked `declined` and the user is notified. A whitelist-match user skips `pending_approval`, is granted `active` with `users.expires_at` set from the grant's `default_ttl` (or `NULL` for permanent), and receives the "you're in" template (FR-NOTF-06.a) instead. Every approval — admin one-click, admin console, or whitelist auto — is recorded in `approval_decisions` with the effective TTL. This applies equally to password and OIDC registrations. | Must (**D-02** resolved 2026-09-19, ADR-0002; **D-20** amendment 2026-09-19, ADR-0020; **Shipped** for password registration) | Invite-code mode moves to §7 backlog. Shipped behaviour: approval via the one-click email or `AdminService.ApproveRegistration` / `DeclineRegistration`; the default access window on approval is 7 days, and the registration detail page in the console shows the expiry. OIDC registration is not built. |
 | FR-AUTH-15 | Admin approval decisions shall be actionable from a transactional email containing two single-use, HMAC-signed, 7-day-TTL URLs (Accept / Decline) that require no admin sign-in. The signing key is a server-side secret; each URL binds `user_id`, decision, issued-at, and expiry; a successful click consumes the token, records the decision in `approval_decisions`, and triggers the corresponding user notification (FR-NOTF-05). A revoked token returns a clear error page linking to the MFA-protected review surface. | Must | Compromise of an inbox forwards a single decision at most; the review surface (FR-ADM-10) requires MFA and can override or re-open a decision. |
 | FR-AUTH-16 | Pending approvals shall auto-decline 7 days after email verification if no admin decision has been made. The account is marked `declined` with `decision = auto_decline`, the user is notified per FR-NOTF-05, and the row is retained for audit and re-application. | Must | The auto-decline job runs in the API's scheduler; the user's decline notification says the request timed out and invites them to reapply. |
-| FR-AUTH-17 | The site shall support an admin-managed access whitelist (`access_grants`) keyed by email address. Each entry carries a `default_ttl` (`1d` / `3d` / `7d` / `30d` / `permanent`), optional `entry_expires_at` (defaults to none — entry never expires), notes, and audit metadata (`created_by`, `created_at`). On email verification, the API looks up the applicant's address in `access_grants`; a hit that has not itself expired auto-approves the user as described in FR-AUTH-14. A miss falls through to the standard admin-approval flow. | Must (**D-20** resolved 2026-09-19; ADR-0020) | Whitelist management is FR-ADM-11. The lookup is a plain equality query against `access_grants.email` (citext); no wildcards or domain matching in v1. |
-| FR-AUTH-18 | Approved accounts shall carry an `expires_at` timestamp (nullable — null means permanent). A scheduled job (a) sends the "your access ends soon" reminder (FR-NOTF-06.c) three days before `expires_at`; (b) at or after `expires_at`, flips the user from `active` to `expired`, revokes every active session, and sends the "your access has ended" notice (FR-NOTF-06.d). An expired user cannot sign in; re-activation is a one-click extension in the admin console for a whitelisted email, or a fresh access request otherwise. | Must (**D-20**) | Sessions have their own 30-day cap (FR-AUTH-08); the expiry job runs hourly so the worst-case grace is under an hour past `expires_at`. |
+| FR-AUTH-17 | The site shall support an admin-managed access whitelist (`access_grants`) keyed by email address. Each entry carries a `default_ttl` (`1d` / `3d` / `7d` / `30d` / `permanent`), optional `entry_expires_at` (defaults to none — entry never expires), notes, and audit metadata (`created_by`, `created_at`). On email verification, the API looks up the applicant's address in `access_grants`; a hit that has not itself expired auto-approves the user as described in FR-AUTH-14. A miss falls through to the standard admin-approval flow. | Must (**D-20** resolved 2026-09-19; ADR-0020; **Shipped**) | Whitelist management is FR-ADM-11 (`AdminService.ListAccessGrants` / `UpsertAccessGrant` / `DeleteAccessGrant`). The lookup is a plain equality query against `access_grants.email` (citext); no wildcards or domain matching in v1. The whitelist form defaults the TTL to 7 days. |
+| FR-AUTH-18 | Approved accounts shall carry an `expires_at` timestamp (nullable — null means permanent). A scheduled job (a) sends the "your access ends soon" reminder (FR-NOTF-06.c) three days before `expires_at`; (b) at or after `expires_at`, flips the user from `active` to `expired`, revokes every active session, and sends the "your access has ended" notice (FR-NOTF-06.d). An expired user cannot sign in; re-activation is a one-click extension in the admin console for a whitelisted email, or a fresh access request otherwise. | Must (**D-20**; expiry and extension **Shipped**) | Sessions have their own 30-day cap (FR-AUTH-08); the expiry job runs hourly so the worst-case grace is under an hour past `expires_at`. Extension is `AdminService.ExtendAccess`; the `access_ending_soon` and `access_ended` template kinds exist in the API. The jobs run in-process every `EXPIRY_INTERVAL_SECONDS` (default 3600, so hourly) via `internal/scheduler`. |
 
 ### 5.3 Member profile and personalization (FR-PROF)
 
@@ -312,6 +324,8 @@ A site that acts like a well-briefed representative of the owner: it learns what
 
 ### 5.5 Ask Roger — conversational assistant (FR-CHAT)
 
+**Status (2026-09-22).** The chat surface (FR-CHAT-01..15, 17, 19) is not built; it is Phase 4 PR 5. What is live are the components it will share with the JD reviewer (§5.11): the corpus with visibility and per-chunk embedder recipe, `nomic-embed-text` embeddings on the box, the sidecar LLM gateway (`SidecarService.Generate`) in front of Ollama, the versioned prompt registry (`services/api/internal/prompts`), and the decision log that is collecting human-in-the-loop labels for a future adapter (`docs/decision-log.md`). `ChatService` exists in `proto/` as a contract only. The rows below remain the specification for the chat.
+
 | ID | Requirement | Priority | Acceptance criteria / notes |
 |---|---|---|---|
 | FR-CHAT-01 | Members shall have access to the assistant from every member page (side panel) and on a full-page view (`/ask`). | Must | Panel state persists across navigation within a session. |
@@ -329,7 +343,7 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-CHAT-13 | The assistant shall treat retrieved content and member input as data, never as instructions, and the system prompt shall not be disclosed. Tool use is restricted to a small, named allowlist declared in the persona prompt: (a) `open_contact_form` with a pre-selected category (see FR-CNT-22), (b) `open_scheduler` (see FR-CNT-23), (c) `open_contributor_request` for a specific repo (see FR-CNT-25). Each tool renders a UI intent — a modal or navigation — that the member confirms before anything is submitted; the assistant never fires the underlying HTTP call. Every other tool remains disabled in v1. | Must (amended **D-25**) | Prompt-injection test cases in the golden set (NFR-GOV-07) include attempts to invoke tools outside the allowlist, to pre-fill contact-form bodies with sensitive data, and to auto-confirm the scheduler without user action. The assistant must refuse or defer to the human. |
 | FR-CHAT-14 | Members shall be able to rate each answer (up/down) with an optional comment. | Should | Stored with message; surfaced in admin. |
 | FR-CHAT-15 | The assistant shall be evaluated against a golden question set (≥ 50 questions incl. out-of-scope and adversarial) with automated grading, run when corpus, prompt, or retrieval code changes. | Should | Realized as a UVTS spec (retrieval quality, thresholds, profiles) plus ULTS specs (prompt contracts); the quick profile is a required check on affected PRs and the full profile runs before release (NFR-GOV-07). |
-| FR-CHAT-16 | LLM and embedding providers shall sit behind a provider interface with at least two implementations: (a) **Anthropic Claude via the Messages API** — default in production for the assistant's generation path; (b) **Ollama on the same host** — supported for embeddings (default when Ollama is configured) and available as an alternative generation provider for the "how this was built" transparency demo, private eval runs, and future fine-tuned personas. The active provider is chosen per call type (`generation`, `embedding`, `rerank`) via configuration, not code. | Must (amended **D-11** + new **D-26**) | Ollama runs on the owner's host at `${OLLAMA_URL}`; provider dispatch is a small wrapper in the Go API + Python sidecar. Fine-tuning a persona LoRA is a Phase 4+ follow-up (D-26); the interface just needs to accept a swap without a rewrite. |
+| FR-CHAT-16 | LLM and embedding providers shall sit behind a provider interface with at least two implementations: (a) **Anthropic Claude via the Messages API** — default in production for the assistant's generation path; (b) **Ollama on the same host** — supported for embeddings (default when Ollama is configured) and available as an alternative generation provider for the "how this was built" transparency demo, private eval runs, and future fine-tuned personas. The active provider is chosen per call type (`generation`, `embedding`, `rerank`) via configuration, not code. | Must (amended **D-11** + new **D-26**; provider interface **Shipped** in the sidecar) | Current production state: both embeddings (`SIDECAR_EMBED_PROVIDER=ollama`, `nomic-embed-text`) and generation for the JD reviewer (`OLLAMA_LLM_MODEL=qwen3:4b-q8_0`) run on the box's own Ollama container. `OLLAMA_LLM_URL` can point generation at another Ollama host and `OLLAMA_API_KEY` at a hosted one; a `stub` provider exists for both call types. No Anthropic provider is wired today (nothing in `services/api` or `services/sidecar` references one); "Claude as the production default" remains the specification for the chat, not the state of the system. Fine-tuning a persona adapter is a Phase 4+ follow-up (D-26); the decision log is collecting its labels. |
 | FR-CHAT-17 | When the LLM provider is unavailable, the assistant shall degrade gracefully: answer from the Q&A bank if matched, otherwise explain and offer contact options. | Must | Simulated outage test. |
 | FR-CHAT-18 | Retrieval shall be limited to content with `chatbot_include: true` and visibility the member is entitled to; the assistant shall never access other members' data. | Must | Retrieval filter enforced in the query, not the prompt. |
 | FR-CHAT-19 | With the member's consent (default on, disclosed in FR-AUTH-10), the assistant may use a summary of the member's own history (tracks, viewed items, previous questions) to personalize answers and suggestions. | Should | Summary regenerated per session; never includes other members. |
@@ -350,6 +364,8 @@ A site that acts like a well-briefed representative of the owner: it learns what
 
 ### 5.7 Admin console (FR-ADM)
 
+**Status (2026-09-22).** `/admin` is live with: Overview, Contact messages (`/admin/contacts`), Registrations (`/admin/registrations`, detail with expiry), Access & whitelist (`/admin/access`), Activity (`/admin/activity`), Corpus (`/admin/corpus`), JD submissions (`/admin/jd`, detail at `/admin/jd/<id>`), Decision review (`/admin/decisions`), and DB query (`/admin/db`). Member-detail transcripts, the conversation-review queue, analytics, persona, quotes, scheduler, and the support inbox as specified below are not built. FR-ADM-01..09 and 12..13 remain specification.
+
 | ID | Requirement | Priority | Acceptance criteria / notes |
 |---|---|---|---|
 | FR-ADM-01 | The admin console shall list members with name, email, organization, stated role, tracks, verification status, first and last seen, and activity counts, with search and filters. | Must | Server-side pagination. |
@@ -361,11 +377,15 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-ADM-07 | The admin shall see an analytics overview: registrations, verification rate, active members, top content, top questions, downloads, assistant usage and cost. | Should | Daily aggregates; exportable CSV. |
 | FR-ADM-08 | The admin may send an opt-in digest to members summarizing new content. | Could | Unsubscribe link mandatory. |
 | FR-ADM-09 | All admin actions shall be recorded in the audit log. | Must | Includes note edits, replies, approvals, deletions. |
-| FR-ADM-10 | The admin shall have a *Pending approvals* review surface listing every `pending_approval` user (name, email, organization, stated role, submitted at, IP hash, user-agent) with per-row Approve and Decline actions and decision history. The Approve action offers a TTL choice — `1d` / `3d` / `7d` / `30d` / `permanent`, default `7d` — which sets `users.expires_at` per FR-AUTH-18. A manual approve for an already-whitelisted email uses the admin's chosen TTL (not the whitelist default). The surface can also re-open or override a decision made via a one-click email link (FR-AUTH-15). Access requires an MFA-fresh admin session. | Must (amended **D-20**) | Ships in Phase 2 as the destination for review links in FR-NOTF-05 emails; expanded coverage of admin activity lives in the full admin console (Phase 5). |
-| FR-ADM-11 | The admin shall have a *Whitelist* surface (`/admin/whitelist`) listing every `access_grants` entry (email, default TTL, notes, entry expiry, created by, created at) with add / edit / remove actions. Adding an entry does not retroactively affect existing users; it only affects future registrations. Removing an entry does not revoke access already granted; it only stops future auto-approvals. Access requires an MFA-fresh admin session; every mutation is written to `audit_log`. | Must (**D-20**) | Bulk import (paste a CSV) is deferred to §7 backlog. |
+| FR-ADM-10 | The admin shall have a *Pending approvals* review surface listing every `pending_approval` user (name, email, organization, stated role, submitted at, IP hash, user-agent) with per-row Approve and Decline actions and decision history. The Approve action offers a TTL choice — `1d` / `3d` / `7d` / `30d` / `permanent`, default `7d` — which sets `users.expires_at` per FR-AUTH-18. A manual approve for an already-whitelisted email uses the admin's chosen TTL (not the whitelist default). The surface can also re-open or override a decision made via a one-click email link (FR-AUTH-15). Access requires an MFA-fresh admin session. | Must (amended **D-20**; **Shipped** as `/admin/registrations`) | Ships in Phase 2 as the destination for review links in FR-NOTF-05 emails; expanded coverage of admin activity lives in the full admin console (Phase 5). Shipped: list and per-registration detail with the access expiry; approve with a TTL (default 7 days), decline, extend, and resend a notification (`ApproveRegistration`, `DeclineRegistration`, `ExtendAccess`, `ResendNotification`). The MFA-fresh option is declared on the RPCs but not enforced; `requireAdmin` checks the admin role only (TOTP is not built). |
+| FR-ADM-11 | The admin shall have an *Access & whitelist* surface (`/admin/access`) listing every `access_grants` entry (email, default TTL, notes, entry expiry, created by, created at) with add / edit / remove actions. Adding an entry does not retroactively affect existing users; it only affects future registrations. Removing an entry does not revoke access already granted; it only stops future auto-approvals. Access requires an MFA-fresh admin session; every mutation is written to `audit_log`. | Must (**D-20**; **Shipped**) | Bulk import (paste a CSV) is deferred to §7 backlog. The add form defaults the TTL to 7 days. Nothing writes `audit_log` today (no code path inserts into it); the MFA-fresh gate is declared but not enforced. |
 | FR-ADM-12 | The admin shall have a *Quotes* surface (`/admin/quotes`) listing every `quotes` row with add, edit, reorder, activate/deactivate actions. An "active" quote is eligible for rotation on the public landing page (FR-CNT-24); a deactivated one stays in the database but never appears. Every mutation is written to `audit_log`. Access requires an MFA-fresh admin session. | Should (**D-23**) | Reordering is a `display_order` integer; ties broken by `created_at`. |
 | FR-ADM-13 | The admin shall have a *Scheduler* surface (`/admin/scheduler`) with (a) a Google-Calendar connect flow that stores an OAuth refresh token encrypted-at-rest; (b) availability windows (days-of-week + hour ranges + slot length + per-day cap); (c) a list of recent bookings with cancel/reschedule links back into Google Calendar. Access requires an MFA-fresh admin session. | Must (**D-22**) | The refresh token never leaves the process except to Google; rotation is one click. Deleting the connection immediately makes the public scheduler page show "unavailable". |
-| FR-ADM-14 | The admin shall have a *Support inbox* surface (`/admin/support`) listing every `support_messages` row (category, subject, submitter, body preview, submitted at, status) with per-row Resolve, Reopen, and Delete actions plus category filters. Access requires an MFA-fresh admin session. | Must (**D-21**) | Reply flow is external — the admin replies from their normal mailbox — this surface only tracks status so nothing falls through. |
+| FR-ADM-14 | The admin shall have a *Contact messages* surface (`/admin/contacts`) listing every `support_messages` row (category, subject, submitter, body preview, submitted at, status) with per-row Resolve, Reopen, and Delete actions plus category filters. Access requires an MFA-fresh admin session. | Must (**D-21**; **Shipped** as `/admin/contacts` with `ListContactMessages` / `ResolveContactMessage`) | Reply flow is external — the admin replies from their normal mailbox — this surface only tracks status so nothing falls through. Reopen, Delete, and category filters (unverified). |
+| FR-ADM-15 | The admin shall have a *JD submissions* surface (`/admin/jd`) listing every submission and a detail page (`/admin/jd/<id>`) showing the score derivation (retrieval pre-score, requirements with verdicts, weights, formula version), the résumé and PDF when produced, a *Re-score* action that re-runs the pipeline, and the fit-bands form (FR-JD-05). | Must (**Shipped**) | `AdminService.ListJdSubmissions`, `GetJdSubmission`, `RescoreJd`, `GetJdFitBands`, `SetJdFitBands`. An assessor failure marks the row `failed` and is repaired with Re-score; it never falls back to the retrieval score. |
+| FR-ADM-16 | The admin shall have a *Decision review* surface (`/admin/decisions`) listing every decision the JD reviewer made (per-requirement verdicts and the code gate) with the exact evidence the model saw, the raw prompt and response, model and prompt version, and a per-row human verdict (`met` / `partial` / `unmet`) with a note; reviewed rows shall be exportable as JSONL for adapter training and evaluation. | Must (**Shipped**) | `decision_log` table (migration 00019); `AdminService.ListDecisionLog`, `ReviewDecision`, `ExportDecisionLog`. Reviewing is idempotent. Specification in `docs/decision-log.md`. |
+| FR-ADM-17 | The admin shall have a *Corpus* surface (`/admin/corpus`) that lists corpus documents with visibility, ingests pasted text, and runs *Reindex* (public or private mount) and *Embed sweep* as background jobs with progress. | Should (**Shipped**) | `AdminService.ListCorpusDocuments`, `IngestCorpusText`, `ReindexCorpus`, `SweepCorpusEmbeddings`, with `RunJob` / `GetJob` for progress. The retrieval tester of FR-ADM-06 (`TestRetrieval`) exists as an RPC; its UI (unverified). |
+| FR-ADM-18 | The admin shall have a read-only *DB query* surface (`/admin/db`) that lists tables and runs SQL as a dedicated read-only database role, with saved queries. | Could (**Shipped**) | Role `career_admin_readonly` (migration 00005); `AdminService.ListDbTables`, `RunDbQuery`, `ListSavedQueries`, `UpsertSavedQuery`, `DeleteSavedQuery`. |
 
 ### 5.8 Notifications and email (FR-NOTF)
 
@@ -375,8 +395,9 @@ A site that acts like a well-briefed representative of the owner: it learns what
 | FR-NOTF-02 | The owner shall be notified of: new verified member (name, organization, role, tracks), new escalation, negative feedback, and system alerts (errors, budget thresholds). | Must / Should | Delivery channel configurable (email; optional webhook to a chat app). |
 | FR-NOTF-03 | Email sending shall go through a provider interface with a local console sink for development. | Must | Resend, Postmark, or SES adapter; provider chosen in §11. |
 | FR-NOTF-04 | Non-transactional email shall be opt-in with one-click unsubscribe. | Must | Applies to digests only. |
-| FR-NOTF-05 | The approval workflow (FR-AUTH-14…16) shall use four transactional templates: (a) **admin approval request** to the owner containing applicant context (name, email, organization, stated role, submitted at, IP hash, user-agent, reference ID) and the two one-click signed URLs from FR-AUTH-15 — the Accept URL grants the default TTL (7 days); other TTL choices route through the MFA-protected review surface (FR-ADM-10); (b) **user approved**: brief confirmation, sign-in URL, effective access period (or "permanent"), and the owner's contact address for questions; (c) **user declined**: a plain-language message that the admin did not recognize the credentials, an invitation to contact the owner if the applicant believes the decision is in error, and a pasteable context block (reference ID, applicant fields, submitted at, decision, signed re-review URL to the admin surface in FR-ADM-10) the applicant can copy into a reply; (d) **user auto-declined** (per FR-AUTH-16): a polite time-out notice inviting reapplication. All four templates carry plain-text alternatives and are subject to SPF/DKIM/DMARC per FR-NOTF-01. | Must | Owner contact address is configuration (`OWNER_CONTACT_EMAIL`), not hard-coded. |
-| FR-NOTF-06 | The whitelist + expiry workflow (FR-AUTH-17/18) shall use four additional templates: (a) **whitelist auto-approved**: sent instead of the admin email when a verified user matches an active `access_grants` entry; welcomes the user, states the effective access period, and provides the sign-in URL — Roger receives no email in this case; (b) **admin whitelist activity digest** (Should): a periodic summary of auto-approvals in the last N days, so Roger can spot-check policy without seeing every event; (c) **user access ending soon**: sent 3 days before `expires_at`, invites the user to reach out if they want it extended; (d) **user access ended**: sent at or immediately after `expires_at`, explains re-application steps. All four templates carry plain-text alternatives and are subject to SPF/DKIM/DMARC per FR-NOTF-01. | Must for (a), (c), (d); Should for (b) (**D-20**) | The digest cadence and channel are admin-configurable; not enabled by default in v1. |
+| FR-NOTF-05 | The approval workflow (FR-AUTH-14…16) shall use four transactional templates: (a) **admin approval request** to the owner containing applicant context (name, email, organization, stated role, submitted at, IP hash, user-agent, reference ID) and the two one-click signed URLs from FR-AUTH-15 — the Accept URL grants the default TTL (7 days); other TTL choices route through the MFA-protected review surface (FR-ADM-10); (b) **user approved**: brief confirmation, sign-in URL, effective access period (or "permanent"), and the owner's contact address for questions; (c) **user declined**: a plain-language message that the admin did not recognize the credentials, an invitation to contact the owner if the applicant believes the decision is in error, and a pasteable context block (reference ID, applicant fields, submitted at, decision, signed re-review URL to the admin surface in FR-ADM-10) the applicant can copy into a reply; (d) **user auto-declined** (per FR-AUTH-16): a polite time-out notice inviting reapplication. All four templates carry plain-text alternatives and are subject to SPF/DKIM/DMARC per FR-NOTF-01. | Must (**Shipped**) | Owner contact address is configuration (`OWNER_CONTACT_EMAIL`), not hard-coded. Template kinds in the API: `approval_request`, `user_approved`, `user_declined`, `user_auto_declined`. The Accept URL grants the default 7-day window. |
+| FR-NOTF-06 | The whitelist + expiry workflow (FR-AUTH-17/18) shall use four additional templates: (a) **whitelist auto-approved**: sent instead of the admin email when a verified user matches an active `access_grants` entry; welcomes the user, states the effective access period, and provides the sign-in URL — Roger receives no email in this case; (b) **admin whitelist activity digest** (Should): a periodic summary of auto-approvals in the last N days, so Roger can spot-check policy without seeing every event; (c) **user access ending soon**: sent 3 days before `expires_at`, invites the user to reach out if they want it extended; (d) **user access ended**: sent at or immediately after `expires_at`, explains re-application steps. All four templates carry plain-text alternatives and are subject to SPF/DKIM/DMARC per FR-NOTF-01. | Must for (a), (c), (d); Should for (b) (**D-20**; (c) and (d) **Shipped** as `access_ending_soon` / `access_ended`) | The digest cadence and channel are admin-configurable; not enabled by default in v1. Template (a) as a distinct kind and digest (b) (unverified). |
+| FR-NOTF-07 | The JD reviewer (§5.11) shall send two emails when a pipeline reaches a terminal state: (a) **`jd_outcome`** to the owner with the score, every verdict with rationale, the application link, and links to the admin detail and the decision review; (b) **`jd_result`** to the submitter (the member's address, and the contact address if different) chosen by fit category: *very strong* and *strong* attach the résumé PDF; *possible* and *weak* say Roger will review and reply; *very weak* says no further action is needed; a failed pipeline is also reported. Email providers shall support attachments (Resend base64, SMTP multipart/mixed). Every delivery shall be audited in `notification_deliveries`. | Must (**Shipped**) | `services/api/internal/email`; migration 00012 (`notification_deliveries`). Verification and password-reset kinds are `verify_email` and `password_reset`. |
 
 ### 5.9 Search (FR-SRCH)
 
@@ -391,6 +412,29 @@ A site that acts like a well-briefed representative of the owner: it learns what
 |---|---|---|---|
 | FR-ANLT-01 | Public-page analytics shall be first-party and cookie-less (self-hosted Umami or hosted Plausible; **D-14**). | Should | No cookie banner required because no non-essential cookies are set. |
 | FR-ANLT-02 | The site shall load no third-party trackers, advertising, or social-widget scripts. | Must | Verified by CSP and an e2e assertion on outbound requests. |
+
+### 5.11 JD reviewer (FR-JD)
+
+Added in 0.3.8 to record the feature as shipped (live on production since 2026-09-22, PR 87 to 89). The user-facing walk-through is `docs/jd-submitter-workflow.md`; the model and calibration record is `docs/llm-tuning-log.md`; the label-collection design is `docs/decision-log.md`. The owner's design rules apply: retrieve rather than memorize, score in code, ground the résumé with source ids, and render the PDF outside the model.
+
+| ID | Requirement | Priority | Acceptance criteria / notes |
+|---|---|---|---|
+| FR-JD-01 | A signed-in member shall be able to submit a job description on `/jd-upload` (posting text; optional role, employer, contact email, application link). The page shall quote the live résumé gate and list the member's own earlier submissions. JD upload is members-only, never public. | Must (**Shipped**) | `JdService.SubmitJd`, `ListMySubmissions`, `GetJdReviewConfig`; `/jd-upload` is gated by FR-PUB-02. Migrations 00009, 00018, 00020. |
+| FR-JD-02 | On submit the site shall show a modal with 0 to 100 % progress and the current pipeline stage, which the member may keep open or close; the pipeline writes `progress_pct` and `progress_stage` as it goes and the result panel polls for up to an hour. | Must (**Shipped**) | Migration 00021. The panel says "15 to 30 minutes, you can close this page". |
+| FR-JD-03 | The review shall be reopenable at `/jd-upload/<id>` by the member who submitted it, from any signed-in session; session ownership releases the verdicts, résumé, and PDF. The result token issued to the submitting tab shall keep working. | Must (**Shipped**) | `JdService.GetJdResult`. |
+| FR-JD-04 | The result shall show the fit category, the score, "N of M evidenced", every requirement with its verdict and rationale, and, when the category is strong or better, the tailored résumé and a link to the locked PDF. Below the gate it shall say what was and was not evidenced. | Must (**Shipped**) | Categories: very strong, strong, possible, weak, very weak. |
+| FR-JD-05 | Fit bands shall be owner-editable on `/admin/jd` and stored in `app_settings` under `jd_fit_bands` (cached 15 s; existing scores re-classified on read). "Strong" is the résumé gate. `JD_MATCH_THRESHOLD` only seeds the setting on first read. | Must (**Shipped**) | Defaults seeded from the calibration: very strong ≥ 0.85, strong ≥ 0.70, possible ≥ 0.55, weak ≥ 0.35, very weak below. Migration 00022; `AdminService.GetJdFitBands` / `SetJdFitBands`. |
+| FR-JD-06 | The pipeline shall run, per submission: a retrieval pre-score (mean of the top 8 cosine similarities; diagnostics only, never a gate), requirement extraction (`jd_requirements` v2: keeps "or equivalent" clauses; preferred items are "nice"), per-requirement retrieval of 4 chunks plus the owner's career facts sheet, one judge call per requirement (`requirement_judge` v2), the score formula in code, and, above the gate, résumé generation (`resume_tailor` v3). | Must (**Shipped**) | Prompt registry with versions in `services/api/internal/prompts`; pipeline in `services/api/internal/jd`. The pre-score is stored for diagnostics. |
+| FR-JD-07 | The career facts sheet shall be a private-corpus document of `source_kind` `profile`, rendered first in every judge prompt, never truncated, and served from Ollama's prompt cache. | Must (**Shipped**) | `ProfileSourceKind = "profile"`; the sheet lives in the private mount, not in the repository. |
+| FR-JD-08 | The score shall be computed in code by formula v2 (`v2-nice-bonus`): verdict values met 1, partial 0.5, unmet 0; requirement weights 1 to 3; must items always in the denominator; nice items only when evidenced. The formula version is stored with the assessment. | Must (**Shipped**) | `services/api/internal/jd/assess.go`. Calibration with qwen3:4b-q8_0, the facts sheet, prompts v2 and formula v2: Bosch posting 0.917, strong 0.857, mid 0.591, weak 0.100, unrelated 0.000. |
+| FR-JD-09 | The tailored résumé shall be generated as JSON whose source ids are verified in code against the retrieved evidence, rendered to Markdown, then to a two-page PDF with Typst in the sidecar, and locked with `RESUME_PDF_OWNER_PASSWORD` (opens without a password; editing, form filling, and page assembly denied). | Must (**Shipped**) | `SidecarService.RenderResume`; `pypdf` applies the lock; migrations 00016, 00017. The password value is configuration, never committed. |
+| FR-JD-10 | Pipelines shall run one at a time (`PipelineConcurrency = 1`), under a per-submission timeout counted from slot acquisition, with the sidecar's own LLM timeout below it. An assessor failure shall mark the submission `failed`; it shall never fall back to the retrieval score. Re-score is the repair (FR-ADM-15). | Must (**Shipped**) | On the CPX31 with qwen3:4b-q8_0: judge calls about 100 to 135 s each, résumé about 13 min, whole pipeline 15 to 30 min. Production values `JD_PIPELINE_TIMEOUT_SECONDS=3600` and `SIDECAR_LLM_TIMEOUT_SECONDS=3000` (`deploy/README.md`; `.env.prod.example` still carries lower pre-cutover defaults). A monthly LLM call cap (`LLM_MONTHLY_CALL_CAP`) exists in configuration. |
+| FR-JD-11 | Context safety: the sidecar shall send `num_ctx` on every call and refuse truncated results; the API shall budget prompts at 4 bytes per token against `SIDECAR_LLM_NUM_CTX` (8192 on production) and judge one requirement per call so no prompt is silently cut. | Must (**Shipped**) | `services/sidecar/src/career_sidecar/llm.py`. |
+| FR-JD-12 | Every model decision (per-requirement verdict) and every code decision (the gate) shall be written to `decision_log` with the inputs the decision was made from, the raw prompt and response, model, prompt id and version, token counts, and latency, for human review per FR-ADM-16. | Must (**Shipped**) | Kinds `jd_requirement_verdict` and `jd_gate`; later kinds reuse the table. |
+| FR-JD-13 | Terminal states shall notify the owner and the submitter per FR-NOTF-07. | Must (**Shipped**) | See FR-NOTF-07. |
+| FR-JD-14 | The reviewer's LLM shall run on the production host's Ollama container: model `qwen3:4b-q8_0`, `OLLAMA_MAX_LOADED_MODELS=1`, `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_MEM_LIMIT=7g`. Larger models are not the plan: the 14b does not fit the box (owner's decision) and the 8b OOM-killed it. | Must (**Shipped**; owner's decision per `docs/llm-tuning-log.md`) | Embeddings stay on the box (`nomic-embed-text`, task prefixes `search_document:` / `search_query:`, embedder recipe `ollama:nomic-embed-text#p1`, 768-dim HNSW cosine index). |
+
+Open items for this module (not requirements yet): phone-width review of the result panel and OT mode; résumé length tuning (owner's call); adapter training once the decision log holds enough reviewed rows.
 
 ---
 
@@ -483,6 +527,8 @@ A site that acts like a well-briefed representative of the owner: it learns what
 
 These requirements bind the project to the UxTS methodology described in §10. Terms (framework, spec, runner, parity, gate mode, canonical report) are defined there.
 
+**Status (2026-09-22).** The governance bootstrap has not started: `docs/specs/`, `docs/tests/`, `docs/development/`, and the `uxts.yml` / `uvts.yml` workflows do not exist in the repository. The rows below are specification. NFR-GOV-10 is honoured by the shipped JD reviewer (single-shot calls, retrieval in code, one requirement per judge call, no tool use).
+
 | ID | Requirement | Priority |
 |---|---|---|
 | NFR-GOV-01 | The repository shall be UxTS-governed: every framework with status `active` has a JSON Schema, canonical specs under `specs/`, an executable runner with full schema-runner parity, a Makefile target, a CI gate, a documented owner, and a documented hash strategy. | Must |
@@ -507,8 +553,8 @@ These requirements bind the project to the UxTS methodology described in §10. T
 | NFR-DOC-03 | The API reference (`docs/api/README.md` + `docs/api/endpoints.json`) is generated from the compiled Protobuf descriptors by `make docs-api` and drift-checked in CI (`make check-gen`); hand-editing the generated files is a merge-blocker. | Must |
 | NFR-SUPP-01 | The repository shall carry the standard public-repo files: `LICENSE` (MIT, per D-09), `LICENSE-CONTENT.md` (content terms), `SECURITY.md` (private disclosure policy), `CONTRIBUTING.md` (branch workflow + docs discipline), `CODEOWNERS`, PR + issue templates under `.github/`, and a Dependabot config for gomod/pip/npm/actions/docker. | Must (**D-27** resolved; ADR-0027) |
 | NFR-SUPP-02 | The repository shall carry a documented **contributor onboarding path** — see `CONTRIBUTING.md`. External contributors reach the maintainer through either a GitHub issue or the "Request contributor access" form (FR-CNT-25). Every merged external PR is credited in the release notes and, once the file exists, `CONTRIBUTORS.md`. | Should |
-| NFR-SUPP-03 | Security posture: **CodeQL** SAST across Go, TypeScript, and Python runs on every push to `main`, on PRs, and weekly on cron; secret scanning + push protection are enabled at the repo level; private vulnerability reporting is enabled; branch protection on `main` requires PR review + CI green + no force-push. | Must |
-| NFR-SUPP-04 | The main branch is protected — no direct pushes. All changes land through a PR from a feature branch (`claude_dev*`, `feat/*`, `fix/*`); CI must be green; merges are squash-only so `main`'s history stays a linear record of shipped features. See §9.3. | Must (**D-27** resolved; ADR-0027) |
+| NFR-SUPP-03 | Security posture: **CodeQL** SAST across Go, TypeScript, and Python runs on every push to `main`, on PRs, and weekly on cron; secret scanning + push protection are enabled at the repo level; private vulnerability reporting is enabled; branch protection on `main` requires a PR + CI green + no force-push. | Must (**Shipped**: `codeql.yml`, `security.yml`, ruleset `protect-main`; repo-level secret scanning enabled, push protection enabled, private vulnerability reporting enabled (read from the repository settings 2026-09-22)) |
+| NFR-SUPP-04 | The main branch is protected — no direct pushes. All changes land through a PR from a feature branch (`claude_dev*`, `feat/*`, `fix/*`); CI must be green; merges are squash-only so `main`'s history stays a linear record of shipped features. See §9.3. | Must (**D-27** resolved; ADR-0027; **Shipped** as GitHub ruleset `protect-main`: pull request required, required checks `api (go)`, `web (typescript)`, `sidecar (python)`, `proto (lint, breaking, drift)`, `gitleaks (secret scan)`, no force push, no deletion. Squash-only is documented policy in `AGENTS.md` and `CONTRIBUTING.md` but not enforced by repository settings.) |
 
 ---
 
@@ -516,29 +562,38 @@ These requirements bind the project to the UxTS methodology described in §10. T
 
 ### 7.1 Sitemap
 
-| Route | Access | Purpose |
-|---|---|---|
-| `/` | Public | Landing page (FR-PUB-01) |
-| `/privacy`, `/terms`, `/ai` | Public | Legal pages and "How Ask Roger works / how this site was built" |
-| `/register`, `/login`, `/verify`, `/reset`, `/auth/callback/:provider` | Public | Identity flows |
-| `/home` | Member | Tailored home: welcome-back, start-here path, highlights, assistant panel |
-| `/timeline` | Member | Career timeline |
-| `/projects`, `/projects/:slug` | Member | Project catalog and detail |
-| `/writing`, `/writing/:slug` | Member | Articles and publications |
-| `/presentations`, `/presentations/:slug` | Member | Decks and papers |
-| `/skills` | Member | Skills matrix |
-| `/credentials` | Member | Awards, education, service |
-| `/gallery` | Member | Photo gallery |
-| `/downloads` | Member | Résumé variants and other files |
-| `/contact` | Member | Contact options, availability, form |
-| `/ask`, `/ask/:conversationId` | Member | Assistant full-page view |
-| `/search` | Member | Site search |
-| `/me`, `/me/interests`, `/me/history`, `/me/saved`, `/me/conversations`, `/me/data` | Member | Profile, interests, history, saved items, conversations, export/delete |
-| `/admin` … | Admin | Console (§5.7) |
+Routes marked **shipped** exist under `apps/web/src/app` as of 2026-09-22; the rest are planned.
+
+| Route | Access | Status | Purpose |
+|---|---|---|---|
+| `/` | Public | shipped | Landing page (FR-PUB-01) in IT editorial or OT HMI mode (cookie); the OT mode has an operator note panel with request access / contact / sign in, nav pills, and a working IT/OT switch |
+| `/privacy`, `/terms` | Public | shipped | Legal pages |
+| `/how-ask-roger-works` | Member today (spec: Public) | shipped | "How Ask Roger works / how this site was built" (FR-PUB-03) |
+| `/register`, `/register/check-email`, `/login`, `/verify`, `/forgot-password`, `/reset-password` | Public | shipped | Identity flows. `/auth/callback/:provider` (OIDC) is planned |
+| `/admin/decision` | Public (token) | shipped | One-click approve / decline landing for the FR-AUTH-15 email links |
+| `/contact` | Public | shipped | Contact form (FR-CNT-22); public for anonymous visitors, with member context when signed in |
+| `/home` | Member | shipped | Member home with the "Upload a JD" card; tailoring, welcome-back, and the assistant panel are planned |
+| `/jd-upload`, `/jd-upload/:id` | Member | shipped | JD reviewer: submit, own-submissions list, reopenable review (§5.11) |
+| `/articles`, `/articles/:slug` | Member | shipped | Articles from the public corpus (`apps/web/content/articles`). Specified as `/writing` |
+| `/gallery` | Member | shipped | Photo gallery; captions are owner-approved |
+| `/settings` | Member | shipped | Account settings (specified as `/me`) |
+| `/version` | Member | shipped | Deployed version |
+| `/timeline` | Member | planned | Career timeline |
+| `/projects`, `/projects/:slug` | Member | planned | Project catalog and detail |
+| `/presentations`, `/presentations/:slug` | Member | planned | Decks and papers |
+| `/skills` | Member | planned | Skills matrix |
+| `/credentials` | Member | planned | Awards, education, service |
+| `/downloads` | Member | planned | Résumé variants and other files |
+| `/ask`, `/ask/:conversationId` | Member | planned | Assistant full-page view |
+| `/search` | Member | planned | Site search |
+| `/me/interests`, `/me/history`, `/me/saved`, `/me/conversations`, `/me/data` | Member | planned | Interests, history, saved items, conversations, export/delete |
+| `/admin`, `/admin/contacts`, `/admin/registrations[/:id]`, `/admin/access`, `/admin/activity`, `/admin/corpus`, `/admin/jd[/:id]`, `/admin/decisions`, `/admin/db` | Admin | shipped | Console (§5.7) |
 
 ### 7.2 Content types and frontmatter
 
 All content lives under `content/`. The schema is defined once as JSON Schema in `packages/schema/` (authored as Pydantic models in the sidecar and exported), consumed by the Go API when it loads the catalog and by generated TypeScript types on the web side, and enforced in CI.
+
+**Status (2026-09-22).** The content model below is specification. What exists: the public corpus under `apps/web/content` (`articles/`, `photos/`), mounted into the API as `/corpus`, and the private corpus mounted as `/corpus-private` (see §7.4). Each top-level subdirectory of a mount is a `source_kind` (for example `profile` for the career facts sheet). `packages/schema/` and `content/` as drawn here do not exist yet.
 
 Common fields (every type):
 
@@ -598,6 +653,13 @@ Each track also defines: a one-paragraph framing in the owner's voice, a "Start 
 3. Merge to `main` triggers deploy; the deploy job runs `career-cli ingest --changed` in the sidecar to update the corpus incrementally by content hash.
 4. Large binaries (photos, PDFs) are uploaded to object storage with `career-cli assets push`; the content file references the storage key. The repository holds thumbnails and diagrams only (**D-07**).
 
+**Shipped corpus workflow (2026-09-22).** The steps above are specification; `career-cli` does not exist. What runs today:
+
+1. Public corpus: files under `apps/web/content` in the deploy checkout at `/opt/career-site` are bind-mounted read-only into the API at `/corpus` (`CORPUS_ROOT`), so a reindex walks the same files that shipped with the deploy.
+2. Private corpus: the owner keeps a gitignored manifest at `docs/personal/corpus-manifest.txt` (shape in `deploy/corpus-manifest.example.txt`); `make sync-corpus` rsyncs the listed files to `/opt/career-site-private/corpus` on the server (`make stage-corpus` stages them into `./.corpus-private` for the dev stack), mounted into the API as `/corpus-private`. Kinds include `profile` (the career facts sheet).
+3. Visibility is `public` or `corpus_only` (migration 00013); `corpus_only` text is retrieved for the JD reviewer but never quoted on the site.
+4. Indexing: on `/admin/corpus` the owner runs *Reindex* (public or private mount) and *Embed sweep* as jobs with progress (`AdminService.ReindexCorpus`, `SweepCorpusEmbeddings`, `RunJob` / `GetJob`), or pastes text with `IngestCorpusText`. Chunks record the embedder recipe (`ollama:nomic-embed-text#p1`, migration 00014) so a model change is a dual-index migration, not a variable flip.
+
 ### 7.5 UX principles and key screens
 
 - **Tone:** confident, specific, evidence-forward; no marketing adjectives without a number or link behind them.
@@ -655,20 +717,22 @@ flowchart LR
 
 Caddy routes `/api/*` to the Go API and everything else to the Next.js server on the same origin, so session cookies are first-party and CORS is unnecessary; server components call the API server-side with the member's cookie forwarded. The Go API owns all business logic, data access, and scheduling. The Python sidecar is one package with two entry points: a gRPC service the API calls at request time (query embedding, optional reranking, scope classification) and the `career-cli` used for batch content and ML jobs — invoked by the API's scheduler over gRPC, by CI, and from the owner's terminal. The two talk only over Protobuf contracts, so either can be tested or replaced in isolation.
 
+**As shipped (2026-09-22).** The diagram's "LLM API" and "Embeddings API" are one **Ollama container** inside the Compose stack (`docker-compose.yml` and the `docker-compose.prod.yml` overlay): `nomic-embed-text` for embeddings and `qwen3:4b-q8_0` for generation, both reached only by the sidecar. The sidecar today serves `Embed`, `Generate` (the LLM gateway, which sends `num_ctx` and refuses truncated results), and `RenderResume` (Typst PDF plus the `pypdf` owner-password lock); `career-cli` is not built and corpus indexing runs inside the API (§7.4). MinIO and Mailpit are in the Compose stack; the private corpus is a host directory rather than an object-storage bucket. The stack runs on one Hetzner CPX31 (§8.10).
+
 ### 8.2 Technology stack
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Frontend | Next.js (App Router, current stable), TypeScript `strict`, React, Tailwind CSS, Radix primitives, MDX for content bodies | The owner's standard for polished, general-audience UI; server rendering for fast first paint; MDX renders content with embedded diagrams |
-| Backend API | Go (current stable): `net/http` + ConnectRPC handlers, `pgx` + `sqlc` for typed SQL, `goose` migrations embedded in the binary, `golang.org/x/crypto/argon2`, `pquerna/otp` (TOTP), `coreos/go-oidc` + `x/oauth2`, official Anthropic Go SDK for streaming generation, `robfig/cron` in-process scheduler, `slog` structured logs | The owner's language for the serving path: one static binary, small image, native concurrency for streaming and background jobs, low idle cost on a small host; the site itself becomes a Go work sample |
-| Python sidecar | Python 3.12+, `uv`, `Ruff`, `pyright`, `pytest`; `grpcio` server; `typer` CLI (`career-cli`); `pypdf`/`pdfplumber`, `python-docx`, `tiktoken`, Pillow, Typst | The ML and document-processing ecosystem lives here: chunking, embeddings, reranking, PDF/DOCX parsing, image processing, résumé generation, LLM-graded evaluation — the owner's scripting language, kept out of the request path except for small RPCs |
+| Frontend | Next.js 16 (App Router; the access policy lives in `proxy.ts`, not `middleware`), TypeScript `strict`, React 19, Tailwind CSS. Fonts (Fraunces, Inter Tight, JetBrains Mono) are self-hosted from `apps/web/src/fonts` via `next/font/local`, so builds never touch Google Fonts. Radix primitives and MDX (unverified) | The owner's standard for polished, general-audience UI; server rendering for fast first paint; MDX renders content with embedded diagrams |
+| Backend API | Go 1.26: `net/http` + ConnectRPC handlers, `pgx` + `sqlc` for typed SQL, `goose` migrations embedded in the binary (`services/api/internal/db/migrations`, 00001 to 00022), `golang.org/x/crypto/argon2`, TOTP, an in-process scheduler with per-job intervals, `slog` structured logs. No Anthropic SDK is in use; generation goes through the sidecar's `Generate` RPC | The owner's language for the serving path: one static binary, small image, native concurrency for streaming and background jobs, low idle cost on a small host; the site itself becomes a Go work sample |
+| Python sidecar | Python 3.12, `uv`, `Ruff`, `pyright`, `pytest`; `grpcio` server serving `Embed`, `Generate`, and `RenderResume` (Typst render, `pypdf` lock); `typer` CLI (`career-cli`), `pdfplumber`, `python-docx`, `tiktoken`, Pillow (planned) | The ML and document-processing ecosystem lives here: chunking, embeddings, reranking, PDF/DOCX parsing, image processing, résumé generation, LLM-graded evaluation — the owner's scripting language, kept out of the request path except for small RPCs |
 | Contracts | Protobuf managed with `buf`; ConnectRPC between browser and API (**D-17**); gRPC between API and sidecar; `protovalidate` for request validation; generated Go server, TypeScript client, and Python stubs committed and drift-checked in CI | One contract source for three languages; spec-first, which is the owner's practice |
-| Database | PostgreSQL 16+ with `pgvector` and built-in full-text search | One database for relational data, vectors, sessions, rate limits, and job state — no Redis or separate vector store to operate |
+| Database | PostgreSQL 16 with `pgvector` (768-dimension vectors, HNSW cosine index) and built-in full-text search | One database for relational data, vectors, sessions, rate limits, and job state — no Redis or separate vector store to operate |
 | Object storage | S3-compatible bucket (Cloudflare R2 or Backblaze B2) | Large binaries and private corpus stay out of the public repository; also the backup target |
-| LLM | Anthropic Claude via the Messages API (streaming), behind a provider interface; model chosen by configuration | Quality and instruction-following for a grounded, persona-constrained assistant; provider-agnostic interface keeps the option to switch |
-| Embeddings | Provider interface; default per **D-11** (hosted embeddings API, or an open-weight model served from the owner's compute) | Corpus is small; either option is inexpensive |
+| LLM | **Shipped:** `qwen3:4b-q8_0` on the production host's Ollama container, behind the sidecar provider interface (`SIDECAR_LLM_PROVIDER`, `OLLAMA_LLM_URL`, `OLLAMA_LLM_MODEL`, `SIDECAR_LLM_NUM_CTX=8192`); model chosen by configuration. Anthropic Claude via the Messages API remains the specified option for the chat (D-11, D-26) but is not wired | No hosting spend beyond the box (owner is unemployed; the CPX31 is the ceiling). The 14b does not fit and the 8b OOM-killed the box; the 4b with the career facts sheet calibrates well (FR-JD-08) |
+| Embeddings | **Shipped:** `nomic-embed-text` on the same Ollama container (`SIDECAR_EMBED_PROVIDER=ollama`), task prefixes `search_document:` / `search_query:`, embedder recipe `ollama:nomic-embed-text#p1` recorded per chunk | Corpus is small; embeddings stay on the box even if generation ever moves |
 | Auth | Implemented in the API (Argon2id, server-side sessions, TOTP for admin); OIDC client for LinkedIn/GitHub/Google | Keeps identity in one place with the data it protects; no third-party auth SaaS dependency |
-| Email | Provider adapter (Resend or Postmark; SES if already on AWS) | Transactional deliverability with minimal setup |
+| Email | **Shipped:** provider adapter with Resend (production) and SMTP (development, Mailpit) implementations, both supporting attachments; every delivery audited in `notification_deliveries` | Transactional deliverability with minimal setup |
 | Bot protection | Cloudflare Turnstile | Privacy-friendly, no cookies, free |
 | Résumé generation | Typst templates driven by structured content | Deterministic PDFs from the same data as the site |
 | CI/CD | GitHub Actions; images published to GHCR | Free for public repositories |
@@ -683,9 +747,9 @@ Caddy routes `/api/*` to the Go API and everything else to the Next.js server on
 |---|---|
 | `web` | Routing, SSR/RSC rendering, MDX content rendering, tailored layout, assistant UI (streaming client), member and admin UIs, image optimization, PDF viewer |
 | `api` (Go) | Registration, verification, sessions, OAuth, MFA, rate limiting; member profile and tracks; activity events; personalization scoring; content catalog and search queries; assistant orchestration (query embedding via sidecar, hybrid retrieval in SQL, generation and streaming, post-checks); saved items; data export and deletion; admin endpoints; audit log; email sending; GitHub metadata sync; the in-process scheduler for retention, digests, GitHub sync, backups, and sidecar jobs |
-| `sidecar` (Python) — gRPC | `Embed` (query and document embeddings through one implementation so ingest and retrieval never diverge), `Rerank` (optional cross-encoder over the top-k), `Classify` (in-scope / out-of-scope / injection heuristics), `RunJob` and `JobStatus` for scheduler-triggered batch work |
-| `sidecar` (Python) — `career-cli` | `content validate`, `content index` (writes the catalog to the database), `ingest` (parse, chunk, embed), `assets push` (EXIF strip, responsive derivatives, upload), `resume build` (Typst), `eval run`, `docs index` |
-| `db` | PostgreSQL with `pgvector`; `goose` migrations embedded in the API binary and applied on start |
+| `sidecar` (Python) — gRPC | **Shipped:** `Embed` (query and document embeddings through one implementation so ingest and retrieval never diverge), `Generate` (LLM gateway to Ollama: sends `num_ctx`, refuses truncated results), `RenderResume` (Typst PDF, `pypdf` owner-password lock), `Health`. In the contract but returning UNIMPLEMENTED from the sidecar: `Rerank`, `Classify`, `RunJob`, `GetJob` (the api runs its own corpus jobs instead) |
+| `sidecar` (Python) — `career-cli` | Planned: `content validate`, `content index` (writes the catalog to the database), `ingest` (parse, chunk, embed), `assets push` (EXIF strip, responsive derivatives, upload), `resume build` (Typst), `eval run`, `docs index`. Today corpus indexing and embedding sweeps run inside the API as admin jobs (§7.4) |
+| `db` | PostgreSQL 16 with `pgvector`; `goose` migrations embedded in the API binary and applied on start (`services/api/internal/db/migrations`, currently 00001 to 00022) |
 | `storage` | Object storage for photos, PDFs, private corpus, exports, backups |
 
 ### 8.4 Data model
@@ -741,15 +805,18 @@ erDiagram
 
 Vector index: HNSW on `corpus_chunks.embedding` (cosine). Full-text: GIN on the `search_vector` columns. Personal data columns are enumerated in a `PII_COLUMNS` registry used by the export and deletion jobs so nothing is missed when the schema grows.
 
+**Shipped schema (2026-09-22).** The table above is the specification; the live schema is the goose migration series 00001 to 00022 in `services/api/internal/db/migrations`. Beyond the identity, approval, and whitelist tables above, the shipped additions are: `support_messages` (00004, hiring fields 00010), the read-only admin role (00005), user notification status (00006), `admin_saved_queries` (00007), `activity_events` (00008), `jd_submissions` (00009; submitter 00018, `apply_url` 00020, `progress_pct` / `progress_stage` 00021) with assessment (00015), résumé JSON (00016) and PDF (00017) columns, the Ask Roger corpus tables (00011) with visibility (00013) and per-chunk embedder recipe (00014), `notification_deliveries` (00012), `llm_usage` (00015), `decision_log` (00019), and `app_settings` (00022, holds `jd_fit_bands`). Column-level detail for these tables is in the migrations, not restated here.
+
 ### 8.5 API surface
 
 **D-17 resolved (2026-09-18): ConnectRPC.** The surface is defined as Protobuf services in `proto/career/v1/` (public) and `proto/career/sidecar/v1/` (internal) and served by the Go API under `/api/`; each method is `POST /api/{package}.{Service}/{Method}` with JSON (or binary) encoding, and `ChatService.SendMessage` is server-streaming. Every method declares its access policy with the `career.v1.auth`, `allow_unverified`, `rate_limit_per_minute`, and `mfa_fresh` options, enforced by a Connect interceptor before handlers run, and every request field carries `buf.validate` rules enforced the same way. Three things stay plain HTTP `GET` because browsers and monitors navigate to them: OAuth start/callback, download redirects, and health probes.
 
-The authoritative, generated reference is **`docs/api/README.md`** (conventions, JSON encoding, errors, auth, every method with request/response fields, rules, and example bodies) with **`docs/api/endpoints.json`** as the machine-readable index; both are produced by `make docs-api` from the compiled descriptors and drift-checked in CI. The table below is the same index at service level (65 methods at v0.3.2):
+The authoritative, generated reference is **`docs/api/README.md`** (conventions, JSON encoding, errors, auth, every method with request/response fields, rules, and example bodies) with **`docs/api/endpoints.json`** as the machine-readable index; both are produced by `make docs-api` from the compiled descriptors and drift-checked in CI. The table below is the same index at service level (90 public methods across 11 services plus 8 sidecar methods at v0.3.8; contracts exist for every service, but only the services and methods used by the shipped surfaces have working handlers):
 
 | Service | Auth | Methods |
 |---|---|---|
-| `AuthService` | Member / Public | `Register`, `Verify`, `ResendVerification`, `Login`, `Logout`, `LogoutAll`, `ForgotPassword`, `ResetPassword`, `ChangePassword`, `ChangeEmail`, `MfaEnroll`, `MfaVerify` — plus `GET /api/auth/oauth/{provider}/start` and `/callback` |
+| `AuthService` | Member / Public | `Register`, `Verify`, `ResendVerification`, `Login`, `Logout`, `LogoutAll`, `ForgotPassword`, `ResetPassword`, `ChangePassword`, `ChangeEmail`, `MfaEnroll`, `MfaVerify` — plus `GET /api/auth/oauth/{provider}/start` and `/callback` (OAuth routes planned) |
+| `JdService` | Member | `SubmitJd`, `GetJdResult`, `ListMySubmissions`, `GetJdReviewConfig` (shipped; §5.11) |
 | `MemberService` | Member | `GetMe`, `UpdateMe`, `SetInterests`, `GetHistory`, `ListSaved`, `SaveItem`, `UnsaveItem`, `RequestExport`, `GetExport`, `DeleteAccount` |
 | `ContentService` | Member | `ListContent`, `GetContent`, `WhatsNew`, `ListTracks`, `GetSkills`, `Search` |
 | `HomeService` | Member | `GetHome` |
@@ -757,9 +824,9 @@ The authoritative, generated reference is **`docs/api/README.md`** (conventions,
 | `ChatService` | Member | `CreateConversation`, `ListConversations`, `GetConversation`, `SendMessage` (server-streaming), `DeleteConversation`, `RateMessage`, `Escalate`, `GetSuggestions`, `GetQuota` |
 | `DownloadService` | Member | `ListDownloads` — plus `GET /api/downloads/{variant}` (signed-URL redirect; records the event) |
 | `ContactService` | Member | `GetContactOptions`, `SubmitContact` |
-| `AdminService` | Admin | `ListMembers`, `GetMember`, `AddMemberNote`, `SetMemberStatus`, `GetReviewQueue`, `ResolveReviewItem`, `ReplyEscalation`, `GetMemberConversation`, `GetCorpusStatus`, `TestRetrieval`, `RunJob`, `GetJob`, `GetPersona`, `GetAnalytics`, `GetAudit` |
+| `AdminService` | Admin | `ListMembers`, `ResendNotification`, `GetMember`, `AddMemberNote`, `SetMemberStatus`, `GetReviewQueue`, `ResolveReviewItem`, `ReplyEscalation`, `GetMemberConversation`, `GetCorpusStatus`, `TestRetrieval`, `RunJob`, `GetJob`, `GetPersona`, `GetAnalytics`, `GetAudit`, `ListContactMessages`, `ResolveContactMessage`, `ApproveRegistration`, `DeclineRegistration`, `ExtendAccess`, `ListDbTables`, `RunDbQuery`, `ListAccessGrants`, `UpsertAccessGrant`, `DeleteAccessGrant`, `ListSavedQueries`, `UpsertSavedQuery`, `DeleteSavedQuery`, `ListMemberActivity`, `IngestCorpusText`, `ListCorpusDocuments`, `ReindexCorpus`, `SweepCorpusEmbeddings`, `ListJdSubmissions`, `GetJdSubmission`, `RescoreJd`, `ListDecisionLog`, `ReviewDecision`, `ExportDecisionLog`, `GetJdFitBands`, `SetJdFitBands` |
 | `SystemService` | Public | `GetVersion`, `GetGovernanceStatus` — plus `GET /api/healthz` and `GET /api/readyz` |
-| `SidecarService` | internal (gRPC, API → sidecar only) | `Embed`, `Rerank`, `Classify`, `RunJob`, `GetJob`, `Health` |
+| `SidecarService` | internal (gRPC, API → sidecar only) | `Embed`, `Rerank`, `Classify`, `RunJob`, `GetJob`, `Health`, `Generate`, `RenderResume` |
 
 Generated code is committed inside each consumer — `services/api/gen` (Go, Connect handlers and the sidecar gRPC client), `apps/web/src/gen` (TypeScript for connect-es), `services/sidecar/src/career` and `services/sidecar/src/buf` (Python) — and `make check-gen` fails CI when any output drifts from `proto/`. `buf lint` (STANDARD + COMMENTS) and `buf breaking` run on every PR.
 
@@ -855,11 +922,13 @@ flowchart TB
 
 | Environment | Where | Data | Purpose |
 |---|---|---|---|
-| Local | Laptop, Compose | Synthetic seed data; Mailpit for email; MinIO for storage | Development and tests |
-| Preview | Ephemeral per PR (optional; see D-08) | Synthetic | Reviewing UI changes |
-| Production | Host per D-08 | Real | Members |
+| Local | Laptop, `docker-compose.yml` | Synthetic seed data; Mailpit for email; MinIO for storage; Ollama | Development and tests |
+| Preview | Ephemeral per PR (optional; see D-08) | Synthetic | Reviewing UI changes (not built) |
+| Production | Hetzner CPX31 (4 vCPU / 7.7 GB) at 5.161.62.205, deploy dir `/opt/career-site`, `docker-compose.yml` + `docker-compose.prod.yml` overlay: caddy, web, api, sidecar, ollama, postgres | Real | Members (shipped) |
 
-Configuration is 12-factor: one image, environment-specific variables. Feature flags (`APPROVAL_MODE`, `INVITES`, `DIGEST`, `MDEMG_RETRIEVAL`) are environment variables read at start.
+**Rollout as shipped.** `ci.yml` builds and pushes `ghcr.io/reh3376/career-site-{web,api,sidecar}:<12-char sha>` on `main`. There is no `deploy.yml`; the rollout is manual: confirm all three image tags exist, bump `IMAGE_TAG` in `/opt/career-site/.env.prod`, then `docker compose pull` and `docker compose up -d` on the host with both compose files and `--env-file .env.prod` (`deploy/README.md`). `deploy/live-check.sh` runs the post-deploy functional check, submitting its test JD as the admin member from the server so it follows the members-only policy. The nightly encrypted `pg_dump` in the diagram is not built (`deploy/README.md`, "Backups (next)"), so NFR-OPS-02 is open.
+
+Configuration is 12-factor: one image, environment-specific variables. The feature flags named in earlier drafts (`APPROVAL_MODE`, `INVITES`, `DIGEST`, `MDEMG_RETRIEVAL`) do not exist in the code; the live configuration surface is `.env.example` and `.env.prod.example`.
 
 ---
 
@@ -884,31 +953,31 @@ career-site/
 │   ├── career/v1/*.proto         # public API: options, common, auth, member, content, home, activity, chat, download, contact, admin, system
 │   └── career/sidecar/v1/sidecar.proto   # internal API ↔ sidecar contract
 ├── apps/
-│   └── web/                      # Next.js application (pnpm); generated connect-es types in src/gen/ (committed)
+│   └── web/                      # Next.js 16 application; src/proxy.ts (access policy), src/fonts/ (self-hosted WOFF2), content/{articles,photos} (public corpus), generated connect-es types in src/gen/ (committed)
 ├── services/
 │   ├── api/                      # Go module `github.com/reh3376/career-site/services/api`
 │   │   ├── cmd/api/              # main: HTTP server, migrations on start, scheduler
 │   │   ├── gen/                  # generated Connect handlers, message types, sidecar gRPC client (committed)
-│   │   ├── internal/{auth,members,content,personalize,chat,admin,jobs,mail,github,sidecar}/
-│   │   ├── db/{migrations,queries}/  # goose SQL migrations; sqlc queries → internal/db
-│   │   └── go.mod · go.sum · sqlc.yaml · .golangci.yaml
-│   └── sidecar/                  # Python package `career_sidecar` (uv)
+│   │   ├── internal/{auth,users,handlers,jd,prompts,llm,ingest,email,jobs,scheduler,ratelimit,sidecar,config,db,server,build}/
+│   │   ├── internal/db/migrations/  # goose SQL migrations (00001 to 00022)
+│   │   └── go.mod · go.sum
+│   └── sidecar/                  # Python package `career_sidecar` (uv): embed, llm (Ollama gateway), résumé render
 │       ├── pyproject.toml · uv.lock
-│       ├── src/career_sidecar/{grpc,ingest,embed,assets,resume,eval,cli}/
+│       ├── src/career_sidecar/
 │       ├── src/career/ · src/buf/  # generated Python types, gRPC stubs, and buf.validate descriptors (committed)
 │       └── tests/
-├── packages/
-│   └── schema/                   # content JSON Schema (exported from sidecar Pydantic models) → TS types
-├── content/                      # roles, projects, articles, presentations, skills, credentials, photos, resumes, qa, tracks.yaml, site.yaml
-├── infra/
-│   ├── compose.yaml · compose.prod.yaml
-│   ├── docker/{web,api,sidecar}.Dockerfile
-│   ├── caddy/Caddyfile
-│   └── deploy/                   # server bootstrap script, backup script, systemd timer for backups
-├── Makefile                      # one entry point: make dev · gen · lint · test · eval · build
-├── scripts/                      # one-off developer scripts
+├── packages/schema/              # planned: content JSON Schema (exported from sidecar Pydantic models) → TS types
+├── content/                      # planned: roles, projects, presentations, skills, credentials, resumes, qa, tracks.yaml, site.yaml (articles and photos live in apps/web/content today)
+├── docker-compose.yml · docker-compose.prod.yml   # dev stack and the production overlay (caddy, web, api, sidecar, ollama, postgres, mailpit, minio)
+├── deploy/
+│   ├── caddy/                    # Caddyfile (dev) · Caddyfile.prod
+│   ├── postgres/
+│   ├── setup-server.sh · live-check.sh · corpus-sync.sh · corpus-manifest.example.txt · README.md
+├── docs/personal/                # gitignored: private corpus manifest and files
+├── Makefile                      # gen · lint-proto · breaking · docs-api · check-gen · sync-corpus · stage-corpus · photos
+├── scripts/                      # dev-push.sh · gen_api_docs.py
 └── .github/
-    ├── workflows/{ci,content,uxts,uvts,deploy,security}.yml
+    ├── workflows/{auto-pr,ci,codeql,security}.yml   # content, uxts, uvts, and deploy workflows are planned
     ├── ISSUE_TEMPLATE/ · PULL_REQUEST_TEMPLATE.md
     └── dependabot.yml
 ```
@@ -928,23 +997,27 @@ career-site/
 
 ### 9.3 Branching, commits, and reviews
 
-- Trunk-based development on `main` with feature branches; `main` is always deployable and **protected** — no direct pushes.
-- Owner-facing work by AI-assisted sessions uses **`claude_dev01`** as a single long-lived branch. Human contributor work uses `feat/<slug>` or `fix/<slug>` branches. All three patterns run CI on push and open a draft PR against `main` via `.github/workflows/auto-pr.yml`.
+- Trunk-based development on `main` with feature branches; `main` is always deployable and **protected** by the GitHub ruleset `protect-main` (pull request required; required checks `api (go)`, `web (typescript)`, `sidecar (python)`, `proto (lint, breaking, drift)`, `gitleaks (secret scan)`; no force push; no branch deletion).
+- Owner-facing work by AI-assisted sessions uses **`claude_dev01`** as a single long-lived branch. Human contributor work uses `feat/<slug>` or `fix/<slug>` branches. All three patterns run CI on push and open a PR against `main` via `.github/workflows/auto-pr.yml`, which is the only path that opens PRs for these branches; the owner merges.
 - Local check runner: `scripts/dev-push.sh` mirrors the CI matrix (`make lint-proto`, `make check-gen`, `gofmt` + `go vet` + `go test -race` + `go build`, `uv sync` + `ruff` + `pyright` + `pytest`, `pnpm typecheck` + `lint` + `audit` + `build`) and refuses to push when on `main`.
 - Conventional commits (`feat(auth): …`, `fix(chat): …`, `content: …`, `docs: …`); PR titles follow the same format.
-- Every PR references FR/NFR IDs, includes a test plan, ticks the docs-discipline checklist in the PR template (NFR-DOC-01), and passes CI; the owner is the sole `CODEOWNER`. **Merges are squash-only** so `main`'s history stays a linear record of shipped features.
-- Releases are tagged `vMAJOR.MINOR.PATCH`; the deployed version is exposed at `/api/v1/version`. Each push to `main` publishes container images to `ghcr.io/reh3376/career-site-{api,sidecar,web}:{sha,latest}`; production deploys pin the 12-char SHA in `.env.prod`.
+- Every PR references FR/NFR IDs, includes a test plan, ticks the docs-discipline checklist in the PR template (NFR-DOC-01), and passes CI; the owner is the sole `CODEOWNER`. **Merges are squash-only** by documented policy (`AGENTS.md`, `CONTRIBUTING.md`); the repository settings still allow merge commits and rebases, so this is not enforced.
+- Releases are meant to be tagged `vMAJOR.MINOR.PATCH`; the repository has 0 such tags today, and prod is rolled by image tag (12-character commit sha), not by release; the deployed version is exposed by `SystemService.GetVersion` and the `/version` page. Each push to `main` publishes container images to `ghcr.io/reh3376/career-site-{api,sidecar,web}:{sha,latest}`; production deploys pin the 12-char SHA in `.env.prod` (§8.10).
 
 ### 9.4 CI/CD pipeline
 
+Workflows present in the repository on 2026-09-22: `auto-pr.yml`, `ci.yml`, `codeql.yml`, `security.yml`. The rest of this table is planned.
+
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `ci.yml` | Every PR and push to `main` | `buf lint` + `buf breaking` + generation drift check → lint and typecheck (Go, Python, TS) → unit tests (`go test -race`, `pytest`, Vitest) → content validation → build images → Playwright e2e against the built stack → Lighthouse CI on landing and one content page |
-| `content.yml` | Changes under `content/` | Schema validation, link check, résumé build (artifacts attached to the PR) |
-| `security.yml` | Weekly and on PR | CodeQL (Go, JS/TS, Python), `govulncheck`, `pip-audit`, `pnpm audit`, `gitleaks`, `trivy` |
-| `uxts.yml` | Every PR and push to `main`; paths under `docs/api/api-spec/**`, `docs/tests/**`, `docs/specs/**`, `docs/development/UXTS_FRAMEWORK_MATRIX.md`, `scripts/verify_uxts_*.py`, `Makefile`, and any source path a framework governs | `make verify-uxts-canonical verify-uxts-drift verify-hashes` (block) → framework runners against the Compose stack in the gate mode the matrix declares for each (UATS, USTS, UDTS, ULTS, UPTS, UNTS block; UAMS, UOBS, UOTS, UBTS soft) → `make uxts-report` → upload reports as artifacts |
-| `uvts.yml` | Required check for PRs touching `services/api/internal/chat/**`, `services/sidecar/src/career_sidecar/{ingest,embed}/**`, `content/**` with `chatbot_include`, `docs/tests/ults/**`, `docs/tests/uvts/**`; manual dispatch for the full profile | Ingest into a throwaway database with the real embedding provider, `make test-uvts-quick` (full profile on dispatch and before release), post the graded report to the PR |
-| `deploy.yml` | Push to `main` after `ci.yml` succeeds | Build and push images to GHCR → SSH to host → `docker compose pull && up -d` → run migrations → smoke test → notify |
+| `ci.yml` (shipped) | Every PR and push to `main` and the feature-branch patterns | Jobs `proto (lint, breaking, drift)`, `api (go)`, `sidecar (python)`, `web (typescript)`, a changed-paths detector, and `images (docker build + push)` to GHCR on `main`. The first four plus `gitleaks (secret scan)` are the required checks in the `protect-main` ruleset. Content validation, Playwright, and Lighthouse steps are planned |
+| `auto-pr.yml` (shipped) | Push to `claude_dev*`, `feat/*`, `fix/*` | Opens the PR against `main` for the branch if none exists |
+| `codeql.yml` (shipped) | Push, PR, and weekly cron (Mondays 06:23 UTC) | CodeQL SAST for Go, JavaScript/TypeScript, and Python |
+| `content.yml` (planned) | Changes under `content/` | Schema validation, link check, résumé build (artifacts attached to the PR) |
+| `security.yml` (shipped) | On PR and daily cron (06:17 UTC) | Jobs `govulncheck (api)`, `pip-audit (sidecar)`, `pnpm audit (web)` (`--prod --audit-level=high`, tolerant of advisory-endpoint outages), `trivy (fs + config)`, `gitleaks (secret scan)`; the last is a required check on `main` |
+| `uxts.yml` (planned) | Every PR and push to `main`; paths under `docs/api/api-spec/**`, `docs/tests/**`, `docs/specs/**`, `docs/development/UXTS_FRAMEWORK_MATRIX.md`, `scripts/verify_uxts_*.py`, `Makefile`, and any source path a framework governs | `make verify-uxts-canonical verify-uxts-drift verify-hashes` (block) → framework runners against the Compose stack in the gate mode the matrix declares for each (UATS, USTS, UDTS, ULTS, UPTS, UNTS block; UAMS, UOBS, UOTS, UBTS soft) → `make uxts-report` → upload reports as artifacts |
+| `uvts.yml` (planned) | Required check for PRs touching `services/api/internal/chat/**`, `services/sidecar/src/career_sidecar/{ingest,embed}/**`, `content/**` with `chatbot_include`, `docs/tests/ults/**`, `docs/tests/uvts/**`; manual dispatch for the full profile | Ingest into a throwaway database with the real embedding provider, `make test-uvts-quick` (full profile on dispatch and before release), post the graded report to the PR |
+| `deploy.yml` (planned; today the rollout is manual, §8.10) | Push to `main` after `ci.yml` succeeds | SSH to host → bump `IMAGE_TAG` → `docker compose pull && up -d` → migrations run on API start → `deploy/live-check.sh` → notify |
 
 ### 9.5 Testing strategy
 
@@ -1128,6 +1201,8 @@ Promotion from `soft` to `block` follows NFR-GOV-12; the matrix carries the date
 
 Recommendation: **A** for production, with Compose files that also run under **B**'s services should the owner prefer to move later. Local development is identical in every case.
 
+**As shipped.** Option A on a Hetzner CPX31 (4 vCPU / 7.7 GB) at 5.161.62.205, deploy directory `/opt/career-site`, running Caddy, web, api, sidecar, Ollama, and PostgreSQL. The box was sized for the on-host LLM (the 2 vCPU / 4 GB shape in the table cannot run it). There is no further server spend: the CPX31 is the ceiling and the workload is fitted to it (model choice in FR-JD-14).
+
 ### 11.2 Domain, DNS, TLS, and email authentication
 
 - Domain per **D-10**; DNS at Cloudflare; `A`/`AAAA` records to the host; optional Cloudflare proxy for DDoS absorption.
@@ -1185,6 +1260,18 @@ Effort is expressed in focused working days with AI-assisted development and is 
 | **6 — Hardening and launch** | NFR-OPS-*, NFR-COST-01, NFR-LGL-*, NFR-GOV-09/12, FR-CNT-21, remaining Should items | Production host, deploy pipeline, backups and restore drill, monitoring and alerts, runbooks, accessibility and security review, content proofread, permissions confirmed (D-15), UBTS and UOTS pilots, UVTS full profile, gap assessment, gate promotions, governance page, soft launch with three to five trusted testers | Launch checklist (§15.G) complete, including the gap assessment; testers register, browse, chat, and receive a reply to an escalation end to end | 4–6 days |
 | **7 — Post-launch backlog** | Could items: FR-AUTH-05/06/14, FR-CNT-12, FR-HIST-04 notes, FR-HIST-07, FR-CHAT-21 (MDEMG), FR-ADM-05 console editing, FR-ADM-08/10, FR-SRCH-02 | Prioritized by observed use and owner interest | — | ongoing |
 
+**Status at 2026-09-22 (after PR 89).**
+
+| Phase | State |
+|---|---|
+| 0, Foundation | Repository, contracts, generated code, Compose stack, `ci.yml`, `AGENTS.md`, `Makefile` done. UxTS governance bootstrap (policy, matrix, registry, runners, guards) not started (§6.10 status note). |
+| 1, Content core | Partial: articles and gallery render from `apps/web/content`; landing (IT and OT modes) and legal pages live. Timeline, projects, presentations, skills, credentials, downloads, résumé build, and the "how this was built" governance page not built. |
+| 2, Identity, gate, and content core | First sub-milestone live: register / verify / approve / whitelist / expiry / sign in / gated home; contact form and `/admin/contacts`; public-repo hygiene files and CodeQL; `protect-main` ruleset. Scheduler, quote of the day, GitHub cards and contributor request, OIDC not built. |
+| 3, Personalization and history | Not started; `activity_events` (migration 00008) and `/admin/activity` exist. |
+| 4, Ask Roger | Chat not built (PR 5 of the phase). Shipped from this phase's scope: corpus ingestion with visibility and embedder recipes, on-box embeddings and LLM, the prompt registry, and the decision log for adapter training. The JD reviewer (§5.11) shipped here as an unplanned deliverable, live on production since 2026-09-22. |
+| 5, Admin and notifications | Partial: Overview, Registrations, Access & whitelist, Activity, Corpus jobs, JD submissions, Decision review, DB query; approval, access, JD, verification and reset emails with delivery audit. Review queue, analytics, persona, digest not built. |
+| 6, Hardening and launch | Production host, manual rollout and `live-check.sh` in place. Backups, monitoring, runbooks, accessibility and security review, the FSD 1.0 hardening pass: open. |
+
 Indicative total for phases 0–6: roughly 35–47 focused days, of which governance accounts for about six to seven; the framework pays that back by making every later change to an RPC, prompt, or auth path a spec diff the owner can review in minutes. Content preparation (§15.B) runs in parallel from Phase 0 and is the most common cause of schedule slip; the intake checklist exists to front-load it.
 
 ---
@@ -1218,17 +1305,17 @@ Each decision becomes an ADR when resolved. Recommendations reflect the analysis
 
 | ID | Decision | Options | Recommendation |
 |---|---|---|---|
-| D-01 | Public landing page with substance vs. hard gate on everything | Landing with headline accomplishments (gated detail) / minimal sign-in-only page | Landing with substance (mitigates R-01) |
+| D-01 | Public landing page with substance vs. hard gate on everything | Landing with headline accomplishments (gated detail) / minimal sign-in-only page | Landing with substance (mitigates R-01). **Shipped as such** (IT editorial and OT HMI modes, request access as the primary action); no ADR recorded |
 | D-02 | Registration mode | Open with verification / approval required / invite-only | **Resolved 2026-09-19: approval required.** Verified users enter `pending_approval`; admin approves or declines via a signed one-click email link; pending requests auto-decline after 7 days. FR-AUTH-14…16, FR-ADM-10, FR-NOTF-05; ADR-0002 |
 | D-03 | Social sign-in providers | LinkedIn / GitHub / Google / none | LinkedIn in v1 (audience fit, verifies professional identity); GitHub for technical visitors post-launch |
 | D-04 | API language | Python + FastAPI / Go + Python sidecar | **Resolved 2026-09-18:** Go API with a Python sidecar for content, ML, and scripting jobs; JS/TS front end (§8.2); ADR-0004 (recorded) |
 | D-05 | Assistant retrieval and memory | pgvector in-house / MDEMG integration | pgvector for v1; MDEMG as a Phase 7 showcase behind a feature flag |
 | D-06 | Q&A bank and persona editing | Repository files / admin console / both | Repository in v1 (versioned, reviewable); console editing later |
 | D-07 | Large assets | Repository (Git LFS) / object storage | Object storage; thumbnails only in the repository |
-| D-08 | Hosting | Single VPS + Compose / managed split / home compute | Single VPS + Compose (§11.1) |
+| D-08 | Hosting | Single VPS + Compose / managed split / home compute | Single VPS + Compose (§11.1). **Shipped**: Hetzner CPX31, `/opt/career-site`; no ADR recorded |
 | D-09 | Licenses | Code: MIT or Apache-2.0; content: All rights reserved or CC BY-NC-ND 4.0 | MIT for code; All rights reserved for content with explicit permission to quote with attribution |
-| D-10 | Domain and site name | Owner's choice | Repository **resolved 2026-09-18: `github.com/reh3376/career-site`** (ADR-0010), alongside the owner's open-source portfolio. Domain still open: a personal domain the owner already holds or `<firstname><lastname>.com`-style |
-| D-11 | LLM model and embeddings provider | Hosted embeddings API / open-weight model on owner's compute; LLM model tier | Hosted embeddings for operational simplicity in v1; LLM model set by cost/quality trial on the golden set |
+| D-10 | Domain and site name | Owner's choice | Repository **resolved 2026-09-18: `github.com/reh3376/career-site`** (ADR-0010), alongside the owner's open-source portfolio. Domain: **`rogerhenley.dev`** is live (Caddy auto-TLS, Resend DNS records per `deploy/README.md`); no ADR recorded |
+| D-11 | LLM model and embeddings provider | Hosted embeddings API / open-weight model on owner's compute; LLM model tier | Superseded in practice by D-26: embeddings are `nomic-embed-text` on the box and the JD reviewer's LLM is `qwen3:4b-q8_0` on the box, chosen by the calibration in `docs/llm-tuning-log.md` (FR-JD-08, FR-JD-14). The chat's model is still open; no ADR recorded |
 | D-12 | Invite links with pre-selected tracks | Include in v1 / defer | Defer to Phase 7 |
 | D-13 | Deletion semantics for conversations | Hard delete / anonymize and keep for quality | Hard delete member-identifiable data; keep anonymized question text only if the owner wants it for the Q&A bank |
 | D-14 | Public-page analytics | Self-hosted Umami / hosted Plausible / none | Self-hosted Umami on the same host, or none in v1 |
@@ -1243,7 +1330,7 @@ Each decision becomes an ADR when resolved. Recommendations reflect the analysis
 | D-23 | Quote of the day storage + rotation | Static YAML file / DB with admin CRUD / DB + LLM-generated / date-hash deterministic rotation | DB (`quotes` table) with admin CRUD (FR-ADM-12); rotation is `index = day_of_year % active_count` (deterministic — same visitor same day sees the same quote); cacheable at Caddy. Owner-curated only in v1; LLM-generated deferred. FR-CNT-24 |
 | D-24 | Contributor-access mechanism | Email-only ("email me your GH username") / in-app form with manual admin add / in-app form with one-click Accept that hits GitHub API | In-app form + signed one-click Accept URL (same pattern as the D-02 approval email). On Accept, the API calls `PUT /repos/reh3376/{repo}/collaborators/{ghuser}` using an admin PAT (`GITHUB_ADMIN_PAT`, `admin:repo` scope). FR-CNT-25 |
 | D-25 | Chatbot tool-use policy | No tools (v1 baseline) / small named allowlist that renders UI intents / open function-calling | Small named allowlist: `open_contact_form`, `open_scheduler`, `open_contributor_request`. Each renders a UI intent the member confirms; the assistant never fires the underlying HTTP call. Amends FR-CHAT-13. Open function-calling stays out — no path from "prompt injection" to "action taken." |
-| D-26 | On-host LLM / embeddings via Ollama | Hosted Anthropic only / hosted primary + Ollama fallback / Ollama primary for embeddings, Anthropic primary for generation | Ollama primary for embeddings + a supported alternative for generation demos and future fine-tuned personas; Anthropic Claude remains the production generation default. Both sit behind the same provider interface. Fine-tuning a persona LoRA on Roger's corpus (via Axolotl/Unsloth) is a Phase 4+ follow-up; today Ollama runs off-the-shelf models. Amends FR-CHAT-16. |
+| D-26 | On-host LLM / embeddings via Ollama | Hosted Anthropic only / hosted primary + Ollama fallback / Ollama primary for embeddings, Anthropic primary for generation | Ollama primary for embeddings + a supported alternative for generation demos and future fine-tuned personas; Anthropic Claude remains the production generation default. Both sit behind the same provider interface. Fine-tuning a persona LoRA on Roger's corpus (via Axolotl/Unsloth) is a Phase 4+ follow-up; today Ollama runs off-the-shelf models. Amends FR-CHAT-16. **Current state:** Ollama on the box serves both embeddings and the JD reviewer's generation; no Anthropic provider is wired; the decision log (FR-ADM-16) is collecting the labels for the adapter. No ADR recorded |
 | D-27 | Docs discipline + public-repo maturity policy | Ad-hoc / lightweight guidance / codified in AGENTS.md + FSD + PR template | **Resolved 2026-09-19: codified.** Every behavior-changing PR ships its documentation in the same commit; the PR template requires the author to tick the docs-discipline checklist. Standard public-repo files (LICENSE, LICENSE-CONTENT, SECURITY, CONTRIBUTING, CODEOWNERS, PR + issue templates, Dependabot, CodeQL) are present and current. Main is protected; merges are squash-only. NFR-DOC-01/02/03, NFR-SUPP-01/02/03/04; ADR-0027 |
 
 ---
@@ -1252,7 +1339,7 @@ Each decision becomes an ADR when resolved. Recommendations reflect the analysis
 
 ### 15.A Requirement index
 
-Counts at version 0.3.0 (Won't = 0). Regenerate with `career-cli docs index` after amendments.
+Counts at version 0.3.0 (Won't = 0). Not regenerated since: the 0.3.4/0.3.5 additions (FR-AUTH-17/18, FR-ADM-11..14, FR-CNT-22..25, FR-NOTF-06) and the 0.3.8 additions (FR-JD-01..14, FR-ADM-15..18, FR-NOTF-07) are not in these totals. `career-cli docs index` does not exist yet; recount by hand or with a script when the FSD 1.0 pass happens.
 
 | Module | Must | Should | Could | Total |
 |---|---|---|---|---|
@@ -1328,7 +1415,9 @@ Counts at version 0.3.0 (Won't = 0). Regenerate with `career-cli docs index` aft
 
 ### 15.E Email templates
 
-`verify-email`, `password-reset`, `email-change-verify`, `welcome`, `escalation-reply`, `export-ready`, `account-deleted`, `owner-new-member`, `owner-escalation`, `owner-negative-feedback`, `owner-weekly-digest`, `member-digest` (opt-in). Each has HTML and plain-text variants and a test rendering in CI.
+Specified: `verify-email`, `password-reset`, `email-change-verify`, `welcome`, `escalation-reply`, `export-ready`, `account-deleted`, `owner-new-member`, `owner-escalation`, `owner-negative-feedback`, `owner-weekly-digest`, `member-digest` (opt-in). Each has HTML and plain-text variants and a test rendering in CI.
+
+Shipped template kinds (`services/api/internal/email`, audited in `notification_deliveries`): `verify_email`, `password_reset`, `approval_request`, `user_approved`, `user_declined`, `user_auto_declined`, `access_ending_soon`, `access_ended`, `jd_outcome`, `jd_result`. Every kind ships a `.txt.tmpl` alongside its `.html.tmpl`; there is no CI render test for the templates.
 
 ### 15.F Glossary
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
+import { AgreementPanel } from "./agreement";
 import { ReviewForm } from "./review-form";
 
 export const metadata: Metadata = { title: "Admin · Decision review" };
@@ -198,6 +199,8 @@ export default async function DecisionsPage({
           export all
         </a>
       </div>
+
+      <AgreementPanel />
 
       {error ? (
         <p className="mt-10 text-sm text-danger">Could not load the log: {error}</p>

@@ -28,3 +28,9 @@ The site is a live portfolio, not confidential material (FSD A-05), so this is a
 - FSD FR-AUTH-11 (account deletion) remains authoritative for privacy: an expired row still exists and can still be deleted by the user; an expired non-deleted row can be re-activated by Roger without a fresh registration cycle.
 - No wildcards, no domain matches, no CSV import in v1 — deliberately kept simple. Bulk import moves to §7 backlog if the list ever grows past ~50 entries.
 - Phase 2 effort revised 6–8 days → 8–10 days to cover the additional surfaces, templates, and scheduler.
+
+## Status update (2026-09-22)
+
+- The whitelist surface lives at `/admin/access` ("Access & whitelist"), not `/admin/whitelist`. Its add / edit form defaults `default_ttl` to 7 days (`GRANT_TTL_7D` in `apps/web/src/app/admin/(console)/access/grant-form.tsx`); the five TTL values are unchanged.
+- The default access window everywhere is 7 days: the emailed one-click Accept grants 7 days (`AcceptDefaultTTL`), a whitelist hit grants the entry's TTL (7 days unless changed), and the registration detail page shows the expiry with day-preset and "permanent" extension actions (`ExtendAccess` on `AdminService`).
+- The hourly expiry job, the 3-day warning and the closing email are in `services/api/internal/handlers/expiry.go`, as decided. An `expired` user is refused at sign-in with "your access has expired, reach out to Roger to renew" (`handlers/auth_session.go`); renewal is the owner extending access from `/admin/registrations/[id]`, not a new application (verified 2026-09-22).

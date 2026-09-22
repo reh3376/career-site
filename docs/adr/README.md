@@ -2,6 +2,8 @@
 
 One record per resolved decision from the FSD (`docs/FSD.md` §14). The file number is the decision ID (`D-04` → `0004-…`), so the FSD table and the record always match. Format: context, decision, consequences. A record is required whenever a technology in FSD §8.2 is replaced or a decision is reversed; the superseded record stays and points at its successor.
 
+The reasoning in a record is historical and is not rewritten. Where a later change extended or superseded part of a decision, the record ends with a dated "Status update" section that says what changed and where the current behaviour lives.
+
 | ADR | Decision | Status |
 |---|---|---|
 | [0002](0002-approval-gated-registration.md) | Approval-gated registration | Accepted 2026-09-19 |
