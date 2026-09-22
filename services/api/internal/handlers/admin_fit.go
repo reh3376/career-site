@@ -49,5 +49,6 @@ func (a *Admin) SetJdFitBands(
 		}
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	a.events.Emit(ctx, requestEvent(req, "admin.fit_bands_changed", admin.ID, nil))
 	return connect.NewResponse(&v1.SetJdFitBandsResponse{Bands: bandsToProto(b)}), nil
 }

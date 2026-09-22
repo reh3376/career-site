@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
+import { EventBeacon } from "@/components/event-beacon";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getUiMode } from "@/lib/ui-mode";
@@ -75,6 +76,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        <EventBeacon />
       </body>
     </html>
   );

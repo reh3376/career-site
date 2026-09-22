@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -51,6 +52,8 @@ type Scorer struct {
 	resume *ResumeWriter
 	// bands hold the fit categories; the "strong" edge is the gate.
 	bands *BandsStore
+	// events is the product event stream (jd.finished); nil is silent.
+	events *events.Writer
 	// slots serialises pipelines. On the CPX31 two concurrent JDs made
 	// the embedder and the LLM swap in and out (one resident model at a
 	// time) until an embed call timed out; one JD at a time is also

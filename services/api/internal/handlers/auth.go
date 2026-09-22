@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -37,6 +38,8 @@ type Auth struct {
 	// attempts per 15 minutes (single-instance API only; a
 	// horizontally-scaled deployment would need Redis).
 	loginLimiter *ratelimit.Limiter
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 }
 
 type AuthConfig struct {
@@ -169,6 +172,7 @@ func (h *Auth) Register(
 			)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("registration failed"))
 		}
+		h.events.Emit(ctx, requestEvent(req, "register.submit", u.ID, map[string]any{"user_id": u.ID}))
 	}
 
 	return connect.NewResponse(&v1.RegisterResponse{
@@ -227,6 +231,7 @@ func (h *Auth) Verify(
 	userID, err := h.users.ConsumeToken(ctx, tokenHash, users.PurposeVerify)
 	if err != nil {
 		if errors.Is(err, users.ErrTokenExpired) {
+			h.events.Emit(ctx, requestEvent(req, "verify.already_used", 0, nil))
 			return nil, connect.NewError(connect.CodeInvalidArgument,
 				errors.New("this verification link has expired or already been used"))
 		}
@@ -244,9 +249,14 @@ func (h *Auth) Verify(
 	switch {
 	case err == nil:
 		// Whitelist hit — grant active, set expiry, record decision, welcome.
+		h.events.Emit(ctx, requestEvent(req, "verify.success", u.ID, map[string]any{"user_id": u.ID}))
+		h.events.Emit(ctx, requestEvent(req, "approval.decided", u.ID,
+			map[string]any{"user_id": u.ID, "decision": "approve", "channel": "whitelist_auto"}))
 		return h.applyWhitelistAutoApprove(ctx, u, grant)
 	case errors.Is(err, users.ErrNotFound):
 		// No whitelist entry — standard pending_approval flow.
+		h.events.Emit(ctx, requestEvent(req, "verify.success", u.ID, map[string]any{"user_id": u.ID}))
+		h.events.Emit(ctx, requestEvent(req, "approval.requested", u.ID, map[string]any{"user_id": u.ID}))
 		return h.applyPendingApproval(ctx, u, ClientIP(req), req.Header().Get("User-Agent"))
 	default:
 		h.log.Error("whitelist lookup failed",

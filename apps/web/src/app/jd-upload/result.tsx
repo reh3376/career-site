@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+import { track } from "@/lib/events-client";
 
 type Verdict = {
   id: string;
@@ -48,8 +50,10 @@ const FIT_LABEL: Record<string, string> = {
 };
 
 const FIT_NOTE: Record<string, string> = {
-  very_strong: "A two-page résumé written for this posting is ready below and in your email.",
-  strong: "A two-page résumé written for this posting is ready below and in your email.",
+  very_strong:
+    "A two-page résumé written for this posting is ready below and in your email.",
+  strong:
+    "A two-page résumé written for this posting is ready below and in your email.",
   possible: "Roger will review this one himself and get back to you.",
   weak: "Roger will review this one himself and get back to you.",
   very_weak: "No further action is needed; the breakdown below shows why.",
@@ -66,29 +70,43 @@ const VERDICT_LABEL: Record<string, string> = {
 // manager needs is which asks were and were not evidenced, not a
 // single number that hides a strong candidate behind two literal
 // misses.
-function VerdictBreakdown({ verdicts, met, partial, unmet }: {
+function VerdictBreakdown({
+  verdicts,
+  met,
+  partial,
+  unmet,
+}: {
   verdicts: Verdict[];
   met: number;
   partial: number;
   unmet: number;
 }) {
-  const unmetTexts = verdicts.filter((v) => v.verdict === "unmet").map((v) => v.text);
+  const unmetTexts = verdicts
+    .filter((v) => v.verdict === "unmet")
+    .map((v) => v.text);
   return (
     <section className="border-t border-line pt-5">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         requirement by requirement
       </p>
       <p className="mt-2 text-sm leading-relaxed text-ink">
-        {met} of {verdicts.length} requirements evidenced in Roger&rsquo;s records
+        {met} of {verdicts.length} requirements evidenced in Roger&rsquo;s
+        records
         {partial ? `, ${partial} partly` : ""}
         {unmet ? `, ${unmet} not evidenced` : ""}.
         {unmetTexts.length ? (
-          <span className="text-ink-2"> Not evidenced: {unmetTexts.join("; ")}.</span>
+          <span className="text-ink-2">
+            {" "}
+            Not evidenced: {unmetTexts.join("; ")}.
+          </span>
         ) : null}
       </p>
       <ul className="mt-4 space-y-3">
         {verdicts.map((v) => (
-          <li key={v.id} className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[9rem_1fr]">
+          <li
+            key={v.id}
+            className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[9rem_1fr]"
+          >
             <span
               className={
                 v.verdict === "met"
@@ -103,7 +121,9 @@ function VerdictBreakdown({ verdicts, met, partial, unmet }: {
             </span>
             <span className="text-ink-2">
               <span className="text-ink">{v.text}</span>
-              {v.rationale ? <span className="block text-xs text-ink-3">{v.rationale}</span> : null}
+              {v.rationale ? (
+                <span className="block text-xs text-ink-3">{v.rationale}</span>
+              ) : null}
             </span>
           </li>
         ))}
@@ -112,7 +132,11 @@ function VerdictBreakdown({ verdicts, met, partial, unmet }: {
   );
 }
 
-const LIVE = new Set(["JD_STATUS_RECEIVED", "JD_STATUS_SCORING", "JD_STATUS_GENERATING"]);
+const LIVE = new Set([
+  "JD_STATUS_RECEIVED",
+  "JD_STATUS_SCORING",
+  "JD_STATUS_GENERATING",
+]);
 
 const STEP_LABEL: Record<string, string> = {
   JD_STATUS_RECEIVED: "queued",
@@ -179,6 +203,24 @@ export function JdResult({
     };
   }, [submissionId, resultToken]);
 
+  // One jd.result_viewed per finished review per page load, whether it
+  // was reached from the submit flow or reopened from the list.
+  const viewedRef = useRef<string>("");
+  const pollStatus = poll?.status ?? "";
+  useEffect(() => {
+    if (
+      !pollStatus ||
+      LIVE.has(pollStatus) ||
+      viewedRef.current === submissionId
+    )
+      return;
+    viewedRef.current = submissionId;
+    track("jd.result_viewed", {
+      submission_id: submissionId,
+      via: resultToken ? "submit" : "reopen",
+    });
+  }, [pollStatus, submissionId, resultToken]);
+
   if (failed) {
     return (
       <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
@@ -201,7 +243,10 @@ export function JdResult({
   const met = Number(poll.metCount ?? poll.met_count ?? 0);
   const partial = Number(poll.partialCount ?? poll.partial_count ?? 0);
   const unmet = Number(poll.unmetCount ?? poll.unmet_count ?? 0);
-  const pct = Math.max(0, Math.min(100, Number(poll.progressPct ?? poll.progress_pct ?? 0)));
+  const pct = Math.max(
+    0,
+    Math.min(100, Number(poll.progressPct ?? poll.progress_pct ?? 0)),
+  );
   const stage = poll.progressStage ?? poll.progress_stage ?? "";
   const fit = poll.fitCategory ?? poll.fit_category ?? "";
 
@@ -224,16 +269,20 @@ export function JdResult({
                   Reviewing the posting
                 </h2>
                 <div className="mt-4 h-2 w-full bg-line" aria-hidden="true">
-                  <div className="h-2 bg-accent transition-all duration-700" style={{ width: `${pct}%` }} />
+                  <div
+                    className="h-2 bg-accent transition-all duration-700"
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
                 <p className="mt-2 flex items-baseline justify-between font-mono text-xs text-ink-2">
                   <span>{stage || STEP_LABEL[status] || "working"}</span>
                   <span className="text-ink">{pct}%</span>
                 </p>
                 <p className="mt-4 text-sm leading-relaxed text-ink-2">
-                  Each requirement is judged one at a time; this usually takes 15 to 30
-                  minutes. Keep this open to watch, or close it: you get an email when
-                  the review is finished, with the résumé attached if the fit is strong.
+                  Each requirement is judged one at a time; this usually takes
+                  15 to 30 minutes. Keep this open to watch, or close it: you
+                  get an email when the review is finished, with the résumé
+                  attached if the fit is strong.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
@@ -243,7 +292,9 @@ export function JdResult({
                   >
                     Close, email me when it is done
                   </button>
-                  <span className="inline-flex items-center text-sm text-ink-3">or keep watching</span>
+                  <span className="inline-flex items-center text-sm text-ink-3">
+                    or keep watching
+                  </span>
                 </div>
               </>
             ) : (
@@ -257,11 +308,14 @@ export function JdResult({
                 </h2>
                 {typeof score === "number" ? (
                   <p className="mt-2 font-mono text-sm text-ink-2">
-                    match score <span className="text-ink">{score.toFixed(2)}</span>
+                    match score{" "}
+                    <span className="text-ink">{score.toFixed(2)}</span>
                   </p>
                 ) : null}
                 {fit && FIT_NOTE[fit] ? (
-                  <p className="mt-3 text-sm leading-relaxed text-ink-2">{FIT_NOTE[fit]}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-ink-2">
+                    {FIT_NOTE[fit]}
+                  </p>
                 ) : null}
                 <div className="mt-5">
                   <button
@@ -280,7 +334,15 @@ export function JdResult({
 
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         status{" "}
-        <span className={live ? "text-signal" : status === "JD_STATUS_FAILED" ? "text-danger" : "text-ink"}>
+        <span
+          className={
+            live
+              ? "text-signal"
+              : status === "JD_STATUS_FAILED"
+                ? "text-danger"
+                : "text-ink"
+          }
+        >
           {STEP_LABEL[status] ?? status.toLowerCase()}
         </span>
         {typeof score === "number" ? (
@@ -292,7 +354,13 @@ export function JdResult({
         {fit && !live ? (
           <>
             <span className="text-ink-4"> · </span>
-            <span className={fit === "very_strong" || fit === "strong" ? "text-signal" : "text-ink"}>
+            <span
+              className={
+                fit === "very_strong" || fit === "strong"
+                  ? "text-signal"
+                  : "text-ink"
+              }
+            >
               {FIT_LABEL[fit] ?? fit}
             </span>
           </>
@@ -302,7 +370,10 @@ export function JdResult({
       {live ? (
         <div>
           <div className="h-1.5 w-full bg-line" aria-hidden="true">
-            <div className="h-1.5 bg-accent transition-all duration-700" style={{ width: `${pct}%` }} />
+            <div
+              className="h-1.5 bg-accent transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
           </div>
           <p className="mt-1 flex items-baseline justify-between font-mono text-[11px] text-ink-3">
             <span>{stage}</span>
@@ -317,9 +388,9 @@ export function JdResult({
 
       {live ? (
         <p className="text-sm leading-relaxed text-ink-2">
-          This runs a language model over each requirement in the
-          posting, one at a time, and usually takes 15 to 30 minutes. You
-          can close this page: the review stays at{" "}
+          This runs a language model over each requirement in the posting, one
+          at a time, and usually takes 15 to 30 minutes. You can close this
+          page: the review stays at{" "}
           <Link
             href={`/jd-upload/${submissionId}`}
             className="font-mono text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
@@ -332,22 +403,26 @@ export function JdResult({
 
       {status === "JD_STATUS_BELOW_THRESHOLD" ? (
         <p className="text-sm leading-relaxed text-ink-2">
-          The weighted score came in under the {threshold} gate, so no
-          tailored résumé was generated automatically. The breakdown
-          below shows what was and was not evidenced; Roger sees every
-          submission and will reply personally if the role looks worth
-          a conversation.
+          The weighted score came in under the {threshold} gate, so no tailored
+          résumé was generated automatically. The breakdown below shows what was
+          and was not evidenced; Roger sees every submission and will reply
+          personally if the role looks worth a conversation.
         </p>
       ) : null}
 
       {!live && verdicts.length > 0 ? (
-        <VerdictBreakdown verdicts={verdicts} met={met} partial={partial} unmet={unmet} />
+        <VerdictBreakdown
+          verdicts={verdicts}
+          met={met}
+          partial={partial}
+          unmet={unmet}
+        />
       ) : null}
 
       {status === "JD_STATUS_FAILED" ? (
         <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-          The pipeline hit an error{err ? `: ${err}` : ""}. Roger has
-          the submission and will follow up.
+          The pipeline hit an error{err ? `: ${err}` : ""}. Roger has the
+          submission and will follow up.
         </p>
       ) : null}
 

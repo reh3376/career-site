@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 
 import { setUiModeAction } from "@/app/actions/ui-mode";
+import { track } from "@/lib/events-client";
 import type { UiMode } from "@/lib/ui-mode";
 
 // A segmented two-button control that flips the site between IT and
@@ -16,6 +17,7 @@ export function ModeToggle({ current }: { current: UiMode }) {
 
   const select = (mode: UiMode) => {
     if (pending || mode === current) return;
+    track("landing.mode_switch", { from: current, to: mode }, { flush: true });
     // Optimistic DOM flip so the whole page re-tokens immediately.
     // If the server action fails, the next paint reconciles with the
     // real cookie state.

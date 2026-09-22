@@ -126,6 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 42 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
+| [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -3285,6 +3286,56 @@ _No fields; send `{}`._
 
 </details>
 
+## EventService
+
+Accepts browser-minted events. Public so the landing funnel is
+visible before sign-in; the api attaches identity (session member,
+anonymous id cookie), the client address hash and the device class
+itself and never trusts those from the client.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | 120 | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
+
+### EventService.Record
+
+`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** 120/min
+
+Records up to 50 events. Unknown names and oversized props are
+dropped, never errors; the response says how many were stored.
+
+**Request** — [`RecordRequest`](#recordrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `events` | [`BrowserEvent`](#browserevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Up to 50 events. |
+
+**Response** — [`RecordResponse`](#recordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `accepted` | `int32` | number |  | Events stored (duplicates and rejected events are not counted). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "events": [
+    {
+      "eventId": "string",
+      "name": "string",
+      "clientTsMs": "0",
+      "path": "string",
+      "referrer": "string",
+      "uiMode": "string",
+      "propsJson": "string"
+    }
+  ]
+}
+```
+
+</details>
+
 ## SidecarService
 
 Embedding, reranking, classification, and batch jobs.
@@ -6040,6 +6091,36 @@ Download list.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `items` | [`DownloadItem`](#downloaditem)[] | array of object |  | Items, recommended first. |
+
+### BrowserEvent
+
+One browser event.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `eventId` | `string` | string | `string: min_len: 8 max_len: 64` | Client-minted UUID; a retried batch de-duplicates on it. |
+| `name` | `string` | string | `string: min_len: 1 max_len: 64` | Registry name (page.view, page.leave, landing.cta_click, ...). |
+| `clientTsMs` | `int64` | string (decimal) |  | Client clock in milliseconds since the epoch; kept for skew analysis, never used for ordering. |
+| `path` | `string` | string | `string: max_len: 512` | Page path (no query string). |
+| `referrer` | `string` | string | `string: max_len: 1024` | document.referrer, reduced to its host by the api. |
+| `uiMode` | `string` | string | `string: max_len: 8` | UI mode the page rendered in: it | ot. |
+| `propsJson` | `string` | string | `string: max_len: 2048` | Event properties as a JSON object; keys are checked against the registry and the whole thing is capped at 2 KB. |
+
+### RecordRequest
+
+A batch of browser events.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `events` | [`BrowserEvent`](#browserevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Up to 50 events. |
+
+### RecordResponse
+
+How the batch was handled.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `accepted` | `int32` | number |  | Events stored (duplicates and rejected events are not counted). |
 
 ### GetHomeRequest
 
