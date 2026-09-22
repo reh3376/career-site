@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/reh3376/career-site/services/api/internal/build"
+	"github.com/reh3376/career-site/services/api/internal/tenant"
 )
 
 // Registry lists every event name the stream accepts and the prop
@@ -152,11 +153,12 @@ func (w *Writer) Record(ctx context.Context, e Event) (bool, error) {
 	}
 	tag, err := w.pool.Exec(ctx, `
     INSERT INTO events
-      (event_id, name, occurred_at, client_ts, anon_id, user_id, session_id, ui_mode,
+      (tenant_id, event_id, name, occurred_at, client_ts, anon_id, user_id, session_id, ui_mode,
        path, referrer_host, utm, device, ip_hash, app_commit, props)
-    VALUES ($1, $2, now(), $3, $4, NULLIF($5, 0), NULLIF($6, 0), NULLIF($7, ''),
-            NULLIF($8, ''), NULLIF($9, ''), $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14)
+    VALUES ($1, $2, $3, now(), $4, $5, NULLIF($6, 0), NULLIF($7, 0), NULLIF($8, ''),
+            NULLIF($9, ''), NULLIF($10, ''), $11, NULLIF($12, ''), NULLIF($13, ''), $14, $15)
     ON CONFLICT (event_id) DO NOTHING`,
+		tenant.FromContext(ctx).Int64(),
 		id, e.Name, e.ClientTS, anon, e.UserID, e.SessionID, e.UIMode,
 		truncate(e.Path, 512), referrerHost(e.Referrer), utm, e.Device, w.hashAddr(e.ClientAddr), build.Commit, string(raw))
 	if err != nil {

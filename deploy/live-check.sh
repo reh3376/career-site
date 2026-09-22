@@ -24,15 +24,30 @@ check(){ if eval "$2"; then ok "$1"; else bad "$1"; fi; }
 
 echo "== live check: $BASE  ($(date -u +%Y-%m-%dT%H:%M:%SZ)) =="
 
-echo "-- public endpoints (members-only paths must redirect anonymous visitors)"
-for path in / /login /contact /register; do
+# The access policy, asserted from outside. It lives in
+# apps/web/src/lib/public-routes.ts; if a route moves across the line
+# there, it moves here too, and a mismatch means the site is not
+# enforcing what we think it is.
+echo "-- access policy (evidence is public, the reviewer is not)"
+for path in / /login /contact /register /articles /gallery /privacy /terms; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$path")
-  check "GET $path -> $code" "[ '$code' = '200' ]"
+  check "GET $path (anonymous) -> $code" "[ '$code' = '200' ]"
 done
-for path in /jd-upload /articles /gallery /home; do
+for path in /jd-upload /home /settings /admin; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$path")
   check "GET $path (anonymous) -> $code, redirected" "[ '$code' = '307' ] || [ '$code' = '302' ]"
 done
+# The gallery serves a subset anonymously; if the filter broke, every
+# photo would be public. Counting the rendered derivatives is the
+# cheapest way to notice from outside.
+shown=$(curl -s --max-time 20 "$BASE/gallery" | grep -o 'images/gallery/[a-z0-9-]*-1600' | sort -u | wc -l | tr -d ' ')
+check "gallery shows the public subset to anonymous -> $shown photos" "[ '$shown' -gt 0 ] && [ '$shown' -le 8 ]"
+# Crawlers are invited to the public surface and kept off the rest.
+robots=$(curl -s --max-time 10 "$BASE/robots.txt")
+check "robots allows /articles" "echo '$robots' | grep -q 'Allow: /articles'"
+check "robots disallows /jd-upload" "echo '$robots' | grep -q 'Disallow: /jd-upload'"
+smap=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/sitemap.xml")
+check "sitemap.xml -> $smap" "[ '$smap' = '200' ]"
 hz=$(curl -s --max-time 10 "$BASE/api/healthz"); check "healthz: $hz" "echo '$hz' | grep -q '\"ok\"'"
 rz=$(curl -s --max-time 10 "$BASE/api/readyz");  check "readyz: $rz"   "echo '$rz' | grep -q '\"postgres\":true' && echo '$rz' | grep -q '\"sidecar\":true'"
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/api/jd/resume/1.pdf"); check "pdf route refuses without a session -> $code" "[ '$code' = '401' ] || [ '$code' = '403' ] || [ '$code' = '404' ]"

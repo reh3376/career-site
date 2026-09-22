@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/reh3376/career-site/services/api/internal/tenant"
 )
 
 // LLMUsage is one row of llm_usage: a single call to the LLM gateway,
@@ -27,11 +29,12 @@ type LLMUsage struct {
 func (r *Repo) RecordLLMUsage(ctx context.Context, u LLMUsage) error {
 	const q = `
     INSERT INTO llm_usage
-      (kind, ref_id, model, prompt_id, prompt_version,
+      (tenant_id, kind, ref_id, model, prompt_id, prompt_version,
        prompt_tokens, completion_tokens, latency_ms, ok, error)
-    VALUES ($1, NULLIF($2, 0), $3, $4, $5, $6, $7, $8, $9, NULLIF($10, ''))
+    VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8, $9, $10, NULLIF($11, ''))
   `
 	if _, err := r.pool.Exec(ctx, q,
+		tenant.FromContext(ctx).Int64(),
 		u.Kind, u.RefID, u.Model, u.PromptID, u.PromptVersion,
 		u.PromptTokens, u.CompletionTokens, u.LatencyMs, u.OK, u.Error,
 	); err != nil {

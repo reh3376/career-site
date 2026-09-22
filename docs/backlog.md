@@ -48,6 +48,30 @@ in the sections below.
 - **Articles. DECIDED: public.** Most were posted publicly on LinkedIn
   already, so gating them buys nothing and costs discovery.
 
+## 1b. Direction, settled 2026-09-22
+
+A go-to-market plan (`docs/personal/review/GTM.md`, gitignored) proposes
+turning the reviewer into a multi-tenant product. The owner's reading of
+it, which sets the order of everything below:
+
+- **The platform is proof for a senior role first**, a product second.
+  So the work is depth on one corpus and evidence that it works, not
+  tenancy, billing or support. Timelines in that document are not
+  commitments.
+- **The one real user is the owner.** No beta cohort until the thing
+  runs very well for him.
+- **Funding comes before the platform.** The repository split, the
+  private platform repo and anything with a monthly bill wait for it,
+  so no answer yet on the spend ceiling.
+- **Build so none of it has to be undone.** Where a long-term shape can
+  be adopted for almost nothing today, adopt it. The first instance is
+  the tenancy seam, ADR 0029, shipped the same day.
+
+Open from that conversation: whether "dossier" is the right word to
+build a brand on, and the fact that seeker documents would bring other
+people's confidential material into the corpus. Neither blocks anything
+while the only user is the owner.
+
 ## 2. Data layer (Roger's stated priority)
 
 D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
@@ -72,6 +96,7 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   prompt hashes, corpus fingerprint, timings and outcome; `run_id` on
   `llm_usage` and `decision_log` so a score can be traced to exactly
   what produced it. Rescore then makes a new run, not an overwrite.
+  Carries `tenant_id` from birth, like every table after ADR 0029.
 - **D3 feedback and outcomes.** Submitter thumbs on a result, owner
   outcome on a submission (interview, offer, no reply), and the
   `admin.decision_reviewed` labels, all joined by `run_id`.
