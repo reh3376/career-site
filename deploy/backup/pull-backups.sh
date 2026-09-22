@@ -30,17 +30,22 @@ if ! ssh -o ConnectTimeout=20 -o BatchMode=yes "$SERVER" true 2>/dev/null; then
   exit 0   # a sleeping laptop or a down link is not a failure
 fi
 
+# macOS ships openrsync, which has neither --chmod nor --partial, so
+# permissions come from the umask above and from the explicit chmod
+# below rather than from rsync flags.
 log "pulling dumps from $SERVER"
-rsync -az --partial --chmod=F600 \
-  -e 'ssh -o ConnectTimeout=20 -o BatchMode=yes' \
+rsync -az -e 'ssh -o ConnectTimeout=20 -o BatchMode=yes' \
   "$SERVER:$REMOTE_DIR/" "$LOCAL_DIR/"
 
 if [ "$PULL_ENV" = "1" ]; then
   log "pulling .env.prod (secrets; stays out of the repo)"
-  rsync -az --chmod=F600 \
-    -e 'ssh -o ConnectTimeout=20 -o BatchMode=yes' \
+  rsync -az -e 'ssh -o ConnectTimeout=20 -o BatchMode=yes' \
     "$SERVER:/opt/career-site/.env.prod" "$LOCAL_DIR/env.prod.copy"
 fi
+
+# Nothing here is readable by anyone but the owner, whatever arrived.
+chmod 700 "$LOCAL_DIR"
+find "$LOCAL_DIR" -type f -exec chmod 600 {} +
 
 # Local retention, by filename date like the server's.
 now=$(date -u +%s)

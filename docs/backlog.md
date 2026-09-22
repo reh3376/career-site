@@ -132,10 +132,18 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   Roger is also enlarging the Hetzner volume. Left to do: make the
   prune automatic rather than a step someone remembers, either in a
   deploy script or a weekly timer on the box.
-- **Backups**, per the decision in section 1: nightly `pg_dump` on the
-  server with a week kept locally, a launchd job on the Mac pulling over
-  ssh, and a restore rehearsal recorded in `deploy/README.md`. Disk
-  cleanup comes first, since the dumps need room.
+- **Backups. Built 2026-09-22**, see `deploy/backup/README.md`. Nightly
+  dump plus cluster roles, verified by reading the archive, pruned to 14
+  daily, 8 weekly and 6 monthly; a weekly restore into a scratch
+  database that compares row counts against live; a launchd pull to the
+  Mac that also takes `.env.prod` and fails loudly if the newest dump
+  goes stale. Proven end to end on the server and the Mac the same day:
+  a 1.4 MB dump of 271 objects restored with every table matching.
+  **One step left:** the systemd timers install from the deploy
+  checkout, so run
+  `ssh career@5.161.62.205 'cd /opt/career-site && sudo deploy/backup/install-server.sh'`
+  once this lands on `main` and the server has pulled it. Until then the
+  only copies are the one taken by hand on 2026-09-22.
 
 ## 5. Hardening (public repo)
 
