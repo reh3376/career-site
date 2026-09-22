@@ -17,6 +17,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/jobs"
@@ -50,6 +51,8 @@ type Admin struct {
 	jdTimeout time.Duration
 	// jobs runs the long admin operations (reindex, sweep) out of band.
 	jobs *jobs.Runner
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 	// queryLimiter caps how often a single admin can hit RunDbQuery.
 	// The read-only role bounds the *effect* of a bad query; this bounds
 	// the *rate*, so a compromised admin session (or a stuck client
@@ -1286,6 +1289,7 @@ func (a *Admin) RescoreJd(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("could not mark scoring"))
 	}
 	a.log.Info("jd rescore queued", slog.Int64("id", id), slog.Int64("admin_id", admin.ID))
+	a.events.Emit(ctx, requestEvent(req, "admin.rescore", admin.ID, map[string]any{"submission_id": id}))
 	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
 	// No deadline here: the scorer caps the queue wait and applies the
 	// pipeline timeout once the submission holds its slot.

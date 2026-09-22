@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -26,10 +27,14 @@ type OutcomeNotifier interface {
 // SetNotifier installs the outcome notifier. Nil disables it.
 func (s *Scorer) SetNotifier(n OutcomeNotifier) { s.notifier = n }
 
+// SetEvents installs the product event writer; nil is silent.
+func (s *Scorer) SetEvents(w *events.Writer) { s.events = w }
+
 // notifyOutcome runs after ScoreAndPersist, whatever path it took. It
-// reads the row back so the mail reflects exactly what was stored.
+// reads the row back so the mail and the jd.finished event reflect
+// exactly what was stored.
 func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
-	if s.notifier == nil {
+	if s.notifier == nil && s.events == nil {
 		return
 	}
 	row, err := s.users.GetJdSubmission(ctx, submissionID)
@@ -42,6 +47,16 @@ func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
 	default:
 		return
 	}
+	bands := s.bands.Get(ctx)
+	props := map[string]any{"submission_id": row.ID, "outcome": row.Status, "threshold": bands.Strong}
+	if row.MatchScore != nil {
+		props["score"] = *row.MatchScore
+		props["fit"] = string(bands.Category(*row.MatchScore))
+	}
+	s.events.Emit(ctx, events.Event{Name: "jd.finished", UserID: row.UserID, Props: props})
+	if s.notifier == nil {
+		return
+	}
 	var a *Assessment
 	if len(row.Assessment) > 0 {
 		var parsed Assessment
@@ -49,7 +64,7 @@ func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
 			a = &parsed
 		}
 	}
-	if err := s.notifier.NotifyJdOutcome(ctx, row, a, s.bands.Get(ctx)); err != nil {
+	if err := s.notifier.NotifyJdOutcome(ctx, row, a, bands); err != nil {
 		s.log.Warn("jd: outcome mail failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
 }

@@ -20,6 +20,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
@@ -40,6 +41,8 @@ type Jd struct {
 	// pipelineTimeout bounds one submission's background run. CPU
 	// inference can take minutes per LLM call.
 	pipelineTimeout time.Duration
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 }
 
 func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration) *Jd {
@@ -133,6 +136,8 @@ func (h *Jd) SubmitJd(
 		slog.Int("chars", len(text)),
 		slog.String("role_hint", s.RoleHint),
 	)
+	h.events.Emit(ctx, requestEvent(req, "jd.submitted", member.ID,
+		map[string]any{"submission_id": s.ID, "chars": len(text), "has_apply_url": s.ApplyURL != ""}))
 
 	// Fire-and-forget score in the background so the RPC returns
 	// immediately. Uses a fresh context (not `ctx`, which cancels
@@ -405,6 +410,7 @@ func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid result token", http.StatusForbidden)
 		return
 	}
+	h.events.Emit(r.Context(), httpEvent(r, "jd.pdf_downloaded", member.ID, map[string]any{"submission_id": id}))
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"roger-henley-resume-%d.pdf\"", id))
 	w.Header().Set("Cache-Control", "private, no-store")

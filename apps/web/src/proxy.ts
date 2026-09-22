@@ -36,14 +36,34 @@ function isPublic(pathname: string): boolean {
   );
 }
 
+// First-party anonymous id for the product event stream
+// (docs/events/README.md). Set on the first page load, HttpOnly so no
+// script reads it, 13 months like a consent-free analytics cookie. The
+// api reads it from the Cookie header on beacon calls; it never carries
+// identity by itself and is blanked from old rows by a nightly job.
+export const ANON_COOKIE = "career_anon";
+const ANON_MAX_AGE = 60 * 60 * 24 * 400;
+
+function withAnonId(request: NextRequest, res: NextResponse): NextResponse {
+  if (request.cookies.get(ANON_COOKIE)?.value) return res;
+  res.cookies.set(ANON_COOKIE, crypto.randomUUID(), {
+    path: "/",
+    maxAge: ANON_MAX_AGE,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.nextUrl.protocol === "https:",
+  });
+  return res;
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname)) return NextResponse.next();
+  if (isPublic(pathname)) return withAnonId(request, NextResponse.next());
   if (request.cookies.get(SESSION_COOKIE)?.value) {
     // Member pages are never indexed, whatever a crawler holds.
     const res = NextResponse.next();
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
-    return res;
+    return withAnonId(request, res);
   }
 
   const login = new URL("/login", request.url);

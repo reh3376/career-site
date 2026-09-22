@@ -90,6 +90,7 @@ func (a *Admin) ReviewDecision(
 		a.log.Error("ReviewDecision failed", slog.Int64("id", id), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("review failed"))
 	}
+	a.events.Emit(ctx, requestEvent(req, "admin.decision_reviewed", me.ID, map[string]any{"decision_id": id, "verdict": verdict}))
 	return connect.NewResponse(&v1.ReviewDecisionResponse{}), nil
 }
 

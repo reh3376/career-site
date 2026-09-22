@@ -1442,6 +1442,22 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.EventService",
+      "method": "Record",
+      "path": "/api/career.v1.EventService/Record",
+      "grpc_full_method": "/career.v1.EventService/Record",
+      "internal": false,
+      "request": "career.v1.RecordRequest",
+      "response": "career.v1.RecordResponse",
+      "summary": "Records up to 50 events.",
+      "auth": "public",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 120,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.sidecar.v1.SidecarService",
       "method": "Embed",
       "path": null,

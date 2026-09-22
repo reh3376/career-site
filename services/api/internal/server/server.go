@@ -29,6 +29,7 @@ type Server struct {
 	admin    *handlers.Admin
 	activity *handlers.Activity
 	jd       *handlers.Jd
+	events   *handlers.Events
 	sidecar  *sidecar.Client
 	db       *db.Pool
 }
@@ -46,6 +47,7 @@ type Deps struct {
 	Admin    *handlers.Admin
 	Activity *handlers.Activity
 	Jd       *handlers.Jd
+	Events   *handlers.Events
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
@@ -60,6 +62,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		admin:    deps.Admin,
 		activity: deps.Activity,
 		jd:       deps.Jd,
+		events:   deps.Events,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
 	}
@@ -124,6 +127,11 @@ func (s *Server) routes() http.Handler {
 	if s.jd != nil {
 		jdPath, jdHandler := careerv1connect.NewJdServiceHandler(s.jd)
 		mount(jdPath, jdHandler)
+	}
+
+	if s.events != nil {
+		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events)
+		mount(eventsPath, eventsHandler)
 	}
 
 	// Every RPC body is small (the JD text is capped at 50k characters

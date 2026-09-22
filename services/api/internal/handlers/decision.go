@@ -10,6 +10,7 @@ import (
 
 	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -29,6 +30,8 @@ type AdminDecision struct {
 	// DefaultTTL applied to an Accept from the one-click email (FR-NOTF-05.a).
 	// Other TTLs go through the console (Task 5).
 	AcceptDefaultTTL users.GrantTTL
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 }
 
 func NewAdminDecision(
@@ -150,6 +153,8 @@ func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via stri
 	}
 	u.ExpiresAt = &expiresAt
 	u.Status = users.StatusActive
+	h.events.Emit(ctx, events.Event{Name: "approval.decided", UserID: u.ID,
+		Props: map[string]any{"user_id": u.ID, "decision": "approve", "channel": via}})
 
 	go h.sendUserApproved(u)
 	return ttl, nil
@@ -174,6 +179,8 @@ func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via stri
 		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 	}
 	u.Status = users.StatusDeclined
+	h.events.Emit(ctx, events.Event{Name: "approval.decided", UserID: u.ID,
+		Props: map[string]any{"user_id": u.ID, "decision": "decline", "channel": via}})
 	// A declined account should not carry any live session forward.
 	// In practice pending_approval users don't have sessions to begin
 	// with (they can't log in), but this closes the door if a manual

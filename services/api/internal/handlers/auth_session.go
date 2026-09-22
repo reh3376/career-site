@@ -52,14 +52,17 @@ func (h *Auth) Login(
 		// endpoint does not distinguish. Constant-time argon2 still runs so
 		// there is no timing side-channel either.
 		_ = auth.VerifyPassword(msg.Password, dummyArgonHash)
+		h.events.Emit(ctx, requestEvent(req, "login.failed", 0, map[string]any{"reason": "bad_credentials"}))
 		return nil, badCredentials
 	}
 
 	if hashErr := auth.VerifyPassword(msg.Password, currentPasswordHash(ctx, h.users, u.ID)); hashErr != nil {
+		h.events.Emit(ctx, requestEvent(req, "login.failed", 0, map[string]any{"reason": "bad_credentials"}))
 		return nil, badCredentials
 	}
 
 	if err := statusToLoginError(u.Status); err != nil {
+		h.events.Emit(ctx, requestEvent(req, "login.failed", u.ID, map[string]any{"reason": string(u.Status)}))
 		return nil, err
 	}
 
@@ -101,6 +104,7 @@ func (h *Auth) Login(
 			slog.Int64("user_id", u.ID), slog.String("error", err.Error()),
 		)
 	}
+	h.events.Emit(ctx, requestEvent(req, "login.success", u.ID, map[string]any{"user_id": u.ID}))
 
 	resp := connect.NewResponse(&v1.LoginResponse{
 		Me:          h.buildMe(u),
@@ -117,7 +121,12 @@ func (h *Auth) Logout(
 	req *connect.Request[v1.LogoutRequest],
 ) (*connect.Response[v1.LogoutResponse], error) {
 	if token := sessionTokenFromRequest(req); token != "" {
+		var userID int64
+		if u, err := h.lookupSessionToken(ctx, token); err == nil && u != nil {
+			userID = u.ID
+		}
 		_ = h.users.RevokeSession(ctx, auth.HashToken(token))
+		h.events.Emit(ctx, requestEvent(req, "logout", userID, nil))
 	}
 	resp := connect.NewResponse(&v1.LogoutResponse{})
 	clearSessionCookie(resp.Header(), h.cfg.CookieSecure)

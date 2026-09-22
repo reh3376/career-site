@@ -9,11 +9,13 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/jd"
@@ -174,6 +176,10 @@ func main() {
 		)
 	}
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
+	// Product event stream: one writer shared by the browser beacon
+	// handler and the api's own emit points (docs/events/README.md).
+	eventWriter := events.New(pool.Pool, log, cfg.EventIPSalt)
+	eventsHandler := handlers.NewEvents(log, eventWriter, authHandler)
 	// JD scorer reuses the sidecar's embedder. Skipped when the
 	// sidecar isn't dialled (rare — dev only) so /jd-upload still
 	// stores submissions even without scoring wired.
@@ -218,6 +224,16 @@ func main() {
 		jdScorer, cfg.JDPipelineTimeout,
 	)
 
+	// Server-side emit points share the one writer.
+	authHandler.SetEvents(eventWriter)
+	decisionHandler.SetEvents(eventWriter)
+	contactHandler.SetEvents(eventWriter)
+	jdHandler.SetEvents(eventWriter)
+	adminHandler.SetEvents(eventWriter)
+	if jdScorer != nil {
+		jdScorer.SetEvents(eventWriter)
+	}
+
 	srv := server.New(cfg, log, server.Deps{
 		Sidecar:  sc,
 		DB:       pool,
@@ -228,16 +244,31 @@ func main() {
 		Admin:    adminHandler,
 		Activity: activityHandler,
 		Jd:       jdHandler,
+		Events:   eventsHandler,
 	})
 
 	// Expiry + auto-decline jobs run in-process; interval configurable so
 	// tests can drive them quickly.
 	expiry := handlers.NewExpiryJobs(log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail)
 	autoDecline := handlers.NewAutoDeclineJobs(log, userRepo, decisionHandler, cfg.PendingApprovalTTL)
+	expiry.SetEvents(eventWriter)
+	autoDecline.SetEvents(eventWriter)
 	sched := scheduler.New(log,
 		scheduler.Job{Name: "expiry-warn", Interval: cfg.ExpirySchedulerInterval, Run: expiry.WarnJob},
 		scheduler.Job{Name: "expiry-cut", Interval: cfg.ExpirySchedulerInterval, Run: expiry.ExpireJob},
 		scheduler.Job{Name: "auto-decline", Interval: cfg.ExpirySchedulerInterval, Run: autoDecline.Run},
+		// Identity retention on the event stream: blank user, session,
+		// anon id and address hash on rows older than the window.
+		scheduler.Job{Name: "events-anonymize", Interval: 24 * time.Hour, Run: func(ctx context.Context) error {
+			n, err := eventWriter.AnonymizeOlderThan(ctx, cfg.EventIdentityRetention)
+			if err != nil {
+				return err
+			}
+			if n > 0 {
+				log.Info("events: identity blanked on old rows", slog.Int64("rows", n))
+			}
+			return nil
+		}},
 	)
 	sched.Start(ctx)
 	defer sched.Stop()

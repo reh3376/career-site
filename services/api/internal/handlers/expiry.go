@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -20,6 +21,7 @@ type ExpiryJobs struct {
 	email     email.Provider
 	from      string
 	ownerAddr string
+	events    *events.Writer // product event stream; nil is silent
 
 	warnWindow time.Duration // how far ahead of expiry the reminder fires (default 3d)
 	// notifiedWarn tracks user IDs we've already emailed a warning for in
@@ -82,6 +84,7 @@ func (j *ExpiryJobs) ExpireJob(ctx context.Context) error {
 		if !expired {
 			continue // raced with another writer; already handled
 		}
+		j.events.Emit(ctx, events.Event{Name: "access.expired", UserID: u.ID, Props: map[string]any{"user_id": u.ID}})
 		if _, err := j.users.RevokeSessions(ctx, u.ID); err != nil {
 			j.log.Warn("revoke sessions failed",
 				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
@@ -167,6 +170,7 @@ type AutoDeclineJobs struct {
 	users      *users.Repo
 	decision   *AdminDecision
 	pendingTTL time.Duration
+	events     *events.Writer // product event stream; nil is silent
 }
 
 func NewAutoDeclineJobs(log *slog.Logger, repo *users.Repo, decision *AdminDecision, pendingTTL time.Duration) *AutoDeclineJobs {
@@ -200,6 +204,7 @@ func (j *AutoDeclineJobs) Run(ctx context.Context) error {
 			j.log.Warn("auto-decline record failed",
 				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
 		}
+		j.events.Emit(ctx, events.Event{Name: "approval.auto_declined", UserID: u.ID, Props: map[string]any{"user_id": u.ID}})
 		if err := j.decision.SendUserAutoDeclined(ctx, u); err != nil {
 			j.log.Warn("auto-decline email failed",
 				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))

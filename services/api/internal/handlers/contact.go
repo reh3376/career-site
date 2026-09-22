@@ -14,6 +14,7 @@ import (
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -29,6 +30,7 @@ type Contact struct {
 	email     email.Provider
 	from      string
 	ownerAddr string
+	events    *events.Writer // product event stream; nil is silent
 	webBase   string
 }
 
@@ -140,6 +142,12 @@ func (h *Contact) SubmitContact(
 		h.log.Error("support insert failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("submit failed"))
 	}
+	var eventUser int64
+	if userID != nil {
+		eventUser = *userID
+	}
+	h.events.Emit(ctx, requestEvent(req, "contact.submitted", eventUser,
+		map[string]any{"category": string(stored.Category), "has_jd": hiringJDURL != ""}))
 
 	go func() {
 		emailCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

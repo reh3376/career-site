@@ -97,6 +97,15 @@ type Config struct {
 	DecisionTokenSecret []byte
 	DecisionTokenTTL    time.Duration
 
+	// Product event stream (docs/events/README.md). EventIPSalt keys
+	// the client-address hash stored with each event; empty falls back
+	// to a fixed dev salt with a warning. EventIdentityRetention is how
+	// long identity columns (user, session, anon id, address hash) stay
+	// on a row before the nightly job blanks them; the row itself is
+	// kept for aggregate counts.
+	EventIPSalt            string
+	EventIdentityRetention time.Duration
+
 	// Sessions (FR-AUTH-08)
 	SessionTTL   time.Duration
 	CookieSecure bool
@@ -153,6 +162,9 @@ func Load() (Config, error) {
 
 		AdminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_USERNAME"))),
 		AdminPassword: os.Getenv("CAREER_SITE_ADMIN_PW"),
+
+		EventIPSalt:            os.Getenv("EVENT_IP_SALT"),
+		EventIdentityRetention: time.Duration(envIntOr("EVENT_IDENTITY_RETENTION_DAYS", 400)) * 24 * time.Hour,
 	}
 	if secretHex := os.Getenv("DECISION_TOKEN_SECRET"); secretHex != "" {
 		s, err := hexDecode(secretHex)

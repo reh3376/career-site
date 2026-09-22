@@ -680,3 +680,49 @@ until that PR is deployed; the flip is then the runbook's Phase C with
 `SIDECAR_LLM_NUM_CTX=8192` and either `qwen3:8b` on the box or
 `qwen3:14b` on the Mac over `OLLAMA_LLM_URL`.
 
+
+## 2026-09-22: data layer D1, the product event stream
+
+Not a tuning change; recorded here because the owner reads this log
+for every decision. The data strategy agreed after the site review is
+D1 events, D2 `jd_runs` with a `run_id` on `llm_usage` and
+`decision_log`, D3 feedback and outcomes, D4 a golden set with
+`eval_runs`, D5 views and `/admin/analytics`. This entry is D1.
+
+**What shipped.** One append-only `events` table (migration 00023),
+one registry of names in `internal/events`, one writer used by the
+browser beacon and the api's own emit points. The web proxy sets a
+first-party `career_anon` cookie (HttpOnly, 400 days) so anonymous
+landing visits and later member actions line up under one visitor id.
+A public `EventService.Record` RPC takes beacon batches (50 per call,
+120 per minute per address); identity, device class and the salted
+address hash are attached by the api, never trusted from the client.
+Server-side emits sit at the success point of register, verify,
+approval (all three channels), login, logout, expiry, contact, JD
+submit, JD finish (with score, fit and threshold), PDF download, and
+the admin decision review, rescore and fit-band edits. A daily job
+blanks identity columns after `EVENT_IDENTITY_RETENTION_DAYS` (400).
+The 42 `activity_events` rows were copied in. `docs/events/README.md`
+is the registry and holds the funnel query; the privacy page now says
+all of this in plain words.
+
+**Why this shape.** The questions worth answering cross the anonymous
+and member boundary (landing to request to approval to JD to result),
+so one table with one visitor id beats the member-only activity table
+plus joins. The registry in code keeps the table from filling with
+ad-hoc names; a new event is a one-line addition in two places.
+
+**Verified locally.** Proxy sets the cookie; a beacon batch with a
+duplicate id, an unregistered name and a server-only name stored one
+row; utm survived and a stray query parameter did not; the referrer
+was reduced to its host; a real browser load wrote page.view, then
+page.leave with dwell on navigation, then the next page.view.
+
+**Prod step.** Set `EVENT_IP_SALT` in `.env.prod` (`openssl rand -hex
+16`) before the deploy, or the api logs a warning and hashes with the
+development salt.
+
+**Left for later.** Reserved browser names (`article.view`,
+`gallery.*`, `repo.click`, `jd.poll_abandoned`) are in the registry but
+not yet emitted; `ActivityService.RecordEvents` still writes the old
+table and should be retired; an admin analytics surface is D5.
