@@ -144,6 +144,14 @@ services:
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
       OLLAMA_NUM_PARALLEL: "1"
+      # Memory levers for the CPX31 (7 GB cap, qwen3:8b at 8k context).
+      # The first prod run OOM-killed llama-server at 7.07 GB with both
+      # models resident and a full-precision KV cache. One loaded model
+      # at a time (the embedder reloads in seconds when needed), flash
+      # attention, and a q8_0 KV cache take ~1 GB off the peak.
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+      OLLAMA_FLASH_ATTENTION: ${OLLAMA_FLASH_ATTENTION:-1}
+      OLLAMA_KV_CACHE_TYPE: ${OLLAMA_KV_CACHE_TYPE:-q8_0}
     mem_limit: ${OLLAMA_MEM_LIMIT:-900m}
     volumes:
       - ollama_models:/root/.ollama
