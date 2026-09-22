@@ -60,6 +60,8 @@ type Scorer struct {
 	slots chan struct{}
 	// pipelineTimeout bounds one run from the moment it holds the slot.
 	pipelineTimeout time.Duration
+	// notifier is told when a run reaches a terminal state (see notify.go).
+	notifier OutcomeNotifier
 }
 
 // NewScorer wires the deps. assessor and resume may be nil; a
@@ -186,6 +188,8 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 // 2026-09-22 when a submission queued for 28 minutes behind another).
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
 	persist := context.WithoutCancel(ctx)
+	// Whatever path the run takes, the owner hears about the outcome.
+	defer s.notifyOutcome(persist, submissionID)
 	if err := s.users.UpdateJdScoring(persist, submissionID, "scoring", nil, ""); err != nil {
 		s.log.Warn("jd: failed to mark scoring", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
