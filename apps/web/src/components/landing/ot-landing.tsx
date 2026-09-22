@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { setUiModeAction } from "@/app/actions/ui-mode";
 import { GithubReposOt } from "@/components/github-repos";
+import { ModeToggle } from "@/components/mode-toggle";
 import { getSocialLinks } from "@/lib/social-links";
 
 // OT-mode landing. Renders the site as a plant HMI overview screen.
@@ -13,6 +15,13 @@ import { getSocialLinks } from "@/lib/social-links";
 // static content, the "live" values (uptime, historian rate) are
 // design elements, not data hookups, and are labeled as such where
 // a plant operator would recognize the fiction.
+//
+// Interaction parity with the IT landing (owner, 2026-09-22: "OT mode
+// needs cleaned up, it is not nearly as easy to interact with as IT
+// mode"): the same three actions (request access, contact, sign in)
+// are visible at every width, the nav pills are real anchors, the
+// mode switch actually switches, status values are honest, and body
+// text never drops below 13px.
 
 const PRACTICE_TAGS = [
   {
@@ -69,27 +78,32 @@ export function OtLanding() {
       {/* right = live status. The visual grammar is 100% "SCADA top    */}
       {/* bar", Roger's Bardstown HMI has the exact same structure.    */}
       <div className="border-b border-line-strong bg-paper-2">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+          <nav
+            aria-label="Screens"
+            className="flex flex-wrap items-center gap-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-2"
+          >
             <NavPill active>OVERVIEW</NavPill>
-            <NavPill>PRACTICE</NavPill>
-            <NavPill>TIMELINE</NavPill>
+            <NavPill href="#practice">PRACTICE</NavPill>
+            <NavPill href="#timeline">TIMELINE</NavPill>
             <NavPill href="/contact">CONTACT</NavPill>
-            <NavPill href="/register">ACCESS</NavPill>
-          </div>
-          <div className="flex-1 text-center font-mono text-[13px] uppercase tracking-[0.2em] text-ink">
+            <NavPill href="/register" primary>
+              REQUEST ACCESS
+            </NavPill>
+          </nav>
+          <div className="order-first w-full text-center font-mono text-[13px] uppercase tracking-[0.2em] text-ink sm:order-none sm:w-auto sm:flex-1">
             R. HENLEY <span className="text-ink-3">/</span> CAREER-SITE
             <span className="text-ink-3">.</span>OT
           </div>
-          <div className="hidden items-center gap-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2 md:flex">
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-2">
             <StatusChip color="success">RUN</StatusChip>
-            <span className="text-ink-3">
-              MODE <span className="text-ink">OT</span>
+            <ModeToggle current="ot" />
+            <span className="hidden items-center gap-2 lg:flex">
+              <OtSocialPills />
             </span>
-            <OtSocialPills />
             <Link
               href="/login"
-              className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
             >
               [ SIGN IN ]
             </Link>
@@ -99,11 +113,53 @@ export function OtLanding() {
 
       {/* Main HMI body, 12-col grid on wide screens, stacked on phone. */}
       <div className="mx-auto grid max-w-[1600px] gap-4 px-4 py-4 sm:px-6 md:grid-cols-12">
+        {/* OPERATOR NOTE: the one panel a first-time visitor needs. Says */}
+        {/* who this is and what to do next, with the same three actions  */}
+        {/* the IT landing puts in its hero, at button size.              */}
+        <section aria-labelledby="op-note-heading" className="md:col-span-12">
+          <PanelHeader tag="OP-1" title="OPERATOR NOTE · READ FIRST" />
+          <div className="grid gap-6 border border-line-strong bg-paper-2 p-5 sm:p-6 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+            <div>
+              <h1
+                id="op-note-heading"
+                className="font-mono text-[15px] leading-snug text-ink sm:text-[17px]"
+              >
+                Roger Henley. Thirty years of regulated, 24-hour manufacturing; the
+                last eight commissioning distilleries from concrete pour to
+                steady-state. Controls, plant systems, industrial data, applied AI.
+              </h1>
+              <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-2">
+                Hiring managers: request access, then upload a job description.
+                The reviewer scores it against thirty years of records, shows which
+                requirements are evidenced, and above the gate returns a two-page
+                résumé written for that posting.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 font-mono text-[12px] uppercase tracking-[0.14em] lg:justify-end">
+              <Link
+                href="/register"
+                className="inline-flex min-h-[44px] items-center bg-accent px-5 text-white no-underline transition-colors hover:bg-accent-hover"
+              >
+                [ REQUEST ACCESS ]
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex min-h-[44px] items-center border border-line-strong px-5 text-ink no-underline transition-colors hover:border-accent hover:text-accent"
+              >
+                [ CONTACT ]
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex min-h-[44px] items-center border border-line-strong px-5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+              >
+                [ SIGN IN ]
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Left rail: system + KPI tiles ---------------------------- */}
-        <section
-          aria-label="Overview KPIs"
-          className="md:col-span-8 md:row-span-2"
-        >
+        <section aria-label="Overview KPIs" className="md:col-span-8">
           <PanelHeader tag="OV-1" title="OVERVIEW · KPIs" />
           <div className="grid grid-cols-1 gap-4 border border-line-strong bg-paper-2 p-4 sm:grid-cols-3">
             <KpiTile
@@ -133,19 +189,19 @@ export function OtLanding() {
           className="md:col-span-4"
         >
           <PanelHeader tag="LS-1" title="LIVE STATUS" />
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border border-line-strong bg-paper-2 p-4 font-mono text-[12px]">
-            <dt className="text-ink-3">UPTIME</dt>
-            <dd className="m-0 text-right tabular text-ink">30y 0m</dd>
-            <dt className="text-ink-3">HIST qty/s</dt>
-            <dd className="m-0 text-right tabular text-ink">8</dd>
-            <dt className="text-ink-3">GATEWAY CPU</dt>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border border-line-strong bg-paper-2 p-4 font-mono text-[13px]">
+            <dt className="text-ink-3">CAREER</dt>
+            <dd className="m-0 text-right tabular text-ink">30 yr</dd>
+            <dt className="text-ink-3">DISTILLERY</dt>
+            <dd className="m-0 text-right tabular text-ink">8 yr</dd>
+            <dt className="text-ink-3">SHIFT</dt>
             <dd className="m-0 text-right tabular text-ink">24/7</dd>
-            <dt className="text-ink-3">HMI SERVER</dt>
-            <dd className="m-0 text-right text-ink">PRIMARY</dd>
-            <dt className="text-ink-3">CORPUS</dt>
-            <dd className="m-0 text-right text-signal">STAGING</dd>
+            <dt className="text-ink-3">AVAILABILITY</dt>
+            <dd className="m-0 text-right text-success">OPEN</dd>
+            <dt className="text-ink-3">JD.REVIEW</dt>
+            <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
             <dt className="text-ink-3">ASK.ROGER</dt>
-            <dd className="m-0 text-right text-ink-3">OFFLINE</dd>
+            <dd className="m-0 text-right text-ink-3">PLANNED</dd>
           </dl>
         </section>
 
@@ -153,18 +209,32 @@ export function OtLanding() {
         <section aria-label="Navigation" className="md:col-span-4">
           <PanelHeader tag="NV-1" title="NAV" />
           <div className="border border-line-strong bg-paper-2 p-4">
-            <ul className="space-y-1 font-mono text-[12px]">
-              <NavRow tag="/" label="HOME.IT" href="/" note="switch surface" />
+            <ul className="space-y-0.5 font-mono text-[13px]">
+              <li>
+                <form action={setUiModeAction} className="m-0">
+                  <input type="hidden" name="mode" value="it" />
+                  <button
+                    type="submit"
+                    className="flex min-h-[40px] w-full items-center justify-between gap-4 bg-transparent text-left text-ink-2 hover:text-accent"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-ink-3">mode</span>
+                      <span>SWITCH.TO.IT</span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-ink-3">editorial surface</span>
+                  </button>
+                </form>
+              </li>
               <NavRow tag="/register" label="ACCESS.REQ" href="/register" note="hiring managers" />
-              <NavRow tag="/login" label="SESSION.NEW" href="/login" />
-              <NavRow tag="/contact" label="MSG.OUT" href="/contact" />
+              <NavRow tag="/login" label="SESSION.NEW" href="/login" note="members" />
+              <NavRow tag="/contact" label="MSG.OUT" href="/contact" note="email roger" />
               <SocialNavRows />
             </ul>
           </div>
         </section>
 
         {/* PRACTICE AREAS panel ------------------------------------ */}
-        <section aria-label="Practice areas" className="md:col-span-8">
+        <section id="practice" aria-label="Practice areas" className="scroll-mt-4 md:col-span-8 md:row-span-2">
           <PanelHeader tag="PA-1" title="PRACTICE AREAS" />
           <div className="border border-line-strong bg-paper-2">
             <div className="grid grid-cols-[80px_1fr_120px] gap-x-4 border-b border-line px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
@@ -176,12 +246,12 @@ export function OtLanding() {
               {PRACTICE_TAGS.map((row) => (
                 <li
                   key={row.tag}
-                  className="grid grid-cols-[80px_1fr_120px] items-center gap-x-4 px-4 py-3 font-mono text-[12px] text-ink-2"
+                  className="grid grid-cols-[80px_1fr_120px] items-center gap-x-4 px-4 py-3 font-mono text-[13px] text-ink-2"
                 >
                   <span className="text-ink">{row.tag}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-ink">{row.title}</span>
-                    <span className="block truncate text-[11px] text-ink-3">
+                    <span className="block text-ink">{row.title}</span>
+                    <span className="block text-[12px] leading-snug text-ink-3">
                       {row.desc}
                     </span>
                   </span>
@@ -196,9 +266,9 @@ export function OtLanding() {
         </section>
 
         {/* EVENT LOG panel ------------------------------------------ */}
-        <section aria-label="Event log" className="md:col-span-4">
+        <section id="timeline" aria-label="Event log" className="scroll-mt-4 md:col-span-4">
           <PanelHeader tag="EL-1" title="EVENT LOG" />
-          <div className="border border-line-strong bg-paper-2 p-4 font-mono text-[11px]">
+          <div className="border border-line-strong bg-paper-2 p-4 font-mono text-[12px]">
             <ul className="space-y-2">
               {EVENT_LOG.map((e, i) => (
                 <li key={i} className="text-ink-2">
@@ -248,16 +318,16 @@ export function OtLanding() {
       <div className="border-t border-line-strong bg-paper-2">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-2 sm:px-6">
           <span>
-            UPTIME <span className="text-ink">30y</span>
+            CAREER <span className="text-ink">30 yr</span>
           </span>
           <span>
-            HIST qty/s <span className="text-ink">8</span>
+            DISTILLERY <span className="text-ink">8 yr</span>
           </span>
           <span>
-            CPU <span className="text-ink">24/7</span>
+            SHIFT <span className="text-ink">24/7</span>
           </span>
           <span>
-            HMI SERVER <span className="text-ink">PRIMARY</span>
+            JD.REVIEW <span className="text-ink">ONLINE</span>
           </span>
           <span className="ml-auto flex items-center gap-2">
             <span className="pilot text-success" aria-hidden="true" />
@@ -310,17 +380,21 @@ function KpiTile({
 function NavPill({
   children,
   active = false,
+  primary = false,
   href,
 }: {
   children: React.ReactNode;
   active?: boolean;
+  primary?: boolean;
   href?: string;
 }) {
   const cls =
-    "inline-block px-2 py-1 no-underline transition-colors " +
+    "inline-flex min-h-[36px] items-center px-3 py-1.5 no-underline transition-colors " +
     (active
-      ? "bg-accent text-white"
-      : "border border-line-strong text-ink-2 hover:border-accent hover:text-accent");
+      ? "border border-ink bg-ink text-paper"
+      : primary
+        ? "bg-accent text-white hover:bg-accent-hover"
+        : "border border-line-strong text-ink-2 hover:border-accent hover:text-accent");
   if (href) {
     return (
       <Link href={href} className={cls}>
@@ -328,7 +402,11 @@ function NavPill({
       </Link>
     );
   }
-  return <span className={cls}>{children}</span>;
+  return (
+    <span aria-current="page" className={cls}>
+      {children}
+    </span>
+  );
 }
 
 function StatusChip({
@@ -365,7 +443,7 @@ function OtSocialPills() {
           href={s.linkedin}
           rel="noopener noreferrer"
           target="_blank"
-          className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
         >
           [ LINKEDIN ]
         </a>
@@ -375,7 +453,7 @@ function OtSocialPills() {
           href={s.github}
           rel="noopener noreferrer"
           target="_blank"
-          className="border border-line-strong px-2 py-1 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
         >
           [ GITHUB ]
         </a>
@@ -396,7 +474,7 @@ function SocialNavRows() {
             href={s.linkedin}
             rel="noopener noreferrer"
             target="_blank"
-            className="flex items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
+            className="flex min-h-[40px] items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
           >
             <span className="flex items-center gap-3">
               <span className="text-ink-3">ext</span>
@@ -412,7 +490,7 @@ function SocialNavRows() {
             href={s.github}
             rel="noopener noreferrer"
             target="_blank"
-            className="flex items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
+            className="flex min-h-[40px] items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
           >
             <span className="flex items-center gap-3">
               <span className="text-ink-3">ext</span>
@@ -441,7 +519,7 @@ function NavRow({
     <li>
       <Link
         href={href}
-        className="flex items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
+        className="flex min-h-[40px] items-center justify-between gap-4 no-underline text-ink-2 hover:text-accent"
       >
         <span className="flex items-center gap-3">
           <span className="text-ink-3">{tag}</span>
