@@ -498,6 +498,74 @@ interleaved.
 Deployed PR 81 (`64aafef17421`): the result panel now shows the
 requirement-by-requirement verdicts to the submitter.
 
+Submission 5 re-scored alone after the PR 81 deploy: **0.611**, below
+the 0.70 gate (it is the live-check script's terse synthetic posting,
+not a real one). 9 judge calls at **106 s each** on the CPX31 with the
+facts sheet in the prompt, about 17 minutes end to end. 18 decision
+rows now in `/admin/decisions` (submissions 5 and 6).
+
+**Speed note.** The judge prompt renders the requirement before the
+evidence, so the ~900 tokens of system prompt plus facts sheet that
+are identical across every call sit behind a varying prefix and
+Ollama's prompt cache cannot reuse them. Rendering the profile first
+(`<candidate_profile>` before `<requirement>`) makes those tokens a
+shared prefix; on a CPU box where prompt evaluation dominates, that
+should cut a judge call by roughly a third. Prompt layout is part of
+the prompt version, so this ships as `requirement_judge` v2 together
+with `jd_requirements` v2 and a fresh calibration table.
+
+## 2026-09-22: prompts v2 and the v2 score formula
+
+**Prompt changes.** `jd_requirements` v2 keeps the posting's own
+alternatives ("or related field", "or equivalent experience", "or a
+combination of education and experience") inside the requirement
+text, and files anything under "preferred" / "nice to have" as
+`nice`. `requirement_judge` v2 renders the career facts sheet once,
+first, in `<candidate_profile>`, then the requirement and its
+retrieved evidence: the system prompt plus profile become a shared
+prefix Ollama's prompt cache can reuse across the one-per-call judge
+pass. Verdict rules unchanged except that an alternative the
+requirement itself offers counts as met.
+
+**First v2 pass (4b, formula v1):** Bosch **0.704**, strong 0.864,
+mid 0.458, weak 0.091, unrelated 0.000. Cleaner separation, but Bosch
+fell from 0.833 for two reasons: the 4b still dropped "or combination
+of education and experience" from the degree line despite the rule,
+and the extraction now lists the posting's preferred certifications
+(Master's, Six Sigma belt, PMP) as separate `nice` items that count
+against the denominator when unmet. That is the ATS pattern in
+miniature: a missing PMP was subtracting from a plant automation
+lead's score.
+
+**Score formula v2 (`ScoreFormula = "v2-nice-bonus"`).** Every `must`
+requirement is in the denominator; a `nice` requirement joins it only
+when it earned something. Preferred items can raise a score, never
+sink it. Verdict values unchanged. Stored assessments carry
+`score_formula` so old rows are read correctly.
+
+**Facts sheet.** Added a plain statement under Education that the
+B.S. Applied Mathematics plus A.S. Electrical Engineering Technology
+satisfy "engineering or related field", "or equivalent experience"
+and "combination of education and experience" requirements. The judge
+reads the sheet; it does not infer equivalence on its own.
+
+| JD | v1 prompts + profile | v2 prompts, formula v1 | **v2 prompts, formula v2, sheet** |
+|---|---|---|---|
+| bosch_lead | 0.833 | 0.704 | **0.917** |
+| strong | 0.974 | 0.864 | **0.857** |
+| mid | 0.667 | 0.458 | **0.500** |
+| weak | 0.231 | 0.091 | **0.100** |
+| unrelated | 0.000 | 0.000 | 0.000 |
+
+Bosch verdicts now: 12 met, 1 unmet must ("robotics and vision
+systems", which the corpus does not state; the owner can add a line
+to the facts sheet if the experience exists), 3 unmet preferred
+certifications that no longer count against him.
+
+**Decision.** Gate stays `JD_MATCH_THRESHOLD=0.70`: strong 0.857 and
+Bosch 0.917 clear it with margin; mid 0.500 sits 0.20 below. Every
+verdict on these runs is in the decision log for the owner to grade.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

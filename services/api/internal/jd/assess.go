@@ -28,7 +28,7 @@ const EvidencePerRequirement = 4
 // how much of it is added per call; the sheet is meant to be one or
 // two chunks.
 const (
-	ProfileKind      = "profile"
+	ProfileKind      = prompts.ProfileSourceKind
 	ProfileChunksMax = 2
 )
 
@@ -51,6 +51,11 @@ func withProfile(profile, hits []users.CorpusHit) []users.CorpusHit {
 	}
 	return out
 }
+
+// ScoreFormula identifies the current score arithmetic in stored
+// assessments. v1 was a plain weighted mean over every requirement;
+// v2 keeps unmet "nice" requirements out of the denominator.
+const ScoreFormula = "v2-nice-bonus"
 
 // ErrMonthlyCap is returned when the LLM call cap for the current
 // calendar month has been reached (Phase 4 guardrail #8).
@@ -93,7 +98,10 @@ type Assessment struct {
 	EvidenceIDs map[string][]int64 `json:"evidence_ids"`
 	Score       float64            `json:"score"`
 	WeightTotal int                `json:"weight_total"`
-	Model       string             `json:"model"`
+	// ScoreFormula names the arithmetic (see ScoreFormula const) so a
+	// stored assessment can be re-read after the formula changes.
+	ScoreFormula string `json:"score_formula,omitempty"`
+	Model        string `json:"model"`
 	Prompts     map[string]int     `json:"prompts"` // prompt id → version
 	// JudgeBatches is how many model calls the judgment took (context
 	// budgeting on a small box splits it).
@@ -291,6 +299,13 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	}
 
 	// 4. Score in code. A requirement the model skipped counts as unmet.
+	//
+	// Formula (v2, 2026-09-22): every "must" requirement is in the
+	// denominator; a "nice" requirement joins it only when it earned
+	// something. Preferred items can raise a score, never sink it: an
+	// ATS that subtracts for a missing PMP or a preferred Master's is
+	// exactly the filter this reviewer is meant not to be. Verdict
+	// values are unchanged (met 1, partial 0.5, unmet 0).
 	var weighted float64
 	for _, r := range reqs {
 		j, ok := byReq[r.ID]
@@ -298,12 +313,16 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 			j = Judgment{RequirementID: r.ID, Verdict: "unmet", Rationale: "no judgment returned"}
 		}
 		out.Judgments = append(out.Judgments, j)
-		out.WeightTotal += r.Weight
-		weighted += float64(r.Weight) * verdictValue(j.Verdict)
+		v := verdictValue(j.Verdict)
+		if r.Category == "must" || v > 0 {
+			out.WeightTotal += r.Weight
+		}
+		weighted += float64(r.Weight) * v
 	}
 	if out.WeightTotal > 0 {
 		out.Score = weighted / float64(out.WeightTotal)
 	}
+	out.ScoreFormula = ScoreFormula
 
 	// 5. Decision log: one row per verdict with everything the owner
 	// needs to judge it himself (docs/decision-log.md). Best-effort.
