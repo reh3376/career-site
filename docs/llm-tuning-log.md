@@ -358,6 +358,45 @@ weights, about twice the tokens per second of the 8b on this CPU).
 Measured on the calibration set in the next entry; the decision log
 now lets the owner grade its verdicts directly.
 
+## 2026-09-22: qwen3:4b-q8_0 on the calibration set (owner's Mac, 8k)
+
+| JD | 14b (1 req/call) | 4b-q8_0 (1 req/call) | 4b requirements extracted | 4b judge call |
+|---|---|---|---|---|
+| strong | 0.604 | **0.842** | 7 (14b: 12) | 1.3 s |
+| mid | 0.333 | **0.625** | 10 | 1.4 s |
+| weak | 0.020 | **0.231** | 12 | 1.3 s |
+| unrelated | 0.000 | **0.000** | 7 | 1.2 s |
+
+Ordering correct, gaps 0.22 (strong to mid) and 0.39 (mid to weak).
+Two differences from the 14b:
+
+1. The 4b reads evidence more leniently: everything shifts up by
+   0.2 to 0.3. Under the 0.55 gate the mid JD would get a résumé.
+2. The 4b extracts fewer, broader requirements from the same posting
+   (7 vs 12 for the strong JD), so each verdict carries more weight.
+
+**Decision: the gate is configuration, not a constant.** It is
+model-dependent, so `JD_MATCH_THRESHOLD` now lives in `.env.prod`
+next to `OLLAMA_LLM_MODEL`; the api enforces it and the web quotes
+the same variable on the JD pages. Calibrated values:
+
+| Judge model | Gate | Basis |
+|---|---|---|
+| `qwen3:14b` | 0.55 | strong 0.604 / mid 0.333 |
+| `qwen3:4b-q8_0` | 0.72 | strong 0.842 / mid 0.625 (margins 0.12 / 0.10) |
+
+**Recommendation for the CPX31:** `qwen3:4b-q8_0` at 8k with the
+0.72 gate. Peak memory about 5.5 GB against the 7 GB cap (4.4 GB
+weights, 0.6 GB q8 KV cache, buffers), judge calls in the 20 to 40 s
+range on this CPU instead of 85 s, and the decision log lets the owner
+grade its verdicts directly; if the agreement rate is poor, the Mac
+backend (`OLLAMA_LLM_URL`, 14b, gate 0.55) is the fallback at no cost.
+
+**Owner's real-world JD.** A Bosch "Manufacturing Automation
+Engineering Lead" posting the owner expects above 0.75 was added to
+the calibration set as `bosch_lead`; results on both models in the
+next entry.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

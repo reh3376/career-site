@@ -34,9 +34,11 @@ const STEP_LABEL: Record<string, string> = {
 export function JdResult({
   submissionId,
   resultToken,
+  threshold,
 }: {
   submissionId: string;
   resultToken: string;
+  threshold: string;
 }) {
   const [poll, setPoll] = useState<Poll | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export function JdResult({
 
       {status === "JD_STATUS_BELOW_THRESHOLD" ? (
         <p className="text-sm leading-relaxed text-ink-2">
-          The requirement-by-requirement check came in under the 0.55
+          The requirement-by-requirement check came in under the {threshold}
           gate, so no tailored résumé was generated. Roger still sees
           every submission and will reply personally if the role looks
           worth a conversation.

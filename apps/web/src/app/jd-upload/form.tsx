@@ -13,7 +13,7 @@ const fieldInputClass =
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function JdForm() {
+export function JdForm({ threshold }: { threshold: string }) {
   const [state, formAction] = useActionState(submitJdAction, initial);
   const v = state.values ?? {};
 
@@ -34,6 +34,7 @@ export function JdForm() {
           <JdResult
             submissionId={state.submission_id}
             resultToken={state.result_token ?? ""}
+            threshold={threshold}
           />
         ) : null}
         <p className="text-sm leading-relaxed text-ink-2">

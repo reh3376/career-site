@@ -34,6 +34,12 @@ type Config struct {
 	// (Phase 4 guardrail #8). 0 = unlimited; set it in prod once a
 	// metered provider is in play.
 	LLMMonthlyCallCap int64
+	// JDMatchThreshold is the requirement-weighted score at or above
+	// which a JD gets a tailored résumé. It is model-dependent (each
+	// judge model reads evidence with its own strictness), so it lives
+	// in .env.prod next to OLLAMA_LLM_MODEL and is recalibrated with
+	// it; docs/llm-tuning-log.md records the value per model.
+	JDMatchThreshold float64
 	// JDPipelineTimeout bounds one submission's score + generate run.
 	// CPU inference of a two-page résumé can take minutes.
 	JDPipelineTimeout time.Duration
@@ -114,6 +120,7 @@ func Load() (Config, error) {
 		CorpusRoot:             envOr("CORPUS_ROOT", "/corpus"),
 		CorpusPrivateRoot:      envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
 		LLMMonthlyCallCap:      int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
+		JDMatchThreshold:       envFloatOr("JD_MATCH_THRESHOLD", 0.55),
 		JDPipelineTimeout:      time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
 		LLMAllowStub:           os.Getenv("LLM_ALLOW_STUB") == "1",
 		LLMNumCtx:              envIntOr("LLM_NUM_CTX", 16384),
@@ -174,6 +181,15 @@ func Load() (Config, error) {
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func envFloatOr(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
 	}
 	return fallback
 }
