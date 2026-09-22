@@ -81,6 +81,12 @@ var KnownKinds = []string{
 	"article", "talk", "speaker_notes", "readme", "worksheet",
 	"post_mortem", "strategy_doc", "interview_prep", "career_note",
 	"resume", "adr", "other",
+	// profile: the owner-maintained career facts sheet (roles with
+	// dates, degrees, certifications, compliance ownership). Every JD
+	// requirement is judged with it on the table, because embedding
+	// retrieval is unreliable for tenure / title / credential facts.
+	// Keep it short: it is added to every judge call.
+	"profile",
 }
 
 // IsKnownKind reports whether k is in KnownKinds.

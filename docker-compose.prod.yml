@@ -91,7 +91,7 @@ services:
       CORPUS_PRIVATE_ROOT: /corpus-private
       JD_PIPELINE_TIMEOUT_SECONDS: ${JD_PIPELINE_TIMEOUT_SECONDS:-1200}
       # Match gate; model-dependent, calibrated per OLLAMA_LLM_MODEL in
-      # docs/llm-tuning-log.md (qwen3:14b 0.55, qwen3:4b-q8_0 0.72).
+      # docs/llm-tuning-log.md (qwen3:4b-q8_0 with the career facts sheet: 0.70).
       JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
       LLM_MONTHLY_CALL_CAP: ${LLM_MONTHLY_CALL_CAP:-2000}
       # Must match SIDECAR_LLM_NUM_CTX; the api budgets prompts to it.
@@ -119,7 +119,7 @@ services:
       # LLM host; defaults to the box's ollama. Point it at a tailnet
       # address to run the model on the owner's workstation instead.
       OLLAMA_LLM_URL: ${OLLAMA_LLM_URL:-http://ollama:11434}
-      OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:14b}
+      OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:4b-q8_0}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       SIDECAR_LLM_TIMEOUT_SECONDS: ${SIDECAR_LLM_TIMEOUT_SECONDS:-900}
       SIDECAR_LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}

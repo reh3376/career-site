@@ -278,12 +278,23 @@ func (r *Repo) CountChunksByEmbedder(ctx context.Context) ([]EmbedderCount, erro
 func (r *Repo) SearchCorpus(
 	ctx context.Context, embedding []float32, topK int,
 ) ([]CorpusHit, error) {
+	return r.searchCorpus(ctx, embedding, "", topK)
+}
+
+// searchCorpus is the shared body; sourceKind "" means any kind (a
+// per-kind search was tried as a résumé anchor for the JD judge and
+// dropped: cosine similarity is unreliable for tenure and credential
+// facts, see docs/llm-tuning-log.md 2026-09-22).
+func (r *Repo) searchCorpus(
+	ctx context.Context, embedding []float32, sourceKind string, topK int,
+) ([]CorpusHit, error) {
 	if len(embedding) == 0 {
 		return nil, fmt.Errorf("empty embedding")
 	}
 	if topK <= 0 || topK > 200 {
 		topK = 20
 	}
+	// $3 = '' means any kind; the index is still used for the ordering.
 	const q = `
     SELECT c.id, c.document_id, c.chunk_index, c.text,
            COALESCE(c.token_count, 0),
@@ -292,10 +303,11 @@ func (r *Repo) SearchCorpus(
     FROM corpus_chunks c
     JOIN corpus_documents d ON d.id = c.document_id
     WHERE c.embedding IS NOT NULL
+      AND ($3 = '' OR d.source_kind = $3)
     ORDER BY c.embedding <=> $1
     LIMIT $2
   `
-	rows, err := r.pool.Query(ctx, q, vectorLiteral(embedding), topK)
+	rows, err := r.pool.Query(ctx, q, vectorLiteral(embedding), topK, sourceKind)
 	if err != nil {
 		return nil, fmt.Errorf("search corpus: %w", err)
 	}

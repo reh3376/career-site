@@ -120,7 +120,7 @@ services:
       # `stub` returns schema-valid canned JSON.
       SIDECAR_LLM_PROVIDER: ${SIDECAR_LLM_PROVIDER:-stub}
       OLLAMA_LLM_URL: ${OLLAMA_LLM_URL:-http://host.docker.internal:11434}
-      OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:14b}
+      OLLAMA_LLM_MODEL: ${OLLAMA_LLM_MODEL:-qwen3:4b-q8_0}
       SIDECAR_LLM_TIMEOUT_SECONDS: ${SIDECAR_LLM_TIMEOUT_SECONDS:-600}
       SIDECAR_LLM_NUM_CTX: ${SIDECAR_LLM_NUM_CTX:-16384}
     extra_hosts:
