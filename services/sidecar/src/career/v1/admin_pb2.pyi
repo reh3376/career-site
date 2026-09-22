@@ -1068,7 +1068,7 @@ class GetJdSubmissionRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
 
 class GetJdSubmissionResponse(_message.Message):
-    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version", "download_url")
+    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version", "download_url", "runs")
     ROW_FIELD_NUMBER: _ClassVar[int]
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
     ASSESSMENT_JSON_FIELD_NUMBER: _ClassVar[int]
@@ -1077,6 +1077,7 @@ class GetJdSubmissionResponse(_message.Message):
     PROMPT_ID_FIELD_NUMBER: _ClassVar[int]
     PROMPT_VERSION_FIELD_NUMBER: _ClassVar[int]
     DOWNLOAD_URL_FIELD_NUMBER: _ClassVar[int]
+    RUNS_FIELD_NUMBER: _ClassVar[int]
     row: JdSubmissionRow
     jd_text: str
     assessment_json: str
@@ -1085,7 +1086,70 @@ class GetJdSubmissionResponse(_message.Message):
     prompt_id: str
     prompt_version: int
     download_url: str
-    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ...) -> None: ...
+    runs: _containers.RepeatedCompositeFieldContainer[JdRun]
+    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ..., runs: _Optional[_Iterable[_Union[JdRun, _Mapping]]] = ...) -> None: ...
+
+class JdRun(_message.Message):
+    __slots__ = ("run_id", "attempt", "trigger", "triggered_by", "status", "error", "app_commit", "host", "model", "num_ctx", "embedder_model", "prompts_json", "corpus_fingerprint", "corpus_documents", "corpus_chunks", "score_formula", "retrieval_score", "match_score", "threshold", "fit", "requirement_count", "met_count", "partial_count", "unmet_count", "resume_generated", "queued_ms", "duration_ms", "started_at", "finished_at")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    TRIGGER_FIELD_NUMBER: _ClassVar[int]
+    TRIGGERED_BY_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    APP_COMMIT_FIELD_NUMBER: _ClassVar[int]
+    HOST_FIELD_NUMBER: _ClassVar[int]
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    NUM_CTX_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDER_MODEL_FIELD_NUMBER: _ClassVar[int]
+    PROMPTS_JSON_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_FINGERPRINT_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_CHUNKS_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FORMULA_FIELD_NUMBER: _ClassVar[int]
+    RETRIEVAL_SCORE_FIELD_NUMBER: _ClassVar[int]
+    MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
+    THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    FIT_FIELD_NUMBER: _ClassVar[int]
+    REQUIREMENT_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MET_COUNT_FIELD_NUMBER: _ClassVar[int]
+    PARTIAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    UNMET_COUNT_FIELD_NUMBER: _ClassVar[int]
+    RESUME_GENERATED_FIELD_NUMBER: _ClassVar[int]
+    QUEUED_MS_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MS_FIELD_NUMBER: _ClassVar[int]
+    STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    attempt: int
+    trigger: str
+    triggered_by: int
+    status: str
+    error: str
+    app_commit: str
+    host: str
+    model: str
+    num_ctx: int
+    embedder_model: str
+    prompts_json: str
+    corpus_fingerprint: str
+    corpus_documents: int
+    corpus_chunks: int
+    score_formula: str
+    retrieval_score: float
+    match_score: float
+    threshold: float
+    fit: str
+    requirement_count: int
+    met_count: int
+    partial_count: int
+    unmet_count: int
+    resume_generated: bool
+    queued_ms: int
+    duration_ms: int
+    started_at: _timestamp_pb2.Timestamp
+    finished_at: _timestamp_pb2.Timestamp
+    def __init__(self, run_id: _Optional[str] = ..., attempt: _Optional[int] = ..., trigger: _Optional[str] = ..., triggered_by: _Optional[int] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., app_commit: _Optional[str] = ..., host: _Optional[str] = ..., model: _Optional[str] = ..., num_ctx: _Optional[int] = ..., embedder_model: _Optional[str] = ..., prompts_json: _Optional[str] = ..., corpus_fingerprint: _Optional[str] = ..., corpus_documents: _Optional[int] = ..., corpus_chunks: _Optional[int] = ..., score_formula: _Optional[str] = ..., retrieval_score: _Optional[float] = ..., match_score: _Optional[float] = ..., threshold: _Optional[float] = ..., fit: _Optional[str] = ..., requirement_count: _Optional[int] = ..., met_count: _Optional[int] = ..., partial_count: _Optional[int] = ..., unmet_count: _Optional[int] = ..., resume_generated: _Optional[bool] = ..., queued_ms: _Optional[int] = ..., duration_ms: _Optional[int] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class RescoreJdRequest(_message.Message):
     __slots__ = ("submission_id",)

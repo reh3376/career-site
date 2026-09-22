@@ -10,6 +10,8 @@
 package prompts
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -36,6 +38,28 @@ func Get(id string) (Prompt, bool) {
 		}
 	}
 	return Prompt{}, false
+}
+
+// Fingerprint is the prompt's version plus a short hash of the text it
+// actually sends, as "v2:9f1c2e7a".
+//
+// The version alone is a promise, not a fact: editing a prompt without
+// bumping it is an easy mistake and an invisible one, and it would make
+// two runs look comparable when they are not. Hashing the system text
+// and the schema makes the edit visible in every run record that used
+// it, which is the point of recording provenance at all.
+func (p Prompt) Fingerprint() string {
+	sum := sha256.Sum256([]byte(p.System + "\x00" + p.Schema))
+	return fmt.Sprintf("v%d:%s", p.Version, hex.EncodeToString(sum[:4]))
+}
+
+// Fingerprints is the whole registry, for a run record.
+func Fingerprints() map[string]string {
+	out := make(map[string]string, len(Registry))
+	for _, p := range Registry {
+		out[p.ID] = p.Fingerprint()
+	}
+	return out
 }
 
 // Hints are the optional fields the submitter gave alongside the JD.

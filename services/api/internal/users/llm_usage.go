@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/tenant"
 )
 
@@ -29,12 +30,12 @@ type LLMUsage struct {
 func (r *Repo) RecordLLMUsage(ctx context.Context, u LLMUsage) error {
 	const q = `
     INSERT INTO llm_usage
-      (tenant_id, kind, ref_id, model, prompt_id, prompt_version,
+      (tenant_id, run_id, kind, ref_id, model, prompt_id, prompt_version,
        prompt_tokens, completion_tokens, latency_ms, ok, error)
-    VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8, $9, $10, NULLIF($11, ''))
+    VALUES ($1, NULLIF($2, '')::uuid, $3, NULLIF($4, 0), $5, $6, $7, $8, $9, $10, $11, NULLIF($12, ''))
   `
 	if _, err := r.pool.Exec(ctx, q,
-		tenant.FromContext(ctx).Int64(),
+		tenant.FromContext(ctx).Int64(), runid.FromContext(ctx),
 		u.Kind, u.RefID, u.Model, u.PromptID, u.PromptVersion,
 		u.PromptTokens, u.CompletionTokens, u.LatencyMs, u.OK, u.Error,
 	); err != nil {

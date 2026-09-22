@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/tenant"
 )
 
@@ -55,12 +56,13 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
 	defer func() { _ = tx.Rollback(ctx) }()
 	const q = `
     INSERT INTO decision_log
-      (tenant_id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
+      (tenant_id, run_id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
        input, output, prompt_text, response_text,
        prompt_tokens, completion_tokens, latency_ms)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
   `
 	tid := tenant.FromContext(ctx).Int64()
+	rid := runid.FromContext(ctx)
 	for _, d := range rows {
 		in := d.Input
 		if len(in) == 0 {
@@ -71,7 +73,7 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
 			out = json.RawMessage(`{}`)
 		}
 		if _, err := tx.Exec(ctx, q,
-			tid,
+			tid, rid,
 			d.Kind, d.RefKind, d.RefID, d.Key, d.Model, d.PromptID, d.PromptVersion, d.NumCtx,
 			in, out, d.PromptText, d.ResponseText,
 			d.PromptTokens, d.CompletionTok, d.LatencyMs,

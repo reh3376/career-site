@@ -6466,7 +6466,12 @@ type GetJdSubmissionResponse struct {
 	// Download path for the locked PDF, including the submission's
 	// result token, when a PDF was rendered; empty otherwise. Admin-only
 	// by virtue of this RPC's auth level.
-	DownloadUrl   string `protobuf:"bytes,8,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	DownloadUrl string `protobuf:"bytes,8,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	// Every pipeline run for this submission, newest attempt first. The
+	// fields above reflect only the most recent run, because a re-score
+	// overwrites them; these rows survive it, so a superseded verdict can
+	// still be read and compared with the one that replaced it.
+	Runs          []*JdRun `protobuf:"bytes,9,rep,name=runs,proto3" json:"runs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6557,6 +6562,313 @@ func (x *GetJdSubmissionResponse) GetDownloadUrl() string {
 	return ""
 }
 
+func (x *GetJdSubmissionResponse) GetRuns() []*JdRun {
+	if x != nil {
+		return x.Runs
+	}
+	return nil
+}
+
+// One pipeline run: what produced a verdict and what it decided
+// (data layer D2, table `jd_runs`).
+type JdRun struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable run identifier; `llm_usage` and `decision_log` rows carry it.
+	RunId string `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// 1 for the first run, 2 for the first re-score, and so on.
+	Attempt int32 `protobuf:"varint,2,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// `submit` or `rescore`.
+	Trigger string `protobuf:"bytes,3,opt,name=trigger,proto3" json:"trigger,omitempty"`
+	// Admin who triggered a re-score; 0 for a submission.
+	TriggeredBy int64 `protobuf:"varint,4,opt,name=triggered_by,json=triggeredBy,proto3" json:"triggered_by,omitempty"`
+	// running | ready | below_threshold | failed.
+	Status string `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	// Why it failed, empty otherwise.
+	Error string `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	// Build the api was running.
+	AppCommit string `protobuf:"bytes,7,opt,name=app_commit,json=appCommit,proto3" json:"app_commit,omitempty"`
+	// Where the model ran.
+	Host string `protobuf:"bytes,8,opt,name=host,proto3" json:"host,omitempty"`
+	// Judge model as the gateway reported it.
+	Model string `protobuf:"bytes,9,opt,name=model,proto3" json:"model,omitempty"`
+	// Context window the sidecar was asked for.
+	NumCtx int32 `protobuf:"varint,10,opt,name=num_ctx,json=numCtx,proto3" json:"num_ctx,omitempty"`
+	// Embedding model the corpus chunks were built with.
+	EmbedderModel string `protobuf:"bytes,11,opt,name=embedder_model,json=embedderModel,proto3" json:"embedder_model,omitempty"`
+	// Prompt id to "version:hash" as JSON, so an edited prompt is visible
+	// even when its version did not change.
+	PromptsJson string `protobuf:"bytes,12,opt,name=prompts_json,json=promptsJson,proto3" json:"prompts_json,omitempty"`
+	// Hash over the corpus documents this run could retrieve from.
+	CorpusFingerprint string `protobuf:"bytes,13,opt,name=corpus_fingerprint,json=corpusFingerprint,proto3" json:"corpus_fingerprint,omitempty"`
+	// Documents in the corpus at run time.
+	CorpusDocuments int32 `protobuf:"varint,14,opt,name=corpus_documents,json=corpusDocuments,proto3" json:"corpus_documents,omitempty"`
+	// Chunks in the corpus at run time.
+	CorpusChunks int32 `protobuf:"varint,15,opt,name=corpus_chunks,json=corpusChunks,proto3" json:"corpus_chunks,omitempty"`
+	// Name of the arithmetic that produced the score.
+	ScoreFormula string `protobuf:"bytes,16,opt,name=score_formula,json=scoreFormula,proto3" json:"score_formula,omitempty"`
+	// Mean top-K cosine, the cheap pre-score.
+	RetrievalScore *float64 `protobuf:"fixed64,17,opt,name=retrieval_score,json=retrievalScore,proto3,oneof" json:"retrieval_score,omitempty"`
+	// Requirement-weighted score, the one the gate reads.
+	MatchScore *float64 `protobuf:"fixed64,18,opt,name=match_score,json=matchScore,proto3,oneof" json:"match_score,omitempty"`
+	// Gate in force for this run.
+	Threshold *float64 `protobuf:"fixed64,19,opt,name=threshold,proto3,oneof" json:"threshold,omitempty"`
+	// Fit band the score fell in.
+	Fit string `protobuf:"bytes,20,opt,name=fit,proto3" json:"fit,omitempty"`
+	// Requirements the posting was broken into.
+	RequirementCount int32 `protobuf:"varint,21,opt,name=requirement_count,json=requirementCount,proto3" json:"requirement_count,omitempty"`
+	// Requirements judged met.
+	MetCount int32 `protobuf:"varint,22,opt,name=met_count,json=metCount,proto3" json:"met_count,omitempty"`
+	// Requirements judged partly met.
+	PartialCount int32 `protobuf:"varint,23,opt,name=partial_count,json=partialCount,proto3" json:"partial_count,omitempty"`
+	// Requirements judged unmet.
+	UnmetCount int32 `protobuf:"varint,24,opt,name=unmet_count,json=unmetCount,proto3" json:"unmet_count,omitempty"`
+	// Whether this run produced a tailored résumé.
+	ResumeGenerated bool `protobuf:"varint,25,opt,name=resume_generated,json=resumeGenerated,proto3" json:"resume_generated,omitempty"`
+	// Time spent waiting for a pipeline slot.
+	QueuedMs int64 `protobuf:"varint,26,opt,name=queued_ms,json=queuedMs,proto3" json:"queued_ms,omitempty"`
+	// Time spent working, once it held the slot.
+	DurationMs int64 `protobuf:"varint,27,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	// When the run opened.
+	StartedAt *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	// When the run closed; unset while it is still running.
+	FinishedAt    *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JdRun) Reset() {
+	*x = JdRun{}
+	mi := &file_career_v1_admin_proto_msgTypes[89]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JdRun) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JdRun) ProtoMessage() {}
+
+func (x *JdRun) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_admin_proto_msgTypes[89]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JdRun.ProtoReflect.Descriptor instead.
+func (*JdRun) Descriptor() ([]byte, []int) {
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{89}
+}
+
+func (x *JdRun) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *JdRun) GetAttempt() int32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *JdRun) GetTrigger() string {
+	if x != nil {
+		return x.Trigger
+	}
+	return ""
+}
+
+func (x *JdRun) GetTriggeredBy() int64 {
+	if x != nil {
+		return x.TriggeredBy
+	}
+	return 0
+}
+
+func (x *JdRun) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *JdRun) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *JdRun) GetAppCommit() string {
+	if x != nil {
+		return x.AppCommit
+	}
+	return ""
+}
+
+func (x *JdRun) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *JdRun) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *JdRun) GetNumCtx() int32 {
+	if x != nil {
+		return x.NumCtx
+	}
+	return 0
+}
+
+func (x *JdRun) GetEmbedderModel() string {
+	if x != nil {
+		return x.EmbedderModel
+	}
+	return ""
+}
+
+func (x *JdRun) GetPromptsJson() string {
+	if x != nil {
+		return x.PromptsJson
+	}
+	return ""
+}
+
+func (x *JdRun) GetCorpusFingerprint() string {
+	if x != nil {
+		return x.CorpusFingerprint
+	}
+	return ""
+}
+
+func (x *JdRun) GetCorpusDocuments() int32 {
+	if x != nil {
+		return x.CorpusDocuments
+	}
+	return 0
+}
+
+func (x *JdRun) GetCorpusChunks() int32 {
+	if x != nil {
+		return x.CorpusChunks
+	}
+	return 0
+}
+
+func (x *JdRun) GetScoreFormula() string {
+	if x != nil {
+		return x.ScoreFormula
+	}
+	return ""
+}
+
+func (x *JdRun) GetRetrievalScore() float64 {
+	if x != nil && x.RetrievalScore != nil {
+		return *x.RetrievalScore
+	}
+	return 0
+}
+
+func (x *JdRun) GetMatchScore() float64 {
+	if x != nil && x.MatchScore != nil {
+		return *x.MatchScore
+	}
+	return 0
+}
+
+func (x *JdRun) GetThreshold() float64 {
+	if x != nil && x.Threshold != nil {
+		return *x.Threshold
+	}
+	return 0
+}
+
+func (x *JdRun) GetFit() string {
+	if x != nil {
+		return x.Fit
+	}
+	return ""
+}
+
+func (x *JdRun) GetRequirementCount() int32 {
+	if x != nil {
+		return x.RequirementCount
+	}
+	return 0
+}
+
+func (x *JdRun) GetMetCount() int32 {
+	if x != nil {
+		return x.MetCount
+	}
+	return 0
+}
+
+func (x *JdRun) GetPartialCount() int32 {
+	if x != nil {
+		return x.PartialCount
+	}
+	return 0
+}
+
+func (x *JdRun) GetUnmetCount() int32 {
+	if x != nil {
+		return x.UnmetCount
+	}
+	return 0
+}
+
+func (x *JdRun) GetResumeGenerated() bool {
+	if x != nil {
+		return x.ResumeGenerated
+	}
+	return false
+}
+
+func (x *JdRun) GetQueuedMs() int64 {
+	if x != nil {
+		return x.QueuedMs
+	}
+	return 0
+}
+
+func (x *JdRun) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *JdRun) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *JdRun) GetFinishedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FinishedAt
+	}
+	return nil
+}
+
 // Rescore-jd request.
 type RescoreJdRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6568,7 +6880,7 @@ type RescoreJdRequest struct {
 
 func (x *RescoreJdRequest) Reset() {
 	*x = RescoreJdRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[89]
+	mi := &file_career_v1_admin_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6580,7 +6892,7 @@ func (x *RescoreJdRequest) String() string {
 func (*RescoreJdRequest) ProtoMessage() {}
 
 func (x *RescoreJdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[89]
+	mi := &file_career_v1_admin_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6593,7 +6905,7 @@ func (x *RescoreJdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RescoreJdRequest.ProtoReflect.Descriptor instead.
 func (*RescoreJdRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{89}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *RescoreJdRequest) GetSubmissionId() string {
@@ -6614,7 +6926,7 @@ type RescoreJdResponse struct {
 
 func (x *RescoreJdResponse) Reset() {
 	*x = RescoreJdResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[90]
+	mi := &file_career_v1_admin_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6626,7 +6938,7 @@ func (x *RescoreJdResponse) String() string {
 func (*RescoreJdResponse) ProtoMessage() {}
 
 func (x *RescoreJdResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[90]
+	mi := &file_career_v1_admin_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6639,7 +6951,7 @@ func (x *RescoreJdResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RescoreJdResponse.ProtoReflect.Descriptor instead.
 func (*RescoreJdResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{90}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *RescoreJdResponse) GetStatus() JdStatus {
@@ -6668,7 +6980,7 @@ type ReindexCorpusRequest struct {
 
 func (x *ReindexCorpusRequest) Reset() {
 	*x = ReindexCorpusRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[91]
+	mi := &file_career_v1_admin_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6680,7 +6992,7 @@ func (x *ReindexCorpusRequest) String() string {
 func (*ReindexCorpusRequest) ProtoMessage() {}
 
 func (x *ReindexCorpusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[91]
+	mi := &file_career_v1_admin_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6693,7 +7005,7 @@ func (x *ReindexCorpusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReindexCorpusRequest.ProtoReflect.Descriptor instead.
 func (*ReindexCorpusRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{91}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ReindexCorpusRequest) GetSourceKind() string {
@@ -6741,7 +7053,7 @@ type ReindexCorpusResponse struct {
 
 func (x *ReindexCorpusResponse) Reset() {
 	*x = ReindexCorpusResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[92]
+	mi := &file_career_v1_admin_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6753,7 +7065,7 @@ func (x *ReindexCorpusResponse) String() string {
 func (*ReindexCorpusResponse) ProtoMessage() {}
 
 func (x *ReindexCorpusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[92]
+	mi := &file_career_v1_admin_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6766,7 +7078,7 @@ func (x *ReindexCorpusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReindexCorpusResponse.ProtoReflect.Descriptor instead.
 func (*ReindexCorpusResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{92}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *ReindexCorpusResponse) GetRoot() string {
@@ -6841,7 +7153,7 @@ type ListJdSubmissionsRequest struct {
 
 func (x *ListJdSubmissionsRequest) Reset() {
 	*x = ListJdSubmissionsRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[93]
+	mi := &file_career_v1_admin_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6853,7 +7165,7 @@ func (x *ListJdSubmissionsRequest) String() string {
 func (*ListJdSubmissionsRequest) ProtoMessage() {}
 
 func (x *ListJdSubmissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[93]
+	mi := &file_career_v1_admin_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6866,7 +7178,7 @@ func (x *ListJdSubmissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJdSubmissionsRequest.ProtoReflect.Descriptor instead.
 func (*ListJdSubmissionsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{93}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{94}
 }
 
 // One row of the /admin/jd triage table.
@@ -6914,7 +7226,7 @@ type JdSubmissionRow struct {
 
 func (x *JdSubmissionRow) Reset() {
 	*x = JdSubmissionRow{}
-	mi := &file_career_v1_admin_proto_msgTypes[94]
+	mi := &file_career_v1_admin_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6926,7 +7238,7 @@ func (x *JdSubmissionRow) String() string {
 func (*JdSubmissionRow) ProtoMessage() {}
 
 func (x *JdSubmissionRow) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[94]
+	mi := &file_career_v1_admin_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6939,7 +7251,7 @@ func (x *JdSubmissionRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JdSubmissionRow.ProtoReflect.Descriptor instead.
 func (*JdSubmissionRow) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{94}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *JdSubmissionRow) GetId() string {
@@ -7066,7 +7378,7 @@ type ListJdSubmissionsResponse struct {
 
 func (x *ListJdSubmissionsResponse) Reset() {
 	*x = ListJdSubmissionsResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[95]
+	mi := &file_career_v1_admin_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7078,7 +7390,7 @@ func (x *ListJdSubmissionsResponse) String() string {
 func (*ListJdSubmissionsResponse) ProtoMessage() {}
 
 func (x *ListJdSubmissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[95]
+	mi := &file_career_v1_admin_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7091,7 +7403,7 @@ func (x *ListJdSubmissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJdSubmissionsResponse.ProtoReflect.Descriptor instead.
 func (*ListJdSubmissionsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{95}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ListJdSubmissionsResponse) GetSubmissions() []*JdSubmissionRow {
@@ -7182,7 +7494,7 @@ type DecisionLogRow struct {
 
 func (x *DecisionLogRow) Reset() {
 	*x = DecisionLogRow{}
-	mi := &file_career_v1_admin_proto_msgTypes[96]
+	mi := &file_career_v1_admin_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7194,7 +7506,7 @@ func (x *DecisionLogRow) String() string {
 func (*DecisionLogRow) ProtoMessage() {}
 
 func (x *DecisionLogRow) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[96]
+	mi := &file_career_v1_admin_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7207,7 +7519,7 @@ func (x *DecisionLogRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecisionLogRow.ProtoReflect.Descriptor instead.
 func (*DecisionLogRow) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{96}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *DecisionLogRow) GetId() string {
@@ -7374,7 +7686,7 @@ type ListDecisionLogRequest struct {
 
 func (x *ListDecisionLogRequest) Reset() {
 	*x = ListDecisionLogRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[97]
+	mi := &file_career_v1_admin_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7386,7 +7698,7 @@ func (x *ListDecisionLogRequest) String() string {
 func (*ListDecisionLogRequest) ProtoMessage() {}
 
 func (x *ListDecisionLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[97]
+	mi := &file_career_v1_admin_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7399,7 +7711,7 @@ func (x *ListDecisionLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDecisionLogRequest.ProtoReflect.Descriptor instead.
 func (*ListDecisionLogRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{97}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ListDecisionLogRequest) GetKind() string {
@@ -7445,7 +7757,7 @@ type ListDecisionLogResponse struct {
 
 func (x *ListDecisionLogResponse) Reset() {
 	*x = ListDecisionLogResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[98]
+	mi := &file_career_v1_admin_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7457,7 +7769,7 @@ func (x *ListDecisionLogResponse) String() string {
 func (*ListDecisionLogResponse) ProtoMessage() {}
 
 func (x *ListDecisionLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[98]
+	mi := &file_career_v1_admin_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7470,7 +7782,7 @@ func (x *ListDecisionLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDecisionLogResponse.ProtoReflect.Descriptor instead.
 func (*ListDecisionLogResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{98}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ListDecisionLogResponse) GetDecisions() []*DecisionLogRow {
@@ -7510,7 +7822,7 @@ type ReviewDecisionRequest struct {
 
 func (x *ReviewDecisionRequest) Reset() {
 	*x = ReviewDecisionRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[99]
+	mi := &file_career_v1_admin_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7522,7 +7834,7 @@ func (x *ReviewDecisionRequest) String() string {
 func (*ReviewDecisionRequest) ProtoMessage() {}
 
 func (x *ReviewDecisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[99]
+	mi := &file_career_v1_admin_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7535,7 +7847,7 @@ func (x *ReviewDecisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewDecisionRequest.ProtoReflect.Descriptor instead.
 func (*ReviewDecisionRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{99}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *ReviewDecisionRequest) GetId() string {
@@ -7568,7 +7880,7 @@ type ReviewDecisionResponse struct {
 
 func (x *ReviewDecisionResponse) Reset() {
 	*x = ReviewDecisionResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[100]
+	mi := &file_career_v1_admin_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7580,7 +7892,7 @@ func (x *ReviewDecisionResponse) String() string {
 func (*ReviewDecisionResponse) ProtoMessage() {}
 
 func (x *ReviewDecisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[100]
+	mi := &file_career_v1_admin_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7593,7 +7905,7 @@ func (x *ReviewDecisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewDecisionResponse.ProtoReflect.Descriptor instead.
 func (*ReviewDecisionResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{100}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{101}
 }
 
 // Selects which rows the JSONL export includes.
@@ -7608,7 +7920,7 @@ type ExportDecisionLogRequest struct {
 
 func (x *ExportDecisionLogRequest) Reset() {
 	*x = ExportDecisionLogRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[101]
+	mi := &file_career_v1_admin_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7620,7 +7932,7 @@ func (x *ExportDecisionLogRequest) String() string {
 func (*ExportDecisionLogRequest) ProtoMessage() {}
 
 func (x *ExportDecisionLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[101]
+	mi := &file_career_v1_admin_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7633,7 +7945,7 @@ func (x *ExportDecisionLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportDecisionLogRequest.ProtoReflect.Descriptor instead.
 func (*ExportDecisionLogRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{101}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ExportDecisionLogRequest) GetReviewedOnly() bool {
@@ -7656,7 +7968,7 @@ type ExportDecisionLogResponse struct {
 
 func (x *ExportDecisionLogResponse) Reset() {
 	*x = ExportDecisionLogResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[102]
+	mi := &file_career_v1_admin_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7668,7 +7980,7 @@ func (x *ExportDecisionLogResponse) String() string {
 func (*ExportDecisionLogResponse) ProtoMessage() {}
 
 func (x *ExportDecisionLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[102]
+	mi := &file_career_v1_admin_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7681,7 +7993,7 @@ func (x *ExportDecisionLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportDecisionLogResponse.ProtoReflect.Descriptor instead.
 func (*ExportDecisionLogResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{102}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ExportDecisionLogResponse) GetJsonl() string {
@@ -7707,7 +8019,7 @@ type GetJdFitBandsRequest struct {
 
 func (x *GetJdFitBandsRequest) Reset() {
 	*x = GetJdFitBandsRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[103]
+	mi := &file_career_v1_admin_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7719,7 +8031,7 @@ func (x *GetJdFitBandsRequest) String() string {
 func (*GetJdFitBandsRequest) ProtoMessage() {}
 
 func (x *GetJdFitBandsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[103]
+	mi := &file_career_v1_admin_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7732,7 +8044,7 @@ func (x *GetJdFitBandsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdFitBandsRequest.ProtoReflect.Descriptor instead.
 func (*GetJdFitBandsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{103}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{104}
 }
 
 // The bands in force and who last changed them.
@@ -7746,7 +8058,7 @@ type GetJdFitBandsResponse struct {
 
 func (x *GetJdFitBandsResponse) Reset() {
 	*x = GetJdFitBandsResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[104]
+	mi := &file_career_v1_admin_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7758,7 +8070,7 @@ func (x *GetJdFitBandsResponse) String() string {
 func (*GetJdFitBandsResponse) ProtoMessage() {}
 
 func (x *GetJdFitBandsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[104]
+	mi := &file_career_v1_admin_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7771,7 +8083,7 @@ func (x *GetJdFitBandsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdFitBandsResponse.ProtoReflect.Descriptor instead.
 func (*GetJdFitBandsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{104}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *GetJdFitBandsResponse) GetBands() *JdFitBands {
@@ -7792,7 +8104,7 @@ type SetJdFitBandsRequest struct {
 
 func (x *SetJdFitBandsRequest) Reset() {
 	*x = SetJdFitBandsRequest{}
-	mi := &file_career_v1_admin_proto_msgTypes[105]
+	mi := &file_career_v1_admin_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7804,7 +8116,7 @@ func (x *SetJdFitBandsRequest) String() string {
 func (*SetJdFitBandsRequest) ProtoMessage() {}
 
 func (x *SetJdFitBandsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[105]
+	mi := &file_career_v1_admin_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7817,7 +8129,7 @@ func (x *SetJdFitBandsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJdFitBandsRequest.ProtoReflect.Descriptor instead.
 func (*SetJdFitBandsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{105}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *SetJdFitBandsRequest) GetBands() *JdFitBands {
@@ -7838,7 +8150,7 @@ type SetJdFitBandsResponse struct {
 
 func (x *SetJdFitBandsResponse) Reset() {
 	*x = SetJdFitBandsResponse{}
-	mi := &file_career_v1_admin_proto_msgTypes[106]
+	mi := &file_career_v1_admin_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7850,7 +8162,7 @@ func (x *SetJdFitBandsResponse) String() string {
 func (*SetJdFitBandsResponse) ProtoMessage() {}
 
 func (x *SetJdFitBandsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_admin_proto_msgTypes[106]
+	mi := &file_career_v1_admin_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7863,7 +8175,7 @@ func (x *SetJdFitBandsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJdFitBandsResponse.ProtoReflect.Descriptor instead.
 func (*SetJdFitBandsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_admin_proto_rawDescGZIP(), []int{106}
+	return file_career_v1_admin_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *SetJdFitBandsResponse) GetBands() *JdFitBands {
@@ -8335,7 +8647,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06failed\x18\x04 \x01(\x05R\x06failed\x12\x1c\n" +
 	"\tremaining\x18\x05 \x01(\x05R\tremaining\"H\n" +
 	"\x16GetJdSubmissionRequest\x12.\n" +
-	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"\xb6\x02\n" +
+	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"\xdc\x02\n" +
 	"\x17GetJdSubmissionResponse\x12,\n" +
 	"\x03row\x18\x01 \x01(\v2\x1a.career.v1.JdSubmissionRowR\x03row\x12\x17\n" +
 	"\ajd_text\x18\x02 \x01(\tR\x06jdText\x12'\n" +
@@ -8344,7 +8656,49 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\tllm_model\x18\x05 \x01(\tR\bllmModel\x12\x1b\n" +
 	"\tprompt_id\x18\x06 \x01(\tR\bpromptId\x12%\n" +
 	"\x0eprompt_version\x18\a \x01(\x05R\rpromptVersion\x12!\n" +
-	"\fdownload_url\x18\b \x01(\tR\vdownloadUrl\"B\n" +
+	"\fdownload_url\x18\b \x01(\tR\vdownloadUrl\x12$\n" +
+	"\x04runs\x18\t \x03(\v2\x10.career.v1.JdRunR\x04runs\"\x9f\b\n" +
+	"\x05JdRun\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x18\n" +
+	"\aattempt\x18\x02 \x01(\x05R\aattempt\x12\x18\n" +
+	"\atrigger\x18\x03 \x01(\tR\atrigger\x12!\n" +
+	"\ftriggered_by\x18\x04 \x01(\x03R\vtriggeredBy\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\x12\x1d\n" +
+	"\n" +
+	"app_commit\x18\a \x01(\tR\tappCommit\x12\x12\n" +
+	"\x04host\x18\b \x01(\tR\x04host\x12\x14\n" +
+	"\x05model\x18\t \x01(\tR\x05model\x12\x17\n" +
+	"\anum_ctx\x18\n" +
+	" \x01(\x05R\x06numCtx\x12%\n" +
+	"\x0eembedder_model\x18\v \x01(\tR\rembedderModel\x12!\n" +
+	"\fprompts_json\x18\f \x01(\tR\vpromptsJson\x12-\n" +
+	"\x12corpus_fingerprint\x18\r \x01(\tR\x11corpusFingerprint\x12)\n" +
+	"\x10corpus_documents\x18\x0e \x01(\x05R\x0fcorpusDocuments\x12#\n" +
+	"\rcorpus_chunks\x18\x0f \x01(\x05R\fcorpusChunks\x12#\n" +
+	"\rscore_formula\x18\x10 \x01(\tR\fscoreFormula\x12,\n" +
+	"\x0fretrieval_score\x18\x11 \x01(\x01H\x00R\x0eretrievalScore\x88\x01\x01\x12$\n" +
+	"\vmatch_score\x18\x12 \x01(\x01H\x01R\n" +
+	"matchScore\x88\x01\x01\x12!\n" +
+	"\tthreshold\x18\x13 \x01(\x01H\x02R\tthreshold\x88\x01\x01\x12\x10\n" +
+	"\x03fit\x18\x14 \x01(\tR\x03fit\x12+\n" +
+	"\x11requirement_count\x18\x15 \x01(\x05R\x10requirementCount\x12\x1b\n" +
+	"\tmet_count\x18\x16 \x01(\x05R\bmetCount\x12#\n" +
+	"\rpartial_count\x18\x17 \x01(\x05R\fpartialCount\x12\x1f\n" +
+	"\vunmet_count\x18\x18 \x01(\x05R\n" +
+	"unmetCount\x12)\n" +
+	"\x10resume_generated\x18\x19 \x01(\bR\x0fresumeGenerated\x12\x1b\n" +
+	"\tqueued_ms\x18\x1a \x01(\x03R\bqueuedMs\x12\x1f\n" +
+	"\vduration_ms\x18\x1b \x01(\x03R\n" +
+	"durationMs\x129\n" +
+	"\n" +
+	"started_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12;\n" +
+	"\vfinished_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"finishedAtB\x12\n" +
+	"\x10_retrieval_scoreB\x0e\n" +
+	"\f_match_scoreB\f\n" +
+	"\n" +
+	"_threshold\"B\n" +
 	"\x10RescoreJdRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"@\n" +
 	"\x11RescoreJdResponse\x12+\n" +
@@ -8564,7 +8918,7 @@ func file_career_v1_admin_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 109)
+var file_career_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 110)
 var file_career_v1_admin_proto_goTypes = []any{
 	(ReviewKind)(0),                       // 0: career.v1.ReviewKind
 	(ReviewStatus)(0),                     // 1: career.v1.ReviewStatus
@@ -8663,90 +9017,91 @@ var file_career_v1_admin_proto_goTypes = []any{
 	(*SweepCorpusEmbeddingsResponse)(nil), // 94: career.v1.SweepCorpusEmbeddingsResponse
 	(*GetJdSubmissionRequest)(nil),        // 95: career.v1.GetJdSubmissionRequest
 	(*GetJdSubmissionResponse)(nil),       // 96: career.v1.GetJdSubmissionResponse
-	(*RescoreJdRequest)(nil),              // 97: career.v1.RescoreJdRequest
-	(*RescoreJdResponse)(nil),             // 98: career.v1.RescoreJdResponse
-	(*ReindexCorpusRequest)(nil),          // 99: career.v1.ReindexCorpusRequest
-	(*ReindexCorpusResponse)(nil),         // 100: career.v1.ReindexCorpusResponse
-	(*ListJdSubmissionsRequest)(nil),      // 101: career.v1.ListJdSubmissionsRequest
-	(*JdSubmissionRow)(nil),               // 102: career.v1.JdSubmissionRow
-	(*ListJdSubmissionsResponse)(nil),     // 103: career.v1.ListJdSubmissionsResponse
-	(*DecisionLogRow)(nil),                // 104: career.v1.DecisionLogRow
-	(*ListDecisionLogRequest)(nil),        // 105: career.v1.ListDecisionLogRequest
-	(*ListDecisionLogResponse)(nil),       // 106: career.v1.ListDecisionLogResponse
-	(*ReviewDecisionRequest)(nil),         // 107: career.v1.ReviewDecisionRequest
-	(*ReviewDecisionResponse)(nil),        // 108: career.v1.ReviewDecisionResponse
-	(*ExportDecisionLogRequest)(nil),      // 109: career.v1.ExportDecisionLogRequest
-	(*ExportDecisionLogResponse)(nil),     // 110: career.v1.ExportDecisionLogResponse
-	(*GetJdFitBandsRequest)(nil),          // 111: career.v1.GetJdFitBandsRequest
-	(*GetJdFitBandsResponse)(nil),         // 112: career.v1.GetJdFitBandsResponse
-	(*SetJdFitBandsRequest)(nil),          // 113: career.v1.SetJdFitBandsRequest
-	(*SetJdFitBandsResponse)(nil),         // 114: career.v1.SetJdFitBandsResponse
-	nil,                                   // 115: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	nil,                                   // 116: career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	(*Me)(nil),                            // 117: career.v1.Me
-	(*timestamppb.Timestamp)(nil),         // 118: google.protobuf.Timestamp
-	(MemberStatus)(0),                     // 119: career.v1.MemberStatus
-	(*PageRequest)(nil),                   // 120: career.v1.PageRequest
-	(*PageResponse)(nil),                  // 121: career.v1.PageResponse
-	(*ActivityEvent)(nil),                 // 122: career.v1.ActivityEvent
-	(*Conversation)(nil),                  // 123: career.v1.Conversation
-	(*Message)(nil),                       // 124: career.v1.Message
-	(*ContentSummary)(nil),                // 125: career.v1.ContentSummary
-	(SupportCategory)(0),                  // 126: career.v1.SupportCategory
-	(JdStatus)(0),                         // 127: career.v1.JdStatus
-	(JdSource)(0),                         // 128: career.v1.JdSource
-	(*JdFitBands)(nil),                    // 129: career.v1.JdFitBands
+	(*JdRun)(nil),                         // 97: career.v1.JdRun
+	(*RescoreJdRequest)(nil),              // 98: career.v1.RescoreJdRequest
+	(*RescoreJdResponse)(nil),             // 99: career.v1.RescoreJdResponse
+	(*ReindexCorpusRequest)(nil),          // 100: career.v1.ReindexCorpusRequest
+	(*ReindexCorpusResponse)(nil),         // 101: career.v1.ReindexCorpusResponse
+	(*ListJdSubmissionsRequest)(nil),      // 102: career.v1.ListJdSubmissionsRequest
+	(*JdSubmissionRow)(nil),               // 103: career.v1.JdSubmissionRow
+	(*ListJdSubmissionsResponse)(nil),     // 104: career.v1.ListJdSubmissionsResponse
+	(*DecisionLogRow)(nil),                // 105: career.v1.DecisionLogRow
+	(*ListDecisionLogRequest)(nil),        // 106: career.v1.ListDecisionLogRequest
+	(*ListDecisionLogResponse)(nil),       // 107: career.v1.ListDecisionLogResponse
+	(*ReviewDecisionRequest)(nil),         // 108: career.v1.ReviewDecisionRequest
+	(*ReviewDecisionResponse)(nil),        // 109: career.v1.ReviewDecisionResponse
+	(*ExportDecisionLogRequest)(nil),      // 110: career.v1.ExportDecisionLogRequest
+	(*ExportDecisionLogResponse)(nil),     // 111: career.v1.ExportDecisionLogResponse
+	(*GetJdFitBandsRequest)(nil),          // 112: career.v1.GetJdFitBandsRequest
+	(*GetJdFitBandsResponse)(nil),         // 113: career.v1.GetJdFitBandsResponse
+	(*SetJdFitBandsRequest)(nil),          // 114: career.v1.SetJdFitBandsRequest
+	(*SetJdFitBandsResponse)(nil),         // 115: career.v1.SetJdFitBandsResponse
+	nil,                                   // 116: career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	nil,                                   // 117: career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	(*Me)(nil),                            // 118: career.v1.Me
+	(*timestamppb.Timestamp)(nil),         // 119: google.protobuf.Timestamp
+	(MemberStatus)(0),                     // 120: career.v1.MemberStatus
+	(*PageRequest)(nil),                   // 121: career.v1.PageRequest
+	(*PageResponse)(nil),                  // 122: career.v1.PageResponse
+	(*ActivityEvent)(nil),                 // 123: career.v1.ActivityEvent
+	(*Conversation)(nil),                  // 124: career.v1.Conversation
+	(*Message)(nil),                       // 125: career.v1.Message
+	(*ContentSummary)(nil),                // 126: career.v1.ContentSummary
+	(SupportCategory)(0),                  // 127: career.v1.SupportCategory
+	(JdStatus)(0),                         // 128: career.v1.JdStatus
+	(JdSource)(0),                         // 129: career.v1.JdSource
+	(*JdFitBands)(nil),                    // 130: career.v1.JdFitBands
 }
 var file_career_v1_admin_proto_depIdxs = []int32{
-	117, // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
+	118, // 0: career.v1.MemberRecord.me:type_name -> career.v1.Me
 	8,   // 1: career.v1.MemberRecord.counts:type_name -> career.v1.MemberCounts
-	118, // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
-	119, // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
+	119, // 2: career.v1.MemberRecord.first_seen_at:type_name -> google.protobuf.Timestamp
+	120, // 3: career.v1.ListMembersRequest.status:type_name -> career.v1.MemberStatus
 	7,   // 4: career.v1.ListMembersRequest.sort:type_name -> career.v1.ListMembersRequest.Sort
-	120, // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
+	121, // 5: career.v1.ListMembersRequest.page:type_name -> career.v1.PageRequest
 	9,   // 6: career.v1.ListMembersResponse.members:type_name -> career.v1.MemberRecord
-	121, // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
-	118, // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
-	118, // 9: career.v1.NotificationDelivery.sent_at:type_name -> google.protobuf.Timestamp
+	122, // 7: career.v1.ListMembersResponse.page:type_name -> career.v1.PageResponse
+	119, // 8: career.v1.AdminNote.created_at:type_name -> google.protobuf.Timestamp
+	119, // 9: career.v1.NotificationDelivery.sent_at:type_name -> google.protobuf.Timestamp
 	9,   // 10: career.v1.GetMemberResponse.member:type_name -> career.v1.MemberRecord
-	122, // 11: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
-	123, // 12: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
+	123, // 11: career.v1.GetMemberResponse.recent_activity:type_name -> career.v1.ActivityEvent
+	124, // 12: career.v1.GetMemberResponse.conversations:type_name -> career.v1.Conversation
 	13,  // 13: career.v1.GetMemberResponse.notes:type_name -> career.v1.AdminNote
 	14,  // 14: career.v1.GetMemberResponse.deliveries:type_name -> career.v1.NotificationDelivery
 	14,  // 15: career.v1.ResendNotificationResponse.delivery:type_name -> career.v1.NotificationDelivery
 	13,  // 16: career.v1.AddMemberNoteResponse.note:type_name -> career.v1.AdminNote
-	119, // 17: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
+	120, // 17: career.v1.SetMemberStatusRequest.status:type_name -> career.v1.MemberStatus
 	9,   // 18: career.v1.SetMemberStatusResponse.member:type_name -> career.v1.MemberRecord
 	0,   // 19: career.v1.GetReviewQueueRequest.kind:type_name -> career.v1.ReviewKind
 	1,   // 20: career.v1.GetReviewQueueRequest.status:type_name -> career.v1.ReviewStatus
-	120, // 21: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
+	121, // 21: career.v1.GetReviewQueueRequest.page:type_name -> career.v1.PageRequest
 	0,   // 22: career.v1.ReviewItem.kind:type_name -> career.v1.ReviewKind
 	1,   // 23: career.v1.ReviewItem.status:type_name -> career.v1.ReviewStatus
-	117, // 24: career.v1.ReviewItem.member:type_name -> career.v1.Me
-	118, // 25: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
+	118, // 24: career.v1.ReviewItem.member:type_name -> career.v1.Me
+	119, // 25: career.v1.ReviewItem.created_at:type_name -> google.protobuf.Timestamp
 	23,  // 26: career.v1.GetReviewQueueResponse.items:type_name -> career.v1.ReviewItem
-	121, // 27: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
+	122, // 27: career.v1.GetReviewQueueResponse.page:type_name -> career.v1.PageResponse
 	1,   // 28: career.v1.ResolveReviewItemRequest.resolution:type_name -> career.v1.ReviewStatus
-	124, // 29: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
-	117, // 30: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
-	123, // 31: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
-	124, // 32: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
-	115, // 33: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
-	118, // 34: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
+	125, // 29: career.v1.ReplyEscalationResponse.message:type_name -> career.v1.Message
+	118, // 30: career.v1.GetMemberConversationResponse.member:type_name -> career.v1.Me
+	124, // 31: career.v1.GetMemberConversationResponse.conversation:type_name -> career.v1.Conversation
+	125, // 32: career.v1.GetMemberConversationResponse.messages:type_name -> career.v1.Message
+	116, // 33: career.v1.GetCorpusStatusResponse.documents_by_type:type_name -> career.v1.GetCorpusStatusResponse.DocumentsByTypeEntry
+	119, // 34: career.v1.GetCorpusStatusResponse.last_ingest_at:type_name -> google.protobuf.Timestamp
 	34,  // 35: career.v1.TestRetrievalResponse.hits:type_name -> career.v1.RetrievalHit
-	125, // 36: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
+	126, // 36: career.v1.TestRetrievalResponse.qa_match:type_name -> career.v1.ContentSummary
 	2,   // 37: career.v1.RunJobRequest.kind:type_name -> career.v1.JobKind
 	2,   // 38: career.v1.GetJobResponse.kind:type_name -> career.v1.JobKind
 	3,   // 39: career.v1.GetJobResponse.status:type_name -> career.v1.JobStatus
-	118, // 40: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	118, // 41: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
-	118, // 42: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
+	119, // 40: career.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	119, // 41: career.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	119, // 42: career.v1.PersonaVersion.activated_at:type_name -> google.protobuf.Timestamp
 	41,  // 43: career.v1.GetPersonaResponse.active:type_name -> career.v1.PersonaVersion
 	41,  // 44: career.v1.GetPersonaResponse.history:type_name -> career.v1.PersonaVersion
-	118, // 45: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
-	118, // 46: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
-	118, // 47: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
-	125, // 48: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
+	119, // 45: career.v1.GetAnalyticsRequest.from:type_name -> google.protobuf.Timestamp
+	119, // 46: career.v1.GetAnalyticsRequest.to:type_name -> google.protobuf.Timestamp
+	119, // 47: career.v1.DailyCount.day:type_name -> google.protobuf.Timestamp
+	126, // 48: career.v1.RankedContent.item:type_name -> career.v1.ContentSummary
 	44,  // 49: career.v1.GetAnalyticsResponse.registrations:type_name -> career.v1.DailyCount
 	44,  // 50: career.v1.GetAnalyticsResponse.verifications:type_name -> career.v1.DailyCount
 	44,  // 51: career.v1.GetAnalyticsResponse.active_members:type_name -> career.v1.DailyCount
@@ -8755,154 +9110,157 @@ var file_career_v1_admin_proto_depIdxs = []int32{
 	45,  // 54: career.v1.GetAnalyticsResponse.top_downloads:type_name -> career.v1.RankedContent
 	46,  // 55: career.v1.GetAnalyticsResponse.top_questions:type_name -> career.v1.RankedQuestion
 	47,  // 56: career.v1.GetAnalyticsResponse.assistant:type_name -> career.v1.AssistantUsage
-	116, // 57: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
-	118, // 58: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
-	118, // 59: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
-	120, // 60: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
-	118, // 61: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
+	117, // 57: career.v1.GetAnalyticsResponse.members_by_track:type_name -> career.v1.GetAnalyticsResponse.MembersByTrackEntry
+	119, // 58: career.v1.GetAuditRequest.from:type_name -> google.protobuf.Timestamp
+	119, // 59: career.v1.GetAuditRequest.to:type_name -> google.protobuf.Timestamp
+	121, // 60: career.v1.GetAuditRequest.page:type_name -> career.v1.PageRequest
+	119, // 61: career.v1.AuditEntry.occurred_at:type_name -> google.protobuf.Timestamp
 	50,  // 62: career.v1.GetAuditResponse.entries:type_name -> career.v1.AuditEntry
-	121, // 63: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
-	126, // 64: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
+	122, // 63: career.v1.GetAuditResponse.page:type_name -> career.v1.PageResponse
+	127, // 64: career.v1.SupportMessage.category:type_name -> career.v1.SupportCategory
 	4,   // 65: career.v1.SupportMessage.status:type_name -> career.v1.SupportStatus
-	118, // 66: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
-	118, // 67: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
-	118, // 68: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
+	119, // 66: career.v1.SupportMessage.created_at:type_name -> google.protobuf.Timestamp
+	119, // 67: career.v1.SupportMessage.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 68: career.v1.SupportMessage.resolved_at:type_name -> google.protobuf.Timestamp
 	4,   // 69: career.v1.ListContactMessagesRequest.status:type_name -> career.v1.SupportStatus
-	126, // 70: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
-	120, // 71: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
+	127, // 70: career.v1.ListContactMessagesRequest.category:type_name -> career.v1.SupportCategory
+	121, // 71: career.v1.ListContactMessagesRequest.page:type_name -> career.v1.PageRequest
 	52,  // 72: career.v1.ListContactMessagesResponse.messages:type_name -> career.v1.SupportMessage
-	121, // 73: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
+	122, // 73: career.v1.ListContactMessagesResponse.page:type_name -> career.v1.PageResponse
 	4,   // 74: career.v1.ResolveContactMessageRequest.status:type_name -> career.v1.SupportStatus
 	52,  // 75: career.v1.ResolveContactMessageResponse.message:type_name -> career.v1.SupportMessage
 	9,   // 76: career.v1.ApproveRegistrationResponse.member:type_name -> career.v1.MemberRecord
 	9,   // 77: career.v1.DeclineRegistrationResponse.member:type_name -> career.v1.MemberRecord
-	118, // 78: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
+	119, // 78: career.v1.ExtendAccessRequest.new_expires_at:type_name -> google.protobuf.Timestamp
 	9,   // 79: career.v1.ExtendAccessResponse.member:type_name -> career.v1.MemberRecord
 	63,  // 80: career.v1.DbTable.columns:type_name -> career.v1.DbColumn
 	64,  // 81: career.v1.ListDbTablesResponse.tables:type_name -> career.v1.DbTable
 	68,  // 82: career.v1.RunDbQueryResponse.rows:type_name -> career.v1.DbRow
 	5,   // 83: career.v1.AccessGrant.default_ttl:type_name -> career.v1.GrantTTL
-	118, // 84: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
-	118, // 85: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
-	118, // 86: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 84: career.v1.AccessGrant.entry_expires_at:type_name -> google.protobuf.Timestamp
+	119, // 85: career.v1.AccessGrant.created_at:type_name -> google.protobuf.Timestamp
+	119, // 86: career.v1.AccessGrant.updated_at:type_name -> google.protobuf.Timestamp
 	70,  // 87: career.v1.ListAccessGrantsResponse.grants:type_name -> career.v1.AccessGrant
 	5,   // 88: career.v1.UpsertAccessGrantRequest.default_ttl:type_name -> career.v1.GrantTTL
-	118, // 89: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
+	119, // 89: career.v1.UpsertAccessGrantRequest.entry_expires_at:type_name -> google.protobuf.Timestamp
 	70,  // 90: career.v1.UpsertAccessGrantResponse.grant:type_name -> career.v1.AccessGrant
-	118, // 91: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
-	118, // 92: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 91: career.v1.SavedQuery.created_at:type_name -> google.protobuf.Timestamp
+	119, // 92: career.v1.SavedQuery.updated_at:type_name -> google.protobuf.Timestamp
 	77,  // 93: career.v1.ListSavedQueriesResponse.queries:type_name -> career.v1.SavedQuery
 	77,  // 94: career.v1.UpsertSavedQueryResponse.query:type_name -> career.v1.SavedQuery
-	119, // 95: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
-	118, // 96: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
+	120, // 95: career.v1.MemberActivitySummary.status:type_name -> career.v1.MemberStatus
+	119, // 96: career.v1.MemberActivitySummary.last_event_at:type_name -> google.protobuf.Timestamp
 	6,   // 97: career.v1.ListMemberActivityRequest.sort:type_name -> career.v1.ActivitySort
 	84,  // 98: career.v1.ListMemberActivityResponse.members:type_name -> career.v1.MemberActivitySummary
-	118, // 99: career.v1.CorpusDocumentRow.ingested_at:type_name -> google.protobuf.Timestamp
-	118, // 100: career.v1.CorpusDocumentRow.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 99: career.v1.CorpusDocumentRow.ingested_at:type_name -> google.protobuf.Timestamp
+	119, // 100: career.v1.CorpusDocumentRow.updated_at:type_name -> google.protobuf.Timestamp
 	90,  // 101: career.v1.ListCorpusDocumentsResponse.documents:type_name -> career.v1.CorpusDocumentRow
 	92,  // 102: career.v1.ListCorpusDocumentsResponse.embedder_counts:type_name -> career.v1.EmbedderCount
-	102, // 103: career.v1.GetJdSubmissionResponse.row:type_name -> career.v1.JdSubmissionRow
-	127, // 104: career.v1.RescoreJdResponse.status:type_name -> career.v1.JdStatus
-	127, // 105: career.v1.JdSubmissionRow.status:type_name -> career.v1.JdStatus
-	128, // 106: career.v1.JdSubmissionRow.source:type_name -> career.v1.JdSource
-	118, // 107: career.v1.JdSubmissionRow.created_at:type_name -> google.protobuf.Timestamp
-	118, // 108: career.v1.JdSubmissionRow.completed_at:type_name -> google.protobuf.Timestamp
-	102, // 109: career.v1.ListJdSubmissionsResponse.submissions:type_name -> career.v1.JdSubmissionRow
-	118, // 110: career.v1.DecisionLogRow.created_at:type_name -> google.protobuf.Timestamp
-	118, // 111: career.v1.DecisionLogRow.reviewed_at:type_name -> google.protobuf.Timestamp
-	104, // 112: career.v1.ListDecisionLogResponse.decisions:type_name -> career.v1.DecisionLogRow
-	129, // 113: career.v1.GetJdFitBandsResponse.bands:type_name -> career.v1.JdFitBands
-	129, // 114: career.v1.SetJdFitBandsRequest.bands:type_name -> career.v1.JdFitBands
-	129, // 115: career.v1.SetJdFitBandsResponse.bands:type_name -> career.v1.JdFitBands
-	10,  // 116: career.v1.AdminService.ListMembers:input_type -> career.v1.ListMembersRequest
-	16,  // 117: career.v1.AdminService.ResendNotification:input_type -> career.v1.ResendNotificationRequest
-	12,  // 118: career.v1.AdminService.GetMember:input_type -> career.v1.GetMemberRequest
-	18,  // 119: career.v1.AdminService.AddMemberNote:input_type -> career.v1.AddMemberNoteRequest
-	20,  // 120: career.v1.AdminService.SetMemberStatus:input_type -> career.v1.SetMemberStatusRequest
-	22,  // 121: career.v1.AdminService.GetReviewQueue:input_type -> career.v1.GetReviewQueueRequest
-	25,  // 122: career.v1.AdminService.ResolveReviewItem:input_type -> career.v1.ResolveReviewItemRequest
-	27,  // 123: career.v1.AdminService.ReplyEscalation:input_type -> career.v1.ReplyEscalationRequest
-	29,  // 124: career.v1.AdminService.GetMemberConversation:input_type -> career.v1.GetMemberConversationRequest
-	31,  // 125: career.v1.AdminService.GetCorpusStatus:input_type -> career.v1.GetCorpusStatusRequest
-	33,  // 126: career.v1.AdminService.TestRetrieval:input_type -> career.v1.TestRetrievalRequest
-	36,  // 127: career.v1.AdminService.RunJob:input_type -> career.v1.RunJobRequest
-	38,  // 128: career.v1.AdminService.GetJob:input_type -> career.v1.GetJobRequest
-	40,  // 129: career.v1.AdminService.GetPersona:input_type -> career.v1.GetPersonaRequest
-	43,  // 130: career.v1.AdminService.GetAnalytics:input_type -> career.v1.GetAnalyticsRequest
-	49,  // 131: career.v1.AdminService.GetAudit:input_type -> career.v1.GetAuditRequest
-	53,  // 132: career.v1.AdminService.ListContactMessages:input_type -> career.v1.ListContactMessagesRequest
-	55,  // 133: career.v1.AdminService.ResolveContactMessage:input_type -> career.v1.ResolveContactMessageRequest
-	57,  // 134: career.v1.AdminService.ApproveRegistration:input_type -> career.v1.ApproveRegistrationRequest
-	59,  // 135: career.v1.AdminService.DeclineRegistration:input_type -> career.v1.DeclineRegistrationRequest
-	61,  // 136: career.v1.AdminService.ExtendAccess:input_type -> career.v1.ExtendAccessRequest
-	65,  // 137: career.v1.AdminService.ListDbTables:input_type -> career.v1.ListDbTablesRequest
-	67,  // 138: career.v1.AdminService.RunDbQuery:input_type -> career.v1.RunDbQueryRequest
-	71,  // 139: career.v1.AdminService.ListAccessGrants:input_type -> career.v1.ListAccessGrantsRequest
-	73,  // 140: career.v1.AdminService.UpsertAccessGrant:input_type -> career.v1.UpsertAccessGrantRequest
-	75,  // 141: career.v1.AdminService.DeleteAccessGrant:input_type -> career.v1.DeleteAccessGrantRequest
-	78,  // 142: career.v1.AdminService.ListSavedQueries:input_type -> career.v1.ListSavedQueriesRequest
-	80,  // 143: career.v1.AdminService.UpsertSavedQuery:input_type -> career.v1.UpsertSavedQueryRequest
-	82,  // 144: career.v1.AdminService.DeleteSavedQuery:input_type -> career.v1.DeleteSavedQueryRequest
-	85,  // 145: career.v1.AdminService.ListMemberActivity:input_type -> career.v1.ListMemberActivityRequest
-	87,  // 146: career.v1.AdminService.IngestCorpusText:input_type -> career.v1.IngestCorpusTextRequest
-	89,  // 147: career.v1.AdminService.ListCorpusDocuments:input_type -> career.v1.ListCorpusDocumentsRequest
-	99,  // 148: career.v1.AdminService.ReindexCorpus:input_type -> career.v1.ReindexCorpusRequest
-	93,  // 149: career.v1.AdminService.SweepCorpusEmbeddings:input_type -> career.v1.SweepCorpusEmbeddingsRequest
-	101, // 150: career.v1.AdminService.ListJdSubmissions:input_type -> career.v1.ListJdSubmissionsRequest
-	95,  // 151: career.v1.AdminService.GetJdSubmission:input_type -> career.v1.GetJdSubmissionRequest
-	97,  // 152: career.v1.AdminService.RescoreJd:input_type -> career.v1.RescoreJdRequest
-	105, // 153: career.v1.AdminService.ListDecisionLog:input_type -> career.v1.ListDecisionLogRequest
-	107, // 154: career.v1.AdminService.ReviewDecision:input_type -> career.v1.ReviewDecisionRequest
-	109, // 155: career.v1.AdminService.ExportDecisionLog:input_type -> career.v1.ExportDecisionLogRequest
-	111, // 156: career.v1.AdminService.GetJdFitBands:input_type -> career.v1.GetJdFitBandsRequest
-	113, // 157: career.v1.AdminService.SetJdFitBands:input_type -> career.v1.SetJdFitBandsRequest
-	11,  // 158: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
-	17,  // 159: career.v1.AdminService.ResendNotification:output_type -> career.v1.ResendNotificationResponse
-	15,  // 160: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
-	19,  // 161: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
-	21,  // 162: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
-	24,  // 163: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
-	26,  // 164: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
-	28,  // 165: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
-	30,  // 166: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
-	32,  // 167: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
-	35,  // 168: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
-	37,  // 169: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
-	39,  // 170: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
-	42,  // 171: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
-	48,  // 172: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
-	51,  // 173: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
-	54,  // 174: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
-	56,  // 175: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
-	58,  // 176: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
-	60,  // 177: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
-	62,  // 178: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
-	66,  // 179: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
-	69,  // 180: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
-	72,  // 181: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
-	74,  // 182: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
-	76,  // 183: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
-	79,  // 184: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
-	81,  // 185: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
-	83,  // 186: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
-	86,  // 187: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
-	88,  // 188: career.v1.AdminService.IngestCorpusText:output_type -> career.v1.IngestCorpusTextResponse
-	91,  // 189: career.v1.AdminService.ListCorpusDocuments:output_type -> career.v1.ListCorpusDocumentsResponse
-	100, // 190: career.v1.AdminService.ReindexCorpus:output_type -> career.v1.ReindexCorpusResponse
-	94,  // 191: career.v1.AdminService.SweepCorpusEmbeddings:output_type -> career.v1.SweepCorpusEmbeddingsResponse
-	103, // 192: career.v1.AdminService.ListJdSubmissions:output_type -> career.v1.ListJdSubmissionsResponse
-	96,  // 193: career.v1.AdminService.GetJdSubmission:output_type -> career.v1.GetJdSubmissionResponse
-	98,  // 194: career.v1.AdminService.RescoreJd:output_type -> career.v1.RescoreJdResponse
-	106, // 195: career.v1.AdminService.ListDecisionLog:output_type -> career.v1.ListDecisionLogResponse
-	108, // 196: career.v1.AdminService.ReviewDecision:output_type -> career.v1.ReviewDecisionResponse
-	110, // 197: career.v1.AdminService.ExportDecisionLog:output_type -> career.v1.ExportDecisionLogResponse
-	112, // 198: career.v1.AdminService.GetJdFitBands:output_type -> career.v1.GetJdFitBandsResponse
-	114, // 199: career.v1.AdminService.SetJdFitBands:output_type -> career.v1.SetJdFitBandsResponse
-	158, // [158:200] is the sub-list for method output_type
-	116, // [116:158] is the sub-list for method input_type
-	116, // [116:116] is the sub-list for extension type_name
-	116, // [116:116] is the sub-list for extension extendee
-	0,   // [0:116] is the sub-list for field type_name
+	103, // 103: career.v1.GetJdSubmissionResponse.row:type_name -> career.v1.JdSubmissionRow
+	97,  // 104: career.v1.GetJdSubmissionResponse.runs:type_name -> career.v1.JdRun
+	119, // 105: career.v1.JdRun.started_at:type_name -> google.protobuf.Timestamp
+	119, // 106: career.v1.JdRun.finished_at:type_name -> google.protobuf.Timestamp
+	128, // 107: career.v1.RescoreJdResponse.status:type_name -> career.v1.JdStatus
+	128, // 108: career.v1.JdSubmissionRow.status:type_name -> career.v1.JdStatus
+	129, // 109: career.v1.JdSubmissionRow.source:type_name -> career.v1.JdSource
+	119, // 110: career.v1.JdSubmissionRow.created_at:type_name -> google.protobuf.Timestamp
+	119, // 111: career.v1.JdSubmissionRow.completed_at:type_name -> google.protobuf.Timestamp
+	103, // 112: career.v1.ListJdSubmissionsResponse.submissions:type_name -> career.v1.JdSubmissionRow
+	119, // 113: career.v1.DecisionLogRow.created_at:type_name -> google.protobuf.Timestamp
+	119, // 114: career.v1.DecisionLogRow.reviewed_at:type_name -> google.protobuf.Timestamp
+	105, // 115: career.v1.ListDecisionLogResponse.decisions:type_name -> career.v1.DecisionLogRow
+	130, // 116: career.v1.GetJdFitBandsResponse.bands:type_name -> career.v1.JdFitBands
+	130, // 117: career.v1.SetJdFitBandsRequest.bands:type_name -> career.v1.JdFitBands
+	130, // 118: career.v1.SetJdFitBandsResponse.bands:type_name -> career.v1.JdFitBands
+	10,  // 119: career.v1.AdminService.ListMembers:input_type -> career.v1.ListMembersRequest
+	16,  // 120: career.v1.AdminService.ResendNotification:input_type -> career.v1.ResendNotificationRequest
+	12,  // 121: career.v1.AdminService.GetMember:input_type -> career.v1.GetMemberRequest
+	18,  // 122: career.v1.AdminService.AddMemberNote:input_type -> career.v1.AddMemberNoteRequest
+	20,  // 123: career.v1.AdminService.SetMemberStatus:input_type -> career.v1.SetMemberStatusRequest
+	22,  // 124: career.v1.AdminService.GetReviewQueue:input_type -> career.v1.GetReviewQueueRequest
+	25,  // 125: career.v1.AdminService.ResolveReviewItem:input_type -> career.v1.ResolveReviewItemRequest
+	27,  // 126: career.v1.AdminService.ReplyEscalation:input_type -> career.v1.ReplyEscalationRequest
+	29,  // 127: career.v1.AdminService.GetMemberConversation:input_type -> career.v1.GetMemberConversationRequest
+	31,  // 128: career.v1.AdminService.GetCorpusStatus:input_type -> career.v1.GetCorpusStatusRequest
+	33,  // 129: career.v1.AdminService.TestRetrieval:input_type -> career.v1.TestRetrievalRequest
+	36,  // 130: career.v1.AdminService.RunJob:input_type -> career.v1.RunJobRequest
+	38,  // 131: career.v1.AdminService.GetJob:input_type -> career.v1.GetJobRequest
+	40,  // 132: career.v1.AdminService.GetPersona:input_type -> career.v1.GetPersonaRequest
+	43,  // 133: career.v1.AdminService.GetAnalytics:input_type -> career.v1.GetAnalyticsRequest
+	49,  // 134: career.v1.AdminService.GetAudit:input_type -> career.v1.GetAuditRequest
+	53,  // 135: career.v1.AdminService.ListContactMessages:input_type -> career.v1.ListContactMessagesRequest
+	55,  // 136: career.v1.AdminService.ResolveContactMessage:input_type -> career.v1.ResolveContactMessageRequest
+	57,  // 137: career.v1.AdminService.ApproveRegistration:input_type -> career.v1.ApproveRegistrationRequest
+	59,  // 138: career.v1.AdminService.DeclineRegistration:input_type -> career.v1.DeclineRegistrationRequest
+	61,  // 139: career.v1.AdminService.ExtendAccess:input_type -> career.v1.ExtendAccessRequest
+	65,  // 140: career.v1.AdminService.ListDbTables:input_type -> career.v1.ListDbTablesRequest
+	67,  // 141: career.v1.AdminService.RunDbQuery:input_type -> career.v1.RunDbQueryRequest
+	71,  // 142: career.v1.AdminService.ListAccessGrants:input_type -> career.v1.ListAccessGrantsRequest
+	73,  // 143: career.v1.AdminService.UpsertAccessGrant:input_type -> career.v1.UpsertAccessGrantRequest
+	75,  // 144: career.v1.AdminService.DeleteAccessGrant:input_type -> career.v1.DeleteAccessGrantRequest
+	78,  // 145: career.v1.AdminService.ListSavedQueries:input_type -> career.v1.ListSavedQueriesRequest
+	80,  // 146: career.v1.AdminService.UpsertSavedQuery:input_type -> career.v1.UpsertSavedQueryRequest
+	82,  // 147: career.v1.AdminService.DeleteSavedQuery:input_type -> career.v1.DeleteSavedQueryRequest
+	85,  // 148: career.v1.AdminService.ListMemberActivity:input_type -> career.v1.ListMemberActivityRequest
+	87,  // 149: career.v1.AdminService.IngestCorpusText:input_type -> career.v1.IngestCorpusTextRequest
+	89,  // 150: career.v1.AdminService.ListCorpusDocuments:input_type -> career.v1.ListCorpusDocumentsRequest
+	100, // 151: career.v1.AdminService.ReindexCorpus:input_type -> career.v1.ReindexCorpusRequest
+	93,  // 152: career.v1.AdminService.SweepCorpusEmbeddings:input_type -> career.v1.SweepCorpusEmbeddingsRequest
+	102, // 153: career.v1.AdminService.ListJdSubmissions:input_type -> career.v1.ListJdSubmissionsRequest
+	95,  // 154: career.v1.AdminService.GetJdSubmission:input_type -> career.v1.GetJdSubmissionRequest
+	98,  // 155: career.v1.AdminService.RescoreJd:input_type -> career.v1.RescoreJdRequest
+	106, // 156: career.v1.AdminService.ListDecisionLog:input_type -> career.v1.ListDecisionLogRequest
+	108, // 157: career.v1.AdminService.ReviewDecision:input_type -> career.v1.ReviewDecisionRequest
+	110, // 158: career.v1.AdminService.ExportDecisionLog:input_type -> career.v1.ExportDecisionLogRequest
+	112, // 159: career.v1.AdminService.GetJdFitBands:input_type -> career.v1.GetJdFitBandsRequest
+	114, // 160: career.v1.AdminService.SetJdFitBands:input_type -> career.v1.SetJdFitBandsRequest
+	11,  // 161: career.v1.AdminService.ListMembers:output_type -> career.v1.ListMembersResponse
+	17,  // 162: career.v1.AdminService.ResendNotification:output_type -> career.v1.ResendNotificationResponse
+	15,  // 163: career.v1.AdminService.GetMember:output_type -> career.v1.GetMemberResponse
+	19,  // 164: career.v1.AdminService.AddMemberNote:output_type -> career.v1.AddMemberNoteResponse
+	21,  // 165: career.v1.AdminService.SetMemberStatus:output_type -> career.v1.SetMemberStatusResponse
+	24,  // 166: career.v1.AdminService.GetReviewQueue:output_type -> career.v1.GetReviewQueueResponse
+	26,  // 167: career.v1.AdminService.ResolveReviewItem:output_type -> career.v1.ResolveReviewItemResponse
+	28,  // 168: career.v1.AdminService.ReplyEscalation:output_type -> career.v1.ReplyEscalationResponse
+	30,  // 169: career.v1.AdminService.GetMemberConversation:output_type -> career.v1.GetMemberConversationResponse
+	32,  // 170: career.v1.AdminService.GetCorpusStatus:output_type -> career.v1.GetCorpusStatusResponse
+	35,  // 171: career.v1.AdminService.TestRetrieval:output_type -> career.v1.TestRetrievalResponse
+	37,  // 172: career.v1.AdminService.RunJob:output_type -> career.v1.RunJobResponse
+	39,  // 173: career.v1.AdminService.GetJob:output_type -> career.v1.GetJobResponse
+	42,  // 174: career.v1.AdminService.GetPersona:output_type -> career.v1.GetPersonaResponse
+	48,  // 175: career.v1.AdminService.GetAnalytics:output_type -> career.v1.GetAnalyticsResponse
+	51,  // 176: career.v1.AdminService.GetAudit:output_type -> career.v1.GetAuditResponse
+	54,  // 177: career.v1.AdminService.ListContactMessages:output_type -> career.v1.ListContactMessagesResponse
+	56,  // 178: career.v1.AdminService.ResolveContactMessage:output_type -> career.v1.ResolveContactMessageResponse
+	58,  // 179: career.v1.AdminService.ApproveRegistration:output_type -> career.v1.ApproveRegistrationResponse
+	60,  // 180: career.v1.AdminService.DeclineRegistration:output_type -> career.v1.DeclineRegistrationResponse
+	62,  // 181: career.v1.AdminService.ExtendAccess:output_type -> career.v1.ExtendAccessResponse
+	66,  // 182: career.v1.AdminService.ListDbTables:output_type -> career.v1.ListDbTablesResponse
+	69,  // 183: career.v1.AdminService.RunDbQuery:output_type -> career.v1.RunDbQueryResponse
+	72,  // 184: career.v1.AdminService.ListAccessGrants:output_type -> career.v1.ListAccessGrantsResponse
+	74,  // 185: career.v1.AdminService.UpsertAccessGrant:output_type -> career.v1.UpsertAccessGrantResponse
+	76,  // 186: career.v1.AdminService.DeleteAccessGrant:output_type -> career.v1.DeleteAccessGrantResponse
+	79,  // 187: career.v1.AdminService.ListSavedQueries:output_type -> career.v1.ListSavedQueriesResponse
+	81,  // 188: career.v1.AdminService.UpsertSavedQuery:output_type -> career.v1.UpsertSavedQueryResponse
+	83,  // 189: career.v1.AdminService.DeleteSavedQuery:output_type -> career.v1.DeleteSavedQueryResponse
+	86,  // 190: career.v1.AdminService.ListMemberActivity:output_type -> career.v1.ListMemberActivityResponse
+	88,  // 191: career.v1.AdminService.IngestCorpusText:output_type -> career.v1.IngestCorpusTextResponse
+	91,  // 192: career.v1.AdminService.ListCorpusDocuments:output_type -> career.v1.ListCorpusDocumentsResponse
+	101, // 193: career.v1.AdminService.ReindexCorpus:output_type -> career.v1.ReindexCorpusResponse
+	94,  // 194: career.v1.AdminService.SweepCorpusEmbeddings:output_type -> career.v1.SweepCorpusEmbeddingsResponse
+	104, // 195: career.v1.AdminService.ListJdSubmissions:output_type -> career.v1.ListJdSubmissionsResponse
+	96,  // 196: career.v1.AdminService.GetJdSubmission:output_type -> career.v1.GetJdSubmissionResponse
+	99,  // 197: career.v1.AdminService.RescoreJd:output_type -> career.v1.RescoreJdResponse
+	107, // 198: career.v1.AdminService.ListDecisionLog:output_type -> career.v1.ListDecisionLogResponse
+	109, // 199: career.v1.AdminService.ReviewDecision:output_type -> career.v1.ReviewDecisionResponse
+	111, // 200: career.v1.AdminService.ExportDecisionLog:output_type -> career.v1.ExportDecisionLogResponse
+	113, // 201: career.v1.AdminService.GetJdFitBands:output_type -> career.v1.GetJdFitBandsResponse
+	115, // 202: career.v1.AdminService.SetJdFitBands:output_type -> career.v1.SetJdFitBandsResponse
+	161, // [161:203] is the sub-list for method output_type
+	119, // [119:161] is the sub-list for method input_type
+	119, // [119:119] is the sub-list for extension type_name
+	119, // [119:119] is the sub-list for extension extendee
+	0,   // [0:119] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_admin_proto_init() }
@@ -8915,14 +9273,15 @@ func file_career_v1_admin_proto_init() {
 	file_career_v1_contact_proto_init()
 	file_career_v1_jd_proto_init()
 	file_career_v1_options_proto_init()
-	file_career_v1_admin_proto_msgTypes[94].OneofWrappers = []any{}
+	file_career_v1_admin_proto_msgTypes[89].OneofWrappers = []any{}
+	file_career_v1_admin_proto_msgTypes[95].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_admin_proto_rawDesc), len(file_career_v1_admin_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   109,
+			NumMessages:   110,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

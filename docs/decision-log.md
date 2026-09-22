@@ -27,6 +27,14 @@ latency, and the submission it belongs to (`ref_kind = jd_submission`,
 
 Code decisions (`jd_gate`) have `model = code` and empty prompt text.
 
+Since 2026-09-22 every row also carries `run_id`, joining it to the
+pipeline run in `jd_runs` that produced it: the build, the judge model
+and its context size, the prompt fingerprints, and the corpus
+fingerprint. That is what makes two labelled decisions comparable. Two
+verdicts on the same requirement mean something different if one was
+judged against a corpus the other never saw, and before `jd_runs` there
+was no way to tell. Rows written before that date have a null `run_id`.
+
 Later kinds (`resume_item`, `chat_answer`) are planned to use the same
 table and the same review flow; nothing here is JD-specific except the
 input shape. Neither is written yet.

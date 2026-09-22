@@ -18,9 +18,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
+	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -52,6 +54,10 @@ type Scorer struct {
 	resume *ResumeWriter
 	// bands hold the fit categories; the "strong" edge is the gate.
 	bands *BandsStore
+	// host names where the model ran, recorded on every run so a change
+	// in latency or verdicts can be attributed to the machine rather
+	// than guessed at. One value today; the plan is for more.
+	host string
 	// events is the product event stream (jd.finished); nil is silent.
 	events *events.Writer
 	// slots serialises pipelines. On the CPX31 two concurrent JDs made
@@ -196,7 +202,66 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 // left at `scoring` forever (which is what happened on prod on
 // 2026-09-22 when a submission queued for 28 minutes behind another).
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, "submit", 0)
+}
+
+// RescoreAndPersist is ScoreAndPersist for an admin re-run. The only
+// difference is what the run record says about why it happened and who
+// asked, which is exactly the sort of thing that is impossible to
+// reconstruct later if it is not written down at the time.
+func (s *Scorer) RescoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, adminID int64) {
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, "rescore", adminID)
+}
+
+func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, trigger string, adminID int64) {
 	persist := context.WithoutCancel(ctx)
+
+	// The run record (data layer D2). A re-score overwrites the
+	// submission row, so without this the evidence of what the previous
+	// run did, and of what produced it, is gone. Opened before the queue
+	// wait so queue time is recorded even when the run never gets a slot.
+	run := users.JdRun{
+		RunID:        runid.New(),
+		SubmissionID: submissionID,
+		Trigger:      trigger,
+		TriggeredBy:  adminID,
+		AppCommit:    build.Commit,
+		ScoreFormula: ScoreFormula,
+		Prompts:      prompts.Fingerprints(),
+		NumCtx:       s.assessor.NumCtx(),
+		Host:         s.host,
+	}
+	if fp, docs, chunks, embedder, err := s.users.CorpusFingerprint(persist); err != nil {
+		s.log.Warn("jd: corpus fingerprint failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+	} else {
+		run.CorpusFingerprint, run.CorpusDocuments, run.CorpusChunks, run.EmbedderModel = fp, docs, chunks, embedder
+	}
+	runOpen := false
+	if attempt, err := s.users.StartJdRun(persist, run); err != nil {
+		// A missing run record must not cost the submitter their review,
+		// so the pipeline continues without one and says so loudly.
+		s.log.Error("jd: could not open a run record", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+	} else {
+		run.Attempt = attempt
+		runOpen = true
+		ctx = runid.With(ctx, run.RunID)
+		persist = runid.With(persist, run.RunID)
+	}
+	runStarted := time.Now()
+	// Filled in as the run progresses; whatever is set when the function
+	// returns is what the record keeps.
+	outcome := &users.JdRun{RunID: run.RunID, Status: "failed", ScoreFormula: ScoreFormula}
+	defer func() {
+		if !runOpen {
+			return
+		}
+		outcome.DurationMs = time.Since(runStarted).Milliseconds()
+		if err := s.users.FinishJdRun(persist, *outcome); err != nil {
+			s.log.Warn("jd: could not close the run record",
+				slog.Int64("id", submissionID), slog.String("run", run.RunID), slog.String("error", err.Error()))
+		}
+	}()
+
 	// Whatever path the run takes, the owner hears about the outcome,
 	// and the progress column reads 100 once the row is terminal.
 	defer s.notifyOutcome(persist, submissionID)
@@ -212,12 +277,19 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	_ = s.users.UpdateJdProgress(persist, submissionID, 1, "queued behind another review")
 	if !s.acquire(ctx) {
 		s.log.Warn("jd: gave up waiting for a pipeline slot", slog.Int64("id", submissionID))
+		outcome.QueuedMs = time.Since(queued).Milliseconds()
+		outcome.Error = "timed out waiting for the pipeline"
 		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", nil, "timed out waiting for the pipeline; re-score to retry"); uErr != nil {
 			s.log.Warn("jd: failed to record queue timeout", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
 	}
 	defer s.release()
+	// Queue time is recorded apart from work time. They answer different
+	// questions: one says the box is busy, the other says the pipeline is
+	// slow, and a single duration hides which.
+	outcome.QueuedMs = time.Since(queued).Milliseconds()
+	runStarted = time.Now()
 	if waited := time.Since(queued); waited > time.Second {
 		s.log.Info("jd: pipeline slot acquired", slog.Int64("id", submissionID), slog.Duration("waited", waited))
 	}
@@ -244,13 +316,17 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 	if err != nil {
 		s.log.Warn("jd: score failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		outcome.Error = "retrieval: " + truncErr(err.Error())
 		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", nil, truncErr(err.Error())); uErr != nil {
 			s.log.Warn("jd: failed to record failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
 		return
 	}
+	outcome.RetrievalScore = &retrieval
 	if len(hits) == 0 {
 		s.log.Info("jd: no corpus hits", slog.Int64("id", submissionID))
+		outcome.Status = "below_threshold"
+		outcome.Error = "corpus is empty"
 		_ = s.users.UpdateJdScoring(persist, submissionID, "below_threshold", &retrieval,
 			"corpus is empty: no chunks available to score against")
 		return
@@ -276,6 +352,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 			// runs it again once the cause (usually the model host) is
 			// fixed. See docs/llm-tuning-log.md, 2026-09-22.
 			s.log.Warn("jd: assessment failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			outcome.Error = "assessment: " + truncErr(err.Error())
 			assessment = &Assessment{Error: truncErr(err.Error())}
 			if raw, mErr := json.Marshal(assessment); mErr == nil {
 				if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, raw); uErr != nil {
@@ -288,6 +365,18 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 			return
 		} else {
 			score = assessment.Score
+			outcome.Model = assessment.Model
+			outcome.RequirementCount = len(assessment.Requirements)
+			for _, v := range assessment.Judgments {
+				switch v.Verdict {
+				case "met":
+					outcome.MetCount++
+				case "partial":
+					outcome.PartialCount++
+				case "unmet":
+					outcome.UnmetCount++
+				}
+			}
 			s.log.Info("jd: assessed",
 				slog.Int64("id", submissionID),
 				slog.Int("requirements", len(assessment.Requirements)),
@@ -306,9 +395,15 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 
 	next := "below_threshold"
-	if score >= s.Threshold() {
+	threshold := s.Threshold()
+	if score >= threshold {
 		next = "generating"
 	}
+	outcome.MatchScore = &score
+	outcome.Threshold = &threshold
+	outcome.Fit = s.Bands(ctx).Category(score)
+	// Terminal unless the résumé stage runs and changes it.
+	outcome.Status = next
 	s.logGate(ctx, submissionID, score, retrieval, assessment, next)
 	if err := s.users.UpdateJdScoring(persist, submissionID, next, &score, ""); err != nil {
 		s.log.Warn("jd: failed to record score",
@@ -339,6 +434,8 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	res, markdown, err := s.resume.Write(ctx, submissionID, jdText, hints, usable, hits)
 	if err != nil {
 		s.log.Warn("jd: résumé failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		outcome.Status = "failed"
+		outcome.Error = "résumé: " + truncErr(err.Error())
 		if uErr := s.users.UpdateJdScoring(persist, submissionID, "failed", &score, "résumé generation failed: "+truncErr(err.Error())); uErr != nil {
 			s.log.Warn("jd: failed to record résumé failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 		}
@@ -347,8 +444,13 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	raw, _ := json.Marshal(res)
 	if err := s.users.SetJdResume(persist, submissionID, raw, markdown, res.Model, res.PromptID, res.PromptVers); err != nil {
 		s.log.Warn("jd: failed to store résumé", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+		outcome.Error = "storing the résumé: " + truncErr(err.Error())
 		return
 	}
+	// The submission reaches `ready` when SetJdResume lands; the run
+	// agrees from here, whatever the optional PDF stage does.
+	outcome.Status = "ready"
+	outcome.ResumeGenerated = true
 	s.log.Info("jd: résumé ready",
 		slog.Int64("id", submissionID),
 		slog.String("model", res.Model),

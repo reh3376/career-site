@@ -726,3 +726,50 @@ development salt.
 `gallery.*`, `repo.click`, `jd.poll_abandoned`) are in the registry but
 not yet emitted; `ActivityService.RecordEvents` still writes the old
 table and should be retired; an admin analytics surface is D5.
+
+## 2026-09-22: run telemetry (data layer D2)
+
+The reviewer could not answer its most important question. A re-score
+overwrites `jd_submissions`: the score, the assessment, the status and
+the résumé are all replaced. So after changing a prompt, a model, or the
+corpus, there was no way to say whether the change helped, because the
+thing it would be compared against had been destroyed by the comparison
+itself.
+
+**What shipped.** `jd_runs`, one immutable row per pipeline run
+(migration 00025). It records what produced the verdict and what the
+verdict was:
+
+- build, host, judge model, context window, embedder model
+- prompt fingerprints, which are the version plus a short hash of the
+  system text and schema. The version alone is a promise; an edit
+  without a version bump is an easy mistake and an invisible one, and
+  it would make two runs look comparable when they are not
+- corpus fingerprint, a hash over the documents' content hashes, with
+  document and chunk counts
+- the score formula, retrieval score, match score, threshold, fit band,
+  requirement count and the met / partial / unmet split
+- queue time and work time separately, because one says the box is busy
+  and the other says the pipeline is slow
+
+`run_id` rides the request context, the way the tenant does, so every
+`llm_usage` and `decision_log` row written anywhere in the fan-out is
+tied back to its run without threading a parameter through a dozen
+signatures. Token counts and cost are deliberately not copied onto the
+run; they live in `llm_usage` and are summed by `run_id`, because a
+second copy is a second source of truth that drifts.
+
+A re-score now opens attempt two and records the admin who asked for
+it. `/admin/jd/[id]` lists the history, so the superseded verdict is
+readable beside the one that replaced it.
+
+**Verified locally.** Two attempts on one submission, both preserved
+with their own provenance; the gate decision row carried the run id;
+the run closed with its outcome and timings. A run left open by a
+process that died is closed at boot, beside the existing stranded
+submission reconciliation.
+
+**What this unlocks.** D4, the golden set, becomes possible: re-score a
+fixed set of postings, compare runs by fingerprint, and state whether a
+prompt change moved the score because of the prompt or because
+something else moved underneath it.

@@ -92,11 +92,18 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   - After the deploy, run the funnel query in the events README on
     prod and confirm rows arrive from a real phone (device class,
     referrer host, utm).
-- **D2 `jd_runs`.** One row per pipeline run with `run_id`, model,
-  prompt hashes, corpus fingerprint, timings and outcome; `run_id` on
-  `llm_usage` and `decision_log` so a score can be traced to exactly
-  what produced it. Rescore then makes a new run, not an overwrite.
-  Carries `tenant_id` from birth, like every table after ADR 0029.
+- **D2 `jd_runs`. SHIPPED 2026-09-22.** One immutable row per pipeline
+  run: build, host, model, context size, prompt fingerprints (version
+  plus a hash of the text, so an unversioned edit is still visible),
+  corpus fingerprint with counts, queue and work time apart, and the
+  outcome with its verdict counts. `run_id` rides the context onto every
+  `llm_usage` and `decision_log` row. A re-score opens attempt two
+  instead of overwriting attempt one, and records who asked. The admin
+  JD page shows the history, so a superseded verdict can be compared
+  with the one that replaced it.
+  **Left over:** the old submissions have no runs, which the page says
+  plainly rather than hiding. Chat will need its own run kind when it
+  lands; the column is nullable for that reason.
 - **D3 feedback and outcomes.** Submitter thumbs on a result, owner
   outcome on a submission (interview, offer, no reply), and the
   `admin.decision_reviewed` labels, all joined by `run_id`.

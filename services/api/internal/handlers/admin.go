@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -1256,7 +1257,62 @@ func (a *Admin) GetJdSubmission(
 	if s.GeneratedResumeURL != "" && len(s.ResultToken) > 0 {
 		out.DownloadUrl = s.GeneratedResumeURL + "?t=" + hex.EncodeToString(s.ResultToken)
 	}
+	// The run history. Best-effort: the page is still useful without it,
+	// and a submission from before the run table existed simply has none.
+	if runs, rErr := a.users.ListJdRuns(ctx, id); rErr != nil {
+		a.log.Warn("admin: could not read run history", slog.Int64("id", id), slog.String("error", rErr.Error()))
+	} else {
+		out.Runs = jdRunsToProto(runs)
+	}
 	return connect.NewResponse(out), nil
+}
+
+// jdRunsToProto maps run rows for the admin JD page.
+func jdRunsToProto(runs []users.JdRun) []*v1.JdRun {
+	out := make([]*v1.JdRun, 0, len(runs))
+	for _, r := range runs {
+		promptsJSON := "{}"
+		if len(r.Prompts) > 0 {
+			if b, err := json.Marshal(r.Prompts); err == nil {
+				promptsJSON = string(b)
+			}
+		}
+		pr := &v1.JdRun{
+			RunId:             r.RunID,
+			Attempt:           int32(r.Attempt),
+			Trigger:           r.Trigger,
+			TriggeredBy:       r.TriggeredBy,
+			Status:            r.Status,
+			Error:             r.Error,
+			AppCommit:         r.AppCommit,
+			Host:              r.Host,
+			Model:             r.Model,
+			NumCtx:            int32(r.NumCtx),
+			EmbedderModel:     r.EmbedderModel,
+			PromptsJson:       promptsJSON,
+			CorpusFingerprint: r.CorpusFingerprint,
+			CorpusDocuments:   int32(r.CorpusDocuments),
+			CorpusChunks:      int32(r.CorpusChunks),
+			ScoreFormula:      r.ScoreFormula,
+			RetrievalScore:    r.RetrievalScore,
+			MatchScore:        r.MatchScore,
+			Threshold:         r.Threshold,
+			Fit:               r.Fit,
+			RequirementCount:  int32(r.RequirementCount),
+			MetCount:          int32(r.MetCount),
+			PartialCount:      int32(r.PartialCount),
+			UnmetCount:        int32(r.UnmetCount),
+			ResumeGenerated:   r.ResumeGenerated,
+			QueuedMs:          r.QueuedMs,
+			DurationMs:        r.DurationMs,
+			StartedAt:         timestamppb.New(r.StartedAt),
+		}
+		if r.FinishedAt != nil {
+			pr.FinishedAt = timestamppb.New(*r.FinishedAt)
+		}
+		out = append(out, pr)
+	}
+	return out
 }
 
 // ---------------------------------------------------------------
@@ -1293,9 +1349,9 @@ func (a *Admin) RescoreJd(
 	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
 	// No deadline here: the scorer caps the queue wait and applies the
 	// pipeline timeout once the submission holds its slot.
-	go func(id int64, text string) {
-		a.jdScorer.ScoreAndPersist(context.Background(), id, text, hints)
-	}(id, s.JdText)
+	go func(id int64, text string, adminID int64) {
+		a.jdScorer.RescoreAndPersist(context.Background(), id, text, hints, adminID)
+	}(id, s.JdText, admin.ID)
 	return connect.NewResponse(&v1.RescoreJdResponse{Status: v1.JdStatus_JD_STATUS_SCORING}), nil
 }
 

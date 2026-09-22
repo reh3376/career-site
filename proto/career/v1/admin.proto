@@ -1542,6 +1542,75 @@ message GetJdSubmissionResponse {
   // result token, when a PDF was rendered; empty otherwise. Admin-only
   // by virtue of this RPC's auth level.
   string download_url = 8;
+  // Every pipeline run for this submission, newest attempt first. The
+  // fields above reflect only the most recent run, because a re-score
+  // overwrites them; these rows survive it, so a superseded verdict can
+  // still be read and compared with the one that replaced it.
+  repeated JdRun runs = 9;
+}
+
+// One pipeline run: what produced a verdict and what it decided
+// (data layer D2, table `jd_runs`).
+message JdRun {
+  // Stable run identifier; `llm_usage` and `decision_log` rows carry it.
+  string run_id = 1;
+  // 1 for the first run, 2 for the first re-score, and so on.
+  int32 attempt = 2;
+  // `submit` or `rescore`.
+  string trigger = 3;
+  // Admin who triggered a re-score; 0 for a submission.
+  int64 triggered_by = 4;
+  // running | ready | below_threshold | failed.
+  string status = 5;
+  // Why it failed, empty otherwise.
+  string error = 6;
+  // Build the api was running.
+  string app_commit = 7;
+  // Where the model ran.
+  string host = 8;
+  // Judge model as the gateway reported it.
+  string model = 9;
+  // Context window the sidecar was asked for.
+  int32 num_ctx = 10;
+  // Embedding model the corpus chunks were built with.
+  string embedder_model = 11;
+  // Prompt id to "version:hash" as JSON, so an edited prompt is visible
+  // even when its version did not change.
+  string prompts_json = 12;
+  // Hash over the corpus documents this run could retrieve from.
+  string corpus_fingerprint = 13;
+  // Documents in the corpus at run time.
+  int32 corpus_documents = 14;
+  // Chunks in the corpus at run time.
+  int32 corpus_chunks = 15;
+  // Name of the arithmetic that produced the score.
+  string score_formula = 16;
+  // Mean top-K cosine, the cheap pre-score.
+  optional double retrieval_score = 17;
+  // Requirement-weighted score, the one the gate reads.
+  optional double match_score = 18;
+  // Gate in force for this run.
+  optional double threshold = 19;
+  // Fit band the score fell in.
+  string fit = 20;
+  // Requirements the posting was broken into.
+  int32 requirement_count = 21;
+  // Requirements judged met.
+  int32 met_count = 22;
+  // Requirements judged partly met.
+  int32 partial_count = 23;
+  // Requirements judged unmet.
+  int32 unmet_count = 24;
+  // Whether this run produced a tailored résumé.
+  bool resume_generated = 25;
+  // Time spent waiting for a pipeline slot.
+  int64 queued_ms = 26;
+  // Time spent working, once it held the slot.
+  int64 duration_ms = 27;
+  // When the run opened.
+  google.protobuf.Timestamp started_at = 28;
+  // When the run closed; unset while it is still running.
+  google.protobuf.Timestamp finished_at = 29;
 }
 
 // Rescore-jd request.

@@ -30,6 +30,9 @@ func (s *Scorer) SetNotifier(n OutcomeNotifier) { s.notifier = n }
 // SetEvents installs the product event writer; nil is silent.
 func (s *Scorer) SetEvents(w *events.Writer) { s.events = w }
 
+// SetHost names where the model runs, for the run record.
+func (s *Scorer) SetHost(h string) { s.host = h }
+
 // notifyOutcome runs after ScoreAndPersist, whatever path it took. It
 // reads the row back so the mail and the jd.finished event reflect
 // exactly what was stored.
