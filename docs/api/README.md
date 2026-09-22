@@ -3088,6 +3088,7 @@ on the actual scoring / generation — those run out of band.
 | `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
 | `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
 | `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+| `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
 
 **Response** — [`SubmitJdResponse`](#submitjdresponse)
 
@@ -3106,7 +3107,8 @@ on the actual scoring / generation — those run out of band.
   "source": "JD_SOURCE_PASTE",
   "roleHint": "string",
   "employerHint": "string",
-  "contactEmail": "string"
+  "contactEmail": "string",
+  "applyUrl": "string"
 }
 ```
 
@@ -4143,6 +4145,7 @@ is expected — the handler surfaces InvalidArgument otherwise.
 | `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the visitor is considering Roger for. Free-form; used for admin triage and to steer the tailored résumé prompt when scoring lands. |
 | `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid as role_hint. |
 | `contactEmail` | `string` | string | `string: max_len: 254` | Optional email so the visitor can be notified when the résumé is ready without keeping the tab open. Never surfaced publicly. |
+| `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
 
 ### SubmitJdResponse
 
@@ -5193,6 +5196,7 @@ One row of the /admin/jd triage table.
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state was reached; unset while in-flight. |
 | `retrievalScore` | `double` | number |  | _(oneof `_retrieval_score`)_ Retrieval pre-score (mean top-K cosine); unset before scoring. match_score is the requirement-weighted gate when the assessor ran. |
 | `submitterEmail` | `string` | string |  | Email of the signed-in member who submitted; empty for rows created before JD upload became members-only. |
+| `applyUrl` | `string` | string |  | Optional link to apply for the position, as given by the submitter. |
 
 ### ListJdSubmissionsResponse
 

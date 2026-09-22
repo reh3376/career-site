@@ -20,6 +20,7 @@ type JdSubmission struct {
 	RoleHint           string
 	EmployerHint       string
 	ContactEmail       string
+	ApplyURL           string
 	Status             string
 	MatchScore         *float64
 	GeneratedResumeURL string
@@ -57,6 +58,7 @@ type JdSubmitInput struct {
 	RoleHint     string
 	EmployerHint string
 	ContactEmail string
+	ApplyURL     string
 	IPHash       []byte
 	UAHash       []byte
 	UserID       int64 // submitting member; required
@@ -109,8 +111,8 @@ func (r *Repo) CreateJdSubmission(
 	const q = `
     INSERT INTO jd_submissions (
       ip_hash, ua_hash, source_kind, jd_text, jd_hash, text_head,
-      role_hint, employer_hint, contact_email, result_token, user_id
-    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11, 0))
+      role_hint, employer_hint, contact_email, result_token, user_id, apply_url
+    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11, 0), NULLIF($12,''))
     RETURNING id, created_at, status
   `
 	s := &JdSubmission{
@@ -121,12 +123,13 @@ func (r *Repo) CreateJdSubmission(
 		RoleHint:     in.RoleHint,
 		EmployerHint: in.EmployerHint,
 		ContactEmail: in.ContactEmail,
+		ApplyURL:     in.ApplyURL,
 		ResultToken:  token,
 		UserID:       in.UserID,
 	}
 	err := r.pool.QueryRow(ctx, q,
 		in.IPHash, in.UAHash, in.SourceKind, in.JdText, hash, head,
-		in.RoleHint, in.EmployerHint, in.ContactEmail, token, in.UserID,
+		in.RoleHint, in.EmployerHint, in.ContactEmail, token, in.UserID, in.ApplyURL,
 	).Scan(&s.ID, &s.CreatedAt, &s.Status)
 	if err != nil {
 		return nil, fmt.Errorf("insert jd submission: %w", err)
@@ -137,6 +140,7 @@ func (r *Repo) CreateJdSubmission(
 const jdCols = `
     s.id, s.source_kind, s.jd_text, s.jd_hash, s.text_head,
     COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''), COALESCE(s.contact_email, ''),
+    COALESCE(s.apply_url, ''),
     s.status, s.match_score, COALESCE(s.generated_resume_url, ''), COALESCE(s.error, ''),
     s.created_at, s.completed_at,
     s.result_token, COALESCE(s.resume_markdown, ''), COALESCE(s.llm_model, ''),
@@ -256,7 +260,7 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 	const q = `
     SELECT s.id, s.source_kind, ''::text /* jd_text elided */, s.jd_hash, s.text_head,
            COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''),
-           COALESCE(s.contact_email, ''),
+           COALESCE(s.contact_email, ''), COALESCE(s.apply_url, ''),
            s.status, s.match_score, COALESCE(s.generated_resume_url, ''),
            COALESCE(s.error, ''),
            s.created_at, s.completed_at,
@@ -278,7 +282,7 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 		var s JdSubmission
 		if err := rows.Scan(
 			&s.ID, &s.SourceKind, &s.JdText, &s.JdHash, &s.TextHead,
-			&s.RoleHint, &s.EmployerHint, &s.ContactEmail,
+			&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL,
 			&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 			&s.CreatedAt, &s.CompletedAt,
 			&s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
@@ -298,7 +302,7 @@ func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, er
 		`SELECT `+jdCols+` FROM jd_submissions s LEFT JOIN users u ON u.id = s.user_id WHERE s.id = $1`, id,
 	).Scan(
 		&s.ID, &s.SourceKind, &s.JdText, &s.JdHash, &s.TextHead,
-		&s.RoleHint, &s.EmployerHint, &s.ContactEmail,
+		&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL,
 		&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 		&s.CreatedAt, &s.CompletedAt,
 		&s.ResultToken, &s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,

@@ -115,6 +115,25 @@ export function JdForm({ threshold }: { threshold: string }) {
       </div>
 
       <div>
+        <label htmlFor="apply_url" className={labelClass}>
+          Link to apply (optional)
+        </label>
+        <input
+          id="apply_url"
+          name="apply_url"
+          type="url"
+          inputMode="url"
+          defaultValue={v.applyUrl ?? ""}
+          placeholder="https://careers.example.com/jobs/12345"
+          maxLength={2048}
+          className={fieldInputClass}
+        />
+        <p className="mt-2 text-xs text-ink-3">
+          The posting&rsquo;s application page, so Roger can apply directly if the fit is right.
+        </p>
+      </div>
+
+      <div>
         <label htmlFor="contact_email" className={labelClass}>
           Your email (optional)
         </label>

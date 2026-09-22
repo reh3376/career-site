@@ -181,7 +181,10 @@ type SubmitJdRequest struct {
 	EmployerHint string `protobuf:"bytes,4,opt,name=employer_hint,json=employerHint,proto3" json:"employer_hint,omitempty"`
 	// Optional email so the visitor can be notified when the résumé
 	// is ready without keeping the tab open. Never surfaced publicly.
-	ContactEmail  string `protobuf:"bytes,5,opt,name=contact_email,json=contactEmail,proto3" json:"contact_email,omitempty"`
+	ContactEmail string `protobuf:"bytes,5,opt,name=contact_email,json=contactEmail,proto3" json:"contact_email,omitempty"`
+	// Optional link to apply for the position (http or https). Shown
+	// to Roger in the admin triage view; never surfaced publicly.
+	ApplyUrl      string `protobuf:"bytes,6,opt,name=apply_url,json=applyUrl,proto3" json:"apply_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,6 +250,13 @@ func (x *SubmitJdRequest) GetEmployerHint() string {
 func (x *SubmitJdRequest) GetContactEmail() string {
 	if x != nil {
 		return x.ContactEmail
+	}
+	return ""
+}
+
+func (x *SubmitJdRequest) GetApplyUrl() string {
+	if x != nil {
+		return x.ApplyUrl
 	}
 	return ""
 }
@@ -631,14 +641,15 @@ var File_career_v1_jd_proto protoreflect.FileDescriptor
 
 const file_career_v1_jd_proto_rawDesc = "" +
 	"\n" +
-	"\x12career/v1/jd.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17career/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf3\x01\n" +
+	"\x12career/v1/jd.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17career/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9a\x02\n" +
 	"\x0fSubmitJdRequest\x12\"\n" +
 	"\ajd_text\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x18І\x03R\x06jdText\x127\n" +
 	"\x06source\x18\x02 \x01(\x0e2\x13.career.v1.JdSourceB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06source\x12%\n" +
 	"\trole_hint\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\broleHint\x12-\n" +
 	"\remployer_hint\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\femployerHint\x12-\n" +
-	"\rcontact_email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\fcontactEmail\"\xa1\x01\n" +
+	"\rcontact_email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\fcontactEmail\x12%\n" +
+	"\tapply_url\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\bapplyUrl\"\xa1\x01\n" +
 	"\x10SubmitJdResponse\x12#\n" +
 	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12\x18\n" +
