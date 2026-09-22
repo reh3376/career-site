@@ -4,8 +4,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import { IngestForm } from "./ingest-form";
-import { ReindexPanel } from "./reindex-panel";
-import { SweepPanel } from "./sweep-panel";
+import { JobPanel } from "./job-panel";
 
 export const metadata: Metadata = { title: "Admin · Corpus" };
 export const dynamic = "force-dynamic";
@@ -123,21 +122,12 @@ export default async function AdminCorpusPage() {
         </dl>
       )}
 
-      <section aria-label="Reindex from filesystem" className="mt-10">
+      <section aria-label="Corpus jobs" className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          reindex from filesystem
+          reindex and embed
         </p>
         <div className="mt-3">
-          <ReindexPanel />
-        </div>
-      </section>
-
-      <section aria-label="Embed sweep" className="mt-10">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          embeddings
-        </p>
-        <div className="mt-3">
-          <SweepPanel
+          <JobPanel
             embedderCounts={(
               (result.ok
                 ? (result.data.embedder_counts ?? result.data.embedderCounts)

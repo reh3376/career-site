@@ -2031,6 +2031,7 @@ Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `kind` | [`JobKind`](#jobkind) | string (enum name) | `enum: defined_only: true not_in: 0` | Which job. |
+| `sourceKind` | `string` | string | `string: max_len: 40` | For the corpus reindex jobs: restrict the walk to one source_kind; empty walks every kind. |
 
 **Response** — [`RunJobResponse`](#runjobresponse)
 
@@ -2042,7 +2043,8 @@ Starts a sidecar job (re-ingest, content index, résumé build, evaluation).
 
 ```json
 {
-  "kind": "JOB_KIND_CONTENT_VALIDATE"
+  "kind": "JOB_KIND_CONTENT_VALIDATE",
+  "sourceKind": "string"
 }
 ```
 
@@ -4553,6 +4555,7 @@ Job start request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `kind` | [`JobKind`](#jobkind) | string (enum name) | `enum: defined_only: true not_in: 0` | Which job. |
+| `sourceKind` | `string` | string | `string: max_len: 40` | For the corpus reindex jobs: restrict the walk to one source_kind; empty walks every kind. |
 
 ### RunJobResponse
 
@@ -6475,6 +6478,9 @@ Sidecar jobs the owner can start.
 | `JOB_KIND_RESUME_BUILD` | 5 | Rebuild résumé PDFs from structured content. |
 | `JOB_KIND_EVAL_QUICK` | 6 | Run the UVTS retrieval evaluation (quick profile). |
 | `JOB_KIND_GITHUB_SYNC` | 7 | Refresh GitHub repository metadata. |
+| `JOB_KIND_CORPUS_REINDEX_PUBLIC` | 8 | Walk the public content mount into the corpus (api-side job). |
+| `JOB_KIND_CORPUS_REINDEX_PRIVATE` | 9 | Walk the private corpus mount into the corpus (api-side job). |
+| `JOB_KIND_EMBED_SWEEP` | 10 | Re-embed every stale chunk until none remain (api-side job). |
 
 ### JobStatus
 

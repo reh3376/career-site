@@ -12,17 +12,20 @@ truth for the LLM rollout.
 | Layer | Local (owner's Mac) | Production (CPX31, 4 vCPU / 8 GB, since 2026-09-21) |
 |---|---|---|
 | Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container, `SIDECAR_EMBED_PROVIDER=ollama`, corpus fully on `ollama:nomic-embed-text#p1` (Phase A done 2026-09-21) |
-| LLM gateway | Ollama on the host, `qwen3:14b` (`SIDECAR_LLM_PROVIDER=ollama`) | **`stub`** (schema-valid placeholder JSON; api keeps the retrieval score as the gate) |
-| Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus` |
-| JD scoring | requirements → per-requirement retrieval → verdicts → weighted score in code | real cosine retrieval pre-score (assessor disabled on stub); above-threshold rows park at `generating` |
-| Résumé | JSON with source ids, code-side verification, markdown render, Typst PDF locked with `RESUME_PDF_OWNER_PASSWORD` | not generated; above-threshold rows wait at `generating` |
-| Adapter | LoRA experiments on the Mac (`reh3376/mdemg-llm-*` in local Ollama) | none |
+| LLM gateway | Ollama on the host, `qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192` | **live since 2026-09-22**: the box's `ollama`, `qwen3:4b-q8_0`, 8k context, `OLLAMA_MAX_LOADED_MODELS=1`, flash attention, q8 KV cache, `OLLAMA_MEM_LIMIT=7g` |
+| Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus`; includes the career facts sheet (`profile`) |
+| JD scoring | requirements v2 → per-requirement retrieval + facts sheet → one judge call per requirement → score formula v2 in code | same code; `JD_MATCH_THRESHOLD=0.70`; one pipeline at a time; 15 to 30 minutes per JD on the CPU |
+| Résumé | JSON with source ids, code-side verification, markdown render, Typst PDF locked with `RESUME_PDF_OWNER_PASSWORD` | same; the résumé call is ~13 minutes of generation on the box |
+| Adapter | not started; the decision log (`/admin/decisions`) is collecting the labelled set | none |
 
 The api decides at boot whether to run the structured assessor: it calls the
 sidecar's `Health` and enables the assessor only when `llm_provider` is not
 `stub` (or `LLM_ALLOW_STUB=1`). Flipping `SIDECAR_LLM_PROVIDER` on the
 sidecar and restarting both containers is therefore the whole switch on the
-application side.
+application side. With the assessor wired, an assessment failure marks the
+submission `failed` (Re-score reruns it); the retrieval pre-score is never
+used as a gate. The dated record of every measurement and decision behind
+the current settings is `docs/llm-tuning-log.md`.
 
 ## 2. Principles the rollout must keep
 
@@ -54,21 +57,17 @@ that work, and both are in place:
    costs nothing in total tokens and makes the verdicts independent of
    the context size; the reasoning and the measurements are in
    `docs/llm-tuning-log.md`. Expect ~10 minutes per JD on this CPU.
-2. **The LLM host can be elsewhere at no cost.** `OLLAMA_LLM_URL` lets the
-   sidecar send LLM calls to a different Ollama than the embedder. With a
-   Tailscale link between the CPX31 and the owner's Mac, `qwen3:14b` runs
-   on the Mac's GPU at the measured quality (0.79 / 0.36 / 0.00 / 0.00 on
-   the calibration set) while embeddings stay on the box. Starlink's CGNAT
-   is irrelevant: tailnet traffic is outbound from both ends. If the Mac
-   is off, the assessor errors and the pipeline falls back to the
-   retrieval pre-score, which is the documented degraded mode.
+2. **The model is `qwen3:4b-q8_0` (owner's decision, 2026-09-22).** The
+   8b OOM-killed the box at 8k context; the 14b never fit and is dropped
+   from all measurement. With the career facts sheet in every judge call
+   the 4b reads the owner's record closer to his own assessment than the
+   14b did. `OLLAMA_LLM_URL` still allows a different Ollama host for the
+   LLM than for the embedder if that is ever wanted at no cost.
 
 | Workload | Model | Where | Memory | Notes |
 |---|---|---|---|---|
-| Embeddings | `nomic-embed-text` | CPX31 `ollama` | ~0.6 GB loaded | done (Phase A) |
-| Assess + résumé | `qwen3:8b` at 8k ctx | CPX31 `ollama` | ~6.4 GB | fits; 2-3 judgment batches; ~10 min per JD |
-| Assess + résumé | `qwen3:4b` at 16k ctx | CPX31 `ollama` | ~5 GB | fallback if 8b is too tight; lower quality |
-| Assess + résumé | `qwen3:14b` at 16k ctx | owner's Mac via Tailscale | Mac RAM | best quality; needs the Mac on |
+| Embeddings | `nomic-embed-text` | CPX31 `ollama` | ~0.6 GB loaded | done (Phase A); unloads while the LLM runs (`OLLAMA_MAX_LOADED_MODELS=1`) |
+| Assess + résumé | `qwen3:4b-q8_0` at 8k ctx | CPX31 `ollama` | ~5.5 GB peak | live; judge calls ~100 to 135 s each, résumé ~13 min |
 
 ### Historical sizing note
 
@@ -81,14 +80,13 @@ that work, and both are in place:
 
 CPU inference of a 14B model on 4 or 8 shared vCPUs runs at a few tokens per
 second. The JD pipeline is asynchronous and bounded by
-`JD_PIPELINE_TIMEOUT_SECONDS` (1200 s in prod), so a slow answer is
+`JD_PIPELINE_TIMEOUT_SECONDS` (3600 s in prod, counted from the moment a
+submission holds its pipeline slot, not from submit), so a slow answer is
 acceptable; a timed-out one is recorded as `failed` with the error visible in
 `/admin/jd`. Budget roughly: one requirements call, one judge call per
-requirement (6 to 14, ~1.2k prompt tokens each) and one résumé call
-(~1.4k output tokens) per above-threshold JD.
-
-Production stays on `stub` for the LLM until the log records a passing
-run at 8k with the chosen backend; embeddings are already on `ollama`.
+requirement (6 to 14, ~2.4k prompt tokens each with the facts sheet, of
+which ~1.1k are served from Ollama's prompt cache) and one résumé call
+(~1.6k output tokens) per above-threshold JD.
 
 ## 4. Order of operations
 
@@ -99,9 +97,10 @@ run at 8k with the chosen backend; embeddings are already on `ollama`.
 2. `cs up -d ollama sidecar api`; wait for the model pull in `cs logs -f ollama`.
 3. `/admin/corpus`: **Reindex public content**, **Reindex private corpus**
    (after `make sync-corpus`), then **Embed sweep** until `remaining` is 0.
-   On the CPX31 CPU the private reindex took ~150 s and outran the proxy /
-   api write timeout (the server still finished); use small sweep batches
-   (`maxChunks` 16) until the async-job follow-up lands.
+   Reindex and sweep run as api-side jobs since PR 88 (`RunJob` /
+   `GetJob`; the corpus page starts one and polls it), so a 150 s
+   private reindex or a full sweep no longer outruns the proxy: click
+   once, watch the progress line, leave the page if you like.
 4. `deploy/live-check.sh --submit` confirms a real `retrieval_score`
    (0.701 for the labelled strong JD on the first run).
 

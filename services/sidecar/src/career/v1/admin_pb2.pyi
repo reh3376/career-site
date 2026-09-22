@@ -42,6 +42,9 @@ class JobKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     JOB_KIND_RESUME_BUILD: _ClassVar[JobKind]
     JOB_KIND_EVAL_QUICK: _ClassVar[JobKind]
     JOB_KIND_GITHUB_SYNC: _ClassVar[JobKind]
+    JOB_KIND_CORPUS_REINDEX_PUBLIC: _ClassVar[JobKind]
+    JOB_KIND_CORPUS_REINDEX_PRIVATE: _ClassVar[JobKind]
+    JOB_KIND_EMBED_SWEEP: _ClassVar[JobKind]
 
 class JobStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -91,6 +94,9 @@ JOB_KIND_INGEST_FULL: JobKind
 JOB_KIND_RESUME_BUILD: JobKind
 JOB_KIND_EVAL_QUICK: JobKind
 JOB_KIND_GITHUB_SYNC: JobKind
+JOB_KIND_CORPUS_REINDEX_PUBLIC: JobKind
+JOB_KIND_CORPUS_REINDEX_PRIVATE: JobKind
+JOB_KIND_EMBED_SWEEP: JobKind
 JOB_STATUS_UNSPECIFIED: JobStatus
 JOB_STATUS_QUEUED: JobStatus
 JOB_STATUS_RUNNING: JobStatus
@@ -431,10 +437,12 @@ class TestRetrievalResponse(_message.Message):
     def __init__(self, hits: _Optional[_Iterable[_Union[RetrievalHit, _Mapping]]] = ..., qa_match: _Optional[_Union[_common_pb2.ContentSummary, _Mapping]] = ..., qa_similarity: _Optional[float] = ..., latency_ms: _Optional[int] = ...) -> None: ...
 
 class RunJobRequest(_message.Message):
-    __slots__ = ("kind",)
+    __slots__ = ("kind", "source_kind")
     KIND_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
     kind: JobKind
-    def __init__(self, kind: _Optional[_Union[JobKind, str]] = ...) -> None: ...
+    source_kind: str
+    def __init__(self, kind: _Optional[_Union[JobKind, str]] = ..., source_kind: _Optional[str] = ...) -> None: ...
 
 class RunJobResponse(_message.Message):
     __slots__ = ("job_id",)
