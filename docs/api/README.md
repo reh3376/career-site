@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 37 |
+| [`AdminService`](#adminservice) | Owner console. | 40 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 2 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -1646,6 +1646,9 @@ Owner console.
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 | [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
 | [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score, assessment, résumé and PDF when above threshold) for one submission in the background, e.g. |
+| [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
+| [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
+| [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
 
 ### AdminService.ListMembers
 
@@ -2888,6 +2891,106 @@ change. Returns immediately; poll GetJdSubmission for the outcome.
 ```json
 {
   "submissionId": "string"
+}
+```
+
+</details>
+
+### AdminService.ListDecisionLog
+
+`POST /api/career.v1.AdminService/ListDecisionLog` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists logged reviewer decisions (per-requirement verdicts, gate
+outcomes) with the evidence each was made from, for the owner's
+human-in-the-loop review. Backs /admin/decisions.
+
+**Request** — [`ListDecisionLogRequest`](#listdecisionlogrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `kind` | `string` | string |  | Restrict to one kind; empty for all kinds. |
+| `refId` | `string` | string |  | Restrict to one ref id (e.g. a JD submission); empty for all. |
+| `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
+| `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
+
+**Response** — [`ListDecisionLogResponse`](#listdecisionlogresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `decisions` | [`DecisionLogRow`](#decisionlogrow)[] | array of object |  | Rows, newest first. |
+| `totalCount` | `int64` | string (decimal) |  | Rows in the whole table, any kind. |
+| `reviewedCount` | `int64` | string (decimal) |  | Rows the owner has reviewed. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "kind": "string",
+  "refId": "string",
+  "unreviewedOnly": true,
+  "limit": 0
+}
+```
+
+</details>
+
+### AdminService.ReviewDecision
+
+`POST /api/career.v1.AdminService/ReviewDecision` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Records the owner's own verdict and note on one logged decision.
+Saving again overwrites the label; the model's output is never
+changed.
+
+**Request** — [`ReviewDecisionRequest`](#reviewdecisionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Row id to label. |
+| `humanVerdict` | `string` | string |  | The owner's verdict; the vocabulary of the row's output (met / partial / unmet for requirement verdicts). |
+| `humanNote` | `string` | string |  | Optional note explaining the label. |
+
+**Response** — [`ReviewDecisionResponse`](#reviewdecisionresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string",
+  "humanVerdict": "string",
+  "humanNote": "string"
+}
+```
+
+</details>
+
+### AdminService.ExportDecisionLog
+
+`POST /api/career.v1.AdminService/ExportDecisionLog` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Exports decisions as JSON Lines for adapter training and
+evaluation; reviewed rows carry the human label.
+
+**Request** — [`ExportDecisionLogRequest`](#exportdecisionlogrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reviewedOnly` | `bool` | boolean |  | Only rows the owner has reviewed (the training set); false exports everything. |
+
+**Response** — [`ExportDecisionLogResponse`](#exportdecisionlogresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jsonl` | `string` | string |  | JSON Lines, one decision per line, oldest first. |
+| `rowCount` | `int32` | number |  | Number of lines in jsonl. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "reviewedOnly": true
 }
 ```
 
@@ -5078,6 +5181,89 @@ List-jd-submissions response.
 | `belowThresholdCount` | `int32` | number |  | Number that scored below the threshold. |
 | `failedCount` | `int32` | number |  | Number that failed during scoring / generation. |
 | `inFlightCount` | `int32` | number |  | Number still in flight (received / scoring / generating). |
+
+### DecisionLogRow
+
+One logged decision: what the model (or the code) decided, from
+what, and the owner's review of it. See docs/decision-log.md.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Row id (numeric, stringified). |
+| `kind` | `string` | string |  | Decision kind: jd_requirement_verdict, jd_gate, ... |
+| `refKind` | `string` | string |  | What the decision belongs to (e.g. jd_submission). |
+| `refId` | `string` | string |  | Id of the ref (numeric, stringified). |
+| `key` | `string` | string |  | Item within the ref (requirement id); empty when per-ref. |
+| `model` | `string` | string |  | Who decided: the gateway model name, or "code". |
+| `promptId` | `string` | string |  | Prompt id that produced it; empty for code decisions. |
+| `promptVersion` | `int32` | number |  | Prompt version that produced it; 0 for code decisions. |
+| `numCtx` | `int32` | number |  | Context window requested for the call; 0 for code decisions. |
+| `inputJson` | `string` | string |  | What it was decided from, as JSON (shape depends on kind). |
+| `outputJson` | `string` | string |  | What was decided, as JSON (shape depends on kind). |
+| `promptText` | `string` | string |  | Exact system + user prompt sent; empty for code decisions. |
+| `responseText` | `string` | string |  | Raw model output; empty for code decisions. |
+| `promptTokens` | `int32` | number |  | Prompt tokens as reported by the provider. |
+| `completionTokens` | `int32` | number |  | Completion tokens as reported by the provider. |
+| `latencyMs` | `int64` | string (decimal) |  | Call latency in milliseconds. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the decision was made. |
+| `humanVerdict` | `string` | string |  | The owner's verdict in the same vocabulary as the output; empty until reviewed. |
+| `humanNote` | `string` | string |  | The owner's free-text note on the review. |
+| `reviewedBy` | `string` | string |  | User id of the reviewer (numeric, stringified); empty until reviewed. |
+| `reviewedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the review was saved; unset until reviewed. |
+
+### ListDecisionLogRequest
+
+Filters for the decision-review list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `kind` | `string` | string |  | Restrict to one kind; empty for all kinds. |
+| `refId` | `string` | string |  | Restrict to one ref id (e.g. a JD submission); empty for all. |
+| `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
+| `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
+
+### ListDecisionLogResponse
+
+A page of logged decisions plus table-wide counts.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `decisions` | [`DecisionLogRow`](#decisionlogrow)[] | array of object |  | Rows, newest first. |
+| `totalCount` | `int64` | string (decimal) |  | Rows in the whole table, any kind. |
+| `reviewedCount` | `int64` | string (decimal) |  | Rows the owner has reviewed. |
+
+### ReviewDecisionRequest
+
+The owner's label for one decision.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Row id to label. |
+| `humanVerdict` | `string` | string |  | The owner's verdict; the vocabulary of the row's output (met / partial / unmet for requirement verdicts). |
+| `humanNote` | `string` | string |  | Optional note explaining the label. |
+
+### ReviewDecisionResponse
+
+Empty: success is the absence of an error.
+
+_No fields._
+
+### ExportDecisionLogRequest
+
+Selects which rows the JSONL export includes.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reviewedOnly` | `bool` | boolean |  | Only rows the owner has reviewed (the training set); false exports everything. |
+
+### ExportDecisionLogResponse
+
+The rendered export.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jsonl` | `string` | string |  | JSON Lines, one decision per line, oldest first. |
+| `rowCount` | `int32` | number |  | Number of lines in jsonl. |
 
 ### RegisterRequest
 

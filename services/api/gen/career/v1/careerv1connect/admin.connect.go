@@ -143,6 +143,15 @@ const (
 	AdminServiceGetJdSubmissionProcedure = "/career.v1.AdminService/GetJdSubmission"
 	// AdminServiceRescoreJdProcedure is the fully-qualified name of the AdminService's RescoreJd RPC.
 	AdminServiceRescoreJdProcedure = "/career.v1.AdminService/RescoreJd"
+	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
+	// ListDecisionLog RPC.
+	AdminServiceListDecisionLogProcedure = "/career.v1.AdminService/ListDecisionLog"
+	// AdminServiceReviewDecisionProcedure is the fully-qualified name of the AdminService's
+	// ReviewDecision RPC.
+	AdminServiceReviewDecisionProcedure = "/career.v1.AdminService/ReviewDecision"
+	// AdminServiceExportDecisionLogProcedure is the fully-qualified name of the AdminService's
+	// ExportDecisionLog RPC.
+	AdminServiceExportDecisionLogProcedure = "/career.v1.AdminService/ExportDecisionLog"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -283,6 +292,17 @@ type AdminServiceClient interface {
 	// background, e.g. after a transient sidecar failure or a prompt
 	// change. Returns immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
+	// Lists logged reviewer decisions (per-requirement verdicts, gate
+	// outcomes) with the evidence each was made from, for the owner's
+	// human-in-the-loop review. Backs /admin/decisions.
+	ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error)
+	// Records the owner's own verdict and note on one logged decision.
+	// Saving again overwrites the label; the model's output is never
+	// changed.
+	ReviewDecision(context.Context, *connect.Request[v1.ReviewDecisionRequest]) (*connect.Response[v1.ReviewDecisionResponse], error)
+	// Exports decisions as JSON Lines for adapter training and
+	// evaluation; reviewed rows carry the human label.
+	ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -518,6 +538,24 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
 			connect.WithClientOptions(opts...),
 		),
+		listDecisionLog: connect.NewClient[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse](
+			httpClient,
+			baseURL+AdminServiceListDecisionLogProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListDecisionLog")),
+			connect.WithClientOptions(opts...),
+		),
+		reviewDecision: connect.NewClient[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse](
+			httpClient,
+			baseURL+AdminServiceReviewDecisionProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ReviewDecision")),
+			connect.WithClientOptions(opts...),
+		),
+		exportDecisionLog: connect.NewClient[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse](
+			httpClient,
+			baseURL+AdminServiceExportDecisionLogProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionLog")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -560,6 +598,9 @@ type adminServiceClient struct {
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 	getJdSubmission       *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
 	rescoreJd             *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
+	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
+	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
+	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -747,6 +788,21 @@ func (c *adminServiceClient) RescoreJd(ctx context.Context, req *connect.Request
 	return c.rescoreJd.CallUnary(ctx, req)
 }
 
+// ListDecisionLog calls career.v1.AdminService.ListDecisionLog.
+func (c *adminServiceClient) ListDecisionLog(ctx context.Context, req *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {
+	return c.listDecisionLog.CallUnary(ctx, req)
+}
+
+// ReviewDecision calls career.v1.AdminService.ReviewDecision.
+func (c *adminServiceClient) ReviewDecision(ctx context.Context, req *connect.Request[v1.ReviewDecisionRequest]) (*connect.Response[v1.ReviewDecisionResponse], error) {
+	return c.reviewDecision.CallUnary(ctx, req)
+}
+
+// ExportDecisionLog calls career.v1.AdminService.ExportDecisionLog.
+func (c *adminServiceClient) ExportDecisionLog(ctx context.Context, req *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error) {
+	return c.exportDecisionLog.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -885,6 +941,17 @@ type AdminServiceHandler interface {
 	// background, e.g. after a transient sidecar failure or a prompt
 	// change. Returns immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
+	// Lists logged reviewer decisions (per-requirement verdicts, gate
+	// outcomes) with the evidence each was made from, for the owner's
+	// human-in-the-loop review. Backs /admin/decisions.
+	ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error)
+	// Records the owner's own verdict and note on one logged decision.
+	// Saving again overwrites the label; the model's output is never
+	// changed.
+	ReviewDecision(context.Context, *connect.Request[v1.ReviewDecisionRequest]) (*connect.Response[v1.ReviewDecisionResponse], error)
+	// Exports decisions as JSON Lines for adapter training and
+	// evaluation; reviewed rows carry the human label.
+	ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1116,6 +1183,24 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListDecisionLogHandler := connect.NewUnaryHandler(
+		AdminServiceListDecisionLogProcedure,
+		svc.ListDecisionLog,
+		connect.WithSchema(adminServiceMethods.ByName("ListDecisionLog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceReviewDecisionHandler := connect.NewUnaryHandler(
+		AdminServiceReviewDecisionProcedure,
+		svc.ReviewDecision,
+		connect.WithSchema(adminServiceMethods.ByName("ReviewDecision")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceExportDecisionLogHandler := connect.NewUnaryHandler(
+		AdminServiceExportDecisionLogProcedure,
+		svc.ExportDecisionLog,
+		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionLog")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -1192,6 +1277,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetJdSubmissionHandler.ServeHTTP(w, r)
 		case AdminServiceRescoreJdProcedure:
 			adminServiceRescoreJdHandler.ServeHTTP(w, r)
+		case AdminServiceListDecisionLogProcedure:
+			adminServiceListDecisionLogHandler.ServeHTTP(w, r)
+		case AdminServiceReviewDecisionProcedure:
+			adminServiceReviewDecisionHandler.ServeHTTP(w, r)
+		case AdminServiceExportDecisionLogProcedure:
+			adminServiceExportDecisionLogHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1347,4 +1438,16 @@ func (UnimplementedAdminServiceHandler) GetJdSubmission(context.Context, *connec
 
 func (UnimplementedAdminServiceHandler) RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RescoreJd is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListDecisionLog is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ReviewDecision(context.Context, *connect.Request[v1.ReviewDecisionRequest]) (*connect.Response[v1.ReviewDecisionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ReviewDecision is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionLog is not implemented"))
 }

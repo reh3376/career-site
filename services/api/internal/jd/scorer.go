@@ -58,6 +58,42 @@ func NewScorer(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, ass
 	return &Scorer{log: log, users: repo, embed: embed, assessor: assessor, resume: resume}
 }
 
+// logGate records the gate decision (a code decision, no model) in the
+// decision log so the owner can review the threshold call alongside
+// the verdicts that fed it. Best-effort.
+func (s *Scorer) logGate(ctx context.Context, submissionID int64, score, retrieval float64, assessment *Assessment, next string) {
+	counts := map[string]int{"met": 0, "partial": 0, "unmet": 0}
+	assessed := assessment != nil && assessment.Error == ""
+	weightTotal, nReq := 0, 0
+	if assessed {
+		for _, j := range assessment.Judgments {
+			counts[j.Verdict]++
+		}
+		weightTotal, nReq = assessment.WeightTotal, len(assessment.Requirements)
+	}
+	input, _ := json.Marshal(map[string]any{
+		"score":           score,
+		"retrieval_score": retrieval,
+		"threshold":       MatchThreshold,
+		"assessor_ran":    assessed,
+		"requirements":    nReq,
+		"weight_total":    weightTotal,
+		"verdicts":        counts,
+	})
+	outcome := "below_threshold"
+	if next == "generating" {
+		outcome = "above_threshold"
+	}
+	output, _ := json.Marshal(map[string]any{"outcome": outcome})
+	row := users.Decision{
+		Kind: "jd_gate", RefKind: "jd_submission", RefID: submissionID,
+		Model: "code", Input: input, Output: output,
+	}
+	if err := s.users.InsertDecisions(context.WithoutCancel(ctx), []users.Decision{row}); err != nil {
+		s.log.Warn("decision log write failed", slog.Int64("jd_id", submissionID), slog.String("error", err.Error()))
+	}
+}
+
 // Score embeds the JD, retrieves top-K corpus chunks, and returns the
 // mean of their similarities: a cheap retrieval pre-score, monotonic
 // in the strength and breadth of the match, kept for diagnostics
@@ -162,6 +198,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 	if score >= MatchThreshold {
 		next = "generating"
 	}
+	s.logGate(ctx, submissionID, score, retrieval, assessment, next)
 	if err := s.users.UpdateJdScoring(ctx, submissionID, next, &score, ""); err != nil {
 		s.log.Warn("jd: failed to record score",
 			slog.Int64("id", submissionID),
