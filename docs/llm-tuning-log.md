@@ -325,6 +325,39 @@ Agreement between `output.verdict` and `human_verdict` becomes the
 metric that decides between prompt revision, corpus additions and
 adapter training.
 
+## 2026-09-22: prod OOM at judge call 11, and a wrong fallback
+
+**Prod submission 6** (calibration strong JD, `qwen3:8b`, 8k): the
+kernel OOM-killed `llama-server` inside the ollama container at judge
+call 11 of 12 (`anon-rss: 7,073,268 kB` against the 7 GB cgroup cap).
+Ollama had both models resident (`loaded runners count=2`: the
+embedder plus the 8b) and the KV cache at full precision. Ollama
+restarted the runner within 10 s.
+
+The pipeline then did the wrong thing: the assessor error fell back to
+the retrieval score (0.712), which passed the gate, and a résumé was
+generated with no verdicts behind it. The retrieval score is flat
+across the calibration set (0.58 to 0.71) and cannot gate anything.
+
+**Fixes (PR 78).**
+
+- Assessor failure with the assessor wired now marks the submission
+  `failed` with the error ("assessment failed: ..."), keeps the
+  retrieval score on the row, and leaves Re-score to run it again.
+- Judge calls retry once on a transient error at the call level, so a
+  runner restart costs one call, not a whole 12-call pass. "model
+  runner has unexpectedly stopped" and HTTP 500 count as transient.
+- Ollama memory levers on the box: `OLLAMA_MAX_LOADED_MODELS=1` (the
+  embedder unloads while the LLM works; it reloads in seconds),
+  `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0` (halves the
+  KV cache). Together about 1 GB off the peak.
+
+**Owner's direction:** "we need a smaller model, maybe a Q8 4b?"
+Candidate `qwen3:4b-q8_0` (~4.4 GB on disk, near-lossless 8-bit
+weights, about twice the tokens per second of the 8b on this CPU).
+Measured on the calibration set in the next entry; the decision log
+now lets the owner grade its verdicts directly.
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

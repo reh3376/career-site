@@ -170,11 +170,24 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 			}
 		}
 		if err != nil {
-			// Fall back to the retrieval pre-score but keep the failure
-			// on the record so the admin can see the gate was degraded.
-			s.log.Warn("jd: assessment failed, using retrieval score",
-				slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			// The retrieval pre-score is flat across good and bad JDs
+			// (0.58 to 0.71 on the calibration set) and cannot gate a
+			// résumé. With the assessor wired, an assessment failure is a
+			// failed submission: the retrieval score is kept for the
+			// record, the error is visible in /admin/jd, and Re-score
+			// runs it again once the cause (usually the model host) is
+			// fixed. See docs/llm-tuning-log.md, 2026-09-22.
+			s.log.Warn("jd: assessment failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 			assessment = &Assessment{Error: truncErr(err.Error())}
+			if raw, mErr := json.Marshal(assessment); mErr == nil {
+				if uErr := s.users.SetJdAssessment(ctx, submissionID, retrieval, raw); uErr != nil {
+					s.log.Warn("jd: failed to store assessment", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+				}
+			}
+			if uErr := s.users.UpdateJdScoring(ctx, submissionID, "failed", &retrieval, "assessment failed: "+truncErr(err.Error())); uErr != nil {
+				s.log.Warn("jd: failed to record assessment failure", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+			}
+			return
 		} else {
 			score = assessment.Score
 			s.log.Info("jd: assessed",
@@ -277,6 +290,9 @@ func isTransient(err error) bool {
 	for _, needle := range []string{
 		"unavailable", "network is unreachable", "connection refused", "connection reset",
 		"broken pipe", "eof", "timeout", "temporarily", "no such host", "503", "502",
+		// Ollama restarts its model runner after a crash (an OOM kill on
+		// a tight box); the next call succeeds, so treat it as transient.
+		"unexpectedly stopped", "http 500",
 	} {
 		if strings.Contains(msg, needle) {
 			return true

@@ -385,14 +385,25 @@ func validateRequirements(in []prompts.Requirement) ([]prompts.Requirement, erro
 // decodes the JSON into dst. Returns what the call produced.
 func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Prompt, user string, maxTokens int, dst any) (callResult, error) {
 	started := time.Now()
-	resp, err := a.llm.Generate(ctx, llm.Request{
+	req := llm.Request{
 		System:      p.System,
 		User:        user,
 		MaxTokens:   maxTokens,
 		Temperature: 0,
 		JSONSchema:  p.Schema,
 		TraceID:     fmt.Sprintf("jd:%d:%s", submissionID, p.ID),
-	})
+	}
+	resp, err := a.llm.Generate(ctx, req)
+	if err != nil && isTransient(err) {
+		// One retry per call, not per assessment: a judge pass is a dozen
+		// calls on a CPU box and a model-runner restart mid-way should
+		// cost one call's worth of time, not the whole pass.
+		a.log.Warn("llm call transient failure, retrying once",
+			slog.Int64("jd_id", submissionID), slog.String("prompt", p.ID), slog.String("error", err.Error()))
+		if sleepCtx(ctx, retryDelay) {
+			resp, err = a.llm.Generate(ctx, req)
+		}
+	}
 	usage := users.LLMUsage{
 		Kind: "jd_assess", RefID: submissionID,
 		PromptID: p.ID, PromptVersion: p.Version,
