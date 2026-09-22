@@ -140,4 +140,34 @@ message GetJdResultResponse {
   // Generated résumé in markdown, only when status is READY and the
   // request carried the submission's result_token.
   string resume_markdown = 7;
+  // Requirement-by-requirement verdicts behind the score, released
+  // with the result_token whatever the outcome, so a below-threshold
+  // result shows what was and was not evidenced instead of a bare
+  // number (the opposite of an ATS musts-and-misses filter).
+  repeated RequirementVerdict verdicts = 8;
+  // Number of requirements judged met.
+  int32 met_count = 9;
+  // Number judged partially met.
+  int32 partial_count = 10;
+  // Number judged not evidenced.
+  int32 unmet_count = 11;
+  // The gate the score was compared against (JD_MATCH_THRESHOLD).
+  double match_threshold = 12;
+}
+
+// One requirement the reviewer extracted from the posting and the
+// verdict it reached from the candidate's records.
+message RequirementVerdict {
+  // Requirement id within the submission (r1, r2, ...).
+  string id = 1;
+  // The requirement in the posting's own words.
+  string text = 2;
+  // "must" or "nice", as the posting stated it.
+  string category = 3;
+  // Weight 1 to 3 used in the score.
+  int32 weight = 4;
+  // "met", "partial" or "unmet".
+  string verdict = 5;
+  // One-sentence reason, grounded in the evidence the judge saw.
+  string rationale = 6;
 }

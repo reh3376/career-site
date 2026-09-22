@@ -3,10 +3,11 @@ import datetime
 from buf.validate import validate_pb2 as _validate_pb2
 from career.v1 import options_pb2 as _options_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Mapping as _Mapping
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
@@ -74,7 +75,7 @@ class GetJdResultRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ..., result_token: _Optional[str] = ...) -> None: ...
 
 class GetJdResultResponse(_message.Message):
-    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at", "resume_markdown")
+    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at", "resume_markdown", "verdicts", "met_count", "partial_count", "unmet_count", "match_threshold")
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
     GENERATED_RESUME_URL_FIELD_NUMBER: _ClassVar[int]
@@ -82,6 +83,11 @@ class GetJdResultResponse(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
     RESUME_MARKDOWN_FIELD_NUMBER: _ClassVar[int]
+    VERDICTS_FIELD_NUMBER: _ClassVar[int]
+    MET_COUNT_FIELD_NUMBER: _ClassVar[int]
+    PARTIAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    UNMET_COUNT_FIELD_NUMBER: _ClassVar[int]
+    MATCH_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
     status: JdStatus
     match_score: float
     generated_resume_url: str
@@ -89,4 +95,25 @@ class GetJdResultResponse(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
     resume_markdown: str
-    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ...) -> None: ...
+    verdicts: _containers.RepeatedCompositeFieldContainer[RequirementVerdict]
+    met_count: int
+    partial_count: int
+    unmet_count: int
+    match_threshold: float
+    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ..., verdicts: _Optional[_Iterable[_Union[RequirementVerdict, _Mapping]]] = ..., met_count: _Optional[int] = ..., partial_count: _Optional[int] = ..., unmet_count: _Optional[int] = ..., match_threshold: _Optional[float] = ...) -> None: ...
+
+class RequirementVerdict(_message.Message):
+    __slots__ = ("id", "text", "category", "weight", "verdict", "rationale")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    WEIGHT_FIELD_NUMBER: _ClassVar[int]
+    VERDICT_FIELD_NUMBER: _ClassVar[int]
+    RATIONALE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    text: str
+    category: str
+    weight: int
+    verdict: str
+    rationale: str
+    def __init__(self, id: _Optional[str] = ..., text: _Optional[str] = ..., category: _Optional[str] = ..., weight: _Optional[int] = ..., verdict: _Optional[str] = ..., rationale: _Optional[str] = ...) -> None: ...

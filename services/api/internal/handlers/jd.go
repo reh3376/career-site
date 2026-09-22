@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -190,16 +191,60 @@ func (h *Jd) GetJdResult(
 	// the token that was issued at submit time; the numeric id alone
 	// reveals nothing beyond status and score.
 	out.GeneratedResumeUrl = ""
-	if s.ResumeMarkdown != "" {
-		tok := strings.TrimSpace(req.Msg.ResultToken)
-		if presented, err := hex.DecodeString(tok); err == nil && s.TokenMatches(presented) {
-			out.ResumeMarkdown = s.ResumeMarkdown
-			if s.GeneratedResumeURL != "" {
-				out.GeneratedResumeUrl = s.GeneratedResumeURL + "?t=" + tok
-			}
+	tok := strings.TrimSpace(req.Msg.ResultToken)
+	presented, tokErr := hex.DecodeString(tok)
+	holdsToken := tokErr == nil && tok != "" && s.TokenMatches(presented)
+	if s.ResumeMarkdown != "" && holdsToken {
+		out.ResumeMarkdown = s.ResumeMarkdown
+		if s.GeneratedResumeURL != "" {
+			out.GeneratedResumeUrl = s.GeneratedResumeURL + "?t=" + tok
 		}
 	}
+	// The verdict breakdown is released with the token whatever the
+	// outcome: a below-threshold result should say what was and was not
+	// evidenced, not just a number. Rationales never quote private
+	// chunks (judge prompt rule 4), so they are safe to show the
+	// person who submitted the posting.
+	if holdsToken && len(s.Assessment) > 0 {
+		out.Verdicts, out.MetCount, out.PartialCount, out.UnmetCount = verdictBreakdown(s.Assessment)
+	}
+	if h.scorer != nil {
+		out.MatchThreshold = h.scorer.Threshold()
+	}
 	return connect.NewResponse(out), nil
+}
+
+// verdictBreakdown flattens the stored assessment into per-requirement
+// verdicts in requirement order, with counts. An assessment that
+// recorded an error (retrieval fallback) yields nothing.
+func verdictBreakdown(raw []byte) (out []*v1.RequirementVerdict, met, partial, unmet int32) {
+	var a jd.Assessment
+	if err := json.Unmarshal(raw, &a); err != nil || a.Error != "" {
+		return nil, 0, 0, 0
+	}
+	byReq := map[string]jd.Judgment{}
+	for _, j := range a.Judgments {
+		byReq[j.RequirementID] = j
+	}
+	for _, r := range a.Requirements {
+		j, ok := byReq[r.ID]
+		if !ok {
+			j = jd.Judgment{RequirementID: r.ID, Verdict: "unmet"}
+		}
+		switch j.Verdict {
+		case "met":
+			met++
+		case "partial":
+			partial++
+		default:
+			unmet++
+		}
+		out = append(out, &v1.RequirementVerdict{
+			Id: r.ID, Text: r.Text, Category: r.Category, Weight: int32(r.Weight),
+			Verdict: j.Verdict, Rationale: j.Rationale,
+		})
+	}
+	return out, met, partial, unmet
 }
 
 // requireMember resolves the caller's session or fails the RPC. JD

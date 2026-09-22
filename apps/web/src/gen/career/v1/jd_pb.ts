@@ -24,7 +24,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/jd.proto.
  */
 export const file_career_v1_jd: GenFile = /*@__PURE__*/
-  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSK9AQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ASJ1ChBTdWJtaXRKZFJlc3BvbnNlEhUKDXN1Ym1pc3Npb25faWQYASABKAkSIwoGc3RhdHVzGAIgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkSFAoMcmVzdWx0X3Rva2VuGAQgASgJIlUKEkdldEpkUmVzdWx0UmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCASHQoMcmVzdWx0X3Rva2VuGAIgASgJQge6SARyAhhAIpQCChNHZXRKZFJlc3VsdFJlc3BvbnNlEiMKBnN0YXR1cxgBIAEoDjITLmNhcmVlci52MS5KZFN0YXR1cxIYCgttYXRjaF9zY29yZRgCIAEoAUgAiAEBEhwKFGdlbmVyYXRlZF9yZXN1bWVfdXJsGAMgASgJEhUKDWVycm9yX21lc3NhZ2UYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMY29tcGxldGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9yZXN1bWVfbWFya2Rvd24YByABKAlCDgoMX21hdGNoX3Njb3JlKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyq4AQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYysgEKCUpkU2VydmljZRJNCghTdWJtaXRKZBIaLmNhcmVlci52MS5TdWJtaXRKZFJlcXVlc3QaGy5jYXJlZXIudjEuU3VibWl0SmRSZXNwb25zZSIIgLUYApC1GAMSVgoLR2V0SmRSZXN1bHQSHS5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXF1ZXN0Gh4uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVzcG9uc2UiCIC1GAKQtRgeQqEBCg1jb20uY2FyZWVyLnYxQgdKZFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSK9AQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ASJ1ChBTdWJtaXRKZFJlc3BvbnNlEhUKDXN1Ym1pc3Npb25faWQYASABKAkSIwoGc3RhdHVzGAIgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkSFAoMcmVzdWx0X3Rva2VuGAQgASgJIlUKEkdldEpkUmVzdWx0UmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCASHQoMcmVzdWx0X3Rva2VuGAIgASgJQge6SARyAhhAIp0DChNHZXRKZFJlc3VsdFJlc3BvbnNlEiMKBnN0YXR1cxgBIAEoDjITLmNhcmVlci52MS5KZFN0YXR1cxIYCgttYXRjaF9zY29yZRgCIAEoAUgAiAEBEhwKFGdlbmVyYXRlZF9yZXN1bWVfdXJsGAMgASgJEhUKDWVycm9yX21lc3NhZ2UYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMY29tcGxldGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9yZXN1bWVfbWFya2Rvd24YByABKAkSLwoIdmVyZGljdHMYCCADKAsyHS5jYXJlZXIudjEuUmVxdWlyZW1lbnRWZXJkaWN0EhEKCW1ldF9jb3VudBgJIAEoBRIVCg1wYXJ0aWFsX2NvdW50GAogASgFEhMKC3VubWV0X2NvdW50GAsgASgFEhcKD21hdGNoX3RocmVzaG9sZBgMIAEoAUIOCgxfbWF0Y2hfc2NvcmUidAoSUmVxdWlyZW1lbnRWZXJkaWN0EgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSDgoGd2VpZ2h0GAQgASgFEg8KB3ZlcmRpY3QYBSABKAkSEQoJcmF0aW9uYWxlGAYgASgJKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyq4AQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYysgEKCUpkU2VydmljZRJNCghTdWJtaXRKZBIaLmNhcmVlci52MS5TdWJtaXRKZFJlcXVlc3QaGy5jYXJlZXIudjEuU3VibWl0SmRSZXNwb25zZSIIgLUYApC1GAMSVgoLR2V0SmRSZXN1bHQSHS5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXF1ZXN0Gh4uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVzcG9uc2UiCIC1GAKQtRgeQqEBCg1jb20uY2FyZWVyLnYxQgdKZFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Submission request. Exactly one of jd_text (paste) OR
@@ -215,6 +215,44 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
    * @generated from field: string resume_markdown = 7;
    */
   resumeMarkdown: string;
+
+  /**
+   * Requirement-by-requirement verdicts behind the score, released
+   * with the result_token whatever the outcome, so a below-threshold
+   * result shows what was and was not evidenced instead of a bare
+   * number (the opposite of an ATS musts-and-misses filter).
+   *
+   * @generated from field: repeated career.v1.RequirementVerdict verdicts = 8;
+   */
+  verdicts: RequirementVerdict[];
+
+  /**
+   * Number of requirements judged met.
+   *
+   * @generated from field: int32 met_count = 9;
+   */
+  metCount: number;
+
+  /**
+   * Number judged partially met.
+   *
+   * @generated from field: int32 partial_count = 10;
+   */
+  partialCount: number;
+
+  /**
+   * Number judged not evidenced.
+   *
+   * @generated from field: int32 unmet_count = 11;
+   */
+  unmetCount: number;
+
+  /**
+   * The gate the score was compared against (JD_MATCH_THRESHOLD).
+   *
+   * @generated from field: double match_threshold = 12;
+   */
+  matchThreshold: number;
 };
 
 /**
@@ -223,6 +261,63 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
  */
 export const GetJdResultResponseSchema: GenMessage<GetJdResultResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_jd, 3);
+
+/**
+ * One requirement the reviewer extracted from the posting and the
+ * verdict it reached from the candidate's records.
+ *
+ * @generated from message career.v1.RequirementVerdict
+ */
+export type RequirementVerdict = Message<"career.v1.RequirementVerdict"> & {
+  /**
+   * Requirement id within the submission (r1, r2, ...).
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The requirement in the posting's own words.
+   *
+   * @generated from field: string text = 2;
+   */
+  text: string;
+
+  /**
+   * "must" or "nice", as the posting stated it.
+   *
+   * @generated from field: string category = 3;
+   */
+  category: string;
+
+  /**
+   * Weight 1 to 3 used in the score.
+   *
+   * @generated from field: int32 weight = 4;
+   */
+  weight: number;
+
+  /**
+   * "met", "partial" or "unmet".
+   *
+   * @generated from field: string verdict = 5;
+   */
+  verdict: string;
+
+  /**
+   * One-sentence reason, grounded in the evidence the judge saw.
+   *
+   * @generated from field: string rationale = 6;
+   */
+  rationale: string;
+};
+
+/**
+ * Describes the message career.v1.RequirementVerdict.
+ * Use `create(RequirementVerdictSchema)` to create a new message.
+ */
+export const RequirementVerdictSchema: GenMessage<RequirementVerdict> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 4);
 
 /**
  * Where the JD text came from — mirrors jd_submissions.source_kind.

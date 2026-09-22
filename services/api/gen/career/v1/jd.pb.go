@@ -404,6 +404,19 @@ type GetJdResultResponse struct {
 	// Generated résumé in markdown, only when status is READY and the
 	// request carried the submission's result_token.
 	ResumeMarkdown string `protobuf:"bytes,7,opt,name=resume_markdown,json=resumeMarkdown,proto3" json:"resume_markdown,omitempty"`
+	// Requirement-by-requirement verdicts behind the score, released
+	// with the result_token whatever the outcome, so a below-threshold
+	// result shows what was and was not evidenced instead of a bare
+	// number (the opposite of an ATS musts-and-misses filter).
+	Verdicts []*RequirementVerdict `protobuf:"bytes,8,rep,name=verdicts,proto3" json:"verdicts,omitempty"`
+	// Number of requirements judged met.
+	MetCount int32 `protobuf:"varint,9,opt,name=met_count,json=metCount,proto3" json:"met_count,omitempty"`
+	// Number judged partially met.
+	PartialCount int32 `protobuf:"varint,10,opt,name=partial_count,json=partialCount,proto3" json:"partial_count,omitempty"`
+	// Number judged not evidenced.
+	UnmetCount int32 `protobuf:"varint,11,opt,name=unmet_count,json=unmetCount,proto3" json:"unmet_count,omitempty"`
+	// The gate the score was compared against (JD_MATCH_THRESHOLD).
+	MatchThreshold float64 `protobuf:"fixed64,12,opt,name=match_threshold,json=matchThreshold,proto3" json:"match_threshold,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -487,6 +500,133 @@ func (x *GetJdResultResponse) GetResumeMarkdown() string {
 	return ""
 }
 
+func (x *GetJdResultResponse) GetVerdicts() []*RequirementVerdict {
+	if x != nil {
+		return x.Verdicts
+	}
+	return nil
+}
+
+func (x *GetJdResultResponse) GetMetCount() int32 {
+	if x != nil {
+		return x.MetCount
+	}
+	return 0
+}
+
+func (x *GetJdResultResponse) GetPartialCount() int32 {
+	if x != nil {
+		return x.PartialCount
+	}
+	return 0
+}
+
+func (x *GetJdResultResponse) GetUnmetCount() int32 {
+	if x != nil {
+		return x.UnmetCount
+	}
+	return 0
+}
+
+func (x *GetJdResultResponse) GetMatchThreshold() float64 {
+	if x != nil {
+		return x.MatchThreshold
+	}
+	return 0
+}
+
+// One requirement the reviewer extracted from the posting and the
+// verdict it reached from the candidate's records.
+type RequirementVerdict struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Requirement id within the submission (r1, r2, ...).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The requirement in the posting's own words.
+	Text string `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	// "must" or "nice", as the posting stated it.
+	Category string `protobuf:"bytes,3,opt,name=category,proto3" json:"category,omitempty"`
+	// Weight 1 to 3 used in the score.
+	Weight int32 `protobuf:"varint,4,opt,name=weight,proto3" json:"weight,omitempty"`
+	// "met", "partial" or "unmet".
+	Verdict string `protobuf:"bytes,5,opt,name=verdict,proto3" json:"verdict,omitempty"`
+	// One-sentence reason, grounded in the evidence the judge saw.
+	Rationale     string `protobuf:"bytes,6,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequirementVerdict) Reset() {
+	*x = RequirementVerdict{}
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequirementVerdict) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequirementVerdict) ProtoMessage() {}
+
+func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequirementVerdict.ProtoReflect.Descriptor instead.
+func (*RequirementVerdict) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RequirementVerdict) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RequirementVerdict) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *RequirementVerdict) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *RequirementVerdict) GetWeight() int32 {
+	if x != nil {
+		return x.Weight
+	}
+	return 0
+}
+
+func (x *RequirementVerdict) GetVerdict() string {
+	if x != nil {
+		return x.Verdict
+	}
+	return ""
+}
+
+func (x *RequirementVerdict) GetRationale() string {
+	if x != nil {
+		return x.Rationale
+	}
+	return ""
+}
+
 var File_career_v1_jd_proto protoreflect.FileDescriptor
 
 const file_career_v1_jd_proto_rawDesc = "" +
@@ -506,7 +646,7 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\fresult_token\x18\x04 \x01(\tR\vresultToken\"p\n" +
 	"\x12GetJdResultRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12*\n" +
-	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xf2\x02\n" +
+	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xb9\x04\n" +
 	"\x13GetJdResultResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
 	"\vmatch_score\x18\x02 \x01(\x01H\x00R\n" +
@@ -516,8 +656,22 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
 	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12'\n" +
-	"\x0fresume_markdown\x18\a \x01(\tR\x0eresumeMarkdownB\x0e\n" +
-	"\f_match_score*h\n" +
+	"\x0fresume_markdown\x18\a \x01(\tR\x0eresumeMarkdown\x129\n" +
+	"\bverdicts\x18\b \x03(\v2\x1d.career.v1.RequirementVerdictR\bverdicts\x12\x1b\n" +
+	"\tmet_count\x18\t \x01(\x05R\bmetCount\x12#\n" +
+	"\rpartial_count\x18\n" +
+	" \x01(\x05R\fpartialCount\x12\x1f\n" +
+	"\vunmet_count\x18\v \x01(\x05R\n" +
+	"unmetCount\x12'\n" +
+	"\x0fmatch_threshold\x18\f \x01(\x01R\x0ematchThresholdB\x0e\n" +
+	"\f_match_score\"\xa4\x01\n" +
+	"\x12RequirementVerdict\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\x12\x1a\n" +
+	"\bcategory\x18\x03 \x01(\tR\bcategory\x12\x16\n" +
+	"\x06weight\x18\x04 \x01(\x05R\x06weight\x12\x18\n" +
+	"\averdict\x18\x05 \x01(\tR\averdict\x12\x1c\n" +
+	"\trationale\x18\x06 \x01(\tR\trationale*h\n" +
 	"\bJdSource\x12\x19\n" +
 	"\x15JD_SOURCE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fJD_SOURCE_PASTE\x10\x01\x12\x11\n" +
@@ -550,7 +704,7 @@ func file_career_v1_jd_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_jd_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_career_v1_jd_proto_goTypes = []any{
 	(JdSource)(0),                 // 0: career.v1.JdSource
 	(JdStatus)(0),                 // 1: career.v1.JdStatus
@@ -558,23 +712,25 @@ var file_career_v1_jd_proto_goTypes = []any{
 	(*SubmitJdResponse)(nil),      // 3: career.v1.SubmitJdResponse
 	(*GetJdResultRequest)(nil),    // 4: career.v1.GetJdResultRequest
 	(*GetJdResultResponse)(nil),   // 5: career.v1.GetJdResultResponse
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*RequirementVerdict)(nil),    // 6: career.v1.RequirementVerdict
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
 }
 var file_career_v1_jd_proto_depIdxs = []int32{
 	0, // 0: career.v1.SubmitJdRequest.source:type_name -> career.v1.JdSource
 	1, // 1: career.v1.SubmitJdResponse.status:type_name -> career.v1.JdStatus
 	1, // 2: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
-	6, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
-	6, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
-	2, // 5: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
-	4, // 6: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
-	3, // 7: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
-	5, // 8: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
-	7, // [7:9] is the sub-list for method output_type
-	5, // [5:7] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	7, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
+	7, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
+	6, // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
+	2, // 6: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
+	4, // 7: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
+	3, // 8: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
+	5, // 9: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_jd_proto_init() }
@@ -590,7 +746,7 @@ func file_career_v1_jd_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_jd_proto_rawDesc), len(file_career_v1_jd_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
