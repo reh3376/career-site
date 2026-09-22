@@ -100,9 +100,9 @@ type Assessment struct {
 	WeightTotal int                `json:"weight_total"`
 	// ScoreFormula names the arithmetic (see ScoreFormula const) so a
 	// stored assessment can be re-read after the formula changes.
-	ScoreFormula string `json:"score_formula,omitempty"`
-	Model        string `json:"model"`
-	Prompts     map[string]int     `json:"prompts"` // prompt id → version
+	ScoreFormula string         `json:"score_formula,omitempty"`
+	Model        string         `json:"model"`
+	Prompts      map[string]int `json:"prompts"` // prompt id → version
 	// JudgeBatches is how many model calls the judgment took (context
 	// budgeting on a small box splits it).
 	JudgeBatches int `json:"judge_batches,omitempty"`
