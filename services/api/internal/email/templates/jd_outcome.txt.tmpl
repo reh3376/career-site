@@ -1,0 +1,23 @@
+JD #{{.ID}}: {{.Headline}}, {{.StatusLabel}}
+
+{{if .Score}}Match score:  {{.Score}} (gate {{.Threshold}}){{else}}Match score:  not computed{{end}}
+{{if .RetrievalScore}}Retrieval:    {{.RetrievalScore}}
+{{end}}Submitted by: {{if .SubmitterEmail}}{{.SubmitterEmail}}{{else}}unknown member{{end}}{{if .ContactEmail}} (contact: {{.ContactEmail}}){{end}}
+Received:     {{.SubmittedAt}}
+{{if .ApplyURL}}Apply here:   {{.ApplyURL}}
+{{end}}{{if .Error}}
+Error: {{.Error}}
+{{end}}{{if .Requirements}}
+Requirements: {{.Met}} of {{.Requirements}} evidenced{{if .Partial}}, {{.Partial}} partly{{end}}{{if .Unmet}}, {{.Unmet}} not evidenced{{end}}
+{{range .Verdicts}}  [{{.Verdict}}]{{if eq .Category "nice"}} (preferred){{end}} {{.Text}}{{if .Rationale}}
+      {{.Rationale}}{{end}}
+{{end}}{{end}}
+---
+{{.TextHead}}
+---
+
+Review:      {{.AdminURL}}
+Grade:       {{.DecisionsURL}}
+{{if .PDFURL}}Résumé PDF:  {{.PDFURL}}
+{{end}}
+career-site (JD reviewer)

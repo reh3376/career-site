@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fafafa;color:#0a0a0a;margin:0;padding:24px">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:8px">
+    <tr><td style="padding:32px">
+      <p style="margin:0 0 8px;font-size:14px;color:#525252">career-site · JD reviewer</p>
+      <p style="margin:0 0 4px;font-size:12px;font-family:ui-monospace,monospace;color:#737373">JD #{{.ID}} · {{.StatusLabel}}</p>
+      <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">{{.Headline}}</h1>
+
+      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin-bottom:20px;font-size:13px">
+        <tr><td style="padding:4px 0;color:#737373;width:120px">Match score</td><td style="padding:4px 0;font-family:ui-monospace,monospace">{{if .Score}}<strong>{{.Score}}</strong> (gate {{.Threshold}}){{else}}not computed{{end}}</td></tr>
+        {{if .RetrievalScore}}<tr><td style="padding:4px 0;color:#737373">Retrieval</td><td style="padding:4px 0;font-family:ui-monospace,monospace">{{.RetrievalScore}}</td></tr>{{end}}
+        <tr><td style="padding:4px 0;color:#737373">Submitted by</td><td style="padding:4px 0">{{if .SubmitterEmail}}<a href="mailto:{{.SubmitterEmail}}" style="color:#0f3d5c">{{.SubmitterEmail}}</a>{{else}}unknown member{{end}}{{if .ContactEmail}} · contact <a href="mailto:{{.ContactEmail}}" style="color:#0f3d5c">{{.ContactEmail}}</a>{{end}}</td></tr>
+        <tr><td style="padding:4px 0;color:#737373">Received</td><td style="padding:4px 0">{{.SubmittedAt}}</td></tr>
+        {{if .ApplyURL}}<tr><td style="padding:4px 0;color:#737373">Apply</td><td style="padding:4px 0"><a href="{{.ApplyURL}}" style="color:#0f3d5c">{{.ApplyURL}}</a></td></tr>{{end}}
+      </table>
+
+      {{if .Error}}<p style="margin:0 0 16px;padding:10px 12px;background:#fff7ed;border-left:3px solid #c2410c;font-size:13px">{{.Error}}</p>{{end}}
+
+      {{if .Requirements}}
+      <p style="margin:0 0 8px;font-size:14px"><strong>{{.Met}} of {{.Requirements}}</strong> requirements evidenced{{if .Partial}}, {{.Partial}} partly{{end}}{{if .Unmet}}, {{.Unmet}} not evidenced{{end}}.</p>
+      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin-bottom:20px;font-size:13px">
+        {{range .Verdicts}}
+        <tr>
+          <td style="padding:4px 8px 4px 0;vertical-align:top;width:90px;font-family:ui-monospace,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:{{if eq .Verdict "met"}}#166534{{else if eq .Verdict "partial"}}#525252{{else}}#9a3412{{end}}">{{.Verdict}}{{if eq .Category "nice"}}<br><span style="color:#a3a3a3">preferred</span>{{end}}</td>
+          <td style="padding:4px 0;vertical-align:top">{{.Text}}{{if .Rationale}}<br><span style="color:#737373;font-size:12px">{{.Rationale}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </table>
+      {{end}}
+
+      <div style="border-top:1px solid #e5e5e5;padding-top:16px;line-height:1.6;white-space:pre-wrap;font-size:13px;color:#525252">{{.TextHead}}</div>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px">
+        <tr>
+          <td style="padding-right:12px">
+            <a href="{{.AdminURL}}" style="display:inline-block;background:#0f3d5c;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600">Open in admin</a>
+          </td>
+          <td style="padding-right:12px">
+            <a href="{{.DecisionsURL}}" style="display:inline-block;background:transparent;color:#0f3d5c;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;border:1px solid #0f3d5c">Grade the verdicts</a>
+          </td>
+          {{if .PDFURL}}<td>
+            <a href="{{.PDFURL}}" style="display:inline-block;background:transparent;color:#0f3d5c;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;border:1px solid #0f3d5c">Résumé PDF</a>
+          </td>{{end}}
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

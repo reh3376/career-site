@@ -203,6 +203,7 @@ func main() {
 			log.Info("jd assessor disabled; retrieval score is the gate", slog.String("llm_provider", provider))
 		}
 		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, cfg.JDMatchThreshold, cfg.JDPipelineTimeout)
+		jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
 	}
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.

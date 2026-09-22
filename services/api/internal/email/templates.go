@@ -48,6 +48,7 @@ var (
 	AccessEndedTemplate         = mustLoad("access_ended")
 	SupportNotificationTemplate = mustLoad("support_notification")
 	PasswordResetTemplate       = mustLoad("password_reset")
+	JdOutcomeTemplate           = mustLoad("jd_outcome")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the
