@@ -50,6 +50,9 @@ const (
 	// JdServiceListMySubmissionsProcedure is the fully-qualified name of the JdService's
 	// ListMySubmissions RPC.
 	JdServiceListMySubmissionsProcedure = "/career.v1.JdService/ListMySubmissions"
+	// JdServiceGetJdReviewConfigProcedure is the fully-qualified name of the JdService's
+	// GetJdReviewConfig RPC.
+	JdServiceGetJdReviewConfigProcedure = "/career.v1.JdService/GetJdReviewConfig"
 )
 
 // JdServiceClient is a client for the career.v1.JdService service.
@@ -65,6 +68,9 @@ type JdServiceClient interface {
 	// Lists the signed-in member's own submissions, newest first, so a
 	// review can be reopened after the tab that submitted it is gone.
 	ListMySubmissions(context.Context, *connect.Request[v1.ListMySubmissionsRequest]) (*connect.Response[v1.ListMySubmissionsResponse], error)
+	// Returns the fit bands in force (the gate is the "strong" edge), so
+	// the JD pages quote the numbers the pipeline actually uses.
+	GetJdReviewConfig(context.Context, *connect.Request[v1.GetJdReviewConfigRequest]) (*connect.Response[v1.GetJdReviewConfigResponse], error)
 }
 
 // NewJdServiceClient constructs a client for the career.v1.JdService service. By default, it uses
@@ -96,6 +102,12 @@ func NewJdServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(jdServiceMethods.ByName("ListMySubmissions")),
 			connect.WithClientOptions(opts...),
 		),
+		getJdReviewConfig: connect.NewClient[v1.GetJdReviewConfigRequest, v1.GetJdReviewConfigResponse](
+			httpClient,
+			baseURL+JdServiceGetJdReviewConfigProcedure,
+			connect.WithSchema(jdServiceMethods.ByName("GetJdReviewConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -104,6 +116,7 @@ type jdServiceClient struct {
 	submitJd          *connect.Client[v1.SubmitJdRequest, v1.SubmitJdResponse]
 	getJdResult       *connect.Client[v1.GetJdResultRequest, v1.GetJdResultResponse]
 	listMySubmissions *connect.Client[v1.ListMySubmissionsRequest, v1.ListMySubmissionsResponse]
+	getJdReviewConfig *connect.Client[v1.GetJdReviewConfigRequest, v1.GetJdReviewConfigResponse]
 }
 
 // SubmitJd calls career.v1.JdService.SubmitJd.
@@ -121,6 +134,11 @@ func (c *jdServiceClient) ListMySubmissions(ctx context.Context, req *connect.Re
 	return c.listMySubmissions.CallUnary(ctx, req)
 }
 
+// GetJdReviewConfig calls career.v1.JdService.GetJdReviewConfig.
+func (c *jdServiceClient) GetJdReviewConfig(ctx context.Context, req *connect.Request[v1.GetJdReviewConfigRequest]) (*connect.Response[v1.GetJdReviewConfigResponse], error) {
+	return c.getJdReviewConfig.CallUnary(ctx, req)
+}
+
 // JdServiceHandler is an implementation of the career.v1.JdService service.
 type JdServiceHandler interface {
 	// Accepts a job description and stores it for scoring. Returns the
@@ -134,6 +152,9 @@ type JdServiceHandler interface {
 	// Lists the signed-in member's own submissions, newest first, so a
 	// review can be reopened after the tab that submitted it is gone.
 	ListMySubmissions(context.Context, *connect.Request[v1.ListMySubmissionsRequest]) (*connect.Response[v1.ListMySubmissionsResponse], error)
+	// Returns the fit bands in force (the gate is the "strong" edge), so
+	// the JD pages quote the numbers the pipeline actually uses.
+	GetJdReviewConfig(context.Context, *connect.Request[v1.GetJdReviewConfigRequest]) (*connect.Response[v1.GetJdReviewConfigResponse], error)
 }
 
 // NewJdServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -161,6 +182,12 @@ func NewJdServiceHandler(svc JdServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(jdServiceMethods.ByName("ListMySubmissions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	jdServiceGetJdReviewConfigHandler := connect.NewUnaryHandler(
+		JdServiceGetJdReviewConfigProcedure,
+		svc.GetJdReviewConfig,
+		connect.WithSchema(jdServiceMethods.ByName("GetJdReviewConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.JdService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case JdServiceSubmitJdProcedure:
@@ -169,6 +196,8 @@ func NewJdServiceHandler(svc JdServiceHandler, opts ...connect.HandlerOption) (s
 			jdServiceGetJdResultHandler.ServeHTTP(w, r)
 		case JdServiceListMySubmissionsProcedure:
 			jdServiceListMySubmissionsHandler.ServeHTTP(w, r)
+		case JdServiceGetJdReviewConfigProcedure:
+			jdServiceGetJdReviewConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -188,4 +217,8 @@ func (UnimplementedJdServiceHandler) GetJdResult(context.Context, *connect.Reque
 
 func (UnimplementedJdServiceHandler) ListMySubmissions(context.Context, *connect.Request[v1.ListMySubmissionsRequest]) (*connect.Response[v1.ListMySubmissionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.JdService.ListMySubmissions is not implemented"))
+}
+
+func (UnimplementedJdServiceHandler) GetJdReviewConfig(context.Context, *connect.Request[v1.GetJdReviewConfigRequest]) (*connect.Response[v1.GetJdReviewConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.JdService.GetJdReviewConfig is not implemented"))
 }

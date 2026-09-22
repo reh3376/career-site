@@ -152,6 +152,12 @@ const (
 	// AdminServiceExportDecisionLogProcedure is the fully-qualified name of the AdminService's
 	// ExportDecisionLog RPC.
 	AdminServiceExportDecisionLogProcedure = "/career.v1.AdminService/ExportDecisionLog"
+	// AdminServiceGetJdFitBandsProcedure is the fully-qualified name of the AdminService's
+	// GetJdFitBands RPC.
+	AdminServiceGetJdFitBandsProcedure = "/career.v1.AdminService/GetJdFitBands"
+	// AdminServiceSetJdFitBandsProcedure is the fully-qualified name of the AdminService's
+	// SetJdFitBands RPC.
+	AdminServiceSetJdFitBandsProcedure = "/career.v1.AdminService/SetJdFitBands"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -303,6 +309,12 @@ type AdminServiceClient interface {
 	// Exports decisions as JSON Lines for adapter training and
 	// evaluation; reviewed rows carry the human label.
 	ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error)
+	// Reads the JD fit bands (the numbers that classify a review as very
+	// strong / strong / possible / weak / very weak; "strong" is the gate).
+	GetJdFitBands(context.Context, *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error)
+	// Sets the JD fit bands. Takes effect for the next submission within
+	// seconds; existing scores are re-classified on read.
+	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -556,6 +568,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionLog")),
 			connect.WithClientOptions(opts...),
 		),
+		getJdFitBands: connect.NewClient[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse](
+			httpClient,
+			baseURL+AdminServiceGetJdFitBandsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetJdFitBands")),
+			connect.WithClientOptions(opts...),
+		),
+		setJdFitBands: connect.NewClient[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse](
+			httpClient,
+			baseURL+AdminServiceSetJdFitBandsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -601,6 +625,8 @@ type adminServiceClient struct {
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
+	getJdFitBands         *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
+	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -803,6 +829,16 @@ func (c *adminServiceClient) ExportDecisionLog(ctx context.Context, req *connect
 	return c.exportDecisionLog.CallUnary(ctx, req)
 }
 
+// GetJdFitBands calls career.v1.AdminService.GetJdFitBands.
+func (c *adminServiceClient) GetJdFitBands(ctx context.Context, req *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error) {
+	return c.getJdFitBands.CallUnary(ctx, req)
+}
+
+// SetJdFitBands calls career.v1.AdminService.SetJdFitBands.
+func (c *adminServiceClient) SetJdFitBands(ctx context.Context, req *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
+	return c.setJdFitBands.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -952,6 +988,12 @@ type AdminServiceHandler interface {
 	// Exports decisions as JSON Lines for adapter training and
 	// evaluation; reviewed rows carry the human label.
 	ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error)
+	// Reads the JD fit bands (the numbers that classify a review as very
+	// strong / strong / possible / weak / very weak; "strong" is the gate).
+	GetJdFitBands(context.Context, *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error)
+	// Sets the JD fit bands. Takes effect for the next submission within
+	// seconds; existing scores are re-classified on read.
+	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1201,6 +1243,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionLog")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetJdFitBandsHandler := connect.NewUnaryHandler(
+		AdminServiceGetJdFitBandsProcedure,
+		svc.GetJdFitBands,
+		connect.WithSchema(adminServiceMethods.ByName("GetJdFitBands")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetJdFitBandsHandler := connect.NewUnaryHandler(
+		AdminServiceSetJdFitBandsProcedure,
+		svc.SetJdFitBands,
+		connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -1283,6 +1337,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceReviewDecisionHandler.ServeHTTP(w, r)
 		case AdminServiceExportDecisionLogProcedure:
 			adminServiceExportDecisionLogHandler.ServeHTTP(w, r)
+		case AdminServiceGetJdFitBandsProcedure:
+			adminServiceGetJdFitBandsHandler.ServeHTTP(w, r)
+		case AdminServiceSetJdFitBandsProcedure:
+			adminServiceSetJdFitBandsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1450,4 +1508,12 @@ func (UnimplementedAdminServiceHandler) ReviewDecision(context.Context, *connect
 
 func (UnimplementedAdminServiceHandler) ExportDecisionLog(context.Context, *connect.Request[v1.ExportDecisionLogRequest]) (*connect.Response[v1.ExportDecisionLogResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionLog is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetJdFitBands(context.Context, *connect.Request[v1.GetJdFitBandsRequest]) (*connect.Response[v1.GetJdFitBandsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetJdFitBands is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdFitBands is not implemented"))
 }

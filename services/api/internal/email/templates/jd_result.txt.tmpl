@@ -1,16 +1,20 @@
 Your JD review is finished: {{.Headline}}
 
-{{if .Score}}Match score: {{.Score}} (the gate for a tailored résumé is {{.Threshold}}){{else}}The review could not be completed.{{end}}
+{{if .Score}}Fit: {{.CategoryLabel}} (match score {{.Score}}){{else}}The review could not be completed.{{end}}
 {{if .Error}}
 What happened: {{.Error}}
 Roger has the submission and will follow up.
+{{end}}{{if .GoodFit}}
+This posting is a {{.CategoryLabel}} fit. A two-page résumé written for it is attached as a PDF; it opens without a password and is locked against editing.
+{{else if .WillReview}}
+This posting is a {{.CategoryLabel}} fit on the automated read. Roger will review it himself and get back to you.
+{{else if .Category}}
+On the automated read this posting is a {{.CategoryLabel}} fit for Roger's record. No further action is needed on your side.
 {{end}}{{if .Requirements}}
 {{.Met}} of {{.Requirements}} requirements evidenced in Roger's records{{if .Partial}}, {{.Partial}} partly{{end}}{{if .Unmet}}, {{.Unmet}} not evidenced{{end}}.
 {{if .UnmetList}}Not evidenced: {{range $i, $t := .UnmetList}}{{if $i}}; {{end}}{{$t}}{{end}}.
 {{end}}{{end}}
-Open the full review, with each requirement and its reason{{if .PDFURL}} and the tailored résumé PDF{{end}}:
+The full review, with each requirement and its reason{{if .PDFURL}} and the résumé download{{end}}:
 {{.ReviewURL}}
-
-Roger sees every submission and replies personally when a role looks worth a conversation.
 
 career-site (JD reviewer)

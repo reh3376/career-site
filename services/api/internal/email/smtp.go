@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -64,24 +65,50 @@ func (s *SMTP) Send(ctx context.Context, msg Message) error {
 
 // buildMIME writes a multipart/alternative message so clients that support
 // HTML render it and text-only clients still get something readable.
+// With attachments the alternative part is wrapped in multipart/mixed.
 func buildMIME(from string, msg Message) []byte {
 	var b strings.Builder
-	boundary := "career-site-boundary-2ff7"
+	alt := "career-site-boundary-2ff7"
+	mixed := "career-site-mixed-9c41"
 	fmt.Fprintf(&b, "From: %s\r\n", from)
 	fmt.Fprintf(&b, "To: %s\r\n", msg.To)
 	fmt.Fprintf(&b, "Subject: %s\r\n", msg.Subject)
 	fmt.Fprintf(&b, "MIME-Version: 1.0\r\n")
-	fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", boundary)
+	if len(msg.Attachments) > 0 {
+		fmt.Fprintf(&b, "Content-Type: multipart/mixed; boundary=%s\r\n\r\n", mixed)
+		fmt.Fprintf(&b, "--%s\r\n", mixed)
+	}
+	fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", alt)
 
-	fmt.Fprintf(&b, "--%s\r\n", boundary)
+	fmt.Fprintf(&b, "--%s\r\n", alt)
 	fmt.Fprintf(&b, "Content-Type: text/plain; charset=utf-8\r\n\r\n%s\r\n\r\n", msg.TextBody)
 
 	if msg.HTMLBody != "" {
-		fmt.Fprintf(&b, "--%s\r\n", boundary)
+		fmt.Fprintf(&b, "--%s\r\n", alt)
 		fmt.Fprintf(&b, "Content-Type: text/html; charset=utf-8\r\n\r\n%s\r\n\r\n", msg.HTMLBody)
 	}
 
-	fmt.Fprintf(&b, "--%s--\r\n", boundary)
+	fmt.Fprintf(&b, "--%s--\r\n", alt)
+
+	if len(msg.Attachments) > 0 {
+		for _, a := range msg.Attachments {
+			ct := a.ContentType
+			if ct == "" {
+				ct = "application/octet-stream"
+			}
+			fmt.Fprintf(&b, "\r\n--%s\r\n", mixed)
+			fmt.Fprintf(&b, "Content-Type: %s; name=\"%s\"\r\n", ct, a.Filename)
+			fmt.Fprintf(&b, "Content-Disposition: attachment; filename=\"%s\"\r\n", a.Filename)
+			fmt.Fprintf(&b, "Content-Transfer-Encoding: base64\r\n\r\n")
+			enc := base64.StdEncoding.EncodeToString(a.Data)
+			for len(enc) > 76 {
+				b.WriteString(enc[:76] + "\r\n")
+				enc = enc[76:]
+			}
+			b.WriteString(enc + "\r\n")
+		}
+		fmt.Fprintf(&b, "--%s--\r\n", mixed)
+	}
 	return []byte(b.String())
 }
 

@@ -77,7 +77,7 @@ class GetJdResultRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ..., result_token: _Optional[str] = ...) -> None: ...
 
 class GetJdResultResponse(_message.Message):
-    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at", "resume_markdown", "verdicts", "met_count", "partial_count", "unmet_count", "match_threshold")
+    __slots__ = ("status", "match_score", "generated_resume_url", "error_message", "created_at", "completed_at", "resume_markdown", "verdicts", "met_count", "partial_count", "unmet_count", "match_threshold", "progress_pct", "progress_stage", "fit_category")
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
     GENERATED_RESUME_URL_FIELD_NUMBER: _ClassVar[int]
@@ -90,6 +90,9 @@ class GetJdResultResponse(_message.Message):
     PARTIAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     UNMET_COUNT_FIELD_NUMBER: _ClassVar[int]
     MATCH_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_PCT_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_STAGE_FIELD_NUMBER: _ClassVar[int]
+    FIT_CATEGORY_FIELD_NUMBER: _ClassVar[int]
     status: JdStatus
     match_score: float
     generated_resume_url: str
@@ -102,7 +105,32 @@ class GetJdResultResponse(_message.Message):
     partial_count: int
     unmet_count: int
     match_threshold: float
-    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ..., verdicts: _Optional[_Iterable[_Union[RequirementVerdict, _Mapping]]] = ..., met_count: _Optional[int] = ..., partial_count: _Optional[int] = ..., unmet_count: _Optional[int] = ..., match_threshold: _Optional[float] = ...) -> None: ...
+    progress_pct: int
+    progress_stage: str
+    fit_category: str
+    def __init__(self, status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., generated_resume_url: _Optional[str] = ..., error_message: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resume_markdown: _Optional[str] = ..., verdicts: _Optional[_Iterable[_Union[RequirementVerdict, _Mapping]]] = ..., met_count: _Optional[int] = ..., partial_count: _Optional[int] = ..., unmet_count: _Optional[int] = ..., match_threshold: _Optional[float] = ..., progress_pct: _Optional[int] = ..., progress_stage: _Optional[str] = ..., fit_category: _Optional[str] = ...) -> None: ...
+
+class JdFitBands(_message.Message):
+    __slots__ = ("very_strong", "strong", "possible", "weak")
+    VERY_STRONG_FIELD_NUMBER: _ClassVar[int]
+    STRONG_FIELD_NUMBER: _ClassVar[int]
+    POSSIBLE_FIELD_NUMBER: _ClassVar[int]
+    WEAK_FIELD_NUMBER: _ClassVar[int]
+    very_strong: float
+    strong: float
+    possible: float
+    weak: float
+    def __init__(self, very_strong: _Optional[float] = ..., strong: _Optional[float] = ..., possible: _Optional[float] = ..., weak: _Optional[float] = ...) -> None: ...
+
+class GetJdReviewConfigRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetJdReviewConfigResponse(_message.Message):
+    __slots__ = ("bands",)
+    BANDS_FIELD_NUMBER: _ClassVar[int]
+    bands: JdFitBands
+    def __init__(self, bands: _Optional[_Union[JdFitBands, _Mapping]] = ...) -> None: ...
 
 class ListMySubmissionsRequest(_message.Message):
     __slots__ = ()
@@ -115,7 +143,7 @@ class ListMySubmissionsResponse(_message.Message):
     def __init__(self, submissions: _Optional[_Iterable[_Union[MySubmission, _Mapping]]] = ...) -> None: ...
 
 class MySubmission(_message.Message):
-    __slots__ = ("id", "status", "match_score", "role_hint", "employer_hint", "created_at", "completed_at", "has_resume")
+    __slots__ = ("id", "status", "match_score", "role_hint", "employer_hint", "created_at", "completed_at", "has_resume", "fit_category", "progress_pct")
     ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
@@ -124,6 +152,8 @@ class MySubmission(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
     HAS_RESUME_FIELD_NUMBER: _ClassVar[int]
+    FIT_CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_PCT_FIELD_NUMBER: _ClassVar[int]
     id: str
     status: JdStatus
     match_score: float
@@ -132,7 +162,9 @@ class MySubmission(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     completed_at: _timestamp_pb2.Timestamp
     has_resume: bool
-    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., has_resume: _Optional[bool] = ...) -> None: ...
+    fit_category: str
+    progress_pct: int
+    def __init__(self, id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., match_score: _Optional[float] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., has_resume: _Optional[bool] = ..., fit_category: _Optional[str] = ..., progress_pct: _Optional[int] = ...) -> None: ...
 
 class RequirementVerdict(_message.Message):
     __slots__ = ("id", "text", "category", "weight", "verdict", "rationale")

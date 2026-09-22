@@ -21,6 +21,8 @@ type JdSubmission struct {
 	EmployerHint       string
 	ContactEmail       string
 	ApplyURL           string
+	ProgressPct        int32
+	ProgressStage      string
 	Status             string
 	MatchScore         *float64
 	GeneratedResumeURL string
@@ -140,7 +142,7 @@ func (r *Repo) CreateJdSubmission(
 const jdCols = `
     s.id, s.source_kind, s.jd_text, s.jd_hash, s.text_head,
     COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''), COALESCE(s.contact_email, ''),
-    COALESCE(s.apply_url, ''),
+    COALESCE(s.apply_url, ''), s.progress_pct, s.progress_stage,
     s.status, s.match_score, COALESCE(s.generated_resume_url, ''), COALESCE(s.error, ''),
     s.created_at, s.completed_at,
     s.result_token, COALESCE(s.resume_markdown, ''), COALESCE(s.llm_model, ''),
@@ -240,7 +242,9 @@ func (r *Repo) UpdateJdScoring(
     SET status       = $2,
         match_score  = $3,
         error        = NULLIF($4, ''),
-        completed_at = CASE WHEN $5::boolean THEN now() ELSE completed_at END
+        completed_at = CASE WHEN $5::boolean THEN now() ELSE completed_at END,
+        progress_pct = CASE WHEN $5::boolean THEN 100 ELSE progress_pct END,
+        progress_stage = CASE WHEN $5::boolean THEN 'finished' ELSE progress_stage END
     WHERE id = $1
   `
 	tag, err := r.pool.Exec(ctx, q, id, status, score, errText, terminal)
@@ -260,7 +264,7 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 	const q = `
     SELECT s.id, s.source_kind, ''::text /* jd_text elided */, s.jd_hash, s.text_head,
            COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''),
-           COALESCE(s.contact_email, ''), COALESCE(s.apply_url, ''),
+           COALESCE(s.contact_email, ''), COALESCE(s.apply_url, ''), s.progress_pct, s.progress_stage,
            s.status, s.match_score, COALESCE(s.generated_resume_url, ''),
            COALESCE(s.error, ''),
            s.created_at, s.completed_at,
@@ -282,7 +286,7 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
 		var s JdSubmission
 		if err := rows.Scan(
 			&s.ID, &s.SourceKind, &s.JdText, &s.JdHash, &s.TextHead,
-			&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL,
+			&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL, &s.ProgressPct, &s.ProgressStage,
 			&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 			&s.CreatedAt, &s.CompletedAt,
 			&s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
@@ -302,7 +306,7 @@ func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, er
 		`SELECT `+jdCols+` FROM jd_submissions s LEFT JOIN users u ON u.id = s.user_id WHERE s.id = $1`, id,
 	).Scan(
 		&s.ID, &s.SourceKind, &s.JdText, &s.JdHash, &s.TextHead,
-		&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL,
+		&s.RoleHint, &s.EmployerHint, &s.ContactEmail, &s.ApplyURL, &s.ProgressPct, &s.ProgressStage,
 		&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 		&s.CreatedAt, &s.CompletedAt,
 		&s.ResultToken, &s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
@@ -324,7 +328,8 @@ func (r *Repo) ListJdSubmissionsByUser(ctx context.Context, userID int64, limit 
     SELECT s.id, s.status, s.match_score,
            COALESCE(s.role_hint, ''), COALESCE(s.employer_hint, ''),
            s.created_at, s.completed_at,
-           CASE WHEN s.resume_markdown IS NULL THEN '' ELSE 'y' END
+           CASE WHEN s.resume_markdown IS NULL THEN '' ELSE 'y' END,
+           s.progress_pct
     FROM jd_submissions s
     WHERE s.user_id = $1
     ORDER BY s.created_at DESC
@@ -339,11 +344,41 @@ func (r *Repo) ListJdSubmissionsByUser(ctx context.Context, userID int64, limit 
 	for rows.Next() {
 		var s JdSubmission
 		if err := rows.Scan(&s.ID, &s.Status, &s.MatchScore, &s.RoleHint, &s.EmployerHint,
-			&s.CreatedAt, &s.CompletedAt, &s.ResumeMarkdown); err != nil {
+			&s.CreatedAt, &s.CompletedAt, &s.ResumeMarkdown, &s.ProgressPct); err != nil {
 			return nil, fmt.Errorf("scan jd row: %w", err)
 		}
 		s.UserID = userID
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// UpdateJdProgress records where the pipeline is, for the submitter's
+// progress view. Best-effort; never fails the run.
+func (r *Repo) UpdateJdProgress(ctx context.Context, id int64, pct int32, stage string) error {
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 99 {
+		pct = 99 // 100 is written with the terminal status
+	}
+	_, err := r.pool.Exec(ctx,
+		`UPDATE jd_submissions SET progress_pct = $2, progress_stage = $3 WHERE id = $1 AND progress_pct <= $2`,
+		id, pct, stage)
+	if err != nil {
+		return fmt.Errorf("update jd progress: %w", err)
+	}
+	return nil
+}
+
+// FinishJdProgress sets progress to 100 / finished once the row is in
+// a terminal state, whichever write got it there.
+func (r *Repo) FinishJdProgress(ctx context.Context, id int64) error {
+	_, err := r.pool.Exec(ctx, `
+    UPDATE jd_submissions SET progress_pct = 100, progress_stage = 'finished'
+     WHERE id = $1 AND status IN ('ready', 'below_threshold', 'failed')`, id)
+	if err != nil {
+		return fmt.Errorf("finish jd progress: %w", err)
+	}
+	return nil
 }

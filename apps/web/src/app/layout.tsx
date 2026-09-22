@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
@@ -8,17 +8,22 @@ import { getUiMode } from "@/lib/ui-mode";
 
 import "./globals.css";
 
+// The three faces are self-hosted from src/fonts (variable WOFF2, latin
+// subset, SIL Open Font License) so a build never depends on
+// fonts.googleapis.com: two builds in one afternoon failed when
+// Turbopack could not fetch the Google Fonts CSS. Same families, same
+// axes, same CSS variables as before; the callsites are unchanged.
+
 // Fraunces, variable serif for display. Distinctive letterforms
 // (soft-square terminals, wonky ampersand, opsz variation) that read as
-// crafted, not templated.
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  // Variable weight is required for next/font to accept custom axes.
-  // The opsz axis drives display-vs-text optical sizing (we set 60–144
-  // via font-variation-settings at the callsites); SOFT gives the
-  // headlines a softer terminal that reads as crafted, not templated.
-  axes: ["opsz", "SOFT"],
-  style: ["normal", "italic"],
+// crafted, not templated. The file carries the opsz and SOFT axes; the
+// callsites set them with font-variation-settings.
+const fraunces = localFont({
+  src: [
+    { path: "../fonts/fraunces-latin.woff2", style: "normal" },
+    { path: "../fonts/fraunces-italic-latin.woff2", style: "italic" },
+  ],
+  weight: "100 900",
   variable: "--font-fraunces",
   display: "swap",
 });
@@ -26,9 +31,9 @@ const fraunces = Fraunces({
 // Inter Tight, slightly condensed Inter. Precise, humanist, disappears
 // when needed; the small horizontal savings vs. regular Inter give body
 // text more breathing room on narrow columns.
-const interTight = Inter_Tight({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const interTight = localFont({
+  src: "../fonts/inter-tight-latin.woff2",
+  weight: "100 900",
   variable: "--font-inter-tight",
   display: "swap",
 });
@@ -36,9 +41,9 @@ const interTight = Inter_Tight({
 // JetBrains Mono, reserved for numeric callouts, mono tags, and the
 // system-status indicator. Signals the industrial-control aesthetic
 // without hijacking body prose.
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const jetbrainsMono = localFont({
+  src: "../fonts/jetbrains-mono-latin.woff2",
+  weight: "100 800",
   variable: "--font-jetbrains-mono",
   display: "swap",
 });

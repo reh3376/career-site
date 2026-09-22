@@ -24,7 +24,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/jd.proto.
  */
 export const file_career_v1_jd: GenFile = /*@__PURE__*/
-  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQInUKEFN1Ym1pdEpkUmVzcG9uc2USFQoNc3VibWlzc2lvbl9pZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRIUCgxyZXN1bHRfdG9rZW4YBCABKAkiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAinQMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBQg4KDF9tYXRjaF9zY29yZSIaChhMaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QiSQoZTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZRIsCgtzdWJtaXNzaW9ucxgBIAMoCzIXLmNhcmVlci52MS5NeVN1Ym1pc3Npb24iiQIKDE15U3VibWlzc2lvbhIKCgJpZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSGAoLbWF0Y2hfc2NvcmUYAyABKAFIAIgBARIRCglyb2xlX2hpbnQYBCABKAkSFQoNZW1wbG95ZXJfaGludBgFIAEoCRIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmhhc19yZXN1bWUYCCABKAhCDgoMX21hdGNoX3Njb3JlInQKElJlcXVpcmVtZW50VmVyZGljdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEhAKCGNhdGVnb3J5GAMgASgJEg4KBndlaWdodBgEIAEoBRIPCgd2ZXJkaWN0GAUgASgJEhEKCXJhdGlvbmFsZRgGIAEoCSpoCghKZFNvdXJjZRIZChVKRF9TT1VSQ0VfVU5TUEVDSUZJRUQQABITCg9KRF9TT1VSQ0VfUEFTVEUQARIRCg1KRF9TT1VSQ0VfUERGEAISGQoVSkRfU09VUkNFX1RFWFRfVVBMT0FEEAMquAEKCEpkU3RhdHVzEhkKFUpEX1NUQVRVU19VTlNQRUNJRklFRBAAEhYKEkpEX1NUQVRVU19SRUNFSVZFRBABEhUKEUpEX1NUQVRVU19TQ09SSU5HEAISHQoZSkRfU1RBVFVTX0JFTE9XX1RIUkVTSE9MRBADEhgKFEpEX1NUQVRVU19HRU5FUkFUSU5HEAQSEwoPSkRfU1RBVFVTX1JFQURZEAUSFAoQSkRfU1RBVFVTX0ZBSUxFRBAGMpwCCglKZFNlcnZpY2USTQoIU3VibWl0SmQSGi5jYXJlZXIudjEuU3VibWl0SmRSZXF1ZXN0GhsuY2FyZWVyLnYxLlN1Ym1pdEpkUmVzcG9uc2UiCIC1GAKQtRgDElYKC0dldEpkUmVzdWx0Eh0uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVxdWVzdBoeLmNhcmVlci52MS5HZXRKZFJlc3VsdFJlc3BvbnNlIgiAtRgCkLUYHhJoChFMaXN0TXlTdWJtaXNzaW9ucxIjLmNhcmVlci52MS5MaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZSIIgLUYApC1GB5CoQEKDWNvbS5jYXJlZXIudjFCB0pkUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQInUKEFN1Ym1pdEpkUmVzcG9uc2USFQoNc3VibWlzc2lvbl9pZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRIUCgxyZXN1bHRfdG9rZW4YBCABKAkiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAi4QMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBEhQKDHByb2dyZXNzX3BjdBgNIAEoBRIWCg5wcm9ncmVzc19zdGFnZRgOIAEoCRIUCgxmaXRfY2F0ZWdvcnkYDyABKAlCDgoMX21hdGNoX3Njb3JlIlEKCkpkRml0QmFuZHMSEwoLdmVyeV9zdHJvbmcYASABKAESDgoGc3Ryb25nGAIgASgBEhAKCHBvc3NpYmxlGAMgASgBEgwKBHdlYWsYBCABKAEiGgoYR2V0SmRSZXZpZXdDb25maWdSZXF1ZXN0IkEKGUdldEpkUmV2aWV3Q29uZmlnUmVzcG9uc2USJAoFYmFuZHMYASABKAsyFS5jYXJlZXIudjEuSmRGaXRCYW5kcyIaChhMaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QiSQoZTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZRIsCgtzdWJtaXNzaW9ucxgBIAMoCzIXLmNhcmVlci52MS5NeVN1Ym1pc3Npb24itQIKDE15U3VibWlzc2lvbhIKCgJpZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSGAoLbWF0Y2hfc2NvcmUYAyABKAFIAIgBARIRCglyb2xlX2hpbnQYBCABKAkSFQoNZW1wbG95ZXJfaGludBgFIAEoCRIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmhhc19yZXN1bWUYCCABKAgSFAoMZml0X2NhdGVnb3J5GAkgASgJEhQKDHByb2dyZXNzX3BjdBgKIAEoBUIOCgxfbWF0Y2hfc2NvcmUidAoSUmVxdWlyZW1lbnRWZXJkaWN0EgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSDgoGd2VpZ2h0GAQgASgFEg8KB3ZlcmRpY3QYBSABKAkSEQoJcmF0aW9uYWxlGAYgASgJKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyq4AQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYyhgMKCUpkU2VydmljZRJNCghTdWJtaXRKZBIaLmNhcmVlci52MS5TdWJtaXRKZFJlcXVlc3QaGy5jYXJlZXIudjEuU3VibWl0SmRSZXNwb25zZSIIgLUYApC1GAMSVgoLR2V0SmRSZXN1bHQSHS5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXF1ZXN0Gh4uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVzcG9uc2UiCIC1GAKQtRgeEmgKEUxpc3RNeVN1Ym1pc3Npb25zEiMuY2FyZWVyLnYxLkxpc3RNeVN1Ym1pc3Npb25zUmVxdWVzdBokLmNhcmVlci52MS5MaXN0TXlTdWJtaXNzaW9uc1Jlc3BvbnNlIgiAtRgCkLUYHhJoChFHZXRKZFJldmlld0NvbmZpZxIjLmNhcmVlci52MS5HZXRKZFJldmlld0NvbmZpZ1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0SmRSZXZpZXdDb25maWdSZXNwb25zZSIIgLUYApC1GDxCoQEKDWNvbS5jYXJlZXIudjFCB0pkUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Submission request. Exactly one of jd_text (paste) OR
@@ -261,6 +261,29 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
    * @generated from field: double match_threshold = 12;
    */
   matchThreshold: number;
+
+  /**
+   * Pipeline progress, 0 to 100, while the submission is live; 100
+   * once it has finished.
+   *
+   * @generated from field: int32 progress_pct = 13;
+   */
+  progressPct: number;
+
+  /**
+   * Short human-readable stage ("judging requirement 4 of 12").
+   *
+   * @generated from field: string progress_stage = 14;
+   */
+  progressStage: string;
+
+  /**
+   * Fit category derived from the score once known: very_strong,
+   * strong, possible, weak, very_weak; empty before scoring.
+   *
+   * @generated from field: string fit_category = 15;
+   */
+  fitCategory: string;
 };
 
 /**
@@ -269,6 +292,85 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
  */
 export const GetJdResultResponseSchema: GenMessage<GetJdResultResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_jd, 3);
+
+/**
+ * Lower edges of the fit categories; scores below weak are very weak.
+ * Owner-editable from /admin/jd.
+ *
+ * @generated from message career.v1.JdFitBands
+ */
+export type JdFitBands = Message<"career.v1.JdFitBands"> & {
+  /**
+   * Very strong at or above this score.
+   *
+   * @generated from field: double very_strong = 1;
+   */
+  veryStrong: number;
+
+  /**
+   * Strong at or above this score; also the résumé gate.
+   *
+   * @generated from field: double strong = 2;
+   */
+  strong: number;
+
+  /**
+   * Possible at or above this score.
+   *
+   * @generated from field: double possible = 3;
+   */
+  possible: number;
+
+  /**
+   * Weak at or above this score.
+   *
+   * @generated from field: double weak = 4;
+   */
+  weak: number;
+};
+
+/**
+ * Describes the message career.v1.JdFitBands.
+ * Use `create(JdFitBandsSchema)` to create a new message.
+ */
+export const JdFitBandsSchema: GenMessage<JdFitBands> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 4);
+
+/**
+ * Config request; the member is the session.
+ *
+ * @generated from message career.v1.GetJdReviewConfigRequest
+ */
+export type GetJdReviewConfigRequest = Message<"career.v1.GetJdReviewConfigRequest"> & {
+};
+
+/**
+ * Describes the message career.v1.GetJdReviewConfigRequest.
+ * Use `create(GetJdReviewConfigRequestSchema)` to create a new message.
+ */
+export const GetJdReviewConfigRequestSchema: GenMessage<GetJdReviewConfigRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 5);
+
+/**
+ * The bands in force.
+ *
+ * @generated from message career.v1.GetJdReviewConfigResponse
+ */
+export type GetJdReviewConfigResponse = Message<"career.v1.GetJdReviewConfigResponse"> & {
+  /**
+   * Current bands.
+   *
+   * @generated from field: career.v1.JdFitBands bands = 1;
+   */
+  bands?: JdFitBands | undefined;
+};
+
+/**
+ * Describes the message career.v1.GetJdReviewConfigResponse.
+ * Use `create(GetJdReviewConfigResponseSchema)` to create a new message.
+ */
+export const GetJdReviewConfigResponseSchema: GenMessage<GetJdReviewConfigResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 6);
 
 /**
  * List request; the member is the session.
@@ -283,7 +385,7 @@ export type ListMySubmissionsRequest = Message<"career.v1.ListMySubmissionsReque
  * Use `create(ListMySubmissionsRequestSchema)` to create a new message.
  */
 export const ListMySubmissionsRequestSchema: GenMessage<ListMySubmissionsRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 4);
+  messageDesc(file_career_v1_jd, 7);
 
 /**
  * The member's submissions, newest first.
@@ -304,7 +406,7 @@ export type ListMySubmissionsResponse = Message<"career.v1.ListMySubmissionsResp
  * Use `create(ListMySubmissionsResponseSchema)` to create a new message.
  */
 export const ListMySubmissionsResponseSchema: GenMessage<ListMySubmissionsResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 5);
+  messageDesc(file_career_v1_jd, 8);
 
 /**
  * One of the member's own submissions, enough to pick it from a list.
@@ -367,6 +469,20 @@ export type MySubmission = Message<"career.v1.MySubmission"> & {
    * @generated from field: bool has_resume = 8;
    */
   hasResume: boolean;
+
+  /**
+   * Fit category once scored (see GetJdResultResponse.fit_category).
+   *
+   * @generated from field: string fit_category = 9;
+   */
+  fitCategory: string;
+
+  /**
+   * Pipeline progress, 0 to 100.
+   *
+   * @generated from field: int32 progress_pct = 10;
+   */
+  progressPct: number;
 };
 
 /**
@@ -374,7 +490,7 @@ export type MySubmission = Message<"career.v1.MySubmission"> & {
  * Use `create(MySubmissionSchema)` to create a new message.
  */
 export const MySubmissionSchema: GenMessage<MySubmission> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 6);
+  messageDesc(file_career_v1_jd, 9);
 
 /**
  * One requirement the reviewer extracted from the posting and the
@@ -431,7 +547,7 @@ export type RequirementVerdict = Message<"career.v1.RequirementVerdict"> & {
  * Use `create(RequirementVerdictSchema)` to create a new message.
  */
 export const RequirementVerdictSchema: GenMessage<RequirementVerdict> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 7);
+  messageDesc(file_career_v1_jd, 10);
 
 /**
  * Where the JD text came from — mirrors jd_submissions.source_kind.
@@ -579,6 +695,17 @@ export const JdService: GenService<{
     methodKind: "unary";
     input: typeof ListMySubmissionsRequestSchema;
     output: typeof ListMySubmissionsResponseSchema;
+  },
+  /**
+   * Returns the fit bands in force (the gate is the "strong" edge), so
+   * the JD pages quote the numbers the pipeline actually uses.
+   *
+   * @generated from rpc career.v1.JdService.GetJdReviewConfig
+   */
+  getJdReviewConfig: {
+    methodKind: "unary";
+    input: typeof GetJdReviewConfigRequestSchema;
+    output: typeof GetJdReviewConfigResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_jd, 0);

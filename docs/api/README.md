@@ -123,9 +123,9 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 40 |
+| [`AdminService`](#adminservice) | Owner console. | 42 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
-| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 3 |
+| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -1649,6 +1649,8 @@ Owner console.
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
+| [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
+| [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands. |
 
 ### AdminService.ListMembers
 
@@ -2998,6 +3000,65 @@ evaluation; reviewed rows carry the human label.
 
 </details>
 
+### AdminService.GetJdFitBands
+
+`POST /api/career.v1.AdminService/GetJdFitBands` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads the JD fit bands (the numbers that classify a review as very
+strong / strong / possible / weak / very weak; "strong" is the gate).
+
+**Request** — [`GetJdFitBandsRequest`](#getjdfitbandsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetJdFitBandsResponse`](#getjdfitbandsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.SetJdFitBands
+
+`POST /api/career.v1.AdminService/SetJdFitBands` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Sets the JD fit bands. Takes effect for the next submission within
+seconds; existing scores are re-classified on read.
+
+**Request** — [`SetJdFitBandsRequest`](#setjdfitbandsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | The bands to store. |
+
+**Response** — [`SetJdFitBandsResponse`](#setjdfitbandsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Stored bands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "bands": {
+    "veryStrong": 0.5,
+    "strong": 0.5,
+    "possible": 0.5,
+    "weak": 0.5
+  }
+}
+```
+
+</details>
+
 ## SystemService
 
 Version and governance status.
@@ -3073,6 +3134,7 @@ submit or poll, and the submitting member is recorded on the row.
 | [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
 | [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission — queued / scoring / below-threshold / generating / ready / failed — plus the generated résumé URL when status is `ready`. |
 | [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
+| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
 
 ### JdService.SubmitJd
 
@@ -3148,6 +3210,9 @@ generated résumé URL when status is `ready`.
 | `partialCount` | `int32` | number |  | Number judged partially met. |
 | `unmetCount` | `int32` | number |  | Number judged not evidenced. |
 | `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+| `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
+| `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
+| `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
 
 <details><summary>Example request body</summary>
 
@@ -3176,6 +3241,31 @@ _No fields; send `{}`._
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `submissions` | [`MySubmission`](#mysubmission)[] | array of object |  | Up to 100 rows. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### JdService.GetJdReviewConfig
+
+`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** 60/min
+
+Returns the fit bands in force (the gate is the "strong" edge), so
+the JD pages quote the numbers the pipeline actually uses.
+
+**Request** — [`GetJdReviewConfigRequest`](#getjdreviewconfigrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetJdReviewConfigResponse`](#getjdreviewconfigresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
 
 <details><summary>Example request body</summary>
 
@@ -4215,6 +4305,35 @@ Poll response.
 | `partialCount` | `int32` | number |  | Number judged partially met. |
 | `unmetCount` | `int32` | number |  | Number judged not evidenced. |
 | `matchThreshold` | `double` | number |  | The gate the score was compared against (JD_MATCH_THRESHOLD). |
+| `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
+| `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
+| `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
+
+### JdFitBands
+
+Lower edges of the fit categories; scores below weak are very weak.
+Owner-editable from /admin/jd.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `veryStrong` | `double` | number |  | Very strong at or above this score. |
+| `strong` | `double` | number |  | Strong at or above this score; also the résumé gate. |
+| `possible` | `double` | number |  | Possible at or above this score. |
+| `weak` | `double` | number |  | Weak at or above this score. |
+
+### GetJdReviewConfigRequest
+
+Config request; the member is the session.
+
+_No fields._
+
+### GetJdReviewConfigResponse
+
+The bands in force.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
 
 ### ListMySubmissionsRequest
 
@@ -4244,6 +4363,8 @@ One of the member's own submissions, enough to pick it from a list.
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was submitted. |
 | `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it reached a terminal state; unset while running. |
 | `hasResume` | `bool` | boolean |  | True when a tailored résumé exists for it. |
+| `fitCategory` | `string` | string |  | Fit category once scored (see GetJdResultResponse.fit_category). |
+| `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100. |
 
 ### RequirementVerdict
 
@@ -5350,6 +5471,36 @@ The rendered export.
 |---|---|---|---|---|
 | `jsonl` | `string` | string |  | JSON Lines, one decision per line, oldest first. |
 | `rowCount` | `int32` | number |  | Number of lines in jsonl. |
+
+### GetJdFitBandsRequest
+
+Read request.
+
+_No fields._
+
+### GetJdFitBandsResponse
+
+The bands in force and who last changed them.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
+
+### SetJdFitBandsRequest
+
+New bands; must satisfy 0 < weak < possible < strong < very_strong <= 1.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | The bands to store. |
+
+### SetJdFitBandsResponse
+
+The bands as stored.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Stored bands. |
 
 ### RegisterRequest
 

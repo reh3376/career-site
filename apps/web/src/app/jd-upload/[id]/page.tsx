@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
-import { getJdThreshold } from "@/lib/jd-threshold";
+import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
 import { getSessionUser } from "@/lib/session-user";
 
@@ -38,7 +38,7 @@ export default async function JdReviewPage({
   });
   if (probe.status === 404) notFound();
 
-  const threshold = getJdThreshold();
+  const threshold = (await getJdBands(cookie)).strong.toFixed(2);
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">

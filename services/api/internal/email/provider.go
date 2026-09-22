@@ -24,6 +24,17 @@ type Message struct {
 	Kind        string
 	UserID      int64
 	TriggeredBy string
+
+	// Attachments ride along as base64 (Resend) or a multipart/mixed
+	// part (SMTP). Keep them small; the résumé PDF is ~40 KB.
+	Attachments []Attachment
+}
+
+// Attachment is one file on a message.
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
 }
 
 type Provider interface {

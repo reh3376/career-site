@@ -167,12 +167,25 @@ func (a *Assessor) batchRequirements(reqs []prompts.Requirement, evidence map[st
 	return batches
 }
 
-// Assess produces the assessment for one JD. Two LLM calls, N
-// retrievals. Every call lands in llm_usage.
-func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) (*Assessment, error) {
+// Progress receives pipeline progress (0 to 100) with a short stage
+// label. Nil is allowed.
+type Progress func(pct int32, stage string)
+
+func (p Progress) report(pct int32, stage string) {
+	if p != nil {
+		p(pct, stage)
+	}
+}
+
+// Assess produces the assessment for one JD: one requirements call,
+// one embed call, one judge call per requirement. Every call lands in
+// llm_usage. Progress is reported from 5% to 75%; the scorer owns the
+// rest (résumé, PDF).
+func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, progress Progress) (*Assessment, error) {
 	if err := a.checkCap(ctx); err != nil {
 		return nil, err
 	}
+	progress.report(5, "reading the posting")
 	out := &Assessment{
 		EvidenceIDs: map[string][]int64{},
 		Prompts: map[string]int{
@@ -196,6 +209,8 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		return nil, fmt.Errorf("requirements: %w", err)
 	}
 	out.Requirements = reqs
+
+	progress.report(12, fmt.Sprintf("%d requirements found; gathering evidence", len(reqs)))
 
 	// 2. Retrieval per requirement (one batched embed call).
 	texts := make([]string, len(reqs))
@@ -245,6 +260,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	userPrompts := make([]string, 0, len(batches))
 	batchOf := map[string]int{}
 	for bi, batch := range batches {
+		progress.report(int32(15+60*bi/len(batches)), fmt.Sprintf("judging requirement %d of %d", bi+1, len(batches)))
 		var judgeDoc struct {
 			Judgments []rawJudgment `json:"judgments"`
 		}
@@ -261,6 +277,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		all = append(all, judgeDoc.Judgments...)
 	}
 	out.JudgeBatches = len(batches)
+	progress.report(76, "computing the score")
 	rawByReq := map[string]rawJudgment{}
 	byReq := map[string]Judgment{}
 	for _, j := range all {

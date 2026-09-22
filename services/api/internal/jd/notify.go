@@ -20,7 +20,7 @@ import (
 // promised "the full JD lands in Roger's inbox with a match score"
 // since it shipped, and this is what keeps that promise.
 type OutcomeNotifier interface {
-	NotifyJdOutcome(ctx context.Context, s *users.JdSubmission, a *Assessment, threshold float64) error
+	NotifyJdOutcome(ctx context.Context, s *users.JdSubmission, a *Assessment, bands Bands) error
 }
 
 // SetNotifier installs the outcome notifier. Nil disables it.
@@ -49,23 +49,26 @@ func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
 			a = &parsed
 		}
 	}
-	if err := s.notifier.NotifyJdOutcome(ctx, row, a, s.threshold); err != nil {
+	if err := s.notifier.NotifyJdOutcome(ctx, row, a, s.bands.Get(ctx)); err != nil {
 		s.log.Warn("jd: outcome mail failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 	}
 }
 
-// OwnerMailer mails the owner about each finished submission.
+// OwnerMailer mails the owner and the submitter about each finished
+// submission.
 type OwnerMailer struct {
 	email   email.Provider
+	users   *users.Repo
 	from    string
 	to      string
 	webBase string
 	log     *slog.Logger
 }
 
-// NewOwnerMailer wires the mailer. to is the owner's address.
-func NewOwnerMailer(provider email.Provider, from, to, webBase string, log *slog.Logger) *OwnerMailer {
-	return &OwnerMailer{email: provider, from: from, to: to, webBase: strings.TrimRight(webBase, "/"), log: log}
+// NewOwnerMailer wires the mailer. to is the owner's address; repo is
+// used to fetch the résumé PDF for attachment.
+func NewOwnerMailer(provider email.Provider, repo *users.Repo, from, to, webBase string, log *slog.Logger) *OwnerMailer {
+	return &OwnerMailer{email: provider, users: repo, from: from, to: to, webBase: strings.TrimRight(webBase, "/"), log: log}
 }
 
 // jdOutcomeData is the template payload.
@@ -95,6 +98,14 @@ type jdOutcomeData struct {
 	PDFURL         string
 	// ReviewURL is the submitter's own page for this review.
 	ReviewURL string
+	// Fit category and its wording (very strong, strong, possible,
+	// weak, very weak); empty when no score was computed.
+	Category      string
+	CategoryLabel string
+	// GoodFit is true for very strong and strong: the résumé is attached.
+	GoodFit bool
+	// WillReview is true for possible and weak: Roger reads it himself.
+	WillReview bool
 }
 
 type jdOutcomeVerdict struct {
@@ -105,7 +116,7 @@ type jdOutcomeVerdict struct {
 }
 
 // NotifyJdOutcome implements OutcomeNotifier.
-func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission, a *Assessment, threshold float64) error {
+func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission, a *Assessment, bands Bands) error {
 	if m == nil || m.to == "" {
 		return nil
 	}
@@ -123,10 +134,14 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 		AdminURL:       m.webBase + "/admin/jd/" + id,
 		DecisionsURL:   m.webBase + "/admin/decisions?ref=" + id,
 		ReviewURL:      m.webBase + "/jd-upload/" + id,
-		Threshold:      fmt.Sprintf("%.2f", threshold),
+		Threshold:      fmt.Sprintf("%.2f", bands.Strong),
 	}
 	if s.MatchScore != nil {
 		d.Score = fmt.Sprintf("%.3f", *s.MatchScore)
+		d.Category = bands.Category(*s.MatchScore)
+		d.CategoryLabel = FitLabel(d.Category)
+		d.GoodFit = d.Category == FitVeryStrong || d.Category == FitStrong
+		d.WillReview = d.Category == FitPossible || d.Category == FitWeak
 	}
 	if s.RetrievalScore != nil {
 		d.RetrievalScore = fmt.Sprintf("%.3f", *s.RetrievalScore)
@@ -191,22 +206,43 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 	})
 
 	// The submitter hears too: their account address, plus the contact
-	// address from the form when it differs. The mail carries the score,
-	// the summary and the link to their own review page (which works
-	// from any signed-in session), never the admin links.
+	// address from the form when it differs. The mail carries the fit
+	// category, the score, the summary and the link to their own review
+	// page (which works from any signed-in session), never the admin
+	// links. For a strong or very strong fit the tailored résumé PDF is
+	// attached (owner's spec, 2026-09-22).
+	var attachments []email.Attachment
+	if d.GoodFit && s.GeneratedResumeURL != "" {
+		if pdf, _, _, err := m.users.GetJdResumePDF(ctx, s.ID); err == nil && len(pdf) > 0 {
+			attachments = append(attachments, email.Attachment{
+				Filename:    fmt.Sprintf("roger-henley-resume-jd-%s.pdf", id),
+				ContentType: "application/pdf",
+				Data:        pdf,
+			})
+		} else if err != nil {
+			m.log.Warn("jd: résumé pdf not attached", slog.Int64("jd_id", s.ID), slog.String("error", err.Error()))
+		}
+	}
+	subjectFor := func() string {
+		if d.CategoryLabel == "" {
+			return fmt.Sprintf("Your JD review is finished: %s", what)
+		}
+		return fmt.Sprintf("Your JD review is finished: %s (%s fit)", what, d.CategoryLabel)
+	}
 	for _, to := range submitterAddresses(s) {
 		rt, rh, err := email.JdResultTemplate.Render(d)
 		if err != nil {
 			return fmt.Errorf("render jd result: %w", err)
 		}
 		if err := m.email.Send(ctx, email.Message{
-			From:     m.from,
-			To:       to,
-			Subject:  fmt.Sprintf("Your JD review is finished: %s", what),
-			TextBody: rt,
-			HTMLBody: rh,
-			Kind:     "jd_result",
-			UserID:   s.UserID,
+			From:        m.from,
+			To:          to,
+			Subject:     subjectFor(),
+			TextBody:    rt,
+			HTMLBody:    rh,
+			Kind:        "jd_result",
+			UserID:      s.UserID,
+			Attachments: attachments,
 		}); err != nil {
 			m.log.Warn("jd: submitter mail failed", slog.Int64("jd_id", s.ID), slog.String("to", to), slog.String("error", err.Error()))
 		}

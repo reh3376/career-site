@@ -1276,3 +1276,25 @@ class ExportDecisionLogResponse(_message.Message):
     jsonl: str
     row_count: int
     def __init__(self, jsonl: _Optional[str] = ..., row_count: _Optional[int] = ...) -> None: ...
+
+class GetJdFitBandsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetJdFitBandsResponse(_message.Message):
+    __slots__ = ("bands",)
+    BANDS_FIELD_NUMBER: _ClassVar[int]
+    bands: _jd_pb2.JdFitBands
+    def __init__(self, bands: _Optional[_Union[_jd_pb2.JdFitBands, _Mapping]] = ...) -> None: ...
+
+class SetJdFitBandsRequest(_message.Message):
+    __slots__ = ("bands",)
+    BANDS_FIELD_NUMBER: _ClassVar[int]
+    bands: _jd_pb2.JdFitBands
+    def __init__(self, bands: _Optional[_Union[_jd_pb2.JdFitBands, _Mapping]] = ...) -> None: ...
+
+class SetJdFitBandsResponse(_message.Message):
+    __slots__ = ("bands",)
+    BANDS_FIELD_NUMBER: _ClassVar[int]
+    bands: _jd_pb2.JdFitBands
+    def __init__(self, bands: _Optional[_Union[_jd_pb2.JdFitBands, _Mapping]] = ...) -> None: ...

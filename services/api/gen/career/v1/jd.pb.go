@@ -427,8 +427,16 @@ type GetJdResultResponse struct {
 	UnmetCount int32 `protobuf:"varint,11,opt,name=unmet_count,json=unmetCount,proto3" json:"unmet_count,omitempty"`
 	// The gate the score was compared against (JD_MATCH_THRESHOLD).
 	MatchThreshold float64 `protobuf:"fixed64,12,opt,name=match_threshold,json=matchThreshold,proto3" json:"match_threshold,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Pipeline progress, 0 to 100, while the submission is live; 100
+	// once it has finished.
+	ProgressPct int32 `protobuf:"varint,13,opt,name=progress_pct,json=progressPct,proto3" json:"progress_pct,omitempty"`
+	// Short human-readable stage ("judging requirement 4 of 12").
+	ProgressStage string `protobuf:"bytes,14,opt,name=progress_stage,json=progressStage,proto3" json:"progress_stage,omitempty"`
+	// Fit category derived from the score once known: very_strong,
+	// strong, possible, weak, very_weak; empty before scoring.
+	FitCategory   string `protobuf:"bytes,15,opt,name=fit_category,json=fitCategory,proto3" json:"fit_category,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetJdResultResponse) Reset() {
@@ -545,6 +553,184 @@ func (x *GetJdResultResponse) GetMatchThreshold() float64 {
 	return 0
 }
 
+func (x *GetJdResultResponse) GetProgressPct() int32 {
+	if x != nil {
+		return x.ProgressPct
+	}
+	return 0
+}
+
+func (x *GetJdResultResponse) GetProgressStage() string {
+	if x != nil {
+		return x.ProgressStage
+	}
+	return ""
+}
+
+func (x *GetJdResultResponse) GetFitCategory() string {
+	if x != nil {
+		return x.FitCategory
+	}
+	return ""
+}
+
+// Lower edges of the fit categories; scores below weak are very weak.
+// Owner-editable from /admin/jd.
+type JdFitBands struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Very strong at or above this score.
+	VeryStrong float64 `protobuf:"fixed64,1,opt,name=very_strong,json=veryStrong,proto3" json:"very_strong,omitempty"`
+	// Strong at or above this score; also the résumé gate.
+	Strong float64 `protobuf:"fixed64,2,opt,name=strong,proto3" json:"strong,omitempty"`
+	// Possible at or above this score.
+	Possible float64 `protobuf:"fixed64,3,opt,name=possible,proto3" json:"possible,omitempty"`
+	// Weak at or above this score.
+	Weak          float64 `protobuf:"fixed64,4,opt,name=weak,proto3" json:"weak,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JdFitBands) Reset() {
+	*x = JdFitBands{}
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JdFitBands) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JdFitBands) ProtoMessage() {}
+
+func (x *JdFitBands) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JdFitBands.ProtoReflect.Descriptor instead.
+func (*JdFitBands) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *JdFitBands) GetVeryStrong() float64 {
+	if x != nil {
+		return x.VeryStrong
+	}
+	return 0
+}
+
+func (x *JdFitBands) GetStrong() float64 {
+	if x != nil {
+		return x.Strong
+	}
+	return 0
+}
+
+func (x *JdFitBands) GetPossible() float64 {
+	if x != nil {
+		return x.Possible
+	}
+	return 0
+}
+
+func (x *JdFitBands) GetWeak() float64 {
+	if x != nil {
+		return x.Weak
+	}
+	return 0
+}
+
+// Config request; the member is the session.
+type GetJdReviewConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJdReviewConfigRequest) Reset() {
+	*x = GetJdReviewConfigRequest{}
+	mi := &file_career_v1_jd_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJdReviewConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJdReviewConfigRequest) ProtoMessage() {}
+
+func (x *GetJdReviewConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJdReviewConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetJdReviewConfigRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{5}
+}
+
+// The bands in force.
+type GetJdReviewConfigResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current bands.
+	Bands         *JdFitBands `protobuf:"bytes,1,opt,name=bands,proto3" json:"bands,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJdReviewConfigResponse) Reset() {
+	*x = GetJdReviewConfigResponse{}
+	mi := &file_career_v1_jd_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJdReviewConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJdReviewConfigResponse) ProtoMessage() {}
+
+func (x *GetJdReviewConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJdReviewConfigResponse.ProtoReflect.Descriptor instead.
+func (*GetJdReviewConfigResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetJdReviewConfigResponse) GetBands() *JdFitBands {
+	if x != nil {
+		return x.Bands
+	}
+	return nil
+}
+
 // List request; the member is the session.
 type ListMySubmissionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -554,7 +740,7 @@ type ListMySubmissionsRequest struct {
 
 func (x *ListMySubmissionsRequest) Reset() {
 	*x = ListMySubmissionsRequest{}
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +752,7 @@ func (x *ListMySubmissionsRequest) String() string {
 func (*ListMySubmissionsRequest) ProtoMessage() {}
 
 func (x *ListMySubmissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +765,7 @@ func (x *ListMySubmissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySubmissionsRequest.ProtoReflect.Descriptor instead.
 func (*ListMySubmissionsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{7}
 }
 
 // The member's submissions, newest first.
@@ -593,7 +779,7 @@ type ListMySubmissionsResponse struct {
 
 func (x *ListMySubmissionsResponse) Reset() {
 	*x = ListMySubmissionsResponse{}
-	mi := &file_career_v1_jd_proto_msgTypes[5]
+	mi := &file_career_v1_jd_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +791,7 @@ func (x *ListMySubmissionsResponse) String() string {
 func (*ListMySubmissionsResponse) ProtoMessage() {}
 
 func (x *ListMySubmissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[5]
+	mi := &file_career_v1_jd_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +804,7 @@ func (x *ListMySubmissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySubmissionsResponse.ProtoReflect.Descriptor instead.
 func (*ListMySubmissionsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{5}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListMySubmissionsResponse) GetSubmissions() []*MySubmission {
@@ -646,14 +832,18 @@ type MySubmission struct {
 	// When it reached a terminal state; unset while running.
 	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
 	// True when a tailored résumé exists for it.
-	HasResume     bool `protobuf:"varint,8,opt,name=has_resume,json=hasResume,proto3" json:"has_resume,omitempty"`
+	HasResume bool `protobuf:"varint,8,opt,name=has_resume,json=hasResume,proto3" json:"has_resume,omitempty"`
+	// Fit category once scored (see GetJdResultResponse.fit_category).
+	FitCategory string `protobuf:"bytes,9,opt,name=fit_category,json=fitCategory,proto3" json:"fit_category,omitempty"`
+	// Pipeline progress, 0 to 100.
+	ProgressPct   int32 `protobuf:"varint,10,opt,name=progress_pct,json=progressPct,proto3" json:"progress_pct,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MySubmission) Reset() {
 	*x = MySubmission{}
-	mi := &file_career_v1_jd_proto_msgTypes[6]
+	mi := &file_career_v1_jd_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -665,7 +855,7 @@ func (x *MySubmission) String() string {
 func (*MySubmission) ProtoMessage() {}
 
 func (x *MySubmission) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[6]
+	mi := &file_career_v1_jd_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -678,7 +868,7 @@ func (x *MySubmission) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MySubmission.ProtoReflect.Descriptor instead.
 func (*MySubmission) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{6}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MySubmission) GetId() string {
@@ -737,6 +927,20 @@ func (x *MySubmission) GetHasResume() bool {
 	return false
 }
 
+func (x *MySubmission) GetFitCategory() string {
+	if x != nil {
+		return x.FitCategory
+	}
+	return ""
+}
+
+func (x *MySubmission) GetProgressPct() int32 {
+	if x != nil {
+		return x.ProgressPct
+	}
+	return 0
+}
+
 // One requirement the reviewer extracted from the posting and the
 // verdict it reached from the candidate's records.
 type RequirementVerdict struct {
@@ -759,7 +963,7 @@ type RequirementVerdict struct {
 
 func (x *RequirementVerdict) Reset() {
 	*x = RequirementVerdict{}
-	mi := &file_career_v1_jd_proto_msgTypes[7]
+	mi := &file_career_v1_jd_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -771,7 +975,7 @@ func (x *RequirementVerdict) String() string {
 func (*RequirementVerdict) ProtoMessage() {}
 
 func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[7]
+	mi := &file_career_v1_jd_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -784,7 +988,7 @@ func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequirementVerdict.ProtoReflect.Descriptor instead.
 func (*RequirementVerdict) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{7}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RequirementVerdict) GetId() string {
@@ -849,7 +1053,7 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\fresult_token\x18\x04 \x01(\tR\vresultToken\"p\n" +
 	"\x12GetJdResultRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12*\n" +
-	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xb9\x04\n" +
+	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xa6\x05\n" +
 	"\x13GetJdResultResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
 	"\vmatch_score\x18\x02 \x01(\x01H\x00R\n" +
@@ -866,11 +1070,24 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	" \x01(\x05R\fpartialCount\x12\x1f\n" +
 	"\vunmet_count\x18\v \x01(\x05R\n" +
 	"unmetCount\x12'\n" +
-	"\x0fmatch_threshold\x18\f \x01(\x01R\x0ematchThresholdB\x0e\n" +
-	"\f_match_score\"\x1a\n" +
+	"\x0fmatch_threshold\x18\f \x01(\x01R\x0ematchThreshold\x12!\n" +
+	"\fprogress_pct\x18\r \x01(\x05R\vprogressPct\x12%\n" +
+	"\x0eprogress_stage\x18\x0e \x01(\tR\rprogressStage\x12!\n" +
+	"\ffit_category\x18\x0f \x01(\tR\vfitCategoryB\x0e\n" +
+	"\f_match_score\"u\n" +
+	"\n" +
+	"JdFitBands\x12\x1f\n" +
+	"\vvery_strong\x18\x01 \x01(\x01R\n" +
+	"veryStrong\x12\x16\n" +
+	"\x06strong\x18\x02 \x01(\x01R\x06strong\x12\x1a\n" +
+	"\bpossible\x18\x03 \x01(\x01R\bpossible\x12\x12\n" +
+	"\x04weak\x18\x04 \x01(\x01R\x04weak\"\x1a\n" +
+	"\x18GetJdReviewConfigRequest\"H\n" +
+	"\x19GetJdReviewConfigResponse\x12+\n" +
+	"\x05bands\x18\x01 \x01(\v2\x15.career.v1.JdFitBandsR\x05bands\"\x1a\n" +
 	"\x18ListMySubmissionsRequest\"V\n" +
 	"\x19ListMySubmissionsResponse\x129\n" +
-	"\vsubmissions\x18\x01 \x03(\v2\x17.career.v1.MySubmissionR\vsubmissions\"\xdc\x02\n" +
+	"\vsubmissions\x18\x01 \x03(\v2\x17.career.v1.MySubmissionR\vsubmissions\"\xa2\x03\n" +
 	"\fMySubmission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
@@ -882,7 +1099,10 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
 	"\fcompleted_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12\x1d\n" +
 	"\n" +
-	"has_resume\x18\b \x01(\bR\thasResumeB\x0e\n" +
+	"has_resume\x18\b \x01(\bR\thasResume\x12!\n" +
+	"\ffit_category\x18\t \x01(\tR\vfitCategory\x12!\n" +
+	"\fprogress_pct\x18\n" +
+	" \x01(\x05R\vprogressPctB\x0e\n" +
 	"\f_match_score\"\xa4\x01\n" +
 	"\x12RequirementVerdict\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
@@ -903,11 +1123,12 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x19JD_STATUS_BELOW_THRESHOLD\x10\x03\x12\x18\n" +
 	"\x14JD_STATUS_GENERATING\x10\x04\x12\x13\n" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
-	"\x10JD_STATUS_FAILED\x10\x062\x9c\x02\n" +
+	"\x10JD_STATUS_FAILED\x10\x062\x86\x03\n" +
 	"\tJdService\x12M\n" +
 	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12V\n" +
 	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +
-	"\x11ListMySubmissions\x12#.career.v1.ListMySubmissionsRequest\x1a$.career.v1.ListMySubmissionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1eB\xa1\x01\n" +
+	"\x11ListMySubmissions\x12#.career.v1.ListMySubmissionsRequest\x1a$.career.v1.ListMySubmissionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +
+	"\x11GetJdReviewConfig\x12#.career.v1.GetJdReviewConfigRequest\x1a$.career.v1.GetJdReviewConfigResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18<B\xa1\x01\n" +
 	"\rcom.career.v1B\aJdProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -924,7 +1145,7 @@ func file_career_v1_jd_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_jd_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_career_v1_jd_proto_goTypes = []any{
 	(JdSource)(0),                     // 0: career.v1.JdSource
 	(JdStatus)(0),                     // 1: career.v1.JdStatus
@@ -932,34 +1153,40 @@ var file_career_v1_jd_proto_goTypes = []any{
 	(*SubmitJdResponse)(nil),          // 3: career.v1.SubmitJdResponse
 	(*GetJdResultRequest)(nil),        // 4: career.v1.GetJdResultRequest
 	(*GetJdResultResponse)(nil),       // 5: career.v1.GetJdResultResponse
-	(*ListMySubmissionsRequest)(nil),  // 6: career.v1.ListMySubmissionsRequest
-	(*ListMySubmissionsResponse)(nil), // 7: career.v1.ListMySubmissionsResponse
-	(*MySubmission)(nil),              // 8: career.v1.MySubmission
-	(*RequirementVerdict)(nil),        // 9: career.v1.RequirementVerdict
-	(*timestamppb.Timestamp)(nil),     // 10: google.protobuf.Timestamp
+	(*JdFitBands)(nil),                // 6: career.v1.JdFitBands
+	(*GetJdReviewConfigRequest)(nil),  // 7: career.v1.GetJdReviewConfigRequest
+	(*GetJdReviewConfigResponse)(nil), // 8: career.v1.GetJdReviewConfigResponse
+	(*ListMySubmissionsRequest)(nil),  // 9: career.v1.ListMySubmissionsRequest
+	(*ListMySubmissionsResponse)(nil), // 10: career.v1.ListMySubmissionsResponse
+	(*MySubmission)(nil),              // 11: career.v1.MySubmission
+	(*RequirementVerdict)(nil),        // 12: career.v1.RequirementVerdict
+	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
 }
 var file_career_v1_jd_proto_depIdxs = []int32{
 	0,  // 0: career.v1.SubmitJdRequest.source:type_name -> career.v1.JdSource
 	1,  // 1: career.v1.SubmitJdResponse.status:type_name -> career.v1.JdStatus
 	1,  // 2: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
-	10, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
-	10, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
-	9,  // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
-	8,  // 6: career.v1.ListMySubmissionsResponse.submissions:type_name -> career.v1.MySubmission
-	1,  // 7: career.v1.MySubmission.status:type_name -> career.v1.JdStatus
-	10, // 8: career.v1.MySubmission.created_at:type_name -> google.protobuf.Timestamp
-	10, // 9: career.v1.MySubmission.completed_at:type_name -> google.protobuf.Timestamp
-	2,  // 10: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
-	4,  // 11: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
-	6,  // 12: career.v1.JdService.ListMySubmissions:input_type -> career.v1.ListMySubmissionsRequest
-	3,  // 13: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
-	5,  // 14: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
-	7,  // 15: career.v1.JdService.ListMySubmissions:output_type -> career.v1.ListMySubmissionsResponse
-	13, // [13:16] is the sub-list for method output_type
-	10, // [10:13] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
+	13, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
+	12, // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
+	6,  // 6: career.v1.GetJdReviewConfigResponse.bands:type_name -> career.v1.JdFitBands
+	11, // 7: career.v1.ListMySubmissionsResponse.submissions:type_name -> career.v1.MySubmission
+	1,  // 8: career.v1.MySubmission.status:type_name -> career.v1.JdStatus
+	13, // 9: career.v1.MySubmission.created_at:type_name -> google.protobuf.Timestamp
+	13, // 10: career.v1.MySubmission.completed_at:type_name -> google.protobuf.Timestamp
+	2,  // 11: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
+	4,  // 12: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
+	9,  // 13: career.v1.JdService.ListMySubmissions:input_type -> career.v1.ListMySubmissionsRequest
+	7,  // 14: career.v1.JdService.GetJdReviewConfig:input_type -> career.v1.GetJdReviewConfigRequest
+	3,  // 15: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
+	5,  // 16: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
+	10, // 17: career.v1.JdService.ListMySubmissions:output_type -> career.v1.ListMySubmissionsResponse
+	8,  // 18: career.v1.JdService.GetJdReviewConfig:output_type -> career.v1.GetJdReviewConfigResponse
+	15, // [15:19] is the sub-list for method output_type
+	11, // [11:15] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_jd_proto_init() }
@@ -969,14 +1196,14 @@ func file_career_v1_jd_proto_init() {
 	}
 	file_career_v1_options_proto_init()
 	file_career_v1_jd_proto_msgTypes[3].OneofWrappers = []any{}
-	file_career_v1_jd_proto_msgTypes[6].OneofWrappers = []any{}
+	file_career_v1_jd_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_jd_proto_rawDesc), len(file_career_v1_jd_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
