@@ -91,6 +91,9 @@ message SubmitJdRequest {
   // Optional email so the visitor can be notified when the résumé
   // is ready without keeping the tab open. Never surfaced publicly.
   string contact_email = 5 [(buf.validate.field).string.max_len = 254];
+  // Optional link to apply for the position (http or https). Shown
+  // to Roger in the admin triage view; never surfaced publicly.
+  string apply_url = 6 [(buf.validate.field).string.max_len = 2048];
 }
 
 // Submission response. Deliberately minimal — the async scoring +

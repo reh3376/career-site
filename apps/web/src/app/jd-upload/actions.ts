@@ -14,6 +14,7 @@ export type SubmitState = {
     roleHint?: string;
     employerHint?: string;
     contactEmail?: string;
+    applyUrl?: string;
   };
 };
 
@@ -35,7 +36,16 @@ export async function submitJdAction(
     .trim()
     .toLowerCase();
 
-  const values = { jdText, roleHint, employerHint, contactEmail };
+  const applyUrl = String(formData.get("apply_url") ?? "").trim();
+
+  const values = { jdText, roleHint, employerHint, contactEmail, applyUrl };
+
+  if (applyUrl && !/^https?:\/\/\S+$/i.test(applyUrl)) {
+    return {
+      error: "The application link needs to be a full URL starting with http:// or https://.",
+      values,
+    };
+  }
 
   if (jdText.length < 100) {
     return {
@@ -52,6 +62,7 @@ export async function submitJdAction(
       roleHint,
       employerHint,
       contactEmail,
+      applyUrl,
     },
     cookie,
   });

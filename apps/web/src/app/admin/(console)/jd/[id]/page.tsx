@@ -25,6 +25,8 @@ type Row = {
   employerHint?: string;
   contact_email?: string;
   contactEmail?: string;
+  apply_url?: string;
+  applyUrl?: string;
   error_message?: string;
   errorMessage?: string;
   created_at?: string;
@@ -113,6 +115,7 @@ export default async function AdminJdDetailPage({
   const role = r.role_hint ?? r.roleHint ?? "";
   const employer = r.employer_hint ?? r.employerHint ?? "";
   const email = r.contact_email ?? r.contactEmail ?? "";
+  const applyUrl = r.apply_url ?? r.applyUrl ?? "";
 
   let assessment: Assessment | null = null;
   const raw = d.assessment_json ?? d.assessmentJson ?? "";
@@ -157,6 +160,19 @@ export default async function AdminJdDetailPage({
           >
             {email}
           </a>
+        </p>
+      ) : null}
+      {applyUrl ? (
+        <p className="mt-2 text-sm">
+          <a
+            href={applyUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            Apply for this position
+          </a>
+          <span className="ml-2 font-mono text-[11px] text-ink-3">{applyUrl.replace(/^https?:\/\//, "").slice(0, 60)}</span>
         </p>
       ) : null}
 

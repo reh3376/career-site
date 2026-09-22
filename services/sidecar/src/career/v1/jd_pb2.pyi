@@ -41,18 +41,20 @@ JD_STATUS_READY: JdStatus
 JD_STATUS_FAILED: JdStatus
 
 class SubmitJdRequest(_message.Message):
-    __slots__ = ("jd_text", "source", "role_hint", "employer_hint", "contact_email")
+    __slots__ = ("jd_text", "source", "role_hint", "employer_hint", "contact_email", "apply_url")
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
     EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
     CONTACT_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    APPLY_URL_FIELD_NUMBER: _ClassVar[int]
     jd_text: str
     source: JdSource
     role_hint: str
     employer_hint: str
     contact_email: str
-    def __init__(self, jd_text: _Optional[str] = ..., source: _Optional[_Union[JdSource, str]] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ...) -> None: ...
+    apply_url: str
+    def __init__(self, jd_text: _Optional[str] = ..., source: _Optional[_Union[JdSource, str]] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., apply_url: _Optional[str] = ...) -> None: ...
 
 class SubmitJdResponse(_message.Message):
     __slots__ = ("submission_id", "status", "message", "result_token")

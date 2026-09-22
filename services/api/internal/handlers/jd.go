@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -81,6 +82,11 @@ func (h *Jd) SubmitJd(
 			errors.New("that JD looks awfully short — need at least 100 characters to work with"))
 	}
 
+	applyURL, err := cleanApplyURL(msg.ApplyUrl)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
 	source := jdSourceProtoToRepo(msg.Source)
 	if source == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
@@ -110,6 +116,7 @@ func (h *Jd) SubmitJd(
 		RoleHint:     strings.TrimSpace(msg.RoleHint),
 		EmployerHint: strings.TrimSpace(msg.EmployerHint),
 		ContactEmail: strings.ToLower(strings.TrimSpace(msg.ContactEmail)),
+		ApplyURL:     applyURL,
 		IPHash:       ipHash,
 		UAHash:       uaHash,
 		UserID:       member.ID,
@@ -245,6 +252,24 @@ func verdictBreakdown(raw []byte) (out []*v1.RequirementVerdict, met, partial, u
 		})
 	}
 	return out, met, partial, unmet
+}
+
+// cleanApplyURL accepts an empty value or an absolute http(s) URL with
+// a host. Anything else is rejected so the admin view never renders a
+// javascript: or relative link from a submitter.
+func cleanApplyURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	if len(raw) > 2048 {
+		return "", errors.New("application link is too long")
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", errors.New("application link must be a full http(s) URL")
+	}
+	return u.String(), nil
 }
 
 // requireMember resolves the caller's session or fails the RPC. JD

@@ -1600,6 +1600,8 @@ message JdSubmissionRow {
   // Email of the signed-in member who submitted; empty for rows created
   // before JD upload became members-only.
   string submitter_email = 14;
+  // Optional link to apply for the position, as given by the submitter.
+  string apply_url = 15;
 }
 
 // List-jd-submissions response.
