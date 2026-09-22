@@ -397,6 +397,77 @@ Engineering Lead" posting the owner expects above 0.75 was added to
 the calibration set as `bosch_lead`; results on both models in the
 next entry.
 
+## 2026-09-22: the Bosch posting, and why embedding retrieval fails on facts
+
+The owner's real posting (Bosch, Manufacturing Automation Engineering
+Lead; he expects above 0.75) first scored **0.712** on `qwen3:4b-q8_0`
+and **0.426** on `qwen3:14b`. The decision log showed the cause for
+the worst rows:
+
+- "2+ years of leadership or supervisory experience" → unmet. The
+  four retrieved chunks were two dev-doc speaker notes about *session*
+  "resume" scoring, an interview-prep story and the application
+  playbook. None of the six master-résumé chunks (VP of Engineering
+  2022–2026, Director of Engineering 2017–2022) were offered. The
+  judge answered the evidence it had.
+- "OSHA, environmental and safety compliance" → unmet, same pattern
+  (worksheet, readme, article; no NFPA 70E chunk).
+- "Bachelor's degree in engineering or related field" → unmet with the
+  education chunk present: the extraction dropped the posting's own
+  "or combination education and experience", and the judge read the
+  remainder literally against a B.S. Applied Mathematics plus an A.S.
+  Electrical Engineering Technology.
+
+**Tried first: a résumé anchor** (closest master-résumé chunk by
+cosine added to every requirement). No change: for the leadership
+requirement the closest résumé chunk was the publications section
+(similarity 0.52). Cosine similarity is the wrong tool for tenure,
+title, degree and certification facts.
+
+**Fix: an owner-maintained career facts sheet** (`source_kind`
+`profile`, `docs/personal/career-facts.md`, ~2.4k chars, one chunk)
+offered to every requirement the judge sees (`ProfileKind` in
+`assess.go`; `profile` added to `ingest.KnownKinds` and the manifest).
+Roles with dates, degrees, credentials, safety and standards
+ownership, recognition. The owner edits it directly; `make
+sync-corpus` plus a private reindex puts it on the box.
+
+| JD | 4b before | 4b with profile | 14b before | 14b with profile |
+|---|---|---|---|---|
+| bosch_lead | 0.712 | **0.833** | 0.426 | 0.574 |
+| strong | 0.842 | **0.974** | 0.604 | (not rerun) |
+| mid | 0.625 | **0.667** | 0.333 | (not rerun) |
+
+With the profile, the 4b marks leadership, degree and 7+ years met on
+the Bosch posting; the remaining unmets are safety compliance (read
+strictly despite NFPA 70E ownership in the sheet) and the Master's
+degree, which the posting lists as preferred. The 14b still marks
+"industrial networking and communication protocols" and "machine
+safety standards" unmet, which the record does not support; it reads
+fine-grained "must" lines more literally than a human would.
+
+**Decisions.**
+- The owner (2026-09-22): "The 14b model is not viable for our resource
+  constraints so there is no reason to waste time with it." The 14b
+  is dropped from all further measurement; `qwen3:4b-q8_0` is the
+  model, locally and on the box, and the defaults now say so.
+- Gate `JD_MATCH_THRESHOLD=0.70` (Bosch 0.833, strong 0.974 above;
+  mid 0.667 below, narrowly).
+- Judge calls with the profile cost ~+600 prompt tokens (3.6 s per
+  call on the Mac; expect ~50 s on the CPX31).
+
+**Owner's framing (2026-09-22):** "This is a major issue with ATS
+systems that HR departments use. They rank on musts and misses that
+set aside viable candidates that never make it to a human to provide
+the full context." Two consequences for this system: the gate only
+decides whether a résumé is generated automatically, never whether
+the owner sees the submission (he sees all of them); and the result
+page should show the requirement-by-requirement verdicts with their
+rationales to the hiring manager, so a below-threshold result reads
+as "9 of 14 met, 2 not evidenced: X, Y" instead of a rejection.
+Scheduled next, with `jd_requirements` v2 (keep the posting's
+alternative-qualification clauses in the extracted requirement).
+
 **State at the end of the day.** Everything above is in the branch
 `claude_dev01` as one PR. Production remains on `SIDECAR_LLM_PROVIDER=stub`
 until that PR is deployed; the flip is then the runbook's Phase C with

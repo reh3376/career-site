@@ -23,6 +23,35 @@ import (
 // requirements per call, not by thinning evidence.
 const EvidencePerRequirement = 4
 
+// ProfileKind is the source_kind of the owner's career facts sheet,
+// offered to every requirement (see Assess). ProfileChunksMax bounds
+// how much of it is added per call; the sheet is meant to be one or
+// two chunks.
+const (
+	ProfileKind      = "profile"
+	ProfileChunksMax = 2
+)
+
+// withProfile puts the profile chunks first in a requirement's
+// evidence, skipping any the open search already returned.
+func withProfile(profile, hits []users.CorpusHit) []users.CorpusHit {
+	if len(profile) == 0 {
+		return hits
+	}
+	seen := map[int64]bool{}
+	for _, p := range profile {
+		seen[p.Chunk.ID] = true
+	}
+	out := make([]users.CorpusHit, 0, len(profile)+len(hits))
+	out = append(out, profile...)
+	for _, h := range hits {
+		if !seen[h.Chunk.ID] {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
 // ErrMonthlyCap is returned when the LLM call cap for the current
 // calendar month has been reached (Phase 4 guardrail #8).
 var ErrMonthlyCap = errors.New("llm monthly call cap reached")
@@ -172,12 +201,24 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	if len(vectors) != len(reqs) {
 		return nil, errors.New("embed requirements: vector count mismatch")
 	}
+	// The career facts sheet (source_kind "profile") is offered to every
+	// requirement. Embedding retrieval is unreliable for tenure, title,
+	// degree and certification facts: a "2+ years leadership"
+	// requirement once drew dev-doc notes about session "resume"
+	// scoring, and the closest résumé chunk by cosine was the
+	// publications section. The sheet is short and owner-maintained
+	// (docs/decision-log.md, docs/llm-tuning-log.md 2026-09-22).
+	profile, err := a.users.ListChunksByKind(ctx, ProfileKind, ProfileChunksMax)
+	if err != nil {
+		a.log.Warn("profile chunks unavailable", slog.String("error", err.Error()))
+	}
 	evidence := make(map[string][]users.CorpusHit, len(reqs))
 	for i, r := range reqs {
 		hits, err := a.users.SearchCorpus(ctx, vectors[i], EvidencePerRequirement)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve %s: %w", r.ID, err)
 		}
+		hits = withProfile(profile, hits)
 		evidence[r.ID] = hits
 		for _, h := range hits {
 			out.EvidenceIDs[r.ID] = append(out.EvidenceIDs[r.ID], h.Chunk.ID)

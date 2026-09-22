@@ -6,7 +6,12 @@
 #         arrives with the content-management work).
 #   kind  one of: article talk speaker_notes readme worksheet
 #         post_mortem strategy_doc interview_prep career_note resume
-#         adr other
+#         adr other profile
+#
+#   profile  the owner-maintained career facts sheet (roles with dates,
+#         degrees, certifications, compliance ownership). Offered to
+#         every JD requirement the judge sees, so keep it short (one
+#         file, under ~2,500 characters).
 #
 # Everything synced through this file is ingested as visibility=
 # corpus_only: it informs Ask Roger and JD scoring but is never quoted

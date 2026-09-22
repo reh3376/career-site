@@ -55,7 +55,7 @@ class Config:
             llm_provider=os.environ.get("SIDECAR_LLM_PROVIDER", "stub"),
             ollama_llm_url=os.environ.get("OLLAMA_LLM_URL")
             or os.environ.get("OLLAMA_URL", "http://ollama:11434"),
-            ollama_llm_model=os.environ.get("OLLAMA_LLM_MODEL", "qwen3:14b"),
+            ollama_llm_model=os.environ.get("OLLAMA_LLM_MODEL", "qwen3:4b-q8_0"),
             ollama_api_key=os.environ.get("OLLAMA_API_KEY", ""),
             llm_timeout_seconds=int(os.environ.get("SIDECAR_LLM_TIMEOUT_SECONDS", "600")),
             llm_num_ctx=int(os.environ.get("SIDECAR_LLM_NUM_CTX", "16384")),
