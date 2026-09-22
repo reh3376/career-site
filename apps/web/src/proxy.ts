@@ -1,40 +1,18 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { isPublicPath } from "@/lib/public-routes";
 import { SESSION_COOKIE } from "@/lib/session";
 
-// Access policy for anonymous visitors: the landing page (base info
-// plus request access), the contact form, the legal pages, and the
-// flows needed to become a member (register, verify, sign in, password
-// reset, the one-click approval link). Everything else needs a session.
+// The access policy itself lives in lib/public-routes.ts, shared with
+// robots.txt and the sitemap so the three cannot drift apart.
 //
 // This is an optimistic check on cookie presence so a signed-out
 // visitor is sent to /login instead of seeing an empty page; the API
 // enforces the real authorization on every data call, and server
-// components re-validate the session where it matters.
-const PUBLIC_PATHS = new Set([
-  "/",
-  "/contact",
-  "/register",
-  "/register/check-email",
-  "/login",
-  "/verify",
-  "/forgot-password",
-  "/reset-password",
-  "/privacy",
-  "/terms",
-  "/admin/decision",
-]);
-
-function isPublic(pathname: string): boolean {
-  if (PUBLIC_PATHS.has(pathname)) return true;
-  // Token-bearing flows carry the token as a path segment on some routes.
-  return (
-    pathname.startsWith("/verify/") ||
-    pathname.startsWith("/reset-password/") ||
-    pathname.startsWith("/admin/decision/")
-  );
-}
+// components re-validate the session where it matters. The gallery
+// serves both audiences from one URL, so it is public here and filters
+// its own content by session.
 
 // First-party anonymous id for the product event stream
 // (docs/events/README.md). Set on the first page load, HttpOnly so no
@@ -58,7 +36,7 @@ function withAnonId(request: NextRequest, res: NextResponse): NextResponse {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (isPublic(pathname)) return withAnonId(request, NextResponse.next());
+  if (isPublicPath(pathname)) return withAnonId(request, NextResponse.next());
   if (request.cookies.get(SESSION_COOKIE)?.value) {
     // Member pages are never indexed, whatever a crawler holds.
     const res = NextResponse.next();

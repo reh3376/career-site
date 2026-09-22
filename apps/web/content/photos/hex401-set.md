@@ -6,7 +6,7 @@ taken: "2023"
 alt: "The open end of a large stainless steel heat exchanger showing the bank of tubes."
 permission: "Roger Henley (owner photo, no client marks)"
 hero_tracks: "automation, projects"
-visibility: "member"
+visibility: "public"
 order: 30
 source: "HEX401-set.jpeg"
 ---

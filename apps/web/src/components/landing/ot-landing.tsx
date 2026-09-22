@@ -225,6 +225,8 @@ export function OtLanding() {
                   </button>
                 </form>
               </li>
+              <NavRow tag="/articles" label="WRITING" href="/articles" note="open, no account" />
+              <NavRow tag="/gallery" label="ON.THE.FLOOR" href="/gallery" note="work photos" />
               <NavRow tag="/register" label="ACCESS.REQ" href="/register" note="hiring managers" />
               <NavRow tag="/login" label="SESSION.NEW" href="/login" note="members" />
               <NavRow tag="/contact" label="MSG.OUT" href="/contact" note="email roger" />

@@ -6,7 +6,7 @@ taken: "2008"
 alt: "A dragline excavator at Hobet Mining at dusk, its boom silhouetted against the sky over a stripped bench."
 permission: "Roger Henley (owner photo, already published on the landing page)"
 hero_tracks: "automation, power"
-visibility: "member"
+visibility: "public"
 order: 10
 source: "public/images/hobet-dragline.jpeg"
 ---

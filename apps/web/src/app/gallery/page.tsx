@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { redirect } from "next/navigation";
 
+import { AccessNote } from "@/components/access-note";
 import { listPhotos } from "@/lib/photos";
 import { getSessionUser } from "@/lib/session-user";
 
@@ -9,15 +9,18 @@ export const metadata: Metadata = {
   title: "Gallery",
   description: "Professional portraits and on-the-floor work photos, with context.",
 };
+// Branches on the session, so it is rendered per request.
 export const dynamic = "force-dynamic";
 
-// Members-only (FSD route table). The proxy already redirects a
-// signed-out visitor; this re-check keeps the page correct if the
-// allow-list ever drifts.
+// One URL, two audiences (decided 2026-09-22). An anonymous visitor
+// sees the work photos, which are the evidence that makes the case;
+// a member sees those plus the personal ones. Each photo declares
+// which it is in its front matter, so the split is content, not code.
 export default async function GalleryPage() {
   const me = await getSessionUser();
-  if (!me) redirect("/login?next=/gallery");
-  const photos = await listPhotos();
+  const all = await listPhotos();
+  const photos = me ? all : all.filter((p) => p.visibility === "public");
+  const withheld = all.length - photos.length;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-24">
@@ -31,9 +34,9 @@ export default async function GalleryPage() {
         Gallery.
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
-        Where the work happens: control rooms, columns, tank farms,
-        greenfield builds, and the desk the writing comes from. Every
-        photo carries its context and the year; nothing here is stock.
+        Where the work happens: control rooms, columns, tank farms and
+        greenfield builds. Every photo carries its context and the year;
+        nothing here is stock.
       </p>
 
       {photos.length === 0 ? (
@@ -73,6 +76,8 @@ export default async function GalleryPage() {
           ))}
         </ul>
       )}
+
+      {!me && withheld > 0 ? <AccessNote variant="gallery" /> : null}
     </div>
   );
 }

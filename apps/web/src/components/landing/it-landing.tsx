@@ -98,9 +98,11 @@ export function ItLanding() {
           <HeroSocial />
         </div>
         <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
-          The JD upload scores fit against thirty years of manufacturing
-          and applied-AI work; if it clears the threshold, you get a
-          two-page résumé tailored to that specific posting.
+          The writing and the work photos are open; read them first. An
+          account is for the reviewer: paste a posting and it reads it
+          requirement by requirement against thirty years of manufacturing
+          and applied-AI records, then writes a two-page résumé for that
+          specific job.
         </p>
       </section>
 

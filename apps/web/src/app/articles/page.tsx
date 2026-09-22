@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { redirect } from "next/navigation";
-
+import { AccessNote } from "@/components/access-note";
 import { listArticles } from "@/lib/articles";
-import { getSessionUser } from "@/lib/session-user";
 
 export const metadata: Metadata = {
   title: "Articles",
   description: "Roger Henley's writing on industrial digital transformation, decision-making, and manufacturing AI.",
 };
 
-export const dynamic = "force-dynamic";
+// Public since 2026-09-22: most of these were posted on LinkedIn
+// already, so gating them cost discovery and bought nothing. The
+// articles ship inside the image, so the page prerenders at build and
+// never parses markdown per request.
+export const dynamic = "force-static";
 
 export default async function ArticlesIndexPage() {
-  if (!(await getSessionUser())) redirect("/login?next=/articles");
   const articles = await listArticles();
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
@@ -67,6 +68,8 @@ export default async function ArticlesIndexPage() {
           ))}
         </ul>
       )}
+
+      <AccessNote />
     </div>
   );
 }

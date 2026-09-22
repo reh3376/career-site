@@ -6,7 +6,7 @@ taken: "2023"
 alt: "A conservation vent valve mounted on top of a tank with piping and fittings around it."
 permission: "Roger Henley (owner photo, no client marks)"
 hero_tracks: "automation"
-visibility: "member"
+visibility: "public"
 order: 50
 source: "conservation-valve.jpeg"
 ---
