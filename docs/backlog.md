@@ -124,13 +124,14 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
-- **Disk is 93 percent full** (2.7 GB free of 38 GB, found during the
-  2026-09-22 deploy, where one image layer failed to extract for exactly
-  this reason). Docker holds 170 images, of which 5.5 GB is reclaimable,
-  plus 2.6 GB of build cache that a pull-only box never uses. The fix is
-  `docker builder prune -af` and an image prune that keeps the last
-  week, then a recurring prune so it does not creep back. Needs the
-  owner's go-ahead because it runs against production.
+- **Disk. Cleared 2026-09-22**, from 93 percent full to 68 percent
+  (2.7 GB free to 12 GB), by dropping the build cache and 159 stale
+  deploy image tags; the current and previous tags were kept so a
+  rollback is still a local `up`, and all seven containers stayed up.
+  The prune is now the last step of the rollout in `deploy/README.md`.
+  Roger is also enlarging the Hetzner volume. Left to do: make the
+  prune automatic rather than a step someone remembers, either in a
+  deploy script or a weekly timer on the box.
 - **Backups**, per the decision in section 1: nightly `pg_dump` on the
   server with a week kept locally, a launchd job on the Mac pulling over
   ssh, and a restore rehearsal recorded in `deploy/README.md`. Disk
@@ -166,12 +167,13 @@ Still open:
   results, résumé PDFs, `/home`, the admin console, anything naming a
   member. The open call is the middle tier, in ascending order of how
   much is given away:
-  1. Articles and the fuller landing only.
-  2. Plus a small gallery subset, six to eight photos with no client
-     marks (recommended).
-  3. Plus the whole gallery and a public projects page.
-  Whichever tier, the landing needs one line naming what registering
-  buys: submit a posting and get a résumé written against it.
+  **DECIDED 2026-09-22: the middle tier.** Public becomes the full
+  landing with practice and timeline detail, the articles list and
+  reader, and a gallery subset of six to eight photos carrying no
+  client marks. The reviewer, the résumé PDFs, the rest of the gallery,
+  `/home` and the admin console stay behind the gate. The landing also
+  needs one line naming what registering buys: submit a posting and get
+  a résumé written against it.
 - **OT mode.** First pass shipped (PR 86); check on a real phone, and
   raise the body and muted text contrast to meet WCAG AA in the dark
   tokens (treated as a fix, no decision needed).
