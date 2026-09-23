@@ -27,6 +27,21 @@ latency, and the submission it belongs to (`ref_kind = jd_submission`,
 
 Code decisions (`jd_gate`) have `model = code` and empty prompt text.
 
+The reviewer's vocabulary mirrors the model's (`met` / `partial` /
+`unmet` for verdicts, `above_threshold` / `below_threshold` for the
+gate) so agreement is a direct comparison, plus one value the model does
+not have: **`insufficient_evidence`**, meaning the reviewer could not
+judge the row from what they were shown. It applies to both kinds.
+
+That option exists because the first real review hit a row where neither
+of the two answers was true, and forcing one manufactures a wrong label.
+A wrong label is worse than no label: the agreement rate counts it.
+Rows graded this way are excluded from agreement and reported on their
+own, because they say something different and more actionable.
+Disagreement means the judge reasoned badly, which a prompt can fix.
+Ungradeable means the right documents never reached the judge, which no
+prompt will fix.
+
 Since 2026-09-22 every row also carries `run_id`, joining it to the
 pipeline run in `jd_runs` that produced it: the build, the judge model
 and its context size, the prompt fingerprints, and the corpus

@@ -905,3 +905,78 @@ the fit band a run assigned against what actually happened afterwards.
 It is the question the whole data layer was built to answer, and it will
 say nothing useful until outcomes accumulate. That is the honest state
 of it, and the page says so rather than pretending otherwise.
+
+## 2026-09-22: the first human review found a systematic bias
+
+The owner graded seven requirement verdicts on one posting. Four
+agreed. Three disagreed, and all three the same way: the model said
+"unmet" where the owner said "met". Nothing went the other direction.
+Three harsh and zero generous is not noise.
+
+The three were Machine Learning, Data Science and Principal Software
+Engineer, all musts. Every rationale said a version of "the candidate's
+profile does not mention" that skill. Meanwhile the evidence actually
+retrieved for the machine-learning requirement included the owner's own
+MDEMG framework: a graph memory system with vector similarity search,
+Hebbian reinforcement and model-based re-ranking. The judge was handed
+that and concluded he has no machine-learning experience.
+
+**A wrong first reading, recorded because it was wrong.** The empty
+`evidence_ids` on those three looked like the judge ignoring the
+documents. It was not: rule 3 of the v2 prompt requires evidence_ids to
+be empty for "unmet". The citation pattern was mandated, not diagnostic.
+The real tell was the rationale wording, which points at framing rather
+than retrieval.
+
+**The cause.** The v2 prompt introduced the profile chunk first and
+uncapped, to fix a leadership requirement that retrieval kept missing
+(2026-09-22, earlier). It fixed that and created this: the judge began
+treating the profile as the definitive account of the candidate, and
+the retrieved documents as commentary on it. The profile is a timeline
+of roles and degrees. It says nothing about machine learning, so the
+judge concluded there is none.
+
+**requirement_judge v3** (`v2:e9c650d9` → `v3:5475a41f`) says plainly
+that the two kinds of evidence carry equal weight; that the summary is a
+timeline and not an inventory, so its silence about a skill is not
+evidence of absence; that a document showing he built a system is
+evidence of the skills that system required, named or not; and that an
+"unmet" rationale must say what was looked for in the documents and may
+not cite the profile's silence.
+
+**Unverified.** The local provider is a stub, so this cannot be tested
+here. The test is a re-score of that posting on production and, properly,
+an evaluation before and after. That is what the golden set is for and
+it is the first real use for it.
+
+**A second, separate gap that is the owner's to close.** The facts sheet
+genuinely does not mention software engineering, data engineering or
+machine learning. His review notes name the work: the three-layer
+control system with model-predictive control, the MES, warehouse and
+historian software behind Whiskey House, and MDEMG. A better prompt
+cannot supply facts that are not written down. Fix the sheet and the
+prompt separately, with an evaluation between them, or neither effect
+will be attributable.
+
+## 2026-09-22: "I could not judge this" is a third answer
+
+The same review exposed a defect in the grading tool. On the gate row
+the owner had two options, agree or disagree, and neither was true: the
+evidence in front of him was not enough to make a credible call. He
+picked one deliberately to raise the issue.
+
+Forcing a verdict there manufactures a wrong label, and a wrong label is
+worse than no label, because the agreement rate then counts it as
+signal. `insufficient_evidence` is now a third option on both the
+requirement verdicts and the gate, excluded from the agreement rate
+rather than counted against it, and surfaced on its own.
+
+It is the most actionable grade in the set. Disagreement says the judge
+reasoned badly, which a prompt can address. Ungradeable says the right
+documents never reached the judge at all, which no prompt will fix.
+Those need opposite responses and used to be indistinguishable.
+
+The agreement summary now also splits disagreements by direction, too
+harsh against too generous, for the same reason: this review is three
+harsh and zero generous, which is a bias with a fix, and a single
+percentage would have hidden it.

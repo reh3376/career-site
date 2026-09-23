@@ -84,9 +84,15 @@ type GateInput = {
 };
 type GateOutput = { outcome?: string };
 
+// The owner's vocabulary. The first values mirror the model's, so
+// agreement is a direct comparison. `insufficient_evidence` is the
+// reviewer saying they could not judge this from what they were shown;
+// it is on both kinds because either can be ungradeable, and it is
+// excluded from the agreement rate rather than counted as a
+// disagreement.
 const VERDICT_OPTIONS: Record<string, string[]> = {
-  jd_requirement_verdict: ["met", "partial", "unmet"],
-  jd_gate: ["above_threshold", "below_threshold"],
+  jd_requirement_verdict: ["met", "partial", "unmet", "insufficient_evidence"],
+  jd_gate: ["above_threshold", "below_threshold", "insufficient_evidence"],
 };
 
 function parse<T>(s: string | undefined): T | null {
@@ -176,11 +182,17 @@ export default async function DecisionsPage({
           <span className="font-mono text-ink">{total}</span> logged
         </span>
         <span className="text-ink-3">·</span>
-        <Link href={filterHref({ all: unreviewedOnly ? "1" : "" })} className="text-accent">
+        <Link
+          href={filterHref({ all: unreviewedOnly ? "1" : "" })}
+          className="text-accent"
+        >
           {unreviewedOnly ? "show reviewed too" : "unreviewed only"}
         </Link>
         <span className="text-ink-3">·</span>
-        <Link href={filterHref({ kind: kind === "jd_gate" ? "" : "jd_gate" })} className="text-accent">
+        <Link
+          href={filterHref({ kind: kind === "jd_gate" ? "" : "jd_gate" })}
+          className="text-accent"
+        >
           {kind === "jd_gate" ? "all kinds" : "gate decisions only"}
         </Link>
         {ref ? (
@@ -203,7 +215,9 @@ export default async function DecisionsPage({
       <AgreementPanel />
 
       {error ? (
-        <p className="mt-10 text-sm text-danger">Could not load the log: {error}</p>
+        <p className="mt-10 text-sm text-danger">
+          Could not load the log: {error}
+        </p>
       ) : null}
 
       {!error && rows.length === 0 ? (
@@ -219,10 +233,16 @@ export default async function DecisionsPage({
               <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                 submission
               </span>
-              <Link href={`/admin/jd/${sub}`} className="font-mono text-sm text-accent">
+              <Link
+                href={`/admin/jd/${sub}`}
+                className="font-mono text-sm text-accent"
+              >
                 #{sub}
               </Link>
-              <Link href={filterHref({ ref: sub })} className="text-xs text-ink-3">
+              <Link
+                href={filterHref({ ref: sub })}
+                className="text-xs text-ink-3"
+              >
                 only this submission
               </Link>
             </h2>
@@ -269,12 +289,21 @@ function DecisionCard({ row }: { row: Row }) {
     const v = input?.verdicts ?? {};
     return (
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">gate</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          gate
+        </p>
         <p className="mt-2 text-sm text-ink">
           Match score{" "}
-          <span className="font-mono">{(input?.score ?? 0).toFixed(3)}</span> against a gate of{" "}
-          <span className="font-mono">{(input?.threshold ?? 0).toFixed(2)}</span>:{" "}
-          <span className="font-mono">{(output?.outcome ?? "").replace(/_/g, " ")}</span>.
+          <span className="font-mono">{(input?.score ?? 0).toFixed(3)}</span>{" "}
+          against a gate of{" "}
+          <span className="font-mono">
+            {(input?.threshold ?? 0).toFixed(2)}
+          </span>
+          :{" "}
+          <span className="font-mono">
+            {(output?.outcome ?? "").replace(/_/g, " ")}
+          </span>
+          .
         </p>
         <p className="mt-1 text-sm text-ink-2">
           {input?.assessor_ran
@@ -282,7 +311,12 @@ function DecisionCard({ row }: { row: Row }) {
             : `Assessor did not run; the retrieval score ${(input?.retrieval_score ?? 0).toFixed(3)} was the gate.`}
         </p>
         {meta}
-        <ReviewForm decisionId={row.id} options={options} current={human} note={note} />
+        <ReviewForm
+          decisionId={row.id}
+          options={options}
+          current={human}
+          note={note}
+        />
       </div>
     );
   }
@@ -297,9 +331,12 @@ function DecisionCard({ row }: { row: Row }) {
   return (
     <div>
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        {req?.id ?? row.key} · {req?.category ?? ""} · weight {req?.weight ?? ""}
+        {req?.id ?? row.key} · {req?.category ?? ""} · weight{" "}
+        {req?.weight ?? ""}
       </p>
-      <p className="mt-2 text-base leading-snug text-ink">{req?.text ?? "(requirement missing)"}</p>
+      <p className="mt-2 text-base leading-snug text-ink">
+        {req?.text ?? "(requirement missing)"}
+      </p>
 
       <p className="mt-4 text-sm text-ink-2">
         Model verdict:{" "}
@@ -315,9 +352,14 @@ function DecisionCard({ row }: { row: Row }) {
           {verdict || "none"}
         </span>
         {raw && raw !== verdict ? (
-          <span className="text-ink-3"> (model said {raw}; downgraded because it cited nothing it was given)</span>
+          <span className="text-ink-3">
+            {" "}
+            (model said {raw}; downgraded because it cited nothing it was given)
+          </span>
         ) : null}
-        {output?.rationale ? <span className="text-ink-2">. {output.rationale}</span> : null}
+        {output?.rationale ? (
+          <span className="text-ink-2">. {output.rationale}</span>
+        ) : null}
       </p>
       {meta}
 
@@ -354,7 +396,12 @@ function DecisionCard({ row }: { row: Row }) {
         </pre>
       </details>
 
-      <ReviewForm decisionId={row.id} options={options} current={human} note={note} />
+      <ReviewForm
+        decisionId={row.id}
+        options={options}
+        current={human}
+        note={note}
+      />
     </div>
   );
 }
