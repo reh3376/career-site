@@ -20,6 +20,7 @@ const NAV = [
   { href: "/admin/jd", label: "JD submissions" },
   { href: "/admin/decisions", label: "Decision review" },
   { href: "/admin/evals", label: "Evaluations" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/db", label: "DB query" },
 ];
 

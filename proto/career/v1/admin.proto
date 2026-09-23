@@ -324,6 +324,14 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns the state of the reviewer, read from the SQL views that
+  // define each metric once. Nothing here is computed in the api or in
+  // a page: two definitions of the same number is how a dashboard
+  // starts disagreeing with itself.
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Lists logged reviewer decisions (per-requirement verdicts, gate
   // outcomes) with the evidence each was made from, for the owner's
   // human-in-the-loop review. Backs /admin/decisions.
@@ -1861,6 +1869,81 @@ message GetEvalRunRequest {
 message GetEvalRunResponse {
   // The evaluation, with its per-posting results.
   EvalRun run = 1;
+}
+
+// Get-metrics request.
+message GetMetricsRequest {}
+
+// One fit band against what actually happened afterwards.
+message OutcomeByFit {
+  // Fit band the run assigned.
+  string fit = 1;
+  // Recorded outcome.
+  string outcome = 2;
+  // How many submissions.
+  int32 submissions = 3;
+}
+
+// The state of the reviewer. Every field comes from a view in
+// migration 00028; none is computed here.
+message GetMetricsResponse {
+  // Real runs in the last twenty.
+  int32 recent_runs = 1;
+  // Of those, how many finished without intervention.
+  int32 recent_completed = 2;
+  // Of those, how many failed.
+  int32 recent_failed = 3;
+  // Of those, how many are still claiming to run.
+  int32 recent_stuck = 4;
+
+  // Requirement verdicts the owner has reviewed.
+  int32 reviewed = 5;
+  // Of those, how many the owner agreed with.
+  int32 agreed = 6;
+  // Agreement as a percentage; unset with nothing reviewed.
+  optional double agreement_pct = 7;
+  // Disagreements where one side said partial: the judge being unsure.
+  int32 soft_disagreements = 8;
+  // Disagreements between met and unmet: the judge being wrong.
+  int32 hard_disagreements = 9;
+
+  // Runs that reached a result.
+  int32 finished_runs = 10;
+  // Median minutes to a result.
+  optional double median_minutes = 11;
+  // 95th percentile minutes to a result.
+  optional double p95_minutes = 12;
+  // Median minutes spent queued, reported apart from work.
+  optional double median_queued_minutes = 13;
+
+  // Thirty-day funnel: visitors who reached the landing page.
+  int32 landed = 14;
+  // Visitors who read an article.
+  int32 read_writing = 15;
+  // Visitors who clicked a call to action.
+  int32 clicked = 16;
+  // Visitors who submitted a registration.
+  int32 registered = 17;
+  // Visitors who verified their email.
+  int32 verified = 18;
+  // Visitors who signed in.
+  int32 signed_in = 19;
+  // Visitors who submitted a posting.
+  int32 submitted = 20;
+
+  // Model calls in the last 30 days.
+  int32 calls = 21;
+  // Of those, how many failed.
+  int32 call_failures = 22;
+  // Prompt tokens in the last 30 days.
+  int64 prompt_tokens = 23;
+  // Completion tokens in the last 30 days.
+  int64 completion_tokens = 24;
+
+  // Newest finished evaluation; unset before the first one.
+  EvalRun latest_eval = 25;
+  // Fit band against recorded outcomes.
+  repeated OutcomeByFit outcomes = 26;
 }
 
 // One pipeline run: what produced a verdict and what it decided

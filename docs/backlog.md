@@ -133,9 +133,17 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   **Left over:** the set needs Roger's real calibration postings added,
   which cannot be seeded from the repo because they live in the
   gitignored personal folder. Two placeholders exist locally only.
-- **D5 views and `/admin/analytics`.** SQL views over `events`,
-  `jd_runs` and `eval_runs`, and one admin page: funnel, JD outcomes by
-  fit and commit, judge agreement over time.
+- **D5 views and `/admin/analytics`. SHIPPED 2026-09-22.** Ten SQL views
+  (migration 00028, catalogued in `docs/metrics.md`) define every number
+  once; the api selects from them and the page renders what it gets.
+  Nothing recomputes a metric in Go or in a page, because two
+  definitions of the same number is how a dashboard starts disagreeing
+  with itself. The page is arranged by the criteria in the go-to-market
+  response: reliability, agreement, time to a result, calibration,
+  whether the score predicts anything, reach, model load. A criterion
+  with no data says so rather than showing a zero that reads like a
+  failure. The read-only console role picks up new views automatically,
+  so `/admin/db` queries them directly.
 - **Metrics for adapter training** (Roger opted in 2026-09-21). D2 to
   D4 cover the shape; still open are the nightly export of interactions
   and labels to object storage, and a corpus lineage table
