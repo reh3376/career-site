@@ -44,6 +44,8 @@ func (a *Admin) ListGoldenPostings(
 			ExpectedBand: g.ExpectedBand,
 			Note:         g.Note,
 			Active:       g.Active,
+			Selection:    g.Selection,
+			Source:       g.Source,
 			LastScore:    g.LastScore,
 		}
 		if g.LastPassed != nil {
@@ -65,10 +67,20 @@ func (a *Admin) UpsertGoldenPosting(
 	if _, err := requireAdmin(a, ctx, req); err != nil {
 		return nil, err
 	}
+	// An empty gate is legitimate: a posting drawn at random arrives
+	// unlabelled on purpose, and is labelled after someone reads it.
 	gate := strings.ToLower(strings.TrimSpace(req.Msg.GetExpectedGate()))
-	if gate != "above" && gate != "below" {
+	if gate != "above" && gate != "below" && gate != "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("expected_gate must be above or below"))
+			errors.New("expected_gate must be above, below, or empty to add it unlabelled"))
+	}
+	selection := strings.ToLower(strings.TrimSpace(req.Msg.GetSelection()))
+	if selection == "" {
+		selection = "chosen"
+	}
+	if selection != "chosen" && selection != "random" {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("selection must be chosen or random"))
 	}
 	name := strings.TrimSpace(req.Msg.GetName())
 	if name == "" {
@@ -82,6 +94,8 @@ func (a *Admin) UpsertGoldenPosting(
 		ExpectedGate: gate,
 		ExpectedBand: strings.ToLower(strings.TrimSpace(req.Msg.GetExpectedBand())),
 		Note:         strings.TrimSpace(req.Msg.GetNote()),
+		Selection:    selection,
+		Source:       strings.TrimSpace(req.Msg.GetSource()),
 		Active:       true,
 	})
 	if err != nil {
@@ -104,6 +118,25 @@ func (a *Admin) SetGoldenActive(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("could not update the posting"))
 	}
 	return connect.NewResponse(&v1.SetGoldenActiveResponse{}), nil
+}
+
+// LabelGoldenPosting records the owner's expectation for one posting.
+func (a *Admin) LabelGoldenPosting(
+	ctx context.Context,
+	req *connect.Request[v1.LabelGoldenPostingRequest],
+) (*connect.Response[v1.LabelGoldenPostingResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	gate := strings.ToLower(strings.TrimSpace(req.Msg.GetExpectedGate()))
+	if gate != "above" && gate != "below" {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("expected_gate must be above or below"))
+	}
+	if err := a.users.LabelGoldenPosting(ctx, req.Msg.GetId(), gate, strings.TrimSpace(req.Msg.GetNote())); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("posting not found"))
+	}
+	return connect.NewResponse(&v1.LabelGoldenPostingResponse{}), nil
 }
 
 // ListEvalRuns returns evaluations newest first.

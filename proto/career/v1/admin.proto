@@ -314,6 +314,13 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Records which side of the gate a posting belongs on. Separate from
+  // the upsert so labelling a posting does not mean resending its text,
+  // and so an unlabelled posting is a state the console can act on.
+  rpc LabelGoldenPosting(LabelGoldenPostingRequest) returns (LabelGoldenPostingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Lists evaluations, newest first, without their per-posting results.
   rpc ListEvalRuns(ListEvalRunsRequest) returns (ListEvalRunsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
@@ -1708,6 +1715,12 @@ message GoldenPosting {
   string note = 8;
   // Retired postings stay for history and are skipped by new runs.
   bool active = 9;
+  // chosen (the owner picked it) or random (drawn without reading it
+  // first). Reported apart, because a gate clean on chosen postings and
+  // noisy on random ones is the finding that matters.
+  string selection = 13;
+  // Where the posting came from.
+  string source = 14;
   // Score from the most recent evaluation that included it.
   optional double last_score = 10;
   // Whether that evaluation put it on the expected side.
@@ -1744,11 +1757,12 @@ message UpsertGoldenPostingRequest {
   string role_hint = 3 [(buf.validate.field).string.max_len = 200];
   // Employer hint.
   string employer_hint = 4 [(buf.validate.field).string.max_len = 200];
-  // above | below.
-  string expected_gate = 5 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 8
-  }];
+  // above, below, or empty to add it unlabelled for review later.
+  string expected_gate = 5 [(buf.validate.field).string.max_len = 8];
+  // chosen or random; defaults to chosen.
+  string selection = 8 [(buf.validate.field).string.max_len = 16];
+  // Where the posting came from.
+  string source = 9 [(buf.validate.field).string.max_len = 500];
   // Advisory band.
   string expected_band = 6 [(buf.validate.field).string.max_len = 20];
   // Why it is in the set.
@@ -1771,6 +1785,23 @@ message SetGoldenActiveRequest {
 
 // Set-golden-active response.
 message SetGoldenActiveResponse {}
+
+// Label-golden-posting request. Labelling is its own call so recording
+// a judgment does not mean resending the whole posting text.
+message LabelGoldenPostingRequest {
+  // Row id.
+  int64 id = 1;
+  // above or below.
+  string expected_gate = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8
+  }];
+  // Why, in a sentence. Appended to the posting's note.
+  string note = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// Label-golden-posting response.
+message LabelGoldenPostingResponse {}
 
 // One scoring of the whole active golden set under one configuration.
 message EvalRun {

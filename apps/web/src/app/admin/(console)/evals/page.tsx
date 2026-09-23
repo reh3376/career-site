@@ -4,27 +4,12 @@ import Link from "next/link";
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
-import { setGoldenActiveAction } from "./actions";
 import { EvalRunner } from "./eval-runner";
 import { GoldenForm } from "./golden-form";
+import { PostingRow, type Posting } from "./posting-row";
 
 export const metadata: Metadata = { title: "Admin · Evaluations" };
 export const dynamic = "force-dynamic";
-
-type Posting = {
-  id?: string | number;
-  name?: string;
-  expected_gate?: string;
-  expectedGate?: string;
-  expected_band?: string;
-  expectedBand?: string;
-  note?: string;
-  active?: boolean;
-  last_score?: number;
-  lastScore?: number;
-  last_passed?: boolean;
-  lastPassed?: boolean;
-};
 
 type Run = {
   id?: string | number;
@@ -74,9 +59,10 @@ export default async function AdminEvalsPage() {
   ]);
   const postings = set?.postings ?? [];
   const evals = runs?.runs ?? [];
-  const above = postings.filter(
-    (p) => (p.expected_gate ?? p.expectedGate) === "above",
-  ).length;
+  const gateOf = (p: Posting) => p.expected_gate ?? p.expectedGate ?? "";
+  const chosen = postings.filter((p) => p.selection !== "random").length;
+  const random = postings.filter((p) => p.selection === "random").length;
+  const unlabelled = postings.filter((p) => gateOf(p) === "").length;
 
   return (
     <>
@@ -104,8 +90,19 @@ export default async function AdminEvalsPage() {
       <section className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           the set <span className="text-ink-4">·</span> {postings.length}{" "}
-          postings, {above} expected above the gate
+          postings <span className="text-ink-4">·</span> {chosen} chosen,{" "}
+          {random} random
+          {unlabelled > 0 ? (
+            <span className="text-accent"> · {unlabelled} need a label</span>
+          ) : null}
         </p>
+        {unlabelled > 0 ? (
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">
+            A posting drawn at random arrives with nobody having read it, which
+            is the point. Until it is labelled, evaluations skip it rather than
+            guessing, so nothing is broken by leaving it here.
+          </p>
+        ) : null}
         {postings.length === 0 ? (
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
             Nothing in the set yet. Add the postings you already use to judge
@@ -114,66 +111,10 @@ export default async function AdminEvalsPage() {
             or five is enough to catch a regression.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-line border-y border-line">
-            {postings.map((p) => {
-              const gate = p.expected_gate ?? p.expectedGate ?? "";
-              const last = p.last_score ?? p.lastScore;
-              const passed = p.last_passed ?? p.lastPassed;
-              const active = p.active !== false;
-              return (
-                <li
-                  key={String(p.id)}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-ink">
-                      {p.name}
-                      <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                        expect {gate}
-                      </span>
-                      {!active ? (
-                        <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-4">
-                          retired
-                        </span>
-                      ) : null}
-                    </p>
-                    {p.note ? (
-                      <p className="mt-0.5 text-sm text-ink-3">{p.note}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-sm text-ink">
-                      {last === undefined ? (
-                        <span className="text-ink-4">not scored</span>
-                      ) : (
-                        <>
-                          {num(last)}{" "}
-                          <span
-                            className={passed ? "text-signal" : "text-danger"}
-                          >
-                            {passed ? "ok" : "miss"}
-                          </span>
-                        </>
-                      )}
-                    </span>
-                    <form action={setGoldenActiveAction} className="m-0">
-                      <input type="hidden" name="id" value={String(p.id)} />
-                      <input
-                        type="hidden"
-                        name="active"
-                        value={active ? "false" : "true"}
-                      />
-                      <button
-                        type="submit"
-                        className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3 underline decoration-line underline-offset-4 hover:text-accent"
-                      >
-                        {active ? "retire" : "restore"}
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
+          <ul className="mt-4 space-y-2">
+            {postings.map((p) => (
+              <PostingRow key={String(p.id)} p={p} />
+            ))}
           </ul>
         )}
       </section>

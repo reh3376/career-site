@@ -67,3 +67,27 @@ async function errorText(resp: Response): Promise<string> {
   }
   return `HTTP ${resp.status}`;
 }
+
+export type LabelState = { saved?: boolean; error?: string };
+
+// Record which side of the gate a posting belongs on. Separate from the
+// upsert so labelling does not mean resending the posting text, and so
+// an unlabelled posting is a state the console can act on.
+export async function labelGoldenAction(
+  _prev: LabelState,
+  formData: FormData,
+): Promise<LabelState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const expectedGate = String(formData.get("expected_gate") ?? "").trim();
+  if (!id || !expectedGate) return { error: "Pick a side." };
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/LabelGoldenPosting",
+    body: { id, expectedGate, note: String(formData.get("note") ?? "").trim() },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp) };
+  revalidatePath("/admin/evals");
+  return { saved: true };
+}

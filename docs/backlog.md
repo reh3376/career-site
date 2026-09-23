@@ -279,7 +279,16 @@ an existing claim honest.
   arranged by the seven criteria. What is missing is the pass/fail
   shape, below.
 
-**1. Random postings in the golden set (`RR-11`, `RR-12`).** The set
+**1. Random postings in the golden set (`RR-11`, `RR-12`). PARTLY
+SHIPPED 2026-09-23.** A posting now records how it got into the set,
+chosen or random, and where it came from; a random one arrives
+unlabelled, which evaluations skip rather than guess at; and the
+console shows each posting's full text with a label control, because a
+posting cannot be judged without being read. Three random postings are
+loaded from an unfiltered search in adjacent fields and are waiting for
+a label. **Left to do:** the owner labels them, more are added toward
+ten, and calibration is reported separately for chosen and random,
+which is the part that makes the split worth having. Originally: the set
 holds one posting. The owner chose it, and chose it because he applied
 for the job, so its expected outcome is his application decision
 restated rather than an independent judgment. A set like that cannot

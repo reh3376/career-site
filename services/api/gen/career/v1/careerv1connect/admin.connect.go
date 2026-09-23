@@ -164,6 +164,9 @@ const (
 	// AdminServiceSetGoldenActiveProcedure is the fully-qualified name of the AdminService's
 	// SetGoldenActive RPC.
 	AdminServiceSetGoldenActiveProcedure = "/career.v1.AdminService/SetGoldenActive"
+	// AdminServiceLabelGoldenPostingProcedure is the fully-qualified name of the AdminService's
+	// LabelGoldenPosting RPC.
+	AdminServiceLabelGoldenPostingProcedure = "/career.v1.AdminService/LabelGoldenPosting"
 	// AdminServiceListEvalRunsProcedure is the fully-qualified name of the AdminService's ListEvalRuns
 	// RPC.
 	AdminServiceListEvalRunsProcedure = "/career.v1.AdminService/ListEvalRuns"
@@ -352,6 +355,10 @@ type AdminServiceClient interface {
 	// because deleting one would silently change what every past
 	// evaluation was measuring.
 	SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error)
+	// Records which side of the gate a posting belongs on. Separate from
+	// the upsert so labelling a posting does not mean resending its text,
+	// and so an unlabelled posting is a state the console can act on.
+	LabelGoldenPosting(context.Context, *connect.Request[v1.LabelGoldenPostingRequest]) (*connect.Response[v1.LabelGoldenPostingResponse], error)
 	// Lists evaluations, newest first, without their per-posting results.
 	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
 	// Returns one evaluation with every posting's result.
@@ -644,6 +651,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetGoldenActive")),
 			connect.WithClientOptions(opts...),
 		),
+		labelGoldenPosting: connect.NewClient[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse](
+			httpClient,
+			baseURL+AdminServiceLabelGoldenPostingProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("LabelGoldenPosting")),
+			connect.WithClientOptions(opts...),
+		),
 		listEvalRuns: connect.NewClient[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse](
 			httpClient,
 			baseURL+AdminServiceListEvalRunsProcedure,
@@ -739,6 +752,7 @@ type adminServiceClient struct {
 	listGoldenPostings    *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
 	upsertGoldenPosting   *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
 	setGoldenActive       *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
+	labelGoldenPosting    *connect.Client[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse]
 	listEvalRuns          *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
 	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
 	getMetrics            *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
@@ -959,6 +973,11 @@ func (c *adminServiceClient) SetGoldenActive(ctx context.Context, req *connect.R
 	return c.setGoldenActive.CallUnary(ctx, req)
 }
 
+// LabelGoldenPosting calls career.v1.AdminService.LabelGoldenPosting.
+func (c *adminServiceClient) LabelGoldenPosting(ctx context.Context, req *connect.Request[v1.LabelGoldenPostingRequest]) (*connect.Response[v1.LabelGoldenPostingResponse], error) {
+	return c.labelGoldenPosting.CallUnary(ctx, req)
+}
+
 // ListEvalRuns calls career.v1.AdminService.ListEvalRuns.
 func (c *adminServiceClient) ListEvalRuns(ctx context.Context, req *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error) {
 	return c.listEvalRuns.CallUnary(ctx, req)
@@ -1163,6 +1182,10 @@ type AdminServiceHandler interface {
 	// because deleting one would silently change what every past
 	// evaluation was measuring.
 	SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error)
+	// Records which side of the gate a posting belongs on. Separate from
+	// the upsert so labelling a posting does not mean resending its text,
+	// and so an unlabelled posting is a state the console can act on.
+	LabelGoldenPosting(context.Context, *connect.Request[v1.LabelGoldenPostingRequest]) (*connect.Response[v1.LabelGoldenPostingResponse], error)
 	// Lists evaluations, newest first, without their per-posting results.
 	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
 	// Returns one evaluation with every posting's result.
@@ -1451,6 +1474,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetGoldenActive")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceLabelGoldenPostingHandler := connect.NewUnaryHandler(
+		AdminServiceLabelGoldenPostingProcedure,
+		svc.LabelGoldenPosting,
+		connect.WithSchema(adminServiceMethods.ByName("LabelGoldenPosting")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListEvalRunsHandler := connect.NewUnaryHandler(
 		AdminServiceListEvalRunsProcedure,
 		svc.ListEvalRuns,
@@ -1585,6 +1614,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceUpsertGoldenPostingHandler.ServeHTTP(w, r)
 		case AdminServiceSetGoldenActiveProcedure:
 			adminServiceSetGoldenActiveHandler.ServeHTTP(w, r)
+		case AdminServiceLabelGoldenPostingProcedure:
+			adminServiceLabelGoldenPostingHandler.ServeHTTP(w, r)
 		case AdminServiceListEvalRunsProcedure:
 			adminServiceListEvalRunsHandler.ServeHTTP(w, r)
 		case AdminServiceGetEvalRunProcedure:
@@ -1776,6 +1807,10 @@ func (UnimplementedAdminServiceHandler) UpsertGoldenPosting(context.Context, *co
 
 func (UnimplementedAdminServiceHandler) SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetGoldenActive is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) LabelGoldenPosting(context.Context, *connect.Request[v1.LabelGoldenPostingRequest]) (*connect.Response[v1.LabelGoldenPostingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.LabelGoldenPosting is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error) {
