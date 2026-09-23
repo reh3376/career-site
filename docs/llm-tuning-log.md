@@ -1031,3 +1031,65 @@ results, a fragment.
 the assessor is disabled and this path does not run here. The
 deterministic half is covered by tests. The real test is production,
 re-submitting that same worksheet and seeing it refused.
+
+## 2026-09-23: the fix over-corrected, and the golden set caught it
+
+First real before-and-after on a genuine posting (Blue Origin, Senior
+Software Development Manager, AI Manufacturing Execution Systems).
+
+| | run 1 | run 2 |
+|---|---|---|
+| judge prompt | v3:5475a41f | v3:5475a41f |
+| corpus | 853404a1b788 | a3ec0c636121 |
+| score | 0.800 (strong) | 1.000 (very strong) |
+| met / partial / unmet | 11 / 0 / 3 | 14 / 0 / 0 |
+
+Between the runs, three spans were added to the career facts sheet: the
+MPC/APC work (15+ years), MDEMG (2024 to 2026, two years, sole
+developer) and the in-house Whiskey House manufacturing software. The
+documents already described what these systems do; nothing stated how
+long they took, which is what a "N+ years of X" requirement needs.
+
+**A perfect score is not a win.** Two of the three that flipped were
+wrong, and the owner had already said so about one of them.
+
+- The requirement to collaborate with Anthropic, AWS and OpenAI as
+  external partners flipped to met, reasoning that MDEMG "integrates
+  with LLMs and supports collaboration with external AI providers
+  through gRPC, DevSpace hub, and inter-agent messaging". Calling an
+  API is not a partnership with the company behind it.
+- "5+ years in building products that apply or incorporate Machine
+  Learning Models" flipped to met citing MDEMG, which the facts sheet
+  now states is two years. The judge never consulted a span, and never
+  touched the fifteen years of MPC/APC added for exactly this purpose.
+
+**The cause was v3's rule 3**, written that morning to fix the opposite
+failure: "a document showing the candidate built a system is evidence of
+the skills that system required, named or not". True, and necessary, but
+it said nothing about what "evidence of" may establish. So the judge
+swung from reasoning only about the profile summary to inferring
+durations and business relationships from a repository existing.
+
+**v4** (`v3:5475a41f` → `v4:52e4ba2e`) keeps rule 3 and bounds it:
+inference establishes capability and nothing else. It may never
+establish a length of time, a relationship with a named company, a
+credential, or an employer; those must be stated in the evidence. A
+requirement asking for a minimum number of years must find a stated
+span covering that much of that work, met when one does, partial when
+the work is evidenced but no span reaches the length, and never
+inferred from a system existing or from total career years in another
+field.
+
+**Prediction recorded before running it**, so the next entry is a test
+rather than a rationalisation: vendor requirement back to unmet, the
+two-year LLM requirement stays met because the span now says two years,
+the five-year ML requirement lands on partial. Roughly twelve met, one
+partial, one unmet, high eighties. If it returns 1.0 again, the prompt
+is not the lever and retrieval is.
+
+**What this says about the method.** Two changes were made at once by
+accident of sequencing (prompt v3 shipped, then the corpus changed), and
+the run records still separated them: same prompt fingerprint, different
+corpus fingerprint, so the movement is attributable to the corpus. That
+is the entire reason D2 records provenance, and it paid for itself on
+the first real comparison.

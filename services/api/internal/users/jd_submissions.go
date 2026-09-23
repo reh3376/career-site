@@ -247,17 +247,35 @@ func (r *Repo) UpdateJdScoring(
 	ctx context.Context, id int64, status string, score *float64, errText string,
 ) error {
 	terminal := status == "below_threshold" || status == "ready" || status == "failed" || status == "not_a_posting"
+	// Only `scoring` means a run is beginning. `generating` is also
+	// non-terminal but arrives four fifths of the way through one, so
+	// resetting on "not terminal" would send the bar back to zero just
+	// before the résumé is written.
+	starting := status == "scoring"
 	const q = `
     UPDATE jd_submissions
     SET status       = $2,
         match_score  = $3,
         error        = NULLIF($4, ''),
         completed_at = CASE WHEN $5::boolean THEN now() ELSE completed_at END,
-        progress_pct = CASE WHEN $5::boolean THEN 100 ELSE progress_pct END,
-        progress_stage = CASE WHEN $5::boolean THEN 'finished' ELSE progress_stage END
+        -- A terminal write finishes the bar. A non-terminal one starts a
+        -- run, so it resets the bar to zero.
+        --
+        -- UpdateJdProgress only ever moves progress forward, which keeps
+        -- a late write from a slow stage dragging the bar backwards. But
+        -- a re-score inherits the previous run's 100, so every forward
+        -- write fails that guard and the bar reads "finished" for the
+        -- whole of the second run. Resetting here is the one place that
+        -- knows a run is beginning.
+        progress_pct = CASE WHEN $5::boolean THEN 100
+                            WHEN $6::boolean THEN 0
+                            ELSE progress_pct END,
+        progress_stage = CASE WHEN $5::boolean THEN 'finished'
+                              WHEN $6::boolean THEN ''
+                              ELSE progress_stage END
     WHERE id = $1
   `
-	tag, err := r.pool.Exec(ctx, q, id, status, score, errText, terminal)
+	tag, err := r.pool.Exec(ctx, q, id, status, score, errText, terminal, starting)
 	if err != nil {
 		return fmt.Errorf("update jd scoring: %w", err)
 	}
