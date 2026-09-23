@@ -82,8 +82,20 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 	started := time.Now()
 	for i, g := range set {
 		if ctx.Err() != nil {
+			// Bookkeeping runs on a context that outlives the
+			// cancellation. Closing the run with the dead ctx writes
+			// nothing, which on 2026-09-23 left a timed-out run sitting at
+			// "running" for ever with no summary and no record of how far
+			// it got. A run that died should say so in the table, since
+			// that table is the only place anyone looks afterwards.
+			done := context.WithoutCancel(ctx)
 			run.Status = "failed"
-			_ = e.users.FinishEvalRun(ctx, run)
+			run.Note = fmt.Sprintf("%s | stopped after %d of %d: %v",
+				run.Note, i, len(set), ctx.Err())
+			if fErr := e.users.FinishEvalRun(done, run); fErr != nil {
+				e.log.Warn("eval: could not close the interrupted run",
+					slog.String("error", fErr.Error()))
+			}
 			return "", ctx.Err()
 		}
 		report(int32(5+85*i/len(set)), fmt.Sprintf("scoring %s (%d of %d)", g.Name, i+1, len(set)))

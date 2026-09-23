@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -26,6 +27,24 @@ import (
 // sweep job; small so progress reports are frequent and a cancelled
 // job stops within a batch.
 const sweepBatch = 32
+
+// jobTimeout is how long a job of this kind may take before the runner
+// cancels it. Zero means the runner's default of two hours.
+//
+// An evaluation is the exception. It scores every golden posting
+// through the real pipeline with one judge call per requirement, and on
+// this box one posting takes roughly fifty minutes, so a set of five is
+// already a four-hour job and the set is meant to grow. The default
+// ceiling cancelled a run three postings in on 2026-09-23 after two
+// hours of work. Eight hours is not a promise that a run is healthy, it
+// is a ceiling loose enough that hitting it means something is wrong
+// rather than merely slow.
+func jobTimeout(kind v1.JobKind) time.Duration {
+	if kind == v1.JobKind_JOB_KIND_EVAL_QUICK {
+		return 8 * time.Hour
+	}
+	return 0
+}
 
 // RunJob starts a job and returns its id.
 func (a *Admin) RunJob(
@@ -123,7 +142,7 @@ func (a *Admin) RunJob(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("job kind %s is not runnable here", kind.String()))
 	}
 
-	j, err := a.jobs.Start(kind.String(), fn)
+	j, err := a.jobs.StartWithin(kind.String(), jobTimeout(kind), fn)
 	if err != nil {
 		if errors.Is(err, jobs.ErrAlreadyRunning) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)

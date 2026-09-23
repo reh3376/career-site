@@ -1308,3 +1308,51 @@ appears across the top of the console saying so, naming both versions,
 with a reload button. It cannot make a stale submission succeed. It can
 stop one being mistaken for a success, which is the part that cost real
 work here.
+
+## 2026-09-23: the first five-posting run, and the ceiling it hit
+
+The run died at exactly two hours, three postings in, with `context
+deadline exceeded`. Two separate faults, one visible and one not.
+
+**The ceiling.** The job runner cancels anything past two hours. That
+suits work bounded by the size of the corpus. An evaluation is bounded
+by the language model: every posting goes through the real pipeline
+with one judge call per requirement, and on this box a single posting
+takes the better part of an hour. Five postings was already a
+four-hour job. The kind now carries its own deadline, eight hours,
+loose enough that reaching it means something is wrong rather than
+merely slow.
+
+**The silent one.** When the deadline fired, the evaluator closed the
+run using the context that had just expired, so the write did nothing.
+The run sat at `running` for ever, with no summary and no record of how
+far it got. Bookkeeping now uses `context.WithoutCancel`, and the note
+records where it stopped. A run that died should say so in the table,
+because that table is the only place anyone looks afterwards.
+
+**What the two completed postings said**, gate 0.700:
+
+| posting | expected | scored | |
+|---|---|---|---|
+| random-orca-general-manager | above | 0.786 | strong |
+| ati-director-process-control-automation | above | 1.000 | very strong |
+
+**A label was corrected mid-run.** Orca was first labelled `below` with
+the note "not the type of position that translates well to my core
+skillset". The owner then restated it: "I do have the experience and
+skill set to do this job", and the earlier note was a personal
+preference, which is a parameter filter and not a capability judgment.
+The reviewer's 0.786 was right and the expectation was wrong.
+
+Two things follow. First, the guidance on the label form was not enough
+on its own: the note field invited a reason, and the reason that came
+naturally was about fit. A field that only accepts a capability
+sentence, or a separate place to record whether he would take the job,
+would have kept them apart. Second, and worse for measurement, the set
+now has no posting expected `below` at all. `separation` needs both
+groups, so it reports no margin, and gate accuracy degenerates into
+"did everything score above 0.700", which a reviewer that says yes to
+everything would pass perfectly. The set cannot currently detect the
+failure that costs the owner something: a generous reviewer tailoring a
+résumé for a job he cannot do. The next postings drawn must include
+ones that are a genuine no on capability.

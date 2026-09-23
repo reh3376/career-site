@@ -72,6 +72,20 @@ func New(log *slog.Logger, retain, timeout time.Duration) *Runner {
 // same kind (reindexing the same directory twice at once has no use
 // and doubles the load on the embedder).
 func (r *Runner) Start(kind string, fn Fn) (*Job, error) {
+	return r.StartWithin(kind, 0, fn)
+}
+
+// StartWithin is Start with its own deadline, for a job whose honest
+// duration is not the default.
+//
+// The default of two hours suits work that is bounded by the size of
+// the corpus. An evaluation is bounded by the language model instead:
+// it scores every posting in the golden set through the real pipeline,
+// one judge call per requirement, and on this box a single posting
+// takes the better part of an hour. A five-posting set ran into the
+// two-hour ceiling on 2026-09-23 and lost two hours of work three
+// postings in, which is the whole reason this exists.
+func (r *Runner) StartWithin(kind string, timeout time.Duration, fn Fn) (*Job, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.pruneLocked()
@@ -86,12 +100,15 @@ func (r *Runner) Start(kind string, fn Fn) (*Job, error) {
 	}
 	j := &Job{ID: hex.EncodeToString(b[:]), Kind: kind, Status: StatusQueued, StartedAt: time.Now().UTC()}
 	r.jobs[j.ID] = j
-	go r.run(j, fn)
+	if timeout <= 0 {
+		timeout = r.timeout
+	}
+	go r.run(j, timeout, fn)
 	return snapshot(j), nil
 }
 
-func (r *Runner) run(j *Job, fn Fn) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	r.set(j, func(x *Job) { x.Status = StatusRunning; x.StartedAt = time.Now().UTC() })
 	report := func(pct int32, summary string) {
