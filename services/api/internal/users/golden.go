@@ -11,11 +11,17 @@ import (
 
 // GoldenPosting is one job description with a stated expectation.
 //
-// The expectation is which side of the gate it belongs on, not a score.
-// A score is model-dependent and would have to be rewritten on every
-// model change, and that rewriting is exactly how a regression hides.
-// "This posting is a good fit for Roger" stays true when the model
-// changes, so that is what gets asserted.
+// The expectation answers one question: does the candidate have the
+// skill set to do this job. Not whether the level, the pay, the
+// location or the hours suit him. Those are parameter filters the
+// candidate sets for himself, they need no model, and mixing them in
+// here would make the reviewer's verdict mean two things at once.
+//
+// It is a side of the gate rather than a score, because a score is
+// model-dependent and would have to be rewritten on every model change,
+// and that rewriting is exactly how a regression hides. "He can do this
+// job" stays true when the model changes, so that is what gets
+// asserted.
 type GoldenPosting struct {
 	ID           int64
 	Name         string
