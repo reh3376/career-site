@@ -257,6 +257,91 @@ Still open:
   citations, guardrails, on the same gateway and decision log as the JD
   reviewer. Sized to the CPX31 with the 4b model.
 
+## 6b. Evaluation roadmap
+
+From an external review of the go-to-market response
+(`docs/personal/review/gtm-response-review01.md`, gitignored; its items
+are tagged `RR-NN` and referenced here by that id). Ordered cheapest and
+most informative first, which is not the order the review lists them in.
+
+The theme: the reviewer's sharpest observation is that the measurements
+built so far can confirm what the owner already believes but cannot
+surprise him. Everything below either removes that limitation or makes
+an existing claim honest.
+
+**Already true**, noted so nobody builds them twice:
+
+- `RR-19` host and model on every run. Shipped with D2.
+- `RR-06` reproducibility fields. `decision_log` already carries model,
+  prompt id and version, exact input and output, tokens, latency and
+  `run_id`; a second assessor's rows slot into that shape unchanged.
+- `RR-13` in part. Ten metric views exist and `/admin/analytics` is
+  arranged by the seven criteria. What is missing is the pass/fail
+  shape, below.
+
+**1. Random postings in the golden set (`RR-11`, `RR-12`).** The set
+holds one posting. The owner chose it, and chose it because he applied
+for the job, so its expected outcome is his application decision
+restated rather than an independent judgment. A set like that cannot
+fail informatively. Add ten postings drawn at random from job boards in
+adjacent fields, labelled as usual, and record per posting how it was
+selected. Report calibration separately for chosen and random: a gate
+that is clean on chosen postings and noisy on random ones is the most
+useful thing the set can tell us. Needs nobody else and costs nothing.
+
+**2. Check that a source supports its bullet (`RR-09`).** Today
+`jd/resume.go` confirms a cited chunk id was among those offered. It
+never checks that the chunk's text supports the sentence. So "verified"
+currently means "cites something real", not "is supported by what it
+cites", and the honesty criterion is written against the weaker
+meaning. An entailment check on each bullet closes the gap between what
+the site implies and what it does.
+
+**3. The gate as pass or fail (`RR-13`, `RR-14`).** One view per
+criterion returning `pass, value, target, as_of`, and `/admin/gate`
+showing seven rows with links to the runs behind them. The analytics
+page shows numbers arranged by criterion; this turns them into a gate
+that is either met or not. It is also the artifact to screen-share in
+an interview.
+
+**4. The second assessor (`RR-05`, `RR-07`, `RR-08`, `RR-10`).** A
+stronger model checking every verdict, in two clearly separated modes:
+does the cited evidence support this verdict, and separately, is the
+verdict right given everything documented. Mixing them in one number
+blurs both. The valuable output is the owner-versus-checker
+disagreement, which splits into two actionable findings: the documents
+understate work that was done, or a verdict leans on something known
+but never written down. Calibrate the checker against 30 to 50
+owner-labelled entailment judgments before quoting any of its numbers.
+**Blocked** until the conflict in item 6 is resolved.
+
+**5. Record the protocol as an ADR (`RR-15`).** Once items 1 to 4 have
+settled into something that works, not before: an ADR written ahead of
+the practice describes an intention rather than a decision.
+
+**6. Resolve a contradiction in the review before item 4 (`RR-01`
+against `RR-10`).** `RR-01` defines `corpus_only` material as never
+exported, never used for training, and assigns client and NDA records
+to it. `RR-10` then says sending that same material to a hosted model
+is acceptable. Sending it to a hosted provider is an export. This needs
+an owner decision, and it gates the second assessor: either the checker
+sees only `public` material, or `corpus_only` gets a narrower rule that
+says what a hosted assessor may read.
+
+**Not a work item, a correction.** The review's draft post states that
+a much larger model independently checks whether cited evidence
+supports each verdict, and quotes an agreement percentage. Neither
+exists: production holds the owner's labels and the small model's
+verdicts and nothing else. That post cannot be published until item 4
+ships, because it would be a claim the system cannot back, which is the
+failure this product exists to prevent.
+
+**Smaller, whenever convenient.** A structured finding log rather than
+prose (`RR-17`), a refresh cadence for the random postings so the set
+does not decay into "postings the model already handles" (`RR-18`), and
+the three-way agreement chart on the public build page once the numbers
+are stable (`RR-20`).
+
 ## 7. Documentation
 
 - Five "(unverified)" markers remain in `docs/FSD.md` (registration
