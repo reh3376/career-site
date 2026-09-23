@@ -47,6 +47,15 @@ func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
 	}
 	switch row.Status {
 	case "ready", "below_threshold", "failed":
+	case "not_a_posting":
+		// The submitter already has the answer from the page, and it is
+		// about what they pasted rather than about the fit. Emailing the
+		// owner about someone's mis-paste is noise; the row is in the
+		// console and the event is recorded.
+		s.events.Emit(ctx, events.Event{Name: "jd.finished", UserID: row.UserID, Props: map[string]any{
+			"submission_id": row.ID, "outcome": row.Status,
+		}})
+		return
 	default:
 		return
 	}

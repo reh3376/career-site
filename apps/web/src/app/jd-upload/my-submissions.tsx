@@ -37,6 +37,7 @@ const LABEL: Record<string, string> = {
   JD_STATUS_BELOW_THRESHOLD: "below the gate",
   JD_STATUS_READY: "résumé ready",
   JD_STATUS_FAILED: "failed",
+  JD_STATUS_NOT_A_POSTING: "not a posting",
 };
 
 // The member's own submissions, newest first. Server-rendered; each

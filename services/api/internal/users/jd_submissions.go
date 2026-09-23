@@ -246,7 +246,7 @@ func (r *Repo) SetJdResume(
 func (r *Repo) UpdateJdScoring(
 	ctx context.Context, id int64, status string, score *float64, errText string,
 ) error {
-	terminal := status == "below_threshold" || status == "ready" || status == "failed"
+	terminal := status == "below_threshold" || status == "ready" || status == "failed" || status == "not_a_posting"
 	const q = `
     UPDATE jd_submissions
     SET status       = $2,
@@ -390,7 +390,7 @@ func (r *Repo) UpdateJdProgress(ctx context.Context, id int64, pct int32, stage 
 func (r *Repo) FinishJdProgress(ctx context.Context, id int64) error {
 	_, err := r.pool.Exec(ctx, `
     UPDATE jd_submissions SET progress_pct = 100, progress_stage = 'finished'
-     WHERE id = $1 AND status IN ('ready', 'below_threshold', 'failed')`, id)
+     WHERE id = $1 AND status IN ('ready', 'below_threshold', 'failed', 'not_a_posting')`, id)
 	if err != nil {
 		return fmt.Errorf("finish jd progress: %w", err)
 	}
