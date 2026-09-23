@@ -87,6 +87,7 @@ const STATUS_LABEL: Record<string, string> = {
   JD_STATUS_GENERATING: "generating",
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
+  JD_STATUS_NOT_A_POSTING: "not a posting",
 };
 
 const VERDICT_TONE: Record<string, string> = {

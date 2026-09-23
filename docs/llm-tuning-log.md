@@ -980,3 +980,54 @@ The agreement summary now also splits disagreements by direction, too
 harsh against too generous, for the same reason: this review is three
 harsh and zero generous, which is a bias with a fix, and a single
 percentage would have hidden it.
+
+## 2026-09-23: the first question is whether it is a job description
+
+Submission 9, the one whose grading exposed the judge bias, was not a
+job description. The whole input was 365 characters of a job-search
+worksheet: two company names and the search terms to use on each. The
+extractor had not flattened a posting into keywords, as first read. The
+keywords were the input.
+
+That reframes the earlier finding. The requirement extraction was not
+degenerate; it faithfully structured what it was given. But the system
+then judged seven "must" requirements, scored 0.571, and presented it as
+a verdict about fit, with nothing anywhere saying "this is not a job
+description". A confident number computed from the wrong kind of input
+looks exactly like a real one, and the reader has no way to tell.
+
+The owner's grade on that gate, "not enough information for me to make a
+credible review", was the correct answer, and the tool had no way to
+record it. Both defects came from the same submission.
+
+**posting_check v1** runs before anything expensive. It answers one
+question, is this a job posting, and it:
+
+- costs one small call, before retrieval and judging
+- **fails open**. A classifier that is down, slow or confused must never
+  stop a real posting being assessed. Wrongly refusing a hiring
+  manager's posting costs far more than scoring something odd, so every
+  error path returns "carry on"
+- logs its verdict like every other decision, so it can be reviewed and
+  graded and its agreement measured. A gatekeeper nobody can audit is
+  how a system quietly starts refusing real work
+- has a length guard in code for the obvious cases (an empty box, a
+  pasted link) purely to save the call. The guard sits well below any
+  plausible posting: the 365-character worksheet passes it and is
+  judged on meaning, because the difference between that and a terse
+  posting is meaning, not length
+
+The refusal is a status of its own, `not_a_posting`, not a failure. The
+submitter is told what the text looked like and what to do, in the
+server's words, and no email goes to the owner: a mis-paste is not news.
+
+**What the prompt refuses to do.** It does not judge tidiness. A posting
+pasted with navigation junk around it, badly formatted, brief, or
+missing a salary is still a posting. What disqualifies text is
+describing no role: a list of search terms, a résumé, a board's search
+results, a fragment.
+
+**Unverified against the real model.** The local provider is a stub, so
+the assessor is disabled and this path does not run here. The
+deterministic half is covered by tests. The real test is production,
+re-submitting that same worksheet and seeing it refused.

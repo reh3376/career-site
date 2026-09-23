@@ -71,6 +71,7 @@ const STATUS_LABEL: Record<string, string> = {
   JD_STATUS_GENERATING: "generating",
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
+  JD_STATUS_NOT_A_POSTING: "not a posting",
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -80,6 +81,9 @@ const STATUS_TONE: Record<string, string> = {
   JD_STATUS_RECEIVED: "text-ink-3",
   JD_STATUS_BELOW_THRESHOLD: "text-ink-3",
   JD_STATUS_FAILED: "text-danger",
+  // Not an error: the reviewer declined to score something that was not
+  // a posting, which is the system working.
+  JD_STATUS_NOT_A_POSTING: "text-ink-2",
 };
 
 export default async function AdminJdPage() {

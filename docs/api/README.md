@@ -7274,6 +7274,7 @@ Lifecycle of a submission — mirrors jd_submissions.status.
 | `JD_STATUS_GENERATING` | 4 | Score at or above the gate; résumé generation is running. |
 | `JD_STATUS_READY` | 5 | Résumé is ready; generated_resume_url is populated. |
 | `JD_STATUS_FAILED` | 6 | Anything above raised an error; see error_message for detail. |
+| `JD_STATUS_NOT_A_POSTING` | 7 | The submitted text is not a job posting (a list of search terms, a résumé, a fragment), so nothing was scored. error_message says what it looked like and what to do. This is a refusal, not a failure: a score computed from the wrong kind of input looks exactly like a real one and means nothing. |
 
 ### ListMembersRequest.Sort
 

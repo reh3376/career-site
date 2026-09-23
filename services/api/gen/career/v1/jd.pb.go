@@ -115,6 +115,12 @@ const (
 	JdStatus_JD_STATUS_READY JdStatus = 5
 	// Anything above raised an error; see error_message for detail.
 	JdStatus_JD_STATUS_FAILED JdStatus = 6
+	// The submitted text is not a job posting (a list of search terms, a
+	// résumé, a fragment), so nothing was scored. error_message says what
+	// it looked like and what to do. This is a refusal, not a failure: a
+	// score computed from the wrong kind of input looks exactly like a
+	// real one and means nothing.
+	JdStatus_JD_STATUS_NOT_A_POSTING JdStatus = 7
 )
 
 // Enum value maps for JdStatus.
@@ -127,6 +133,7 @@ var (
 		4: "JD_STATUS_GENERATING",
 		5: "JD_STATUS_READY",
 		6: "JD_STATUS_FAILED",
+		7: "JD_STATUS_NOT_A_POSTING",
 	}
 	JdStatus_value = map[string]int32{
 		"JD_STATUS_UNSPECIFIED":     0,
@@ -136,6 +143,7 @@ var (
 		"JD_STATUS_GENERATING":      4,
 		"JD_STATUS_READY":           5,
 		"JD_STATUS_FAILED":          6,
+		"JD_STATUS_NOT_A_POSTING":   7,
 	}
 )
 
@@ -1128,7 +1136,7 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x15JD_SOURCE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fJD_SOURCE_PASTE\x10\x01\x12\x11\n" +
 	"\rJD_SOURCE_PDF\x10\x02\x12\x19\n" +
-	"\x15JD_SOURCE_TEXT_UPLOAD\x10\x03*\xb8\x01\n" +
+	"\x15JD_SOURCE_TEXT_UPLOAD\x10\x03*\xd5\x01\n" +
 	"\bJdStatus\x12\x19\n" +
 	"\x15JD_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12JD_STATUS_RECEIVED\x10\x01\x12\x15\n" +
@@ -1136,7 +1144,8 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x19JD_STATUS_BELOW_THRESHOLD\x10\x03\x12\x18\n" +
 	"\x14JD_STATUS_GENERATING\x10\x04\x12\x13\n" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
-	"\x10JD_STATUS_FAILED\x10\x062\x86\x03\n" +
+	"\x10JD_STATUS_FAILED\x10\x06\x12\x1b\n" +
+	"\x17JD_STATUS_NOT_A_POSTING\x10\a2\x86\x03\n" +
 	"\tJdService\x12M\n" +
 	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12V\n" +
 	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +

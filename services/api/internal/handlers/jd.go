@@ -452,6 +452,8 @@ func jdStatusRepoToProto(status string) v1.JdStatus {
 		return v1.JdStatus_JD_STATUS_READY
 	case "failed":
 		return v1.JdStatus_JD_STATUS_FAILED
+	case "not_a_posting":
+		return v1.JdStatus_JD_STATUS_NOT_A_POSTING
 	default:
 		return v1.JdStatus_JD_STATUS_UNSPECIFIED
 	}

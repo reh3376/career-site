@@ -145,6 +145,7 @@ const STEP_LABEL: Record<string, string> = {
   JD_STATUS_BELOW_THRESHOLD: "below threshold",
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
+  JD_STATUS_NOT_A_POSTING: "not a posting",
 };
 
 // Polls the public GetJdResult endpoint with the submission's result
@@ -424,6 +425,26 @@ export function JdResult({
           The pipeline hit an error{err ? `: ${err}` : ""}. Roger has the
           submission and will follow up.
         </p>
+      ) : null}
+
+      {/* Not a failure and not a verdict: the text was not a posting, so
+          nothing was scored. The message from the server says what it
+          looked like and what to do, so it is shown as-is. */}
+      {status === "JD_STATUS_NOT_A_POSTING" ? (
+        <div className="border-l-2 border-accent bg-paper-2 px-4 py-3">
+          <p className="text-sm leading-relaxed text-ink">
+            {err ||
+              "That does not look like a job posting, so nothing was scored."}
+          </p>
+          <p className="mt-2 text-sm">
+            <Link
+              href="/jd-upload"
+              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+            >
+              Submit the posting
+            </Link>
+          </p>
+        </div>
       ) : null}
 
       {status === "JD_STATUS_READY" && pdfUrl ? (

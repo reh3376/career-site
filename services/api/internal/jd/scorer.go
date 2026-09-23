@@ -302,6 +302,25 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	})
 	progress(2, "starting")
 
+	// Step zero: is this even a job posting? A score computed from a
+	// search-term list or a pasted résumé looks exactly like a real one
+	// and means nothing, which is worse than refusing to answer. Runs
+	// before retrieval so nothing expensive is spent on it, and fails
+	// open so a confused classifier cannot block real work.
+	if s.assessor != nil {
+		progress(4, "checking the posting")
+		if v := s.assessor.CheckPosting(ctx, submissionID, jdText); !v.IsPosting {
+			msg := NotAPostingMessage(v)
+			outcome.Status = "not_a_posting"
+			outcome.Error = "not a posting: " + v.Kind
+			if uErr := s.users.UpdateJdScoring(persist, submissionID, "not_a_posting", nil, msg); uErr != nil {
+				s.log.Warn("jd: failed to record not-a-posting",
+					slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+			}
+			return
+		}
+	}
+
 	retrieval, hits, err := s.Score(ctx, jdText)
 	if err != nil && isTransient(err) {
 		// One retry after a short pause covers the sidecar restarting or
