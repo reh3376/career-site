@@ -128,7 +128,7 @@ func RenderPostingCheckUser(text string) string {
 // model never sees the corpus here; it only structures the posting.
 var JDRequirements = Prompt{
 	ID:      "jd_requirements",
-	Version: 2,
+	Version: 3,
 	System: strings.TrimSpace(`
 You extract hiring requirements from a job description so each one can be checked against a candidate's evidence.
 
@@ -140,6 +140,7 @@ Rules:
 5. category is "must" when the posting states it as required, minimum, or essential; otherwise "nice". Items under "preferred", "nice to have" or "a plus" are always "nice".
 6. weight is 3 for the role's core purpose, 2 for a stated requirement, 1 for a preference or nice-to-have.
 7. ids are r1, r2, ... in order of importance.
+8. named_parties lists organisations the requirement names and expects the candidate to have worked with: companies, clients, institutions, agencies, employers. Almost always empty. Do not list technologies, languages, standards, frameworks, file formats, methodologies or product categories, however prominently they are named. "Collaborate with partners like Anthropic, AWS and OpenAI" names three parties. "Experience with Kubernetes and Python" names none.
 Output only the JSON object.
 `),
 	Schema: `{
@@ -152,12 +153,13 @@ Output only the JSON object.
       "maxItems": 20,
       "items": {
         "type": "object",
-        "required": ["id", "text", "category", "weight"],
+        "required": ["id", "text", "category", "weight", "named_parties"],
         "properties": {
           "id": {"type": "string"},
           "text": {"type": "string"},
           "category": {"type": "string", "enum": ["must", "nice"]},
-          "weight": {"type": "integer", "minimum": 1, "maximum": 3}
+          "weight": {"type": "integer", "minimum": 1, "maximum": 3},
+          "named_parties": {"type": "array", "items": {"type": "string"}}
         }
       }
     }
@@ -184,7 +186,7 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // model never emits a number.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 5,
+	Version: 6,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -202,12 +204,13 @@ Rules:
    - a certification, clearance, licence or degree;
    - a job title held, or an employer worked for.
    Calling a vendor's product or API is not a relationship with that vendor. Using a technology is not a partnership with the company that makes it. Do not describe integration as collaboration.
-5. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere.
-6. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, or when rule 5 applies, and "unmet" when nothing in either kind of evidence supports it.
-7. Before answering "unmet", read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer "unmet" only when the documents still show nothing relevant.
-8. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
-9. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source. For "unmet" it must say what was looked for in the documents and not found; it must not say that the profile does not mention something. It must never assert a duration, a partnership or a credential the evidence does not state.
-10. Return exactly one judgment per requirement id, in the given order.
+5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries named_parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
+6. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere.
+7. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, and "unmet" when nothing in either kind of evidence supports it.
+8. Before answering "unmet", read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer "unmet" only when the documents still show nothing relevant.
+9. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
+10. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source. For "unmet" it must say what was looked for in the documents and not found; it must not say that the profile does not mention something. It must never assert a duration, a partnership or a credential the evidence does not state.
+11. Return exactly one judgment per requirement id, in the given order.
 Output only the JSON object.
 `),
 	Schema: `{
@@ -219,13 +222,14 @@ Output only the JSON object.
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["requirement_id", "verdict", "evidence_ids", "rationale", "stated_span_years"],
+        "required": ["requirement_id", "verdict", "evidence_ids", "rationale", "stated_span_years", "parties_evidenced"],
         "properties": {
           "requirement_id": {"type": "string"},
           "verdict": {"type": "string", "enum": ["met", "partial", "unmet"]},
           "evidence_ids": {"type": "array", "items": {"type": "string"}},
           "rationale": {"type": "string"},
-          "stated_span_years": {"type": "number"}
+          "stated_span_years": {"type": "number"},
+          "parties_evidenced": {"type": "array", "items": {"type": "string"}}
         }
       }
     }
@@ -239,6 +243,11 @@ type Requirement struct {
 	Text     string `json:"text"`
 	Category string `json:"category"`
 	Weight   int    `json:"weight"`
+	// NamedParties are organisations the requirement names and expects a
+	// working relationship with. Extracted once per posting, because
+	// which companies a requirement names is a fact about the posting
+	// rather than a judgment about the candidate. Usually empty.
+	NamedParties []string `json:"named_parties,omitempty"`
 }
 
 // JudgeChunkRunes caps the evidence text shown per chunk in the judge
@@ -284,8 +293,18 @@ func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit) 
 	}
 	b.WriteString("Judge each requirement against the candidate profile and its evidence.\n\n")
 	for _, r := range reqs {
-		fmt.Fprintf(&b, "<requirement id=%q category=%q weight=\"%d\">%s</requirement>\n",
-			r.ID, r.Category, r.Weight, clean(r.Text))
+		// Named parties ride along so the judge knows which organisations
+		// to look for in the evidence. Which companies a requirement
+		// names was settled once, at extraction; asking the judge to
+		// re-derive it per requirement would be fourteen chances to
+		// disagree with itself.
+		if len(r.NamedParties) > 0 {
+			fmt.Fprintf(&b, "<requirement id=%q category=%q weight=\"%d\" parties=%q>%s</requirement>\n",
+				r.ID, r.Category, r.Weight, clean(strings.Join(r.NamedParties, ", ")), clean(r.Text))
+		} else {
+			fmt.Fprintf(&b, "<requirement id=%q category=%q weight=\"%d\">%s</requirement>\n",
+				r.ID, r.Category, r.Weight, clean(r.Text))
+		}
 		var hits []users.CorpusHit
 		for _, h := range evidence[r.ID] {
 			if h.SourceKind != ProfileSourceKind {
