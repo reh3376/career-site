@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import { getSessionUser, isAdmin } from "@/lib/session-user";
 
+import { StaleBuild } from "./stale-build";
+
 // Admin layout. Server-side role gate for the whole /admin subtree so
 // unauthenticated visitors go to /login and authenticated non-admins
 // bounce back to their member home. Renders a two-column layout: a
@@ -24,13 +26,32 @@ const NAV = [
   { href: "/admin/db", label: "DB query" },
 ];
 
+// buildVersion reads the version the API reports. Web and api roll out
+// under one image tag, so this identifies the deploy that rendered the
+// page, which is what StaleBuild compares against later from the
+// browser. A failure here is not worth breaking the console over: an
+// empty string simply turns the check off.
+async function buildVersion(): Promise<string> {
+  try {
+    const base = process.env.API_URL ?? "http://localhost:8080";
+    const resp = await fetch(`${base}/api/readyz`, { cache: "no-store" });
+    if (!resp.ok) return "";
+    const body = (await resp.json()) as { version?: string };
+    return body.version ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const me = await getSessionUser();
   if (!me) redirect("/login?next=/admin");
   if (!isAdmin(me)) redirect("/home");
+  const version = await buildVersion();
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-14 sm:px-10 sm:py-20 md:grid-cols-[220px_1fr] md:gap-16">
+      <StaleBuild renderedVersion={version} />
       <aside className="md:sticky md:top-24 md:self-start">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
           admin console
