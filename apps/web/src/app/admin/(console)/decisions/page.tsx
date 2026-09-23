@@ -93,6 +93,7 @@ type GateOutput = { outcome?: string };
 const VERDICT_OPTIONS: Record<string, string[]> = {
   jd_requirement_verdict: ["met", "partial", "unmet", "insufficient_evidence"],
   jd_gate: ["above_threshold", "below_threshold", "insufficient_evidence"],
+  jd_posting_check: ["posting", "not_posting", "insufficient_evidence"],
 };
 
 function parse<T>(s: string | undefined): T | null {
@@ -264,7 +265,11 @@ function DecisionCard({ row }: { row: Row }) {
   const human = row.human_verdict ?? row.humanVerdict ?? "";
   const note = row.human_note ?? row.humanNote ?? "";
   const reviewedAt = row.reviewed_at ?? row.reviewedAt;
-  const options = VERDICT_OPTIONS[row.kind] ?? ["agree", "disagree"];
+  // No fallback. This used to default to ["agree", "disagree"], which
+  // the server rejects for every kind, so a decision kind missing from
+  // the map above got a form whose every answer failed. An empty list
+  // makes the gap say so instead.
+  const options = VERDICT_OPTIONS[row.kind] ?? [];
   const model = row.model ?? "";
   const promptId = row.prompt_id ?? row.promptId ?? "";
   const promptVersion = row.prompt_version ?? row.promptVersion ?? 0;

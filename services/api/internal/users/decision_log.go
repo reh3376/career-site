@@ -173,6 +173,38 @@ func (r *Repo) ReviewDecision(ctx context.Context, id, reviewerID int64, verdict
 	return nil
 }
 
+// ReviewVocabulary is what the owner may answer, per decision kind.
+//
+// It is per kind rather than one flat list because "met" on a gate row
+// or "above_threshold" on a requirement is meaningless, and a label
+// that means nothing is worse than no label: it still counts.
+//
+// A kind missing from this map cannot be graded at all, which is
+// deliberate. Adding a decision kind without deciding what a human is
+// supposed to say about it is the bug that produced this map: the
+// posting check started logging rows the console offered no valid
+// answer for, and every attempt to grade one failed silently.
+//
+// `insufficient_evidence` is in every list. It is the reviewer saying
+// they could not judge the row from what they were shown, which is
+// neither agreement nor disagreement, and it is excluded from the
+// agreement rate rather than counted against it.
+var ReviewVocabulary = map[string][]string{
+	"jd_requirement_verdict": {"met", "partial", "unmet", "insufficient_evidence"},
+	"jd_gate":                {"above_threshold", "below_threshold", "insufficient_evidence"},
+	"jd_posting_check":       {"posting", "not_posting", "insufficient_evidence"},
+}
+
+// DecisionKind returns the kind of one logged decision, so a review can
+// be validated against the vocabulary that actually applies to it.
+func (r *Repo) DecisionKind(ctx context.Context, id int64) (string, error) {
+	var kind string
+	if err := r.pool.QueryRow(ctx, `SELECT kind FROM decision_log WHERE id = $1`, id).Scan(&kind); err != nil {
+		return "", ErrNotFound
+	}
+	return kind, nil
+}
+
 // ExportDecisions returns rows oldest first, optionally only the
 // reviewed ones, for the JSONL training export.
 func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decision, error) {
