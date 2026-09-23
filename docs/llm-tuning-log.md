@@ -773,3 +773,45 @@ submission reconciliation.
 fixed set of postings, compare runs by fingerprint, and state whether a
 prompt change moved the score because of the prompt or because
 something else moved underneath it.
+
+## 2026-09-22: ground truth and judgment (data layer D3)
+
+Everything measured up to here is the system's account of itself: the
+model's verdicts, the owner's labels on those verdicts, the timings and
+the provenance. All of it answers "was the reasoning sound". None of it
+answers "was the answer right", and those are different questions. A
+posting can score 0.92 with every requirement properly evidenced and
+still be a job that goes nowhere.
+
+**What shipped** (migration 00026), two tables because they are two
+different kinds of claim:
+
+- `jd_outcomes`: what happened in the world. One revisable row per
+  posting, from a fixed vocabulary ordered the way a posting actually
+  moves: not pursued, applied, screening, interview, offer, rejected,
+  no response, withdrew. It carries the day the person knows, which is
+  not the day they typed it in.
+- `jd_feedback`: what a person thought of a run's output. Attached to
+  the run rather than the submission, so a re-score does not inherit an
+  opinion of the thing it replaced. Owner and submitter judgments are
+  kept apart and must never be averaged together.
+
+**Why not thumbs.** The score ratings are accurate, too generous, too
+harsh, unusable. A thumb down cannot distinguish the second from the
+third, and those point at opposite fixes: one says tighten the judge,
+the other says the evidence is not reaching it. The résumé ratings are
+would send, needs edits, wrong. A unique index keeps one current
+opinion per person per run per target, so counting ratings counts
+people rather than clicks.
+
+**Verified locally.** An outcome stored with its date and note; an
+invalid status rejected with the vocabulary listed back; feedback tied
+to the run and the tenant; an invalid target and rating pair rejected;
+and a second rating replacing the first rather than stacking.
+
+**What this unlocks.** The calibration question stops being internal.
+Once a handful of postings carry outcomes, the useful query is whether
+the fit bands separate the postings that went somewhere from the ones
+that did not, which is the first honest test of whether the gate is set
+in the right place. Until then the bands rest on four calibration
+postings and the owner's judgment.

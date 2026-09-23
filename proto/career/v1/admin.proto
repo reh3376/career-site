@@ -280,6 +280,22 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Records what happened in the world after a review: applied,
+  // interview, offer, no response. One per posting, revised in place.
+  // This is the only signal that says whether a score predicted
+  // anything, so nothing else can substitute for it.
+  rpc SetJdOutcome(SetJdOutcomeRequest) returns (SetJdOutcomeResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Records the owner's judgment of one run's output: whether the score
+  // was accurate, too generous or too harsh, and whether the résumé is
+  // sendable. Attached to the run, so a later re-score does not inherit
+  // an opinion of the thing it replaced.
+  rpc RecordJdFeedback(RecordJdFeedbackRequest) returns (RecordJdFeedbackResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Lists logged reviewer decisions (per-requirement verdicts, gate
   // outcomes) with the evidence each was made from, for the owner's
   // human-in-the-loop review. Backs /admin/decisions.
@@ -1547,7 +1563,91 @@ message GetJdSubmissionResponse {
   // overwrites them; these rows survive it, so a superseded verdict can
   // still be read and compared with the one that replaced it.
   repeated JdRun runs = 9;
+  // What happened in the world after this review; unset until recorded.
+  JdOutcome outcome = 10;
+  // Judgments recorded about this posting's output, newest first.
+  repeated JdFeedback feedback = 11;
 }
+
+// What happened after a review. One per posting, revised in place.
+message JdOutcome {
+  // not_pursued | applied | screening | interview | offer | rejected |
+  // no_response | withdrew.
+  string status = 1;
+  // The day that status became true, as YYYY-MM-DD; empty when unknown.
+  string decided_on = 2;
+  // Free note.
+  string note = 3;
+  // When the record was last revised.
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+// One person's judgment of one run's output.
+message JdFeedback {
+  // The run being judged; empty for a posting that predates run records.
+  string run_id = 1;
+  // owner | submitter. Never averaged together.
+  string source = 2;
+  // score | resume.
+  string target = 3;
+  // For score: accurate | too_generous | too_harsh | unusable.
+  // For resume: would_send | needs_edits | wrong.
+  string rating = 4;
+  // Free note.
+  string note = 5;
+  // When it was recorded.
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// Set-jd-outcome request.
+message SetJdOutcomeRequest {
+  // Submission id (numeric, stringified).
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // One of the outcome statuses; validated server-side.
+  string status = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // YYYY-MM-DD, or empty when the day is unknown.
+  string decided_on = 3 [(buf.validate.field).string.max_len = 10];
+  // Free note, trimmed to 4000 characters.
+  string note = 4 [(buf.validate.field).string.max_len = 4000];
+}
+
+// Set-jd-outcome response.
+message SetJdOutcomeResponse {
+  // The stored outcome.
+  JdOutcome outcome = 1;
+}
+
+// Record-jd-feedback request. The owner's judgment of a run's output.
+message RecordJdFeedbackRequest {
+  // Submission id (numeric, stringified).
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // Run being judged; empty attaches the judgment to the newest run.
+  string run_id = 2 [(buf.validate.field).string.max_len = 64];
+  // score | resume.
+  string target = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 16
+  }];
+  // Rating from the vocabulary for that target; validated server-side.
+  string rating = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // Free note, trimmed to 4000 characters.
+  string note = 5 [(buf.validate.field).string.max_len = 4000];
+}
+
+// Record-jd-feedback response.
+message RecordJdFeedbackResponse {}
 
 // One pipeline run: what produced a verdict and what it decided
 // (data layer D2, table `jd_runs`).

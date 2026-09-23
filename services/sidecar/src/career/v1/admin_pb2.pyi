@@ -1068,7 +1068,7 @@ class GetJdSubmissionRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
 
 class GetJdSubmissionResponse(_message.Message):
-    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version", "download_url", "runs")
+    __slots__ = ("row", "jd_text", "assessment_json", "resume_markdown", "llm_model", "prompt_id", "prompt_version", "download_url", "runs", "outcome", "feedback")
     ROW_FIELD_NUMBER: _ClassVar[int]
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
     ASSESSMENT_JSON_FIELD_NUMBER: _ClassVar[int]
@@ -1078,6 +1078,8 @@ class GetJdSubmissionResponse(_message.Message):
     PROMPT_VERSION_FIELD_NUMBER: _ClassVar[int]
     DOWNLOAD_URL_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    FEEDBACK_FIELD_NUMBER: _ClassVar[int]
     row: JdSubmissionRow
     jd_text: str
     assessment_json: str
@@ -1087,7 +1089,73 @@ class GetJdSubmissionResponse(_message.Message):
     prompt_version: int
     download_url: str
     runs: _containers.RepeatedCompositeFieldContainer[JdRun]
-    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ..., runs: _Optional[_Iterable[_Union[JdRun, _Mapping]]] = ...) -> None: ...
+    outcome: JdOutcome
+    feedback: _containers.RepeatedCompositeFieldContainer[JdFeedback]
+    def __init__(self, row: _Optional[_Union[JdSubmissionRow, _Mapping]] = ..., jd_text: _Optional[str] = ..., assessment_json: _Optional[str] = ..., resume_markdown: _Optional[str] = ..., llm_model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., download_url: _Optional[str] = ..., runs: _Optional[_Iterable[_Union[JdRun, _Mapping]]] = ..., outcome: _Optional[_Union[JdOutcome, _Mapping]] = ..., feedback: _Optional[_Iterable[_Union[JdFeedback, _Mapping]]] = ...) -> None: ...
+
+class JdOutcome(_message.Message):
+    __slots__ = ("status", "decided_on", "note", "updated_at")
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DECIDED_ON_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    decided_on: str
+    note: str
+    updated_at: _timestamp_pb2.Timestamp
+    def __init__(self, status: _Optional[str] = ..., decided_on: _Optional[str] = ..., note: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class JdFeedback(_message.Message):
+    __slots__ = ("run_id", "source", "target", "rating", "note", "created_at")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    TARGET_FIELD_NUMBER: _ClassVar[int]
+    RATING_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    source: str
+    target: str
+    rating: str
+    note: str
+    created_at: _timestamp_pb2.Timestamp
+    def __init__(self, run_id: _Optional[str] = ..., source: _Optional[str] = ..., target: _Optional[str] = ..., rating: _Optional[str] = ..., note: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class SetJdOutcomeRequest(_message.Message):
+    __slots__ = ("submission_id", "status", "decided_on", "note")
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DECIDED_ON_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    submission_id: str
+    status: str
+    decided_on: str
+    note: str
+    def __init__(self, submission_id: _Optional[str] = ..., status: _Optional[str] = ..., decided_on: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class SetJdOutcomeResponse(_message.Message):
+    __slots__ = ("outcome",)
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    outcome: JdOutcome
+    def __init__(self, outcome: _Optional[_Union[JdOutcome, _Mapping]] = ...) -> None: ...
+
+class RecordJdFeedbackRequest(_message.Message):
+    __slots__ = ("submission_id", "run_id", "target", "rating", "note")
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_FIELD_NUMBER: _ClassVar[int]
+    RATING_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    submission_id: str
+    run_id: str
+    target: str
+    rating: str
+    note: str
+    def __init__(self, submission_id: _Optional[str] = ..., run_id: _Optional[str] = ..., target: _Optional[str] = ..., rating: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class RecordJdFeedbackResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
 
 class JdRun(_message.Message):
     __slots__ = ("run_id", "attempt", "trigger", "triggered_by", "status", "error", "app_commit", "host", "model", "num_ctx", "embedder_model", "prompts_json", "corpus_fingerprint", "corpus_documents", "corpus_chunks", "score_formula", "retrieval_score", "match_score", "threshold", "fit", "requirement_count", "met_count", "partial_count", "unmet_count", "resume_generated", "queued_ms", "duration_ms", "started_at", "finished_at")
