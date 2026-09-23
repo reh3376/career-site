@@ -71,6 +71,10 @@ type rawJudgment struct {
 	// by the model rather than judged by it. The comparison against what
 	// the requirement asks for happens in duration.go.
 	StatedSpanYears float64 `json:"stated_span_years"`
+	// PartiesEvidenced are the organisations the evidence names as ones
+	// the candidate worked with. Compared against the requirement's own
+	// named parties in relationship.go.
+	PartiesEvidenced []string `json:"parties_evidenced"`
 }
 
 // callResult is what one gateway call returned, kept for the ledger
@@ -93,6 +97,9 @@ type Judgment struct {
 	// kept whether or not it mattered, so a reader can see what the
 	// comparison was made against.
 	StatedSpanYears float64 `json:"stated_span_years,omitempty"`
+	// PartiesEvidenced are the organisations the evidence named, kept so
+	// a reader can see what the comparison was made against.
+	PartiesEvidenced []string `json:"parties_evidenced,omitempty"`
 	// Adjusted explains a verdict that code weakened, and is empty when
 	// the model's verdict stood. An adjustment that cannot be read is
 	// indistinguishable from the model having said so itself.
@@ -343,14 +350,26 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		adjusted := ""
 		if req, ok := reqByID[j.RequirementID]; ok {
 			verdict, adjusted = applyDurationRule(req.Text, verdict, j.StatedSpanYears)
+			// A requirement can ask for both a span and a named party.
+			// The duration rule runs first and may already have weakened
+			// the verdict, in which case this one has nothing to do.
+			if v, note := applyRelationshipRule(req, verdict, j.PartiesEvidenced); note != "" {
+				verdict = v
+				if adjusted == "" {
+					adjusted = note
+				} else {
+					adjusted += "; " + note
+				}
+			}
 		}
 		byReq[j.RequirementID] = Judgment{
-			RequirementID:   j.RequirementID,
-			Verdict:         verdict,
-			EvidenceIDs:     ids,
-			Rationale:       truncErr(strings.TrimSpace(j.Rationale)),
-			StatedSpanYears: j.StatedSpanYears,
-			Adjusted:        adjusted,
+			RequirementID:    j.RequirementID,
+			Verdict:          verdict,
+			EvidenceIDs:      ids,
+			Rationale:        truncErr(strings.TrimSpace(j.Rationale)),
+			StatedSpanYears:  j.StatedSpanYears,
+			PartiesEvidenced: j.PartiesEvidenced,
+			Adjusted:         adjusted,
 		}
 	}
 

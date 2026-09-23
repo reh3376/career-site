@@ -1155,3 +1155,62 @@ with partners like Anthropic, AWS, OpenAI") is still wrongly met, and
 this change does not touch it. Relationships have no deterministic
 signal in the requirement text the way "N+ years" does, so it needs its
 own approach and its own measurement. One change, one comparison.
+
+## 2026-09-23: the duration rule worked, so relationships got the same treatment
+
+| run | judge | score | met / partial / unmet |
+|---|---|---|---|
+| 1 | v3:5475a41f | 0.800 | 11 / 0 / 3 |
+| 2 | v3:5475a41f | 1.000 | 14 / 0 / 0 |
+| 3 | v4:52e4ba2e | 1.000 | 14 / 0 / 0 |
+| 4 | v5:6f1e98c4 + code | 0.971 | 13 / 1 / 0 |
+
+Run 4 is the first change that did what it was meant to. The five-year
+machine-learning requirement came back partial, carrying its own
+explanation: "asks for 5 years; the evidence states 2". The reported
+spans show the rule discriminating rather than blunting: 30 against the
+ten-year engineering ask, 2 against the two-year LLM ask (enough, so
+met), and nothing at all on the nine requirements that ask for no
+duration, which the rule never touched.
+
+**What it did not fix, by design.** The vendor requirement was still
+met, so 0.971 still overstates a real application. Partial credit on one
+requirement barely moves a weighted score when the other thirteen are
+met.
+
+**Relationships now work the same way**, because the same division of
+labour is what worked:
+
+- `jd_requirements` v3 (`v2:5a8616c7` → `v3:357938f1`) extracts
+  `named_parties` per requirement: organisations the requirement names
+  and expects a working relationship with. Companies, clients,
+  institutions, employers. Explicitly not technologies, languages,
+  standards or frameworks, because "experience with Kubernetes" names no
+  party and treating it as one would downgrade half the posting.
+  Extracted once per posting, since which companies a requirement names
+  is a fact about the posting rather than a judgment about the
+  candidate.
+- `requirement_judge` v6 (`v5:6f1e98c4` → `v6:409a63a4`) adds
+  `parties_evidenced`: which of those the evidence names as
+  organisations the candidate worked with or for. The prompt says
+  plainly that using a company's product, calling its API or
+  integrating with its service is not working with that company.
+- `internal/jd/relationship.go` compares the two sets. A "met" on a
+  requirement naming organisations, where the evidence names none of
+  them, becomes "partial".
+
+Same constraints as the duration rule: it only weakens, never
+strengthens; it weakens to partial rather than unmet, because the
+capability may be real and only the named relationship is missing; and
+the adjustment is stored and shown, since one that cannot be read is
+indistinguishable from the model having said so itself.
+
+**Matching is deliberately generous**, because a false downgrade
+understates a real candidate and costs more than a loose match. Case and
+punctuation are ignored, corporate suffixes stripped, containment works
+either way, and acronyms match their expansion: a posting saying "AWS"
+is satisfied by a document saying "Amazon Web Services". That last case
+failed on the first run of the tests, which is why it is now handled;
+containment alone never matches an acronym against its expansion.
+Acronym matching is capped at five words, beyond which shared initials
+are coincidence rather than a name anyone uses.
