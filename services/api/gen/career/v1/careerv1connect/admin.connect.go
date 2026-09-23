@@ -149,6 +149,12 @@ const (
 	AdminServiceGetJdSubmissionProcedure = "/career.v1.AdminService/GetJdSubmission"
 	// AdminServiceRescoreJdProcedure is the fully-qualified name of the AdminService's RescoreJd RPC.
 	AdminServiceRescoreJdProcedure = "/career.v1.AdminService/RescoreJd"
+	// AdminServiceSetJdOutcomeProcedure is the fully-qualified name of the AdminService's SetJdOutcome
+	// RPC.
+	AdminServiceSetJdOutcomeProcedure = "/career.v1.AdminService/SetJdOutcome"
+	// AdminServiceRecordJdFeedbackProcedure is the fully-qualified name of the AdminService's
+	// RecordJdFeedback RPC.
+	AdminServiceRecordJdFeedbackProcedure = "/career.v1.AdminService/RecordJdFeedback"
 	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
 	// ListDecisionLog RPC.
 	AdminServiceListDecisionLogProcedure = "/career.v1.AdminService/ListDecisionLog"
@@ -311,6 +317,16 @@ type AdminServiceClient interface {
 	// background, e.g. after a failed run or a prompt change. Returns
 	// immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
+	// Records what happened in the world after a review: applied,
+	// interview, offer, no response. One per posting, revised in place.
+	// This is the only signal that says whether a score predicted
+	// anything, so nothing else can substitute for it.
+	SetJdOutcome(context.Context, *connect.Request[v1.SetJdOutcomeRequest]) (*connect.Response[v1.SetJdOutcomeResponse], error)
+	// Records the owner's judgment of one run's output: whether the score
+	// was accurate, too generous or too harsh, and whether the résumé is
+	// sendable. Attached to the run, so a later re-score does not inherit
+	// an opinion of the thing it replaced.
+	RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -564,6 +580,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
 			connect.WithClientOptions(opts...),
 		),
+		setJdOutcome: connect.NewClient[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse](
+			httpClient,
+			baseURL+AdminServiceSetJdOutcomeProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetJdOutcome")),
+			connect.WithClientOptions(opts...),
+		),
+		recordJdFeedback: connect.NewClient[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse](
+			httpClient,
+			baseURL+AdminServiceRecordJdFeedbackProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RecordJdFeedback")),
+			connect.WithClientOptions(opts...),
+		),
 		listDecisionLog: connect.NewClient[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse](
 			httpClient,
 			baseURL+AdminServiceListDecisionLogProcedure,
@@ -636,6 +664,8 @@ type adminServiceClient struct {
 	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
 	getJdSubmission       *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
 	rescoreJd             *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
+	setJdOutcome          *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
+	recordJdFeedback      *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
@@ -828,6 +858,16 @@ func (c *adminServiceClient) RescoreJd(ctx context.Context, req *connect.Request
 	return c.rescoreJd.CallUnary(ctx, req)
 }
 
+// SetJdOutcome calls career.v1.AdminService.SetJdOutcome.
+func (c *adminServiceClient) SetJdOutcome(ctx context.Context, req *connect.Request[v1.SetJdOutcomeRequest]) (*connect.Response[v1.SetJdOutcomeResponse], error) {
+	return c.setJdOutcome.CallUnary(ctx, req)
+}
+
+// RecordJdFeedback calls career.v1.AdminService.RecordJdFeedback.
+func (c *adminServiceClient) RecordJdFeedback(ctx context.Context, req *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error) {
+	return c.recordJdFeedback.CallUnary(ctx, req)
+}
+
 // ListDecisionLog calls career.v1.AdminService.ListDecisionLog.
 func (c *adminServiceClient) ListDecisionLog(ctx context.Context, req *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {
 	return c.listDecisionLog.CallUnary(ctx, req)
@@ -998,6 +1038,16 @@ type AdminServiceHandler interface {
 	// background, e.g. after a failed run or a prompt change. Returns
 	// immediately; poll GetJdSubmission for the outcome.
 	RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error)
+	// Records what happened in the world after a review: applied,
+	// interview, offer, no response. One per posting, revised in place.
+	// This is the only signal that says whether a score predicted
+	// anything, so nothing else can substitute for it.
+	SetJdOutcome(context.Context, *connect.Request[v1.SetJdOutcomeRequest]) (*connect.Response[v1.SetJdOutcomeResponse], error)
+	// Records the owner's judgment of one run's output: whether the score
+	// was accurate, too generous or too harsh, and whether the résumé is
+	// sendable. Attached to the run, so a later re-score does not inherit
+	// an opinion of the thing it replaced.
+	RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -1247,6 +1297,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("RescoreJd")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceSetJdOutcomeHandler := connect.NewUnaryHandler(
+		AdminServiceSetJdOutcomeProcedure,
+		svc.SetJdOutcome,
+		connect.WithSchema(adminServiceMethods.ByName("SetJdOutcome")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRecordJdFeedbackHandler := connect.NewUnaryHandler(
+		AdminServiceRecordJdFeedbackProcedure,
+		svc.RecordJdFeedback,
+		connect.WithSchema(adminServiceMethods.ByName("RecordJdFeedback")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListDecisionLogHandler := connect.NewUnaryHandler(
 		AdminServiceListDecisionLogProcedure,
 		svc.ListDecisionLog,
@@ -1353,6 +1415,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetJdSubmissionHandler.ServeHTTP(w, r)
 		case AdminServiceRescoreJdProcedure:
 			adminServiceRescoreJdHandler.ServeHTTP(w, r)
+		case AdminServiceSetJdOutcomeProcedure:
+			adminServiceSetJdOutcomeHandler.ServeHTTP(w, r)
+		case AdminServiceRecordJdFeedbackProcedure:
+			adminServiceRecordJdFeedbackHandler.ServeHTTP(w, r)
 		case AdminServiceListDecisionLogProcedure:
 			adminServiceListDecisionLogHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionProcedure:
@@ -1518,6 +1584,14 @@ func (UnimplementedAdminServiceHandler) GetJdSubmission(context.Context, *connec
 
 func (UnimplementedAdminServiceHandler) RescoreJd(context.Context, *connect.Request[v1.RescoreJdRequest]) (*connect.Response[v1.RescoreJdResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RescoreJd is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetJdOutcome(context.Context, *connect.Request[v1.SetJdOutcomeRequest]) (*connect.Response[v1.SetJdOutcomeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdOutcome is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RecordJdFeedback is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {

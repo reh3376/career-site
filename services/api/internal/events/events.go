@@ -60,7 +60,10 @@ var Registry = map[string]struct {
 	"jd.finished":       {Props: []string{"submission_id", "outcome", "score", "threshold", "fit"}},
 	"jd.result_viewed":  {Browser: true, Props: []string{"submission_id", "via"}},
 	"jd.pdf_downloaded": {Props: []string{"submission_id"}},
-	"jd.poll_abandoned": {Browser: true, Props: []string{"submission_id", "waited_ms"}},
+	// Ground truth and judgment (data layer D3).
+	"jd.outcome_recorded":  {Props: []string{"submission_id", "status"}},
+	"jd.feedback_recorded": {Props: []string{"submission_id", "target", "rating"}},
+	"jd.poll_abandoned":    {Browser: true, Props: []string{"submission_id", "waited_ms"}},
 	// Contact
 	"contact.submitted": {Props: []string{"category", "has_jd"}},
 	// Admin

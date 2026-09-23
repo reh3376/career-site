@@ -1264,6 +1264,17 @@ func (a *Admin) GetJdSubmission(
 	} else {
 		out.Runs = jdRunsToProto(runs)
 	}
+	// Ground truth and judgment, both optional and both best-effort.
+	if outcome, oErr := a.users.GetJdOutcome(ctx, id); oErr != nil {
+		a.log.Warn("admin: could not read outcome", slog.Int64("id", id), slog.String("error", oErr.Error()))
+	} else {
+		out.Outcome = outcomeToProto(outcome)
+	}
+	if fb, fErr := a.users.ListJdFeedback(ctx, id); fErr != nil {
+		a.log.Warn("admin: could not read feedback", slog.Int64("id", id), slog.String("error", fErr.Error()))
+	} else {
+		out.Feedback = feedbackToProto(fb)
+	}
 	return connect.NewResponse(out), nil
 }
 

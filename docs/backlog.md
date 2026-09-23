@@ -104,9 +104,19 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   **Left over:** the old submissions have no runs, which the page says
   plainly rather than hiding. Chat will need its own run kind when it
   lands; the column is nullable for that reason.
-- **D3 feedback and outcomes.** Submitter thumbs on a result, owner
-  outcome on a submission (interview, offer, no reply), and the
-  `admin.decision_reviewed` labels, all joined by `run_id`.
+- **D3 feedback and outcomes. SHIPPED 2026-09-22.** `jd_outcomes`, one
+  revisable row per posting for what happened in the world (not
+  pursued, applied, screening, interview, offer, rejected, no response,
+  withdrew), and `jd_feedback`, one judgment per person per run per
+  target. Ratings are a fixed vocabulary rather than thumbs, because
+  "too generous" and "too harsh" point at opposite fixes and one bit
+  cannot tell them apart. Feedback is tied to the run, so a re-score
+  does not inherit an opinion of what it replaced, and re-rating
+  replaces rather than stacks. Both are on `/admin/jd/[id]`, where the
+  posting is in front of you.
+  **Left over:** the submitter-facing rating on `/jd-upload` is not
+  built; with one user it would only ever be the owner rating his own
+  work through a second door. Build it when there is a second user.
 - **D4 golden set and `eval_runs`.** The calibration JDs plus reviewed
   verdicts as a fixed set; a job that rescores the set on demand and
   stores per-requirement agreement, so a prompt or model change is

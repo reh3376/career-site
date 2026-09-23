@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 42 |
+| [`AdminService`](#adminservice) | Owner console. | 44 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1647,6 +1647,8 @@ Owner console.
 | [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
 | [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
 | [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score for diagnostics, per-requirement assessment, score in code, résumé and locked PDF when the fit is strong or better) for one submission in the background, e.g. |
+| [`SetJdOutcome`](#adminservice-setjdoutcome) | `/api/career.v1.AdminService/SetJdOutcome` | Admin (fresh MFA) | default | `SetJdOutcomeRequest` → `SetJdOutcomeResponse` | Records what happened in the world after a review: applied, interview, offer, no response. |
+| [`RecordJdFeedback`](#adminservice-recordjdfeedback) | `/api/career.v1.AdminService/RecordJdFeedback` | Admin (fresh MFA) | default | `RecordJdFeedbackRequest` → `RecordJdFeedbackResponse` | Records the owner's judgment of one run's output: whether the score was accurate, too generous or too harsh, and whether the résumé is sendable. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
@@ -2866,6 +2868,8 @@ generated résumé when present. Backs /admin/jd/[id].
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
 | `runs` | [`JdRun`](#jdrun)[] | array of object |  | Every pipeline run for this submission, newest attempt first. The fields above reflect only the most recent run, because a re-score overwrites them; these rows survive it, so a superseded verdict can still be read and compared with the one that replaced it. |
+| `outcome` | [`JdOutcome`](#jdoutcome) | object |  | What happened in the world after this review; unset until recorded. |
+| `feedback` | [`JdFeedback`](#jdfeedback)[] | array of object |  | Judgments recorded about this posting's output, newest first. |
 
 <details><summary>Example request body</summary>
 
@@ -2904,6 +2908,80 @@ immediately; poll GetJdSubmission for the outcome.
 ```json
 {
   "submissionId": "string"
+}
+```
+
+</details>
+
+### AdminService.SetJdOutcome
+
+`POST /api/career.v1.AdminService/SetJdOutcome` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Records what happened in the world after a review: applied,
+interview, offer, no response. One per posting, revised in place.
+This is the only signal that says whether a score predicted
+anything, so nothing else can substitute for it.
+
+**Request** — [`SetJdOutcomeRequest`](#setjdoutcomerequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+| `status` | `string` | string | `string: min_len: 1 max_len: 32` | One of the outcome statuses; validated server-side. |
+| `decidedOn` | `string` | string | `string: max_len: 10` | YYYY-MM-DD, or empty when the day is unknown. |
+| `note` | `string` | string | `string: max_len: 4000` | Free note, trimmed to 4000 characters. |
+
+**Response** — [`SetJdOutcomeResponse`](#setjdoutcomeresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `outcome` | [`JdOutcome`](#jdoutcome) | object |  | The stored outcome. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string",
+  "status": "string",
+  "decidedOn": "string",
+  "note": "string"
+}
+```
+
+</details>
+
+### AdminService.RecordJdFeedback
+
+`POST /api/career.v1.AdminService/RecordJdFeedback` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Records the owner's judgment of one run's output: whether the score
+was accurate, too generous or too harsh, and whether the résumé is
+sendable. Attached to the run, so a later re-score does not inherit
+an opinion of the thing it replaced.
+
+**Request** — [`RecordJdFeedbackRequest`](#recordjdfeedbackrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+| `runId` | `string` | string | `string: max_len: 64` | Run being judged; empty attaches the judgment to the newest run. |
+| `target` | `string` | string | `string: min_len: 1 max_len: 16` | score | resume. |
+| `rating` | `string` | string | `string: min_len: 1 max_len: 32` | Rating from the vocabulary for that target; validated server-side. |
+| `note` | `string` | string | `string: max_len: 4000` | Free note, trimmed to 4000 characters. |
+
+**Response** — [`RecordJdFeedbackResponse`](#recordjdfeedbackresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string",
+  "runId": "string",
+  "target": "string",
+  "rating": "string",
+  "note": "string"
 }
 ```
 
@@ -5366,6 +5444,69 @@ Get-jd-submission response.
 | `promptVersion` | `int32` | number |  | Prompt version that produced the résumé. |
 | `downloadUrl` | `string` | string |  | Download path for the locked PDF, including the submission's result token, when a PDF was rendered; empty otherwise. Admin-only by virtue of this RPC's auth level. |
 | `runs` | [`JdRun`](#jdrun)[] | array of object |  | Every pipeline run for this submission, newest attempt first. The fields above reflect only the most recent run, because a re-score overwrites them; these rows survive it, so a superseded verdict can still be read and compared with the one that replaced it. |
+| `outcome` | [`JdOutcome`](#jdoutcome) | object |  | What happened in the world after this review; unset until recorded. |
+| `feedback` | [`JdFeedback`](#jdfeedback)[] | array of object |  | Judgments recorded about this posting's output, newest first. |
+
+### JdOutcome
+
+What happened after a review. One per posting, revised in place.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | `string` | string |  | not_pursued | applied | screening | interview | offer | rejected | no_response | withdrew. |
+| `decidedOn` | `string` | string |  | The day that status became true, as YYYY-MM-DD; empty when unknown. |
+| `note` | `string` | string |  | Free note. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the record was last revised. |
+
+### JdFeedback
+
+One person's judgment of one run's output.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string |  | The run being judged; empty for a posting that predates run records. |
+| `source` | `string` | string |  | owner | submitter. Never averaged together. |
+| `target` | `string` | string |  | score | resume. |
+| `rating` | `string` | string |  | For score: accurate | too_generous | too_harsh | unusable. For resume: would_send | needs_edits | wrong. |
+| `note` | `string` | string |  | Free note. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was recorded. |
+
+### SetJdOutcomeRequest
+
+Set-jd-outcome request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+| `status` | `string` | string | `string: min_len: 1 max_len: 32` | One of the outcome statuses; validated server-side. |
+| `decidedOn` | `string` | string | `string: max_len: 10` | YYYY-MM-DD, or empty when the day is unknown. |
+| `note` | `string` | string | `string: max_len: 4000` | Free note, trimmed to 4000 characters. |
+
+### SetJdOutcomeResponse
+
+Set-jd-outcome response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `outcome` | [`JdOutcome`](#jdoutcome) | object |  | The stored outcome. |
+
+### RecordJdFeedbackRequest
+
+Record-jd-feedback request. The owner's judgment of a run's output.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | Submission id (numeric, stringified). |
+| `runId` | `string` | string | `string: max_len: 64` | Run being judged; empty attaches the judgment to the newest run. |
+| `target` | `string` | string | `string: min_len: 1 max_len: 16` | score | resume. |
+| `rating` | `string` | string | `string: min_len: 1 max_len: 32` | Rating from the vocabulary for that target; validated server-side. |
+| `note` | `string` | string | `string: max_len: 4000` | Free note, trimmed to 4000 characters. |
+
+### RecordJdFeedbackResponse
+
+Record-jd-feedback response.
+
+_No fields._
 
 ### JdRun
 

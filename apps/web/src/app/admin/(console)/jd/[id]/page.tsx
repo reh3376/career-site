@@ -9,6 +9,7 @@ import { getSessionCookie } from "@/lib/session";
 
 import { RescoreButton } from "../rescore-button";
 
+import { OutcomePanel, type Feedback, type Outcome } from "./outcome-panel";
 import { RunHistory, type Run } from "./run-history";
 
 export const metadata: Metadata = { title: "Admin · JD submission" };
@@ -52,6 +53,8 @@ type Detail = {
   download_url?: string;
   downloadUrl?: string;
   runs?: Run[];
+  outcome?: Outcome;
+  feedback?: Feedback[];
 };
 
 type Requirement = {
@@ -292,6 +295,14 @@ export default async function AdminJdDetailPage({
           </div>
         </section>
       ) : null}
+
+      <OutcomePanel
+        submissionId={r.id}
+        runId={runs[0]?.run_id ?? runs[0]?.runId ?? ""}
+        outcome={d.outcome}
+        feedback={d.feedback ?? []}
+        hasResume={Boolean(resume)}
+      />
 
       <RunHistory runs={runs} />
 

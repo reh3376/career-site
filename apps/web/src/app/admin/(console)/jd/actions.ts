@@ -23,7 +23,12 @@ export async function rescoreJdAction(formData: FormData): Promise<void> {
 export type FitBandsState = {
   saved?: boolean;
   error?: string;
-  bands?: { veryStrong: number; strong: number; possible: number; weak: number };
+  bands?: {
+    veryStrong: number;
+    strong: number;
+    possible: number;
+    weak: number;
+  };
 };
 
 // Save the fit bands (very strong / strong / possible / weak edges).
@@ -41,8 +46,20 @@ export async function setFitBandsAction(
   if (Object.values(bands).some((v) => !Number.isFinite(v))) {
     return { error: "Every band needs a number between 0 and 1.", bands };
   }
-  if (!(bands.weak > 0 && bands.weak < bands.possible && bands.possible < bands.strong && bands.strong < bands.veryStrong && bands.veryStrong <= 1)) {
-    return { error: "Order must hold: weak < possible < strong < very strong, within 0 and 1.", bands };
+  if (
+    !(
+      bands.weak > 0 &&
+      bands.weak < bands.possible &&
+      bands.possible < bands.strong &&
+      bands.strong < bands.veryStrong &&
+      bands.veryStrong <= 1
+    )
+  ) {
+    return {
+      error:
+        "Order must hold: weak < possible < strong < very strong, within 0 and 1.",
+      bands,
+    };
   }
   const cookie = await getSessionCookie();
   if (!cookie) return { error: "Not signed in.", bands };
@@ -66,3 +83,74 @@ export async function setFitBandsAction(
   return { saved: true, bands };
 }
 
+export type OutcomeState = { saved?: boolean; error?: string };
+
+// Record what happened after a review. This is the only signal that
+// says whether a score predicted anything, so the form is deliberately
+// on the submission page rather than buried in a report.
+export async function setJdOutcomeAction(
+  _prev: OutcomeState,
+  formData: FormData,
+): Promise<OutcomeState> {
+  const submissionId = String(formData.get("submission_id") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+  if (!submissionId || !status) return { error: "Pick a status." };
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/SetJdOutcome",
+    body: {
+      submissionId,
+      status,
+      decidedOn: String(formData.get("decided_on") ?? "").trim(),
+      note: String(formData.get("note") ?? "").trim(),
+    },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp) };
+  revalidatePath("/admin/jd", "layout");
+  return { saved: true };
+}
+
+export type FeedbackState = { saved?: boolean; error?: string };
+
+// Record the owner's judgment of a run's output: was the score
+// accurate, too generous or too harsh, and is the résumé sendable.
+export async function recordJdFeedbackAction(
+  _prev: FeedbackState,
+  formData: FormData,
+): Promise<FeedbackState> {
+  const submissionId = String(formData.get("submission_id") ?? "").trim();
+  const target = String(formData.get("target") ?? "").trim();
+  const rating = String(formData.get("rating") ?? "").trim();
+  if (!submissionId || !target || !rating) return { error: "Pick a rating." };
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/RecordJdFeedback",
+    body: {
+      submissionId,
+      runId: String(formData.get("run_id") ?? "").trim(),
+      target,
+      rating,
+      note: String(formData.get("note") ?? "").trim(),
+    },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp) };
+  revalidatePath("/admin/jd", "layout");
+  return { saved: true };
+}
+
+// Connect returns its own message on an error; surfacing it beats a
+// bare status code, because the server is the one enforcing the
+// vocabularies and it says which value it rejected.
+async function errorText(resp: Response): Promise<string> {
+  try {
+    const j = (await resp.json()) as { message?: string };
+    if (j.message) return j.message;
+  } catch {
+    /* fall through */
+  }
+  return `HTTP ${resp.status}`;
+}
