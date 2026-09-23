@@ -1093,3 +1093,65 @@ the run records still separated them: same prompt fingerprint, different
 corpus fingerprint, so the movement is attributable to the corpus. That
 is the entire reason D2 records provenance, and it paid for itself on
 the first real comparison.
+
+## 2026-09-23: v4 changed nothing, so the judgment moved into code
+
+The prediction in the previous entry was wrong, and usefully so.
+
+| run | judge | corpus | score | met / partial / unmet |
+|---|---|---|---|---|
+| 1 | v3:5475a41f | 853404a1b788 | 0.800 | 11 / 0 / 3 |
+| 2 | v3:5475a41f | a3ec0c636121 | 1.000 | 14 / 0 / 0 |
+| 3 | v4:52e4ba2e | a3ec0c636121 | 1.000 | 14 / 0 / 0 |
+
+v4 bounded the inference rule in prose: capability may be inferred,
+durations and named relationships may not. It produced an identical
+score, identical verdicts, and for the five-year machine-learning
+requirement a rationale **word for word identical** to the previous run.
+
+Both excuses were checked and neither held. The v4 text was genuinely
+sent (its new wording is in the stored `prompt_text`), and both spans
+were in the evidence for that requirement: the fifteen years of MPC/APC
+and the two years of MDEMG. The model had the rule and the facts, and
+still answered a five-year requirement by pointing at a two-year
+project.
+
+**The conclusion is about the method, not the wording.** Three prompt
+versions tried to teach a 4B model to police its own inference. Prose
+rules asking a small model to reason about its own reasoning do not
+work, and the third attempt produced byte-identical output, which is as
+clear a null result as this setup can give.
+
+**So the judgment moved where the score already lives.** The project
+already holds that the model never emits a number, because a number is
+arithmetic and arithmetic belongs in code. A duration check is a
+comparison between two numbers, and it belongs there too.
+
+- `requirement_judge` v5 adds one required field, `stated_span_years`:
+  the number of years the evidence explicitly states for the work in
+  question, 0 when it states none. The prompt is explicit that this is
+  a fact being reported, not a decision being made.
+- `internal/jd/duration.go` reads how many years the requirement demands
+  from the requirement's own text, and compares. A "met" whose stated
+  span falls short becomes "partial", with a note saying why.
+- It only ever weakens a verdict. An "unmet" judge knows something the
+  rule does not, and the rule must never argue a candidate upward.
+- It downgrades to "partial" rather than "unmet" because the work was
+  evidenced; what is missing is proof of how long, which is a lesser
+  claim rather than no claim.
+- Compound requirements take the larger span: "10+ years of software
+  engineering with 3+ years leading teams" asks for ten, and reading the
+  three would let the easier half satisfy the whole.
+- The adjustment is stored on the judgment and rendered on the admin
+  derivation. An adjustment nobody can see is indistinguishable from the
+  model having said so itself.
+
+Tested in code rather than by rescoring: travel percentages, team sizes,
+standard numbers like NFPA 70E, and a founding year must not read as
+durations, and none of them do.
+
+**Still outstanding, deliberately.** The vendor requirement ("collaborate
+with partners like Anthropic, AWS, OpenAI") is still wrongly met, and
+this change does not touch it. Relationships have no deterministic
+signal in the requirement text the way "N+ years" does, so it needs its
+own approach and its own measurement. One change, one comparison.

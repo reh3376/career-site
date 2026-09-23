@@ -184,7 +184,7 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // model never emits a number.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 4,
+	Version: 5,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -202,7 +202,7 @@ Rules:
    - a certification, clearance, licence or degree;
    - a job title held, or an employer worked for.
    Calling a vendor's product or API is not a relationship with that vendor. Using a technology is not a partnership with the company that makes it. Do not describe integration as collaboration.
-5. When a requirement states a minimum length of time ("5+ years of X", "at least three years leading teams"), look in the evidence for a stated span covering that much of that work. Answer "met" only when a stated span covers it. Answer "partial" when the work itself is evidenced but no stated span reaches the length asked for. Never infer a duration from the existence of a system, from a list of projects, or from the candidate's total years of experience in a different field.
+5. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere.
 6. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, or when rule 5 applies, and "unmet" when nothing in either kind of evidence supports it.
 7. Before answering "unmet", read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer "unmet" only when the documents still show nothing relevant.
 8. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
@@ -219,12 +219,13 @@ Output only the JSON object.
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["requirement_id", "verdict", "evidence_ids", "rationale"],
+        "required": ["requirement_id", "verdict", "evidence_ids", "rationale", "stated_span_years"],
         "properties": {
           "requirement_id": {"type": "string"},
           "verdict": {"type": "string", "enum": ["met", "partial", "unmet"]},
           "evidence_ids": {"type": "array", "items": {"type": "string"}},
-          "rationale": {"type": "string"}
+          "rationale": {"type": "string"},
+          "stated_span_years": {"type": "number"}
         }
       }
     }
