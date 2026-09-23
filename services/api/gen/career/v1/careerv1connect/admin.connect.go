@@ -169,6 +169,8 @@ const (
 	AdminServiceListEvalRunsProcedure = "/career.v1.AdminService/ListEvalRuns"
 	// AdminServiceGetEvalRunProcedure is the fully-qualified name of the AdminService's GetEvalRun RPC.
 	AdminServiceGetEvalRunProcedure = "/career.v1.AdminService/GetEvalRun"
+	// AdminServiceGetMetricsProcedure is the fully-qualified name of the AdminService's GetMetrics RPC.
+	AdminServiceGetMetricsProcedure = "/career.v1.AdminService/GetMetrics"
 	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
 	// ListDecisionLog RPC.
 	AdminServiceListDecisionLogProcedure = "/career.v1.AdminService/ListDecisionLog"
@@ -354,6 +356,11 @@ type AdminServiceClient interface {
 	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
 	// Returns one evaluation with every posting's result.
 	GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error)
+	// Returns the state of the reviewer, read from the SQL views that
+	// define each metric once. Nothing here is computed in the api or in
+	// a page: two definitions of the same number is how a dashboard
+	// starts disagreeing with itself.
+	GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -649,6 +656,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetEvalRun")),
 			connect.WithClientOptions(opts...),
 		),
+		getMetrics: connect.NewClient[v1.GetMetricsRequest, v1.GetMetricsResponse](
+			httpClient,
+			baseURL+AdminServiceGetMetricsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetMetrics")),
+			connect.WithClientOptions(opts...),
+		),
 		listDecisionLog: connect.NewClient[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse](
 			httpClient,
 			baseURL+AdminServiceListDecisionLogProcedure,
@@ -728,6 +741,7 @@ type adminServiceClient struct {
 	setGoldenActive       *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
 	listEvalRuns          *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
 	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
+	getMetrics            *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
@@ -955,6 +969,11 @@ func (c *adminServiceClient) GetEvalRun(ctx context.Context, req *connect.Reques
 	return c.getEvalRun.CallUnary(ctx, req)
 }
 
+// GetMetrics calls career.v1.AdminService.GetMetrics.
+func (c *adminServiceClient) GetMetrics(ctx context.Context, req *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error) {
+	return c.getMetrics.CallUnary(ctx, req)
+}
+
 // ListDecisionLog calls career.v1.AdminService.ListDecisionLog.
 func (c *adminServiceClient) ListDecisionLog(ctx context.Context, req *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {
 	return c.listDecisionLog.CallUnary(ctx, req)
@@ -1148,6 +1167,11 @@ type AdminServiceHandler interface {
 	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
 	// Returns one evaluation with every posting's result.
 	GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error)
+	// Returns the state of the reviewer, read from the SQL views that
+	// define each metric once. Nothing here is computed in the api or in
+	// a page: two definitions of the same number is how a dashboard
+	// starts disagreeing with itself.
+	GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -1439,6 +1463,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetEvalRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetMetricsHandler := connect.NewUnaryHandler(
+		AdminServiceGetMetricsProcedure,
+		svc.GetMetrics,
+		connect.WithSchema(adminServiceMethods.ByName("GetMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListDecisionLogHandler := connect.NewUnaryHandler(
 		AdminServiceListDecisionLogProcedure,
 		svc.ListDecisionLog,
@@ -1559,6 +1589,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListEvalRunsHandler.ServeHTTP(w, r)
 		case AdminServiceGetEvalRunProcedure:
 			adminServiceGetEvalRunHandler.ServeHTTP(w, r)
+		case AdminServiceGetMetricsProcedure:
+			adminServiceGetMetricsHandler.ServeHTTP(w, r)
 		case AdminServiceListDecisionLogProcedure:
 			adminServiceListDecisionLogHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionProcedure:
@@ -1752,6 +1784,10 @@ func (UnimplementedAdminServiceHandler) ListEvalRuns(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetEvalRun is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetMetrics is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {

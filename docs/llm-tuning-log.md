@@ -866,3 +866,42 @@ numbers say exactly that rather than collapsing it into a pass or fail.
 **Next.** Add the real calibration postings on production, run one
 evaluation to set the baseline, and from then on run one before and one
 after every prompt or model change. That pair is the evidence.
+
+## 2026-09-22: every metric defined once (data layer D5)
+
+The data layer is complete. D1 records what people do, D2 what produced
+a verdict, D3 whether the answer was right, D4 whether a change helped.
+D5 is the part that makes them readable, and it carries one rule worth
+stating plainly because it is the rule that usually gets broken first:
+
+**A metric is defined once, in SQL, and read.** Never recomputed in Go,
+never recomputed in a page. Two definitions of the same number is how a
+dashboard starts disagreeing with itself, and after that nobody can say
+which one is lying. Ten views in migration 00028, catalogued in
+`docs/metrics.md`.
+
+Three of the definitions carry a judgment worth recording:
+
+- **Evaluation runs are excluded from `v_jd_runs`.** A golden-set run
+  is a test of the reviewer, not use of it. Counting them would flatter
+  both the volume and the latency, and the flattery would grow every
+  time the set was exercised.
+- **Agreement is split into soft and hard.** A disagreement where one
+  side said "partial" is the judge being unsure; a disagreement between
+  "met" and "unmet" is the judge being wrong. They call for different
+  fixes, so a single agreement percentage hides the one thing the
+  number was supposed to tell you.
+- **Queue time is never folded into duration.** One says the box is
+  busy, the other says the pipeline is slow. The sum says neither.
+
+`/admin/analytics` is arranged by the owner's own criteria for "runs
+very well" rather than by what is easy to chart. Where a criterion has
+no data it says so, instead of showing a zero that reads like a failure:
+"no evaluation yet" and "0 percent calibrated" are very different
+statements and only one of them is true today.
+
+**The view that matters most is the emptiest.** `v_outcome_by_fit` puts
+the fit band a run assigned against what actually happened afterwards.
+It is the question the whole data layer was built to answer, and it will
+say nothing useful until outcomes accumulate. That is the honest state
+of it, and the page says so rather than pretending otherwise.

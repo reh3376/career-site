@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 49 |
+| [`AdminService`](#adminservice) | Owner console. | 50 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1654,6 +1654,7 @@ Owner console.
 | [`SetGoldenActive`](#adminservice-setgoldenactive) | `/api/career.v1.AdminService/SetGoldenActive` | Admin (fresh MFA) | default | `SetGoldenActiveRequest` → `SetGoldenActiveResponse` | Retires or restores a golden posting. |
 | [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
 | [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
+| [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
@@ -3143,6 +3144,58 @@ Returns one evaluation with every posting's result.
 {
   "id": "0"
 }
+```
+
+</details>
+
+### AdminService.GetMetrics
+
+`POST /api/career.v1.AdminService/GetMetrics` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns the state of the reviewer, read from the SQL views that
+define each metric once. Nothing here is computed in the api or in
+a page: two definitions of the same number is how a dashboard
+starts disagreeing with itself.
+
+**Request** — [`GetMetricsRequest`](#getmetricsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetMetricsResponse`](#getmetricsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `recentRuns` | `int32` | number |  | Real runs in the last twenty. |
+| `recentCompleted` | `int32` | number |  | Of those, how many finished without intervention. |
+| `recentFailed` | `int32` | number |  | Of those, how many failed. |
+| `recentStuck` | `int32` | number |  | Of those, how many are still claiming to run. |
+| `reviewed` | `int32` | number |  | Requirement verdicts the owner has reviewed. |
+| `agreed` | `int32` | number |  | Of those, how many the owner agreed with. |
+| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage; unset with nothing reviewed. |
+| `softDisagreements` | `int32` | number |  | Disagreements where one side said partial: the judge being unsure. |
+| `hardDisagreements` | `int32` | number |  | Disagreements between met and unmet: the judge being wrong. |
+| `finishedRuns` | `int32` | number |  | Runs that reached a result. |
+| `medianMinutes` | `double` | number |  | _(oneof `_median_minutes`)_ Median minutes to a result. |
+| `p95Minutes` | `double` | number |  | _(oneof `_p95_minutes`)_ 95th percentile minutes to a result. |
+| `medianQueuedMinutes` | `double` | number |  | _(oneof `_median_queued_minutes`)_ Median minutes spent queued, reported apart from work. |
+| `landed` | `int32` | number |  | Thirty-day funnel: visitors who reached the landing page. |
+| `readWriting` | `int32` | number |  | Visitors who read an article. |
+| `clicked` | `int32` | number |  | Visitors who clicked a call to action. |
+| `registered` | `int32` | number |  | Visitors who submitted a registration. |
+| `verified` | `int32` | number |  | Visitors who verified their email. |
+| `signedIn` | `int32` | number |  | Visitors who signed in. |
+| `submitted` | `int32` | number |  | Visitors who submitted a posting. |
+| `calls` | `int32` | number |  | Model calls in the last 30 days. |
+| `callFailures` | `int32` | number |  | Of those, how many failed. |
+| `promptTokens` | `int64` | string (decimal) |  | Prompt tokens in the last 30 days. |
+| `completionTokens` | `int64` | string (decimal) |  | Completion tokens in the last 30 days. |
+| `latestEval` | [`EvalRun`](#evalrun) | object |  | Newest finished evaluation; unset before the first one. |
+| `outcomes` | [`OutcomeByFit`](#outcomebyfit)[] | array of object |  | Fit band against recorded outcomes. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
 ```
 
 </details>
@@ -5819,6 +5872,56 @@ Get-eval-run response.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `run` | [`EvalRun`](#evalrun) | object |  | The evaluation, with its per-posting results. |
+
+### GetMetricsRequest
+
+Get-metrics request.
+
+_No fields._
+
+### OutcomeByFit
+
+One fit band against what actually happened afterwards.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `fit` | `string` | string |  | Fit band the run assigned. |
+| `outcome` | `string` | string |  | Recorded outcome. |
+| `submissions` | `int32` | number |  | How many submissions. |
+
+### GetMetricsResponse
+
+The state of the reviewer. Every field comes from a view in
+migration 00028; none is computed here.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `recentRuns` | `int32` | number |  | Real runs in the last twenty. |
+| `recentCompleted` | `int32` | number |  | Of those, how many finished without intervention. |
+| `recentFailed` | `int32` | number |  | Of those, how many failed. |
+| `recentStuck` | `int32` | number |  | Of those, how many are still claiming to run. |
+| `reviewed` | `int32` | number |  | Requirement verdicts the owner has reviewed. |
+| `agreed` | `int32` | number |  | Of those, how many the owner agreed with. |
+| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage; unset with nothing reviewed. |
+| `softDisagreements` | `int32` | number |  | Disagreements where one side said partial: the judge being unsure. |
+| `hardDisagreements` | `int32` | number |  | Disagreements between met and unmet: the judge being wrong. |
+| `finishedRuns` | `int32` | number |  | Runs that reached a result. |
+| `medianMinutes` | `double` | number |  | _(oneof `_median_minutes`)_ Median minutes to a result. |
+| `p95Minutes` | `double` | number |  | _(oneof `_p95_minutes`)_ 95th percentile minutes to a result. |
+| `medianQueuedMinutes` | `double` | number |  | _(oneof `_median_queued_minutes`)_ Median minutes spent queued, reported apart from work. |
+| `landed` | `int32` | number |  | Thirty-day funnel: visitors who reached the landing page. |
+| `readWriting` | `int32` | number |  | Visitors who read an article. |
+| `clicked` | `int32` | number |  | Visitors who clicked a call to action. |
+| `registered` | `int32` | number |  | Visitors who submitted a registration. |
+| `verified` | `int32` | number |  | Visitors who verified their email. |
+| `signedIn` | `int32` | number |  | Visitors who signed in. |
+| `submitted` | `int32` | number |  | Visitors who submitted a posting. |
+| `calls` | `int32` | number |  | Model calls in the last 30 days. |
+| `callFailures` | `int32` | number |  | Of those, how many failed. |
+| `promptTokens` | `int64` | string (decimal) |  | Prompt tokens in the last 30 days. |
+| `completionTokens` | `int64` | string (decimal) |  | Completion tokens in the last 30 days. |
+| `latestEval` | [`EvalRun`](#evalrun) | object |  | Newest finished evaluation; unset before the first one. |
+| `outcomes` | [`OutcomeByFit`](#outcomebyfit)[] | array of object |  | Fit band against recorded outcomes. |
 
 ### JdRun
 
