@@ -1157,6 +1157,176 @@ class RecordJdFeedbackResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class GoldenPosting(_message.Message):
+    __slots__ = ("id", "name", "jd_text", "role_hint", "employer_hint", "expected_gate", "expected_band", "note", "active", "last_score", "last_passed", "last_eval_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    JD_TEXT_FIELD_NUMBER: _ClassVar[int]
+    ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
+    EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_GATE_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_BAND_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    LAST_SCORE_FIELD_NUMBER: _ClassVar[int]
+    LAST_PASSED_FIELD_NUMBER: _ClassVar[int]
+    LAST_EVAL_AT_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    name: str
+    jd_text: str
+    role_hint: str
+    employer_hint: str
+    expected_gate: str
+    expected_band: str
+    note: str
+    active: bool
+    last_score: float
+    last_passed: bool
+    last_eval_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ..., active: _Optional[bool] = ..., last_score: _Optional[float] = ..., last_passed: _Optional[bool] = ..., last_eval_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListGoldenPostingsRequest(_message.Message):
+    __slots__ = ("active_only",)
+    ACTIVE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    active_only: bool
+    def __init__(self, active_only: _Optional[bool] = ...) -> None: ...
+
+class ListGoldenPostingsResponse(_message.Message):
+    __slots__ = ("postings",)
+    POSTINGS_FIELD_NUMBER: _ClassVar[int]
+    postings: _containers.RepeatedCompositeFieldContainer[GoldenPosting]
+    def __init__(self, postings: _Optional[_Iterable[_Union[GoldenPosting, _Mapping]]] = ...) -> None: ...
+
+class UpsertGoldenPostingRequest(_message.Message):
+    __slots__ = ("name", "jd_text", "role_hint", "employer_hint", "expected_gate", "expected_band", "note")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    JD_TEXT_FIELD_NUMBER: _ClassVar[int]
+    ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
+    EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_GATE_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_BAND_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    jd_text: str
+    role_hint: str
+    employer_hint: str
+    expected_gate: str
+    expected_band: str
+    note: str
+    def __init__(self, name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class UpsertGoldenPostingResponse(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    def __init__(self, id: _Optional[int] = ...) -> None: ...
+
+class SetGoldenActiveRequest(_message.Message):
+    __slots__ = ("id", "active")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    active: bool
+    def __init__(self, id: _Optional[int] = ..., active: _Optional[bool] = ...) -> None: ...
+
+class SetGoldenActiveResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class EvalRun(_message.Message):
+    __slots__ = ("id", "eval_id", "status", "note", "app_commit", "host", "model", "num_ctx", "embedder_model", "prompts_json", "corpus_fingerprint", "threshold", "total", "scored", "gate_correct", "order_violations", "margin", "errors", "started_at", "finished_at", "items")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    EVAL_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    APP_COMMIT_FIELD_NUMBER: _ClassVar[int]
+    HOST_FIELD_NUMBER: _ClassVar[int]
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    NUM_CTX_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDER_MODEL_FIELD_NUMBER: _ClassVar[int]
+    PROMPTS_JSON_FIELD_NUMBER: _ClassVar[int]
+    CORPUS_FINGERPRINT_FIELD_NUMBER: _ClassVar[int]
+    THRESHOLD_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    SCORED_FIELD_NUMBER: _ClassVar[int]
+    GATE_CORRECT_FIELD_NUMBER: _ClassVar[int]
+    ORDER_VIOLATIONS_FIELD_NUMBER: _ClassVar[int]
+    MARGIN_FIELD_NUMBER: _ClassVar[int]
+    ERRORS_FIELD_NUMBER: _ClassVar[int]
+    STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    eval_id: str
+    status: str
+    note: str
+    app_commit: str
+    host: str
+    model: str
+    num_ctx: int
+    embedder_model: str
+    prompts_json: str
+    corpus_fingerprint: str
+    threshold: float
+    total: int
+    scored: int
+    gate_correct: int
+    order_violations: int
+    margin: float
+    errors: int
+    started_at: _timestamp_pb2.Timestamp
+    finished_at: _timestamp_pb2.Timestamp
+    items: _containers.RepeatedCompositeFieldContainer[EvalItem]
+    def __init__(self, id: _Optional[int] = ..., eval_id: _Optional[str] = ..., status: _Optional[str] = ..., note: _Optional[str] = ..., app_commit: _Optional[str] = ..., host: _Optional[str] = ..., model: _Optional[str] = ..., num_ctx: _Optional[int] = ..., embedder_model: _Optional[str] = ..., prompts_json: _Optional[str] = ..., corpus_fingerprint: _Optional[str] = ..., threshold: _Optional[float] = ..., total: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., order_violations: _Optional[int] = ..., margin: _Optional[float] = ..., errors: _Optional[int] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., items: _Optional[_Iterable[_Union[EvalItem, _Mapping]]] = ...) -> None: ...
+
+class EvalItem(_message.Message):
+    __slots__ = ("golden_id", "golden_name", "expected_gate", "run_id", "submission_id", "match_score", "fit", "gate_side", "passed", "error")
+    GOLDEN_ID_FIELD_NUMBER: _ClassVar[int]
+    GOLDEN_NAME_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_GATE_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    MATCH_SCORE_FIELD_NUMBER: _ClassVar[int]
+    FIT_FIELD_NUMBER: _ClassVar[int]
+    GATE_SIDE_FIELD_NUMBER: _ClassVar[int]
+    PASSED_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    golden_id: int
+    golden_name: str
+    expected_gate: str
+    run_id: str
+    submission_id: int
+    match_score: float
+    fit: str
+    gate_side: str
+    passed: bool
+    error: str
+    def __init__(self, golden_id: _Optional[int] = ..., golden_name: _Optional[str] = ..., expected_gate: _Optional[str] = ..., run_id: _Optional[str] = ..., submission_id: _Optional[int] = ..., match_score: _Optional[float] = ..., fit: _Optional[str] = ..., gate_side: _Optional[str] = ..., passed: _Optional[bool] = ..., error: _Optional[str] = ...) -> None: ...
+
+class ListEvalRunsRequest(_message.Message):
+    __slots__ = ("limit",)
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    limit: int
+    def __init__(self, limit: _Optional[int] = ...) -> None: ...
+
+class ListEvalRunsResponse(_message.Message):
+    __slots__ = ("runs",)
+    RUNS_FIELD_NUMBER: _ClassVar[int]
+    runs: _containers.RepeatedCompositeFieldContainer[EvalRun]
+    def __init__(self, runs: _Optional[_Iterable[_Union[EvalRun, _Mapping]]] = ...) -> None: ...
+
+class GetEvalRunRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    def __init__(self, id: _Optional[int] = ...) -> None: ...
+
+class GetEvalRunResponse(_message.Message):
+    __slots__ = ("run",)
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    run: EvalRun
+    def __init__(self, run: _Optional[_Union[EvalRun, _Mapping]] = ...) -> None: ...
+
 class JdRun(_message.Message):
     __slots__ = ("run_id", "attempt", "trigger", "triggered_by", "status", "error", "app_commit", "host", "model", "num_ctx", "embedder_model", "prompts_json", "corpus_fingerprint", "corpus_documents", "corpus_chunks", "score_formula", "retrieval_score", "match_score", "threshold", "fit", "requirement_count", "met_count", "partial_count", "unmet_count", "resume_generated", "queued_ms", "duration_ms", "started_at", "finished_at")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]

@@ -241,6 +241,17 @@ func main() {
 	contactHandler.SetEvents(eventWriter)
 	jdHandler.SetEvents(eventWriter)
 	adminHandler.SetEvents(eventWriter)
+	// The golden-set evaluator needs a member to own its submissions;
+	// the admin bootstrapped at boot is the one person here. Without a
+	// scorer there is nothing to evaluate, so it stays nil in dev
+	// without a sidecar and RunJob says so rather than panicking.
+	if jdScorer != nil {
+		if owner, oErr := userRepo.GetByEmail(ctx, cfg.AdminEmail); oErr == nil && owner != nil {
+			adminHandler.SetEvaluator(jd.NewEvaluator(log, userRepo, jdScorer, owner.ID))
+		} else {
+			log.Warn("eval: no admin user found, golden-set evaluation disabled")
+		}
+	}
 	if jdScorer != nil {
 		jdScorer.SetEvents(eventWriter)
 	}
