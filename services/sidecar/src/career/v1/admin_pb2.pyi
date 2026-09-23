@@ -1342,7 +1342,7 @@ class OutcomeByFit(_message.Message):
     def __init__(self, fit: _Optional[str] = ..., outcome: _Optional[str] = ..., submissions: _Optional[int] = ...) -> None: ...
 
 class GetMetricsResponse(_message.Message):
-    __slots__ = ("recent_runs", "recent_completed", "recent_failed", "recent_stuck", "reviewed", "agreed", "agreement_pct", "soft_disagreements", "hard_disagreements", "finished_runs", "median_minutes", "p95_minutes", "median_queued_minutes", "landed", "read_writing", "clicked", "registered", "verified", "signed_in", "submitted", "calls", "call_failures", "prompt_tokens", "completion_tokens", "latest_eval", "outcomes")
+    __slots__ = ("recent_runs", "recent_completed", "recent_failed", "recent_stuck", "reviewed", "agreed", "agreement_pct", "soft_disagreements", "hard_disagreements", "gradeable", "ungradeable", "too_harsh", "too_generous", "finished_runs", "median_minutes", "p95_minutes", "median_queued_minutes", "landed", "read_writing", "clicked", "registered", "verified", "signed_in", "submitted", "calls", "call_failures", "prompt_tokens", "completion_tokens", "latest_eval", "outcomes")
     RECENT_RUNS_FIELD_NUMBER: _ClassVar[int]
     RECENT_COMPLETED_FIELD_NUMBER: _ClassVar[int]
     RECENT_FAILED_FIELD_NUMBER: _ClassVar[int]
@@ -1352,6 +1352,10 @@ class GetMetricsResponse(_message.Message):
     AGREEMENT_PCT_FIELD_NUMBER: _ClassVar[int]
     SOFT_DISAGREEMENTS_FIELD_NUMBER: _ClassVar[int]
     HARD_DISAGREEMENTS_FIELD_NUMBER: _ClassVar[int]
+    GRADEABLE_FIELD_NUMBER: _ClassVar[int]
+    UNGRADEABLE_FIELD_NUMBER: _ClassVar[int]
+    TOO_HARSH_FIELD_NUMBER: _ClassVar[int]
+    TOO_GENEROUS_FIELD_NUMBER: _ClassVar[int]
     FINISHED_RUNS_FIELD_NUMBER: _ClassVar[int]
     MEDIAN_MINUTES_FIELD_NUMBER: _ClassVar[int]
     P95_MINUTES_FIELD_NUMBER: _ClassVar[int]
@@ -1378,6 +1382,10 @@ class GetMetricsResponse(_message.Message):
     agreement_pct: float
     soft_disagreements: int
     hard_disagreements: int
+    gradeable: int
+    ungradeable: int
+    too_harsh: int
+    too_generous: int
     finished_runs: int
     median_minutes: float
     p95_minutes: float
@@ -1395,7 +1403,7 @@ class GetMetricsResponse(_message.Message):
     completion_tokens: int
     latest_eval: EvalRun
     outcomes: _containers.RepeatedCompositeFieldContainer[OutcomeByFit]
-    def __init__(self, recent_runs: _Optional[int] = ..., recent_completed: _Optional[int] = ..., recent_failed: _Optional[int] = ..., recent_stuck: _Optional[int] = ..., reviewed: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., soft_disagreements: _Optional[int] = ..., hard_disagreements: _Optional[int] = ..., finished_runs: _Optional[int] = ..., median_minutes: _Optional[float] = ..., p95_minutes: _Optional[float] = ..., median_queued_minutes: _Optional[float] = ..., landed: _Optional[int] = ..., read_writing: _Optional[int] = ..., clicked: _Optional[int] = ..., registered: _Optional[int] = ..., verified: _Optional[int] = ..., signed_in: _Optional[int] = ..., submitted: _Optional[int] = ..., calls: _Optional[int] = ..., call_failures: _Optional[int] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latest_eval: _Optional[_Union[EvalRun, _Mapping]] = ..., outcomes: _Optional[_Iterable[_Union[OutcomeByFit, _Mapping]]] = ...) -> None: ...
+    def __init__(self, recent_runs: _Optional[int] = ..., recent_completed: _Optional[int] = ..., recent_failed: _Optional[int] = ..., recent_stuck: _Optional[int] = ..., reviewed: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., soft_disagreements: _Optional[int] = ..., hard_disagreements: _Optional[int] = ..., gradeable: _Optional[int] = ..., ungradeable: _Optional[int] = ..., too_harsh: _Optional[int] = ..., too_generous: _Optional[int] = ..., finished_runs: _Optional[int] = ..., median_minutes: _Optional[float] = ..., p95_minutes: _Optional[float] = ..., median_queued_minutes: _Optional[float] = ..., landed: _Optional[int] = ..., read_writing: _Optional[int] = ..., clicked: _Optional[int] = ..., registered: _Optional[int] = ..., verified: _Optional[int] = ..., signed_in: _Optional[int] = ..., submitted: _Optional[int] = ..., calls: _Optional[int] = ..., call_failures: _Optional[int] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latest_eval: _Optional[_Union[EvalRun, _Mapping]] = ..., outcomes: _Optional[_Iterable[_Union[OutcomeByFit, _Mapping]]] = ...) -> None: ...
 
 class JdRun(_message.Message):
     __slots__ = ("run_id", "attempt", "trigger", "triggered_by", "status", "error", "app_commit", "host", "model", "num_ctx", "embedder_model", "prompts_json", "corpus_fingerprint", "corpus_documents", "corpus_chunks", "score_formula", "retrieval_score", "match_score", "threshold", "fit", "requirement_count", "met_count", "partial_count", "unmet_count", "resume_generated", "queued_ms", "duration_ms", "started_at", "finished_at")

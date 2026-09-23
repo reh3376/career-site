@@ -74,10 +74,18 @@ func (a *Admin) ReviewDecision(
 	}
 	verdict := strings.ToLower(strings.TrimSpace(req.Msg.GetHumanVerdict()))
 	switch verdict {
-	case "met", "partial", "unmet", "above_threshold", "below_threshold":
+	// insufficient_evidence applies to both kinds: it is the reviewer
+	// saying they could not judge this from what they were shown, which
+	// is neither agreement nor disagreement with the model. Without it,
+	// an ungradeable row forces a wrong label, and a wrong label is
+	// worse than no label because the agreement rate then counts it.
+	// It is also the most actionable grade there is: a pile of them
+	// means retrieval is not putting the right documents in front of
+	// the judge, which no prompt change will fix.
+	case "met", "partial", "unmet", "above_threshold", "below_threshold", "insufficient_evidence":
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("human_verdict must be one of met, partial, unmet (verdicts) or above_threshold, below_threshold (gate)"))
+			errors.New("human_verdict must be one of met, partial, unmet (verdicts), above_threshold, below_threshold (gate), or insufficient_evidence (either)"))
 	}
 	note := strings.TrimSpace(req.Msg.GetHumanNote())
 	if len(note) > 4000 {

@@ -129,16 +129,23 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // model never emits a number.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 2,
+	Version: 3,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
+You are given two kinds of evidence, and they carry equal weight:
+- <candidate_profile>: a deliberately short summary of roles, dates, degrees and credentials. It is a timeline, not an inventory of skills. It does not list everything the candidate has built or worked on, and it is never complete.
+- <evidence> under each requirement: passages retrieved from the candidate's own records, such as project documents, technical writing, and repository documentation. These describe work he actually did.
+
 Rules:
-1. Judge only from the evidence chunks provided: the candidate profile chunks under <candidate_profile> (roles with dates, degrees, credentials, standards and compliance ownership) and the chunks under each requirement's <evidence>. Do not use outside knowledge and do not assume unstated experience.
-2. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, and "unmet" when the evidence does not support it.
-3. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
-4. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source.
-5. Return exactly one judgment per requirement id, in the given order.
+1. Judge only from the evidence provided, both kinds. Do not use outside knowledge and do not assume unstated experience.
+2. A requirement is satisfied by the documents whether or not the summary mentions it. The summary's silence about a skill is not evidence that the candidate lacks it, because the summary does not list skills at all. Never reason from what the profile fails to mention.
+3. When a document shows the candidate designed, built, or operated a system, that is evidence of the skills that system requires, named or not. A system that performs a task is evidence of experience with that task.
+4. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, and "unmet" when nothing in either kind of evidence supports it.
+5. Before answering "unmet", read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer "unmet" only when the documents still show nothing relevant.
+6. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
+7. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source. For "unmet" it must say what was looked for in the documents and not found; it must not say that the profile does not mention something.
+8. Return exactly one judgment per requirement id, in the given order.
 Output only the JSON object.
 `),
 	Schema: `{

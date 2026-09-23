@@ -8125,12 +8125,22 @@ type GetMetricsResponse struct {
 	Reviewed int32 `protobuf:"varint,5,opt,name=reviewed,proto3" json:"reviewed,omitempty"`
 	// Of those, how many the owner agreed with.
 	Agreed int32 `protobuf:"varint,6,opt,name=agreed,proto3" json:"agreed,omitempty"`
-	// Agreement as a percentage; unset with nothing reviewed.
+	// Agreement as a percentage of the gradeable rows; unset when none.
 	AgreementPct *float64 `protobuf:"fixed64,7,opt,name=agreement_pct,json=agreementPct,proto3,oneof" json:"agreement_pct,omitempty"`
 	// Disagreements where one side said partial: the judge being unsure.
 	SoftDisagreements int32 `protobuf:"varint,8,opt,name=soft_disagreements,json=softDisagreements,proto3" json:"soft_disagreements,omitempty"`
 	// Disagreements between met and unmet: the judge being wrong.
 	HardDisagreements int32 `protobuf:"varint,9,opt,name=hard_disagreements,json=hardDisagreements,proto3" json:"hard_disagreements,omitempty"`
+	// Reviewed rows the owner could actually judge.
+	Gradeable int32 `protobuf:"varint,27,opt,name=gradeable,proto3" json:"gradeable,omitempty"`
+	// Rows the owner could not judge from what they were shown. Excluded
+	// from the agreement rate, and the most actionable number here: a
+	// pile of them means retrieval is failing, which no prompt fixes.
+	Ungradeable int32 `protobuf:"varint,28,opt,name=ungradeable,proto3" json:"ungradeable,omitempty"`
+	// Disagreements where the model said unmet and the owner did not.
+	TooHarsh int32 `protobuf:"varint,29,opt,name=too_harsh,json=tooHarsh,proto3" json:"too_harsh,omitempty"`
+	// Disagreements where the model credited more than the owner did.
+	TooGenerous int32 `protobuf:"varint,30,opt,name=too_generous,json=tooGenerous,proto3" json:"too_generous,omitempty"`
 	// Runs that reached a result.
 	FinishedRuns int32 `protobuf:"varint,10,opt,name=finished_runs,json=finishedRuns,proto3" json:"finished_runs,omitempty"`
 	// Median minutes to a result.
@@ -8258,6 +8268,34 @@ func (x *GetMetricsResponse) GetSoftDisagreements() int32 {
 func (x *GetMetricsResponse) GetHardDisagreements() int32 {
 	if x != nil {
 		return x.HardDisagreements
+	}
+	return 0
+}
+
+func (x *GetMetricsResponse) GetGradeable() int32 {
+	if x != nil {
+		return x.Gradeable
+	}
+	return 0
+}
+
+func (x *GetMetricsResponse) GetUngradeable() int32 {
+	if x != nil {
+		return x.Ungradeable
+	}
+	return 0
+}
+
+func (x *GetMetricsResponse) GetTooHarsh() int32 {
+	if x != nil {
+		return x.TooHarsh
+	}
+	return 0
+}
+
+func (x *GetMetricsResponse) GetTooGenerous() int32 {
+	if x != nil {
+		return x.TooGenerous
 	}
 	return 0
 }
@@ -10598,7 +10636,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\fOutcomeByFit\x12\x10\n" +
 	"\x03fit\x18\x01 \x01(\tR\x03fit\x12\x18\n" +
 	"\aoutcome\x18\x02 \x01(\tR\aoutcome\x12 \n" +
-	"\vsubmissions\x18\x03 \x01(\x05R\vsubmissions\"\xa6\b\n" +
+	"\vsubmissions\x18\x03 \x01(\x05R\vsubmissions\"\xa6\t\n" +
 	"\x12GetMetricsResponse\x12\x1f\n" +
 	"\vrecent_runs\x18\x01 \x01(\x05R\n" +
 	"recentRuns\x12)\n" +
@@ -10609,7 +10647,11 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06agreed\x18\x06 \x01(\x05R\x06agreed\x12(\n" +
 	"\ragreement_pct\x18\a \x01(\x01H\x00R\fagreementPct\x88\x01\x01\x12-\n" +
 	"\x12soft_disagreements\x18\b \x01(\x05R\x11softDisagreements\x12-\n" +
-	"\x12hard_disagreements\x18\t \x01(\x05R\x11hardDisagreements\x12#\n" +
+	"\x12hard_disagreements\x18\t \x01(\x05R\x11hardDisagreements\x12\x1c\n" +
+	"\tgradeable\x18\x1b \x01(\x05R\tgradeable\x12 \n" +
+	"\vungradeable\x18\x1c \x01(\x05R\vungradeable\x12\x1b\n" +
+	"\ttoo_harsh\x18\x1d \x01(\x05R\btooHarsh\x12!\n" +
+	"\ftoo_generous\x18\x1e \x01(\x05R\vtooGenerous\x12#\n" +
 	"\rfinished_runs\x18\n" +
 	" \x01(\x05R\ffinishedRuns\x12*\n" +
 	"\x0emedian_minutes\x18\v \x01(\x01H\x01R\rmedianMinutes\x88\x01\x01\x12$\n" +

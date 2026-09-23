@@ -1900,12 +1900,22 @@ message GetMetricsResponse {
   int32 reviewed = 5;
   // Of those, how many the owner agreed with.
   int32 agreed = 6;
-  // Agreement as a percentage; unset with nothing reviewed.
+  // Agreement as a percentage of the gradeable rows; unset when none.
   optional double agreement_pct = 7;
   // Disagreements where one side said partial: the judge being unsure.
   int32 soft_disagreements = 8;
   // Disagreements between met and unmet: the judge being wrong.
   int32 hard_disagreements = 9;
+  // Reviewed rows the owner could actually judge.
+  int32 gradeable = 27;
+  // Rows the owner could not judge from what they were shown. Excluded
+  // from the agreement rate, and the most actionable number here: a
+  // pile of them means retrieval is failing, which no prompt fixes.
+  int32 ungradeable = 28;
+  // Disagreements where the model said unmet and the owner did not.
+  int32 too_harsh = 29;
+  // Disagreements where the model credited more than the owner did.
+  int32 too_generous = 30;
 
   // Runs that reached a result.
   int32 finished_runs = 10;

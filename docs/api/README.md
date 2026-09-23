@@ -3171,9 +3171,13 @@ _No fields; send `{}`._
 | `recentStuck` | `int32` | number |  | Of those, how many are still claiming to run. |
 | `reviewed` | `int32` | number |  | Requirement verdicts the owner has reviewed. |
 | `agreed` | `int32` | number |  | Of those, how many the owner agreed with. |
-| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage; unset with nothing reviewed. |
+| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage of the gradeable rows; unset when none. |
 | `softDisagreements` | `int32` | number |  | Disagreements where one side said partial: the judge being unsure. |
 | `hardDisagreements` | `int32` | number |  | Disagreements between met and unmet: the judge being wrong. |
+| `gradeable` | `int32` | number |  | Reviewed rows the owner could actually judge. |
+| `ungradeable` | `int32` | number |  | Rows the owner could not judge from what they were shown. Excluded from the agreement rate, and the most actionable number here: a pile of them means retrieval is failing, which no prompt fixes. |
+| `tooHarsh` | `int32` | number |  | Disagreements where the model said unmet and the owner did not. |
+| `tooGenerous` | `int32` | number |  | Disagreements where the model credited more than the owner did. |
 | `finishedRuns` | `int32` | number |  | Runs that reached a result. |
 | `medianMinutes` | `double` | number |  | _(oneof `_median_minutes`)_ Median minutes to a result. |
 | `p95Minutes` | `double` | number |  | _(oneof `_p95_minutes`)_ 95th percentile minutes to a result. |
@@ -5902,9 +5906,13 @@ migration 00028; none is computed here.
 | `recentStuck` | `int32` | number |  | Of those, how many are still claiming to run. |
 | `reviewed` | `int32` | number |  | Requirement verdicts the owner has reviewed. |
 | `agreed` | `int32` | number |  | Of those, how many the owner agreed with. |
-| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage; unset with nothing reviewed. |
+| `agreementPct` | `double` | number |  | _(oneof `_agreement_pct`)_ Agreement as a percentage of the gradeable rows; unset when none. |
 | `softDisagreements` | `int32` | number |  | Disagreements where one side said partial: the judge being unsure. |
 | `hardDisagreements` | `int32` | number |  | Disagreements between met and unmet: the judge being wrong. |
+| `gradeable` | `int32` | number |  | Reviewed rows the owner could actually judge. |
+| `ungradeable` | `int32` | number |  | Rows the owner could not judge from what they were shown. Excluded from the agreement rate, and the most actionable number here: a pile of them means retrieval is failing, which no prompt fixes. |
+| `tooHarsh` | `int32` | number |  | Disagreements where the model said unmet and the owner did not. |
+| `tooGenerous` | `int32` | number |  | Disagreements where the model credited more than the owner did. |
 | `finishedRuns` | `int32` | number |  | Runs that reached a result. |
 | `medianMinutes` | `double` | number |  | _(oneof `_median_minutes`)_ Median minutes to a result. |
 | `p95Minutes` | `double` | number |  | _(oneof `_p95_minutes`)_ 95th percentile minutes to a result. |

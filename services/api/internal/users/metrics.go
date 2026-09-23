@@ -22,11 +22,20 @@ type Metrics struct {
 	RecentStuck     int
 
 	// Agreement between the model's verdicts and the owner's labels.
+	// Gradeable excludes the rows the reviewer could not judge from
+	// what they were shown; the percentage is out of those, not out of
+	// everything reviewed.
 	Reviewed          int
+	Gradeable         int
+	Ungradeable       int
 	Agreed            int
 	AgreementPct      *float64
 	SoftDisagreements int
 	HardDisagreements int
+	// Which way the judge errs. Three harsh and no generous is a bias
+	// to fix; a mix is noise, and they call for opposite changes.
+	TooHarsh    int
+	TooGenerous int
 
 	// Time to a result.
 	FinishedRuns        int
@@ -89,9 +98,11 @@ func (r *Repo) GetMetrics(ctx context.Context) (*Metrics, error) {
 		Scan(&m.RecentRuns, &m.RecentCompleted, &m.RecentFailed, &m.RecentStuck)
 
 	_ = r.pool.QueryRow(ctx, `
-    SELECT reviewed, agreed, agreement_pct, soft_disagreements, hard_disagreements
+    SELECT reviewed, gradeable, ungradeable, agreed, agreement_pct,
+           soft_disagreements, hard_disagreements, too_harsh, too_generous
       FROM v_judge_agreement_summary WHERE tenant_id = $1`, tid).
-		Scan(&m.Reviewed, &m.Agreed, &m.AgreementPct, &m.SoftDisagreements, &m.HardDisagreements)
+		Scan(&m.Reviewed, &m.Gradeable, &m.Ungradeable, &m.Agreed, &m.AgreementPct,
+			&m.SoftDisagreements, &m.HardDisagreements, &m.TooHarsh, &m.TooGenerous)
 
 	_ = r.pool.QueryRow(ctx, `
     SELECT finished_runs, median_minutes, p95_minutes, median_queued_minutes

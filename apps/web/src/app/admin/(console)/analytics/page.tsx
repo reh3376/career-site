@@ -38,6 +38,12 @@ type Metrics = {
   recent_stuck?: number;
   recentStuck?: number;
   reviewed?: number;
+  gradeable?: number;
+  ungradeable?: number;
+  too_harsh?: number;
+  tooHarsh?: number;
+  too_generous?: number;
+  tooGenerous?: number;
   agreed?: number;
   agreement_pct?: number;
   agreementPct?: number;
@@ -172,7 +178,29 @@ export default async function AdminAnalyticsPage() {
               : "text-ink"
           }
         />
-        <Stat label="reviewed" value={String(reviewed)} />
+        <Stat label="judged" value={`${m.gradeable ?? 0} of ${reviewed}`} />
+        <Stat
+          label="too harsh"
+          value={String(n(m.too_harsh, m.tooHarsh))}
+          tone={n(m.too_harsh, m.tooHarsh) ? "text-danger" : "text-ink-3"}
+        />
+        <Stat
+          label="too generous"
+          value={String(n(m.too_generous, m.tooGenerous))}
+          tone={n(m.too_generous, m.tooGenerous) ? "text-danger" : "text-ink-3"}
+        />
+      </Section>
+
+      <Section
+        title="Could you even judge it?"
+        target="Verdicts marked insufficient evidence are excluded from agreement above. They are the sharpest signal here: they mean the right documents never reached the judge, which no prompt change fixes."
+        empty={reviewed === 0 ? "Nothing reviewed yet." : ""}
+      >
+        <Stat
+          label="not gradeable"
+          value={String(m.ungradeable ?? 0)}
+          tone={m.ungradeable ? "text-danger" : "text-signal"}
+        />
         <Stat
           label="unsure (partial)"
           value={String(n(m.soft_disagreements, m.softDisagreements))}
