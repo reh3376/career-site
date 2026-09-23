@@ -50,6 +50,16 @@ func (s *Scorer) notifyOutcome(ctx context.Context, submissionID int64) {
 	default:
 		return
 	}
+	// A golden-set run takes the real pipeline, which is the point, but
+	// nobody submitted it and nobody should be emailed about it. The
+	// event is still recorded: an evaluation's runs are as real as any
+	// other and belong in the measurements.
+	if row.IsEval {
+		s.events.Emit(ctx, events.Event{Name: "jd.finished", UserID: row.UserID, Props: map[string]any{
+			"submission_id": row.ID, "outcome": row.Status, "eval": true,
+		}})
+		return
+	}
 	bands := s.bands.Get(ctx)
 	props := map[string]any{"submission_id": row.ID, "outcome": row.Status, "threshold": bands.Strong}
 	if row.MatchScore != nil {

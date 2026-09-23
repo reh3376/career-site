@@ -12,6 +12,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
+	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/jobs"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -40,7 +41,12 @@ func (a *Admin) RunJob(
 	}
 	kind := req.Msg.GetKind()
 	sourceKind := strings.TrimSpace(req.Msg.GetSourceKind())
-	if sourceKind != "" && !ingest.IsKnownKind(sourceKind) {
+	// source_kind names a corpus kind for the reindex jobs. The
+	// evaluation job reuses the field as a free note, so it is only
+	// validated where it means what it says.
+	isCorpusJob := kind == v1.JobKind_JOB_KIND_CORPUS_REINDEX_PUBLIC ||
+		kind == v1.JobKind_JOB_KIND_CORPUS_REINDEX_PRIVATE
+	if isCorpusJob && sourceKind != "" && !ingest.IsKnownKind(sourceKind) {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			fmt.Errorf("unknown source_kind %q; known: %s", sourceKind, strings.Join(ingest.KnownKinds, ", ")))
 	}
@@ -69,6 +75,19 @@ func (a *Admin) RunJob(
 				return "", err
 			}
 			return summarizeWalk(scope, res, kinds), nil
+		}
+	case v1.JobKind_JOB_KIND_EVAL_QUICK:
+		if a.evaluator == nil {
+			return nil, connect.NewError(connect.CodeUnavailable,
+				errors.New("the scoring pipeline is not wired, so there is nothing to evaluate"))
+		}
+		// An evaluation scores the whole set through the real pipeline,
+		// which on the production box is tens of minutes. It is a job
+		// with progress for that reason, and only one runs at a time,
+		// which the runner already enforces per kind.
+		note := strings.TrimSpace(req.Msg.GetSourceKind()) // reused as the free note
+		fn = func(jctx context.Context, report jobs.Report) (string, error) {
+			return a.evaluator.Run(jctx, note, admin.ID, jd.Report(report))
 		}
 	case v1.JobKind_JOB_KIND_EMBED_SWEEP:
 		if a.ingest == nil {

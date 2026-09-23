@@ -117,10 +117,22 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   **Left over:** the submitter-facing rating on `/jd-upload` is not
   built; with one user it would only ever be the owner rating his own
   work through a second door. Build it when there is a second user.
-- **D4 golden set and `eval_runs`.** The calibration JDs plus reviewed
-  verdicts as a fixed set; a job that rescores the set on demand and
-  stores per-requirement agreement, so a prompt or model change is
-  measured before it ships.
+- **D4 golden set and `eval_runs`. SHIPPED 2026-09-22.** `golden_postings`
+  holds fixed postings, each asserting only which side of the gate it
+  belongs on. That claim is about the world and survives a model change;
+  a score would have to be rewritten on every change, and that rewriting
+  is how a regression hides. An evaluation scores the whole active set
+  through the real pipeline as a job, recording the same provenance a
+  pipeline run does, and measures three things: gate accuracy,
+  inversions (a posting expected below outscoring one expected above,
+  which moving the gate cannot fix), and the margin between the two
+  groups, which shrinks before anything visibly breaks. Evaluation
+  submissions take the real path but are flagged, so they never reach
+  the submission list or an email. `/admin/evals` runs them and reads
+  the results; each row links to its derivation.
+  **Left over:** the set needs Roger's real calibration postings added,
+  which cannot be seeded from the repo because they live in the
+  gitignored personal folder. Two placeholders exist locally only.
 - **D5 views and `/admin/analytics`.** SQL views over `events`,
   `jd_runs` and `eval_runs`, and one admin page: funnel, JD outcomes by
   fit and commit, judge agreement over time.

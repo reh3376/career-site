@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 44 |
+| [`AdminService`](#adminservice) | Owner console. | 49 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1649,6 +1649,11 @@ Owner console.
 | [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score for diagnostics, per-requirement assessment, score in code, résumé and locked PDF when the fit is strong or better) for one submission in the background, e.g. |
 | [`SetJdOutcome`](#adminservice-setjdoutcome) | `/api/career.v1.AdminService/SetJdOutcome` | Admin (fresh MFA) | default | `SetJdOutcomeRequest` → `SetJdOutcomeResponse` | Records what happened in the world after a review: applied, interview, offer, no response. |
 | [`RecordJdFeedback`](#adminservice-recordjdfeedback) | `/api/career.v1.AdminService/RecordJdFeedback` | Admin (fresh MFA) | default | `RecordJdFeedbackRequest` → `RecordJdFeedbackResponse` | Records the owner's judgment of one run's output: whether the score was accurate, too generous or too harsh, and whether the résumé is sendable. |
+| [`ListGoldenPostings`](#adminservice-listgoldenpostings) | `/api/career.v1.AdminService/ListGoldenPostings` | Admin (fresh MFA) | default | `ListGoldenPostingsRequest` → `ListGoldenPostingsResponse` | Lists the golden set: fixed postings with a stated expectation, re-scored to measure whether a prompt or model change helped. |
+| [`UpsertGoldenPosting`](#adminservice-upsertgoldenposting) | `/api/career.v1.AdminService/UpsertGoldenPosting` | Admin (fresh MFA) | default | `UpsertGoldenPostingRequest` → `UpsertGoldenPostingResponse` | Adds or replaces a golden posting, keyed by name. |
+| [`SetGoldenActive`](#adminservice-setgoldenactive) | `/api/career.v1.AdminService/SetGoldenActive` | Admin (fresh MFA) | default | `SetGoldenActiveRequest` → `SetGoldenActiveResponse` | Retires or restores a golden posting. |
+| [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
+| [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
@@ -2982,6 +2987,161 @@ _No fields; send `{}`._
   "target": "string",
   "rating": "string",
   "note": "string"
+}
+```
+
+</details>
+
+### AdminService.ListGoldenPostings
+
+`POST /api/career.v1.AdminService/ListGoldenPostings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists the golden set: fixed postings with a stated expectation,
+re-scored to measure whether a prompt or model change helped.
+
+**Request** — [`ListGoldenPostingsRequest`](#listgoldenpostingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `activeOnly` | `bool` | boolean |  | True omits retired postings. |
+
+**Response** — [`ListGoldenPostingsResponse`](#listgoldenpostingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `postings` | [`GoldenPosting`](#goldenposting)[] | array of object |  | The set, expected-above first then by name. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "activeOnly": true
+}
+```
+
+</details>
+
+### AdminService.UpsertGoldenPosting
+
+`POST /api/career.v1.AdminService/UpsertGoldenPosting` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Adds or replaces a golden posting, keyed by name.
+
+**Request** — [`UpsertGoldenPostingRequest`](#upsertgoldenpostingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string | `string: min_len: 1 max_len: 80` | Short unique label. |
+| `jdText` | `string` | string | `string: min_len: 40 max_len: 50000` | The posting text. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Role hint. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Employer hint. |
+| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above | below. |
+| `expectedBand` | `string` | string | `string: max_len: 20` | Advisory band. |
+| `note` | `string` | string | `string: max_len: 2000` | Why it is in the set. |
+
+**Response** — [`UpsertGoldenPostingResponse`](#upsertgoldenpostingresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id of the created or replaced posting. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "name": "string",
+  "jdText": "string",
+  "roleHint": "string",
+  "employerHint": "string",
+  "expectedGate": "string",
+  "expectedBand": "string",
+  "note": "string"
+}
+```
+
+</details>
+
+### AdminService.SetGoldenActive
+
+`POST /api/career.v1.AdminService/SetGoldenActive` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Retires or restores a golden posting. Retired postings are kept,
+because deleting one would silently change what every past
+evaluation was measuring.
+
+**Request** — [`SetGoldenActiveRequest`](#setgoldenactiverequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `active` | `bool` | boolean |  | False retires it. |
+
+**Response** — [`SetGoldenActiveResponse`](#setgoldenactiveresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "0",
+  "active": true
+}
+```
+
+</details>
+
+### AdminService.ListEvalRuns
+
+`POST /api/career.v1.AdminService/ListEvalRuns` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists evaluations, newest first, without their per-posting results.
+
+**Request** — [`ListEvalRunsRequest`](#listevalrunsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number | `int32: lte: 100 gte: 0` | Maximum rows, default 25. |
+
+**Response** — [`ListEvalRunsResponse`](#listevalrunsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runs` | [`EvalRun`](#evalrun)[] | array of object |  | Evaluations, newest first. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "limit": 0
+}
+```
+
+</details>
+
+### AdminService.GetEvalRun
+
+`POST /api/career.v1.AdminService/GetEvalRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns one evaluation with every posting's result.
+
+**Request** — [`GetEvalRunRequest`](#getevalrunrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+
+**Response** — [`GetEvalRunResponse`](#getevalrunresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`EvalRun`](#evalrun) | object |  | The evaluation, with its per-posting results. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "0"
 }
 ```
 
@@ -5507,6 +5667,158 @@ Record-jd-feedback request. The owner's judgment of a run's output.
 Record-jd-feedback response.
 
 _No fields._
+
+### GoldenPosting
+
+One job description with a stated expectation (data layer D4). The
+expectation is which side of the gate it belongs on, not a score:
+a score is model-dependent and would have to be rewritten on every
+change, and that rewriting is how a regression hides.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `name` | `string` | string |  | Short unique label used in summaries. |
+| `jdText` | `string` | string |  | The posting itself. |
+| `roleHint` | `string` | string |  | Role hint passed to the pipeline, as a submitter would give it. |
+| `employerHint` | `string` | string |  | Employer hint passed to the pipeline. |
+| `expectedGate` | `string` | string |  | above | below: the side of the gate this posting belongs on. |
+| `expectedBand` | `string` | string |  | Advisory band; not asserted, because band edges are tuned. |
+| `note` | `string` | string |  | Why it is in the set and what it is meant to catch. |
+| `active` | `bool` | boolean |  | Retired postings stay for history and are skipped by new runs. |
+| `lastScore` | `double` | number |  | _(oneof `_last_score`)_ Score from the most recent evaluation that included it. |
+| `lastPassed` | `bool` | boolean |  | Whether that evaluation put it on the expected side. |
+| `lastEvalAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation scored it. |
+
+### ListGoldenPostingsRequest
+
+List-golden-postings request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `activeOnly` | `bool` | boolean |  | True omits retired postings. |
+
+### ListGoldenPostingsResponse
+
+List-golden-postings response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `postings` | [`GoldenPosting`](#goldenposting)[] | array of object |  | The set, expected-above first then by name. |
+
+### UpsertGoldenPostingRequest
+
+Upsert-golden-posting request. Keyed by name within the tenant.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string | `string: min_len: 1 max_len: 80` | Short unique label. |
+| `jdText` | `string` | string | `string: min_len: 40 max_len: 50000` | The posting text. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Role hint. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Employer hint. |
+| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above | below. |
+| `expectedBand` | `string` | string | `string: max_len: 20` | Advisory band. |
+| `note` | `string` | string | `string: max_len: 2000` | Why it is in the set. |
+
+### UpsertGoldenPostingResponse
+
+Upsert-golden-posting response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id of the created or replaced posting. |
+
+### SetGoldenActiveRequest
+
+Set-golden-active request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `active` | `bool` | boolean |  | False retires it. |
+
+### SetGoldenActiveResponse
+
+Set-golden-active response.
+
+_No fields._
+
+### EvalRun
+
+One scoring of the whole active golden set under one configuration.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `evalId` | `string` | string |  | Stable external identifier. |
+| `status` | `string` | string |  | running | done | failed. |
+| `note` | `string` | string |  | Free note describing what was being tested. |
+| `appCommit` | `string` | string |  | Build the api was running. |
+| `host` | `string` | string |  | Where the model ran. |
+| `model` | `string` | string |  | Judge model. |
+| `numCtx` | `int32` | number |  | Context window asked for. |
+| `embedderModel` | `string` | string |  | Embedding model behind the corpus. |
+| `promptsJson` | `string` | string |  | Prompt id to "version:hash" as JSON. |
+| `corpusFingerprint` | `string` | string |  | Corpus fingerprint at the time of the run. |
+| `threshold` | `double` | number |  | _(oneof `_threshold`)_ Gate in force. |
+| `total` | `int32` | number |  | Postings in the set. |
+| `scored` | `int32` | number |  | Postings that produced a score. |
+| `gateCorrect` | `int32` | number |  | Scored postings that landed on the expected side of the gate. |
+| `orderViolations` | `int32` | number |  | Pairs where a posting expected below outscored one expected above. Worse than a gate miss: a gate can be moved, an inversion cannot. |
+| `margin` | `double` | number |  | _(oneof `_margin`)_ Smallest gap between the two groups; a shrinking margin is a regression that gate accuracy hides. |
+| `errors` | `int32` | number |  | Postings that failed to score. |
+| `startedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it started. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it finished; unset while running. |
+| `items` | [`EvalItem`](#evalitem)[] | array of object |  | Per-posting results; populated by GetEvalRun only. |
+
+### EvalItem
+
+One posting's result inside one evaluation.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `goldenId` | `int64` | string (decimal) |  | Golden posting id. |
+| `goldenName` | `string` | string |  | Its label. |
+| `expectedGate` | `string` | string |  | The side of the gate it was expected on. |
+| `runId` | `string` | string |  | The pipeline run that produced this result. |
+| `submissionId` | `int64` | string (decimal) |  | The submission the run belongs to, for opening the derivation. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Score it got; unset when it failed. |
+| `fit` | `string` | string |  | Fit band it landed in. |
+| `gateSide` | `string` | string |  | The side it actually landed on. |
+| `passed` | `bool` | boolean |  | Whether that matched the expectation. |
+| `error` | `string` | string |  | Why it failed to score. |
+
+### ListEvalRunsRequest
+
+List-eval-runs request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number | `int32: lte: 100 gte: 0` | Maximum rows, default 25. |
+
+### ListEvalRunsResponse
+
+List-eval-runs response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runs` | [`EvalRun`](#evalrun)[] | array of object |  | Evaluations, newest first. |
+
+### GetEvalRunRequest
+
+Get-eval-run request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+
+### GetEvalRunResponse
+
+Get-eval-run response.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`EvalRun`](#evalrun) | object |  | The evaluation, with its per-posting results. |
 
 ### JdRun
 

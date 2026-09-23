@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/jd"
 )
 
 // SetEvents installs the product event writer on each handler that has
@@ -19,6 +20,10 @@ func (h *Jd) SetEvents(w *events.Writer)              { h.events = w }
 func (a *Admin) SetEvents(w *events.Writer)           { a.events = w }
 func (j *ExpiryJobs) SetEvents(w *events.Writer)      { j.events = w }
 func (j *AutoDeclineJobs) SetEvents(w *events.Writer) { j.events = w }
+
+// SetEvaluator installs the golden-set evaluator on the admin handler.
+// Nil disables the evaluation job, which is dev without a sidecar.
+func (a *Admin) SetEvaluator(e *jd.Evaluator) { a.evaluator = e }
 
 // uiModeCookie is the web app's mode cookie (apps/web/src/lib/ui-mode.ts).
 const uiModeCookie = "ui_mode"

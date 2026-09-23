@@ -44,6 +44,9 @@ type JdSubmission struct {
 	// SubmitterEmail is joined for the admin views.
 	UserID         int64
 	SubmitterEmail string
+	// IsEval marks a golden-set run: same pipeline, no email, hidden
+	// from the submission list.
+	IsEval bool
 }
 
 // TokenMatches reports whether presented equals the stored token,
@@ -64,6 +67,11 @@ type JdSubmitInput struct {
 	IPHash       []byte
 	UAHash       []byte
 	UserID       int64 // submitting member; required
+	// IsEval marks a golden-set run. It takes the same pipeline as a
+	// real posting, because a test that takes a different path tests a
+	// different thing, but it is kept out of the submission list and
+	// produces no email.
+	IsEval bool
 }
 
 // NormaliseJdHash returns the sha256 of the whitespace-collapsed,
@@ -115,8 +123,8 @@ func (r *Repo) CreateJdSubmission(
 	const q = `
     INSERT INTO jd_submissions (
       ip_hash, ua_hash, source_kind, jd_text, jd_hash, text_head,
-      role_hint, employer_hint, contact_email, result_token, user_id, apply_url
-    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11, 0), NULLIF($12,''))
+      role_hint, employer_hint, contact_email, result_token, user_id, apply_url, is_eval
+    ) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''), NULLIF($8,''), NULLIF($9,''), $10, NULLIF($11, 0), NULLIF($12,''), $13)
     RETURNING id, created_at, status
   `
 	s := &JdSubmission{
@@ -133,7 +141,7 @@ func (r *Repo) CreateJdSubmission(
 	}
 	err := r.pool.QueryRow(ctx, q,
 		in.IPHash, in.UAHash, in.SourceKind, in.JdText, hash, head,
-		in.RoleHint, in.EmployerHint, in.ContactEmail, token, in.UserID, in.ApplyURL,
+		in.RoleHint, in.EmployerHint, in.ContactEmail, token, in.UserID, in.ApplyURL, in.IsEval,
 	).Scan(&s.ID, &s.CreatedAt, &s.Status)
 	if err != nil {
 		return nil, fmt.Errorf("insert jd submission: %w", err)
@@ -150,7 +158,7 @@ const jdCols = `
     s.result_token, COALESCE(s.resume_markdown, ''), COALESCE(s.llm_model, ''),
     COALESCE(s.prompt_id, ''), COALESCE(s.prompt_version, 0),
     s.retrieval_score, COALESCE(s.assessment::text, ''),
-    COALESCE(s.user_id, 0), COALESCE(u.email, '')
+    COALESCE(s.user_id, 0), COALESCE(u.email, ''), s.is_eval
 `
 
 // SetJdAssessment stores the retrieval pre-score and the assessment
@@ -275,6 +283,10 @@ func (r *Repo) ListJdSubmissions(ctx context.Context) ([]JdSubmission, error) {
            s.retrieval_score, COALESCE(s.user_id, 0), COALESCE(u.email, '')
     FROM jd_submissions s
     LEFT JOIN users u ON u.id = s.user_id
+    -- Golden-set runs use the same pipeline and therefore land in this
+    -- table, but they are not postings anyone sent; they belong on the
+    -- evaluations page, not in the owner's inbox.
+    WHERE NOT s.is_eval
     ORDER BY s.created_at DESC
     LIMIT 500
   `
@@ -312,7 +324,7 @@ func (r *Repo) GetJdSubmission(ctx context.Context, id int64) (*JdSubmission, er
 		&s.Status, &s.MatchScore, &s.GeneratedResumeURL, &s.Error,
 		&s.CreatedAt, &s.CompletedAt,
 		&s.ResultToken, &s.ResumeMarkdown, &s.LLMModel, &s.PromptID, &s.PromptVersion,
-		&s.RetrievalScore, &s.Assessment, &s.UserID, &s.SubmitterEmail,
+		&s.RetrievalScore, &s.Assessment, &s.UserID, &s.SubmitterEmail, &s.IsEval,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get jd submission: %w", err)

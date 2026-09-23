@@ -296,6 +296,34 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Lists the golden set: fixed postings with a stated expectation,
+  // re-scored to measure whether a prompt or model change helped.
+  rpc ListGoldenPostings(ListGoldenPostingsRequest) returns (ListGoldenPostingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Adds or replaces a golden posting, keyed by name.
+  rpc UpsertGoldenPosting(UpsertGoldenPostingRequest) returns (UpsertGoldenPostingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Retires or restores a golden posting. Retired postings are kept,
+  // because deleting one would silently change what every past
+  // evaluation was measuring.
+  rpc SetGoldenActive(SetGoldenActiveRequest) returns (SetGoldenActiveResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Lists evaluations, newest first, without their per-posting results.
+  rpc ListEvalRuns(ListEvalRunsRequest) returns (ListEvalRunsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Returns one evaluation with every posting's result.
+  rpc GetEvalRun(GetEvalRunRequest) returns (GetEvalRunResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Lists logged reviewer decisions (per-requirement verdicts, gate
   // outcomes) with the evidence each was made from, for the owner's
   // human-in-the-loop review. Backs /admin/decisions.
@@ -1648,6 +1676,192 @@ message RecordJdFeedbackRequest {
 
 // Record-jd-feedback response.
 message RecordJdFeedbackResponse {}
+
+// One job description with a stated expectation (data layer D4). The
+// expectation is which side of the gate it belongs on, not a score:
+// a score is model-dependent and would have to be rewritten on every
+// change, and that rewriting is how a regression hides.
+message GoldenPosting {
+  // Row id.
+  int64 id = 1;
+  // Short unique label used in summaries.
+  string name = 2;
+  // The posting itself.
+  string jd_text = 3;
+  // Role hint passed to the pipeline, as a submitter would give it.
+  string role_hint = 4;
+  // Employer hint passed to the pipeline.
+  string employer_hint = 5;
+  // above | below: the side of the gate this posting belongs on.
+  string expected_gate = 6;
+  // Advisory band; not asserted, because band edges are tuned.
+  string expected_band = 7;
+  // Why it is in the set and what it is meant to catch.
+  string note = 8;
+  // Retired postings stay for history and are skipped by new runs.
+  bool active = 9;
+  // Score from the most recent evaluation that included it.
+  optional double last_score = 10;
+  // Whether that evaluation put it on the expected side.
+  bool last_passed = 11;
+  // When that evaluation scored it.
+  google.protobuf.Timestamp last_eval_at = 12;
+}
+
+// List-golden-postings request.
+message ListGoldenPostingsRequest {
+  // True omits retired postings.
+  bool active_only = 1;
+}
+
+// List-golden-postings response.
+message ListGoldenPostingsResponse {
+  // The set, expected-above first then by name.
+  repeated GoldenPosting postings = 1;
+}
+
+// Upsert-golden-posting request. Keyed by name within the tenant.
+message UpsertGoldenPostingRequest {
+  // Short unique label.
+  string name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+  }];
+  // The posting text.
+  string jd_text = 2 [(buf.validate.field).string = {
+    min_len: 40
+    max_len: 50000
+  }];
+  // Role hint.
+  string role_hint = 3 [(buf.validate.field).string.max_len = 200];
+  // Employer hint.
+  string employer_hint = 4 [(buf.validate.field).string.max_len = 200];
+  // above | below.
+  string expected_gate = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8
+  }];
+  // Advisory band.
+  string expected_band = 6 [(buf.validate.field).string.max_len = 20];
+  // Why it is in the set.
+  string note = 7 [(buf.validate.field).string.max_len = 2000];
+}
+
+// Upsert-golden-posting response.
+message UpsertGoldenPostingResponse {
+  // Row id of the created or replaced posting.
+  int64 id = 1;
+}
+
+// Set-golden-active request.
+message SetGoldenActiveRequest {
+  // Row id.
+  int64 id = 1;
+  // False retires it.
+  bool active = 2;
+}
+
+// Set-golden-active response.
+message SetGoldenActiveResponse {}
+
+// One scoring of the whole active golden set under one configuration.
+message EvalRun {
+  // Row id.
+  int64 id = 1;
+  // Stable external identifier.
+  string eval_id = 2;
+  // running | done | failed.
+  string status = 3;
+  // Free note describing what was being tested.
+  string note = 4;
+  // Build the api was running.
+  string app_commit = 5;
+  // Where the model ran.
+  string host = 6;
+  // Judge model.
+  string model = 7;
+  // Context window asked for.
+  int32 num_ctx = 8;
+  // Embedding model behind the corpus.
+  string embedder_model = 9;
+  // Prompt id to "version:hash" as JSON.
+  string prompts_json = 10;
+  // Corpus fingerprint at the time of the run.
+  string corpus_fingerprint = 11;
+  // Gate in force.
+  optional double threshold = 12;
+  // Postings in the set.
+  int32 total = 13;
+  // Postings that produced a score.
+  int32 scored = 14;
+  // Scored postings that landed on the expected side of the gate.
+  int32 gate_correct = 15;
+  // Pairs where a posting expected below outscored one expected above.
+  // Worse than a gate miss: a gate can be moved, an inversion cannot.
+  int32 order_violations = 16;
+  // Smallest gap between the two groups; a shrinking margin is a
+  // regression that gate accuracy hides.
+  optional double margin = 17;
+  // Postings that failed to score.
+  int32 errors = 18;
+  // When it started.
+  google.protobuf.Timestamp started_at = 19;
+  // When it finished; unset while running.
+  google.protobuf.Timestamp finished_at = 20;
+  // Per-posting results; populated by GetEvalRun only.
+  repeated EvalItem items = 21;
+}
+
+// One posting's result inside one evaluation.
+message EvalItem {
+  // Golden posting id.
+  int64 golden_id = 1;
+  // Its label.
+  string golden_name = 2;
+  // The side of the gate it was expected on.
+  string expected_gate = 3;
+  // The pipeline run that produced this result.
+  string run_id = 4;
+  // The submission the run belongs to, for opening the derivation.
+  int64 submission_id = 5;
+  // Score it got; unset when it failed.
+  optional double match_score = 6;
+  // Fit band it landed in.
+  string fit = 7;
+  // The side it actually landed on.
+  string gate_side = 8;
+  // Whether that matched the expectation.
+  bool passed = 9;
+  // Why it failed to score.
+  string error = 10;
+}
+
+// List-eval-runs request.
+message ListEvalRunsRequest {
+  // Maximum rows, default 25.
+  int32 limit = 1 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 100
+  }];
+}
+
+// List-eval-runs response.
+message ListEvalRunsResponse {
+  // Evaluations, newest first.
+  repeated EvalRun runs = 1;
+}
+
+// Get-eval-run request.
+message GetEvalRunRequest {
+  // Row id.
+  int64 id = 1;
+}
+
+// Get-eval-run response.
+message GetEvalRunResponse {
+  // The evaluation, with its per-posting results.
+  EvalRun run = 1;
+}
 
 // One pipeline run: what produced a verdict and what it decided
 // (data layer D2, table `jd_runs`).

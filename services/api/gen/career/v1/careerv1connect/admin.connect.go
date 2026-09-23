@@ -155,6 +155,20 @@ const (
 	// AdminServiceRecordJdFeedbackProcedure is the fully-qualified name of the AdminService's
 	// RecordJdFeedback RPC.
 	AdminServiceRecordJdFeedbackProcedure = "/career.v1.AdminService/RecordJdFeedback"
+	// AdminServiceListGoldenPostingsProcedure is the fully-qualified name of the AdminService's
+	// ListGoldenPostings RPC.
+	AdminServiceListGoldenPostingsProcedure = "/career.v1.AdminService/ListGoldenPostings"
+	// AdminServiceUpsertGoldenPostingProcedure is the fully-qualified name of the AdminService's
+	// UpsertGoldenPosting RPC.
+	AdminServiceUpsertGoldenPostingProcedure = "/career.v1.AdminService/UpsertGoldenPosting"
+	// AdminServiceSetGoldenActiveProcedure is the fully-qualified name of the AdminService's
+	// SetGoldenActive RPC.
+	AdminServiceSetGoldenActiveProcedure = "/career.v1.AdminService/SetGoldenActive"
+	// AdminServiceListEvalRunsProcedure is the fully-qualified name of the AdminService's ListEvalRuns
+	// RPC.
+	AdminServiceListEvalRunsProcedure = "/career.v1.AdminService/ListEvalRuns"
+	// AdminServiceGetEvalRunProcedure is the fully-qualified name of the AdminService's GetEvalRun RPC.
+	AdminServiceGetEvalRunProcedure = "/career.v1.AdminService/GetEvalRun"
 	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
 	// ListDecisionLog RPC.
 	AdminServiceListDecisionLogProcedure = "/career.v1.AdminService/ListDecisionLog"
@@ -327,6 +341,19 @@ type AdminServiceClient interface {
 	// sendable. Attached to the run, so a later re-score does not inherit
 	// an opinion of the thing it replaced.
 	RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error)
+	// Lists the golden set: fixed postings with a stated expectation,
+	// re-scored to measure whether a prompt or model change helped.
+	ListGoldenPostings(context.Context, *connect.Request[v1.ListGoldenPostingsRequest]) (*connect.Response[v1.ListGoldenPostingsResponse], error)
+	// Adds or replaces a golden posting, keyed by name.
+	UpsertGoldenPosting(context.Context, *connect.Request[v1.UpsertGoldenPostingRequest]) (*connect.Response[v1.UpsertGoldenPostingResponse], error)
+	// Retires or restores a golden posting. Retired postings are kept,
+	// because deleting one would silently change what every past
+	// evaluation was measuring.
+	SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error)
+	// Lists evaluations, newest first, without their per-posting results.
+	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
+	// Returns one evaluation with every posting's result.
+	GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -592,6 +619,36 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("RecordJdFeedback")),
 			connect.WithClientOptions(opts...),
 		),
+		listGoldenPostings: connect.NewClient[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse](
+			httpClient,
+			baseURL+AdminServiceListGoldenPostingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListGoldenPostings")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertGoldenPosting: connect.NewClient[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse](
+			httpClient,
+			baseURL+AdminServiceUpsertGoldenPostingProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("UpsertGoldenPosting")),
+			connect.WithClientOptions(opts...),
+		),
+		setGoldenActive: connect.NewClient[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse](
+			httpClient,
+			baseURL+AdminServiceSetGoldenActiveProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetGoldenActive")),
+			connect.WithClientOptions(opts...),
+		),
+		listEvalRuns: connect.NewClient[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse](
+			httpClient,
+			baseURL+AdminServiceListEvalRunsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListEvalRuns")),
+			connect.WithClientOptions(opts...),
+		),
+		getEvalRun: connect.NewClient[v1.GetEvalRunRequest, v1.GetEvalRunResponse](
+			httpClient,
+			baseURL+AdminServiceGetEvalRunProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetEvalRun")),
+			connect.WithClientOptions(opts...),
+		),
 		listDecisionLog: connect.NewClient[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse](
 			httpClient,
 			baseURL+AdminServiceListDecisionLogProcedure,
@@ -666,6 +723,11 @@ type adminServiceClient struct {
 	rescoreJd             *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
 	setJdOutcome          *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
 	recordJdFeedback      *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
+	listGoldenPostings    *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
+	upsertGoldenPosting   *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
+	setGoldenActive       *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
+	listEvalRuns          *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
+	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
@@ -868,6 +930,31 @@ func (c *adminServiceClient) RecordJdFeedback(ctx context.Context, req *connect.
 	return c.recordJdFeedback.CallUnary(ctx, req)
 }
 
+// ListGoldenPostings calls career.v1.AdminService.ListGoldenPostings.
+func (c *adminServiceClient) ListGoldenPostings(ctx context.Context, req *connect.Request[v1.ListGoldenPostingsRequest]) (*connect.Response[v1.ListGoldenPostingsResponse], error) {
+	return c.listGoldenPostings.CallUnary(ctx, req)
+}
+
+// UpsertGoldenPosting calls career.v1.AdminService.UpsertGoldenPosting.
+func (c *adminServiceClient) UpsertGoldenPosting(ctx context.Context, req *connect.Request[v1.UpsertGoldenPostingRequest]) (*connect.Response[v1.UpsertGoldenPostingResponse], error) {
+	return c.upsertGoldenPosting.CallUnary(ctx, req)
+}
+
+// SetGoldenActive calls career.v1.AdminService.SetGoldenActive.
+func (c *adminServiceClient) SetGoldenActive(ctx context.Context, req *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error) {
+	return c.setGoldenActive.CallUnary(ctx, req)
+}
+
+// ListEvalRuns calls career.v1.AdminService.ListEvalRuns.
+func (c *adminServiceClient) ListEvalRuns(ctx context.Context, req *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error) {
+	return c.listEvalRuns.CallUnary(ctx, req)
+}
+
+// GetEvalRun calls career.v1.AdminService.GetEvalRun.
+func (c *adminServiceClient) GetEvalRun(ctx context.Context, req *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error) {
+	return c.getEvalRun.CallUnary(ctx, req)
+}
+
 // ListDecisionLog calls career.v1.AdminService.ListDecisionLog.
 func (c *adminServiceClient) ListDecisionLog(ctx context.Context, req *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {
 	return c.listDecisionLog.CallUnary(ctx, req)
@@ -1048,6 +1135,19 @@ type AdminServiceHandler interface {
 	// sendable. Attached to the run, so a later re-score does not inherit
 	// an opinion of the thing it replaced.
 	RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error)
+	// Lists the golden set: fixed postings with a stated expectation,
+	// re-scored to measure whether a prompt or model change helped.
+	ListGoldenPostings(context.Context, *connect.Request[v1.ListGoldenPostingsRequest]) (*connect.Response[v1.ListGoldenPostingsResponse], error)
+	// Adds or replaces a golden posting, keyed by name.
+	UpsertGoldenPosting(context.Context, *connect.Request[v1.UpsertGoldenPostingRequest]) (*connect.Response[v1.UpsertGoldenPostingResponse], error)
+	// Retires or restores a golden posting. Retired postings are kept,
+	// because deleting one would silently change what every past
+	// evaluation was measuring.
+	SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error)
+	// Lists evaluations, newest first, without their per-posting results.
+	ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error)
+	// Returns one evaluation with every posting's result.
+	GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error)
 	// Lists logged reviewer decisions (per-requirement verdicts, gate
 	// outcomes) with the evidence each was made from, for the owner's
 	// human-in-the-loop review. Backs /admin/decisions.
@@ -1309,6 +1409,36 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("RecordJdFeedback")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListGoldenPostingsHandler := connect.NewUnaryHandler(
+		AdminServiceListGoldenPostingsProcedure,
+		svc.ListGoldenPostings,
+		connect.WithSchema(adminServiceMethods.ByName("ListGoldenPostings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceUpsertGoldenPostingHandler := connect.NewUnaryHandler(
+		AdminServiceUpsertGoldenPostingProcedure,
+		svc.UpsertGoldenPosting,
+		connect.WithSchema(adminServiceMethods.ByName("UpsertGoldenPosting")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetGoldenActiveHandler := connect.NewUnaryHandler(
+		AdminServiceSetGoldenActiveProcedure,
+		svc.SetGoldenActive,
+		connect.WithSchema(adminServiceMethods.ByName("SetGoldenActive")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceListEvalRunsHandler := connect.NewUnaryHandler(
+		AdminServiceListEvalRunsProcedure,
+		svc.ListEvalRuns,
+		connect.WithSchema(adminServiceMethods.ByName("ListEvalRuns")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceGetEvalRunHandler := connect.NewUnaryHandler(
+		AdminServiceGetEvalRunProcedure,
+		svc.GetEvalRun,
+		connect.WithSchema(adminServiceMethods.ByName("GetEvalRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListDecisionLogHandler := connect.NewUnaryHandler(
 		AdminServiceListDecisionLogProcedure,
 		svc.ListDecisionLog,
@@ -1419,6 +1549,16 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSetJdOutcomeHandler.ServeHTTP(w, r)
 		case AdminServiceRecordJdFeedbackProcedure:
 			adminServiceRecordJdFeedbackHandler.ServeHTTP(w, r)
+		case AdminServiceListGoldenPostingsProcedure:
+			adminServiceListGoldenPostingsHandler.ServeHTTP(w, r)
+		case AdminServiceUpsertGoldenPostingProcedure:
+			adminServiceUpsertGoldenPostingHandler.ServeHTTP(w, r)
+		case AdminServiceSetGoldenActiveProcedure:
+			adminServiceSetGoldenActiveHandler.ServeHTTP(w, r)
+		case AdminServiceListEvalRunsProcedure:
+			adminServiceListEvalRunsHandler.ServeHTTP(w, r)
+		case AdminServiceGetEvalRunProcedure:
+			adminServiceGetEvalRunHandler.ServeHTTP(w, r)
 		case AdminServiceListDecisionLogProcedure:
 			adminServiceListDecisionLogHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionProcedure:
@@ -1592,6 +1732,26 @@ func (UnimplementedAdminServiceHandler) SetJdOutcome(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) RecordJdFeedback(context.Context, *connect.Request[v1.RecordJdFeedbackRequest]) (*connect.Response[v1.RecordJdFeedbackResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RecordJdFeedback is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListGoldenPostings(context.Context, *connect.Request[v1.ListGoldenPostingsRequest]) (*connect.Response[v1.ListGoldenPostingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListGoldenPostings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) UpsertGoldenPosting(context.Context, *connect.Request[v1.UpsertGoldenPostingRequest]) (*connect.Response[v1.UpsertGoldenPostingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.UpsertGoldenPosting is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetGoldenActive(context.Context, *connect.Request[v1.SetGoldenActiveRequest]) (*connect.Response[v1.SetGoldenActiveResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetGoldenActive is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListEvalRuns(context.Context, *connect.Request[v1.ListEvalRunsRequest]) (*connect.Response[v1.ListEvalRunsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListEvalRuns is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetEvalRun(context.Context, *connect.Request[v1.GetEvalRunRequest]) (*connect.Response[v1.GetEvalRunResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetEvalRun is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListDecisionLog(context.Context, *connect.Request[v1.ListDecisionLogRequest]) (*connect.Response[v1.ListDecisionLogResponse], error) {

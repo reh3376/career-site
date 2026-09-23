@@ -815,3 +815,54 @@ the fit bands separate the postings that went somewhere from the ones
 that did not, which is the first honest test of whether the gate is set
 in the right place. Until then the bands rest on four calibration
 postings and the owner's judgment.
+
+## 2026-09-22: the golden set (data layer D4)
+
+The gate was justified by four postings scored by hand and written into
+this log. That was enough to pick a number once. It could not answer the
+question that arrives with every prompt or model change: did this make
+the reviewer better, worse, or neither?
+
+**What a golden posting asserts.** Only which side of the gate it
+belongs on. Not a score. A score is model-dependent, so an expected
+score would have to be rewritten every time the model changed, and that
+rewriting is precisely how a regression hides: the number moves, the
+expectation moves with it, and nothing looks wrong. "This posting is a
+real fit" is a claim about the world and stays true when the model does
+not.
+
+**Three measurements, because one is not enough** (`internal/jd/evaluate.go`):
+
+- **Gate accuracy.** How many landed on the expected side. Coarse: a
+  set can read 100 % while every score creeps toward the threshold.
+- **Inversions.** Pairs where a posting expected below outscored one
+  expected above. Worse than a gate miss, because a gate can be moved
+  and an inversion cannot be fixed by moving it. There is no threshold
+  that separates an inverted pair.
+- **Margin.** The smallest gap between the two groups. This is the one
+  that gives warning: it shrinks for several changes before any posting
+  actually crosses, so a collapse announces itself instead of arriving
+  as a sudden failure.
+
+Failed postings are excluded from all three rather than counted as
+zero. Scoring a failure as 0.0 would push the margin negative and report
+a regression that did not happen.
+
+**Same pipeline, flagged.** An evaluation creates real submissions and
+runs them through the ordinary path, because a test that takes a
+different path tests a different thing. They carry `is_eval`, which
+keeps them out of the submission list and stops the owner being emailed
+once per posting. Their runs, decisions and model calls are recorded
+like any other, so an evaluation result opens into the same derivation
+view as a real submission, and its decisions are extra labelled data.
+
+**Verified locally** on the stub provider, which scores by retrieval
+only: two postings, the fit one at 0.048 and the unrelated one at 0.038.
+One of two on the expected side, zero inversions, margin +0.010. That
+is the correct reading: the ordering is right, both sit far below the
+0.55 gate because retrieval alone cannot separate them, and the three
+numbers say exactly that rather than collapsing it into a pass or fail.
+
+**Next.** Add the real calibration postings on production, run one
+evaluation to set the baseline, and from then on run one before and one
+after every prompt or model change. That pair is the evidence.
