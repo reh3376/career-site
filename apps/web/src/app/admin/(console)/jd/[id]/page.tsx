@@ -68,6 +68,11 @@ type Judgment = {
   verdict: string;
   evidence_ids?: number[];
   rationale?: string;
+  // Set when code weakened the model's verdict, with the reason. An
+  // adjustment nobody can see is indistinguishable from the model
+  // having said so itself.
+  adjusted?: string;
+  stated_span_years?: number;
 };
 type Assessment = {
   requirements?: Requirement[];
@@ -261,6 +266,11 @@ export default async function AdminJdDetailPage({
                   <p className="mt-1 text-sm text-ink">{req.text}</p>
                   {j?.rationale ? (
                     <p className="mt-1 text-xs text-ink-3">{j.rationale}</p>
+                  ) : null}
+                  {j?.adjusted ? (
+                    <p className="mt-1 border-l-2 border-signal pl-2 text-xs text-ink-2">
+                      downgraded in code: {j.adjusted}
+                    </p>
                   ) : null}
                 </li>
               );

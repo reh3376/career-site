@@ -67,6 +67,10 @@ type rawJudgment struct {
 	Verdict       string   `json:"verdict"`
 	EvidenceIDs   []string `json:"evidence_ids"`
 	Rationale     string   `json:"rationale"`
+	// StatedSpanYears is what the evidence says about duration, reported
+	// by the model rather than judged by it. The comparison against what
+	// the requirement asks for happens in duration.go.
+	StatedSpanYears float64 `json:"stated_span_years"`
 }
 
 // callResult is what one gateway call returned, kept for the ledger
@@ -85,6 +89,14 @@ type Judgment struct {
 	Verdict       string  `json:"verdict"` // met | partial | unmet
 	EvidenceIDs   []int64 `json:"evidence_ids"`
 	Rationale     string  `json:"rationale"`
+	// StatedSpanYears is the duration the model found in the evidence,
+	// kept whether or not it mattered, so a reader can see what the
+	// comparison was made against.
+	StatedSpanYears float64 `json:"stated_span_years,omitempty"`
+	// Adjusted explains a verdict that code weakened, and is empty when
+	// the model's verdict stood. An adjustment that cannot be read is
+	// indistinguishable from the model having said so itself.
+	Adjusted string `json:"adjusted,omitempty"`
 }
 
 // Assessment is the auditable record behind a match score: what the
@@ -291,6 +303,12 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	progress.report(76, "computing the score")
 	rawByReq := map[string]rawJudgment{}
 	byReq := map[string]Judgment{}
+	// The requirement's own text is what says how many years it asks
+	// for, so the duration rule needs it alongside the verdict.
+	reqByID := make(map[string]prompts.Requirement, len(reqs))
+	for _, r := range reqs {
+		reqByID[r.ID] = r
+	}
 	for _, j := range all {
 		if _, dup := rawByReq[j.RequirementID]; !dup {
 			rawByReq[j.RequirementID] = j
@@ -318,11 +336,21 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		if verdict == "unmet" {
 			ids = nil
 		}
+		// Duration is decided here, not by the judge. Three prompt
+		// versions failed to teach a small model to check a span before
+		// answering "met"; it reports the span it found and this applies
+		// the comparison. See duration.go.
+		adjusted := ""
+		if req, ok := reqByID[j.RequirementID]; ok {
+			verdict, adjusted = applyDurationRule(req.Text, verdict, j.StatedSpanYears)
+		}
 		byReq[j.RequirementID] = Judgment{
-			RequirementID: j.RequirementID,
-			Verdict:       verdict,
-			EvidenceIDs:   ids,
-			Rationale:     truncErr(strings.TrimSpace(j.Rationale)),
+			RequirementID:   j.RequirementID,
+			Verdict:         verdict,
+			EvidenceIDs:     ids,
+			Rationale:       truncErr(strings.TrimSpace(j.Rationale)),
+			StatedSpanYears: j.StatedSpanYears,
+			Adjusted:        adjusted,
 		}
 	}
 
