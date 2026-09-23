@@ -257,6 +257,31 @@ Still open:
   citations, guardrails, on the same gateway and decision log as the JD
   reviewer. Sized to the CPX31 with the 4b model.
 
+## 6a. What the reviewer answers, and what it does not
+
+Settled 2026-09-23. The JD reviewer answers one question: **does the
+candidate have the skill set to do this job.** Nothing else.
+
+Whether a role suits the person, salary range, location, full-time
+against contract, seniority, is a separate layer and a different kind
+of problem. Those are constraints the candidate states once and a
+posting either satisfies or does not. They are parameter filters. They
+need no model, no evidence, and no judgment, and running them through
+an LLM would be slower, dearer and less reliable than a WHERE clause.
+
+Two consequences worth holding on to:
+
+- A posting well below the candidate's level still scores high, because
+  he can plainly do it. That is correct, not a bug. The seniority
+  mismatch belongs to the filter layer.
+- Golden-set labels answer the capability question only. A label that
+  means "I would not take this job" would be measuring something the
+  reviewer was never asked to judge.
+
+**Not being built now.** The candidate-side constraint filter is
+deferred deliberately. When it comes it is a form, a few columns and a
+query, and it should stay that way.
+
 ## 6b. Evaluation roadmap
 
 From an external review of the go-to-market response

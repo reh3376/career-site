@@ -137,9 +137,10 @@ function LabelForm({ id }: { id: string }) {
     >
       <input type="hidden" name="id" value={id} />
       <p className="text-sm text-ink-2">
-        Read it, then say which side of the gate it belongs on. This is the
-        claim every future evaluation is measured against, so it is worth the
-        minute.
+        One question only: does the candidate have the skill set to do this job?
+        Not whether the level, the pay, the location or the hours suit him,
+        which are parameter filters and not this system&rsquo;s business. A role
+        well below his level still gets a yes if he can do it.
       </p>
       <label className="mt-2 block">
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-4">
@@ -152,8 +153,8 @@ function LabelForm({ id }: { id: string }) {
         />
       </label>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Choice value="above" label="A real fit (above)" />
-        <Choice value="below" label="Not a fit (below)" />
+        <Choice value="above" label="Yes, he can do it" />
+        <Choice value="below" label="No, he cannot" />
         {state.error ? (
           <span className="text-sm text-danger">{state.error}</span>
         ) : null}

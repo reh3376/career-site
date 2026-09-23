@@ -76,10 +76,12 @@ export default async function AdminEvalsPage() {
         The golden set.
       </h1>
       <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-2">
-        A fixed group of postings, each with one claim attached: this is a real
-        fit, or it is not. Scoring them all under one configuration says whether
-        a change to a prompt, a model or the corpus made the reviewer better or
-        worse. Without it, a change is just a change.
+        A fixed group of postings, each with one claim attached: the candidate
+        can do this job, or he cannot. Only capability, never whether the level,
+        pay, location or hours suit him, which are parameter filters and not
+        this system&rsquo;s business. Scoring them all under one configuration
+        says whether a change to a prompt, a model or the corpus made the
+        reviewer better or worse. Without it, a change is just a change.
       </p>
 
       <div className="mt-8 space-y-6">

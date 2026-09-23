@@ -28,15 +28,15 @@ export function GoldenForm() {
           />
           <label className="block">
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-4">
-              belongs
+              can he do this job?
             </span>
             <select
               name="expected_gate"
               defaultValue="above"
               className="mt-1 block w-full border border-line bg-canvas px-3 py-2 text-sm text-ink"
             >
-              <option value="above">Above the gate (a real fit)</option>
-              <option value="below">Below the gate (not a fit)</option>
+              <option value="above">Yes, he has the skill set</option>
+              <option value="below">No, he does not</option>
             </select>
           </label>
           <Field
