@@ -1214,3 +1214,47 @@ failed on the first run of the tests, which is why it is now handled;
 containment alone never matches an acronym against its expansion.
 Acronym matching is capped at five words, beyond which shared initials
 are coincidence rather than a name anyone uses.
+
+## 2026-09-23: the golden set can now surprise us
+
+Both postings in the set were chosen by the owner, and one of them was
+a job he had applied for, so its expected outcome was his application
+decision restated. A set like that can confirm what he already believes
+and cannot produce an unwelcome result, which means it was not
+measuring anything.
+
+**What shipped** (migration 00030):
+
+- `selection` on each posting: `chosen` (the owner picked it) or
+  `random` (drawn from a search without picking for a known answer),
+  plus `source` so a row can be traced back when a link dies.
+- `expected_gate` may now be empty, which is the unlabelled state. A
+  random posting arrives that way on purpose. Evaluations skip
+  unlabelled postings rather than guessing, and say so rather than
+  reporting an empty set.
+- `LabelGoldenPosting`, separate from the upsert, so recording a
+  judgment does not mean resending the posting text.
+- The console shows each posting's **full text** behind a disclosure,
+  with a label control on the unlabelled ones. This was the missing
+  piece: the owner asked for it directly, and he was right, because
+  labelling a posting you cannot read is guessing with extra steps.
+
+**Three random postings loaded**, from web searches in adjacent fields,
+taken in the order the results came back rather than picked:
+
+| posting | why it is interesting |
+|---|---|
+| Process Control Engineer, Dover Chemical | his hands-on wheelhouse, but well below his level |
+| Automation Engineer (GMP), CAI, Limerick | automation, wrong industry and wrong continent |
+| General Manager, commercial manufacturing, Orca Bio | senior site leadership, but 15 years of it in biologics |
+
+None of the three has an obvious answer, which is the point. Two are
+rendered from the page rather than byte-verbatim, which the `source`
+field records; the Dover one is extracted from the original PDF and is
+verbatim.
+
+**Still to do before this pays off.** The owner labels them, the set
+grows toward ten, and calibration is reported separately for chosen and
+random postings. A gate that is clean on chosen postings and noisy on
+random ones is the most useful thing the set can tell us, and averaging
+the two together would hide exactly that.

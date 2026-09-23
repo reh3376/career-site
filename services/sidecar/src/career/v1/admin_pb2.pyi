@@ -1158,7 +1158,7 @@ class RecordJdFeedbackResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class GoldenPosting(_message.Message):
-    __slots__ = ("id", "name", "jd_text", "role_hint", "employer_hint", "expected_gate", "expected_band", "note", "active", "last_score", "last_passed", "last_eval_at")
+    __slots__ = ("id", "name", "jd_text", "role_hint", "employer_hint", "expected_gate", "expected_band", "note", "active", "selection", "source", "last_score", "last_passed", "last_eval_at")
     ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
@@ -1168,6 +1168,8 @@ class GoldenPosting(_message.Message):
     EXPECTED_BAND_FIELD_NUMBER: _ClassVar[int]
     NOTE_FIELD_NUMBER: _ClassVar[int]
     ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    SELECTION_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     LAST_SCORE_FIELD_NUMBER: _ClassVar[int]
     LAST_PASSED_FIELD_NUMBER: _ClassVar[int]
     LAST_EVAL_AT_FIELD_NUMBER: _ClassVar[int]
@@ -1180,10 +1182,12 @@ class GoldenPosting(_message.Message):
     expected_band: str
     note: str
     active: bool
+    selection: str
+    source: str
     last_score: float
     last_passed: bool
     last_eval_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ..., active: _Optional[bool] = ..., last_score: _Optional[float] = ..., last_passed: _Optional[bool] = ..., last_eval_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[int] = ..., name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ..., active: _Optional[bool] = ..., selection: _Optional[str] = ..., source: _Optional[str] = ..., last_score: _Optional[float] = ..., last_passed: _Optional[bool] = ..., last_eval_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class ListGoldenPostingsRequest(_message.Message):
     __slots__ = ("active_only",)
@@ -1198,12 +1202,14 @@ class ListGoldenPostingsResponse(_message.Message):
     def __init__(self, postings: _Optional[_Iterable[_Union[GoldenPosting, _Mapping]]] = ...) -> None: ...
 
 class UpsertGoldenPostingRequest(_message.Message):
-    __slots__ = ("name", "jd_text", "role_hint", "employer_hint", "expected_gate", "expected_band", "note")
+    __slots__ = ("name", "jd_text", "role_hint", "employer_hint", "expected_gate", "selection", "source", "expected_band", "note")
     NAME_FIELD_NUMBER: _ClassVar[int]
     JD_TEXT_FIELD_NUMBER: _ClassVar[int]
     ROLE_HINT_FIELD_NUMBER: _ClassVar[int]
     EMPLOYER_HINT_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_GATE_FIELD_NUMBER: _ClassVar[int]
+    SELECTION_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_BAND_FIELD_NUMBER: _ClassVar[int]
     NOTE_FIELD_NUMBER: _ClassVar[int]
     name: str
@@ -1211,9 +1217,11 @@ class UpsertGoldenPostingRequest(_message.Message):
     role_hint: str
     employer_hint: str
     expected_gate: str
+    selection: str
+    source: str
     expected_band: str
     note: str
-    def __init__(self, name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., jd_text: _Optional[str] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., expected_gate: _Optional[str] = ..., selection: _Optional[str] = ..., source: _Optional[str] = ..., expected_band: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
 
 class UpsertGoldenPostingResponse(_message.Message):
     __slots__ = ("id",)
@@ -1230,6 +1238,20 @@ class SetGoldenActiveRequest(_message.Message):
     def __init__(self, id: _Optional[int] = ..., active: _Optional[bool] = ...) -> None: ...
 
 class SetGoldenActiveResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class LabelGoldenPostingRequest(_message.Message):
+    __slots__ = ("id", "expected_gate", "note")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_GATE_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    expected_gate: str
+    note: str
+    def __init__(self, id: _Optional[int] = ..., expected_gate: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class LabelGoldenPostingResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 

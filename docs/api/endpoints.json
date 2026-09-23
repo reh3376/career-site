@@ -1347,6 +1347,22 @@
     },
     {
       "service": "career.v1.AdminService",
+      "method": "LabelGoldenPosting",
+      "path": "/api/career.v1.AdminService/LabelGoldenPosting",
+      "grpc_full_method": "/career.v1.AdminService/LabelGoldenPosting",
+      "internal": false,
+      "request": "career.v1.LabelGoldenPostingRequest",
+      "response": "career.v1.LabelGoldenPostingResponse",
+      "summary": "Records which side of the gate a posting belongs on.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.AdminService",
       "method": "ListEvalRuns",
       "path": "/api/career.v1.AdminService/ListEvalRuns",
       "grpc_full_method": "/career.v1.AdminService/ListEvalRuns",

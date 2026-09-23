@@ -22,11 +22,19 @@ type GoldenPosting struct {
 	JdText       string
 	RoleHint     string
 	EmployerHint string
-	ExpectedGate string // above | below
+	// ExpectedGate is "above", "below", or "" when nobody has labelled
+	// it yet. Unlabelled postings are skipped by evaluations rather than
+	// guessed at.
+	ExpectedGate string
 	ExpectedBand string // advisory
 	Note         string
-	Active       bool
-	CreatedAt    time.Time
+	// Selection is "chosen" or "random": how the posting got into the
+	// set. Reported apart, because a gate that is clean on chosen
+	// postings and noisy on random ones is the finding that matters.
+	Selection string
+	Source    string
+	Active    bool
+	CreatedAt time.Time
 	// LastScore and LastEvalAt come from the newest evaluation that
 	// scored it, for the list view.
 	LastScore  *float64
@@ -39,8 +47,8 @@ func (r *Repo) UpsertGoldenPosting(ctx context.Context, g GoldenPosting) (int64,
 	var id int64
 	err := r.pool.QueryRow(ctx, `
     INSERT INTO golden_postings
-      (tenant_id, name, jd_text, role_hint, employer_hint, expected_gate, expected_band, note, active)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      (tenant_id, name, jd_text, role_hint, employer_hint, expected_gate, expected_band, note, active, selection, source)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     ON CONFLICT (tenant_id, name) DO UPDATE SET
       jd_text = EXCLUDED.jd_text,
       role_hint = EXCLUDED.role_hint,
@@ -48,10 +56,12 @@ func (r *Repo) UpsertGoldenPosting(ctx context.Context, g GoldenPosting) (int64,
       expected_gate = EXCLUDED.expected_gate,
       expected_band = EXCLUDED.expected_band,
       note = EXCLUDED.note,
-      active = EXCLUDED.active
+      active = EXCLUDED.active,
+      selection = EXCLUDED.selection,
+      source = EXCLUDED.source
     RETURNING id`,
 		tenant.FromContext(ctx).Int64(), g.Name, g.JdText, g.RoleHint, g.EmployerHint,
-		g.ExpectedGate, g.ExpectedBand, g.Note, g.Active).Scan(&id)
+		g.ExpectedGate, g.ExpectedBand, g.Note, g.Active, g.Selection, g.Source).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("upsert golden posting: %w", err)
 	}
@@ -69,12 +79,33 @@ func (r *Repo) SetGoldenActive(ctx context.Context, id int64, active bool) error
 	return nil
 }
 
+// LabelGoldenPosting records which side of the gate a posting belongs
+// on. Kept separate from the upsert so a label does not require
+// resending the posting, and so the unlabelled state is one the console
+// can act on rather than a gap to be filled by guessing.
+func (r *Repo) LabelGoldenPosting(ctx context.Context, id int64, gate, note string) error {
+	tag, err := r.pool.Exec(ctx, `
+    UPDATE golden_postings
+       SET expected_gate = $2,
+           note = CASE WHEN $3 = '' THEN note
+                       WHEN note = '' THEN $3
+                       ELSE note || ' | ' || $3 END
+     WHERE id = $1`, id, gate, note)
+	if err != nil {
+		return fmt.Errorf("label golden posting: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // ListGoldenPostings returns the set with each posting's most recent
 // result attached.
 func (r *Repo) ListGoldenPostings(ctx context.Context, activeOnly bool) ([]GoldenPosting, error) {
 	rows, err := r.pool.Query(ctx, `
     SELECT g.id, g.name, g.jd_text, g.role_hint, g.employer_hint,
-           g.expected_gate, g.expected_band, g.note, g.active, g.created_at,
+           g.expected_gate, g.expected_band, g.note, g.selection, g.source, g.active, g.created_at,
            last.match_score, last.passed, last.created_at
       FROM golden_postings g
       LEFT JOIN LATERAL (
@@ -82,7 +113,7 @@ func (r *Repo) ListGoldenPostings(ctx context.Context, activeOnly bool) ([]Golde
           FROM eval_items i WHERE i.golden_id = g.id
          ORDER BY i.id DESC LIMIT 1
       ) last ON true
-     WHERE g.tenant_id = $1 AND ($2 = false OR g.active)
+     WHERE g.tenant_id = $1 AND ($2 = false OR (g.active AND g.expected_gate <> ''))
      ORDER BY g.expected_gate DESC, g.name`,
 		tenant.FromContext(ctx).Int64(), activeOnly)
 	if err != nil {
@@ -94,7 +125,7 @@ func (r *Repo) ListGoldenPostings(ctx context.Context, activeOnly bool) ([]Golde
 	for rows.Next() {
 		var g GoldenPosting
 		if err := rows.Scan(&g.ID, &g.Name, &g.JdText, &g.RoleHint, &g.EmployerHint,
-			&g.ExpectedGate, &g.ExpectedBand, &g.Note, &g.Active, &g.CreatedAt,
+			&g.ExpectedGate, &g.ExpectedBand, &g.Note, &g.Selection, &g.Source, &g.Active, &g.CreatedAt,
 			&g.LastScore, &g.LastPassed, &g.LastEvalAt); err != nil {
 			return nil, fmt.Errorf("list golden postings: scan: %w", err)
 		}

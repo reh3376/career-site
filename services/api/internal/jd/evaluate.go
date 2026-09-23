@@ -52,7 +52,11 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 		return "", fmt.Errorf("read the golden set: %w", err)
 	}
 	if len(set) == 0 {
-		return "", fmt.Errorf("the golden set is empty; add postings first")
+		// ListGoldenPostings(active only) already excludes unlabelled
+		// postings: an evaluation compares against an expectation, and a
+		// posting nobody has judged has none. Say that, rather than
+		// reporting an empty set when there are postings sitting there.
+		return "", fmt.Errorf("no labelled postings to evaluate; label the ones waiting on /admin/evals first")
 	}
 
 	threshold := e.scorer.Threshold()

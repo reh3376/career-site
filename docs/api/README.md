@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 50 |
+| [`AdminService`](#adminservice) | Owner console. | 51 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1652,6 +1652,7 @@ Owner console.
 | [`ListGoldenPostings`](#adminservice-listgoldenpostings) | `/api/career.v1.AdminService/ListGoldenPostings` | Admin (fresh MFA) | default | `ListGoldenPostingsRequest` → `ListGoldenPostingsResponse` | Lists the golden set: fixed postings with a stated expectation, re-scored to measure whether a prompt or model change helped. |
 | [`UpsertGoldenPosting`](#adminservice-upsertgoldenposting) | `/api/career.v1.AdminService/UpsertGoldenPosting` | Admin (fresh MFA) | default | `UpsertGoldenPostingRequest` → `UpsertGoldenPostingResponse` | Adds or replaces a golden posting, keyed by name. |
 | [`SetGoldenActive`](#adminservice-setgoldenactive) | `/api/career.v1.AdminService/SetGoldenActive` | Admin (fresh MFA) | default | `SetGoldenActiveRequest` → `SetGoldenActiveResponse` | Retires or restores a golden posting. |
+| [`LabelGoldenPosting`](#adminservice-labelgoldenposting) | `/api/career.v1.AdminService/LabelGoldenPosting` | Admin (fresh MFA) | default | `LabelGoldenPostingRequest` → `LabelGoldenPostingResponse` | Records which side of the gate a posting belongs on. |
 | [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
 | [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
 | [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
@@ -3036,7 +3037,9 @@ Adds or replaces a golden posting, keyed by name.
 | `jdText` | `string` | string | `string: min_len: 40 max_len: 50000` | The posting text. |
 | `roleHint` | `string` | string | `string: max_len: 200` | Role hint. |
 | `employerHint` | `string` | string | `string: max_len: 200` | Employer hint. |
-| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above | below. |
+| `expectedGate` | `string` | string | `string: max_len: 8` | above, below, or empty to add it unlabelled for review later. |
+| `selection` | `string` | string | `string: max_len: 16` | chosen or random; defaults to chosen. |
+| `source` | `string` | string | `string: max_len: 500` | Where the posting came from. |
 | `expectedBand` | `string` | string | `string: max_len: 20` | Advisory band. |
 | `note` | `string` | string | `string: max_len: 2000` | Why it is in the set. |
 
@@ -3055,6 +3058,8 @@ Adds or replaces a golden posting, keyed by name.
   "roleHint": "string",
   "employerHint": "string",
   "expectedGate": "string",
+  "selection": "string",
+  "source": "string",
   "expectedBand": "string",
   "note": "string"
 }
@@ -3087,6 +3092,38 @@ _No fields; send `{}`._
 {
   "id": "0",
   "active": true
+}
+```
+
+</details>
+
+### AdminService.LabelGoldenPosting
+
+`POST /api/career.v1.AdminService/LabelGoldenPosting` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Records which side of the gate a posting belongs on. Separate from
+the upsert so labelling a posting does not mean resending its text,
+and so an unlabelled posting is a state the console can act on.
+
+**Request** — [`LabelGoldenPostingRequest`](#labelgoldenpostingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above or below. |
+| `note` | `string` | string | `string: max_len: 2000` | Why, in a sentence. Appended to the posting's note. |
+
+**Response** — [`LabelGoldenPostingResponse`](#labelgoldenpostingresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "0",
+  "expectedGate": "string",
+  "note": "string"
 }
 ```
 
@@ -5743,6 +5780,8 @@ change, and that rewriting is how a regression hides.
 | `expectedBand` | `string` | string |  | Advisory band; not asserted, because band edges are tuned. |
 | `note` | `string` | string |  | Why it is in the set and what it is meant to catch. |
 | `active` | `bool` | boolean |  | Retired postings stay for history and are skipped by new runs. |
+| `selection` | `string` | string |  | chosen (the owner picked it) or random (drawn without reading it first). Reported apart, because a gate clean on chosen postings and noisy on random ones is the finding that matters. |
+| `source` | `string` | string |  | Where the posting came from. |
 | `lastScore` | `double` | number |  | _(oneof `_last_score`)_ Score from the most recent evaluation that included it. |
 | `lastPassed` | `bool` | boolean |  | Whether that evaluation put it on the expected side. |
 | `lastEvalAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation scored it. |
@@ -5773,7 +5812,9 @@ Upsert-golden-posting request. Keyed by name within the tenant.
 | `jdText` | `string` | string | `string: min_len: 40 max_len: 50000` | The posting text. |
 | `roleHint` | `string` | string | `string: max_len: 200` | Role hint. |
 | `employerHint` | `string` | string | `string: max_len: 200` | Employer hint. |
-| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above | below. |
+| `expectedGate` | `string` | string | `string: max_len: 8` | above, below, or empty to add it unlabelled for review later. |
+| `selection` | `string` | string | `string: max_len: 16` | chosen or random; defaults to chosen. |
+| `source` | `string` | string | `string: max_len: 500` | Where the posting came from. |
 | `expectedBand` | `string` | string | `string: max_len: 20` | Advisory band. |
 | `note` | `string` | string | `string: max_len: 2000` | Why it is in the set. |
 
@@ -5797,6 +5838,23 @@ Set-golden-active request.
 ### SetGoldenActiveResponse
 
 Set-golden-active response.
+
+_No fields._
+
+### LabelGoldenPostingRequest
+
+Label-golden-posting request. Labelling is its own call so recording
+a judgment does not mean resending the whole posting text.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Row id. |
+| `expectedGate` | `string` | string | `string: min_len: 1 max_len: 8` | above or below. |
+| `note` | `string` | string | `string: max_len: 2000` | Why, in a sentence. Appended to the posting's note. |
+
+### LabelGoldenPostingResponse
+
+Label-golden-posting response.
 
 _No fields._
 
