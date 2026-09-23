@@ -1258,3 +1258,53 @@ grows toward ten, and calibration is reported separately for chosen and
 random postings. A gate that is clean on chosen postings and noisy on
 random ones is the most useful thing the set can tell us, and averaging
 the two together would hide exactly that.
+
+## 2026-09-23: three labels that never left the browser
+
+The owner labelled the three random postings and asked for an
+evaluation. Production had none of them. Worth recording, because the
+first instinct was to doubt the report rather than the plumbing, and
+the plumbing was at fault.
+
+**What the evidence said.** The production `golden_postings` table had
+all three randoms still at `expected_gate = ''`. The API log for the
+preceding six hours held exactly one `LabelGoldenPosting` call, a
+`{"id":"999999"}` probe sent to test routing, which answered `404
+posting not found`: the endpoint is wired and reachable. There was also
+no page render from the owner's browser in that window, no
+`ListEvalRuns`, nothing. The local database held one label,
+`random-cai-automation-engineer = below`, timestamped during an earlier
+test of the label path and therefore not the owner's.
+
+So the clicks never reached any server. The deployed web image was
+checked directly and does contain the label form and the corrected
+capability wording, which rules out a stale image.
+
+**Most likely cause.** A deploy finished at 18:47:38. A tab opened
+before that holds server action IDs from the previous build, and after
+the containers restart those submissions are discarded rather than run.
+The click looks accepted and nothing happens. The absent page render
+fits: navigating inside the admin console can be served from the client
+router cache without touching the server, so a tab can sit on a build
+that no longer exists. An expired session is the other candidate, since
+`labelGoldenAction` returns "Not signed in." without calling the API,
+and that message renders small enough to miss.
+
+**What this argues for.** Any console control whose failure is silent
+is a control that cannot be trusted to record a judgment. This is the
+second time in this project a review action has been lost quietly; the
+first was the decision vocabulary mismatch that `useActionState` now
+surfaces. The pattern worth keeping: a write that does not land must
+say so where the person is looking, and a deploy that invalidates open
+tabs should not be able to swallow one.
+
+**What shipped.** `StaleBuild` in the admin layout. The layout reads
+the version the API reports at render time and hands it to a client
+component, which re-reads `/api/readyz` on mount, whenever the tab
+becomes visible again, and every two minutes. Web and api roll out
+under one image tag, so a disagreement between the two means the page
+belongs to a deploy that no longer exists. When they disagree a bar
+appears across the top of the console saying so, naming both versions,
+with a reload button. It cannot make a stale submission succeed. It can
+stop one being mistaken for a success, which is the part that cost real
+work here.
