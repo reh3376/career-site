@@ -178,13 +178,13 @@ func NewAssessor(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, c
 // batchRequirements groups requirements so each rendered judgment
 // prompt stays under the context budget. A single oversized
 // requirement still gets its own batch (the renderer caps chunk text).
-func (a *Assessor) batchRequirements(reqs []prompts.Requirement, evidence map[string][]users.CorpusHit) [][]prompts.Requirement {
+func (a *Assessor) batchRequirements(reqs []prompts.Requirement, evidence map[string][]users.CorpusHit, profile []users.CorpusHit) [][]prompts.Requirement {
 	budget := a.numCtx - judgeReserve - prompts.EstimateTokens(prompts.RequirementJudge.System)
 	var batches [][]prompts.Requirement
 	var cur []prompts.Requirement
 	for _, r := range reqs {
 		trial := append(append([]prompts.Requirement{}, cur...), r)
-		if len(cur) >= judgeBatchMax || (len(cur) > 0 && prompts.EstimateTokens(prompts.RenderJudgeUser(trial, evidence)) > budget) {
+		if len(cur) >= judgeBatchMax || (len(cur) > 0 && prompts.EstimateTokens(prompts.RenderJudgeUser(trial, evidence, profile)) > budget) {
 			batches = append(batches, cur)
 			cur = []prompts.Requirement{r}
 			continue
@@ -279,8 +279,21 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	}
 
 	// 3. Judgments, in batches sized to the context window.
+	//
+	// The career facts sheet is fetched once and passed to every judge
+	// call unchanged. It has to be the same chunks in the same order
+	// every time or the shared prefix is not shared and Ollama
+	// re-evaluates the whole prompt on each call. Two chunks today.
+	profile, pErr := a.users.ListChunksByKind(ctx, prompts.ProfileSourceKind, 8)
+	if pErr != nil {
+		// Not fatal: the judge still has the retrieved evidence, it just
+		// pays full prompt evaluation on every call.
+		a.log.Warn("judge: profile chunks unavailable, prefix caching lost",
+			slog.Int64("jd_id", submissionID), slog.String("error", pErr.Error()))
+		profile = nil
+	}
 	var all []rawJudgment
-	batches := a.batchRequirements(reqs, evidence)
+	batches := a.batchRequirements(reqs, evidence, profile)
 	if err := a.checkCapN(ctx, int64(len(batches))); err != nil {
 		return nil, err
 	}
@@ -294,7 +307,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		var judgeDoc struct {
 			Judgments []rawJudgment `json:"judgments"`
 		}
-		user := prompts.RenderJudgeUser(batch, evidence)
+		user := prompts.RenderJudgeUser(batch, evidence, profile)
 		res, err := a.call(ctx, submissionID, prompts.RequirementJudge, user, 1200, &judgeDoc)
 		if err != nil {
 			return nil, fmt.Errorf("judge batch %d/%d: %w", bi+1, len(batches), err)

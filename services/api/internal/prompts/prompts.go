@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -186,7 +187,7 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // model never emits a number.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 6,
+	Version: 7,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -267,23 +268,26 @@ func CapRunes(s string, n int) string {
 // RenderJudgeUser builds the user turn for RequirementJudge: every
 // requirement followed by its own retrieved evidence. Chunk text is
 // capped so a long corpus cannot blow the context window.
-func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit) string {
+func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit, profile []users.CorpusHit) string {
 	var b strings.Builder
-	// Profile chunks (the career facts sheet) come first and once. They
-	// are identical for every call, so with the system prompt they form
-	// a shared prefix that Ollama's prompt cache reuses across the
-	// one-requirement-per-call judge pass; on a CPU box that is most
-	// of the prompt-evaluation cost.
-	seenProfile := map[int64]bool{}
-	var profile []users.CorpusHit
-	for _, r := range reqs {
-		for _, h := range evidence[r.ID] {
-			if h.SourceKind == ProfileSourceKind && !seenProfile[h.Chunk.ID] {
-				seenProfile[h.Chunk.ID] = true
-				profile = append(profile, h)
-			}
-		}
-	}
+	// Profile chunks (the career facts sheet) come first and once, and
+	// are the same chunks in the same order on every call of a run, so
+	// that the system prompt and this block form a prefix that is byte
+	// for byte identical across the fourteen judge calls. Ollama then
+	// reuses its KV cache for that prefix and only evaluates the tail.
+	//
+	// Measured on the production box: a 2,515-token prompt takes 152 s
+	// to evaluate cold and 2 s when the prefix is already cached. That
+	// is the difference between a judge pass of thirty-four minutes and
+	// one of about ten.
+	//
+	// This used to gather the profile chunks out of the retrieved
+	// evidence, which quietly defeated the whole idea: retrieval runs
+	// per requirement, so a different requirement pulled a different
+	// subset of the profile, the prefix diverged on the second call and
+	// nothing was ever reused. The caller now passes the profile
+	// explicitly, sorted, so it cannot depend on what was retrieved.
+	sort.Slice(profile, func(i, j int) bool { return profile[i].Chunk.ID < profile[j].Chunk.ID })
 	if len(profile) > 0 {
 		b.WriteString("<candidate_profile>\n")
 		for _, h := range profile {
