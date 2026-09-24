@@ -1527,3 +1527,62 @@ failures take seconds to reproduce there and neither is visible in a
 diff. The rule worth keeping: a migration is only correct in the order
 goose runs it, against the schema the migrations before it left behind,
 and the only honest way to know that is to replay them.
+
+## 2026-09-24: thirty-four minutes of the fifty were a cache that never hit
+
+Time to a result fails its criterion: median 47.9 minutes against a
+target of 20. A run breaks down as
+
+| prompt | calls | avg | total | tokens in/out |
+|---|---|---|---|---|
+| requirement_judge | 14 | 146.6 s | 34.2 min | 3108 / 131 |
+| resume_tailor | 1 | 763.1 s | 12.7 min | 4845 / 882 |
+| jd_requirements | 1 | 201.8 s | 3.4 min | 1177 / 797 |
+| posting_check | 1 | 34.4 s | 0.6 min | 751 / 33 |
+
+131 output tokens against 3,108 input says the judge is bound by
+prompt evaluation, not generation. The prompt was built to exploit
+that: the career facts sheet is rendered first so that it and the
+system prompt form a prefix Ollama can reuse across the fourteen calls.
+A direct measurement on the box:
+
+```
+call 1: prompt_eval_count=2515  prompt_eval_s=152.1
+call 2: prompt_eval_count=2513  prompt_eval_s=2.0
+call 3: prompt_eval_count=2513  prompt_eval_s=1.7
+```
+
+Seventy-five times faster when the prefix is shared, and the box is
+configured for it: `OLLAMA_NUM_PARALLEL=1`, one loaded model, a thirty
+minute keep-alive.
+
+**It was never being shared.** The profile block was assembled from the
+retrieved evidence, and retrieval runs per requirement, so a different
+requirement pulled a different subset of the profile. The prefix
+diverged on the second call and nothing was ever reused. The comment
+above the code described the intent accurately and the code did not
+implement it, which is the kind of thing that survives review precisely
+because the comment reads as a justification.
+
+**The fix** passes the profile in explicitly, fetched once per run and
+sorted by chunk id, so the block cannot depend on what was retrieved.
+Four tests pin the property: two different requirements must render an
+identical prefix, the order the rows arrive in must not matter, a
+profile chunk that is also retrieved must not print twice, and an
+absent profile must still render.
+
+**What to expect, stated before measuring so it can be wrong.** Call
+one still pays for the full prompt. Calls two to fourteen should pay
+only for the requirement and its evidence, roughly 1,200 tokens rather
+than 3,100. If prompt evaluation dominates as the numbers suggest, the
+judge pass should fall from about thirty-four minutes to somewhere near
+ten, and a run from 50.9 to around 28. That is a large improvement and
+still short of the twenty-minute target, which would then need
+`resume_tailor` addressed next: 12.7 minutes, and unlike the judge it
+is generation-bound at 882 output tokens, so caching will not touch it.
+
+The prompt is version 7. Nothing about what the judge is asked changed,
+but what it is shown did: every requirement now sees the whole facts
+sheet rather than the part retrieval happened to surface. The golden
+set is the check on whether that helps, hurts or does nothing, against
+a baseline of 8 of 8 with a margin of 0.143.
