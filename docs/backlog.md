@@ -243,12 +243,15 @@ posting being resubmitted and nothing else: change a word and it is a
 different key. One submission is roughly an hour of inference and the
 pipeline runs one at a time, so a member pasting distinct postings in a
 loop was a queue nobody else could get into. `JD_DAILY_LIMIT` (default
-5) caps submissions per member per rolling 24 hours, counted from
+3) caps submissions per member per rolling 24 hours, counted from
 `jd_submissions` rather than an in-memory bucket, because the api
 container is recreated several times a day and anything counted in
 memory is enforced only between deploys. Evaluation rows are excluded.
 The admin is exempt. The check fails closed: if the count cannot be
-read, the submission is refused.
+read, the submission is refused. Three rather than five because the cap
+has to bound the window it is measured over: five members at five each
+is 25 reviews, which at the measured pace is more than a day of
+continuous inference, so the queue would outrun the day it fits in.
 
 The allowance is also stated rather than merely enforced. The upload
 page shows what is left before anyone spends it, every submission
