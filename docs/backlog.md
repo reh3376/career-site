@@ -311,7 +311,37 @@ Still open:
   reviewed now that six of them are public and indexed.
 - **Ask Roger (Phase 4).** Retrieval, persona, streaming chat with
   citations, guardrails, on the same gateway and decision log as the JD
-  reviewer. Sized to the CPX31 with the 4b model.
+  reviewer.
+
+  **Architecture decided 2026-09-24: the model does not run on the web
+  server.** It runs on the owner's own machine and serves the web
+  server. That settles the capacity problem rather than working around
+  it: the CPX31 holds one inference lane, a JD review occupies it for
+  close to an hour, and a chat queued behind that is a form, not a
+  chat. Moving inference off the box also means chat is not competing
+  with the reviewer for the 7 GB the box has.
+
+  What that architecture requires, none of which exists yet:
+
+  - **Hours of operation.** The machine is not a server and is not
+    expected to be up at 3 a.m. The site has to know when Ask Roger is
+    meant to be available and say so.
+  - **A heartbeat** between the web server and the machine, so
+    availability is observed rather than assumed. Inside the stated
+    hours with no heartbeat is an outage worth seeing; outside them it
+    is expected.
+  - **A "not currently available" banner** driven by the heartbeat,
+    not by a schedule alone. A visitor should never be given an input
+    box that will fail.
+  - A transport from the web server to a machine behind residential
+    Starlink CGNAT, which gives no inbound connection. The backup
+    design already ran into this and solved it by having the Mac pull;
+    the same constraint applies here and an outbound tunnel held open
+    from the machine is the shape that fits.
+  - Authentication between the two ends, and a rule for what the
+    machine is allowed to be asked for. `internal/corpusscope` already
+    decides what a visitor's question may retrieve.
+  - What happens to a conversation when the heartbeat drops mid-answer.
 
 ## 6a. What the reviewer answers, and what it does not
 
@@ -398,7 +428,20 @@ selected. Report calibration separately for chosen and random: a gate
 that is clean on chosen postings and noisy on random ones is the most
 useful thing the set can tell us. Needs nobody else and costs nothing.
 
-**2. Check that a source supports its bullet (`RR-09`).** Today
+**2. Check that a source supports its bullet (`RR-09`). SHIPPED
+2026-09-24.** A line is now compared against the text of the chunks it
+cites and dropped when it asserts a quantity or a named organisation
+that none of them carry. Checked in code rather than by a model call:
+one call per line would add twenty minutes to a fifty-minute review,
+and fabrication shows up first in the specifics, which is what code can
+check. Tuned to miss rather than over-report, since a missed check
+costs nothing and a false one costs a true line. `unsupported` and
+`unsupported_claims` are recorded on the stored résumé, separately from
+`dropped`, because a model citing nothing and a model citing something
+that does not support the line need different fixes. **Left to do:** no
+generated résumé has been through it yet, so the first real submission
+is the evidence; and the counts are queryable through `/admin/db` but
+have no place in the console. Originally: today
 `jd/resume.go` confirms a cited chunk id was among those offered. It
 never checks that the chunk's text supports the sentence. So "verified"
 currently means "cites something real", not "is supported by what it

@@ -1444,3 +1444,57 @@ posting is text the submitter wrote being fed to that model. Asking the
 model to keep a secret it has been handed is not a control, it is a
 hope. The same reasoning as duration and relationship: the model
 reports, the code decides.
+
+## 2026-09-24: a citation is not evidence
+
+`jd/resume.go` called a line verified when its cited chunk id was among
+the ids offered to the model. That catches an invented citation and
+nothing else. A line could cite a real document that says nothing like
+it and still be printed on a résumé sent to an employer, with a
+citation attached, which is precisely what stops a reader checking.
+
+**What now has to hold.** Every line is compared against the text of
+the chunks it cites, and dropped when it asserts something they do not
+carry:
+
+- a quantity in the line that appears in none of its sources;
+- a named organisation in the line that appears in none of its sources.
+
+Nothing else. "Led the team through a difficult migration" is not
+checkable this way and passes untouched. Pretending otherwise would
+drop true lines to look rigorous.
+
+**Why this is code and not a model call.** One judging call per line
+would add roughly twenty minutes to a review that already takes fifty.
+The duration and relationship rules established the cheaper lesson
+earlier this week: prose instruction to the model changed nothing
+measurable, structure in code changed the score. Fabrication shows up
+first in the specifics, and specifics are what code can check.
+
+**Tuned to miss rather than over-report.** A missed check costs a check
+that would have passed; a false one costs a true line. Three rules
+follow from that, and each came from a test that failed first:
+
+- A token carrying letters is hardware, not a quantity. `S7-1500` read
+  as a claim of 1500 on a line that was entirely true.
+- A token carrying digits is hardware, not an employer, for the same
+  reason on the same line.
+- The first word of a line is capitalised because it is first. A
+  capitalised run that starts the line drops its first word, so
+  "Commissioned Acme Steel controls" is checked on "Acme Steel". A
+  company that opens a sentence goes unchecked, which is the cheaper
+  error.
+
+Acronym matching is shared with the relationship rule, so AWS and
+Amazon Web Services are one employer here too, in both directions.
+
+**What is recorded.** `unsupported` counts the lines removed and
+`unsupported_claims` says what each asserted, both in the stored résumé
+JSON. They are deliberately separate from `dropped`, which counts lines
+with no usable citation at all: a model citing nothing and a model
+citing something that does not say what it claims argue for different
+fixes.
+
+**Not yet measured.** No generated résumé has been through this. The
+next real submission is the first evidence of whether it drops nothing,
+something, or too much, and the count is the thing to look at.
