@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getJdBands } from "@/lib/jd-bands";
+import { getReviewerStatus } from "@/lib/reviewer-status";
 import { getSessionCookie } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HowAskRogerWorksPage() {
   const bands = await getJdBands(await getSessionCookie());
+  const status = await getReviewerStatus();
   const veryStrong = bands.veryStrong.toFixed(2);
   const strong = bands.strong.toFixed(2);
   const possible = bands.possible.toFixed(2);
@@ -228,6 +230,60 @@ export default async function HowAskRogerWorksPage() {
             nothing above reads as a claim about something that exists.
           </p>
         </div>
+
+        {status ? (
+          <div className="mt-8 border-l-2 border-line pl-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              where that stands today
+            </p>
+            <dl className="mt-4 space-y-4 text-sm leading-relaxed text-ink-2">
+              <div>
+                <dt className="text-ink">
+                  {status.agreementPct.toFixed(1)}% agreement, over{" "}
+                  {status.graded} verdicts Roger has graded by hand
+                </dt>
+                <dd className="mt-1 text-ink-3">
+                  {status.hardDisagreements === 0
+                    ? "No outright disagreements."
+                    : `${status.hardDisagreements} outright ${
+                        status.hardDisagreements === 1
+                          ? "disagreement"
+                          : "disagreements"
+                      }, of which ${status.tooHarsh} were the reviewer refusing to credit work he can evidence and ${status.tooGenerous} were it crediting work he cannot.`}{" "}
+                  The second number is the one that would matter to you, and
+                  it is published whatever it says.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-ink">
+                  {status.gateCorrect} of {status.scored} postings on the
+                  expected side of the gate
+                  {status.inversions === 0
+                    ? ", with no inversions"
+                    : `, with ${status.inversions} inversions`}
+                </dt>
+                <dd className="mt-1 text-ink-3">
+                  From a set of {status.postings} job descriptions,{" "}
+                  {status.postingsRandom} of them drawn at random from job
+                  boards rather than picked.
+                  {status.margin !== undefined
+                    ? ` The closest the two groups came was ${status.margin.toFixed(3)}.`
+                    : ""}
+                  {status.evaluatedAt
+                    ? ` Last run ${new Date(status.evaluatedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}`
+                    : ""}
+                  {status.model ? ` on ${status.model}.` : "."}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-4 text-sm leading-relaxed text-ink-3">
+              These are read live from the same tables Roger reads. They are
+              not a good look on purpose; they are the numbers, and a claim
+              to be honest about evidence is worth less than the figures it
+              is currently failing on.
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-14 border-t border-line pt-10">

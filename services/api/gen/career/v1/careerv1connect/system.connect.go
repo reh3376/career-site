@@ -48,6 +48,9 @@ const (
 	// SystemServiceGetGovernanceStatusProcedure is the fully-qualified name of the SystemService's
 	// GetGovernanceStatus RPC.
 	SystemServiceGetGovernanceStatusProcedure = "/career.v1.SystemService/GetGovernanceStatus"
+	// SystemServiceGetReviewerStatusProcedure is the fully-qualified name of the SystemService's
+	// GetReviewerStatus RPC.
+	SystemServiceGetReviewerStatusProcedure = "/career.v1.SystemService/GetReviewerStatus"
 )
 
 // SystemServiceClient is a client for the career.v1.SystemService service.
@@ -58,6 +61,12 @@ type SystemServiceClient interface {
 	// built" page: UxTS frameworks, spec counts, last verification, pass rate,
 	// and hash-integrity summary, read from the reports CI publishes.
 	GetGovernanceStatus(context.Context, *connect.Request[v1.GetGovernanceStatusRequest]) (*connect.Response[v1.GetGovernanceStatusResponse], error)
+	// Returns how the JD reviewer is currently measuring, for the public
+	// "How Ask Roger works" page: agreement with the owner's own grading,
+	// and the last evaluation of the fixed posting set. Read from the
+	// same views the admin gate reads, so the public page cannot quote a
+	// number the owner is not also looking at.
+	GetReviewerStatus(context.Context, *connect.Request[v1.GetReviewerStatusRequest]) (*connect.Response[v1.GetReviewerStatusResponse], error)
 }
 
 // NewSystemServiceClient constructs a client for the career.v1.SystemService service. By default,
@@ -83,6 +92,12 @@ func NewSystemServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(systemServiceMethods.ByName("GetGovernanceStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		getReviewerStatus: connect.NewClient[v1.GetReviewerStatusRequest, v1.GetReviewerStatusResponse](
+			httpClient,
+			baseURL+SystemServiceGetReviewerStatusProcedure,
+			connect.WithSchema(systemServiceMethods.ByName("GetReviewerStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -90,6 +105,7 @@ func NewSystemServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 type systemServiceClient struct {
 	getVersion          *connect.Client[v1.GetVersionRequest, v1.GetVersionResponse]
 	getGovernanceStatus *connect.Client[v1.GetGovernanceStatusRequest, v1.GetGovernanceStatusResponse]
+	getReviewerStatus   *connect.Client[v1.GetReviewerStatusRequest, v1.GetReviewerStatusResponse]
 }
 
 // GetVersion calls career.v1.SystemService.GetVersion.
@@ -102,6 +118,11 @@ func (c *systemServiceClient) GetGovernanceStatus(ctx context.Context, req *conn
 	return c.getGovernanceStatus.CallUnary(ctx, req)
 }
 
+// GetReviewerStatus calls career.v1.SystemService.GetReviewerStatus.
+func (c *systemServiceClient) GetReviewerStatus(ctx context.Context, req *connect.Request[v1.GetReviewerStatusRequest]) (*connect.Response[v1.GetReviewerStatusResponse], error) {
+	return c.getReviewerStatus.CallUnary(ctx, req)
+}
+
 // SystemServiceHandler is an implementation of the career.v1.SystemService service.
 type SystemServiceHandler interface {
 	// Returns the deployed version and build metadata.
@@ -110,6 +131,12 @@ type SystemServiceHandler interface {
 	// built" page: UxTS frameworks, spec counts, last verification, pass rate,
 	// and hash-integrity summary, read from the reports CI publishes.
 	GetGovernanceStatus(context.Context, *connect.Request[v1.GetGovernanceStatusRequest]) (*connect.Response[v1.GetGovernanceStatusResponse], error)
+	// Returns how the JD reviewer is currently measuring, for the public
+	// "How Ask Roger works" page: agreement with the owner's own grading,
+	// and the last evaluation of the fixed posting set. Read from the
+	// same views the admin gate reads, so the public page cannot quote a
+	// number the owner is not also looking at.
+	GetReviewerStatus(context.Context, *connect.Request[v1.GetReviewerStatusRequest]) (*connect.Response[v1.GetReviewerStatusResponse], error)
 }
 
 // NewSystemServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -131,12 +158,20 @@ func NewSystemServiceHandler(svc SystemServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(systemServiceMethods.ByName("GetGovernanceStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	systemServiceGetReviewerStatusHandler := connect.NewUnaryHandler(
+		SystemServiceGetReviewerStatusProcedure,
+		svc.GetReviewerStatus,
+		connect.WithSchema(systemServiceMethods.ByName("GetReviewerStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.SystemService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SystemServiceGetVersionProcedure:
 			systemServiceGetVersionHandler.ServeHTTP(w, r)
 		case SystemServiceGetGovernanceStatusProcedure:
 			systemServiceGetGovernanceStatusHandler.ServeHTTP(w, r)
+		case SystemServiceGetReviewerStatusProcedure:
+			systemServiceGetReviewerStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -152,4 +187,8 @@ func (UnimplementedSystemServiceHandler) GetVersion(context.Context, *connect.Re
 
 func (UnimplementedSystemServiceHandler) GetGovernanceStatus(context.Context, *connect.Request[v1.GetGovernanceStatusRequest]) (*connect.Response[v1.GetGovernanceStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.SystemService.GetGovernanceStatus is not implemented"))
+}
+
+func (UnimplementedSystemServiceHandler) GetReviewerStatus(context.Context, *connect.Request[v1.GetReviewerStatusRequest]) (*connect.Response[v1.GetReviewerStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.SystemService.GetReviewerStatus is not implemented"))
 }

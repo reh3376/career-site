@@ -29,6 +29,15 @@ service SystemService {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
     option (career.v1.rate_limit_per_minute) = 60;
   }
+  // Returns how the JD reviewer is currently measuring, for the public
+  // "How Ask Roger works" page: agreement with the owner's own grading,
+  // and the last evaluation of the fixed posting set. Read from the
+  // same views the admin gate reads, so the public page cannot quote a
+  // number the owner is not also looking at.
+  rpc GetReviewerStatus(GetReviewerStatusRequest) returns (GetReviewerStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
 }
 
 // Empty.
@@ -83,4 +92,53 @@ message GetGovernanceStatusResponse {
   string commit = 2;
   // When the summary was published.
   google.protobuf.Timestamp published_at = 3;
+}
+
+// Empty.
+message GetReviewerStatusRequest {}
+
+// How the reviewer is measuring, in the two ways that can be stated
+// without describing anyone's private material.
+//
+// Everything here is already visible to the owner on /admin/gate. The
+// point of publishing it is that a claim about a reviewer being honest
+// is worth less than the numbers it is failing on.
+message GetReviewerStatusResponse {
+  // Verdicts the owner has graded and that could be graded (he can also
+  // answer "not enough evidence to judge", which is excluded here).
+  int32 graded = 1;
+  // Of those, how many he agreed with.
+  int32 agreed = 2;
+  // Agreement as a percentage, to one decimal place.
+  double agreement_pct = 3;
+  // Disagreements where the model said met and he said unmet, or the
+  // reverse. Counted apart from the softer kind because they mean the
+  // model was wrong rather than unsure.
+  int32 hard_disagreements = 4;
+  // Of the hard disagreements, how many were the model refusing to
+  // credit something he can evidence. The opposite direction, crediting
+  // what he cannot evidence, is the one that would matter to an
+  // employer.
+  int32 too_harsh = 5;
+  // Of the hard disagreements, how many were the model crediting
+  // something he says is not evidenced.
+  int32 too_generous = 6;
+  // Postings in the fixed evaluation set.
+  int32 postings = 7;
+  // How many of those were drawn at random from job boards rather than
+  // chosen by the owner.
+  int32 postings_random = 8;
+  // Postings scored in the last completed evaluation.
+  int32 scored = 9;
+  // How many landed on the side the owner said they should.
+  int32 gate_correct = 10;
+  // Pairs where a posting he said he could not do outscored one he said
+  // he could. Moving the threshold cannot fix one of these.
+  int32 inversions = 11;
+  // The gap between the two groups. Absent when one side is empty.
+  optional double margin = 12;
+  // When that evaluation ran.
+  google.protobuf.Timestamp evaluated_at = 13;
+  // The model that produced it.
+  string model = 14;
 }

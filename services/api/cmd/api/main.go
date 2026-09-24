@@ -271,6 +271,8 @@ func main() {
 		Activity: activityHandler,
 		Jd:       jdHandler,
 		Events:   eventsHandler,
+		// The public "how it works" page reads the same views the gate does.
+		Users: userRepo,
 	})
 
 	// Expiry + auto-decline jobs run in-process; interval configurable so

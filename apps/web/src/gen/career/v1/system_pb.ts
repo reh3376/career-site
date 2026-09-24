@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/system.proto.
  */
 export const file_career_v1_system: GenFile = /*@__PURE__*/
-  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wMtQBCg1TeXN0ZW1TZXJ2aWNlElMKCkdldFZlcnNpb24SHC5jYXJlZXIudjEuR2V0VmVyc2lvblJlcXVlc3QaHS5jYXJlZXIudjEuR2V0VmVyc2lvblJlc3BvbnNlIgiAtRgBkLUYPBJuChNHZXRHb3Zlcm5hbmNlU3RhdHVzEiUuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXF1ZXN0GiYuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDxCpQEKDWNvbS5jYXJlZXIudjFCC1N5c3RlbVByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhoKGEdldFJldmlld2VyU3RhdHVzUmVxdWVzdCLdAgoZR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZRIOCgZncmFkZWQYASABKAUSDgoGYWdyZWVkGAIgASgFEhUKDWFncmVlbWVudF9wY3QYAyABKAESGgoSaGFyZF9kaXNhZ3JlZW1lbnRzGAQgASgFEhEKCXRvb19oYXJzaBgFIAEoBRIUCgx0b29fZ2VuZXJvdXMYBiABKAUSEAoIcG9zdGluZ3MYByABKAUSFwoPcG9zdGluZ3NfcmFuZG9tGAggASgFEg4KBnNjb3JlZBgJIAEoBRIUCgxnYXRlX2NvcnJlY3QYCiABKAUSEgoKaW52ZXJzaW9ucxgLIAEoBRITCgZtYXJnaW4YDCABKAFIAIgBARIwCgxldmFsdWF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBW1vZGVsGA4gASgJQgkKB19tYXJnaW4yvgIKDVN5c3RlbVNlcnZpY2USUwoKR2V0VmVyc2lvbhIcLmNhcmVlci52MS5HZXRWZXJzaW9uUmVxdWVzdBodLmNhcmVlci52MS5HZXRWZXJzaW9uUmVzcG9uc2UiCIC1GAGQtRg8Em4KE0dldEdvdmVybmFuY2VTdGF0dXMSJS5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3QaJi5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlIgiAtRgBkLUYPBJoChFHZXRSZXZpZXdlclN0YXR1cxIjLmNhcmVlci52MS5HZXRSZXZpZXdlclN0YXR1c1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDxCpQEKDWNvbS5jYXJlZXIudjFCC1N5c3RlbVByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Empty.
@@ -223,6 +223,147 @@ export const GetGovernanceStatusResponseSchema: GenMessage<GetGovernanceStatusRe
   messageDesc(file_career_v1_system, 4);
 
 /**
+ * Empty.
+ *
+ * @generated from message career.v1.GetReviewerStatusRequest
+ */
+export type GetReviewerStatusRequest = Message<"career.v1.GetReviewerStatusRequest"> & {
+};
+
+/**
+ * Describes the message career.v1.GetReviewerStatusRequest.
+ * Use `create(GetReviewerStatusRequestSchema)` to create a new message.
+ */
+export const GetReviewerStatusRequestSchema: GenMessage<GetReviewerStatusRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_system, 5);
+
+/**
+ * How the reviewer is measuring, in the two ways that can be stated
+ * without describing anyone's private material.
+ *
+ * Everything here is already visible to the owner on /admin/gate. The
+ * point of publishing it is that a claim about a reviewer being honest
+ * is worth less than the numbers it is failing on.
+ *
+ * @generated from message career.v1.GetReviewerStatusResponse
+ */
+export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResponse"> & {
+  /**
+   * Verdicts the owner has graded and that could be graded (he can also
+   * answer "not enough evidence to judge", which is excluded here).
+   *
+   * @generated from field: int32 graded = 1;
+   */
+  graded: number;
+
+  /**
+   * Of those, how many he agreed with.
+   *
+   * @generated from field: int32 agreed = 2;
+   */
+  agreed: number;
+
+  /**
+   * Agreement as a percentage, to one decimal place.
+   *
+   * @generated from field: double agreement_pct = 3;
+   */
+  agreementPct: number;
+
+  /**
+   * Disagreements where the model said met and he said unmet, or the
+   * reverse. Counted apart from the softer kind because they mean the
+   * model was wrong rather than unsure.
+   *
+   * @generated from field: int32 hard_disagreements = 4;
+   */
+  hardDisagreements: number;
+
+  /**
+   * Of the hard disagreements, how many were the model refusing to
+   * credit something he can evidence. The opposite direction, crediting
+   * what he cannot evidence, is the one that would matter to an
+   * employer.
+   *
+   * @generated from field: int32 too_harsh = 5;
+   */
+  tooHarsh: number;
+
+  /**
+   * Of the hard disagreements, how many were the model crediting
+   * something he says is not evidenced.
+   *
+   * @generated from field: int32 too_generous = 6;
+   */
+  tooGenerous: number;
+
+  /**
+   * Postings in the fixed evaluation set.
+   *
+   * @generated from field: int32 postings = 7;
+   */
+  postings: number;
+
+  /**
+   * How many of those were drawn at random from job boards rather than
+   * chosen by the owner.
+   *
+   * @generated from field: int32 postings_random = 8;
+   */
+  postingsRandom: number;
+
+  /**
+   * Postings scored in the last completed evaluation.
+   *
+   * @generated from field: int32 scored = 9;
+   */
+  scored: number;
+
+  /**
+   * How many landed on the side the owner said they should.
+   *
+   * @generated from field: int32 gate_correct = 10;
+   */
+  gateCorrect: number;
+
+  /**
+   * Pairs where a posting he said he could not do outscored one he said
+   * he could. Moving the threshold cannot fix one of these.
+   *
+   * @generated from field: int32 inversions = 11;
+   */
+  inversions: number;
+
+  /**
+   * The gap between the two groups. Absent when one side is empty.
+   *
+   * @generated from field: optional double margin = 12;
+   */
+  margin?: number | undefined;
+
+  /**
+   * When that evaluation ran.
+   *
+   * @generated from field: google.protobuf.Timestamp evaluated_at = 13;
+   */
+  evaluatedAt?: Timestamp | undefined;
+
+  /**
+   * The model that produced it.
+   *
+   * @generated from field: string model = 14;
+   */
+  model: string;
+};
+
+/**
+ * Describes the message career.v1.GetReviewerStatusResponse.
+ * Use `create(GetReviewerStatusResponseSchema)` to create a new message.
+ */
+export const GetReviewerStatusResponseSchema: GenMessage<GetReviewerStatusResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_system, 6);
+
+/**
  * Version and governance status.
  *
  * @generated from service career.v1.SystemService
@@ -249,6 +390,20 @@ export const SystemService: GenService<{
     methodKind: "unary";
     input: typeof GetGovernanceStatusRequestSchema;
     output: typeof GetGovernanceStatusResponseSchema;
+  },
+  /**
+   * Returns how the JD reviewer is currently measuring, for the public
+   * "How Ask Roger works" page: agreement with the owner's own grading,
+   * and the last evaluation of the fixed posting set. Read from the
+   * same views the admin gate reads, so the public page cannot quote a
+   * number the owner is not also looking at.
+   *
+   * @generated from rpc career.v1.SystemService.GetReviewerStatus
+   */
+  getReviewerStatus: {
+    methodKind: "unary";
+    input: typeof GetReviewerStatusRequestSchema;
+    output: typeof GetReviewerStatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_system, 0);
