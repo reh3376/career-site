@@ -468,6 +468,23 @@ inversions, margin 0.143), time to a result fails (median 48.9 minutes
 against a target of 20), and the other five are unanswerable, four for
 sample size and two because no target exists.
 
+**Time to a result: not met, and not being pursued (owner,
+2026-09-24).** A run is about 50 minutes: 34 of them are fourteen judge
+calls, each evaluating roughly 1,500 tokens of per-requirement evidence
+at the 12 to 13 tokens a second this box manages. Prompt-prefix caching
+is already working and already counted; the only remaining lever is
+sending the judge less evidence, which trades verdict quality for
+minutes. The owner's call: leave the pipeline alone, this is a resource
+constraint rather than a defect, and further attempts risk the
+effectiveness of something that currently works.
+
+The criterion therefore reads red and will keep reading red. That is
+truthful rather than a fault to fix, and it is the one row on the gate
+whose target was invented before anything had been measured. Whether to
+restate it against what the box actually does, so that it detects a
+regression instead of restating a known limit, is open and is the
+owner's to decide.
+
 Both open questions were settled the same day:
 
 - **Reach is measured, not gated.** Whether strangers find the site is
