@@ -15,7 +15,7 @@ to go and read what it means.
 | View | The question it answers |
 | --- | --- |
 | `v_jd_runs` | Every real pipeline run, with minutes and gate side derived. Evaluation runs are excluded: they are a test of the reviewer, not use of it, and mixing them flatters both latency and volume. |
-| `v_reliability` | Of the last twenty real runs, how many finished without anyone stepping in. |
+| `v_reliability` | Of the last twenty real attempts to review a posting, how many finished without anyone stepping in. Runs the gatekeeper refused (`not_a_posting`) are excluded from the window: the pipeline read the input, decided it was not a posting and stopped, which is the system working rather than a run that failed to complete. |
 | `v_judge_agreement` | For each reviewed requirement, the model's verdict beside the owner's. |
 | `v_judge_agreement_summary` | The agreement rate, split into soft disagreements (one side said partial, the judge was unsure) and hard ones (met against unmet, the judge was wrong). Counting them together would hide which is happening. |
 | `v_jd_latency` | Median and 95th percentile time to a result, with queue time reported apart from work time. |
