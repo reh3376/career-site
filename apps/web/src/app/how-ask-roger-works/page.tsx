@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getJdBands } from "@/lib/jd-bands";
+import { getReviewerStatus } from "@/lib/reviewer-status";
 import { getSessionCookie } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "How Ask Roger works",
   description:
-    "How the JD reviewer works today, and how the Ask Roger assistant will be built, what it draws from, and how it decides what it can and can't answer.",
+    "Which model reviews a job description, why it is not trained on Roger's career, what your posting is read against, and the four ways the reviewer is made better.",
 };
 export const dynamic = "force-dynamic";
 
 export default async function HowAskRogerWorksPage() {
   const bands = await getJdBands(await getSessionCookie());
+  const status = await getReviewerStatus();
   const veryStrong = bands.veryStrong.toFixed(2);
   const strong = bands.strong.toFixed(2);
   const possible = bands.possible.toFixed(2);
@@ -123,13 +125,198 @@ export default async function HowAskRogerWorksPage() {
           list on /jd-upload reopens a review, and the outcome is emailed
           to you.
         </p>
-        <p className="mt-4 text-sm leading-relaxed text-ink-2">
-          The judge and the r&eacute;sum&eacute; writer are open-weight
-          models served through Ollama. Every verdict is logged with the
-          evidence the model saw and the model and prompt version that
-          produced it. Roger reviews those decisions himself, and the
-          labels are collected to evaluate and train the next version.
-        </p>
+      </section>
+
+      <section className="mt-14 border-t border-line pt-10">
+        <h2
+          className="font-display text-2xl leading-snug text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          Which model, and what it is not.
+        </h2>
+        <div className="mt-4 space-y-4 text-base leading-relaxed text-ink-2">
+          <p>
+            One model does the reading:{" "}
+            <span className="font-mono text-sm text-ink">qwen3:4b-q8_0</span>,
+            four billion parameters at eight-bit precision, open weights,
+            served through Ollama on Roger&rsquo;s own server with an
+            8,192-token context. Retrieval uses a second, smaller model,{" "}
+            <span className="font-mono text-sm text-ink">nomic-embed-text</span>,
+            which turns text into 768-dimension vectors stored in Postgres
+            with pgvector. Nothing is sent to a hosted API. No posting you
+            submit leaves that machine.
+          </p>
+          <p>
+            <span className="text-ink">
+              The model is not trained on Roger&rsquo;s career.
+            </span>{" "}
+            It has never seen it in training and nothing about it has been
+            fine-tuned. It is a general open-weight model that is handed
+            the relevant passages at the moment of the question and asked
+            to judge one requirement against them. That is a deliberate
+            choice rather than a shortcut: a model trained on a career can
+            only be corrected by training it again, while a model that
+            reads a corpus is corrected by fixing the corpus, and you can
+            see which passage produced which verdict.
+          </p>
+          <p>
+            It is also not allowed to decide the outcome. The model
+            returns a verdict per requirement and a sentence of reasoning.
+            Every number, the score, the weighting, the threshold, is
+            computed in code from those verdicts. When the model has been
+            asked to reason about something it is reliably bad at, that
+            judgment has been moved out of the prompt and into code: how
+            long a span of years is, whether a named company actually
+            appears in the evidence, and whether a r&eacute;sum&eacute;
+            line is carried by the source it cites.
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-14 border-t border-line pt-10">
+        <h2
+          className="font-display text-2xl leading-snug text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          How it gets better.
+        </h2>
+        <div className="mt-4 space-y-4 text-base leading-relaxed text-ink-2">
+          <p>
+            Four mechanisms, in the order they matter.
+          </p>
+          <ol className="ml-4 list-decimal space-y-3 text-sm leading-relaxed">
+            <li>
+              <span className="text-ink">The corpus gets fixed.</span>{" "}
+              Most wrong verdicts are not the model reasoning badly. They
+              are the model failing to find something because no document
+              says it plainly. When that happens the answer is to write
+              the missing document, not to adjust the prompt.
+            </li>
+            <li>
+              <span className="text-ink">
+                Roger grades the verdicts himself.
+              </span>{" "}
+              Every verdict is logged with the exact evidence the model
+              saw and the model and prompt version that produced it. He
+              marks each one agree, disagree or not enough evidence to
+              judge, in his own words. Disagreements are counted in two
+              directions, because a reviewer that is too harsh and one
+              that is too generous need opposite fixes.
+            </li>
+            <li>
+              <span className="text-ink">
+                A fixed set of postings guards every change.
+              </span>{" "}
+              A group of real job descriptions, some Roger applied for and
+              some drawn at random from job boards, each carrying one
+              claim: he can do this job, or he cannot. Any change to a
+              prompt, a model or the corpus is scored against the whole
+              set before and after. A change that improves one posting and
+              quietly breaks another shows up as a number, not as a
+              feeling.
+            </li>
+            <li>
+              <span className="text-ink">
+                Rules move from prose into code.
+              </span>{" "}
+              When instructing the model in words fails twice, the
+              judgment is taken away from it and written as a rule that
+              runs the same way every time.
+            </li>
+          </ol>
+          <p className="text-sm text-ink-3">
+            A fine-tuned adapter, trained on the graded verdicts, is
+            planned rather than built. It is listed here as a plan so that
+            nothing above reads as a claim about something that exists.
+          </p>
+        </div>
+
+        {status ? (
+          <div className="mt-8 border-l-2 border-line pl-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              where that stands today
+            </p>
+            <dl className="mt-4 space-y-4 text-sm leading-relaxed text-ink-2">
+              <div>
+                <dt className="text-ink">
+                  {status.agreementPct.toFixed(1)}% agreement, over{" "}
+                  {status.graded} verdicts Roger has graded by hand
+                </dt>
+                <dd className="mt-1 text-ink-3">
+                  {status.hardDisagreements === 0
+                    ? "No outright disagreements."
+                    : `${status.hardDisagreements} outright ${
+                        status.hardDisagreements === 1
+                          ? "disagreement"
+                          : "disagreements"
+                      }, of which ${status.tooHarsh} were the reviewer refusing to credit work he can evidence and ${status.tooGenerous} were it crediting work he cannot.`}{" "}
+                  The second number is the one that would matter to you, and
+                  it is published whatever it says.
+                </dd>
+              </div>
+              <div>
+                <dt className="text-ink">
+                  {status.gateCorrect} of {status.scored} postings on the
+                  expected side of the gate
+                  {status.inversions === 0
+                    ? ", with no inversions"
+                    : `, with ${status.inversions} inversions`}
+                </dt>
+                <dd className="mt-1 text-ink-3">
+                  From a set of {status.postings} job descriptions,{" "}
+                  {status.postingsRandom} of them drawn at random from job
+                  boards rather than picked.
+                  {status.margin !== undefined
+                    ? ` The closest the two groups came was ${status.margin.toFixed(3)}.`
+                    : ""}
+                  {status.evaluatedAt
+                    ? ` Last run ${new Date(status.evaluatedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}`
+                    : ""}
+                  {status.model ? ` on ${status.model}.` : "."}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-4 text-sm leading-relaxed text-ink-3">
+              These are read live from the same tables Roger reads. They are
+              not a good look on purpose; they are the numbers, and a claim
+              to be honest about evidence is worth less than the figures it
+              is currently failing on.
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="mt-14 border-t border-line pt-10">
+        <h2
+          className="font-display text-2xl leading-snug text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          What your posting is read against.
+        </h2>
+        <div className="mt-4 space-y-4 text-base leading-relaxed text-ink-2">
+          <p>
+            The corpus has a public part and a private part. The private
+            part holds client work and material under agreement, and a
+            posting submitted through this site cannot reach it: the
+            restriction is enforced in the database query, not by asking
+            the model nicely. Your review is drawn from the public
+            documents, plus two files about Roger himself that every
+            review uses, a sheet of career facts and his master
+            r&eacute;sum&eacute;.
+          </p>
+          <p>
+            That is a real limit and worth stating plainly: a review here
+            sees less than Roger does when he runs the same posting for
+            himself. It is the reason a strong result comes with a
+            r&eacute;sum&eacute; and a weak one comes with Roger reading
+            the posting personally.
+          </p>
+          <p className="text-sm text-ink-3">
+            Your posting is stored so the review can be reopened and so
+            Roger can see what was asked. It is never used to train
+            anything and never shown to anyone else.
+          </p>
+        </div>
       </section>
     </div>
   );

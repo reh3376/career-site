@@ -1570,6 +1570,22 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.SystemService",
+      "method": "GetReviewerStatus",
+      "path": "/api/career.v1.SystemService/GetReviewerStatus",
+      "grpc_full_method": "/career.v1.SystemService/GetReviewerStatus",
+      "internal": false,
+      "request": "career.v1.GetReviewerStatusRequest",
+      "response": "career.v1.GetReviewerStatusResponse",
+      "summary": "Returns how the JD reviewer is currently measuring, for the public \"How Ask Roger works\" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set.",
+      "auth": "public",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 60,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.JdService",
       "method": "SubmitJd",
       "path": "/api/career.v1.JdService/SubmitJd",

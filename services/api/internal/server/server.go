@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
+	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
 type Server struct {
@@ -48,6 +49,9 @@ type Deps struct {
 	Activity *handlers.Activity
 	Jd       *handlers.Jd
 	Events   *handlers.Events
+	// Users backs the public reviewer status on SystemService; nil
+	// leaves that endpoint answering Unavailable.
+	Users *users.Repo
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
@@ -65,6 +69,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		events:   deps.Events,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
+	}
+	if deps.Users != nil {
+		s.system.SetUsers(log, deps.Users)
 	}
 	s.http = &http.Server{
 		Addr:         cfg.Addr,

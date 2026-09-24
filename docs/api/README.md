@@ -124,7 +124,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
 | [`AdminService`](#adminservice) | Owner console. | 54 |
-| [`SystemService`](#systemservice) | Version and governance status. | 2 |
+| [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -3497,6 +3497,7 @@ Version and governance status.
 |---|---|---|---|---|---|
 | [`GetVersion`](#systemservice-getversion) | `/api/career.v1.SystemService/GetVersion` | Public | 60 | `GetVersionRequest` → `GetVersionResponse` | Returns the deployed version and build metadata. |
 | [`GetGovernanceStatus`](#systemservice-getgovernancestatus) | `/api/career.v1.SystemService/GetGovernanceStatus` | Public | 60 | `GetGovernanceStatusRequest` → `GetGovernanceStatusResponse` | Returns the governance status shown on the public "How this site was built" page: UxTS frameworks, spec counts, last verification, pass rate, and hash-integrity summary, read from the reports CI publishes. |
+| [`GetReviewerStatus`](#systemservice-getreviewerstatus) | `/api/career.v1.SystemService/GetReviewerStatus` | Public | 60 | `GetReviewerStatusRequest` → `GetReviewerStatusResponse` | Returns how the JD reviewer is currently measuring, for the public "How Ask Roger works" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set. |
 
 ### SystemService.GetVersion
 
@@ -3545,6 +3546,47 @@ _No fields; send `{}`._
 | `frameworks` | [`FrameworkStatus`](#frameworkstatus)[] | array of object |  | Frameworks in matrix order. |
 | `commit` | `string` | string |  | Commit the reports were produced from. |
 | `publishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the summary was published. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### SystemService.GetReviewerStatus
+
+`POST /api/career.v1.SystemService/GetReviewerStatus` · **Auth:** Public · **Rate limit:** 60/min
+
+Returns how the JD reviewer is currently measuring, for the public
+"How Ask Roger works" page: agreement with the owner's own grading,
+and the last evaluation of the fixed posting set. Read from the
+same views the admin gate reads, so the public page cannot quote a
+number the owner is not also looking at.
+
+**Request** — [`GetReviewerStatusRequest`](#getreviewerstatusrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetReviewerStatusResponse`](#getreviewerstatusresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `graded` | `int32` | number |  | Verdicts the owner has graded and that could be graded (he can also answer "not enough evidence to judge", which is excluded here). |
+| `agreed` | `int32` | number |  | Of those, how many he agreed with. |
+| `agreementPct` | `double` | number |  | Agreement as a percentage, to one decimal place. |
+| `hardDisagreements` | `int32` | number |  | Disagreements where the model said met and he said unmet, or the reverse. Counted apart from the softer kind because they mean the model was wrong rather than unsure. |
+| `tooHarsh` | `int32` | number |  | Of the hard disagreements, how many were the model refusing to credit something he can evidence. The opposite direction, crediting what he cannot evidence, is the one that would matter to an employer. |
+| `tooGenerous` | `int32` | number |  | Of the hard disagreements, how many were the model crediting something he says is not evidenced. |
+| `postings` | `int32` | number |  | Postings in the fixed evaluation set. |
+| `postingsRandom` | `int32` | number |  | How many of those were drawn at random from job boards rather than chosen by the owner. |
+| `scored` | `int32` | number |  | Postings scored in the last completed evaluation. |
+| `gateCorrect` | `int32` | number |  | How many landed on the side the owner said they should. |
+| `inversions` | `int32` | number |  | Pairs where a posting he said he could not do outscored one he said he could. Moving the threshold cannot fix one of these. |
+| `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
+| `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
+| `model` | `string` | string |  | The model that produced it. |
 
 <details><summary>Example request body</summary>
 
@@ -7261,6 +7303,38 @@ Governance summary.
 | `frameworks` | [`FrameworkStatus`](#frameworkstatus)[] | array of object |  | Frameworks in matrix order. |
 | `commit` | `string` | string |  | Commit the reports were produced from. |
 | `publishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the summary was published. |
+
+### GetReviewerStatusRequest
+
+Empty.
+
+_No fields._
+
+### GetReviewerStatusResponse
+
+How the reviewer is measuring, in the two ways that can be stated
+without describing anyone's private material.
+
+Everything here is already visible to the owner on /admin/gate. The
+point of publishing it is that a claim about a reviewer being honest
+is worth less than the numbers it is failing on.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `graded` | `int32` | number |  | Verdicts the owner has graded and that could be graded (he can also answer "not enough evidence to judge", which is excluded here). |
+| `agreed` | `int32` | number |  | Of those, how many he agreed with. |
+| `agreementPct` | `double` | number |  | Agreement as a percentage, to one decimal place. |
+| `hardDisagreements` | `int32` | number |  | Disagreements where the model said met and he said unmet, or the reverse. Counted apart from the softer kind because they mean the model was wrong rather than unsure. |
+| `tooHarsh` | `int32` | number |  | Of the hard disagreements, how many were the model refusing to credit something he can evidence. The opposite direction, crediting what he cannot evidence, is the one that would matter to an employer. |
+| `tooGenerous` | `int32` | number |  | Of the hard disagreements, how many were the model crediting something he says is not evidenced. |
+| `postings` | `int32` | number |  | Postings in the fixed evaluation set. |
+| `postingsRandom` | `int32` | number |  | How many of those were drawn at random from job boards rather than chosen by the owner. |
+| `scored` | `int32` | number |  | Postings scored in the last completed evaluation. |
+| `gateCorrect` | `int32` | number |  | How many landed on the side the owner said they should. |
+| `inversions` | `int32` | number |  | Pairs where a posting he said he could not do outscored one he said he could. Moving the threshold cannot fix one of these. |
+| `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
+| `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
+| `model` | `string` | string |  | The model that produced it. |
 
 ### EmbedPurpose
 

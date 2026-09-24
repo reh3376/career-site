@@ -237,6 +237,18 @@ not what a recruiter sees. Closing that gap is a content decision, not
 a code one: publish more of the corpus. Nothing should reopen the
 retrieval path to do it.
 
+**5a note: two paths are exempt from the corpus scope, on purpose.**
+The judge's career facts sheet and the résumé writer's master résumé
+are fetched by `ListChunksByKind`, which has no visibility predicate,
+so a member's submission sees both although they are `corpus_only`.
+Reviewed with the owner on 2026-09-24 and kept as it is. The scope
+exists to stop a submitted posting steering retrieval across client and
+NDA material; these two are about the candidate rather than a client,
+are identical for every posting, and are fetched by kind rather than
+retrieved, so nothing in a posting can steer them. Recorded because it
+was originally an oversight rather than a decision, and an exemption
+nobody wrote down is indistinguishable from a hole.
+
 **5b. A member cannot queue unbounded work. SHIPPED 2026-09-24.** The
 existing limiter is keyed on (member, jd_hash), so it stops the same
 posting being resubmitted and nothing else: change a word and it is a

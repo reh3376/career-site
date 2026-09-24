@@ -2,7 +2,9 @@ package users
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/tenant"
@@ -191,4 +193,67 @@ func (r *Repo) Gate(ctx context.Context) ([]GateRow, error) {
 		out = append(out, g)
 	}
 	return out, rows.Err()
+}
+
+// ReviewerStatus is the part of the gate that can be published: how the
+// judge agrees with the owner's own grading, and how the fixed posting
+// set scored last time.
+//
+// It carries nothing about who visited, who registered, or what anyone
+// submitted. Those are on the same page of views and are deliberately
+// not here: publishing a funnel says something about other people,
+// publishing a disagreement rate says something about the reviewer.
+type ReviewerStatus struct {
+	Graded, Agreed                  int
+	AgreementPct                    float64
+	HardDisagreements               int
+	TooHarsh, TooGenerous           int
+	Postings, PostingsRandom        int
+	Scored, GateCorrect, Inversions int
+	Margin                          *float64
+	EvaluatedAt                     *time.Time
+	Model                           string
+}
+
+// ReviewerStatus reads the publishable numbers from the same views the
+// admin gate reads, so the public page cannot quote something the owner
+// is not also looking at.
+func (r *Repo) ReviewerStatus(ctx context.Context) (*ReviewerStatus, error) {
+	out := &ReviewerStatus{}
+	tid := tenant.FromContext(ctx).Int64()
+
+	const agreeQ = `
+    SELECT COALESCE(gradeable, 0), COALESCE(agreed, 0), COALESCE(agreement_pct, 0),
+           COALESCE(hard_disagreements, 0), COALESCE(too_harsh, 0), COALESCE(too_generous, 0)
+      FROM v_judge_agreement_summary WHERE tenant_id = $1
+  `
+	if err := r.pool.QueryRow(ctx, agreeQ, tid).Scan(
+		&out.Graded, &out.Agreed, &out.AgreementPct,
+		&out.HardDisagreements, &out.TooHarsh, &out.TooGenerous,
+	); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("reviewer agreement: %w", err)
+	}
+
+	const setQ = `
+    SELECT count(*), count(*) FILTER (WHERE selection = 'random')
+      FROM golden_postings WHERE tenant_id = $1 AND active AND expected_gate <> ''
+  `
+	if err := r.pool.QueryRow(ctx, setQ, tid).Scan(&out.Postings, &out.PostingsRandom); err != nil {
+		return nil, fmt.Errorf("reviewer posting set: %w", err)
+	}
+
+	const evalQ = `
+    SELECT COALESCE(scored, 0), COALESCE(gate_correct, 0), COALESCE(order_violations, 0),
+           margin, started_at, COALESCE(model, '')
+      FROM v_eval_history
+     WHERE tenant_id = $1 AND status = 'done' AND scored > 0
+     ORDER BY started_at DESC LIMIT 1
+  `
+	if err := r.pool.QueryRow(ctx, evalQ, tid).Scan(
+		&out.Scored, &out.GateCorrect, &out.Inversions,
+		&out.Margin, &out.EvaluatedAt, &out.Model,
+	); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("reviewer evaluation: %w", err)
+	}
+	return out, nil
 }

@@ -378,6 +378,220 @@ func (x *GetGovernanceStatusResponse) GetPublishedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Empty.
+type GetReviewerStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewerStatusRequest) Reset() {
+	*x = GetReviewerStatusRequest{}
+	mi := &file_career_v1_system_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewerStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewerStatusRequest) ProtoMessage() {}
+
+func (x *GetReviewerStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_system_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewerStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetReviewerStatusRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_system_proto_rawDescGZIP(), []int{5}
+}
+
+// How the reviewer is measuring, in the two ways that can be stated
+// without describing anyone's private material.
+//
+// Everything here is already visible to the owner on /admin/gate. The
+// point of publishing it is that a claim about a reviewer being honest
+// is worth less than the numbers it is failing on.
+type GetReviewerStatusResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Verdicts the owner has graded and that could be graded (he can also
+	// answer "not enough evidence to judge", which is excluded here).
+	Graded int32 `protobuf:"varint,1,opt,name=graded,proto3" json:"graded,omitempty"`
+	// Of those, how many he agreed with.
+	Agreed int32 `protobuf:"varint,2,opt,name=agreed,proto3" json:"agreed,omitempty"`
+	// Agreement as a percentage, to one decimal place.
+	AgreementPct float64 `protobuf:"fixed64,3,opt,name=agreement_pct,json=agreementPct,proto3" json:"agreement_pct,omitempty"`
+	// Disagreements where the model said met and he said unmet, or the
+	// reverse. Counted apart from the softer kind because they mean the
+	// model was wrong rather than unsure.
+	HardDisagreements int32 `protobuf:"varint,4,opt,name=hard_disagreements,json=hardDisagreements,proto3" json:"hard_disagreements,omitempty"`
+	// Of the hard disagreements, how many were the model refusing to
+	// credit something he can evidence. The opposite direction, crediting
+	// what he cannot evidence, is the one that would matter to an
+	// employer.
+	TooHarsh int32 `protobuf:"varint,5,opt,name=too_harsh,json=tooHarsh,proto3" json:"too_harsh,omitempty"`
+	// Of the hard disagreements, how many were the model crediting
+	// something he says is not evidenced.
+	TooGenerous int32 `protobuf:"varint,6,opt,name=too_generous,json=tooGenerous,proto3" json:"too_generous,omitempty"`
+	// Postings in the fixed evaluation set.
+	Postings int32 `protobuf:"varint,7,opt,name=postings,proto3" json:"postings,omitempty"`
+	// How many of those were drawn at random from job boards rather than
+	// chosen by the owner.
+	PostingsRandom int32 `protobuf:"varint,8,opt,name=postings_random,json=postingsRandom,proto3" json:"postings_random,omitempty"`
+	// Postings scored in the last completed evaluation.
+	Scored int32 `protobuf:"varint,9,opt,name=scored,proto3" json:"scored,omitempty"`
+	// How many landed on the side the owner said they should.
+	GateCorrect int32 `protobuf:"varint,10,opt,name=gate_correct,json=gateCorrect,proto3" json:"gate_correct,omitempty"`
+	// Pairs where a posting he said he could not do outscored one he said
+	// he could. Moving the threshold cannot fix one of these.
+	Inversions int32 `protobuf:"varint,11,opt,name=inversions,proto3" json:"inversions,omitempty"`
+	// The gap between the two groups. Absent when one side is empty.
+	Margin *float64 `protobuf:"fixed64,12,opt,name=margin,proto3,oneof" json:"margin,omitempty"`
+	// When that evaluation ran.
+	EvaluatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
+	// The model that produced it.
+	Model         string `protobuf:"bytes,14,opt,name=model,proto3" json:"model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReviewerStatusResponse) Reset() {
+	*x = GetReviewerStatusResponse{}
+	mi := &file_career_v1_system_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReviewerStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReviewerStatusResponse) ProtoMessage() {}
+
+func (x *GetReviewerStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_system_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReviewerStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetReviewerStatusResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_system_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetReviewerStatusResponse) GetGraded() int32 {
+	if x != nil {
+		return x.Graded
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetAgreed() int32 {
+	if x != nil {
+		return x.Agreed
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetAgreementPct() float64 {
+	if x != nil {
+		return x.AgreementPct
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetHardDisagreements() int32 {
+	if x != nil {
+		return x.HardDisagreements
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetTooHarsh() int32 {
+	if x != nil {
+		return x.TooHarsh
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetTooGenerous() int32 {
+	if x != nil {
+		return x.TooGenerous
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetPostings() int32 {
+	if x != nil {
+		return x.Postings
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetPostingsRandom() int32 {
+	if x != nil {
+		return x.PostingsRandom
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetScored() int32 {
+	if x != nil {
+		return x.Scored
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetGateCorrect() int32 {
+	if x != nil {
+		return x.GateCorrect
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetInversions() int32 {
+	if x != nil {
+		return x.Inversions
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetMargin() float64 {
+	if x != nil && x.Margin != nil {
+		return *x.Margin
+	}
+	return 0
+}
+
+func (x *GetReviewerStatusResponse) GetEvaluatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvaluatedAt
+	}
+	return nil
+}
+
+func (x *GetReviewerStatusResponse) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
 var File_career_v1_system_proto protoreflect.FileDescriptor
 
 const file_career_v1_system_proto_rawDesc = "" +
@@ -410,11 +624,32 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"frameworks\x18\x01 \x03(\v2\x1a.career.v1.FrameworkStatusR\n" +
 	"frameworks\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12=\n" +
-	"\fpublished_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt2\xd4\x01\n" +
+	"\fpublished_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x1a\n" +
+	"\x18GetReviewerStatusRequest\"\xfc\x03\n" +
+	"\x19GetReviewerStatusResponse\x12\x16\n" +
+	"\x06graded\x18\x01 \x01(\x05R\x06graded\x12\x16\n" +
+	"\x06agreed\x18\x02 \x01(\x05R\x06agreed\x12#\n" +
+	"\ragreement_pct\x18\x03 \x01(\x01R\fagreementPct\x12-\n" +
+	"\x12hard_disagreements\x18\x04 \x01(\x05R\x11hardDisagreements\x12\x1b\n" +
+	"\ttoo_harsh\x18\x05 \x01(\x05R\btooHarsh\x12!\n" +
+	"\ftoo_generous\x18\x06 \x01(\x05R\vtooGenerous\x12\x1a\n" +
+	"\bpostings\x18\a \x01(\x05R\bpostings\x12'\n" +
+	"\x0fpostings_random\x18\b \x01(\x05R\x0epostingsRandom\x12\x16\n" +
+	"\x06scored\x18\t \x01(\x05R\x06scored\x12!\n" +
+	"\fgate_correct\x18\n" +
+	" \x01(\x05R\vgateCorrect\x12\x1e\n" +
+	"\n" +
+	"inversions\x18\v \x01(\x05R\n" +
+	"inversions\x12\x1b\n" +
+	"\x06margin\x18\f \x01(\x01H\x00R\x06margin\x88\x01\x01\x12=\n" +
+	"\fevaluated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\x12\x14\n" +
+	"\x05model\x18\x0e \x01(\tR\x05modelB\t\n" +
+	"\a_margin2\xbe\x02\n" +
 	"\rSystemService\x12S\n" +
 	"\n" +
 	"GetVersion\x12\x1c.career.v1.GetVersionRequest\x1a\x1d.career.v1.GetVersionResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12n\n" +
-	"\x13GetGovernanceStatus\x12%.career.v1.GetGovernanceStatusRequest\x1a&.career.v1.GetGovernanceStatusResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<B\xa5\x01\n" +
+	"\x13GetGovernanceStatus\x12%.career.v1.GetGovernanceStatusRequest\x1a&.career.v1.GetGovernanceStatusResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12h\n" +
+	"\x11GetReviewerStatus\x12#.career.v1.GetReviewerStatusRequest\x1a$.career.v1.GetReviewerStatusResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<B\xa5\x01\n" +
 	"\rcom.career.v1B\vSystemProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -430,29 +665,34 @@ func file_career_v1_system_proto_rawDescGZIP() []byte {
 	return file_career_v1_system_proto_rawDescData
 }
 
-var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_career_v1_system_proto_goTypes = []any{
 	(*GetVersionRequest)(nil),           // 0: career.v1.GetVersionRequest
 	(*GetVersionResponse)(nil),          // 1: career.v1.GetVersionResponse
 	(*GetGovernanceStatusRequest)(nil),  // 2: career.v1.GetGovernanceStatusRequest
 	(*FrameworkStatus)(nil),             // 3: career.v1.FrameworkStatus
 	(*GetGovernanceStatusResponse)(nil), // 4: career.v1.GetGovernanceStatusResponse
-	(*timestamppb.Timestamp)(nil),       // 5: google.protobuf.Timestamp
+	(*GetReviewerStatusRequest)(nil),    // 5: career.v1.GetReviewerStatusRequest
+	(*GetReviewerStatusResponse)(nil),   // 6: career.v1.GetReviewerStatusResponse
+	(*timestamppb.Timestamp)(nil),       // 7: google.protobuf.Timestamp
 }
 var file_career_v1_system_proto_depIdxs = []int32{
-	5, // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
-	5, // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
+	7, // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
+	7, // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
 	3, // 2: career.v1.GetGovernanceStatusResponse.frameworks:type_name -> career.v1.FrameworkStatus
-	5, // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
-	0, // 4: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
-	2, // 5: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
-	1, // 6: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
-	4, // 7: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
-	6, // [6:8] is the sub-list for method output_type
-	4, // [4:6] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	7, // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
+	7, // 4: career.v1.GetReviewerStatusResponse.evaluated_at:type_name -> google.protobuf.Timestamp
+	0, // 5: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
+	2, // 6: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
+	5, // 7: career.v1.SystemService.GetReviewerStatus:input_type -> career.v1.GetReviewerStatusRequest
+	1, // 8: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
+	4, // 9: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
+	6, // 10: career.v1.SystemService.GetReviewerStatus:output_type -> career.v1.GetReviewerStatusResponse
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_system_proto_init() }
@@ -461,13 +701,14 @@ func file_career_v1_system_proto_init() {
 		return
 	}
 	file_career_v1_options_proto_init()
+	file_career_v1_system_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_system_proto_rawDesc), len(file_career_v1_system_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
