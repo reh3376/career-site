@@ -2,6 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { GithubReposIt } from "@/components/github-repos";
+import {
+  ACCESS_CAVEAT,
+  OPEN_TO_ANYONE,
+  WITH_AN_ACCOUNT,
+} from "@/lib/access-tiers";
 import { getSocialLinks } from "@/lib/social-links";
 
 // Landing. Editorial, one column, with image bands set into the reading
@@ -38,7 +43,7 @@ const OFFERINGS = [
   },
 ];
 
-export function ItLanding() {
+export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <>
       {/* -----------------------------------------------------------------
@@ -440,6 +445,87 @@ export function ItLanding() {
        * ABOUT THE BUILD, colophon-style closer. Explains the site as a
        * live work sample and points at the repo. Not a card grid.
        * ----------------------------------------------------------------- */}
+      {!signedIn ? (
+        <section
+          aria-labelledby="access-heading"
+          className="border-y border-line bg-paper-2/60"
+        >
+          <div className="mx-auto max-w-5xl px-6 py-24 sm:px-10 sm:py-32">
+            <div className="grid gap-10 md:grid-cols-[1fr_1.5fr] md:items-baseline">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
+                what you can do here
+              </p>
+              <div>
+                <h2
+                  id="access-heading"
+                  className="font-display text-3xl leading-tight text-ink sm:text-4xl"
+                  style={{ fontVariationSettings: '"opsz" 100, "SOFT" 40' }}
+                >
+                  Most of this is open. One thing is not.
+                </h2>
+                <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-2">
+                  The evidence is public, because you should be able to judge
+                  the work without asking anyone for anything. The reviewer
+                  needs an account, because running it spends real time on a
+                  real machine.
+                </p>
+
+                <div className="mt-10 grid gap-10 sm:grid-cols-2">
+                  <div>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                      open to anyone
+                    </p>
+                    <dl className="mt-4 space-y-4">
+                      {OPEN_TO_ANYONE.map((item) => (
+                        <div key={item.label}>
+                          <dt className="text-sm text-ink">{item.label}</dt>
+                          <dd className="mt-1 text-sm leading-relaxed text-ink-3">
+                            {item.detail}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                  <div className="border-l-2 border-accent pl-5">
+                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+                      with an account
+                    </p>
+                    <dl className="mt-4 space-y-4">
+                      {WITH_AN_ACCOUNT.map((item) => (
+                        <div key={item.label}>
+                          <dt className="text-sm text-ink">{item.label}</dt>
+                          <dd className="mt-1 text-sm leading-relaxed text-ink-3">
+                            {item.detail}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                </div>
+
+                <p className="mt-10 text-sm leading-relaxed text-ink-3">
+                  {ACCESS_CAVEAT}
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-6">
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center border border-accent px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline transition-colors hover:bg-accent hover:text-paper"
+                  >
+                    Request access
+                  </Link>
+                  <Link
+                    href="/how-ask-roger-works"
+                    className="text-sm text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+                  >
+                    Read how the reviewer works first
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section
         aria-labelledby="build-heading"
         className="mx-auto max-w-5xl px-6 py-24 sm:px-10 sm:py-32"
