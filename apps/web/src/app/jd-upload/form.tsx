@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { submitJdAction, type SubmitState } from "./actions";
+import { submitJdAction, type Quota, type SubmitState } from "./actions";
 import { JdResult } from "./result";
 
 const initial: SubmitState = {};
@@ -14,9 +14,18 @@ const fieldInputClass =
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function JdForm({ threshold }: { threshold: string }) {
+export function JdForm({
+  threshold,
+  quota,
+}: {
+  threshold: string;
+  quota?: Quota;
+}) {
   const [state, formAction] = useActionState(submitJdAction, initial);
   const v = state.values ?? {};
+  // After a submission the server sends the count back; before one, the
+  // page was handed the quota as it stood when it rendered.
+  const shown = state.quota ?? quota;
 
   if (state.ok) {
     return (
@@ -45,6 +54,7 @@ export function JdForm({ threshold }: { threshold: string }) {
             watch
           />
         ) : null}
+        {shown ? <QuotaLine quota={shown} /> : null}
         <p className="text-sm leading-relaxed text-ink-2">
           Prefer a quick reply?{" "}
           <a
@@ -69,6 +79,8 @@ export function JdForm({ threshold }: { threshold: string }) {
           {state.error}
         </p>
       ) : null}
+
+      {shown ? <QuotaLine quota={shown} /> : null}
 
       <div>
         <label htmlFor="jd_text" className={labelClass}>
@@ -172,5 +184,44 @@ function Submit() {
     >
       {pending ? "Submitting…" : "Submit for review"}
     </button>
+  );
+}
+
+// How much of the allowance is left, said plainly. A limit someone
+// meets without warning reads as a fault, so the number is on the page
+// before it is spent as well as after.
+function QuotaLine({ quota }: { quota: Quota }) {
+  const none = quota.remaining <= 0;
+  const when = quota.nextSlotAt
+    ? new Date(quota.nextSlotAt).toLocaleString(undefined, {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
+  return (
+    <p
+      className={
+        "border-l-2 px-4 py-3 text-sm " +
+        (none ? "border-signal text-ink" : "border-line text-ink-2")
+      }
+    >
+      {none ? (
+        <>
+          You have used all {quota.limit} reviews for the last{" "}
+          {quota.windowHours} hours.
+          {when ? ` The next one opens ${when}.` : ""}
+        </>
+      ) : (
+        <>
+          {quota.remaining} of {quota.limit} reviews left in the next{" "}
+          {quota.windowHours} hours.
+        </>
+      )}{" "}
+      <span className="text-ink-3">
+        Each review is close to an hour of work on one machine, so the queue
+        has to be finite.
+      </span>
+    </p>
   );
 }

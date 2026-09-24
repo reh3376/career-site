@@ -249,6 +249,13 @@ container is recreated several times a day and anything counted in
 memory is enforced only between deploys. Evaluation rows are excluded.
 The admin is exempt. The check fails closed: if the count cannot be
 read, the submission is refused.
+
+The allowance is also stated rather than merely enforced. The upload
+page shows what is left before anyone spends it, every submission
+returns the updated count, and running out names the hour the next slot
+opens. A limit someone meets without warning reads as a fault, and the
+reason for this one is worth saying: a review is close to an hour of
+work on one machine.
 Still open:
 
 - Pin third-party GitHub Actions by commit SHA.
