@@ -4,6 +4,11 @@ import Link from "next/link";
 import { setUiModeAction } from "@/app/actions/ui-mode";
 import { GithubReposOt } from "@/components/github-repos";
 import { ModeToggle } from "@/components/mode-toggle";
+import {
+  ACCESS_CAVEAT,
+  OPEN_TO_ANYONE,
+  WITH_AN_ACCOUNT,
+} from "@/lib/access-tiers";
 import { getSocialLinks } from "@/lib/social-links";
 
 // OT-mode landing. Renders the site as a plant HMI overview screen.
@@ -71,7 +76,7 @@ const CAMERAS = [
   { id: "CAM-04", label: "whiskey house team", src: "/images/whiskey-house-team.jpeg" },
 ];
 
-export function OtLanding() {
+export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <div className="min-h-[calc(100vh-160px)] bg-paper text-ink">
       {/* Plant title strip. Left = nav pills, center = plant name, */}
@@ -234,6 +239,53 @@ export function OtLanding() {
             </ul>
           </div>
         </section>
+
+        {!signedIn ? (
+          <section aria-label="Access" className="md:col-span-12">
+            <PanelHeader tag="AC-1" title="ACCESS SCOPE" />
+            <div className="grid gap-px border border-line-strong bg-line-strong md:grid-cols-2">
+              <div className="bg-paper-2 p-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+                  open · no account
+                </p>
+                <dl className="mt-3 space-y-3 font-mono text-[13px]">
+                  {OPEN_TO_ANYONE.map((item) => (
+                    <div key={item.label}>
+                      <dt className="text-ink">{item.label}</dt>
+                      <dd className="mt-0.5 font-sans text-[13px] leading-relaxed text-ink-3">
+                        {item.detail}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div className="bg-paper-2 p-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                  gated · account required
+                </p>
+                <dl className="mt-3 space-y-3 font-mono text-[13px]">
+                  {WITH_AN_ACCOUNT.map((item) => (
+                    <div key={item.label}>
+                      <dt className="text-ink">{item.label}</dt>
+                      <dd className="mt-0.5 font-sans text-[13px] leading-relaxed text-ink-3">
+                        {item.detail}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <NavPill href="/register" primary>
+                ACCESS.REQ
+              </NavPill>
+              <NavPill href="/how-ask-roger-works">HOW.IT.WORKS</NavPill>
+              <span className="font-sans text-[13px] leading-relaxed text-ink-3">
+                {ACCESS_CAVEAT}
+              </span>
+            </div>
+          </section>
+        ) : null}
 
         {/* PRACTICE AREAS panel ------------------------------------ */}
         <section id="practice" aria-label="Practice areas" className="scroll-mt-4 md:col-span-8 md:row-span-2">
