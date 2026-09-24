@@ -304,16 +304,35 @@ an existing claim honest.
   arranged by the seven criteria. What is missing is the pass/fail
   shape, below.
 
-**1. Random postings in the golden set (`RR-11`, `RR-12`). PARTLY
-SHIPPED 2026-09-23.** A posting now records how it got into the set,
-chosen or random, and where it came from; a random one arrives
-unlabelled, which evaluations skip rather than guess at; and the
-console shows each posting's full text with a label control, because a
-posting cannot be judged without being read. Three random postings are
-loaded from an unfiltered search in adjacent fields and are waiting for
-a label. **Left to do:** the owner labels them, more are added toward
-ten, and calibration is reported separately for chosen and random,
-which is the part that makes the split worth having. Originally: the set
+**1. Random postings in the golden set (`RR-11`, `RR-12`). SHIPPED
+2026-09-24.** A posting records how it got into the set, chosen or
+random, and where it came from; a random one arrives unlabelled, which
+evaluations skip rather than guess at; and the console shows each
+posting's full text with a label control, because a posting cannot be
+judged without being read.
+
+The set holds eight postings, two chosen and six random, five expected
+above the gate and three below. The three on the low side were drawn
+from adjacent fields where the requirement that decides it is a
+credential: a BSEE and ETAP depth, a PE licence, a PhD with top-venue
+publications. Run 2 scored 8 of 8 on the expected side with 0 ordering
+violations and a margin of 0.143, in 6h13m45s. The groups did not
+interleave: every posting expected above outscored every posting
+expected below.
+
+**That margin of 0.143, with 8 of 8 and zero inversions, is the
+regression floor.** A later change to a prompt, a model or the corpus
+that drops below it is a regression, and the numbers exist to say so.
+
+Calibration reported separately for chosen and random shows no
+difference: chosen scored 1.000 and 0.857, random-above scored 0.956,
+0.865 and 0.786. The reviewer is not flattering the owner's own picks,
+which was the specific worry the `selection` column was added to test.
+
+**Left to do:** grow the set toward ten as real postings arrive, and
+keep the low side growing with it, since three rows is thin. See also
+`RR-18` on refreshing random postings so the set does not decay into
+"postings the model already handles". Originally: the set
 holds one posting. The owner chose it, and chose it because he applied
 for the job, so its expected outcome is his application decision
 restated rather than an independent judgment. A set like that cannot
