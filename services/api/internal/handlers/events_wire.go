@@ -25,6 +25,10 @@ func (j *AutoDeclineJobs) SetEvents(w *events.Writer) { j.events = w }
 // Nil disables the evaluation job, which is dev without a sidecar.
 func (a *Admin) SetEvaluator(e *jd.Evaluator) { a.evaluator = e }
 
+// SetJdLimits installs the submission-limit store on the admin handler,
+// so the console edits the same value the JD handler enforces.
+func (a *Admin) SetJdLimits(s *jd.LimitStore) { a.jdLimits = s }
+
 // uiModeCookie is the web app's mode cookie (apps/web/src/lib/ui-mode.ts).
 const uiModeCookie = "ui_mode"
 

@@ -42,14 +42,14 @@ type Jd struct {
 	// pipelineTimeout bounds one submission's background run. CPU
 	// inference can take minutes per LLM call.
 	pipelineTimeout time.Duration
-	// dailyLimit caps submissions per member per rolling 24 hours; 0
-	// disables it.
-	dailyLimit int
+	// limits serves the submissions-per-member cap, which the admin can
+	// change without a restart; 0 disables it.
+	limits *jd.LimitStore
 	// events is the product event stream; nil is silent.
 	events *events.Writer
 }
 
-func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration, dailyLimit int) *Jd {
+func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration, limits *jd.LimitStore) *Jd {
 	if pipelineTimeout <= 0 {
 		pipelineTimeout = 15 * time.Minute
 	}
@@ -62,7 +62,7 @@ func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pi
 		limiter:         ratelimit.New(5, 5.0/(15*60)),
 		scorer:          scorer,
 		pipelineTimeout: pipelineTimeout,
-		dailyLimit:      dailyLimit,
+		limits:          limits,
 	}
 }
 
@@ -224,10 +224,18 @@ func (h *Jd) SubmitJd(
 // the server keeps.
 const jdQuotaWindow = 24 * time.Hour
 
+// jdQuotaWindowHours is the same span for the wire, where it is
+// reported rather than measured with.
+const jdQuotaWindowHours = int32(jdQuotaWindow / time.Hour)
+
 // quotaFor reports the member's remaining allowance, or nil when no
 // limit applies to them.
 func (h *Jd) quotaFor(ctx context.Context, member *users.User) (*v1.JdQuota, error) {
-	if h.dailyLimit <= 0 || member.Role == users.RoleAdmin {
+	if member.Role == users.RoleAdmin {
+		return nil, nil
+	}
+	limit := h.limits.Get(ctx)
+	if limit <= 0 {
 		return nil, nil
 	}
 	since := time.Now().UTC().Add(-jdQuotaWindow)
@@ -235,15 +243,15 @@ func (h *Jd) quotaFor(ctx context.Context, member *users.User) (*v1.JdQuota, err
 	if err != nil {
 		return nil, err
 	}
-	remaining := h.dailyLimit - used
+	remaining := limit - used
 	if remaining < 0 {
 		remaining = 0
 	}
 	q := &v1.JdQuota{
-		Limit:       int32(h.dailyLimit),
+		Limit:       int32(limit),
 		Used:        int32(used),
 		Remaining:   int32(remaining),
-		WindowHours: int32(jdQuotaWindow / time.Hour),
+		WindowHours: jdQuotaWindowHours,
 	}
 	if oldest != nil {
 		q.NextSlotAt = timestamppb.New(oldest.Add(jdQuotaWindow))

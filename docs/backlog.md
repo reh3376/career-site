@@ -253,6 +253,15 @@ has to bound the window it is measured over: five members at five each
 is 25 reviews, which at the measured pace is more than a day of
 continuous inference, so the queue would outrun the day it fits in.
 
+The number is now an admin setting rather than an environment
+variable. `/admin/jd` edits it next to the fit bands, it is stored in
+`app_settings` and cached for 15 seconds, so a change is in force for
+the next submission without a deploy. `JD_DAILY_LIMIT` seeds the row
+the first time it is read and is not consulted again. What the limit
+should be depends on how long a review currently takes, which changes
+with the model, the corpus and the box, so it had no business being a
+value that needs ssh and a restart to alter.
+
 The allowance is also stated rather than merely enforced. The upload
 page shows what is left before anyone spends it, every submission
 returns the updated count, and running out names the hour the next slot

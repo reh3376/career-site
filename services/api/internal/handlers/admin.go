@@ -53,6 +53,7 @@ type Admin struct {
 	// evaluator scores the golden set (data layer D4); nil when the
 	// pipeline is not wired, which is dev without a sidecar.
 	evaluator *jd.Evaluator
+	jdLimits  *jd.LimitStore
 	// jobs runs the long admin operations (reindex, sweep) out of band.
 	jobs *jobs.Runner
 	// events is the product event stream; nil is silent.

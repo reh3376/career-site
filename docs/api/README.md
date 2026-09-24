@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 51 |
+| [`AdminService`](#adminservice) | Owner console. | 53 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1661,6 +1661,8 @@ Owner console.
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
 | [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
+| [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin (fresh MFA) | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
+| [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin (fresh MFA) | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
 
 ### AdminService.ListMembers
 
@@ -3396,6 +3398,64 @@ existing scores are re-classified on read.
     "possible": 0.5,
     "weak": 0.5
   }
+}
+```
+
+</details>
+
+### AdminService.GetJdSubmissionLimit
+
+`POST /api/career.v1.AdminService/GetJdSubmissionLimit` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads how many postings one member may submit per rolling day.
+
+**Request** — [`GetJdSubmissionLimitRequest`](#getjdsubmissionlimitrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetJdSubmissionLimitResponse`](#getjdsubmissionlimitresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number |  | Postings one member may submit per rolling window. |
+| `windowHours` | `int32` | number |  | How long the window is, in hours. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.SetJdSubmissionLimit
+
+`POST /api/career.v1.AdminService/SetJdSubmissionLimit` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Sets how many postings one member may submit per rolling day
+(stored in app_settings; the api caches it for 15 s). Takes effect
+for the next submission within seconds. A member already over a new
+lower limit is not refunded and not penalised: they simply wait for
+their oldest submission to age out.
+
+**Request** — [`SetJdSubmissionLimitRequest`](#setjdsubmissionlimitrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number | `int32: lte: 100 gte: 0` | Postings one member may submit per rolling window. 0 removes the cap, which on a box that reviews one posting an hour means one member with a script can fill the queue indefinitely. |
+
+**Response** — [`SetJdSubmissionLimitResponse`](#setjdsubmissionlimitresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number |  | Stored limit. |
+| `windowHours` | `int32` | number |  | How long the window is, in hours. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "limit": 0
 }
 ```
 
@@ -6245,6 +6305,38 @@ The bands as stored.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `bands` | [`JdFitBands`](#jdfitbands) | object |  | Stored bands. |
+
+### GetJdSubmissionLimitRequest
+
+Read request.
+
+_No fields._
+
+### GetJdSubmissionLimitResponse
+
+The limit in force.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number |  | Postings one member may submit per rolling window. |
+| `windowHours` | `int32` | number |  | How long the window is, in hours. |
+
+### SetJdSubmissionLimitRequest
+
+A new limit.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number | `int32: lte: 100 gte: 0` | Postings one member may submit per rolling window. 0 removes the cap, which on a box that reviews one posting an hour means one member with a script can fill the queue indefinitely. |
+
+### SetJdSubmissionLimitResponse
+
+The limit as stored.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number |  | Stored limit. |
+| `windowHours` | `int32` | number |  | How long the window is, in hours. |
 
 ### RegisterRequest
 

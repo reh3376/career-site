@@ -154,3 +154,61 @@ async function errorText(resp: Response): Promise<string> {
   }
   return `HTTP ${resp.status}`;
 }
+
+export type LimitState = { saved?: boolean; error?: string; limit?: number };
+
+// How many postings one member may submit per rolling day. Stored in
+// app_settings and cached by the api for 15 seconds, so a change is in
+// force for the next submission without a deploy.
+export async function setJdLimitAction(
+  _prev: LimitState,
+  formData: FormData,
+): Promise<LimitState> {
+  const raw = String(formData.get("limit") ?? "").trim();
+  const limit = Number(raw);
+  if (!Number.isInteger(limit) || limit < 0 || limit > 100) {
+    return { error: "A whole number between 0 and 100." };
+  }
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in.", limit };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/SetJdSubmissionLimit",
+    body: { limit },
+    cookie,
+  });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try {
+      const j = (await resp.json()) as { message?: string };
+      if (j.message) msg = j.message;
+    } catch {
+      /* keep default */
+    }
+    return { error: msg, limit };
+  }
+  revalidatePath("/admin/jd", "layout");
+  revalidatePath("/jd-upload", "layout");
+  return { saved: true, limit };
+}
+
+// The limit in force, for the console to render. Falls back to
+// undefined rather than a guess: a number nobody set is worse than no
+// number, because it looks authoritative.
+export async function getJdLimit(): Promise<
+  { limit: number; windowHours: number } | undefined
+> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return undefined;
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetJdSubmissionLimit",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return undefined;
+  try {
+    const j = (await resp.json()) as { limit?: number; windowHours?: number };
+    return { limit: j.limit ?? 0, windowHours: j.windowHours ?? 24 };
+  } catch {
+    return undefined;
+  }
+}
