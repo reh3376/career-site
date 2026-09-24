@@ -455,12 +455,22 @@ cites", and the honesty criterion is written against the weaker
 meaning. An entailment check on each bullet closes the gap between what
 the site implies and what it does.
 
-**3. The gate as pass or fail (`RR-13`, `RR-14`).** One view per
-criterion returning `pass, value, target, as_of`, and `/admin/gate`
-showing seven rows with links to the runs behind them. The analytics
-page shows numbers arranged by criterion; this turns them into a gate
-that is either met or not. It is also the artifact to screen-share in
-an interview.
+**3. The gate as pass or fail (`RR-13`, `RR-14`). SHIPPED
+2026-09-24.** One view per criterion returning `pass, value, target,
+as_of, detail`, unioned as `v_gate` (migration 00031), rendered at
+`/admin/gate`. `pass` has three states: met, not met, and unanswered,
+the last covering both too little data and no target set. An unanswered
+criterion is never drawn as a failure, because a young system rendering
+as seven red rows is a page nobody opens twice.
+
+On production at the time of writing: calibration passes (8 of 8, no
+inversions, margin 0.143), time to a result fails (median 48.9 minutes
+against a target of 20), and the other five are unanswerable, four for
+sample size and two because no target exists.
+
+**Left to do:** reach and model load are measured but have no target,
+so they cannot ever pass until the owner sets one. Rows do not yet link
+to the runs behind them, which `RR-14` asks for.
 
 **4. The second assessor (`RR-05`, `RR-07`, `RR-08`, `RR-10`).** A
 stronger model checking every verdict, in two clearly separated modes:

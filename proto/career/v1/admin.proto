@@ -339,6 +339,14 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns the criteria as a gate: one row per criterion with pass,
+  // value, target and as_of, read from the views that define them.
+  // /admin/analytics shows the same numbers arranged for reading; this
+  // answers whether each one is met.
+  rpc GetGate(GetGateRequest) returns (GetGateResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Lists logged reviewer decisions (per-requirement verdicts, gate
   // outcomes) with the evidence each was made from, for the owner's
   // human-in-the-loop review. Backs /admin/decisions.
@@ -1918,6 +1926,34 @@ message GetEvalRunResponse {
 
 // Get-metrics request.
 message GetMetricsRequest {}
+
+// Read request.
+message GetGateRequest {}
+
+// The criteria, in the order the owner wrote them.
+message GetGateResponse {
+  // One row per criterion.
+  repeated GateRow rows = 1;
+}
+
+// One criterion, answered.
+message GateRow {
+  // Which criterion, as the owner named it.
+  string criterion = 1;
+  // Whether the target is met. Unset means it cannot be answered yet:
+  // not enough data, or no target has been set. An unset value is not
+  // a failure and must not be rendered as one.
+  optional bool pass = 2;
+  // The measurement, already phrased for reading.
+  string value = 3;
+  // What would count as met.
+  string target = 4;
+  // When the measurement is from.
+  google.protobuf.Timestamp as_of = 5;
+  // Anything that qualifies the answer, such as how short the sample
+  // is or which part of the target failed.
+  string detail = 6;
+}
 
 // One fit band against what actually happened afterwards.
 message OutcomeByFit {

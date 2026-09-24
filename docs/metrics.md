@@ -24,6 +24,34 @@ to go and read what it means.
 | `v_funnel_30d_summary` | That funnel as counts. |
 | `v_eval_history` | Golden-set evaluations with their pass rate, for before-and-after comparison. |
 | `v_outcome_by_fit` | The fit band a run assigned against what actually happened afterwards. |
+| `v_gate` | The seven criteria as pass, not met, or unanswered, with the target each is judged against. Defined in migration 00031, one view per criterion. |
+
+## The gate
+
+Migration `00031_gate_views.sql` turns those numbers into an answer.
+One view per criterion (`v_gate_reliability` and the rest), unioned as
+`v_gate`, each returning the same four things: `pass`, `value`,
+`target`, `as_of`, plus a `detail` that qualifies the answer.
+
+`pass` has three states and the third is the point:
+
+| | meaning |
+| --- | --- |
+| `true` | the target is met on the data there is |
+| `false` | the target is not met |
+| `null` | not enough data, or no target has been set |
+
+A null is never rendered as a failure. A criterion nobody has set a
+target for is unanswered, and one with four data points has not earned
+a verdict either way; collapsing those into a failure would make a young
+system read as broken and then nobody opens the page again.
+
+Two criteria, reach and model load, are measured but have no target.
+They stay null until the owner sets one rather than having a number
+invented on his behalf.
+
+`/admin/gate` renders it. `/admin/analytics` shows the same measurements
+arranged for reading.
 
 ## Reading them
 
