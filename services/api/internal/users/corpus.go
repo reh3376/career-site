@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 )
 
 // CorpusDocument mirrors corpus_documents. content_hash and meta are
@@ -295,6 +297,14 @@ func (r *Repo) searchCorpus(
 		topK = 20
 	}
 	// $3 = '' means any kind; the index is still used for the ordering.
+	//
+	// $4 is the visibility gate. Most of the corpus is private, and
+	// retrieved text reaches the judge's context and the résumé
+	// generator, so a submitted posting must not be able to steer
+	// similarity search across client and NDA material. The scope rides
+	// the context and defaults to public, so a caller that forgets to
+	// widen it retrieves too little rather than too much. See
+	// internal/corpusscope.
 	const q = `
     SELECT c.id, c.document_id, c.chunk_index, c.text,
            COALESCE(c.token_count, 0),
@@ -304,10 +314,12 @@ func (r *Repo) searchCorpus(
     JOIN corpus_documents d ON d.id = c.document_id
     WHERE c.embedding IS NOT NULL
       AND ($3 = '' OR d.source_kind = $3)
+      AND ($4 = true OR d.visibility = 'public')
     ORDER BY c.embedding <=> $1
     LIMIT $2
   `
-	rows, err := r.pool.Query(ctx, q, vectorLiteral(embedding), topK, sourceKind)
+	rows, err := r.pool.Query(ctx, q,
+		vectorLiteral(embedding), topK, sourceKind, corpusscope.AllowsPrivate(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("search corpus: %w", err)
 	}

@@ -431,3 +431,29 @@ func (r *Repo) FailStrandedJd(ctx context.Context) (int64, error) {
 	}
 	return tag.RowsAffected(), nil
 }
+
+// CountJdSubmissionsSince counts what a member has submitted inside a
+// window, for the per-member quota.
+//
+// It counts rows rather than tokens in a bucket because the limit has
+// to survive a restart. The in-process limiter resets whenever the api
+// container is recreated, which on this project is several times a day,
+// so anything enforced only there is enforced only between deploys.
+//
+// Evaluation submissions are excluded: they are the owner's own
+// measurement runs, they never come from a person pressing a button,
+// and counting them would let a long evaluation lock the owner out of
+// his own site.
+func (r *Repo) CountJdSubmissionsSince(
+	ctx context.Context, userID int64, since time.Time,
+) (int, error) {
+	const q = `
+    SELECT count(*) FROM jd_submissions
+     WHERE user_id = $1 AND created_at >= $2 AND NOT is_eval
+  `
+	var n int
+	if err := r.pool.QueryRow(ctx, q, userID, since).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count submissions: %w", err)
+	}
+	return n, nil
+}

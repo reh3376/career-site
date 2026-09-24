@@ -212,6 +212,43 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 Shipped so far: ruleset on `main` with required checks, gitleaks in
 CI, rate limits on login and events, client IP behind Caddy, body
 limits, security headers and CSP, noindex on member pages, HIBP fix.
+
+**5a. A submitted posting can no longer reach private material.
+SHIPPED 2026-09-24.** Retrieval had no visibility predicate:
+`SearchCorpus` selected across every embedded chunk, and production
+holds 21 `corpus_only` documents against 5 public ones. The retrieved
+text entered the judge's context and the résumé generator, and the only
+thing between it and the submitter was a line in the judge prompt
+asking the model not to quote private chunks. A submitted posting is
+text the submitter wrote, aimed at that same model, so the prompt was
+the wrong place for the control.
+
+The scope now rides the context (`internal/corpusscope`) and the SQL
+enforces it. It defaults to public, so code that forgets to widen it
+retrieves too little, which someone notices, rather than too much,
+which nobody notices. A member's submission is public-only: 52 chunks.
+The owner's own submissions and evaluation runs are unrestricted: 239
+chunks.
+
+**The cost, stated plainly:** a member's review now draws on five
+public documents. Their results will be thinner and less evidenced than
+the owner's, and the golden-set numbers describe the owner's path only,
+not what a recruiter sees. Closing that gap is a content decision, not
+a code one: publish more of the corpus. Nothing should reopen the
+retrieval path to do it.
+
+**5b. A member cannot queue unbounded work. SHIPPED 2026-09-24.** The
+existing limiter is keyed on (member, jd_hash), so it stops the same
+posting being resubmitted and nothing else: change a word and it is a
+different key. One submission is roughly an hour of inference and the
+pipeline runs one at a time, so a member pasting distinct postings in a
+loop was a queue nobody else could get into. `JD_DAILY_LIMIT` (default
+5) caps submissions per member per rolling 24 hours, counted from
+`jd_submissions` rather than an in-memory bucket, because the api
+container is recreated several times a day and anything counted in
+memory is enforced only between deploys. Evaluation rows are excluded.
+The admin is exempt. The check fails closed: if the count cannot be
+read, the submission is refused.
 Still open:
 
 - Pin third-party GitHub Actions by commit SHA.

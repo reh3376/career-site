@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/build"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -161,7 +162,13 @@ func (e *Evaluator) score(ctx context.Context, g users.GoldenPosting, threshold 
 	// job, and the pipeline serialises anyway, so running these in
 	// parallel would only make them queue behind each other with worse
 	// reporting.
-	e.scorer.ScoreAndPersist(ctx, sub.ID, g.JdText, prompts.Hints{Role: g.RoleHint, Employer: g.EmployerHint})
+	// An evaluation retrieves from the whole corpus. It exists to measure
+	// what the owner gets when he reviews a posting for himself, which is
+	// the case the private material is there for. A member's submission
+	// is scoped to public documents in the handler, so the two paths
+	// differ, and the golden-set numbers describe the owner's path only.
+	e.scorer.ScoreAndPersist(corpusscope.With(ctx, corpusscope.All),
+		sub.ID, g.JdText, prompts.Hints{Role: g.RoleHint, Employer: g.EmployerHint})
 
 	runs, err := e.users.ListJdRuns(ctx, sub.ID)
 	if err != nil || len(runs) == 0 {
