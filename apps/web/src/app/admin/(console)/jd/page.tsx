@@ -3,7 +3,9 @@ import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
 
+import { getJdLimit } from "./actions";
 import { FitBandsForm } from "./fit-bands-form";
+import { SubmissionLimitForm } from "./submission-limit-form";
 import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
 
@@ -90,6 +92,7 @@ export default async function AdminJdPage() {
   const result = await fetchList();
   const nowMs = getNowMs();
   const bands = await getJdBands(await getSessionCookie());
+  const limit = await getJdLimit();
 
   return (
     <>
@@ -127,6 +130,33 @@ export default async function AdminJdPage() {
         </p>
         <div className="mt-4">
           <FitBandsForm initial={bands} />
+        </div>
+
+        <h2
+          className="font-display mt-10 text-2xl leading-tight text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          How many a member may send.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
+          The reviewer works through one posting at a time and each one takes
+          close to an hour, so this is the number that decides how long anyone
+          can be made to wait. Members see what they have left before they
+          spend it.
+        </p>
+        <div className="mt-4">
+          {limit ? (
+            <SubmissionLimitForm
+              initial={limit.limit}
+              windowHours={limit.windowHours}
+            />
+          ) : (
+            <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+              Could not read the limit in force, so it is not shown rather
+              than guessed at. The API refused the read; the cap itself is
+              still enforced.
+            </p>
+          )}
         </div>
       </section>
 

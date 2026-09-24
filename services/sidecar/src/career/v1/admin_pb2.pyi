@@ -1700,3 +1700,29 @@ class SetJdFitBandsResponse(_message.Message):
     BANDS_FIELD_NUMBER: _ClassVar[int]
     bands: _jd_pb2.JdFitBands
     def __init__(self, bands: _Optional[_Union[_jd_pb2.JdFitBands, _Mapping]] = ...) -> None: ...
+
+class GetJdSubmissionLimitRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetJdSubmissionLimitResponse(_message.Message):
+    __slots__ = ("limit", "window_hours")
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_HOURS_FIELD_NUMBER: _ClassVar[int]
+    limit: int
+    window_hours: int
+    def __init__(self, limit: _Optional[int] = ..., window_hours: _Optional[int] = ...) -> None: ...
+
+class SetJdSubmissionLimitRequest(_message.Message):
+    __slots__ = ("limit",)
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    limit: int
+    def __init__(self, limit: _Optional[int] = ...) -> None: ...
+
+class SetJdSubmissionLimitResponse(_message.Message):
+    __slots__ = ("limit", "window_hours")
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_HOURS_FIELD_NUMBER: _ClassVar[int]
+    limit: int
+    window_hours: int
+    def __init__(self, limit: _Optional[int] = ..., window_hours: _Optional[int] = ...) -> None: ...

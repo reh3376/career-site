@@ -46,6 +46,9 @@ services:
       # Outbound links, read at request time (empty hides the link).
       LINKEDIN_URL: ${LINKEDIN_URL:-}
       JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
+      # Seeds the app_settings row on first read; the admin console owns
+      # the value after that, so this is a starting point, not the knob.
+      JD_DAILY_LIMIT: ${JD_DAILY_LIMIT:-3}
       GITHUB_URL: ${GITHUB_URL:-https://github.com/reh3376}
     networks: [app]
 

@@ -372,6 +372,20 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Reads how many postings one member may submit per rolling day.
+  rpc GetJdSubmissionLimit(GetJdSubmissionLimitRequest) returns (GetJdSubmissionLimitResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Sets how many postings one member may submit per rolling day
+  // (stored in app_settings; the api caches it for 15 s). Takes effect
+  // for the next submission within seconds. A member already over a new
+  // lower limit is not refunded and not penalised: they simply wait for
+  // their oldest submission to age out.
+  rpc SetJdSubmissionLimit(SetJdSubmissionLimitRequest) returns (SetJdSubmissionLimitResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
 }
 
 // Activity counts for a member.
@@ -2286,5 +2300,35 @@ message SetJdFitBandsRequest {
 message SetJdFitBandsResponse {
   // Stored bands.
   JdFitBands bands = 1;
+}
+
+// Read request.
+message GetJdSubmissionLimitRequest {}
+
+// The limit in force.
+message GetJdSubmissionLimitResponse {
+  // Postings one member may submit per rolling window.
+  int32 limit = 1;
+  // How long the window is, in hours.
+  int32 window_hours = 2;
+}
+
+// A new limit.
+message SetJdSubmissionLimitRequest {
+  // Postings one member may submit per rolling window. 0 removes the
+  // cap, which on a box that reviews one posting an hour means one
+  // member with a script can fill the queue indefinitely.
+  int32 limit = 1 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 100
+  }];
+}
+
+// The limit as stored.
+message SetJdSubmissionLimitResponse {
+  // Stored limit.
+  int32 limit = 1;
+  // How long the window is, in hours.
+  int32 window_hours = 2;
 }
 

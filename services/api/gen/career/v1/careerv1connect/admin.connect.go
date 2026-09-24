@@ -189,6 +189,12 @@ const (
 	// AdminServiceSetJdFitBandsProcedure is the fully-qualified name of the AdminService's
 	// SetJdFitBands RPC.
 	AdminServiceSetJdFitBandsProcedure = "/career.v1.AdminService/SetJdFitBands"
+	// AdminServiceGetJdSubmissionLimitProcedure is the fully-qualified name of the AdminService's
+	// GetJdSubmissionLimit RPC.
+	AdminServiceGetJdSubmissionLimitProcedure = "/career.v1.AdminService/GetJdSubmissionLimit"
+	// AdminServiceSetJdSubmissionLimitProcedure is the fully-qualified name of the AdminService's
+	// SetJdSubmissionLimit RPC.
+	AdminServiceSetJdSubmissionLimitProcedure = "/career.v1.AdminService/SetJdSubmissionLimit"
 )
 
 // AdminServiceClient is a client for the career.v1.AdminService service.
@@ -386,6 +392,14 @@ type AdminServiceClient interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads how many postings one member may submit per rolling day.
+	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
+	// Sets how many postings one member may submit per rolling day
+	// (stored in app_settings; the api caches it for 15 s). Takes effect
+	// for the next submission within seconds. A member already over a new
+	// lower limit is not refunded and not penalised: they simply wait for
+	// their oldest submission to age out.
+	SetJdSubmissionLimit(context.Context, *connect.Request[v1.SetJdSubmissionLimitRequest]) (*connect.Response[v1.SetJdSubmissionLimitResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the career.v1.AdminService service. By default, it
@@ -705,6 +719,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 			connect.WithClientOptions(opts...),
 		),
+		getJdSubmissionLimit: connect.NewClient[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse](
+			httpClient,
+			baseURL+AdminServiceGetJdSubmissionLimitProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetJdSubmissionLimit")),
+			connect.WithClientOptions(opts...),
+		),
+		setJdSubmissionLimit: connect.NewClient[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse](
+			httpClient,
+			baseURL+AdminServiceSetJdSubmissionLimitProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetJdSubmissionLimit")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -761,6 +787,8 @@ type adminServiceClient struct {
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
 	getJdFitBands         *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
 	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
+	getJdSubmissionLimit  *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
+	setJdSubmissionLimit  *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -1018,6 +1046,16 @@ func (c *adminServiceClient) SetJdFitBands(ctx context.Context, req *connect.Req
 	return c.setJdFitBands.CallUnary(ctx, req)
 }
 
+// GetJdSubmissionLimit calls career.v1.AdminService.GetJdSubmissionLimit.
+func (c *adminServiceClient) GetJdSubmissionLimit(ctx context.Context, req *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
+	return c.getJdSubmissionLimit.CallUnary(ctx, req)
+}
+
+// SetJdSubmissionLimit calls career.v1.AdminService.SetJdSubmissionLimit.
+func (c *adminServiceClient) SetJdSubmissionLimit(ctx context.Context, req *connect.Request[v1.SetJdSubmissionLimitRequest]) (*connect.Response[v1.SetJdSubmissionLimitResponse], error) {
+	return c.setJdSubmissionLimit.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the career.v1.AdminService service.
 type AdminServiceHandler interface {
 	// Lists members with search, filters, and pagination.
@@ -1213,6 +1251,14 @@ type AdminServiceHandler interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads how many postings one member may submit per rolling day.
+	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
+	// Sets how many postings one member may submit per rolling day
+	// (stored in app_settings; the api caches it for 15 s). Takes effect
+	// for the next submission within seconds. A member already over a new
+	// lower limit is not refunded and not penalised: they simply wait for
+	// their oldest submission to age out.
+	SetJdSubmissionLimit(context.Context, *connect.Request[v1.SetJdSubmissionLimitRequest]) (*connect.Response[v1.SetJdSubmissionLimitResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1528,6 +1574,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetJdSubmissionLimitHandler := connect.NewUnaryHandler(
+		AdminServiceGetJdSubmissionLimitProcedure,
+		svc.GetJdSubmissionLimit,
+		connect.WithSchema(adminServiceMethods.ByName("GetJdSubmissionLimit")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetJdSubmissionLimitHandler := connect.NewUnaryHandler(
+		AdminServiceSetJdSubmissionLimitProcedure,
+		svc.SetJdSubmissionLimit,
+		connect.WithSchema(adminServiceMethods.ByName("SetJdSubmissionLimit")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServiceListMembersProcedure:
@@ -1632,6 +1690,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetJdFitBandsHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdFitBandsProcedure:
 			adminServiceSetJdFitBandsHandler.ServeHTTP(w, r)
+		case AdminServiceGetJdSubmissionLimitProcedure:
+			adminServiceGetJdSubmissionLimitHandler.ServeHTTP(w, r)
+		case AdminServiceSetJdSubmissionLimitProcedure:
+			adminServiceSetJdSubmissionLimitHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1843,4 +1905,12 @@ func (UnimplementedAdminServiceHandler) GetJdFitBands(context.Context, *connect.
 
 func (UnimplementedAdminServiceHandler) SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdFitBands is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetJdSubmissionLimit is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetJdSubmissionLimit(context.Context, *connect.Request[v1.SetJdSubmissionLimitRequest]) (*connect.Response[v1.SetJdSubmissionLimitResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdSubmissionLimit is not implemented"))
 }

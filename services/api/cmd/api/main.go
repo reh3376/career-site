@@ -227,7 +227,8 @@ func main() {
 	} else if n > 0 {
 		log.Info("jd: stranded run records closed after restart", slog.Int64("count", n))
 	}
-	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, cfg.JDDailyLimit)
+	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
+	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
 	adminHandler := handlers.NewAdmin(
 		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,
@@ -241,6 +242,9 @@ func main() {
 	contactHandler.SetEvents(eventWriter)
 	jdHandler.SetEvents(eventWriter)
 	adminHandler.SetEvents(eventWriter)
+	// The console edits the same store the JD handler enforces, so a
+	// change there takes effect on the next submission.
+	adminHandler.SetJdLimits(jdLimits)
 	// The golden-set evaluator needs a member to own its submissions;
 	// the admin bootstrapped at boot is the one person here. Without a
 	// scorer there is nothing to evaluate, so it stays nil in dev
