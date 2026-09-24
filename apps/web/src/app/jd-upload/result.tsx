@@ -186,7 +186,7 @@ export function JdResult({
         if (stop) return;
         setPoll(j);
         const live = LIVE.has(j.status ?? "");
-        // The pipeline on the production box takes 15 to 30 minutes and
+        // The pipeline on the production box takes 30 to 60 minutes and
         // may queue behind another submission; keep polling for an hour,
         // quickly at first, then every 20 s.
         const elapsed = Date.now() - started;
@@ -281,7 +281,8 @@ export function JdResult({
                 </p>
                 <p className="mt-4 text-sm leading-relaxed text-ink-2">
                   Each requirement is judged one at a time; this usually takes
-                  15 to 30 minutes. Keep this open to watch, or close it: you
+                  30 to 60 minutes, sometimes longer. Keep this open to watch,
+                  or close it: you
                   get an email when the review is finished, with the résumé
                   attached if the fit is strong.
                 </p>
@@ -390,7 +391,7 @@ export function JdResult({
       {live ? (
         <p className="text-sm leading-relaxed text-ink-2">
           This runs a language model over each requirement in the posting, one
-          at a time, and usually takes 15 to 30 minutes. You can close this
+          at a time, and usually takes 30 to 60 minutes. You can close this
           page: the review stays at{" "}
           <Link
             href={`/jd-upload/${submissionId}`}
