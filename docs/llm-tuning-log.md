@@ -1631,3 +1631,21 @@ and the judge pass from 34 minutes to roughly 14. That is a quality
 trade, not a free win: the chunk that carries a verdict may be the one
 dropped. The golden set is the instrument, against 8 of 8 and a margin
 of 0.143, and no such change should ship without a run through it.
+
+## 2026-09-24: leaving the pipeline alone, on purpose
+
+Decision by the owner, after the measurements above: stop optimising
+time to a result. A review takes about fifty minutes because the box
+evaluates prompts at 12 to 13 tokens a second and the judge must read
+fresh evidence for every requirement. Caching is already working and
+already counted. What remains is cutting evidence per requirement,
+which buys about twenty minutes and risks the verdicts.
+
+His reasoning, and it is the right one: this is a resource constraint,
+not a defect, and continued attempts risk reducing the effectiveness of
+a pipeline that currently works. The golden set says it works, 8 of 8
+with a margin of 0.143, and that is the thing worth protecting.
+
+Recorded here because the next person to look at a 50-minute run will
+reach for the same optimisations, and should know they were measured,
+costed and declined rather than missed.
