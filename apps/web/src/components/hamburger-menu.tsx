@@ -220,19 +220,27 @@ function buildGroups({
   social?: SocialProps;
 }): MenuGroup[] {
   // Anonymous visitors see the evidence: the landing, the writing, the
-  // work photos, and the way in. The gallery serves them a subset from
-  // the same URL. The reviewer and the member surfaces need an account.
+  // work photos, how the reviewer works, and the way in. The gallery
+  // serves them a subset from the same URL.
+  //
+  // "How it works" is in this list rather than behind the sign-in
+  // because it is the page that says which model reads a posting, that
+  // the model was never trained on the career it judges, and how far
+  // the reviewer currently disagrees with its owner. Someone deciding
+  // whether to ask for access needs it before they decide, and a public
+  // page nothing links to is a page nobody reads.
+  //
+  // The reviewer itself needs an account: it spends real compute and
+  // carries the daily quota.
   const browse: MenuItem[] = [
     { kind: "link", label: "Home", href: "/" },
     { kind: "link", label: "Articles", href: "/articles" },
     { kind: "link", label: "Gallery", href: "/gallery" },
+    { kind: "link", label: "How it works", href: "/how-ask-roger-works" },
     { kind: "link", label: "Contact", href: "/contact" },
   ];
   if (signedIn) {
-    browse.push(
-      { kind: "link", label: "JD upload", href: "/jd-upload" },
-      { kind: "link", label: "How Ask Roger works", href: "/how-ask-roger-works" },
-    );
+    browse.splice(4, 0, { kind: "link", label: "JD upload", href: "/jd-upload" });
   }
   const groups: MenuGroup[] = [{ label: "browse", items: browse }];
 
