@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
@@ -213,6 +214,18 @@ type ReviewerStatus struct {
 	Margin                          *float64
 	EvaluatedAt                     *time.Time
 	Model                           string
+	// Bands are the thresholds in force, so a page without a session can
+	// quote the real ones rather than a default that is right only until
+	// the owner edits them.
+	Bands *FitBands
+}
+
+// FitBands mirrors the stored jd_fit_bands setting.
+type FitBands struct {
+	VeryStrong float64 `json:"very_strong"`
+	Strong     float64 `json:"strong"`
+	Possible   float64 `json:"possible"`
+	Weak       float64 `json:"weak"`
 }
 
 // ReviewerStatus reads the publishable numbers from the same views the
@@ -254,6 +267,13 @@ func (r *Repo) ReviewerStatus(ctx context.Context) (*ReviewerStatus, error) {
 		&out.Margin, &out.EvaluatedAt, &out.Model,
 	); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("reviewer evaluation: %w", err)
+	}
+
+	if raw, ok, bErr := r.GetSetting(ctx, "jd_fit_bands"); bErr == nil && ok {
+		var b FitBands
+		if json.Unmarshal(raw, &b) == nil && b.Strong > 0 {
+			out.Bands = &b
+		}
 	}
 	return out, nil
 }

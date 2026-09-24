@@ -3587,6 +3587,7 @@ _No fields; send `{}`._
 | `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
+| `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
 
 <details><summary>Example request body</summary>
 
@@ -7335,6 +7336,18 @@ is worth less than the numbers it is failing on.
 | `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
+| `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
+
+### JdFitBandsPublic
+
+The four thresholds that classify a score.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `veryStrong` | `double` | number |  | At or above this is very strong. |
+| `strong` | `double` | number |  | At or above this is strong, and this is the résumé gate. |
+| `possible` | `double` | number |  | At or above this is possible. |
+| `weak` | `double` | number |  | At or above this is weak; below it is very weak. |
 
 ### EmbedPurpose
 

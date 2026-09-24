@@ -70,6 +70,12 @@ func (h *System) GetReviewerStatus(
 	if st.EvaluatedAt != nil {
 		resp.EvaluatedAt = timestamppb.New(*st.EvaluatedAt)
 	}
+	if b := st.Bands; b != nil {
+		resp.Bands = &v1.JdFitBandsPublic{
+			VeryStrong: b.VeryStrong, Strong: b.Strong,
+			Possible: b.Possible, Weak: b.Weak,
+		}
+	}
 	return connect.NewResponse(resp), nil
 }
 
