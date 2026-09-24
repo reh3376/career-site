@@ -114,6 +114,7 @@ func (a *Admin) GetGate(
 			Target:    g.Target,
 			Detail:    g.Detail,
 			Pass:      g.Pass,
+			Gated:     g.Gated,
 		}
 		if g.AsOf != nil {
 			row.AsOf = timestamppb.New(*g.AsOf)

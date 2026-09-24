@@ -6076,6 +6076,7 @@ One criterion, answered.
 | `target` | `string` | string |  | What would count as met. |
 | `asOf` | `Timestamp` | string (RFC 3339, UTC) |  | When the measurement is from. |
 | `detail` | `string` | string |  | Anything that qualifies the answer, such as how short the sample is or which part of the target failed. |
+| `gated` | `bool` | boolean |  | Whether this row is a criterion at all. False means it is measured on purpose and gated on purpose: reach moves with who happened to find the site, not with whether the reviewer improved. Such a row must not be rendered as permanently unanswered, which would read as a standing reproach for something that is not a fault. |
 
 ### OutcomeByFit
 

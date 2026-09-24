@@ -163,12 +163,15 @@ type GateRow struct {
 	Target    string
 	AsOf      *time.Time
 	Detail    string
+	// Gated is false for a row that is measured on purpose and not
+	// judged on purpose.
+	Gated bool
 }
 
 // Gate returns the criteria in the owner's order.
 func (r *Repo) Gate(ctx context.Context) ([]GateRow, error) {
 	const q = `
-    SELECT criterion, pass, value, target, as_of, detail
+    SELECT criterion, pass, value, target, as_of, detail, gated
       FROM v_gate
      WHERE tenant_id = $1
      ORDER BY ord
@@ -182,7 +185,7 @@ func (r *Repo) Gate(ctx context.Context) ([]GateRow, error) {
 	var out []GateRow
 	for rows.Next() {
 		var g GateRow
-		if err := rows.Scan(&g.Criterion, &g.Pass, &g.Value, &g.Target, &g.AsOf, &g.Detail); err != nil {
+		if err := rows.Scan(&g.Criterion, &g.Pass, &g.Value, &g.Target, &g.AsOf, &g.Detail, &g.Gated); err != nil {
 			return nil, fmt.Errorf("scan gate row: %w", err)
 		}
 		out = append(out, g)

@@ -1953,6 +1953,12 @@ message GateRow {
   // Anything that qualifies the answer, such as how short the sample
   // is or which part of the target failed.
   string detail = 6;
+  // Whether this row is a criterion at all. False means it is measured
+  // on purpose and gated on purpose: reach moves with who happened to
+  // find the site, not with whether the reviewer improved. Such a row
+  // must not be rendered as permanently unanswered, which would read as
+  // a standing reproach for something that is not a fault.
+  bool gated = 7;
 }
 
 // One fit band against what actually happened afterwards.

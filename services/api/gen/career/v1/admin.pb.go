@@ -8285,7 +8285,13 @@ type GateRow struct {
 	AsOf *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
 	// Anything that qualifies the answer, such as how short the sample
 	// is or which part of the target failed.
-	Detail        string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
+	Detail string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
+	// Whether this row is a criterion at all. False means it is measured
+	// on purpose and gated on purpose: reach moves with who happened to
+	// find the site, not with whether the reviewer improved. Such a row
+	// must not be rendered as permanently unanswered, which would read as
+	// a standing reproach for something that is not a fault.
+	Gated         bool `protobuf:"varint,7,opt,name=gated,proto3" json:"gated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8360,6 +8366,13 @@ func (x *GateRow) GetDetail() string {
 		return x.Detail
 	}
 	return ""
+}
+
+func (x *GateRow) GetGated() bool {
+	if x != nil {
+		return x.Gated
+	}
+	return false
 }
 
 // One fit band against what actually happened afterwards.
@@ -11156,14 +11169,15 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x11GetMetricsRequest\"\x10\n" +
 	"\x0eGetGateRequest\"9\n" +
 	"\x0fGetGateResponse\x12&\n" +
-	"\x04rows\x18\x01 \x03(\v2\x12.career.v1.GateRowR\x04rows\"\xc0\x01\n" +
+	"\x04rows\x18\x01 \x03(\v2\x12.career.v1.GateRowR\x04rows\"\xd6\x01\n" +
 	"\aGateRow\x12\x1c\n" +
 	"\tcriterion\x18\x01 \x01(\tR\tcriterion\x12\x17\n" +
 	"\x04pass\x18\x02 \x01(\bH\x00R\x04pass\x88\x01\x01\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\tR\x05value\x12\x16\n" +
 	"\x06target\x18\x04 \x01(\tR\x06target\x12/\n" +
 	"\x05as_of\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x04asOf\x12\x16\n" +
-	"\x06detail\x18\x06 \x01(\tR\x06detailB\a\n" +
+	"\x06detail\x18\x06 \x01(\tR\x06detail\x12\x14\n" +
+	"\x05gated\x18\a \x01(\bR\x05gatedB\a\n" +
 	"\x05_pass\"\\\n" +
 	"\fOutcomeByFit\x12\x10\n" +
 	"\x03fit\x18\x01 \x01(\tR\x03fit\x12\x18\n" +

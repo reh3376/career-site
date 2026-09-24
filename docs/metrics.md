@@ -39,16 +39,25 @@ One view per criterion (`v_gate_reliability` and the rest), unioned as
 | --- | --- |
 | `true` | the target is met on the data there is |
 | `false` | the target is not met |
-| `null` | not enough data, or no target has been set |
+| `null` | not enough data yet |
 
-A null is never rendered as a failure. A criterion nobody has set a
-target for is unanswered, and one with four data points has not earned
-a verdict either way; collapsing those into a failure would make a young
-system read as broken and then nobody opens the page again.
+A null is never rendered as a failure: a criterion with four data points
+has not earned a verdict either way, and collapsing that into a failure
+would make a young system read as broken.
 
-Two criteria, reach and model load, are measured but have no target.
-They stay null until the owner sets one rather than having a number
-invented on his behalf.
+`gated` is separate and says whether a row is a criterion at all. Reach
+is measured and deliberately not gated (owner, 2026-09-24): whether
+strangers find the site is demand, not quality, and a gate that cannot
+be moved by doing good work teaches nothing. Model load is gated on the
+failure rate, under 2 percent, which is the part of it that is a
+property of the box rather than of how busy it was. Latency is not
+repeated there because time to a result already gates it.
+
+Agreement counts only submissions the posting-check gatekeeper accepted
+(migration 00032). A metric that holds the judge accountable for input
+the pipeline would now refuse measures the wrong thing. The gatekeeper
+decides, not the verdict, so a refused posting is excluded whether its
+verdicts were flattering or not.
 
 `/admin/gate` renders it. `/admin/analytics` shows the same measurements
 arranged for reading.

@@ -13,13 +13,18 @@
 --
 --   true   the target is met on the data there is
 --   false  the target is not met
---   null   there is not enough data, or no target has been set
+--   null   there is not enough data yet
 --
--- A null is never rendered as a failure. A criterion nobody has set a
--- target for is not failing, it is unanswered, and a criterion with
--- four data points has not earned a verdict either way. Collapsing
--- those into "false" would make the gate read as broken when it is
--- merely young, and then nobody would look at it.
+-- A null is never rendered as a failure. A criterion with four data
+-- points has not earned a verdict either way, and collapsing that into
+-- "false" would make the gate read as broken when it is merely young.
+--
+-- `gated` is separate and says whether the row is a criterion at all.
+-- Reach is measured and deliberately not gated: the owner does not
+-- control whether recruiters find the site, and a gate that cannot be
+-- moved by doing good work teaches nothing. Rendering it as
+-- permanently unanswered would be a standing reproach for something
+-- that is not a fault, so it says "measured" instead.
 --
 -- Same rule as every other metric: defined once here, never recomputed
 -- in Go or in a page.
@@ -42,7 +47,8 @@ SELECT tenant_id,
             WHEN failed > 0 OR stuck > 0
             THEN failed || ' failed, ' || stuck || ' still running.'
             ELSE ''
-       END AS detail
+       END AS detail,
+       true AS gated
   FROM v_reliability;
 
 -- 2. Agreement. The owner's verdict beside the model's, on the
@@ -64,7 +70,8 @@ SELECT tenant_id,
             WHEN hard_disagreements > 0
             THEN hard_disagreements || ' hard disagreements (met against unmet), ' || soft_disagreements || ' soft.'
             ELSE soft_disagreements || ' soft disagreements, none hard.'
-       END AS detail
+       END AS detail,
+       true AS gated
   FROM v_judge_agreement_summary;
 
 -- 3. Time to a result.
@@ -81,7 +88,8 @@ SELECT tenant_id,
        CASE WHEN finished_runs < 5
             THEN 'Only ' || finished_runs || ' finished runs.'
             ELSE 'Slowest ' || slowest_minutes || ' min, median queue ' || median_queued_minutes || ' min, over ' || finished_runs || ' runs.'
-       END AS detail
+       END AS detail,
+       true AS gated
   FROM v_jd_latency;
 
 -- 4. Calibration. The most recent finished evaluation: every posting on
@@ -101,7 +109,8 @@ SELECT tenant_id,
        'Every posting on its expected side of the gate, no inversions, holding across a change.' AS target,
        started_at AS as_of,
        order_violations || ' inversions, margin ' || COALESCE(round(margin::numeric, 3)::text, 'n/a')
-         || ', model ' || COALESCE(model, 'unknown') AS detail
+         || ', model ' || COALESCE(model, 'unknown') AS detail,
+       true AS gated
   FROM latest;
 
 -- 5. Whether the score predicts anything. This is the question the
@@ -117,34 +126,50 @@ SELECT t.id AS tenant_id,
          || ' runs with a recorded outcome' AS value,
        'Needs recorded outcomes. Until postings have results attached, this is unanswered rather than failing.' AS target,
        now() AS as_of,
-       'Record outcomes on /admin/jd/[id] as they happen; the view is v_outcome_by_fit.' AS detail
+       'Record outcomes on /admin/jd/[id] as they happen; the view is v_outcome_by_fit.' AS detail,
+       true AS gated
   FROM tenants t;
 
--- 6. Reach, and 7. Model load. Both are real measurements with no
--- target set, so both report null rather than inventing a number to
--- pass against. Setting those targets is the owner's call, and a gate
--- that quietly makes one up on his behalf is worse than one that says
--- the target is missing.
+-- 6. Reach. Measured, deliberately not gated (owner, 2026-09-24).
+-- Whether strangers find the site is demand, not quality: it moves with
+-- where a posting was shared and who happened to look, and not with
+-- whether the reviewer got better. A criterion that cannot be moved by
+-- doing good work teaches nothing, so this reports the funnel and
+-- claims nothing about it.
 CREATE VIEW v_gate_reach AS
 SELECT tenant_id,
        6 AS ord,
        'Reach, last 30 days' AS criterion,
        NULL::boolean AS pass,
        landed || ' landed, ' || registered || ' registered, ' || submitted || ' submitted a posting' AS value,
-       'No target set. Anonymous visitors through to a submitted posting.' AS target,
+       'Measured, not gated. Demand is not a property of the reviewer.' AS target,
        now() AS as_of,
-       'Set a target here and this becomes a gate rather than a count.' AS detail
+       read_writing || ' read the writing, ' || clicked || ' clicked through.' AS detail,
+       false AS gated
   FROM v_funnel_30d_summary;
 
+-- 7. Model load. Gated on the failure rate (owner, 2026-09-24), which
+-- is the part of "what the box did" that is a property of the box
+-- rather than of how busy it was. Latency is deliberately not repeated
+-- here; the time-to-a-result criterion already gates it, and one number
+-- gated twice reads as two problems.
 CREATE VIEW v_gate_model_load AS
 SELECT tenant_id,
        7 AS ord,
        'Model load, last 30 days' AS criterion,
-       NULL::boolean AS pass,
-       sum(calls) || ' calls, ' || sum(failures) || ' failed' AS value,
-       'No target set. What the box actually did.' AS target,
+       CASE WHEN sum(calls) < 50 THEN NULL
+            ELSE (100.0 * sum(failures) / sum(calls)) < 2.0
+       END AS pass,
+       sum(calls) || ' calls, ' || sum(failures) || ' failed ('
+         || round(100.0 * sum(failures) / NULLIF(sum(calls), 0), 1) || '%)' AS value,
+       'Under 2 percent of calls fail.' AS target,
        max(day)::timestamptz AS as_of,
-       COALESCE(sum(prompt_tokens + completion_tokens), 0) || ' tokens over ' || count(*) || ' days.' AS detail
+       CASE WHEN sum(calls) < 50
+            THEN 'Only ' || sum(calls) || ' calls; fifty are needed before a rate means anything.'
+            ELSE COALESCE(sum(prompt_tokens + completion_tokens), 0) || ' tokens over ' || count(*)
+                 || ' days, average ' || round(avg(avg_seconds), 1) || ' s a call.'
+       END AS detail,
+       true AS gated
   FROM v_llm_usage_daily
  WHERE day >= current_date - 30
  GROUP BY tenant_id;
