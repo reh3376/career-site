@@ -24,6 +24,43 @@ to go and read what it means.
 | `v_funnel_30d_summary` | That funnel as counts. |
 | `v_eval_history` | Golden-set evaluations with their pass rate, for before-and-after comparison. |
 | `v_outcome_by_fit` | The fit band a run assigned against what actually happened afterwards. |
+| `v_gate` | The seven criteria as pass, not met, or unanswered, with the target each is judged against. Defined in migration 00031, one view per criterion. |
+
+## The gate
+
+Migration `00031_gate_views.sql` turns those numbers into an answer.
+One view per criterion (`v_gate_reliability` and the rest), unioned as
+`v_gate`, each returning the same four things: `pass`, `value`,
+`target`, `as_of`, plus a `detail` that qualifies the answer.
+
+`pass` has three states and the third is the point:
+
+| | meaning |
+| --- | --- |
+| `true` | the target is met on the data there is |
+| `false` | the target is not met |
+| `null` | not enough data yet |
+
+A null is never rendered as a failure: a criterion with four data points
+has not earned a verdict either way, and collapsing that into a failure
+would make a young system read as broken.
+
+`gated` is separate and says whether a row is a criterion at all. Reach
+is measured and deliberately not gated (owner, 2026-09-24): whether
+strangers find the site is demand, not quality, and a gate that cannot
+be moved by doing good work teaches nothing. Model load is gated on the
+failure rate, under 2 percent, which is the part of it that is a
+property of the box rather than of how busy it was. Latency is not
+repeated there because time to a result already gates it.
+
+Agreement counts only submissions the posting-check gatekeeper accepted
+(migration 00032). A metric that holds the judge accountable for input
+the pipeline would now refuse measures the wrong thing. The gatekeeper
+decides, not the verdict, so a refused posting is excluded whether its
+verdicts were flattering or not.
+
+`/admin/gate` renders it. `/admin/analytics` shows the same measurements
+arranged for reading.
 
 ## Reading them
 

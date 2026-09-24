@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 53 |
+| [`AdminService`](#adminservice) | Owner console. | 54 |
 | [`SystemService`](#systemservice) | Version and governance status. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1656,6 +1656,7 @@ Owner console.
 | [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
 | [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
 | [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
+| [`GetGate`](#adminservice-getgate) | `/api/career.v1.AdminService/GetGate` | Admin (fresh MFA) | default | `GetGateRequest` → `GetGateResponse` | Returns the criteria as a gate: one row per criterion with pass, value, target and as_of, read from the views that define them. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
@@ -3234,6 +3235,33 @@ _No fields; send `{}`._
 | `completionTokens` | `int64` | string (decimal) |  | Completion tokens in the last 30 days. |
 | `latestEval` | [`EvalRun`](#evalrun) | object |  | Newest finished evaluation; unset before the first one. |
 | `outcomes` | [`OutcomeByFit`](#outcomebyfit)[] | array of object |  | Fit band against recorded outcomes. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.GetGate
+
+`POST /api/career.v1.AdminService/GetGate` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns the criteria as a gate: one row per criterion with pass,
+value, target and as_of, read from the views that define them.
+/admin/analytics shows the same numbers arranged for reading; this
+answers whether each one is met.
+
+**Request** — [`GetGateRequest`](#getgaterequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetGateResponse`](#getgateresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `rows` | [`GateRow`](#gaterow)[] | array of object |  | One row per criterion. |
 
 <details><summary>Example request body</summary>
 
@@ -6021,6 +6049,34 @@ Get-eval-run response.
 Get-metrics request.
 
 _No fields._
+
+### GetGateRequest
+
+Read request.
+
+_No fields._
+
+### GetGateResponse
+
+The criteria, in the order the owner wrote them.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `rows` | [`GateRow`](#gaterow)[] | array of object |  | One row per criterion. |
+
+### GateRow
+
+One criterion, answered.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `criterion` | `string` | string |  | Which criterion, as the owner named it. |
+| `pass` | `bool` | boolean |  | _(oneof `_pass`)_ Whether the target is met. Unset means it cannot be answered yet: not enough data, or no target has been set. An unset value is not a failure and must not be rendered as one. |
+| `value` | `string` | string |  | The measurement, already phrased for reading. |
+| `target` | `string` | string |  | What would count as met. |
+| `asOf` | `Timestamp` | string (RFC 3339, UTC) |  | When the measurement is from. |
+| `detail` | `string` | string |  | Anything that qualifies the answer, such as how short the sample is or which part of the target failed. |
+| `gated` | `bool` | boolean |  | Whether this row is a criterion at all. False means it is measured on purpose and gated on purpose: reach moves with who happened to find the site, not with whether the reviewer improved. Such a row must not be rendered as permanently unanswered, which would read as a standing reproach for something that is not a fault. |
 
 ### OutcomeByFit
 

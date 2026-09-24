@@ -1353,6 +1353,33 @@ class GetMetricsRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class GetGateRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetGateResponse(_message.Message):
+    __slots__ = ("rows",)
+    ROWS_FIELD_NUMBER: _ClassVar[int]
+    rows: _containers.RepeatedCompositeFieldContainer[GateRow]
+    def __init__(self, rows: _Optional[_Iterable[_Union[GateRow, _Mapping]]] = ...) -> None: ...
+
+class GateRow(_message.Message):
+    __slots__ = ("criterion", "value", "target", "as_of", "detail", "gated")
+    CRITERION_FIELD_NUMBER: _ClassVar[int]
+    PASS_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    TARGET_FIELD_NUMBER: _ClassVar[int]
+    AS_OF_FIELD_NUMBER: _ClassVar[int]
+    DETAIL_FIELD_NUMBER: _ClassVar[int]
+    GATED_FIELD_NUMBER: _ClassVar[int]
+    criterion: str
+    value: str
+    target: str
+    as_of: _timestamp_pb2.Timestamp
+    detail: str
+    gated: bool
+    def __init__(self, criterion: _Optional[str] = ..., value: _Optional[str] = ..., target: _Optional[str] = ..., as_of: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., detail: _Optional[str] = ..., gated: _Optional[bool] = ..., **kwargs) -> None: ...
+
 class OutcomeByFit(_message.Message):
     __slots__ = ("fit", "outcome", "submissions")
     FIT_FIELD_NUMBER: _ClassVar[int]

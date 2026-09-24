@@ -455,12 +455,47 @@ cites", and the honesty criterion is written against the weaker
 meaning. An entailment check on each bullet closes the gap between what
 the site implies and what it does.
 
-**3. The gate as pass or fail (`RR-13`, `RR-14`).** One view per
-criterion returning `pass, value, target, as_of`, and `/admin/gate`
-showing seven rows with links to the runs behind them. The analytics
-page shows numbers arranged by criterion; this turns them into a gate
-that is either met or not. It is also the artifact to screen-share in
-an interview.
+**3. The gate as pass or fail (`RR-13`, `RR-14`). SHIPPED
+2026-09-24.** One view per criterion returning `pass, value, target,
+as_of, detail`, unioned as `v_gate` (migration 00031), rendered at
+`/admin/gate`. `pass` has three states: met, not met, and unanswered,
+the last covering both too little data and no target set. An unanswered
+criterion is never drawn as a failure, because a young system rendering
+as seven red rows is a page nobody opens twice.
+
+On production at the time of writing: calibration passes (8 of 8, no
+inversions, margin 0.143), time to a result fails (median 48.9 minutes
+against a target of 20), and the other five are unanswerable, four for
+sample size and two because no target exists.
+
+Both open questions were settled the same day:
+
+- **Reach is measured, not gated.** Whether strangers find the site is
+  demand, not quality; it moves with where a posting was shared and not
+  with whether the reviewer improved, and a gate that cannot be moved
+  by doing good work teaches nothing. The row says "measured" rather
+  than sitting unanswered forever.
+- **Model load is gated on the failure rate**, under 2 percent of
+  calls. Currently 4 in 363, so it passes, and it turns red if the box
+  starts struggling. Latency is deliberately not repeated there, since
+  time to a result already gates it and one number gated twice reads as
+  two problems.
+- **Agreement counts only what the gatekeeper accepted** (migration
+  00032). Seven of eleven reviewed verdicts came from a 365-character
+  job-search worksheet whose extracted "requirements" were the
+  fragments "Data Science" and "Machine Learning". There is no
+  assertion in those to judge. Excluding them leaves 4 reviewed, 3
+  agreed, and one real disagreement: Blue Origin's "2+ years building
+  products that use Large Language Models", judged unmet against the
+  owner's met. The hazard is named in the migration: dropping rows that
+  make a number look bad is how metrics get gamed, so the gatekeeper
+  decides rather than the verdict, and the rule is written in SQL
+  rather than applied case by case.
+
+**Left to do:** rows do not yet link to the runs behind them, which
+`RR-14` asks for. Submission 9 has no gatekeeper verdict recorded
+because it predates the check, so it is still counted until it is
+re-run.
 
 **4. The second assessor (`RR-05`, `RR-07`, `RR-08`, `RR-10`).** A
 stronger model checking every verdict, in two clearly separated modes:

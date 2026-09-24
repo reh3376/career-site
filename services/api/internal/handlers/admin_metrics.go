@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -83,3 +84,42 @@ func (a *Admin) GetMetrics(
 
 // metricsUnused keeps the users import honest if the struct ever moves.
 var _ = users.Metrics{}
+
+// GetGate returns the criteria as a gate (RR-13, RR-14).
+//
+// /admin/analytics shows these numbers arranged for reading. This
+// answers the question a reader of a dashboard has to answer for
+// themselves, which is whether each one is good enough yet, and a
+// dashboard can be read favourably on a bad day where a pass cannot.
+//
+// The rows come from views, like every other metric. Pass may be unset,
+// meaning the criterion cannot be answered rather than that it failed.
+func (a *Admin) GetGate(
+	ctx context.Context,
+	req *connect.Request[v1.GetGateRequest],
+) (*connect.Response[v1.GetGateResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	rows, err := a.users.Gate(ctx)
+	if err != nil {
+		a.log.Error("GetGate failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not read the gate"))
+	}
+	out := make([]*v1.GateRow, 0, len(rows))
+	for _, g := range rows {
+		row := &v1.GateRow{
+			Criterion: g.Criterion,
+			Value:     g.Value,
+			Target:    g.Target,
+			Detail:    g.Detail,
+			Pass:      g.Pass,
+			Gated:     g.Gated,
+		}
+		if g.AsOf != nil {
+			row.AsOf = timestamppb.New(*g.AsOf)
+		}
+		out = append(out, row)
+	}
+	return connect.NewResponse(&v1.GetGateResponse{Rows: out}), nil
+}

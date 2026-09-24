@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/tenant"
 )
@@ -146,4 +147,48 @@ func (r *Repo) GetMetrics(ctx context.Context) (*Metrics, error) {
 		m.Outcomes = append(m.Outcomes, o)
 	}
 	return m, rows.Err()
+}
+
+// GateRow is one criterion answered, read from v_gate (migration
+// 00031).
+//
+// Pass is deliberately a pointer. The third state is the point of the
+// gate: a criterion with no target set, or with too little data to
+// judge, is unanswered rather than failing, and flattening that into
+// false would make a young system look broken.
+type GateRow struct {
+	Criterion string
+	Pass      *bool
+	Value     string
+	Target    string
+	AsOf      *time.Time
+	Detail    string
+	// Gated is false for a row that is measured on purpose and not
+	// judged on purpose.
+	Gated bool
+}
+
+// Gate returns the criteria in the owner's order.
+func (r *Repo) Gate(ctx context.Context) ([]GateRow, error) {
+	const q = `
+    SELECT criterion, pass, value, target, as_of, detail, gated
+      FROM v_gate
+     WHERE tenant_id = $1
+     ORDER BY ord
+  `
+	rows, err := r.pool.Query(ctx, q, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return nil, fmt.Errorf("select gate: %w", err)
+	}
+	defer rows.Close()
+
+	var out []GateRow
+	for rows.Next() {
+		var g GateRow
+		if err := rows.Scan(&g.Criterion, &g.Pass, &g.Value, &g.Target, &g.AsOf, &g.Detail, &g.Gated); err != nil {
+			return nil, fmt.Errorf("scan gate row: %w", err)
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
 }

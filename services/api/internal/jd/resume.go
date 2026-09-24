@@ -324,6 +324,17 @@ func (w *ResumeWriter) Write(
 		}
 	}
 	if out.Headline == "" || len(out.Experience) == 0 {
+		// Two different faults produce an empty résumé and they need
+		// opposite responses, so the message has to tell them apart. A
+		// model that cited nothing is a prompt or retrieval problem. The
+		// entailment check emptying it means the heuristic is too
+		// aggressive on this posting, and the claims it rejected are the
+		// evidence for deciding which.
+		if out.Unsupported > 0 {
+			return nil, "", fmt.Errorf(
+				"resume: the support check removed %d line(s) and left no usable experience; rejected: %s",
+				out.Unsupported, strings.Join(out.UnsupportedClaims, " | "))
+		}
 		return nil, "", errors.New("resume: verification left no usable experience")
 	}
 	if out.Unsupported > 0 {
