@@ -34,6 +34,16 @@ export function SiteFooter() {
             </p>
             <ul className="space-y-2">
               <li>
+                {/* Before "request access", because it is what tells a
+                    visitor whether access is worth asking for. */}
+                <Link
+                  href="/how-ask-roger-works"
+                  className="text-ink-2 no-underline hover:text-accent"
+                >
+                  How it works
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>
