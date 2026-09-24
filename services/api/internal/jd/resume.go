@@ -146,6 +146,12 @@ func (w *ResumeWriter) Write(
 			verdicts = append(verdicts, prompts.Verdict{RequirementID: j.RequirementID, Text: reqText[j.RequirementID], Verdict: j.Verdict})
 		}
 	}
+	// Like the judge's facts sheet, this ignores internal/corpusscope on
+	// purpose (owner, 2026-09-24): the master résumé is corpus_only, it
+	// is about the candidate rather than a client, it is the same for
+	// every posting, and it is fetched by kind rather than retrieved, so
+	// a submitted posting cannot steer it. Without it the writer has no
+	// roles or dates to work from.
 	resumeChunks, err := w.users.ListChunksByKind(ctx, "resume", 40)
 	if err != nil {
 		w.log.Warn("resume chunks unavailable", slog.String("error", err.Error()))

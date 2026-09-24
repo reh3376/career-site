@@ -284,6 +284,16 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	// call unchanged. It has to be the same chunks in the same order
 	// every time or the shared prefix is not shared and Ollama
 	// re-evaluates the whole prompt on each call. Two chunks today.
+	//
+	// This path deliberately ignores internal/corpusscope, so a member's
+	// submission sees the facts sheet even though the document is
+	// corpus_only. Decided by the owner on 2026-09-24, and the reason
+	// matters: the scope exists to stop a submitted posting steering
+	// retrieval across client and NDA material. The facts sheet is about
+	// the candidate himself, it is the same for every posting, and it
+	// cannot be steered because it is not retrieved. A review without it
+	// would be worse and no safer. The same exemption covers the master
+	// résumé in resume.go.
 	profile, pErr := a.users.ListChunksByKind(ctx, prompts.ProfileSourceKind, 8)
 	if pErr != nil {
 		// Not fatal: the judge still has the retrieved evidence, it just
