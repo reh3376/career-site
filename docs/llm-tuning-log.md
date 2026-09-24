@@ -1586,3 +1586,48 @@ but what it is shown did: every requirement now sees the whole facts
 sheet rather than the part retrieval happened to surface. The golden
 set is the check on whether that helps, hurts or does nothing, against
 a baseline of 8 of 8 with a margin of 0.143.
+
+## 2026-09-24: the correction, an hour later
+
+The entry above predicted that making the judge's prefix genuinely
+shared would take a run from 50.9 minutes to about 28. It did not, and
+the prediction was wrong for an instructive reason.
+
+Measured on the box, in the sidecar's own request shape (`/api/chat`,
+system message, schema-constrained decoding), with a realistic
+per-requirement tail:
+
+```
+call 1: prompt=3565 tok in 266.0s | output=73 tok in 20.4s | total 286.6s
+call 2: prompt=3565 tok in 127.9s | output=69 tok in 19.5s | total 147.4s
+call 3: prompt=3565 tok in 128.0s | output=70 tok in 19.2s | total 147.3s
+call 4: prompt=3565 tok in 128.9s | output=69 tok in 19.6s | total 148.5s
+```
+
+Cold 266 s, cached 128 s. The cache works, and it was already working:
+production under v6 showed the same shape, one slow call then thirteen
+at about 139 s. The 146.6 s average was the cached case all along.
+
+**Where the earlier reasoning went wrong.** The first measurement used
+`/api/generate` with a one-line tail and showed 152 s falling to 2 s. I
+read that as "the cache is not being used in production" when it
+actually showed "a prompt that is almost entirely prefix is almost
+entirely free". Production prompts are not almost entirely prefix. Two
+thousand of the 3,565 tokens are the cached system prompt and facts
+sheet; the other 1,500 are the requirement and its four evidence
+chunks, which differ every call by design and cost about 120 s at the
+12 to 13 tokens a second this box evaluates at.
+
+The fix still stands on its own: the prefix was assembled from
+retrieved evidence and genuinely did diverge, and four tests now pin
+it. It was worth making for reproducibility. It was not worth making
+for speed, and saying otherwise before measuring was the error.
+
+**What would actually make it faster**, and what it costs: the judge
+pass is 34 of the 50.9 minutes and is dominated by evidence tokens, so
+only sending less evidence moves it. Four chunks at 1,200 runes down to
+two at 900 would take the tail from about 1,500 tokens to about 600,
+and the judge pass from 34 minutes to roughly 14. That is a quality
+trade, not a free win: the chunk that carries a verdict may be the one
+dropped. The golden set is the instrument, against 8 of 8 and a margin
+of 0.143, and no such change should ship without a run through it.
