@@ -118,7 +118,8 @@ export default async function HowAskRogerWorksPage() {
         </ol>
         <p className="mt-6 text-sm leading-relaxed text-ink-2">
           Reviews run one at a time on Roger&rsquo;s own server and usually
-          take 15 to 30 minutes. You can close the page: your submissions
+          take 30 to 60 minutes, sometimes longer. You can close the page:
+          your submissions
           list on /jd-upload reopens a review, and the outcome is emailed
           to you.
         </p>

@@ -78,8 +78,9 @@ export default async function JdUploadPage() {
           Scoring is requirement by requirement: the posting is broken
           into checkable asks, each is judged in its own call against
           Roger&rsquo;s career corpus, and the score is computed from
-          those verdicts rather than guessed by a model. A review runs 15
-          to 30 minutes; you can close the page and reopen it from your
+          those verdicts rather than guessed by a model. A review runs 30
+          to 60 minutes and sometimes longer; you can close the page and
+          reopen it from your
           submissions below, and the outcome is emailed. See{" "}
           <a
             href="/how-ask-roger-works"

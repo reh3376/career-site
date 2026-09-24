@@ -64,8 +64,9 @@ export function EvalRunner() {
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">
         Scores every active posting through the real pipeline, one at a time,
         and records what produced each result. On the production box that is
-        roughly twenty minutes per posting, so start it and come back. Run one
-        before a prompt or model change and one after: the pair is the evidence.
+        closer to fifty minutes per posting: an eight-posting run took six
+        hours and a quarter. Start it and come back tomorrow. Run one before a
+        prompt or model change and one after: the pair is the evidence.
       </p>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">

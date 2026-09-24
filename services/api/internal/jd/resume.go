@@ -34,8 +34,9 @@ type Experience struct {
 	Bullets      []Sourced `json:"bullets"`
 }
 
-// Resume is the verified structured résumé. Every Sourced item has at
-// least one source that was among the evidence offered to the model.
+// Resume is the verified structured résumé. Every Sourced item cites at
+// least one chunk that was offered to the model, and carries no
+// quantity or named organisation that those chunks do not contain.
 type Resume struct {
 	Headline     string       `json:"headline"`
 	Summary      string       `json:"summary"`
@@ -43,10 +44,20 @@ type Resume struct {
 	Experience   []Experience `json:"experience"`
 	Education    []Sourced    `json:"education"`
 	// Verification stats, kept for the admin view.
-	Dropped    int    `json:"dropped"`
-	Model      string `json:"model"`
-	PromptID   string `json:"prompt_id"`
-	PromptVers int    `json:"prompt_version"`
+	Dropped int `json:"dropped"`
+	// Unsupported counts lines dropped because they asserted a number or
+	// an organisation their own sources do not contain. Separate from
+	// Dropped, which counts lines with no usable citation at all: one is
+	// a model citing nothing, the other is a model citing something that
+	// does not say what it claims, and they argue for different fixes.
+	Unsupported int `json:"unsupported"`
+	// UnsupportedClaims is what those lines asserted, for the admin view.
+	// A résumé that drops three lines is worth looking at; a count alone
+	// does not say what was wrong with them.
+	UnsupportedClaims []string `json:"unsupported_claims,omitempty"`
+	Model             string   `json:"model"`
+	PromptID          string   `json:"prompt_id"`
+	PromptVers        int      `json:"prompt_version"`
 }
 
 // Renderer produces the locked PDF from verified résumé JSON. The
@@ -247,6 +258,12 @@ func (w *ResumeWriter) Write(
 		PromptID:   p.ID,
 		PromptVers: p.Version,
 	}
+	// Text of every chunk offered, so a line can be checked against what
+	// it actually cites rather than against the fact that it cited.
+	chunkText := map[int64]string{}
+	for _, h := range evidence {
+		chunkText[h.Chunk.ID] = h.Chunk.Text
+	}
 	verify := func(text string, sources []string) (Sourced, bool) {
 		var ids []int64
 		for _, s := range sources {
@@ -258,6 +275,26 @@ func (w *ResumeWriter) Write(
 		text = tidy(text)
 		if text == "" || len(ids) == 0 {
 			out.Dropped++
+			return Sourced{}, false
+		}
+		// Does what it cites actually carry the specifics it asserts?
+		// Only the checkable parts: a quantity or a named organisation
+		// that appears in the line and in none of its sources is either
+		// invented or mis-cited, and both are reasons not to print it on
+		// a résumé that goes to an employer.
+		var srcText strings.Builder
+		for _, id := range ids {
+			srcText.WriteString(chunkText[id])
+			srcText.WriteByte('\n')
+		}
+		if u := checkSupport(text, srcText.String()); u.any() {
+			out.Unsupported++
+			out.UnsupportedClaims = append(out.UnsupportedClaims,
+				describeUnsupported(text, u))
+			w.log.Warn("resume: line dropped, its sources do not carry the claim",
+				slog.Int64("jd_id", submissionID),
+				slog.String("numbers", strings.Join(u.Numbers, ",")),
+				slog.String("parties", strings.Join(u.Parties, ",")))
 			return Sourced{}, false
 		}
 		sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
@@ -288,6 +325,10 @@ func (w *ResumeWriter) Write(
 	}
 	if out.Headline == "" || len(out.Experience) == 0 {
 		return nil, "", errors.New("resume: verification left no usable experience")
+	}
+	if out.Unsupported > 0 {
+		w.log.Info("resume: unsupported lines removed",
+			slog.Int64("jd_id", submissionID), slog.Int("count", out.Unsupported))
 	}
 	return out, RenderMarkdown(out), nil
 }

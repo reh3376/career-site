@@ -546,7 +546,7 @@ func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 // successful submission. Kept server-side so an update lands on
 // every caller without a frontend rebuild.
 func fixedSubmitAckMessage() string {
-	return "Got it, the JD is stored. Scoring runs now: the posting is broken into requirements, each is checked against Roger's records, and the match score is computed from those checks. It usually takes 15 to 30 minutes. You can close this page: the review stays under your submissions on this page, and you get an email when it finishes."
+	return "Got it, the JD is stored. Scoring runs now: the posting is broken into requirements, each is checked against Roger's records, and the match score is computed from those checks. It usually takes 30 to 60 minutes, sometimes longer. You can close this page: the review stays under your submissions on this page, and you get an email when it finishes."
 }
 
 func jdSourceProtoToRepo(s v1.JdSource) string {
