@@ -1498,3 +1498,32 @@ fixes.
 **Not yet measured.** No generated résumé has been through this. The
 next real submission is the first evidence of whether it drops nothing,
 something, or too much, and the count is the thing to look at.
+
+## 2026-09-24: an outage caused by testing in an order that cannot happen
+
+Migration 00032 narrowed the agreement metric to submissions the
+posting-check gatekeeper accepted. It dropped `v_judge_agreement` and
+its summary to redefine them. goose applies 00031 first, which creates
+`v_gate_agreement` on top of that summary, so by the time 00032 ran the
+drop was refused. The api crash-looped, `readyz` returned 502, and
+production was rolled back to the previous tag to restore service.
+
+It passed locally because the two migrations were applied by hand in
+the opposite order, which is an order goose can never produce. The test
+was not weaker than the real thing, it was a different thing.
+
+The second attempt replaced the view in place rather than dropping it,
+which removes the dependency problem entirely since the column list was
+meant to be unchanged. It was written from the definition in 00028.
+Migration 00029 had since added `gradeable` and `human_note`, so the
+replacement dropped two columns and Postgres refused that too. A view
+replacement has to be written against the view as it now stands, which
+means reading `pg_get_viewdef` rather than the migration that first
+created it.
+
+**What now catches this.** CI applies every migration to an empty
+database in version order and then selects from every view. Both
+failures take seconds to reproduce there and neither is visible in a
+diff. The rule worth keeping: a migration is only correct in the order
+goose runs it, against the schema the migrations before it left behind,
+and the only honest way to know that is to replay them.

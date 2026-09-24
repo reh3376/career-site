@@ -83,6 +83,55 @@ jobs:
       - name: check-gen (regenerate and diff)
         run: BUF=$(which buf) make check-gen
 
+  migrations:
+    name: migrations (replay on an empty database)
+    runs-on: ubuntu-latest
+    # A migration is only correct in the order goose runs it, against
+    # the schema the migrations before it left behind. Both of those
+    # were got wrong on 2026-09-24 and the api crash-looped in
+    # production: a view was dropped while a later view depended on it,
+    # and a replacement was written from the definition that first
+    # created the view rather than the one that last changed it. Neither
+    # mistake is visible in a diff, and both are obvious here.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: career
+          POSTGRES_PASSWORD: career
+          POSTGRES_DB: career
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U career"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: apply every migration in order
+        env:
+          PGPASSWORD: career
+        run: |
+          set -euo pipefail
+          for f in $(ls services/api/internal/db/migrations/*.sql | sort); do
+            echo "== $(basename "$f")"
+            sed -n '/-- +goose Up/,/-- +goose StatementEnd/p' "$f" \
+              | grep -v '^-- +goose' \
+              | psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q
+          done
+      - name: every view is selectable
+        env:
+          PGPASSWORD: career
+        run: |
+          set -euo pipefail
+          psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -t -A -c \
+            "SELECT table_name FROM information_schema.views WHERE table_schema='public' ORDER BY table_name" \
+          | while read -r v; do
+              [ -z "$v" ] && continue
+              psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q -c "SELECT * FROM $v LIMIT 1" >/dev/null
+            done
+
   api:
     name: api (go)
     runs-on: ubuntu-latest

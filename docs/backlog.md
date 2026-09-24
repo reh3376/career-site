@@ -493,9 +493,20 @@ Both open questions were settled the same day:
   rather than applied case by case.
 
 **Left to do:** rows do not yet link to the runs behind them, which
-`RR-14` asks for. Submission 9 has no gatekeeper verdict recorded
-because it predates the check, so it is still counted until it is
-re-run.
+`RR-14` asks for. A criterion whose source view returns no rows
+disappears from the gate entirely rather than saying it has no data,
+because each view groups by tenant and an empty table produces no
+group; on an empty database the gate shows one row instead of seven.
+
+**Incident, 2026-09-24.** The first version of migration 00032 dropped
+`v_judge_agreement` and its summary. goose runs 00031 first, so
+`v_gate_agreement` already depended on the summary by then and Postgres
+refused; the api crash-looped and the API was down until a rollback.
+The second attempt replaced the view in place but was written from the
+00028 definition, and 00029 had since added two columns, so Postgres
+refused that too. Both mistakes were invisible in a diff and obvious on
+a replay. CI now applies every migration to an empty database in order
+and selects from every view.
 
 **4. The second assessor (`RR-05`, `RR-07`, `RR-08`, `RR-10`).** A
 stronger model checking every verdict, in two clearly separated modes:
