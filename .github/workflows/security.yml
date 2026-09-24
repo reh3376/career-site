@@ -1,16 +1,17 @@
 # Security scans: vulnerability checks per toolchain + secret scanning.
-# Runs on push, PR, and daily to catch newly-disclosed CVEs against
-# unchanged deps.
+# Runs on every pull request, on main after a merge, and daily to catch
+# newly-disclosed CVEs against unchanged deps.
 
 name: security
 
 on:
+  # Feature branches used to trigger here on push as well, which ran
+  # every scan twice for each commit: a push to claude_dev01 and a
+  # pull_request to main have different refs, and the concurrency group
+  # is keyed on the ref, so neither cancelled the other. The pull
+  # request covers the branch, and main covers what actually shipped.
   push:
-    branches:
-      - main
-      - "claude_dev*"
-      - "feat/*"
-      - "fix/*"
+    branches: [main]
   pull_request:
     branches: [main]
   schedule:
