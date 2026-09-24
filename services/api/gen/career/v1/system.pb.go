@@ -460,8 +460,8 @@ type GetReviewerStatusResponse struct {
 	EvaluatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
 	// The model that produced it.
 	Model string `protobuf:"bytes,14,opt,name=model,proto3" json:"model,omitempty"`
-	// The fit bands in force, so a page can quote the real thresholds
-	// without a session. Without these an anonymous reader is shown
+	// The five fit bands in force, so a page can quote the real
+	// thresholds without a session. Without these an anonymous reader is shown
 	// numbers derived from an environment default, which are right only
 	// until the owner edits the bands.
 	Bands         *JdFitBandsPublic `protobuf:"bytes,15,opt,name=bands,proto3" json:"bands,omitempty"`
@@ -604,16 +604,23 @@ func (x *GetReviewerStatusResponse) GetBands() *JdFitBandsPublic {
 	return nil
 }
 
-// The four thresholds that classify a score.
+// The five fit bands: very strong, strong, possible, weak, very weak.
+//
+// Four numbers describe them, because each threshold opens a band and
+// the fifth needs no number: very weak is whatever falls below the weak
+// line. Storing a zero for it would be a field that can never hold
+// anything else.
 type JdFitBandsPublic struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// At or above this is very strong.
 	VeryStrong float64 `protobuf:"fixed64,1,opt,name=very_strong,json=veryStrong,proto3" json:"very_strong,omitempty"`
-	// At or above this is strong, and this is the résumé gate.
+	// At or above this, and below very strong, is strong. This is also
+	// the résumé gate.
 	Strong float64 `protobuf:"fixed64,2,opt,name=strong,proto3" json:"strong,omitempty"`
-	// At or above this is possible.
+	// At or above this, and below strong, is possible.
 	Possible float64 `protobuf:"fixed64,3,opt,name=possible,proto3" json:"possible,omitempty"`
-	// At or above this is weak; below it is very weak.
+	// At or above this, and below possible, is weak. Anything below this
+	// is very weak, the fifth band.
 	Weak          float64 `protobuf:"fixed64,4,opt,name=weak,proto3" json:"weak,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

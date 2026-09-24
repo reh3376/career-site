@@ -14,10 +14,14 @@ const FIELDS: { key: keyof Bands; label: string; note: string }[] = [
   { key: "weak", label: "Weak at or above", note: "you review and reply; below this is very weak" },
 ];
 
-// The numbers that classify a review. Saved to app_settings; the
-// pipeline, the result pages and the emails pick them up within
-// seconds. Existing scores are re-classified on read, so changing a
-// band never rewrites a stored score.
+// The numbers that classify a review into five bands: very strong,
+// strong, possible, weak and very weak. Four numbers describe five
+// bands, because very weak is whatever falls below the weak line and
+// needs no threshold of its own.
+//
+// Saved to app_settings; the pipeline, the result pages and the emails
+// pick them up within seconds. Existing scores are re-classified on
+// read, so changing a band never rewrites a stored score.
 export function FitBandsForm({ initial }: { initial: Bands }) {
   const [state, action] = useActionState<FitBandsState, FormData>(setFitBandsAction, {});
   const current = state.bands ?? initial;
@@ -42,6 +46,7 @@ export function FitBandsForm({ initial }: { initial: Bands }) {
         ))}
       </div>
       <p className="text-xs leading-relaxed text-ink-3">
+        Five bands, four numbers: anything below the weak line is very weak.
         Order must hold: weak &lt; possible &lt; strong &lt; very strong, all between 0 and 1.
         The calibration behind the defaults is in docs/llm-tuning-log.md; the decision
         log shows how each verdict was reached if a band feels wrong.

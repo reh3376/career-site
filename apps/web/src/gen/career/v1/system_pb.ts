@@ -356,8 +356,8 @@ export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResp
   model: string;
 
   /**
-   * The fit bands in force, so a page can quote the real thresholds
-   * without a session. Without these an anonymous reader is shown
+   * The five fit bands in force, so a page can quote the real
+   * thresholds without a session. Without these an anonymous reader is shown
    * numbers derived from an environment default, which are right only
    * until the owner edits the bands.
    *
@@ -374,7 +374,12 @@ export const GetReviewerStatusResponseSchema: GenMessage<GetReviewerStatusRespon
   messageDesc(file_career_v1_system, 6);
 
 /**
- * The four thresholds that classify a score.
+ * The five fit bands: very strong, strong, possible, weak, very weak.
+ *
+ * Four numbers describe them, because each threshold opens a band and
+ * the fifth needs no number: very weak is whatever falls below the weak
+ * line. Storing a zero for it would be a field that can never hold
+ * anything else.
  *
  * @generated from message career.v1.JdFitBandsPublic
  */
@@ -387,21 +392,23 @@ export type JdFitBandsPublic = Message<"career.v1.JdFitBandsPublic"> & {
   veryStrong: number;
 
   /**
-   * At or above this is strong, and this is the résumé gate.
+   * At or above this, and below very strong, is strong. This is also
+   * the résumé gate.
    *
    * @generated from field: double strong = 2;
    */
   strong: number;
 
   /**
-   * At or above this is possible.
+   * At or above this, and below strong, is possible.
    *
    * @generated from field: double possible = 3;
    */
   possible: number;
 
   /**
-   * At or above this is weak; below it is very weak.
+   * At or above this, and below possible, is weak. Anything below this
+   * is very weak, the fifth band.
    *
    * @generated from field: double weak = 4;
    */

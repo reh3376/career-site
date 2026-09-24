@@ -141,21 +141,28 @@ message GetReviewerStatusResponse {
   google.protobuf.Timestamp evaluated_at = 13;
   // The model that produced it.
   string model = 14;
-  // The fit bands in force, so a page can quote the real thresholds
-  // without a session. Without these an anonymous reader is shown
+  // The five fit bands in force, so a page can quote the real
+  // thresholds without a session. Without these an anonymous reader is shown
   // numbers derived from an environment default, which are right only
   // until the owner edits the bands.
   JdFitBandsPublic bands = 15;
 }
 
-// The four thresholds that classify a score.
+// The five fit bands: very strong, strong, possible, weak, very weak.
+//
+// Four numbers describe them, because each threshold opens a band and
+// the fifth needs no number: very weak is whatever falls below the weak
+// line. Storing a zero for it would be a field that can never hold
+// anything else.
 message JdFitBandsPublic {
   // At or above this is very strong.
   double very_strong = 1;
-  // At or above this is strong, and this is the résumé gate.
+  // At or above this, and below very strong, is strong. This is also
+  // the résumé gate.
   double strong = 2;
-  // At or above this is possible.
+  // At or above this, and below strong, is possible.
   double possible = 3;
-  // At or above this is weak; below it is very weak.
+  // At or above this, and below possible, is weak. Anything below this
+  // is very weak, the fifth band.
   double weak = 4;
 }
