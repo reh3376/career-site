@@ -313,19 +313,21 @@ Still open:
   citations, guardrails, on the same gateway and decision log as the JD
   reviewer.
 
-  **Topology is open.** One option the owner raised on 2026-09-24 is
-  running the model on his own machine and serving the web server from
-  there. It would settle the capacity problem rather than work around
-  it: the CPX31 holds one inference lane, a JD review occupies it for
-  close to an hour, and a chat queued behind that is a form, not a
-  chat. It is a suggestion, not a decision, and the final topology is
-  to be worked out when the phase is actually started. Nothing should
-  be built against it in the meantime.
+  **Settled 2026-09-24: it does not run on the current web server.**
+  The CPX31 is already strained by the reviewer. Ollama holds 5.2 GB
+  of the box's 7, there is one inference lane, a JD review occupies it
+  for close to an hour, and an eight-posting evaluation took six and a
+  quarter. A chat sharing that box is a form with a queue, not a chat.
 
-  Recorded because the questions it raises are worth having early,
-  whichever topology wins. If inference is ever off the box, all of
-  this applies; if it stays on the box, the capacity question comes
-  back and has to be answered instead:
+  **Where it does run is open.** Running it on the owner's own machine
+  was raised the same day as one possibility, and explicitly as a
+  suggestion rather than a decision. The viable option gets
+  investigated when the phase is actually started. Nothing should be
+  built against any particular topology before then.
+
+  What is worth settling early, because it follows from inference being
+  somewhere other than the web server rather than from any particular
+  choice of where:
 
   - **Hours of operation.** A machine that is not a server is not
     expected to be up at 3 a.m. The site would have to know when Ask
