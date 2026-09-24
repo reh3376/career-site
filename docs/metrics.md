@@ -59,6 +59,14 @@ the pipeline would now refuse measures the wrong thing. The gatekeeper
 decides, not the verdict, so a refused posting is excluded whether its
 verdicts were flattering or not.
 
+It does count evaluation runs (migration 00034). `v_jd_runs` leaves
+them out because it measures use, where a test run would flatter both
+latency and volume. Agreement measures judgment, and a golden-set run
+is the same pipeline reading the same corpus about a real posting, so
+its verdicts are as good a sample as a live submission's. Excluding
+them once threw away twenty-nine reviewed verdicts in an afternoon,
+while `/admin/decisions` went on offering those same rows for review.
+
 `/admin/gate` renders it. `/admin/analytics` shows the same measurements
 arranged for reading.
 
