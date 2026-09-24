@@ -1356,3 +1356,62 @@ everything would pass perfectly. The set cannot currently detect the
 failure that costs the owner something: a generous reviewer tailoring a
 résumé for a job he cannot do. The next postings drawn must include
 ones that are a genuine no on capability.
+
+## 2026-09-24: the first run that could have failed, and did not
+
+Eight postings, five expected above the gate and three below, with all
+three of the low side drawn at random from adjacent fields rather than
+picked. 8 of 8 on the expected side, 0 ordering violations, margin
+0.143, 6h13m45s. Model `qwen3:4b-q8_0`, build `3e6107d71ebf`, corpus
+`a3ec0c636121`, gate 0.700.
+
+| | posting | expected | score | fit |
+|---|---|---|---|---|
+| chosen | ati-director-process-control-automation | above | 1.000 | very strong |
+| random | random-dover-process-control-engineer | above | 0.956 | very strong |
+| random | random-cai-automation-engineer | above | 0.865 | very strong |
+| chosen | blue-origin-mes-ai-manager | above | 0.857 | very strong |
+| random | random-orca-general-manager | above | 0.786 | strong |
+| random | random-nexus-power-system-studies | below | 0.643 | possible |
+| random | random-xai-structural-data-centers | below | 0.357 | weak |
+| random | random-profluent-ml-pretraining | below | 0.308 | very weak |
+
+**The groups do not interleave at all.** Every posting expected above
+scored above every posting expected below. That is what makes 8 of 8
+worth anything: gate accuracy alone can be bought by a reviewer that
+says yes to everything, and until this run the set had no low side to
+catch one.
+
+**Random calibration matches chosen calibration.** The two chosen
+postings scored 1.000 and 0.857; the three random postings expected
+above scored 0.956, 0.865 and 0.786. If the reviewer were flattering
+the owner's own picks, the chosen rows would sit high and the random
+rows would scatter. They do not. This was the split that was worth
+building the `selection` column for, and it reports no difference.
+
+**The ordering inside the low side is defensible on its own terms.**
+Power system studies at 0.643 is genuinely adjacent work gated on ETAP
+depth and a BSEE, and the reviewer treated it as a near miss. Structural
+engineering at 0.357 is gated on a PE licence. Protein-design
+pretraining at 0.308 is gated on a PhD and top-venue publications. The
+system is grading distance, not merely failing to match words.
+
+**The gate is well placed and should not move.** The margin runs from
+0.643 to 0.786 and its midpoint is 0.7145, against a threshold of
+0.700. There is no evidence here for changing it.
+
+**One reproducibility result, unplanned.** Orca scored 0.786 in the run
+that was cancelled at the two-hour ceiling and 0.786 again here, on the
+same input under the same configuration. An earlier note recorded that
+the model's reported `stated_span_years` was not stable between runs on
+identical input; this says the arithmetic downstream of it can still
+land on the same number. One matched pair is not a stability claim, but
+it is the first evidence either way.
+
+**What this baseline is, and what it is not.** It is a floor: any later
+change to a prompt, a model or the corpus that drops gate accuracy below
+8 of 8, introduces an inversion, or shrinks the margin below 0.143 is a
+regression, and the numbers now exist to say so. It is not a claim that
+the reviewer is right in general. Eight postings is a small set, the
+low side is three rows, and the tightest pair, Orca at 0.786 against
+Nexus at 0.643, is the one that will flip first.
