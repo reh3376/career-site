@@ -28,10 +28,23 @@
 -- table today, so this states the rule rather than fixing a fault, and
 -- states it before it can become one.
 
-DROP VIEW IF EXISTS v_judge_agreement_summary;
-DROP VIEW IF EXISTS v_judge_agreement;
-
-CREATE VIEW v_judge_agreement AS
+-- Replaced in place rather than dropped. The column list is identical,
+-- only the rows it admits change, so CREATE OR REPLACE applies without
+-- disturbing anything built on top of it.
+--
+-- The first version of this migration dropped the view instead, which
+-- failed in production: goose runs 00031 first, so v_gate_agreement
+-- already depended on v_judge_agreement_summary by the time this ran,
+-- and Postgres refused. It passed locally only because the two were
+-- applied in the opposite order by hand, which is not an order goose
+-- can ever produce.
+--
+-- The column list below is the one migration 00029 left behind, which
+-- added gradeable and human_note. Writing this from the 00028
+-- definition dropped two columns and Postgres refused that too. A view
+-- replacement has to be written against the view as it now stands, not
+-- as the migration that first created it left it.
+CREATE OR REPLACE VIEW v_judge_agreement AS
 SELECT d.tenant_id,
        d.id,
        d.run_id,
@@ -42,7 +55,9 @@ SELECT d.tenant_id,
        d.prompt_version,
        d.output->>'verdict' AS model_verdict,
        d.human_verdict,
+       d.human_verdict <> 'insufficient_evidence' AS gradeable,
        (d.output->>'verdict') = d.human_verdict AS agreed,
+       d.human_note,
        d.reviewed_at
   FROM decision_log d
   JOIN jd_submissions s ON s.id = d.ref_id
@@ -60,28 +75,14 @@ SELECT d.tenant_id,
             AND p.output->>'is_posting' = 'false'
        );
 
-CREATE VIEW v_judge_agreement_summary AS
-SELECT tenant_id,
-       count(*)                          AS reviewed,
-       count(*) FILTER (WHERE agreed)    AS agreed,
-       round(100.0 * count(*) FILTER (WHERE agreed) / NULLIF(count(*), 0), 1) AS agreement_pct,
-       -- A disagreement between met and unmet is a different problem
-       -- from one that lands on partial: the first is the judge being
-       -- wrong, the second is it being unsure. Counting them together
-       -- would hide which one is happening.
-       count(*) FILTER (WHERE NOT agreed AND 'partial' IN (model_verdict, human_verdict)) AS soft_disagreements,
-       count(*) FILTER (WHERE NOT agreed AND 'partial' NOT IN (model_verdict, human_verdict)) AS hard_disagreements
-  FROM v_judge_agreement
- GROUP BY tenant_id;
+-- v_judge_agreement_summary is unchanged and keeps reading from the
+-- view above, so it is left alone.
 
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP VIEW IF EXISTS v_judge_agreement_summary;
-DROP VIEW IF EXISTS v_judge_agreement;
-
-CREATE VIEW v_judge_agreement AS
+CREATE OR REPLACE VIEW v_judge_agreement AS
 SELECT d.tenant_id,
        d.id,
        d.run_id,
@@ -92,20 +93,12 @@ SELECT d.tenant_id,
        d.prompt_version,
        d.output->>'verdict' AS model_verdict,
        d.human_verdict,
+       d.human_verdict <> 'insufficient_evidence' AS gradeable,
        (d.output->>'verdict') = d.human_verdict AS agreed,
+       d.human_note,
        d.reviewed_at
   FROM decision_log d
  WHERE d.kind = 'jd_requirement_verdict'
    AND d.reviewed_at IS NOT NULL
    AND d.human_verdict IS NOT NULL;
-
-CREATE VIEW v_judge_agreement_summary AS
-SELECT tenant_id,
-       count(*)                          AS reviewed,
-       count(*) FILTER (WHERE agreed)    AS agreed,
-       round(100.0 * count(*) FILTER (WHERE agreed) / NULLIF(count(*), 0), 1) AS agreement_pct,
-       count(*) FILTER (WHERE NOT agreed AND 'partial' IN (model_verdict, human_verdict)) AS soft_disagreements,
-       count(*) FILTER (WHERE NOT agreed AND 'partial' NOT IN (model_verdict, human_verdict)) AS hard_disagreements
-  FROM v_judge_agreement
- GROUP BY tenant_id;
 -- +goose StatementEnd
