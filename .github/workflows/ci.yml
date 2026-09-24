@@ -9,27 +9,31 @@
 
 name: ci
 
+# Push only, and deliberately not pull_request.
+#
+# auto-pr.yml opens the pull request with GITHUB_TOKEN, so the PR is
+# authored by github-actions[bot], and GitHub gates workflow runs on
+# bot-authored pull requests behind a manual "Approve and run". A
+# pull_request trigger therefore sits at action_required with zero jobs
+# until someone clicks, which on 2026-09-24 left PR 125 reporting no
+# status at all.
+#
+# Having both triggers also ran the whole pipeline twice for every
+# commit, because the concurrency group is keyed on github.ref and a
+# push to claude_dev01 and a pull request to main have different refs,
+# so neither cancelled the other. Push alone gives one run per commit
+# and needs nobody's permission.
+#
+# main is here because it publishes the GHCR images tagged with the
+# merge commit, which is what deploy/rollout.sh deploys. That tag
+# cannot exist before the merge does.
 on:
-  # main publishes the GHCR images tagged with the merge commit, which
-  # is what deploy/rollout.sh deploys. That tag does not exist until the
-  # merge, so this run produces the artifact rather than merely checking
-  # it.
   push:
-    branches: [main]
-  # Everything before the merge is covered here. Feature branches used
-  # to trigger on push as well, which ran the whole pipeline twice for
-  # every commit: the concurrency group is keyed on github.ref, and a
-  # push to claude_dev01 and a pull_request to main have different refs,
-  # so neither cancelled the other. Two Go builds, two migration
-  # replays, two Docker builds, every time.
-  #
-  # auto-pr.yml opens or updates the pull request on every push, so the
-  # coverage is the same, and a pull_request run tests the branch merged
-  # into main rather than the branch on its own, which is the more
-  # useful test. The cost is that a push to a branch with no pull
-  # request open gets no CI until one exists.
-  pull_request:
-    branches: [main]
+    branches:
+      - main
+      - "claude_dev*"
+      - "feat/*"
+      - "fix/*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -1,5 +1,10 @@
-# CodeQL — GitHub's SAST for Go, TypeScript, and Python.
-# Runs weekly + on PR against main + on push to main.
+# CodeQL, GitHub's SAST for Go, TypeScript, and Python.
+# Runs weekly, on every feature branch push, and on push to main.
+#
+# Push rather than pull_request, for the reason given in ci.yml: the
+# pull request is opened by github-actions[bot] and GitHub holds
+# workflow runs on bot-authored pull requests at action_required until
+# a human approves each one, so a pull_request trigger reports nothing.
 #
 # Findings surface at Repository -> Security -> Code scanning alerts.
 
@@ -7,9 +12,11 @@ name: codeql
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
+      - "claude_dev*"
+      - "feat/*"
+      - "fix/*"
   schedule:
     - cron: "23 6 * * 1" # 06:23 UTC every Monday
 

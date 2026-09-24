@@ -4,16 +4,17 @@
 
 name: security
 
+# Push only, for the same reason as ci.yml: the pull request is opened
+# by github-actions[bot], and GitHub holds workflow runs on bot-authored
+# pull requests at action_required until a human approves each one.
+# Push runs need no approval and give exactly one run per commit.
 on:
-  # Feature branches used to trigger here on push as well, which ran
-  # every scan twice for each commit: a push to claude_dev01 and a
-  # pull_request to main have different refs, and the concurrency group
-  # is keyed on the ref, so neither cancelled the other. The pull
-  # request covers the branch, and main covers what actually shipped.
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
+      - "claude_dev*"
+      - "feat/*"
+      - "fix/*"
   schedule:
     - cron: "17 6 * * *" # 06:17 UTC daily
 
