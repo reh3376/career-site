@@ -492,6 +492,14 @@ Both open questions were settled the same day:
   decides rather than the verdict, and the rule is written in SQL
   rather than applied case by case.
 
+Reliability counts only real attempts to review a posting (migration
+00033). Two of the last eight runs were gatekeeper refusals, which
+dropped the row to "6 of the last 8" for no fault: a refusal finishes
+without anyone stepping in, which is what the criterion asks. Whether
+the gatekeeper refuses the right things is a separate question that
+belongs to agreement and the decision log, not hidden inside a
+reliability number.
+
 **Left to do:** rows do not yet link to the runs behind them, which
 `RR-14` asks for. A criterion whose source view returns no rows
 disappears from the gate entirely rather than saying it has no data,
