@@ -71,7 +71,7 @@ class GetReviewerStatusRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetReviewerStatusResponse(_message.Message):
-    __slots__ = ("graded", "agreed", "agreement_pct", "hard_disagreements", "too_harsh", "too_generous", "postings", "postings_random", "scored", "gate_correct", "inversions", "margin", "evaluated_at", "model")
+    __slots__ = ("graded", "agreed", "agreement_pct", "hard_disagreements", "too_harsh", "too_generous", "postings", "postings_random", "scored", "gate_correct", "inversions", "margin", "evaluated_at", "model", "bands")
     GRADED_FIELD_NUMBER: _ClassVar[int]
     AGREED_FIELD_NUMBER: _ClassVar[int]
     AGREEMENT_PCT_FIELD_NUMBER: _ClassVar[int]
@@ -86,6 +86,7 @@ class GetReviewerStatusResponse(_message.Message):
     MARGIN_FIELD_NUMBER: _ClassVar[int]
     EVALUATED_AT_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
+    BANDS_FIELD_NUMBER: _ClassVar[int]
     graded: int
     agreed: int
     agreement_pct: float
@@ -100,4 +101,17 @@ class GetReviewerStatusResponse(_message.Message):
     margin: float
     evaluated_at: _timestamp_pb2.Timestamp
     model: str
-    def __init__(self, graded: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., hard_disagreements: _Optional[int] = ..., too_harsh: _Optional[int] = ..., too_generous: _Optional[int] = ..., postings: _Optional[int] = ..., postings_random: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., inversions: _Optional[int] = ..., margin: _Optional[float] = ..., evaluated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., model: _Optional[str] = ...) -> None: ...
+    bands: JdFitBandsPublic
+    def __init__(self, graded: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., hard_disagreements: _Optional[int] = ..., too_harsh: _Optional[int] = ..., too_generous: _Optional[int] = ..., postings: _Optional[int] = ..., postings_random: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., inversions: _Optional[int] = ..., margin: _Optional[float] = ..., evaluated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., model: _Optional[str] = ..., bands: _Optional[_Union[JdFitBandsPublic, _Mapping]] = ...) -> None: ...
+
+class JdFitBandsPublic(_message.Message):
+    __slots__ = ("very_strong", "strong", "possible", "weak")
+    VERY_STRONG_FIELD_NUMBER: _ClassVar[int]
+    STRONG_FIELD_NUMBER: _ClassVar[int]
+    POSSIBLE_FIELD_NUMBER: _ClassVar[int]
+    WEAK_FIELD_NUMBER: _ClassVar[int]
+    very_strong: float
+    strong: float
+    possible: float
+    weak: float
+    def __init__(self, very_strong: _Optional[float] = ..., strong: _Optional[float] = ..., possible: _Optional[float] = ..., weak: _Optional[float] = ...) -> None: ...

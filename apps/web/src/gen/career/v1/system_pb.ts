@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/system.proto.
  */
 export const file_career_v1_system: GenFile = /*@__PURE__*/
-  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhoKGEdldFJldmlld2VyU3RhdHVzUmVxdWVzdCLdAgoZR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZRIOCgZncmFkZWQYASABKAUSDgoGYWdyZWVkGAIgASgFEhUKDWFncmVlbWVudF9wY3QYAyABKAESGgoSaGFyZF9kaXNhZ3JlZW1lbnRzGAQgASgFEhEKCXRvb19oYXJzaBgFIAEoBRIUCgx0b29fZ2VuZXJvdXMYBiABKAUSEAoIcG9zdGluZ3MYByABKAUSFwoPcG9zdGluZ3NfcmFuZG9tGAggASgFEg4KBnNjb3JlZBgJIAEoBRIUCgxnYXRlX2NvcnJlY3QYCiABKAUSEgoKaW52ZXJzaW9ucxgLIAEoBRITCgZtYXJnaW4YDCABKAFIAIgBARIwCgxldmFsdWF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBW1vZGVsGA4gASgJQgkKB19tYXJnaW4yvgIKDVN5c3RlbVNlcnZpY2USUwoKR2V0VmVyc2lvbhIcLmNhcmVlci52MS5HZXRWZXJzaW9uUmVxdWVzdBodLmNhcmVlci52MS5HZXRWZXJzaW9uUmVzcG9uc2UiCIC1GAGQtRg8Em4KE0dldEdvdmVybmFuY2VTdGF0dXMSJS5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3QaJi5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlIgiAtRgBkLUYPBJoChFHZXRSZXZpZXdlclN0YXR1cxIjLmNhcmVlci52MS5HZXRSZXZpZXdlclN0YXR1c1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDxCpQEKDWNvbS5jYXJlZXIudjFCC1N5c3RlbVByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhoKGEdldFJldmlld2VyU3RhdHVzUmVxdWVzdCKJAwoZR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZRIOCgZncmFkZWQYASABKAUSDgoGYWdyZWVkGAIgASgFEhUKDWFncmVlbWVudF9wY3QYAyABKAESGgoSaGFyZF9kaXNhZ3JlZW1lbnRzGAQgASgFEhEKCXRvb19oYXJzaBgFIAEoBRIUCgx0b29fZ2VuZXJvdXMYBiABKAUSEAoIcG9zdGluZ3MYByABKAUSFwoPcG9zdGluZ3NfcmFuZG9tGAggASgFEg4KBnNjb3JlZBgJIAEoBRIUCgxnYXRlX2NvcnJlY3QYCiABKAUSEgoKaW52ZXJzaW9ucxgLIAEoBRITCgZtYXJnaW4YDCABKAFIAIgBARIwCgxldmFsdWF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBW1vZGVsGA4gASgJEioKBWJhbmRzGA8gASgLMhsuY2FyZWVyLnYxLkpkRml0QmFuZHNQdWJsaWNCCQoHX21hcmdpbiJXChBKZEZpdEJhbmRzUHVibGljEhMKC3Zlcnlfc3Ryb25nGAEgASgBEg4KBnN0cm9uZxgCIAEoARIQCghwb3NzaWJsZRgDIAEoARIMCgR3ZWFrGAQgASgBMr4CCg1TeXN0ZW1TZXJ2aWNlElMKCkdldFZlcnNpb24SHC5jYXJlZXIudjEuR2V0VmVyc2lvblJlcXVlc3QaHS5jYXJlZXIudjEuR2V0VmVyc2lvblJlc3BvbnNlIgiAtRgBkLUYPBJuChNHZXRHb3Zlcm5hbmNlU3RhdHVzEiUuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXF1ZXN0GiYuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDwSaAoRR2V0UmV2aWV3ZXJTdGF0dXMSIy5jYXJlZXIudjEuR2V0UmV2aWV3ZXJTdGF0dXNSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldFJldmlld2VyU3RhdHVzUmVzcG9uc2UiCIC1GAGQtRg8QqUBCg1jb20uY2FyZWVyLnYxQgtTeXN0ZW1Qcm90b1ABWkJnaXRodWIuY29tL3JlaDMzNzYvY2FyZWVyLXNpdGUvc2VydmljZXMvYXBpL2dlbi9jYXJlZXIvdjE7Y2FyZWVydjGiAgNDWFiqAglDYXJlZXIuVjHKAglDYXJlZXJcVjHiAhVDYXJlZXJcVjFcR1BCTWV0YWRhdGHqAgpDYXJlZXI6OlYxYgZwcm90bzM", [file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Empty.
@@ -354,6 +354,16 @@ export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResp
    * @generated from field: string model = 14;
    */
   model: string;
+
+  /**
+   * The five fit bands in force, so a page can quote the real
+   * thresholds without a session. Without these an anonymous reader is shown
+   * numbers derived from an environment default, which are right only
+   * until the owner edits the bands.
+   *
+   * @generated from field: career.v1.JdFitBandsPublic bands = 15;
+   */
+  bands?: JdFitBandsPublic | undefined;
 };
 
 /**
@@ -362,6 +372,55 @@ export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResp
  */
 export const GetReviewerStatusResponseSchema: GenMessage<GetReviewerStatusResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_system, 6);
+
+/**
+ * The five fit bands: very strong, strong, possible, weak, very weak.
+ *
+ * Four numbers describe them, because each threshold opens a band and
+ * the fifth needs no number: very weak is whatever falls below the weak
+ * line. Storing a zero for it would be a field that can never hold
+ * anything else.
+ *
+ * @generated from message career.v1.JdFitBandsPublic
+ */
+export type JdFitBandsPublic = Message<"career.v1.JdFitBandsPublic"> & {
+  /**
+   * At or above this is very strong.
+   *
+   * @generated from field: double very_strong = 1;
+   */
+  veryStrong: number;
+
+  /**
+   * At or above this, and below very strong, is strong. This is also
+   * the résumé gate.
+   *
+   * @generated from field: double strong = 2;
+   */
+  strong: number;
+
+  /**
+   * At or above this, and below strong, is possible.
+   *
+   * @generated from field: double possible = 3;
+   */
+  possible: number;
+
+  /**
+   * At or above this, and below possible, is weak. Anything below this
+   * is very weak, the fifth band.
+   *
+   * @generated from field: double weak = 4;
+   */
+  weak: number;
+};
+
+/**
+ * Describes the message career.v1.JdFitBandsPublic.
+ * Use `create(JdFitBandsPublicSchema)` to create a new message.
+ */
+export const JdFitBandsPublicSchema: GenMessage<JdFitBandsPublic> = /*@__PURE__*/
+  messageDesc(file_career_v1_system, 7);
 
 /**
  * Version and governance status.

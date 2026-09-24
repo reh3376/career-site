@@ -3587,6 +3587,7 @@ _No fields; send `{}`._
 | `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
+| `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The five fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
 
 <details><summary>Example request body</summary>
 
@@ -7335,6 +7336,23 @@ is worth less than the numbers it is failing on.
 | `margin` | `double` | number |  | _(oneof `_margin`)_ The gap between the two groups. Absent when one side is empty. |
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
+| `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The five fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
+
+### JdFitBandsPublic
+
+The five fit bands: very strong, strong, possible, weak, very weak.
+
+Four numbers describe them, because each threshold opens a band and
+the fifth needs no number: very weak is whatever falls below the weak
+line. Storing a zero for it would be a field that can never hold
+anything else.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `veryStrong` | `double` | number |  | At or above this is very strong. |
+| `strong` | `double` | number |  | At or above this, and below very strong, is strong. This is also the résumé gate. |
+| `possible` | `double` | number |  | At or above this, and below strong, is possible. |
+| `weak` | `double` | number |  | At or above this, and below possible, is weak. Anything below this is very weak, the fifth band. |
 
 ### EmbedPurpose
 

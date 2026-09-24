@@ -10,6 +10,15 @@
 // The policy, decided 2026-09-22: evidence a hiring manager needs in
 // order to decide whether to ask for access is public. Anything that
 // costs compute, reveals a member, or is the thing access buys, is not.
+//
+// /how-ask-roger-works became public on 2026-09-24 under that same
+// policy rather than as an exception to it. It is the page that says
+// which model reads a posting, that the model was never trained on the
+// career it is judging, and how far the reviewer currently disagrees
+// with its owner. Asking someone to register before they can read any
+// of that is asking them to decide without the evidence. The thing
+// access buys, /jd-upload, stays behind the wall: it spends real
+// compute and carries the daily quota.
 
 // Public pages, exact matches.
 export const PUBLIC_PATHS = [
@@ -17,6 +26,7 @@ export const PUBLIC_PATHS = [
   "/articles",
   "/gallery",
   "/contact",
+  "/how-ask-roger-works",
   "/register",
   "/register/check-email",
   "/login",
@@ -50,6 +60,7 @@ export const INDEXABLE_PATHS = [
   "/articles",
   "/gallery",
   "/contact",
+  "/how-ask-roger-works",
   "/register",
   "/login",
   "/privacy",
@@ -62,6 +73,5 @@ export const CRAWLER_DISALLOW = [
   "/jd-upload",
   "/settings",
   "/admin",
-  "/how-ask-roger-works",
   "/api/",
 ] as const;

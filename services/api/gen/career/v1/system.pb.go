@@ -459,7 +459,12 @@ type GetReviewerStatusResponse struct {
 	// When that evaluation ran.
 	EvaluatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
 	// The model that produced it.
-	Model         string `protobuf:"bytes,14,opt,name=model,proto3" json:"model,omitempty"`
+	Model string `protobuf:"bytes,14,opt,name=model,proto3" json:"model,omitempty"`
+	// The five fit bands in force, so a page can quote the real
+	// thresholds without a session. Without these an anonymous reader is shown
+	// numbers derived from an environment default, which are right only
+	// until the owner edits the bands.
+	Bands         *JdFitBandsPublic `protobuf:"bytes,15,opt,name=bands,proto3" json:"bands,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -592,6 +597,93 @@ func (x *GetReviewerStatusResponse) GetModel() string {
 	return ""
 }
 
+func (x *GetReviewerStatusResponse) GetBands() *JdFitBandsPublic {
+	if x != nil {
+		return x.Bands
+	}
+	return nil
+}
+
+// The five fit bands: very strong, strong, possible, weak, very weak.
+//
+// Four numbers describe them, because each threshold opens a band and
+// the fifth needs no number: very weak is whatever falls below the weak
+// line. Storing a zero for it would be a field that can never hold
+// anything else.
+type JdFitBandsPublic struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// At or above this is very strong.
+	VeryStrong float64 `protobuf:"fixed64,1,opt,name=very_strong,json=veryStrong,proto3" json:"very_strong,omitempty"`
+	// At or above this, and below very strong, is strong. This is also
+	// the résumé gate.
+	Strong float64 `protobuf:"fixed64,2,opt,name=strong,proto3" json:"strong,omitempty"`
+	// At or above this, and below strong, is possible.
+	Possible float64 `protobuf:"fixed64,3,opt,name=possible,proto3" json:"possible,omitempty"`
+	// At or above this, and below possible, is weak. Anything below this
+	// is very weak, the fifth band.
+	Weak          float64 `protobuf:"fixed64,4,opt,name=weak,proto3" json:"weak,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JdFitBandsPublic) Reset() {
+	*x = JdFitBandsPublic{}
+	mi := &file_career_v1_system_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JdFitBandsPublic) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JdFitBandsPublic) ProtoMessage() {}
+
+func (x *JdFitBandsPublic) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_system_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JdFitBandsPublic.ProtoReflect.Descriptor instead.
+func (*JdFitBandsPublic) Descriptor() ([]byte, []int) {
+	return file_career_v1_system_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *JdFitBandsPublic) GetVeryStrong() float64 {
+	if x != nil {
+		return x.VeryStrong
+	}
+	return 0
+}
+
+func (x *JdFitBandsPublic) GetStrong() float64 {
+	if x != nil {
+		return x.Strong
+	}
+	return 0
+}
+
+func (x *JdFitBandsPublic) GetPossible() float64 {
+	if x != nil {
+		return x.Possible
+	}
+	return 0
+}
+
+func (x *JdFitBandsPublic) GetWeak() float64 {
+	if x != nil {
+		return x.Weak
+	}
+	return 0
+}
+
 var File_career_v1_system_proto protoreflect.FileDescriptor
 
 const file_career_v1_system_proto_rawDesc = "" +
@@ -625,7 +717,7 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"frameworks\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12=\n" +
 	"\fpublished_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x1a\n" +
-	"\x18GetReviewerStatusRequest\"\xfc\x03\n" +
+	"\x18GetReviewerStatusRequest\"\xaf\x04\n" +
 	"\x19GetReviewerStatusResponse\x12\x16\n" +
 	"\x06graded\x18\x01 \x01(\x05R\x06graded\x12\x16\n" +
 	"\x06agreed\x18\x02 \x01(\x05R\x06agreed\x12#\n" +
@@ -643,8 +735,15 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"inversions\x12\x1b\n" +
 	"\x06margin\x18\f \x01(\x01H\x00R\x06margin\x88\x01\x01\x12=\n" +
 	"\fevaluated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\x12\x14\n" +
-	"\x05model\x18\x0e \x01(\tR\x05modelB\t\n" +
-	"\a_margin2\xbe\x02\n" +
+	"\x05model\x18\x0e \x01(\tR\x05model\x121\n" +
+	"\x05bands\x18\x0f \x01(\v2\x1b.career.v1.JdFitBandsPublicR\x05bandsB\t\n" +
+	"\a_margin\"{\n" +
+	"\x10JdFitBandsPublic\x12\x1f\n" +
+	"\vvery_strong\x18\x01 \x01(\x01R\n" +
+	"veryStrong\x12\x16\n" +
+	"\x06strong\x18\x02 \x01(\x01R\x06strong\x12\x1a\n" +
+	"\bpossible\x18\x03 \x01(\x01R\bpossible\x12\x12\n" +
+	"\x04weak\x18\x04 \x01(\x01R\x04weak2\xbe\x02\n" +
 	"\rSystemService\x12S\n" +
 	"\n" +
 	"GetVersion\x12\x1c.career.v1.GetVersionRequest\x1a\x1d.career.v1.GetVersionResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12n\n" +
@@ -665,7 +764,7 @@ func file_career_v1_system_proto_rawDescGZIP() []byte {
 	return file_career_v1_system_proto_rawDescData
 }
 
-var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_career_v1_system_proto_goTypes = []any{
 	(*GetVersionRequest)(nil),           // 0: career.v1.GetVersionRequest
 	(*GetVersionResponse)(nil),          // 1: career.v1.GetVersionResponse
@@ -674,25 +773,27 @@ var file_career_v1_system_proto_goTypes = []any{
 	(*GetGovernanceStatusResponse)(nil), // 4: career.v1.GetGovernanceStatusResponse
 	(*GetReviewerStatusRequest)(nil),    // 5: career.v1.GetReviewerStatusRequest
 	(*GetReviewerStatusResponse)(nil),   // 6: career.v1.GetReviewerStatusResponse
-	(*timestamppb.Timestamp)(nil),       // 7: google.protobuf.Timestamp
+	(*JdFitBandsPublic)(nil),            // 7: career.v1.JdFitBandsPublic
+	(*timestamppb.Timestamp)(nil),       // 8: google.protobuf.Timestamp
 }
 var file_career_v1_system_proto_depIdxs = []int32{
-	7, // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
-	7, // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
+	8, // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
+	8, // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
 	3, // 2: career.v1.GetGovernanceStatusResponse.frameworks:type_name -> career.v1.FrameworkStatus
-	7, // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
-	7, // 4: career.v1.GetReviewerStatusResponse.evaluated_at:type_name -> google.protobuf.Timestamp
-	0, // 5: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
-	2, // 6: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
-	5, // 7: career.v1.SystemService.GetReviewerStatus:input_type -> career.v1.GetReviewerStatusRequest
-	1, // 8: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
-	4, // 9: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
-	6, // 10: career.v1.SystemService.GetReviewerStatus:output_type -> career.v1.GetReviewerStatusResponse
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
+	8, // 4: career.v1.GetReviewerStatusResponse.evaluated_at:type_name -> google.protobuf.Timestamp
+	7, // 5: career.v1.GetReviewerStatusResponse.bands:type_name -> career.v1.JdFitBandsPublic
+	0, // 6: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
+	2, // 7: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
+	5, // 8: career.v1.SystemService.GetReviewerStatus:input_type -> career.v1.GetReviewerStatusRequest
+	1, // 9: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
+	4, // 10: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
+	6, // 11: career.v1.SystemService.GetReviewerStatus:output_type -> career.v1.GetReviewerStatusResponse
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_system_proto_init() }
@@ -708,7 +809,7 @@ func file_career_v1_system_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_system_proto_rawDesc), len(file_career_v1_system_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
