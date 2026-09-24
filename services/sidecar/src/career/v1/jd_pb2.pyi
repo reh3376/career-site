@@ -59,16 +59,32 @@ class SubmitJdRequest(_message.Message):
     def __init__(self, jd_text: _Optional[str] = ..., source: _Optional[_Union[JdSource, str]] = ..., role_hint: _Optional[str] = ..., employer_hint: _Optional[str] = ..., contact_email: _Optional[str] = ..., apply_url: _Optional[str] = ...) -> None: ...
 
 class SubmitJdResponse(_message.Message):
-    __slots__ = ("submission_id", "status", "message", "result_token")
+    __slots__ = ("submission_id", "status", "message", "result_token", "quota")
     SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     RESULT_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    QUOTA_FIELD_NUMBER: _ClassVar[int]
     submission_id: str
     status: JdStatus
     message: str
     result_token: str
-    def __init__(self, submission_id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., message: _Optional[str] = ..., result_token: _Optional[str] = ...) -> None: ...
+    quota: JdQuota
+    def __init__(self, submission_id: _Optional[str] = ..., status: _Optional[_Union[JdStatus, str]] = ..., message: _Optional[str] = ..., result_token: _Optional[str] = ..., quota: _Optional[_Union[JdQuota, _Mapping]] = ...) -> None: ...
+
+class JdQuota(_message.Message):
+    __slots__ = ("limit", "used", "remaining", "window_hours", "next_slot_at")
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    USED_FIELD_NUMBER: _ClassVar[int]
+    REMAINING_FIELD_NUMBER: _ClassVar[int]
+    WINDOW_HOURS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_SLOT_AT_FIELD_NUMBER: _ClassVar[int]
+    limit: int
+    used: int
+    remaining: int
+    window_hours: int
+    next_slot_at: _timestamp_pb2.Timestamp
+    def __init__(self, limit: _Optional[int] = ..., used: _Optional[int] = ..., remaining: _Optional[int] = ..., window_hours: _Optional[int] = ..., next_slot_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GetJdResultRequest(_message.Message):
     __slots__ = ("submission_id", "result_token")
@@ -129,10 +145,12 @@ class GetJdReviewConfigRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetJdReviewConfigResponse(_message.Message):
-    __slots__ = ("bands",)
+    __slots__ = ("bands", "quota")
     BANDS_FIELD_NUMBER: _ClassVar[int]
+    QUOTA_FIELD_NUMBER: _ClassVar[int]
     bands: JdFitBands
-    def __init__(self, bands: _Optional[_Union[JdFitBands, _Mapping]] = ...) -> None: ...
+    quota: JdQuota
+    def __init__(self, bands: _Optional[_Union[JdFitBands, _Mapping]] = ..., quota: _Optional[_Union[JdQuota, _Mapping]] = ...) -> None: ...
 
 class ListMySubmissionsRequest(_message.Message):
     __slots__ = ()

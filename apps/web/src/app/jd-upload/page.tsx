@@ -5,6 +5,7 @@ import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
 import { getSessionUser } from "@/lib/session-user";
 
+import { getJdQuota } from "./actions";
 import { JdForm } from "./form";
 import { MySubmissions } from "./my-submissions";
 
@@ -21,6 +22,7 @@ export default async function JdUploadPage() {
   const me = await getSessionUser();
   if (!me) redirect("/login?next=/jd-upload");
   const bands = await getJdBands(await getSessionCookie());
+  const quota = await getJdQuota();
   const threshold = bands.strong.toFixed(2);
   const weakEdge = bands.weak.toFixed(2);
   return (
@@ -90,7 +92,7 @@ export default async function JdUploadPage() {
       </section>
 
       <div className="mt-14">
-        <JdForm threshold={threshold} />
+        <JdForm threshold={threshold} quota={quota} />
       </div>
 
       <MySubmissions />

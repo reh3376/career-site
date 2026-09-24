@@ -26,7 +26,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/jd.proto.
  */
 export const file_career_v1_jd: GenFile = /*@__PURE__*/
-  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQInUKEFN1Ym1pdEpkUmVzcG9uc2USFQoNc3VibWlzc2lvbl9pZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSDwoHbWVzc2FnZRgDIAEoCRIUCgxyZXN1bHRfdG9rZW4YBCABKAkiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAi4QMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBEhQKDHByb2dyZXNzX3BjdBgNIAEoBRIWCg5wcm9ncmVzc19zdGFnZRgOIAEoCRIUCgxmaXRfY2F0ZWdvcnkYDyABKAlCDgoMX21hdGNoX3Njb3JlIlEKCkpkRml0QmFuZHMSEwoLdmVyeV9zdHJvbmcYASABKAESDgoGc3Ryb25nGAIgASgBEhAKCHBvc3NpYmxlGAMgASgBEgwKBHdlYWsYBCABKAEiGgoYR2V0SmRSZXZpZXdDb25maWdSZXF1ZXN0IkEKGUdldEpkUmV2aWV3Q29uZmlnUmVzcG9uc2USJAoFYmFuZHMYASABKAsyFS5jYXJlZXIudjEuSmRGaXRCYW5kcyIaChhMaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QiSQoZTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZRIsCgtzdWJtaXNzaW9ucxgBIAMoCzIXLmNhcmVlci52MS5NeVN1Ym1pc3Npb24itQIKDE15U3VibWlzc2lvbhIKCgJpZBgBIAEoCRIjCgZzdGF0dXMYAiABKA4yEy5jYXJlZXIudjEuSmRTdGF0dXMSGAoLbWF0Y2hfc2NvcmUYAyABKAFIAIgBARIRCglyb2xlX2hpbnQYBCABKAkSFQoNZW1wbG95ZXJfaGludBgFIAEoCRIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmhhc19yZXN1bWUYCCABKAgSFAoMZml0X2NhdGVnb3J5GAkgASgJEhQKDHByb2dyZXNzX3BjdBgKIAEoBUIOCgxfbWF0Y2hfc2NvcmUidAoSUmVxdWlyZW1lbnRWZXJkaWN0EgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSDgoGd2VpZ2h0GAQgASgFEg8KB3ZlcmRpY3QYBSABKAkSEQoJcmF0aW9uYWxlGAYgASgJKmgKCEpkU291cmNlEhkKFUpEX1NPVVJDRV9VTlNQRUNJRklFRBAAEhMKD0pEX1NPVVJDRV9QQVNURRABEhEKDUpEX1NPVVJDRV9QREYQAhIZChVKRF9TT1VSQ0VfVEVYVF9VUExPQUQQAyrVAQoISmRTdGF0dXMSGQoVSkRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFgoSSkRfU1RBVFVTX1JFQ0VJVkVEEAESFQoRSkRfU1RBVFVTX1NDT1JJTkcQAhIdChlKRF9TVEFUVVNfQkVMT1dfVEhSRVNIT0xEEAMSGAoUSkRfU1RBVFVTX0dFTkVSQVRJTkcQBBITCg9KRF9TVEFUVVNfUkVBRFkQBRIUChBKRF9TVEFUVVNfRkFJTEVEEAYSGwoXSkRfU1RBVFVTX05PVF9BX1BPU1RJTkcQBzKGAwoJSmRTZXJ2aWNlEk0KCFN1Ym1pdEpkEhouY2FyZWVyLnYxLlN1Ym1pdEpkUmVxdWVzdBobLmNhcmVlci52MS5TdWJtaXRKZFJlc3BvbnNlIgiAtRgCkLUYAxJWCgtHZXRKZFJlc3VsdBIdLmNhcmVlci52MS5HZXRKZFJlc3VsdFJlcXVlc3QaHi5jYXJlZXIudjEuR2V0SmRSZXN1bHRSZXNwb25zZSIIgLUYApC1GB4SaAoRTGlzdE15U3VibWlzc2lvbnMSIy5jYXJlZXIudjEuTGlzdE15U3VibWlzc2lvbnNSZXF1ZXN0GiQuY2FyZWVyLnYxLkxpc3RNeVN1Ym1pc3Npb25zUmVzcG9uc2UiCIC1GAKQtRgeEmgKEUdldEpkUmV2aWV3Q29uZmlnEiMuY2FyZWVyLnYxLkdldEpkUmV2aWV3Q29uZmlnUmVxdWVzdBokLmNhcmVlci52MS5HZXRKZFJldmlld0NvbmZpZ1Jlc3BvbnNlIgiAtRgCkLUYPEKhAQoNY29tLmNhcmVlci52MUIHSmRQcm90b1ABWkJnaXRodWIuY29tL3JlaDMzNzYvY2FyZWVyLXNpdGUvc2VydmljZXMvYXBpL2dlbi9jYXJlZXIvdjE7Y2FyZWVydjGiAgNDWFiqAglDYXJlZXIuVjHKAglDYXJlZXJcVjHiAhVDYXJlZXJcVjFcR1BCTWV0YWRhdGHqAgpDYXJlZXI6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChJjYXJlZXIvdjEvamQucHJvdG8SCWNhcmVlci52MSLaAQoPU3VibWl0SmRSZXF1ZXN0EhoKB2pkX3RleHQYASABKAlCCbpIBnIEGNCGAxIvCgZzb3VyY2UYAiABKA4yEy5jYXJlZXIudjEuSmRTb3VyY2VCCrpIB4IBBBABIAASGwoJcm9sZV9oaW50GAMgASgJQgi6SAVyAxjIARIfCg1lbXBsb3llcl9oaW50GAQgASgJQgi6SAVyAxjIARIfCg1jb250YWN0X2VtYWlsGAUgASgJQgi6SAVyAxj+ARIbCglhcHBseV91cmwYBiABKAlCCLpIBXIDGIAQIpgBChBTdWJtaXRKZFJlc3BvbnNlEhUKDXN1Ym1pc3Npb25faWQYASABKAkSIwoGc3RhdHVzGAIgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEg8KB21lc3NhZ2UYAyABKAkSFAoMcmVzdWx0X3Rva2VuGAQgASgJEiEKBXF1b3RhGAUgASgLMhIuY2FyZWVyLnYxLkpkUXVvdGEigQEKB0pkUXVvdGESDQoFbGltaXQYASABKAUSDAoEdXNlZBgCIAEoBRIRCglyZW1haW5pbmcYAyABKAUSFAoMd2luZG93X2hvdXJzGAQgASgFEjAKDG5leHRfc2xvdF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiVQoSR2V0SmRSZXN1bHRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIdCgxyZXN1bHRfdG9rZW4YAiABKAlCB7pIBHICGEAi4QMKE0dldEpkUmVzdWx0UmVzcG9uc2USIwoGc3RhdHVzGAEgASgOMhMuY2FyZWVyLnYxLkpkU3RhdHVzEhgKC21hdGNoX3Njb3JlGAIgASgBSACIAQESHAoUZ2VuZXJhdGVkX3Jlc3VtZV91cmwYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjb21wbGV0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD3Jlc3VtZV9tYXJrZG93bhgHIAEoCRIvCgh2ZXJkaWN0cxgIIAMoCzIdLmNhcmVlci52MS5SZXF1aXJlbWVudFZlcmRpY3QSEQoJbWV0X2NvdW50GAkgASgFEhUKDXBhcnRpYWxfY291bnQYCiABKAUSEwoLdW5tZXRfY291bnQYCyABKAUSFwoPbWF0Y2hfdGhyZXNob2xkGAwgASgBEhQKDHByb2dyZXNzX3BjdBgNIAEoBRIWCg5wcm9ncmVzc19zdGFnZRgOIAEoCRIUCgxmaXRfY2F0ZWdvcnkYDyABKAlCDgoMX21hdGNoX3Njb3JlIlEKCkpkRml0QmFuZHMSEwoLdmVyeV9zdHJvbmcYASABKAESDgoGc3Ryb25nGAIgASgBEhAKCHBvc3NpYmxlGAMgASgBEgwKBHdlYWsYBCABKAEiGgoYR2V0SmRSZXZpZXdDb25maWdSZXF1ZXN0ImQKGUdldEpkUmV2aWV3Q29uZmlnUmVzcG9uc2USJAoFYmFuZHMYASABKAsyFS5jYXJlZXIudjEuSmRGaXRCYW5kcxIhCgVxdW90YRgCIAEoCzISLmNhcmVlci52MS5KZFF1b3RhIhoKGExpc3RNeVN1Ym1pc3Npb25zUmVxdWVzdCJJChlMaXN0TXlTdWJtaXNzaW9uc1Jlc3BvbnNlEiwKC3N1Ym1pc3Npb25zGAEgAygLMhcuY2FyZWVyLnYxLk15U3VibWlzc2lvbiK1AgoMTXlTdWJtaXNzaW9uEgoKAmlkGAEgASgJEiMKBnN0YXR1cxgCIAEoDjITLmNhcmVlci52MS5KZFN0YXR1cxIYCgttYXRjaF9zY29yZRgDIAEoAUgAiAEBEhEKCXJvbGVfaGludBgEIAEoCRIVCg1lbXBsb3llcl9oaW50GAUgASgJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKaGFzX3Jlc3VtZRgIIAEoCBIUCgxmaXRfY2F0ZWdvcnkYCSABKAkSFAoMcHJvZ3Jlc3NfcGN0GAogASgFQg4KDF9tYXRjaF9zY29yZSJ0ChJSZXF1aXJlbWVudFZlcmRpY3QSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCRIOCgZ3ZWlnaHQYBCABKAUSDwoHdmVyZGljdBgFIAEoCRIRCglyYXRpb25hbGUYBiABKAkqaAoISmRTb3VyY2USGQoVSkRfU09VUkNFX1VOU1BFQ0lGSUVEEAASEwoPSkRfU09VUkNFX1BBU1RFEAESEQoNSkRfU09VUkNFX1BERhACEhkKFUpEX1NPVVJDRV9URVhUX1VQTE9BRBADKtUBCghKZFN0YXR1cxIZChVKRF9TVEFUVVNfVU5TUEVDSUZJRUQQABIWChJKRF9TVEFUVVNfUkVDRUlWRUQQARIVChFKRF9TVEFUVVNfU0NPUklORxACEh0KGUpEX1NUQVRVU19CRUxPV19USFJFU0hPTEQQAxIYChRKRF9TVEFUVVNfR0VORVJBVElORxAEEhMKD0pEX1NUQVRVU19SRUFEWRAFEhQKEEpEX1NUQVRVU19GQUlMRUQQBhIbChdKRF9TVEFUVVNfTk9UX0FfUE9TVElORxAHMoYDCglKZFNlcnZpY2USTQoIU3VibWl0SmQSGi5jYXJlZXIudjEuU3VibWl0SmRSZXF1ZXN0GhsuY2FyZWVyLnYxLlN1Ym1pdEpkUmVzcG9uc2UiCIC1GAKQtRgDElYKC0dldEpkUmVzdWx0Eh0uY2FyZWVyLnYxLkdldEpkUmVzdWx0UmVxdWVzdBoeLmNhcmVlci52MS5HZXRKZFJlc3VsdFJlc3BvbnNlIgiAtRgCkLUYHhJoChFMaXN0TXlTdWJtaXNzaW9ucxIjLmNhcmVlci52MS5MaXN0TXlTdWJtaXNzaW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuTGlzdE15U3VibWlzc2lvbnNSZXNwb25zZSIIgLUYApC1GB4SaAoRR2V0SmRSZXZpZXdDb25maWcSIy5jYXJlZXIudjEuR2V0SmRSZXZpZXdDb25maWdSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldEpkUmV2aWV3Q29uZmlnUmVzcG9uc2UiCIC1GAKQtRg8QqEBCg1jb20uY2FyZWVyLnYxQgdKZFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Submission request. Exactly one of jd_text (paste) OR
@@ -132,6 +132,15 @@ export type SubmitJdResponse = Message<"career.v1.SubmitJdResponse"> & {
    * @generated from field: string result_token = 4;
    */
   resultToken: string;
+
+  /**
+   * What is left of the member's daily allowance after this
+   * submission, so the page can say so rather than let them discover
+   * the limit by hitting it.
+   *
+   * @generated from field: career.v1.JdQuota quota = 5;
+   */
+  quota?: JdQuota | undefined;
 };
 
 /**
@@ -140,6 +149,63 @@ export type SubmitJdResponse = Message<"career.v1.SubmitJdResponse"> & {
  */
 export const SubmitJdResponseSchema: GenMessage<SubmitJdResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_jd, 1);
+
+/**
+ * A member's remaining allowance for submitting postings.
+ *
+ * Reviewing one posting is close to an hour of inference and the
+ * pipeline runs one at a time, so the allowance is capacity rather than
+ * etiquette. It is reported rather than merely enforced because a limit
+ * someone meets without warning reads as a fault.
+ *
+ * @generated from message career.v1.JdQuota
+ */
+export type JdQuota = Message<"career.v1.JdQuota"> & {
+  /**
+   * How many postings the member may submit per window. Zero means no
+   * limit is in force.
+   *
+   * @generated from field: int32 limit = 1;
+   */
+  limit: number;
+
+  /**
+   * How many the member has already submitted inside the window.
+   *
+   * @generated from field: int32 used = 2;
+   */
+  used: number;
+
+  /**
+   * How many remain. Zero means the next submission is refused.
+   *
+   * @generated from field: int32 remaining = 3;
+   */
+  remaining: number;
+
+  /**
+   * How long the window is, in hours; the allowance is rolling rather
+   * than aligned to a calendar day.
+   *
+   * @generated from field: int32 window_hours = 4;
+   */
+  windowHours: number;
+
+  /**
+   * When the oldest counted submission falls out of the window, which
+   * is when the next slot appears. Unset when nothing is counted.
+   *
+   * @generated from field: google.protobuf.Timestamp next_slot_at = 5;
+   */
+  nextSlotAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message career.v1.JdQuota.
+ * Use `create(JdQuotaSchema)` to create a new message.
+ */
+export const JdQuotaSchema: GenMessage<JdQuota> = /*@__PURE__*/
+  messageDesc(file_career_v1_jd, 2);
 
 /**
  * Poll request.
@@ -168,7 +234,7 @@ export type GetJdResultRequest = Message<"career.v1.GetJdResultRequest"> & {
  * Use `create(GetJdResultRequestSchema)` to create a new message.
  */
 export const GetJdResultRequestSchema: GenMessage<GetJdResultRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 2);
+  messageDesc(file_career_v1_jd, 3);
 
 /**
  * Poll response.
@@ -299,7 +365,7 @@ export type GetJdResultResponse = Message<"career.v1.GetJdResultResponse"> & {
  * Use `create(GetJdResultResponseSchema)` to create a new message.
  */
 export const GetJdResultResponseSchema: GenMessage<GetJdResultResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 3);
+  messageDesc(file_career_v1_jd, 4);
 
 /**
  * Lower edges of the fit categories; scores below weak are very weak.
@@ -343,7 +409,7 @@ export type JdFitBands = Message<"career.v1.JdFitBands"> & {
  * Use `create(JdFitBandsSchema)` to create a new message.
  */
 export const JdFitBandsSchema: GenMessage<JdFitBands> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 4);
+  messageDesc(file_career_v1_jd, 5);
 
 /**
  * Config request; the member is the session.
@@ -358,7 +424,7 @@ export type GetJdReviewConfigRequest = Message<"career.v1.GetJdReviewConfigReque
  * Use `create(GetJdReviewConfigRequestSchema)` to create a new message.
  */
 export const GetJdReviewConfigRequestSchema: GenMessage<GetJdReviewConfigRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 5);
+  messageDesc(file_career_v1_jd, 6);
 
 /**
  * The bands in force.
@@ -372,6 +438,14 @@ export type GetJdReviewConfigResponse = Message<"career.v1.GetJdReviewConfigResp
    * @generated from field: career.v1.JdFitBands bands = 1;
    */
   bands?: JdFitBands | undefined;
+
+  /**
+   * The signed-in member's allowance as it stands now, so the upload
+   * page can state the limit before anyone spends it.
+   *
+   * @generated from field: career.v1.JdQuota quota = 2;
+   */
+  quota?: JdQuota | undefined;
 };
 
 /**
@@ -379,7 +453,7 @@ export type GetJdReviewConfigResponse = Message<"career.v1.GetJdReviewConfigResp
  * Use `create(GetJdReviewConfigResponseSchema)` to create a new message.
  */
 export const GetJdReviewConfigResponseSchema: GenMessage<GetJdReviewConfigResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 6);
+  messageDesc(file_career_v1_jd, 7);
 
 /**
  * List request; the member is the session.
@@ -394,7 +468,7 @@ export type ListMySubmissionsRequest = Message<"career.v1.ListMySubmissionsReque
  * Use `create(ListMySubmissionsRequestSchema)` to create a new message.
  */
 export const ListMySubmissionsRequestSchema: GenMessage<ListMySubmissionsRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 7);
+  messageDesc(file_career_v1_jd, 8);
 
 /**
  * The member's submissions, newest first.
@@ -415,7 +489,7 @@ export type ListMySubmissionsResponse = Message<"career.v1.ListMySubmissionsResp
  * Use `create(ListMySubmissionsResponseSchema)` to create a new message.
  */
 export const ListMySubmissionsResponseSchema: GenMessage<ListMySubmissionsResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 8);
+  messageDesc(file_career_v1_jd, 9);
 
 /**
  * One of the member's own submissions, enough to pick it from a list.
@@ -499,7 +573,7 @@ export type MySubmission = Message<"career.v1.MySubmission"> & {
  * Use `create(MySubmissionSchema)` to create a new message.
  */
 export const MySubmissionSchema: GenMessage<MySubmission> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 9);
+  messageDesc(file_career_v1_jd, 10);
 
 /**
  * One requirement the reviewer extracted from the posting and the
@@ -557,7 +631,7 @@ export type RequirementVerdict = Message<"career.v1.RequirementVerdict"> & {
  * Use `create(RequirementVerdictSchema)` to create a new message.
  */
 export const RequirementVerdictSchema: GenMessage<RequirementVerdict> = /*@__PURE__*/
-  messageDesc(file_career_v1_jd, 10);
+  messageDesc(file_career_v1_jd, 11);
 
 /**
  * Where the JD text came from — mirrors jd_submissions.source_kind.

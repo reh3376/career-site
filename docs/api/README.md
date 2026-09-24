@@ -3505,6 +3505,7 @@ on the actual scoring / generation — those run out of band.
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
 | `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | What is left of the member's daily allowance after this submission, so the page can say so rather than let them discover the limit by hitting it. |
 
 <details><summary>Example request body</summary>
 
@@ -3610,6 +3611,7 @@ _No fields; send `{}`._
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | The signed-in member's allowance as it stands now, so the upload page can state the limit before anyone spends it. |
 
 <details><summary>Example request body</summary>
 
@@ -4671,6 +4673,24 @@ GetJdResult with this id.
 | `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
 | `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
 | `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | What is left of the member's daily allowance after this submission, so the page can say so rather than let them discover the limit by hitting it. |
+
+### JdQuota
+
+A member's remaining allowance for submitting postings.
+
+Reviewing one posting is close to an hour of inference and the
+pipeline runs one at a time, so the allowance is capacity rather than
+etiquette. It is reported rather than merely enforced because a limit
+someone meets without warning reads as a fault.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `limit` | `int32` | number |  | How many postings the member may submit per window. Zero means no limit is in force. |
+| `used` | `int32` | number |  | How many the member has already submitted inside the window. |
+| `remaining` | `int32` | number |  | How many remain. Zero means the next submission is refused. |
+| `windowHours` | `int32` | number |  | How long the window is, in hours; the allowance is rolling rather than aligned to a calendar day. |
+| `nextSlotAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the oldest counted submission falls out of the window, which is when the next slot appears. Unset when nothing is counted. |
 
 ### GetJdResultRequest
 
@@ -4729,6 +4749,7 @@ The bands in force.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | The signed-in member's allowance as it stands now, so the upload page can state the limit before anyone spends it. |
 
 ### ListMySubmissionsRequest
 

@@ -444,16 +444,18 @@ func (r *Repo) FailStrandedJd(ctx context.Context) (int64, error) {
 // measurement runs, they never come from a person pressing a button,
 // and counting them would let a long evaluation lock the owner out of
 // his own site.
+// It also returns the oldest submission still inside the window, which
+// is when a slot next comes free. A member told only that they are out
+// has to guess when to come back.
 func (r *Repo) CountJdSubmissionsSince(
 	ctx context.Context, userID int64, since time.Time,
-) (int, error) {
+) (n int, oldest *time.Time, err error) {
 	const q = `
-    SELECT count(*) FROM jd_submissions
+    SELECT count(*), min(created_at) FROM jd_submissions
      WHERE user_id = $1 AND created_at >= $2 AND NOT is_eval
   `
-	var n int
-	if err := r.pool.QueryRow(ctx, q, userID, since).Scan(&n); err != nil {
-		return 0, fmt.Errorf("count submissions: %w", err)
+	if err := r.pool.QueryRow(ctx, q, userID, since).Scan(&n, &oldest); err != nil {
+		return 0, nil, fmt.Errorf("count submissions: %w", err)
 	}
-	return n, nil
+	return n, oldest, nil
 }

@@ -290,7 +290,11 @@ type SubmitJdResponse struct {
 	// GetJdResult to receive the verdicts and the generated résumé. The
 	// submitting member's own session releases the same things without
 	// it, so a review can be reopened from /jd-upload/<id> later.
-	ResultToken   string `protobuf:"bytes,4,opt,name=result_token,json=resultToken,proto3" json:"result_token,omitempty"`
+	ResultToken string `protobuf:"bytes,4,opt,name=result_token,json=resultToken,proto3" json:"result_token,omitempty"`
+	// What is left of the member's daily allowance after this
+	// submission, so the page can say so rather than let them discover
+	// the limit by hitting it.
+	Quota         *JdQuota `protobuf:"bytes,5,opt,name=quota,proto3" json:"quota,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -353,6 +357,103 @@ func (x *SubmitJdResponse) GetResultToken() string {
 	return ""
 }
 
+func (x *SubmitJdResponse) GetQuota() *JdQuota {
+	if x != nil {
+		return x.Quota
+	}
+	return nil
+}
+
+// A member's remaining allowance for submitting postings.
+//
+// Reviewing one posting is close to an hour of inference and the
+// pipeline runs one at a time, so the allowance is capacity rather than
+// etiquette. It is reported rather than merely enforced because a limit
+// someone meets without warning reads as a fault.
+type JdQuota struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// How many postings the member may submit per window. Zero means no
+	// limit is in force.
+	Limit int32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// How many the member has already submitted inside the window.
+	Used int32 `protobuf:"varint,2,opt,name=used,proto3" json:"used,omitempty"`
+	// How many remain. Zero means the next submission is refused.
+	Remaining int32 `protobuf:"varint,3,opt,name=remaining,proto3" json:"remaining,omitempty"`
+	// How long the window is, in hours; the allowance is rolling rather
+	// than aligned to a calendar day.
+	WindowHours int32 `protobuf:"varint,4,opt,name=window_hours,json=windowHours,proto3" json:"window_hours,omitempty"`
+	// When the oldest counted submission falls out of the window, which
+	// is when the next slot appears. Unset when nothing is counted.
+	NextSlotAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=next_slot_at,json=nextSlotAt,proto3" json:"next_slot_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JdQuota) Reset() {
+	*x = JdQuota{}
+	mi := &file_career_v1_jd_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JdQuota) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JdQuota) ProtoMessage() {}
+
+func (x *JdQuota) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_jd_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JdQuota.ProtoReflect.Descriptor instead.
+func (*JdQuota) Descriptor() ([]byte, []int) {
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *JdQuota) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *JdQuota) GetUsed() int32 {
+	if x != nil {
+		return x.Used
+	}
+	return 0
+}
+
+func (x *JdQuota) GetRemaining() int32 {
+	if x != nil {
+		return x.Remaining
+	}
+	return 0
+}
+
+func (x *JdQuota) GetWindowHours() int32 {
+	if x != nil {
+		return x.WindowHours
+	}
+	return 0
+}
+
+func (x *JdQuota) GetNextSlotAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NextSlotAt
+	}
+	return nil
+}
+
 // Poll request.
 type GetJdResultRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -367,7 +468,7 @@ type GetJdResultRequest struct {
 
 func (x *GetJdResultRequest) Reset() {
 	*x = GetJdResultRequest{}
-	mi := &file_career_v1_jd_proto_msgTypes[2]
+	mi := &file_career_v1_jd_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -379,7 +480,7 @@ func (x *GetJdResultRequest) String() string {
 func (*GetJdResultRequest) ProtoMessage() {}
 
 func (x *GetJdResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[2]
+	mi := &file_career_v1_jd_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -392,7 +493,7 @@ func (x *GetJdResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdResultRequest.ProtoReflect.Descriptor instead.
 func (*GetJdResultRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{2}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetJdResultRequest) GetSubmissionId() string {
@@ -460,7 +561,7 @@ type GetJdResultResponse struct {
 
 func (x *GetJdResultResponse) Reset() {
 	*x = GetJdResultResponse{}
-	mi := &file_career_v1_jd_proto_msgTypes[3]
+	mi := &file_career_v1_jd_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +573,7 @@ func (x *GetJdResultResponse) String() string {
 func (*GetJdResultResponse) ProtoMessage() {}
 
 func (x *GetJdResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[3]
+	mi := &file_career_v1_jd_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +586,7 @@ func (x *GetJdResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdResultResponse.ProtoReflect.Descriptor instead.
 func (*GetJdResultResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{3}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetJdResultResponse) GetStatus() JdStatus {
@@ -612,7 +713,7 @@ type JdFitBands struct {
 
 func (x *JdFitBands) Reset() {
 	*x = JdFitBands{}
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -624,7 +725,7 @@ func (x *JdFitBands) String() string {
 func (*JdFitBands) ProtoMessage() {}
 
 func (x *JdFitBands) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[4]
+	mi := &file_career_v1_jd_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -637,7 +738,7 @@ func (x *JdFitBands) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JdFitBands.ProtoReflect.Descriptor instead.
 func (*JdFitBands) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{4}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *JdFitBands) GetVeryStrong() float64 {
@@ -677,7 +778,7 @@ type GetJdReviewConfigRequest struct {
 
 func (x *GetJdReviewConfigRequest) Reset() {
 	*x = GetJdReviewConfigRequest{}
-	mi := &file_career_v1_jd_proto_msgTypes[5]
+	mi := &file_career_v1_jd_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -689,7 +790,7 @@ func (x *GetJdReviewConfigRequest) String() string {
 func (*GetJdReviewConfigRequest) ProtoMessage() {}
 
 func (x *GetJdReviewConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[5]
+	mi := &file_career_v1_jd_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -702,21 +803,24 @@ func (x *GetJdReviewConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdReviewConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetJdReviewConfigRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{5}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{6}
 }
 
 // The bands in force.
 type GetJdReviewConfigResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Current bands.
-	Bands         *JdFitBands `protobuf:"bytes,1,opt,name=bands,proto3" json:"bands,omitempty"`
+	Bands *JdFitBands `protobuf:"bytes,1,opt,name=bands,proto3" json:"bands,omitempty"`
+	// The signed-in member's allowance as it stands now, so the upload
+	// page can state the limit before anyone spends it.
+	Quota         *JdQuota `protobuf:"bytes,2,opt,name=quota,proto3" json:"quota,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetJdReviewConfigResponse) Reset() {
 	*x = GetJdReviewConfigResponse{}
-	mi := &file_career_v1_jd_proto_msgTypes[6]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -728,7 +832,7 @@ func (x *GetJdReviewConfigResponse) String() string {
 func (*GetJdReviewConfigResponse) ProtoMessage() {}
 
 func (x *GetJdReviewConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[6]
+	mi := &file_career_v1_jd_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -741,12 +845,19 @@ func (x *GetJdReviewConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJdReviewConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetJdReviewConfigResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{6}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetJdReviewConfigResponse) GetBands() *JdFitBands {
 	if x != nil {
 		return x.Bands
+	}
+	return nil
+}
+
+func (x *GetJdReviewConfigResponse) GetQuota() *JdQuota {
+	if x != nil {
+		return x.Quota
 	}
 	return nil
 }
@@ -760,7 +871,7 @@ type ListMySubmissionsRequest struct {
 
 func (x *ListMySubmissionsRequest) Reset() {
 	*x = ListMySubmissionsRequest{}
-	mi := &file_career_v1_jd_proto_msgTypes[7]
+	mi := &file_career_v1_jd_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -772,7 +883,7 @@ func (x *ListMySubmissionsRequest) String() string {
 func (*ListMySubmissionsRequest) ProtoMessage() {}
 
 func (x *ListMySubmissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[7]
+	mi := &file_career_v1_jd_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -785,7 +896,7 @@ func (x *ListMySubmissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySubmissionsRequest.ProtoReflect.Descriptor instead.
 func (*ListMySubmissionsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{7}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{8}
 }
 
 // The member's submissions, newest first.
@@ -799,7 +910,7 @@ type ListMySubmissionsResponse struct {
 
 func (x *ListMySubmissionsResponse) Reset() {
 	*x = ListMySubmissionsResponse{}
-	mi := &file_career_v1_jd_proto_msgTypes[8]
+	mi := &file_career_v1_jd_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -811,7 +922,7 @@ func (x *ListMySubmissionsResponse) String() string {
 func (*ListMySubmissionsResponse) ProtoMessage() {}
 
 func (x *ListMySubmissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[8]
+	mi := &file_career_v1_jd_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -824,7 +935,7 @@ func (x *ListMySubmissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMySubmissionsResponse.ProtoReflect.Descriptor instead.
 func (*ListMySubmissionsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{8}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListMySubmissionsResponse) GetSubmissions() []*MySubmission {
@@ -863,7 +974,7 @@ type MySubmission struct {
 
 func (x *MySubmission) Reset() {
 	*x = MySubmission{}
-	mi := &file_career_v1_jd_proto_msgTypes[9]
+	mi := &file_career_v1_jd_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -875,7 +986,7 @@ func (x *MySubmission) String() string {
 func (*MySubmission) ProtoMessage() {}
 
 func (x *MySubmission) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[9]
+	mi := &file_career_v1_jd_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -888,7 +999,7 @@ func (x *MySubmission) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MySubmission.ProtoReflect.Descriptor instead.
 func (*MySubmission) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{9}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MySubmission) GetId() string {
@@ -984,7 +1095,7 @@ type RequirementVerdict struct {
 
 func (x *RequirementVerdict) Reset() {
 	*x = RequirementVerdict{}
-	mi := &file_career_v1_jd_proto_msgTypes[10]
+	mi := &file_career_v1_jd_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -996,7 +1107,7 @@ func (x *RequirementVerdict) String() string {
 func (*RequirementVerdict) ProtoMessage() {}
 
 func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_jd_proto_msgTypes[10]
+	mi := &file_career_v1_jd_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1009,7 +1120,7 @@ func (x *RequirementVerdict) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequirementVerdict.ProtoReflect.Descriptor instead.
 func (*RequirementVerdict) Descriptor() ([]byte, []int) {
-	return file_career_v1_jd_proto_rawDescGZIP(), []int{10}
+	return file_career_v1_jd_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RequirementVerdict) GetId() string {
@@ -1066,12 +1177,20 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\trole_hint\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\broleHint\x12-\n" +
 	"\remployer_hint\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\femployerHint\x12-\n" +
 	"\rcontact_email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\fcontactEmail\x12%\n" +
-	"\tapply_url\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\bapplyUrl\"\xa1\x01\n" +
+	"\tapply_url\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\bapplyUrl\"\xcb\x01\n" +
 	"\x10SubmitJdResponse\x12#\n" +
 	"\rsubmission_id\x18\x01 \x01(\tR\fsubmissionId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12!\n" +
-	"\fresult_token\x18\x04 \x01(\tR\vresultToken\"p\n" +
+	"\fresult_token\x18\x04 \x01(\tR\vresultToken\x12(\n" +
+	"\x05quota\x18\x05 \x01(\v2\x12.career.v1.JdQuotaR\x05quota\"\xb2\x01\n" +
+	"\aJdQuota\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x12\n" +
+	"\x04used\x18\x02 \x01(\x05R\x04used\x12\x1c\n" +
+	"\tremaining\x18\x03 \x01(\x05R\tremaining\x12!\n" +
+	"\fwindow_hours\x18\x04 \x01(\x05R\vwindowHours\x12<\n" +
+	"\fnext_slot_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"nextSlotAt\"p\n" +
 	"\x12GetJdResultRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12*\n" +
 	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xa6\x05\n" +
@@ -1103,9 +1222,10 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x06strong\x18\x02 \x01(\x01R\x06strong\x12\x1a\n" +
 	"\bpossible\x18\x03 \x01(\x01R\bpossible\x12\x12\n" +
 	"\x04weak\x18\x04 \x01(\x01R\x04weak\"\x1a\n" +
-	"\x18GetJdReviewConfigRequest\"H\n" +
+	"\x18GetJdReviewConfigRequest\"r\n" +
 	"\x19GetJdReviewConfigResponse\x12+\n" +
-	"\x05bands\x18\x01 \x01(\v2\x15.career.v1.JdFitBandsR\x05bands\"\x1a\n" +
+	"\x05bands\x18\x01 \x01(\v2\x15.career.v1.JdFitBandsR\x05bands\x12(\n" +
+	"\x05quota\x18\x02 \x01(\v2\x12.career.v1.JdQuotaR\x05quota\"\x1a\n" +
 	"\x18ListMySubmissionsRequest\"V\n" +
 	"\x19ListMySubmissionsResponse\x129\n" +
 	"\vsubmissions\x18\x01 \x03(\v2\x17.career.v1.MySubmissionR\vsubmissions\"\xa2\x03\n" +
@@ -1167,48 +1287,52 @@ func file_career_v1_jd_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_jd_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_career_v1_jd_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_career_v1_jd_proto_goTypes = []any{
 	(JdSource)(0),                     // 0: career.v1.JdSource
 	(JdStatus)(0),                     // 1: career.v1.JdStatus
 	(*SubmitJdRequest)(nil),           // 2: career.v1.SubmitJdRequest
 	(*SubmitJdResponse)(nil),          // 3: career.v1.SubmitJdResponse
-	(*GetJdResultRequest)(nil),        // 4: career.v1.GetJdResultRequest
-	(*GetJdResultResponse)(nil),       // 5: career.v1.GetJdResultResponse
-	(*JdFitBands)(nil),                // 6: career.v1.JdFitBands
-	(*GetJdReviewConfigRequest)(nil),  // 7: career.v1.GetJdReviewConfigRequest
-	(*GetJdReviewConfigResponse)(nil), // 8: career.v1.GetJdReviewConfigResponse
-	(*ListMySubmissionsRequest)(nil),  // 9: career.v1.ListMySubmissionsRequest
-	(*ListMySubmissionsResponse)(nil), // 10: career.v1.ListMySubmissionsResponse
-	(*MySubmission)(nil),              // 11: career.v1.MySubmission
-	(*RequirementVerdict)(nil),        // 12: career.v1.RequirementVerdict
-	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
+	(*JdQuota)(nil),                   // 4: career.v1.JdQuota
+	(*GetJdResultRequest)(nil),        // 5: career.v1.GetJdResultRequest
+	(*GetJdResultResponse)(nil),       // 6: career.v1.GetJdResultResponse
+	(*JdFitBands)(nil),                // 7: career.v1.JdFitBands
+	(*GetJdReviewConfigRequest)(nil),  // 8: career.v1.GetJdReviewConfigRequest
+	(*GetJdReviewConfigResponse)(nil), // 9: career.v1.GetJdReviewConfigResponse
+	(*ListMySubmissionsRequest)(nil),  // 10: career.v1.ListMySubmissionsRequest
+	(*ListMySubmissionsResponse)(nil), // 11: career.v1.ListMySubmissionsResponse
+	(*MySubmission)(nil),              // 12: career.v1.MySubmission
+	(*RequirementVerdict)(nil),        // 13: career.v1.RequirementVerdict
+	(*timestamppb.Timestamp)(nil),     // 14: google.protobuf.Timestamp
 }
 var file_career_v1_jd_proto_depIdxs = []int32{
 	0,  // 0: career.v1.SubmitJdRequest.source:type_name -> career.v1.JdSource
 	1,  // 1: career.v1.SubmitJdResponse.status:type_name -> career.v1.JdStatus
-	1,  // 2: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
-	13, // 3: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
-	13, // 4: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
-	12, // 5: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
-	6,  // 6: career.v1.GetJdReviewConfigResponse.bands:type_name -> career.v1.JdFitBands
-	11, // 7: career.v1.ListMySubmissionsResponse.submissions:type_name -> career.v1.MySubmission
-	1,  // 8: career.v1.MySubmission.status:type_name -> career.v1.JdStatus
-	13, // 9: career.v1.MySubmission.created_at:type_name -> google.protobuf.Timestamp
-	13, // 10: career.v1.MySubmission.completed_at:type_name -> google.protobuf.Timestamp
-	2,  // 11: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
-	4,  // 12: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
-	9,  // 13: career.v1.JdService.ListMySubmissions:input_type -> career.v1.ListMySubmissionsRequest
-	7,  // 14: career.v1.JdService.GetJdReviewConfig:input_type -> career.v1.GetJdReviewConfigRequest
-	3,  // 15: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
-	5,  // 16: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
-	10, // 17: career.v1.JdService.ListMySubmissions:output_type -> career.v1.ListMySubmissionsResponse
-	8,  // 18: career.v1.JdService.GetJdReviewConfig:output_type -> career.v1.GetJdReviewConfigResponse
-	15, // [15:19] is the sub-list for method output_type
-	11, // [11:15] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	4,  // 2: career.v1.SubmitJdResponse.quota:type_name -> career.v1.JdQuota
+	14, // 3: career.v1.JdQuota.next_slot_at:type_name -> google.protobuf.Timestamp
+	1,  // 4: career.v1.GetJdResultResponse.status:type_name -> career.v1.JdStatus
+	14, // 5: career.v1.GetJdResultResponse.created_at:type_name -> google.protobuf.Timestamp
+	14, // 6: career.v1.GetJdResultResponse.completed_at:type_name -> google.protobuf.Timestamp
+	13, // 7: career.v1.GetJdResultResponse.verdicts:type_name -> career.v1.RequirementVerdict
+	7,  // 8: career.v1.GetJdReviewConfigResponse.bands:type_name -> career.v1.JdFitBands
+	4,  // 9: career.v1.GetJdReviewConfigResponse.quota:type_name -> career.v1.JdQuota
+	12, // 10: career.v1.ListMySubmissionsResponse.submissions:type_name -> career.v1.MySubmission
+	1,  // 11: career.v1.MySubmission.status:type_name -> career.v1.JdStatus
+	14, // 12: career.v1.MySubmission.created_at:type_name -> google.protobuf.Timestamp
+	14, // 13: career.v1.MySubmission.completed_at:type_name -> google.protobuf.Timestamp
+	2,  // 14: career.v1.JdService.SubmitJd:input_type -> career.v1.SubmitJdRequest
+	5,  // 15: career.v1.JdService.GetJdResult:input_type -> career.v1.GetJdResultRequest
+	10, // 16: career.v1.JdService.ListMySubmissions:input_type -> career.v1.ListMySubmissionsRequest
+	8,  // 17: career.v1.JdService.GetJdReviewConfig:input_type -> career.v1.GetJdReviewConfigRequest
+	3,  // 18: career.v1.JdService.SubmitJd:output_type -> career.v1.SubmitJdResponse
+	6,  // 19: career.v1.JdService.GetJdResult:output_type -> career.v1.GetJdResultResponse
+	11, // 20: career.v1.JdService.ListMySubmissions:output_type -> career.v1.ListMySubmissionsResponse
+	9,  // 21: career.v1.JdService.GetJdReviewConfig:output_type -> career.v1.GetJdReviewConfigResponse
+	18, // [18:22] is the sub-list for method output_type
+	14, // [14:18] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_jd_proto_init() }
@@ -1217,15 +1341,15 @@ func file_career_v1_jd_proto_init() {
 		return
 	}
 	file_career_v1_options_proto_init()
-	file_career_v1_jd_proto_msgTypes[3].OneofWrappers = []any{}
-	file_career_v1_jd_proto_msgTypes[9].OneofWrappers = []any{}
+	file_career_v1_jd_proto_msgTypes[4].OneofWrappers = []any{}
+	file_career_v1_jd_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_jd_proto_rawDesc), len(file_career_v1_jd_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

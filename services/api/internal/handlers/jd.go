@@ -114,27 +114,25 @@ func (h *Jd) SubmitJd(
 	// The admin is exempt. He is the one who has to be able to work when
 	// the site is under load, and the eval runs he starts are excluded
 	// from the count anyway.
-	if h.dailyLimit > 0 && member.Role != users.RoleAdmin {
-		since := time.Now().UTC().Add(-24 * time.Hour)
-		n, cErr := h.users.CountJdSubmissionsSince(ctx, member.ID, since)
-		if cErr != nil {
-			// Fail closed. A quota that stops being enforced when the
-			// database hiccups is not a quota, and the cost of being wrong
-			// here is one person waiting, against a box that can be taken
-			// down by a loop.
-			h.log.Error("jd quota check failed",
-				slog.Int64("user_id", member.ID), slog.String("error", cErr.Error()))
-			return nil, connect.NewError(connect.CodeUnavailable,
-				errors.New("could not check your submission quota; try again shortly"))
-		}
-		if n >= h.dailyLimit {
-			h.log.Warn("jd daily quota reached",
-				slog.Int64("user_id", member.ID), slog.Int("submitted", n), slog.Int("limit", h.dailyLimit))
-			h.events.Emit(ctx, requestEvent(req, "jd.quota_blocked", member.ID,
-				map[string]any{"submitted": n, "limit": h.dailyLimit}))
-			return nil, connect.NewError(connect.CodeResourceExhausted,
-				fmt.Errorf("you have submitted %d postings in the last 24 hours, which is the limit; each one takes the better part of an hour to review, so the queue is finite", h.dailyLimit))
-		}
+	quota, qErr := h.quotaFor(ctx, member)
+	if qErr != nil {
+		// Fail closed. A quota that stops being enforced when the
+		// database hiccups is not a quota, and the cost of being wrong
+		// here is one person waiting, against a box that can be taken
+		// down by a loop.
+		h.log.Error("jd quota check failed",
+			slog.Int64("user_id", member.ID), slog.String("error", qErr.Error()))
+		return nil, connect.NewError(connect.CodeUnavailable,
+			errors.New("could not check your submission quota; try again shortly"))
+	}
+	if quota != nil && quota.Remaining <= 0 {
+		h.log.Warn("jd daily quota reached",
+			slog.Int64("user_id", member.ID),
+			slog.Int("submitted", int(quota.Used)), slog.Int("limit", int(quota.Limit)))
+		h.events.Emit(ctx, requestEvent(req, "jd.quota_blocked", member.ID,
+			map[string]any{"submitted": quota.Used, "limit": quota.Limit}))
+		return nil, connect.NewError(connect.CodeResourceExhausted,
+			errors.New(quotaExhaustedMessage(quota)))
 	}
 
 	// Rate-limit on (member, jd_hash) so a submitter cannot hammer,
@@ -205,12 +203,65 @@ func (h *Jd) SubmitJd(
 		}(s.ID, text)
 	}
 
+	// Re-read rather than decrementing the copy taken above: the row
+	// just written is what the next check will count, so this is the
+	// number the member can rely on.
+	if after, aErr := h.quotaFor(ctx, member); aErr == nil {
+		quota = after
+	}
+
 	return connect.NewResponse(&v1.SubmitJdResponse{
 		SubmissionId: strconv.FormatInt(s.ID, 10),
 		Status:       jdStatusRepoToProto(s.Status),
 		Message:      fixedSubmitAckMessage(),
 		ResultToken:  hex.EncodeToString(s.ResultToken),
+		Quota:        quota,
 	}), nil
+}
+
+// jdQuotaWindow is how far back the allowance looks. Rolling rather
+// than aligned to a calendar day, so nobody has to know which midnight
+// the server keeps.
+const jdQuotaWindow = 24 * time.Hour
+
+// quotaFor reports the member's remaining allowance, or nil when no
+// limit applies to them.
+func (h *Jd) quotaFor(ctx context.Context, member *users.User) (*v1.JdQuota, error) {
+	if h.dailyLimit <= 0 || member.Role == users.RoleAdmin {
+		return nil, nil
+	}
+	since := time.Now().UTC().Add(-jdQuotaWindow)
+	used, oldest, err := h.users.CountJdSubmissionsSince(ctx, member.ID, since)
+	if err != nil {
+		return nil, err
+	}
+	remaining := h.dailyLimit - used
+	if remaining < 0 {
+		remaining = 0
+	}
+	q := &v1.JdQuota{
+		Limit:       int32(h.dailyLimit),
+		Used:        int32(used),
+		Remaining:   int32(remaining),
+		WindowHours: int32(jdQuotaWindow / time.Hour),
+	}
+	if oldest != nil {
+		q.NextSlotAt = timestamppb.New(oldest.Add(jdQuotaWindow))
+	}
+	return q, nil
+}
+
+// quotaExhaustedMessage explains the refusal in terms of the reason for
+// it. "Rate limited" tells someone they did something wrong; the real
+// story is that a review is an hour of work on one machine.
+func quotaExhaustedMessage(q *v1.JdQuota) string {
+	msg := fmt.Sprintf(
+		"that is %d postings in %d hours, which is the limit. Each review is close to an hour of work on one machine, so the queue has to be finite",
+		q.Limit, q.WindowHours)
+	if q.NextSlotAt != nil {
+		msg += ", and the next slot opens " + q.NextSlotAt.AsTime().UTC().Format("15:04 MST on 2 January")
+	}
+	return msg + "."
 }
 
 // GetJdResult polls a submission. Today just reflects the stored
@@ -297,14 +348,27 @@ func (h *Jd) GetJdReviewConfig(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdReviewConfigRequest],
 ) (*connect.Response[v1.GetJdReviewConfigResponse], error) {
-	if _, err := h.requireMember(ctx, req); err != nil {
+	member, err := h.requireMember(ctx, req)
+	if err != nil {
 		return nil, err
 	}
 	b := jd.DefaultBands(0)
 	if h.scorer != nil {
 		b = h.scorer.Bands(ctx)
 	}
-	return connect.NewResponse(&v1.GetJdReviewConfigResponse{Bands: bandsToProto(b)}), nil
+	// A failed quota read is not worth failing the page over: this
+	// endpoint only describes the rules, it does not enforce them, and
+	// SubmitJd fails closed on its own read.
+	quota, qErr := h.quotaFor(ctx, member)
+	if qErr != nil {
+		h.log.Warn("jd quota read failed for review config",
+			slog.Int64("user_id", member.ID), slog.String("error", qErr.Error()))
+		quota = nil
+	}
+	return connect.NewResponse(&v1.GetJdReviewConfigResponse{
+		Bands: bandsToProto(b),
+		Quota: quota,
+	}), nil
 }
 
 func bandsToProto(b jd.Bands) *v1.JdFitBands {
