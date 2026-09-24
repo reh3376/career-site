@@ -1415,3 +1415,32 @@ regression, and the numbers now exist to say so. It is not a claim that
 the reviewer is right in general. Eight postings is a small set, the
 low side is three rows, and the tightest pair, Orca at 0.786 against
 Nexus at 0.643, is the one that will flip first.
+
+## 2026-09-24: the golden set measures the owner's path, not a visitor's
+
+Retrieval is now scoped by visibility (`internal/corpusscope`), so a
+member's submitted posting retrieves from public documents only while
+the owner's own submissions and evaluation runs retrieve from the whole
+corpus. In production that is 52 chunks against 239.
+
+This matters for how the numbers here should be read. Every measurement
+in this log, including the 8 of 8 with margin 0.143 recorded today, was
+taken with the full corpus in reach, because an evaluation exists to
+measure what the owner gets when he reviews a posting for himself. None
+of it describes what a recruiter submitting a posting will see. Their
+reviewer draws on five public documents and will be thinner and less
+evidenced, and we have not measured it at all.
+
+Two things follow. A golden-set run cannot be cited as evidence about
+the member-facing product. And if the member path is worth measuring,
+it needs its own runs under the public scope, which would double the
+cost of an evaluation on a box where one already takes six hours. The
+cheaper answer is to publish more of the corpus, which is a content
+decision rather than a code one.
+
+Why the control is in SQL rather than the prompt: the judge prompt
+already asked the model not to quote private chunks, and a submitted
+posting is text the submitter wrote being fed to that model. Asking the
+model to keep a secret it has been handed is not a control, it is a
+hope. The same reasoning as duration and relationship: the model
+reports, the code decides.

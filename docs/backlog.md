@@ -212,6 +212,43 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 Shipped so far: ruleset on `main` with required checks, gitleaks in
 CI, rate limits on login and events, client IP behind Caddy, body
 limits, security headers and CSP, noindex on member pages, HIBP fix.
+
+**5a. A submitted posting can no longer reach private material.
+SHIPPED 2026-09-24.** Retrieval had no visibility predicate:
+`SearchCorpus` selected across every embedded chunk, and production
+holds 21 `corpus_only` documents against 5 public ones. The retrieved
+text entered the judge's context and the résumé generator, and the only
+thing between it and the submitter was a line in the judge prompt
+asking the model not to quote private chunks. A submitted posting is
+text the submitter wrote, aimed at that same model, so the prompt was
+the wrong place for the control.
+
+The scope now rides the context (`internal/corpusscope`) and the SQL
+enforces it. It defaults to public, so code that forgets to widen it
+retrieves too little, which someone notices, rather than too much,
+which nobody notices. A member's submission is public-only: 52 chunks.
+The owner's own submissions and evaluation runs are unrestricted: 239
+chunks.
+
+**The cost, stated plainly:** a member's review now draws on five
+public documents. Their results will be thinner and less evidenced than
+the owner's, and the golden-set numbers describe the owner's path only,
+not what a recruiter sees. Closing that gap is a content decision, not
+a code one: publish more of the corpus. Nothing should reopen the
+retrieval path to do it.
+
+**5b. A member cannot queue unbounded work. SHIPPED 2026-09-24.** The
+existing limiter is keyed on (member, jd_hash), so it stops the same
+posting being resubmitted and nothing else: change a word and it is a
+different key. One submission is roughly an hour of inference and the
+pipeline runs one at a time, so a member pasting distinct postings in a
+loop was a queue nobody else could get into. `JD_DAILY_LIMIT` (default
+5) caps submissions per member per rolling 24 hours, counted from
+`jd_submissions` rather than an in-memory bucket, because the api
+container is recreated several times a day and anything counted in
+memory is enforced only between deploys. Evaluation rows are excluded.
+The admin is exempt. The check fails closed: if the count cannot be
+read, the submission is refused.
 Still open:
 
 - Pin third-party GitHub Actions by commit SHA.
@@ -304,16 +341,35 @@ an existing claim honest.
   arranged by the seven criteria. What is missing is the pass/fail
   shape, below.
 
-**1. Random postings in the golden set (`RR-11`, `RR-12`). PARTLY
-SHIPPED 2026-09-23.** A posting now records how it got into the set,
-chosen or random, and where it came from; a random one arrives
-unlabelled, which evaluations skip rather than guess at; and the
-console shows each posting's full text with a label control, because a
-posting cannot be judged without being read. Three random postings are
-loaded from an unfiltered search in adjacent fields and are waiting for
-a label. **Left to do:** the owner labels them, more are added toward
-ten, and calibration is reported separately for chosen and random,
-which is the part that makes the split worth having. Originally: the set
+**1. Random postings in the golden set (`RR-11`, `RR-12`). SHIPPED
+2026-09-24.** A posting records how it got into the set, chosen or
+random, and where it came from; a random one arrives unlabelled, which
+evaluations skip rather than guess at; and the console shows each
+posting's full text with a label control, because a posting cannot be
+judged without being read.
+
+The set holds eight postings, two chosen and six random, five expected
+above the gate and three below. The three on the low side were drawn
+from adjacent fields where the requirement that decides it is a
+credential: a BSEE and ETAP depth, a PE licence, a PhD with top-venue
+publications. Run 2 scored 8 of 8 on the expected side with 0 ordering
+violations and a margin of 0.143, in 6h13m45s. The groups did not
+interleave: every posting expected above outscored every posting
+expected below.
+
+**That margin of 0.143, with 8 of 8 and zero inversions, is the
+regression floor.** A later change to a prompt, a model or the corpus
+that drops below it is a regression, and the numbers exist to say so.
+
+Calibration reported separately for chosen and random shows no
+difference: chosen scored 1.000 and 0.857, random-above scored 0.956,
+0.865 and 0.786. The reviewer is not flattering the owner's own picks,
+which was the specific worry the `selection` column was added to test.
+
+**Left to do:** grow the set toward ten as real postings arrive, and
+keep the low side growing with it, since three rows is thin. See also
+`RR-18` on refreshing random postings so the set does not decay into
+"postings the model already handles". Originally: the set
 holds one posting. The owner chose it, and chose it because he applied
 for the job, so its expected outcome is his application decision
 restated rather than an independent judgment. A set like that cannot

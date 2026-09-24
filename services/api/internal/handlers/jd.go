@@ -20,6 +20,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
@@ -41,11 +42,14 @@ type Jd struct {
 	// pipelineTimeout bounds one submission's background run. CPU
 	// inference can take minutes per LLM call.
 	pipelineTimeout time.Duration
+	// dailyLimit caps submissions per member per rolling 24 hours; 0
+	// disables it.
+	dailyLimit int
 	// events is the product event stream; nil is silent.
 	events *events.Writer
 }
 
-func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration) *Jd {
+func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration, dailyLimit int) *Jd {
 	if pipelineTimeout <= 0 {
 		pipelineTimeout = 15 * time.Minute
 	}
@@ -58,6 +62,7 @@ func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pi
 		limiter:         ratelimit.New(5, 5.0/(15*60)),
 		scorer:          scorer,
 		pipelineTimeout: pipelineTimeout,
+		dailyLimit:      dailyLimit,
 	}
 }
 
@@ -94,6 +99,42 @@ func (h *Jd) SubmitJd(
 	if source == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			errors.New("source is required"))
+	}
+
+	// Per-member quota over a rolling day, checked against the table
+	// rather than a counter in memory.
+	//
+	// The burst limiter below is keyed on (member, jd_hash), so it stops
+	// the same posting being resubmitted and stops nothing else: change
+	// a word and it is a different key. One submission is roughly an
+	// hour of inference on this box and the pipeline runs one at a time,
+	// so a member pasting distinct postings in a loop is a queue nobody
+	// else can get into. This is the ceiling that makes that finite.
+	//
+	// The admin is exempt. He is the one who has to be able to work when
+	// the site is under load, and the eval runs he starts are excluded
+	// from the count anyway.
+	if h.dailyLimit > 0 && member.Role != users.RoleAdmin {
+		since := time.Now().UTC().Add(-24 * time.Hour)
+		n, cErr := h.users.CountJdSubmissionsSince(ctx, member.ID, since)
+		if cErr != nil {
+			// Fail closed. A quota that stops being enforced when the
+			// database hiccups is not a quota, and the cost of being wrong
+			// here is one person waiting, against a box that can be taken
+			// down by a loop.
+			h.log.Error("jd quota check failed",
+				slog.Int64("user_id", member.ID), slog.String("error", cErr.Error()))
+			return nil, connect.NewError(connect.CodeUnavailable,
+				errors.New("could not check your submission quota; try again shortly"))
+		}
+		if n >= h.dailyLimit {
+			h.log.Warn("jd daily quota reached",
+				slog.Int64("user_id", member.ID), slog.Int("submitted", n), slog.Int("limit", h.dailyLimit))
+			h.events.Emit(ctx, requestEvent(req, "jd.quota_blocked", member.ID,
+				map[string]any{"submitted": n, "limit": h.dailyLimit}))
+			return nil, connect.NewError(connect.CodeResourceExhausted,
+				fmt.Errorf("you have submitted %d postings in the last 24 hours, which is the limit; each one takes the better part of an hour to review, so the queue is finite", h.dailyLimit))
+		}
 	}
 
 	// Rate-limit on (member, jd_hash) so a submitter cannot hammer,
@@ -146,10 +187,21 @@ func (h *Jd) SubmitJd(
 	// RECEIVED for manual triage.
 	if h.scorer != nil {
 		hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
+		// How much of the corpus this submission may retrieve from. A
+		// member's posting sees public documents only: retrieved text
+		// reaches the judge and the résumé generator, and a posting is
+		// text the submitter wrote, so it must not be able to steer
+		// similarity search across client and NDA material. The owner
+		// reviewing a posting for himself is the case the private corpus
+		// exists for, so his own submissions are not restricted.
+		scope := corpusscope.Public
+		if member.Role == users.RoleAdmin {
+			scope = corpusscope.All
+		}
 		// No deadline here: the scorer caps the queue wait and applies the
 		// pipeline timeout itself once the submission holds its slot.
 		go func(id int64, jdText string) {
-			h.scorer.ScoreAndPersist(context.Background(), id, jdText, hints)
+			h.scorer.ScoreAndPersist(corpusscope.With(context.Background(), scope), id, jdText, hints)
 		}(s.ID, text)
 	}
 

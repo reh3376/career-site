@@ -227,7 +227,7 @@ func main() {
 	} else if n > 0 {
 		log.Info("jd: stranded run records closed after restart", slog.Int64("count", n))
 	}
-	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout)
+	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, cfg.JDDailyLimit)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
 	adminHandler := handlers.NewAdmin(
 		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,

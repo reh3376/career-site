@@ -40,6 +40,11 @@ type Config struct {
 	// in .env.prod next to OLLAMA_LLM_MODEL and is recalibrated with
 	// it; docs/llm-tuning-log.md records the value per model.
 	JDMatchThreshold float64
+	// JDDailyLimit caps how many postings one member may submit in a
+	// rolling 24 hours. A submission is roughly an hour of inference on
+	// this box, so the ceiling is capacity, not politeness: without it
+	// one member with a script takes the site down. 0 disables the cap.
+	JDDailyLimit int
 	// JDPipelineTimeout bounds one submission's score + generate run.
 	// CPU inference of a two-page résumé can take minutes.
 	JDPipelineTimeout time.Duration
@@ -130,6 +135,7 @@ func Load() (Config, error) {
 		CorpusPrivateRoot:      envOr("CORPUS_PRIVATE_ROOT", "/corpus-private"),
 		LLMMonthlyCallCap:      int64(envIntOr("LLM_MONTHLY_CALL_CAP", 0)),
 		JDMatchThreshold:       envFloatOr("JD_MATCH_THRESHOLD", 0.55),
+		JDDailyLimit:           envIntOr("JD_DAILY_LIMIT", 5),
 		JDPipelineTimeout:      time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
 		LLMAllowStub:           os.Getenv("LLM_ALLOW_STUB") == "1",
 		LLMNumCtx:              envIntOr("LLM_NUM_CTX", 16384),
