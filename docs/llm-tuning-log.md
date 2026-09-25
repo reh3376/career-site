@@ -1832,3 +1832,50 @@ form said "ingested, 2 chunks, embedded 2" and every word was true.
 Checking the database was what showed `visibility | public`. The same
 shape as the two failures logged above: not a wrong computation, but a
 piece of state that no surface displayed.
+
+## 2026-09-25: the summary was the only thing the judge could see
+
+The Heaven Hill posting asked for "the front-end development of future
+major investments, including scope definition, alternatives analysis,
+and basis of design". Extraction compressed that to "Develop front-end
+development for major investments" and the judge read it as web
+development. A capital projects requirement was scored against the
+wrong field entirely, on a posting that should have been among the
+strongest matches in the set.
+
+**Nothing in the pipeline was broken.** Extraction is asked for a
+checkable requirement in at most 200 characters, and it produced one.
+The compression was reasonable in isolation. What it dropped was "of
+future major investments, including scope definition", which is the
+only thing in the sentence that says which industry the term belongs
+to. Front-end, pipeline, platform, architecture, controls, stack and
+commissioning all mean different things in software, construction and
+manufacturing, and the surrounding words are what settle it.
+
+**Adding documents cannot fix this,** which is what made it worth
+understanding rather than working around. The corpus already contained
+ample capital-projects evidence; the judge was answering a different
+question than the posting asked. That was confirmed earlier when
+ingesting a new document changed nothing: 14 of 14 verdicts identical.
+
+**The fix is structural rather than a better instruction.** Each
+requirement now carries `source_quote`, a span of the posting copied
+out word for word, which the judge is shown alongside the summary and
+told decides the meaning where the two differ. The judge no longer
+depends on the compression having been a good one.
+
+A quote the model composed rather than copied would be worse than none,
+because it looks like evidence and is not, so `validateRequirements`
+checks every quote against the posting text and drops any that is not
+found there. Only whitespace and case are forgiven. The requirement
+survives; only the unverified quote goes. Eight cases are covered in
+`internal/jd/quote_test.go`, including the paraphrase that started
+this, "front-end development for major investments", which is rejected.
+
+`jd_requirements` is now v4 and `requirement_judge` v8.
+
+**This changes what the judge sees, so the golden set has to be
+re-run.** The baseline is 8/8 with 0 inversions and a margin of 0.143.
+A prompt change that improves one posting's reading can move others,
+and the only way to know is to measure. Until that run, the 8/8 figure
+describes a pipeline that no longer exists.
