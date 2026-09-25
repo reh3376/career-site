@@ -202,6 +202,46 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 - **Phone-width check of the progress modal and result page** on a
   real device.
 
+- **Meeting scheduler (`FR-CNT-23`, `FR-ADM-13`, decision `D-22`).**
+  Specified as a Must in the FSD and never carried into this backlog,
+  which is why it has sat untouched: a public page showing the owner's
+  real availability from Google Calendar with busy slots hidden, a
+  visitor picks an open slot without needing an account, and the event
+  lands on his calendar with both parties invited. The admin surface
+  configures the windows, so the hours below are initial values rather
+  than anything compiled in.
+
+  **Availability, from the owner 2026-09-24:** Tuesday, Wednesday and
+  Thursday only, 09:00 to 12:00 and 14:00 to 16:00. Three days, two
+  windows a day, five hours a day.
+
+  Details that decide whether this works or annoys people:
+
+  - **The time zone has to be stated everywhere a time is shown.** The
+    windows above have no zone attached yet and that must be settled
+    before anything is built. A visitor in another zone reading bare
+    times will book the wrong hour and blame the site.
+  - **Two windows a day, not one range.** The lunch gap means the
+    availability model is a list of ranges per weekday, not a start and
+    an end. Building it as a single range and bolting on a break later
+    is the usual way this ends up wrong.
+  - **Outside the configured windows the page is unavailable whatever
+    Google says.** A free Tuesday evening is still not bookable. The
+    calendar subtracts from the windows, it does not add to them.
+  - **A per-day cap**, so three days a week does not become five
+    back-to-back conversations on a Wednesday, and a buffer between
+    slots, which the FSD does not mention and which anyone who has
+    taken consecutive calls will want.
+  - **What happens when the token expires.** OAuth refresh tokens die,
+    and the failure has to read as "unavailable" rather than as an
+    empty calendar that looks like no availability at all.
+  - Costs nothing to run: the Google Calendar API is free at this
+    volume, so this does not touch the no-spend constraint.
+
+  Worth doing sooner than its position here suggests. A recruiter who
+  has read the reviewer's output and wants fifteen minutes currently
+  has to use the contact form and wait for a reply.
+
 ## 4. Admin console
 
 - **Access and whitelist surface** (`/admin/access`): whitelist CRUD,
