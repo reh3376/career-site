@@ -174,6 +174,9 @@ const (
 	AdminServiceGetEvalRunProcedure = "/career.v1.AdminService/GetEvalRun"
 	// AdminServiceGetMetricsProcedure is the fully-qualified name of the AdminService's GetMetrics RPC.
 	AdminServiceGetMetricsProcedure = "/career.v1.AdminService/GetMetrics"
+	// AdminServiceGetOpsStatusProcedure is the fully-qualified name of the AdminService's GetOpsStatus
+	// RPC.
+	AdminServiceGetOpsStatusProcedure = "/career.v1.AdminService/GetOpsStatus"
 	// AdminServiceGetGateProcedure is the fully-qualified name of the AdminService's GetGate RPC.
 	AdminServiceGetGateProcedure = "/career.v1.AdminService/GetGate"
 	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
@@ -376,6 +379,10 @@ type AdminServiceClient interface {
 	// a page: two definitions of the same number is how a dashboard
 	// starts disagreeing with itself.
 	GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error)
+	// Returns what the box is doing right now: jobs the runner knows
+	// about, the submission pipeline, recent model activity and host
+	// load. Backs /admin/ops.
+	GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error)
 	// Returns the criteria as a gate: one row per criterion with pass,
 	// value, target and as_of, read from the views that define them.
 	// /admin/analytics shows the same numbers arranged for reading; this
@@ -696,6 +703,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetMetrics")),
 			connect.WithClientOptions(opts...),
 		),
+		getOpsStatus: connect.NewClient[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse](
+			httpClient,
+			baseURL+AdminServiceGetOpsStatusProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetOpsStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		getGate: connect.NewClient[v1.GetGateRequest, v1.GetGateResponse](
 			httpClient,
 			baseURL+AdminServiceGetGateProcedure,
@@ -795,6 +808,7 @@ type adminServiceClient struct {
 	listEvalRuns          *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
 	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
 	getMetrics            *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
+	getOpsStatus          *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
 	getGate               *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
@@ -1035,6 +1049,11 @@ func (c *adminServiceClient) GetMetrics(ctx context.Context, req *connect.Reques
 	return c.getMetrics.CallUnary(ctx, req)
 }
 
+// GetOpsStatus calls career.v1.AdminService.GetOpsStatus.
+func (c *adminServiceClient) GetOpsStatus(ctx context.Context, req *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error) {
+	return c.getOpsStatus.CallUnary(ctx, req)
+}
+
 // GetGate calls career.v1.AdminService.GetGate.
 func (c *adminServiceClient) GetGate(ctx context.Context, req *connect.Request[v1.GetGateRequest]) (*connect.Response[v1.GetGateResponse], error) {
 	return c.getGate.CallUnary(ctx, req)
@@ -1252,6 +1271,10 @@ type AdminServiceHandler interface {
 	// a page: two definitions of the same number is how a dashboard
 	// starts disagreeing with itself.
 	GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error)
+	// Returns what the box is doing right now: jobs the runner knows
+	// about, the submission pipeline, recent model activity and host
+	// load. Backs /admin/ops.
+	GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error)
 	// Returns the criteria as a gate: one row per criterion with pass,
 	// value, target and as_of, read from the views that define them.
 	// /admin/analytics shows the same numbers arranged for reading; this
@@ -1568,6 +1591,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetOpsStatusHandler := connect.NewUnaryHandler(
+		AdminServiceGetOpsStatusProcedure,
+		svc.GetOpsStatus,
+		connect.WithSchema(adminServiceMethods.ByName("GetOpsStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetGateHandler := connect.NewUnaryHandler(
 		AdminServiceGetGateProcedure,
 		svc.GetGate,
@@ -1710,6 +1739,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetEvalRunHandler.ServeHTTP(w, r)
 		case AdminServiceGetMetricsProcedure:
 			adminServiceGetMetricsHandler.ServeHTTP(w, r)
+		case AdminServiceGetOpsStatusProcedure:
+			adminServiceGetOpsStatusHandler.ServeHTTP(w, r)
 		case AdminServiceGetGateProcedure:
 			adminServiceGetGateHandler.ServeHTTP(w, r)
 		case AdminServiceListDecisionLogProcedure:
@@ -1917,6 +1948,10 @@ func (UnimplementedAdminServiceHandler) GetEvalRun(context.Context, *connect.Req
 
 func (UnimplementedAdminServiceHandler) GetMetrics(context.Context, *connect.Request[v1.GetMetricsRequest]) (*connect.Response[v1.GetMetricsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetMetrics is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetOpsStatus is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetGate(context.Context, *connect.Request[v1.GetGateRequest]) (*connect.Response[v1.GetGateResponse], error) {

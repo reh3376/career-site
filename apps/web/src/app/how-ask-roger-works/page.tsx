@@ -330,9 +330,9 @@ export default async function HowAskRogerWorksPage() {
           <p>
             Submit the same posting against the same corpus and you get the
             same verdicts and the same score. Not close to it. The same
-            number. The table below is the check: every posting in the
-            fixed set, scored before and after the reviewer&rsquo;s prompt
-            was rewritten, to three decimal places.
+            number. The table below is the check: the postings scored in
+            the two most recent evaluations, before and after the
+            reviewer&rsquo;s prompt was rewritten, to three decimal places.
           </p>
           <p>
             Four things make that true, and none of them is the model being
@@ -410,7 +410,8 @@ export default async function HowAskRogerWorksPage() {
               applied for are not named: telling those employers he applied,
               and what the reviewer scored him at, is his to disclose and is
               not something the evidence needs. The rest are public job
-              advertisements drawn at random.
+              advertisements drawn at random. A posting appears here only if
+              both evaluations reached it.
             </p>
           </div>
         ) : null}
