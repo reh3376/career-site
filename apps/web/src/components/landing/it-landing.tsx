@@ -100,7 +100,6 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           >
             Already a member? Sign in
           </Link>
-          <HeroSocial />
         </div>
         <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
           The writing and the work photos are open; read them first. An
@@ -595,38 +594,12 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
 // section: GitHub always (falls back to reh3376's profile), LinkedIn
 // only when NEXT_PUBLIC_LINKEDIN_URL is set. Order is deliberate,
 // the site's story is code first, professional network second.
-// Profile links in the hero's action row, so a visitor who only wants
-// the LinkedIn profile or the public repos finds them at the top.
-function HeroSocial() {
-  const s = getSocialLinks();
-  if (!s.github && !s.linkedin) return null;
-  return (
-    <span className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:ml-auto">
-      {s.linkedin ? (
-        <a
-          href={s.linkedin}
-          rel="noopener noreferrer"
-          target="_blank"
-          className="inline-flex items-center gap-1.5 rounded-md border border-line-strong px-3 py-1.5 text-sm text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
-        >
-          LinkedIn profile
-          <span aria-hidden="true" className="text-ink-3">↗</span>
-        </a>
-      ) : null}
-      {s.github ? (
-        <a
-          href={s.github}
-          rel="noopener noreferrer"
-          target="_blank"
-          className="inline-flex items-center gap-1.5 rounded-md border border-line-strong px-3 py-1.5 text-sm text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
-        >
-          GitHub repos
-          <span aria-hidden="true" className="text-ink-3">↗</span>
-        </a>
-      ) : null}
-    </span>
-  );
-}
+//
+// The hero used to carry the same two links as bordered buttons. They
+// were removed on 2026-09-24: the header already offers both as logo
+// links on every page, and in the hero they sat on `sm:ml-auto`, which
+// pushed them to the far right of the action row and read as a
+// separate, stray group rather than part of it.
 
 function SocialInline() {
   const s = getSocialLinks();
