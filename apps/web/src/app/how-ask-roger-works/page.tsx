@@ -330,9 +330,9 @@ export default async function HowAskRogerWorksPage() {
           <p>
             Submit the same posting against the same corpus and you get the
             same verdicts and the same score. Not close to it. The same
-            number. When the reviewer&rsquo;s prompt was rewritten and the
-            whole fixed set of postings was scored again, the scores came
-            back identical to three decimal places.
+            number. The table below is the check: every posting in the
+            fixed set, scored before and after the reviewer&rsquo;s prompt
+            was rewritten, to three decimal places.
           </p>
           <p>
             Four things make that true, and none of them is the model being
