@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { signOutAction } from "@/app/actions/session";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -15,6 +15,52 @@ type MenuItem =
   | { kind: "action"; label: string; action: () => Promise<void> };
 
 type MenuGroup = { label: string; items: MenuItem[] };
+
+// Whether this browser has ever opened the menu.
+//
+// Per-browser, per-device, never read back by anything else, and of no
+// consequence if it is lost: the one thing browser storage is genuinely
+// right for. Read through useSyncExternalStore rather than an effect,
+// so the value is a snapshot of an external system rather than state
+// React has to be told about after the fact.
+//
+// The server snapshot is "seen", so nothing animates during hydration
+// and the hint appears only once the browser has confirmed it is new.
+const MENU_SEEN_KEY = "menu-opened";
+
+let seenCache: boolean | null = null;
+const seenListeners = new Set<() => void>();
+
+function menuSeen(): boolean {
+  if (seenCache === null) {
+    try {
+      seenCache = window.localStorage.getItem(MENU_SEEN_KEY) === "1";
+    } catch {
+      // Private windows and blocked site data throw. Treating that as
+      // "seen" means no hint, which is the right way to fail: the menu
+      // works regardless, and a hint that cannot be dismissed would
+      // repeat on every page.
+      seenCache = true;
+    }
+  }
+  return seenCache;
+}
+
+function markMenuSeen(): void {
+  if (seenCache === true) return;
+  seenCache = true;
+  try {
+    window.localStorage.setItem(MENU_SEEN_KEY, "1");
+  } catch {
+    // Not remembering is a hint that repeats, not a broken menu.
+  }
+  for (const l of seenListeners) l();
+}
+
+function subscribeSeen(onChange: () => void): () => void {
+  seenListeners.add(onChange);
+  return () => seenListeners.delete(onChange);
+}
 
 // Outbound profile links, resolved on the server (lib/social-links)
 // and passed in because this is a client component.
@@ -41,6 +87,19 @@ export function HamburgerMenu({
   social?: SocialProps;
 }) {
   const [open, setOpen] = useState(false);
+  // A visitor who has never opened the menu is told it is there.
+  //
+  // Everything a signed-out visitor can reach, the writing, the photos,
+  // how the reviewer works, lives behind this button, and on a first
+  // visit there is nothing else pointing at it. It stops for good the
+  // first time the menu is opened, and stays stopped: a hint that keeps
+  // hinting after it has been taken is an irritation, not a hint.
+  //
+  // Starts false so the server and the first client render agree, then
+  // turns on after mount if this browser has no record of a previous
+  // open. Members are excluded; they already know where the menu is.
+  const seen = useSyncExternalStore(subscribeSeen, menuSeen, () => true);
+  const hint = !signedIn && !seen;
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -86,8 +145,14 @@ export function HamburgerMenu({
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
         aria-controls="site-menu-panel"
-        onClick={() => setOpen((v) => !v)}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-line bg-paper text-ink transition-colors hover:border-accent hover:text-accent"
+        onClick={() => {
+          markMenuSeen();
+          setOpen((v) => !v);
+        }}
+        className={
+          "relative inline-flex h-10 w-10 items-center justify-center rounded-md border bg-paper text-ink transition-colors hover:border-accent hover:text-accent " +
+          (hint ? "menu-hint border-accent" : "border-line")
+        }
       >
         {/* Three-stroke hamburger. The middle bar fades and the outer
             two slide together into an X when open, subtle motion cue

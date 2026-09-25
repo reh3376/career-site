@@ -112,6 +112,32 @@ body {
 }
 
 /* -----------------------------------------------------------------------
+ * The menu button, on a first visit only.
+ *
+ * Everything a signed-out visitor can reach sits behind that button and
+ * nothing else on the page points at it. This breathes rather than
+ * blinks: the accent colour washes through the background and out
+ * again, slowly enough to read as an invitation rather than an alarm.
+ * It stops the first time the menu is opened and never returns.
+ *
+ * Four cycles, not infinite. A visitor who ignores it has decided, and
+ * a hint that keeps going after it has been declined is nagging.
+ * ----------------------------------------------------------------------- */
+@keyframes menu-hint {
+  0%, 100% { background-color: var(--color-paper); }
+  50% { background-color: var(--color-accent-soft); }
+}
+.menu-hint {
+  animation: menu-hint 2.2s ease-in-out 4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The border already changes to the accent colour, so the button is
+     still distinguished without anything moving. */
+  .menu-hint { animation: none; }
+}
+
+/* -----------------------------------------------------------------------
  * A hairline rule with structural meaning, thicker on one side to
  * suggest a plotted line, not a divider. Used sparingly to break the
  * hero from the sections below.
