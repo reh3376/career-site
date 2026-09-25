@@ -2421,6 +2421,11 @@ message GetOpsStatusResponse {
   int32 disk_free_gb = 12;
   // Total disk in gigabytes on that filesystem.
   int32 disk_total_gb = 13;
+  // Anything this snapshot could not read. A section that failed and a
+  // section that is genuinely empty look identical otherwise, and on
+  // 2026-09-25 that difference hid a broken query behind the words "no
+  // submissions" for as long as nobody read the logs.
+  repeated string warnings = 14;
 }
 
 // One job the runner remembers.
