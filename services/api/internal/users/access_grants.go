@@ -77,7 +77,9 @@ func (r *Repo) GetActiveGrant(ctx context.Context, email string) (*AccessGrant, 
 // Activate flips a user to `active` and sets expires_at. Pass a nil
 // expiresAt for permanent access.
 func (r *Repo) Activate(ctx context.Context, id int64, expiresAt *time.Time) error {
-	const q = `UPDATE users SET status = 'active', expires_at = $2 WHERE id = $1`
+	// Clearing the warning marker is part of setting a new expiry: a new
+	// access period has not been warned about yet.
+	const q = `UPDATE users SET status = 'active', expires_at = $2, expiry_warning_sent_at = NULL WHERE id = $1`
 	tag, err := r.pool.Exec(ctx, q, id, expiresAt)
 	if err != nil {
 		return fmt.Errorf("activate: %w", err)
@@ -115,6 +117,10 @@ func (r *Repo) ExpiringSoon(ctx context.Context, within time.Duration) ([]*User,
       AND expires_at IS NOT NULL
       AND expires_at > now()
       AND expires_at <= now() + $1::interval
+      -- Already warned for this access period. The marker is cleared
+      -- whenever expires_at changes, so an extended account is warned
+      -- again in its next window.
+      AND expiry_warning_sent_at IS NULL
   `
 	rows, err := r.pool.Query(ctx, q, within.String())
 	if err != nil {
@@ -378,7 +384,7 @@ func (r *Repo) DeleteGrant(ctx context.Context, id int64) error {
 // email decision), so the caller can say "already decided".
 func (r *Repo) ActivatePending(ctx context.Context, id int64, expiresAt *time.Time) error {
 	tag, err := r.pool.Exec(ctx,
-		`UPDATE users SET status = 'active', expires_at = $2 WHERE id = $1 AND status = 'pending_approval'`, id, expiresAt)
+		`UPDATE users SET status = 'active', expires_at = $2, expiry_warning_sent_at = NULL WHERE id = $1 AND status = 'pending_approval'`, id, expiresAt)
 	if err != nil {
 		return fmt.Errorf("activate pending: %w", err)
 	}
@@ -397,6 +403,21 @@ func (r *Repo) DeclinePending(ctx context.Context, id int64) error {
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+// MarkExpiryWarned records that the access-ending warning was sent, so a
+// restart of the api does not send it again.
+//
+// It is written after the email rather than before: sending twice
+// because the marker failed to save is a nuisance, and never sending
+// because the marker saved and the email did not is a member losing
+// access without being told.
+func (r *Repo) MarkExpiryWarned(ctx context.Context, id int64) error {
+	const q = `UPDATE users SET expiry_warning_sent_at = now() WHERE id = $1`
+	if _, err := r.pool.Exec(ctx, q, id); err != nil {
+		return fmt.Errorf("mark expiry warned: %w", err)
 	}
 	return nil
 }

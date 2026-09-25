@@ -24,11 +24,15 @@ type ExpiryJobs struct {
 	events    *events.Writer // product event stream; nil is silent
 
 	warnWindow time.Duration // how far ahead of expiry the reminder fires (default 3d)
-	// notifiedWarn tracks user IDs we've already emailed a warning for in
-	// this process lifetime. In production this would be persisted on
-	// `users` (e.g. `expiry_warning_sent_at`) so a restart doesn't
-	// re-notify. Phase 1 keeps it in-memory — the worst case is a duplicate
-	// warning email after a process restart, which is graceful.
+	// notifiedWarn is a per-process short-circuit only. The real record
+	// is users.expiry_warning_sent_at, which ExpiringSoon filters on, so
+	// a restart no longer re-notifies.
+	//
+	// It used to be the only record, with a comment calling a duplicate
+	// after a restart "graceful". Restarts turned out to be dozens a
+	// day during active development, and two members received 30 and 26
+	// identical emails. A marker in a process says whether this process
+	// sent something, not whether the person was sent it.
 	notifiedWarn map[int64]struct{}
 }
 
@@ -61,6 +65,14 @@ func (j *ExpiryJobs) WarnJob(ctx context.Context) error {
 			continue
 		}
 		j.notifiedWarn[u.ID] = struct{}{}
+		// Written after the send, on purpose: sending twice because the
+		// marker failed is a nuisance; never sending because the marker
+		// saved and the email did not is a member losing access with no
+		// warning.
+		if err := j.users.MarkExpiryWarned(ctx, u.ID); err != nil {
+			j.log.Warn("could not record the expiry warning; it may repeat after a restart",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		}
 	}
 	return nil
 }
