@@ -1743,3 +1743,52 @@ organisation that exists nowhere and is therefore in no source. Exactly
 the failure I named when building it: a missed check costs nothing, a
 false one costs a true line. It cost the education section. Fixed, with
 the real line as a test.
+
+## 2026-09-25: the same posting scored 0.929 and 0.571, and the pipeline was right both times
+
+A rescore of one submission, half a day after the first attempt, on
+identical text. Attempt one: fourteen requirements, thirteen met, 0.929.
+Attempt two: eight met, 0.571, below the gate, no résumé.
+
+Every recorded field was identical. Same corpus fingerprint, same model,
+same context size, same host, same prompt versions and fingerprints,
+zero failed model calls, normal latencies. On the face of it the
+reviewer had become non-deterministic, which would have falsified a
+claim published on the public site that day.
+
+It had not. The five flipped requirements had all received **different
+evidence**, and the cause was a bare context:
+
+```go
+a.jdScorer.RescoreAndPersist(context.Background(), ...)
+```
+
+When retrieval scoping was added, `SubmitJd` and the evaluator were
+wired to pass the scope and `RescoreJd` was missed. The scope defaults
+to public by design, so the rescore searched 52 public chunks instead of
+241. Five requirements lost the evidence that proved them.
+
+**The fail-closed default worked exactly as intended.** A path that did
+not ask for private material did not get it. The bug was that the
+owner's own rescore should have asked.
+
+**What made it expensive was invisibility.** `jd_runs` records the
+model, host, context size, prompts and a corpus fingerprint precisely so
+a change in behaviour can be attributed rather than guessed at, and it
+did not record the one thing that differed. Two runs that read entirely
+different corpora were indistinguishable in provenance. `jd_runs` now
+carries `retrieval_scope`.
+
+That is the second time in one day that invisible pipeline state
+produced a confident wrong conclusion. The first was an assessor
+silently disabled at start-up, which scored eight golden postings on
+cosine similarity. Both were fixed by making the state visible rather
+than by making the code more careful, which is the more reliable of the
+two.
+
+**Worth recording about the process:** the owner said "I wouldn't worry
+about the reproducibility statement yet, it is obvious there was
+something wrong with this run" while I was still treating it as a
+possible determinism failure. He was right, and the evidence for his
+reading was already on the table: zero failed calls and identical
+provenance describe a misconfigured run, not a flaky model.

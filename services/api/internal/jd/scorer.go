@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/build"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
@@ -230,6 +231,10 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 		Prompts:      prompts.Fingerprints(),
 		NumCtx:       s.assessor.NumCtx(),
 		Host:         s.host,
+		// What this run was allowed to read. Recorded because two runs
+		// with different scopes were otherwise indistinguishable in
+		// provenance, and looked like non-determinism.
+		RetrievalScope: scopeName(ctx),
 	}
 	if fp, docs, chunks, embedder, err := s.users.CorpusFingerprint(persist); err != nil {
 		s.log.Warn("jd: corpus fingerprint failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
@@ -544,4 +549,12 @@ func truncErr(s string) string {
 		return s
 	}
 	return s[:max]
+}
+
+// scopeName renders the retrieval scope for the run record.
+func scopeName(ctx context.Context) string {
+	if corpusscope.AllowsPrivate(ctx) {
+		return "all"
+	}
+	return "public"
 }
