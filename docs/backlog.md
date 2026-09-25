@@ -152,6 +152,50 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **The résumé writer does not tailor to the posting it just scored.**
+  Found 2026-09-25 by comparing a generated résumé against one the owner
+  wrote himself for the same job, a capital-projects role in distilled
+  spirits that the reviewer scored 0.929.
+
+  The scorer understood the posting. The writer did not. It produced a
+  résumé headlined "Engineering Executive and Hands-On Platform
+  Architect ... Industrial Automation, AI/ML, and Capital Project
+  Delivery", with competencies led by MQTT and Unified Namespace, IOF
+  and BFO modeling, DataOps and governance-as-code, and AI safety.
+  **The posting asked for none of those.** It asked for front-end
+  loading, stage-gate delivery, basis of design, total installed cost,
+  CAR, project controls, construction management, commissioning and
+  CQV, asset turnover and EEM, which is what the owner's own version
+  leads with and which appears nowhere in the generated one.
+
+  It also omitted the strongest evidence available to it. The $135M
+  greenfield build is in the corpus and in the owner's résumé opening
+  line; the generated one does not mention it. Nor the arc flash and
+  NFPA 70E work, nor front-end development as a competency at all, on a
+  posting that names it twice.
+
+  The pattern is that the writer described the candidate the corpus
+  talks about most, rather than the candidate this posting is looking
+  for. That is a retrieval and prompt problem rather than a model
+  quality one: it has the requirement verdicts in hand, thirteen of
+  them met, and does not appear to use them to decide what to lead with.
+
+  Worth fixing in this order:
+
+  - Check whether the writer is actually given the verdicts and the
+    requirement text, or only the retrieved chunks. If only the chunks,
+    the fix is plumbing rather than prompting.
+  - Bias the evidence selection toward the requirements the posting
+    actually contains, rather than toward whatever the whole posting
+    retrieves. A requirement judged met is a claim the résumé should be
+    able to make, and it names its own evidence.
+  - Only then change the prompt, and measure with the golden set rather
+    than by reading one output and liking it more.
+
+  The owner's version is at `docs/personal/reh-resume-HeavenHill.pdf`
+  and is the benchmark worth aiming at: the same facts, ordered by what
+  the posting asked for.
+
 - **Requirement extraction drops the words that disambiguate a
   requirement, and the judge then guesses wrong.** Found 2026-09-25 on a
   capital-projects posting the owner rated a very strong match. It

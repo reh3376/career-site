@@ -1696,3 +1696,50 @@ removed, the run marked failed and voided in its note. The public
 comparison table draws from the two most recent runs with results, so
 leaving them would have put eight invented numbers on a page whose
 argument is that its numbers are checkable.
+
+## 2026-09-25: a résumé for a job the posting was not offering
+
+The owner supplied a capital-projects posting he rated a very strong
+match and a résumé he had written for it himself. The reviewer scored
+the posting 0.929, thirteen requirements of fourteen met, then generated
+a résumé. Putting the two side by side was worth more than any number
+either produced.
+
+**The scorer understood the posting and the writer did not.** The
+generated résumé is headlined "Engineering Executive and Hands-On
+Platform Architect ... Industrial Automation, AI/ML, and Capital Project
+Delivery" and leads with MQTT and Unified Namespace, IOF and BFO
+modeling, DataOps and governance-as-code, AI safety. The posting asked
+for front-end loading, stage-gate delivery, basis of design, total
+installed cost, CAR, project controls, construction management,
+commissioning and CQV, asset turnover and EEM. The owner's version leads
+with exactly those.
+
+It also left its best evidence on the table: the $135M greenfield build
+is in the corpus, and in the owner's opening line, and absent from the
+generated one.
+
+The writer appears to describe the candidate the corpus talks about
+most, not the candidate this posting wants. It holds thirteen met
+verdicts, each naming its own evidence, and does not visibly use them to
+decide what to lead with. That is plumbing and retrieval before it is
+prompting, and the backlog says so in that order.
+
+**Two corrections to earlier claims in this log.**
+
+The Whiskey House document did not change a single verdict on this
+posting: fourteen requirements, fourteen identical, score identical at
+0.929. I had predicted this posting would be the sharpest test of that
+corpus gap. It was not. It was the sharpest test of the extractor, which
+is more useful but is not what I said. The document's own test is a
+re-run of the postings that produced the four hard disagreements, none
+of whose subjects appear here.
+
+And the support check dropped three lines from the generated résumé, two
+of them the candidate's degrees. `partiesIn` stripped punctuation from a
+token instead of letting it end a name, so "B.S. Applied Mathematics,
+West Virginia State University" joined across the comma into one
+organisation that exists nowhere and is therefore in no source. Exactly
+the failure I named when building it: a missed check costs nothing, a
+false one costs a true line. It cost the education section. Fixed, with
+the real line as a test.

@@ -1,6 +1,9 @@
 package jd
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The property that matters most is the one that costs a true line when
 // it is wrong. These tests are weighted accordingly: the cases proving
@@ -101,5 +104,51 @@ func TestEmptySourceReportsNothing(t *testing.T) {
 	// everything is unsupported here would blur the two cases.
 	if got := checkSupport("Cut downtime 40% at Acme Steel", ""); got.any() {
 		t.Fatalf("an empty source reports nothing, got %+v", got)
+	}
+}
+
+// The real line that exposed this: punctuation used to be stripped from
+// a token rather than ending the name it belonged to, so a degree and a
+// university joined across a comma into one organisation that exists
+// nowhere. It dropped the candidate's education from a generated
+// résumé.
+func TestACommaEndsAName(t *testing.T) {
+	line := "B.S. Applied Mathematics, West Virginia State University, 1996"
+	for _, p := range partiesIn(line) {
+		if strings.Contains(p, "Mathematics") && strings.Contains(p, "West Virginia") {
+			t.Fatalf("a comma must end the name, got %q", p)
+		}
+	}
+	// And the university itself must still be found, so the check keeps
+	// working rather than merely stopping being wrong.
+	var found bool
+	for _, p := range partiesIn(line) {
+		if p == "West Virginia State University" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected the university as its own name, got %v", partiesIn(line))
+	}
+}
+
+// The end-to-end version: the source names the university, so the line
+// is supported and must survive.
+func TestEducationLineSurvivesWhenTheSourceNamesTheSchool(t *testing.T) {
+	line := "B.S. Applied Mathematics, West Virginia State University, 1996"
+	src := "Roger holds a B.S. in Applied Mathematics from West Virginia State University, 1996."
+	if got := checkSupport(line, src); got.any() {
+		t.Fatalf("a true education line must survive, got %+v", got)
+	}
+}
+
+// A run that opens the line still drops its first word, and a comma
+// must not resurrect it.
+func TestCommaDoesNotReviveTheSentenceOpener(t *testing.T) {
+	line := "Commissioned Acme Steel, then left"
+	for _, p := range partiesIn(line) {
+		if strings.HasPrefix(p, "Commissioned") {
+			t.Fatalf("the opening word is still not part of a name, got %q", p)
+		}
 	}
 }
