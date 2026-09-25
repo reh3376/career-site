@@ -59,9 +59,21 @@ export function IngestForm() {
           <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
             visibility
           </span>
+          {/*
+            Defaults to corpus-only, for two reasons that point the
+            same way. It is the commoner case: 23 of the 28 documents
+            in the corpus are corpus-only. And it is the safe
+            direction: leaving this field alone should expose less,
+            not more, which is the same reasoning behind
+            corpusscope's Public zero value. The previous default of
+            `public` inverted that, and on the first live ingest it
+            published a document meant to be private. There is no
+            delete in the corpus API, so that took a database revert
+            rather than an edit.
+          */}
           <select
             name="visibility"
-            defaultValue="public"
+            defaultValue="corpus_only"
             className="mt-1 block w-full border border-line-strong bg-canvas px-2 py-1.5 font-mono text-sm text-ink outline-none focus:border-accent"
           >
             <option value="public">public</option>

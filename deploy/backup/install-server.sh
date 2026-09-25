@@ -14,6 +14,10 @@ OWNER=${OWNER:-career}
 [ -d "$REPO/deploy/backup/systemd" ] || { echo "run from the deploy checkout at $REPO"; exit 1; }
 
 install -d -o "$OWNER" -g "$OWNER" -m 700 "$BACKUP_DIR"
+# corpus-snapshot.sh writes here. It has no timer: it is run by hand
+# before a risky ingest, because the corpus API has no delete and a
+# wrong ingest otherwise needs a database operation to undo.
+install -d -o "$OWNER" -g "$OWNER" -m 700 "$BACKUP_DIR/corpus"
 chmod +x "$REPO"/deploy/backup/*.sh
 
 for unit in career-backup.service career-backup.timer \
@@ -29,3 +33,8 @@ systemctl list-timers --no-pager 'career-*' || true
 echo
 echo "installed. first dump runs at the next 03:15 UTC; run one now with:"
 echo "  sudo systemctl start career-backup.service && journalctl -u career-backup -n 20 --no-pager"
+echo
+echo "corpus-snapshot.sh is installed but has no timer. Before an ingest"
+echo "through /admin/corpus that you might want to undo:"
+echo "  deploy/backup/corpus-snapshot.sh snapshot     # note the watermark"
+echo "  deploy/backup/corpus-snapshot.sh revert-since <watermark>"
