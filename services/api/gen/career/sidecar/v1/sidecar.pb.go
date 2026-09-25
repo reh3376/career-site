@@ -1438,13 +1438,21 @@ type HealthResponse struct {
 	StorageReady bool `protobuf:"varint,4,opt,name=storage_ready,json=storageReady,proto3" json:"storage_ready,omitempty"`
 	// Sidecar version.
 	Version string `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
-	// LLM provider configured (does not probe the model).
+	// LLM provider reachable and serving its configured model, confirmed
+	// by asking it rather than by reading configuration. This used to
+	// report only that a provider was configured, which meant stopping
+	// Ollama did not change the answer and every call failed later, at
+	// request time, one posting at a time.
 	LlmReady bool `protobuf:"varint,6,opt,name=llm_ready,json=llmReady,proto3" json:"llm_ready,omitempty"`
 	// LLM provider name (`stub`, `ollama:<model>`) so the API can decide
 	// whether structured pipelines are meaningful.
 	LlmProvider string `protobuf:"bytes,7,opt,name=llm_provider,json=llmProvider,proto3" json:"llm_provider,omitempty"`
 	// PDF renderer available (Typst compiler importable).
 	RendererReady bool `protobuf:"varint,8,opt,name=renderer_ready,json=rendererReady,proto3" json:"renderer_ready,omitempty"`
+	// Why llm_ready is false: the server unreachable, the model absent
+	// from its tag list, and so on. Empty when llm_ready is true. Carried
+	// so the api can log a cause rather than the bare fact of a refusal.
+	LlmDetail     string `protobuf:"bytes,9,opt,name=llm_detail,json=llmDetail,proto3" json:"llm_detail,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1533,6 +1541,13 @@ func (x *HealthResponse) GetRendererReady() bool {
 		return x.RendererReady
 	}
 	return false
+}
+
+func (x *HealthResponse) GetLlmDetail() string {
+	if x != nil {
+		return x.LlmDetail
+	}
+	return ""
 }
 
 var File_career_sidecar_v1_sidecar_proto protoreflect.FileDescriptor
@@ -1636,7 +1651,7 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x03pdf\x18\x01 \x01(\fR\x03pdf\x12\x14\n" +
 	"\x05pages\x18\x02 \x01(\x05R\x05pages\x12\x16\n" +
 	"\x06engine\x18\x03 \x01(\tR\x06engine\"\x0f\n" +
-	"\rHealthRequest\"\x9a\x02\n" +
+	"\rHealthRequest\"\xb9\x02\n" +
 	"\x0eHealthResponse\x12\x14\n" +
 	"\x05ready\x18\x01 \x01(\bR\x05ready\x12%\n" +
 	"\x0eembedder_ready\x18\x02 \x01(\bR\rembedderReady\x12%\n" +
@@ -1645,7 +1660,9 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\aversion\x18\x05 \x01(\tR\aversion\x12\x1b\n" +
 	"\tllm_ready\x18\x06 \x01(\bR\bllmReady\x12!\n" +
 	"\fllm_provider\x18\a \x01(\tR\vllmProvider\x12%\n" +
-	"\x0erenderer_ready\x18\b \x01(\bR\rrendererReady*b\n" +
+	"\x0erenderer_ready\x18\b \x01(\bR\rrendererReady\x12\x1d\n" +
+	"\n" +
+	"llm_detail\x18\t \x01(\tR\tllmDetail*b\n" +
 	"\fEmbedPurpose\x12\x1d\n" +
 	"\x19EMBED_PURPOSE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13EMBED_PURPOSE_QUERY\x10\x01\x12\x1a\n" +

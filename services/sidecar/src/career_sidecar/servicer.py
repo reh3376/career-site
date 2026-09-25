@@ -34,15 +34,26 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
         request: sidecar_pb2.HealthRequest,
         context: grpc.ServicerContext,
     ) -> sidecar_pb2.HealthResponse:
+        # llm_ready asks the provider whether it can serve its model,
+        # rather than reporting that one is configured. The two used to
+        # be the same answer, so stopping Ollama changed nothing here
+        # and the api went on accepting work it could not do.
+        llm_ready, llm_detail = False, ""
+        if self._llm is not None:
+            llm_ready, llm_detail = self._llm.probe()
+        else:
+            llm_detail = "no llm provider configured"
+
         return sidecar_pb2.HealthResponse(
             ready=True,
             embedder_ready=self._embedder is not None,
             reranker_ready=False,
             storage_ready=False,
             version=VERSION,
-            llm_ready=self._llm is not None,
+            llm_ready=llm_ready,
             llm_provider=self._llm.name if self._llm is not None else "",
             renderer_ready=render.renderer_ready(),
+            llm_detail=llm_detail,
         )
 
     def RenderResume(

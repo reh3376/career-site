@@ -440,13 +440,26 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   against a real submission, and the last time an untested degradation
   path ran, it produced eight plausible numbers from nothing.
 
+  **FIXED 2026-09-25**, the first two items below. The sidecar's Health
+  now calls `LLM.probe()`, which for Ollama asks `/api/tags` with a 5
+  second timeout and looks for the configured model, resolving a bare
+  name against its `:latest` tag as Ollama itself does. Tags were chosen
+  over a one-token generation because they are cheap enough to run on
+  every health call and still separate the three failures: server down,
+  model never pulled, model deleted. A generation would also prove the
+  model loads, but loading a 4b model on each health check would make
+  the check the problem. `HealthResponse.llm_detail` carries the reason,
+  so a refusal can be read rather than guessed at. The api's startup
+  probe now requires `LlmReady` rather than a non-empty provider name,
+  and logs the detail when it refuses. Seven cases in
+  `services/sidecar/tests/test_llm_probe.py`, one per failure mode.
+
   The work:
 
-  - The sidecar's health should answer "can I serve this model", not "am
-    I configured for one". Asking Ollama for its tag list, or a one
-    token generation, distinguishes the two.
-  - The api should treat "configured but unreachable" the same way it
-    now treats "no model": refuse rather than accept work it cannot do.
+  - ~~The sidecar's health should answer "can I serve this model", not
+    "am I configured for one".~~ Done.
+  - ~~The api should treat "configured but unreachable" the same way it
+    now treats "no model".~~ Done.
   - A submission that cannot be judged must fail as a submission, with a
     message saying the reviewer is unavailable, and must never reach a
     score by another route.

@@ -354,11 +354,19 @@ message HealthResponse {
   bool storage_ready = 4;
   // Sidecar version.
   string version = 5;
-  // LLM provider configured (does not probe the model).
+  // LLM provider reachable and serving its configured model, confirmed
+  // by asking it rather than by reading configuration. This used to
+  // report only that a provider was configured, which meant stopping
+  // Ollama did not change the answer and every call failed later, at
+  // request time, one posting at a time.
   bool llm_ready = 6;
   // LLM provider name (`stub`, `ollama:<model>`) so the API can decide
   // whether structured pipelines are meaningful.
   string llm_provider = 7;
   // PDF renderer available (Typst compiler importable).
   bool renderer_ready = 8;
+  // Why llm_ready is false: the server unreachable, the model absent
+  // from its tag list, and so on. Empty when llm_ready is true. Carried
+  // so the api can log a cause rather than the bare fact of a refusal.
+  string llm_detail = 9;
 }

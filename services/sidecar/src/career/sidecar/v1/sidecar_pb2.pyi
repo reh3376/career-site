@@ -251,7 +251,7 @@ class HealthRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class HealthResponse(_message.Message):
-    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version", "llm_ready", "llm_provider", "renderer_ready")
+    __slots__ = ("ready", "embedder_ready", "reranker_ready", "storage_ready", "version", "llm_ready", "llm_provider", "renderer_ready", "llm_detail")
     READY_FIELD_NUMBER: _ClassVar[int]
     EMBEDDER_READY_FIELD_NUMBER: _ClassVar[int]
     RERANKER_READY_FIELD_NUMBER: _ClassVar[int]
@@ -260,6 +260,7 @@ class HealthResponse(_message.Message):
     LLM_READY_FIELD_NUMBER: _ClassVar[int]
     LLM_PROVIDER_FIELD_NUMBER: _ClassVar[int]
     RENDERER_READY_FIELD_NUMBER: _ClassVar[int]
+    LLM_DETAIL_FIELD_NUMBER: _ClassVar[int]
     ready: bool
     embedder_ready: bool
     reranker_ready: bool
@@ -268,4 +269,5 @@ class HealthResponse(_message.Message):
     llm_ready: bool
     llm_provider: str
     renderer_ready: bool
-    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ..., llm_ready: _Optional[bool] = ..., llm_provider: _Optional[str] = ..., renderer_ready: _Optional[bool] = ...) -> None: ...
+    llm_detail: str
+    def __init__(self, ready: _Optional[bool] = ..., embedder_ready: _Optional[bool] = ..., reranker_ready: _Optional[bool] = ..., storage_ready: _Optional[bool] = ..., version: _Optional[str] = ..., llm_ready: _Optional[bool] = ..., llm_provider: _Optional[str] = ..., renderer_ready: _Optional[bool] = ..., llm_detail: _Optional[str] = ...) -> None: ...
