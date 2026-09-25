@@ -572,6 +572,27 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   run green through systemd, and the Mac holds a copy. Nothing left to
   do here; re-run `deploy/backup/install-server.sh` after any deploy
   that changes the scripts or the schedule.
+- **Corpus snapshot, added 2026-09-25.**
+  `deploy/backup/corpus-snapshot.sh` gives the corpus tables an undo,
+  which they had no other way to get: the API has
+  `ListCorpusDocuments`, `IngestCorpusText`, `ReindexCorpus` and
+  `SweepCorpusEmbeddings` and no delete at all, so a document ingested
+  through `/admin/corpus` stays ingested. Four commands: `status`,
+  `snapshot`, `revert-since <id>`, `restore <dump>`. Prefer
+  `revert-since`: ingestion only inserts, so deleting what was added
+  restores the prior state exactly without touching a pre-existing
+  row. Proven on a scratch database (both paths returned a fingerprint
+  covering the full 768-dimension vectors to an exact match) and then
+  for real in production, reverting a mis-ingested document back to 27
+  documents and 241 chunks. **Left to do:** it is only installed to
+  `/tmp` on the server and will not survive a reboot. Add it to
+  `deploy/backup/install-server.sh` beside `pg-backup.sh`. It needs no
+  timer; it is run by hand before a risky ingest.
+- **Consider a corpus delete path.** The absence of one is what made a
+  wrong ingest a database operation rather than a click. A
+  `DeleteCorpusDocument` RPC behind admin plus fresh MFA, or at least a
+  documented runbook, would mean the snapshot script is a safety net
+  rather than the only route.
 
 ## 5. Hardening (public repo)
 
@@ -948,6 +969,115 @@ prose (`RR-17`), a refresh cadence for the random postings so the set
 does not decay into "postings the model already handles" (`RR-18`), and
 the three-way agreement chart on the public build page once the numbers
 are stable (`RR-20`).
+
+## 6c. Résumé archive and corpus (opened 2026-09-25)
+
+Roger consolidated ~63 tailored résumés into `docs/personal/resume/`
+(gitignored) and asked for them to be made consistent with the master,
+converted to Markdown as the canonical form, and rendered to PDF. The
+audit and the Markdown conversion are done; what follows is open.
+
+**Owner decisions, blocking.**
+
+- **`Resume Aerospace Defense` claims degrees that do not exist.** It
+  lists "B.S. Electrical Engineering, West Virginia University, 2014"
+  and "B.S. Applied Mathematics, West Virginia University, 2012". The
+  master and all 62 other résumés have B.S. Applied Mathematics, West
+  Virginia **State** University, **1996**, and no EE bachelor's at
+  all. It also dates the EPA award 2022 rather than 2021, adds an
+  unsupported "Discovery Award 2024", and spells Griffen as Griffin.
+  Its filename does not follow the `reh-resume-*` convention and its
+  section structure matches none of the others. Left byte-for-word as
+  written, because altering a document that may already have been sent
+  is not a call to make unasked. Roger needs to say whether it is his,
+  and where it went. Degree verification is standard at defence
+  contractors.
+- **Two cooling papers carry their own publication hold.** The
+  `dc-cooling` white paper and the `Dual Loop Liquid Cooling Discovery
+  Paper` both state "Private. Publication hold. Scrub before any
+  release", tied to the active hiring process. Ingestion as
+  `corpus_only` is not publication and `corpusscope` keeps a visitor's
+  JD from reaching it, but Ask Roger and Roger's own JD reviews would
+  draw on it. His call, not an inference to make for him.
+- **`MAINresumeV` and `MAINresumeV 3`** carry an entirely different job
+  history (11/2007-07/2009, 4/1999-11/2003). They are a much older
+  résumé rather than a variant, so the correction pass excludes them.
+  Supersede, archive or delete.
+
+**Work, once those are answered.**
+
+- Render the 63 canonical `.md` to PDF. Template at
+  `scripts/templates/resume-pandoc.typ`, tuned by measurement so 10 of
+  12 sampled résumés land on the same page count as the hand-made
+  originals (at the site renderer's density, 8 of 12 spilled a page).
+- Delete the `.docx` and `.pdf` originals **only** after Roger has seen
+  rendered output he is happy with. `docs/personal/format-reference/`
+  is exempt and says so in its README: one `.docx` and one `.pdf`
+  specimen kept as layout references, both chosen because the date
+  audit found nothing wrong with either.
+- Scrub `reh-interview-prep-general.md` before ingesting: the ownership
+  structure, the capital and operating budget figures, the Rockwell /
+  Fiix procurement incident and the customer-trust sentence. Every
+  metric that made it worth ingesting survives the scrub.
+- Convert `us_spirits_distillation_column_study_guide.docx` and the
+  `dc-cooling` white paper PDF to Markdown before ingesting; only
+  `.md` and `.txt` sync. The white paper's tables come out of PDF
+  extraction mangled and carry its headline numbers, so convert from
+  the source document or repair the tables by hand.
+- Do **not** ingest `US_Spirits_Structural_Decline_vs_Tobacco_Rev2`.
+  Its `docProps/core.xml` gives `<dc:creator>Claude</dc:creator>` and
+  its title page reads "Prepared for Roger Henley". Ingesting it would
+  have the corpus attribute 2041 forecasts to Roger on a site whose
+  premise is that every claim traces to a source. The companion he did
+  write, "Not Yet 1965, Let Alone 1998", is the one to ingest if it
+  exists as text.
+
+**Build the conversions as a UxTS (Roger's instruction, 2026-09-25).**
+`.md` to `.pdf`, `.pdf` to `.md`, `.md` to `.docx` and back are exactly
+the repeatable transforms that should behave identically every time,
+and today they are four ad-hoc scripts. Note the name: the framework
+family is **UxTS**, "Universal-`x` Test Specification". There is no
+FxTS; the term appears nowhere in `~/mdemg`. The letter **C is free**,
+so `UCTS`. Four layers, per `docs/personal/dev-docs/UXTS_DEVELOPER_GUIDE.md`
+§13.3: a JSON Schema, declarative specs carrying no code, a runner
+that is the only layer with dependencies, and a Makefile CI gate, laid
+out under `docs/tests/ucts/` as `schema/`, `specs/`, `drafts/`,
+`fixtures/`, `runners/`. Spec shape is `<fw>_version` plus identity,
+input, `expected`, `config` (which holds the SHA-256) and `metadata`.
+Runner CLI is `validate`, `validate-all`, `add-hashes`,
+`verify-hashes`. Parity is enforced as allow-sets per nesting level
+with a hard fail on any unknown key, never a silent skip. Working
+examples to copy: `~/mdemg/docs/tests/ubts/` and `uits/`.
+
+What a conversion spec should assert is already known, because each of
+these actually happened during the manual conversion: the contact
+block survives (the site's own résumé template drops it, having no
+field for one), no `****` artifacts from Word's split bold runs, dates
+match the chronology, and the page count does not exceed the source's.
+
+**Known residue in the archive, not defects to fix blindly.**
+
+- `ExcelEngineering` reads "Lucent Technologies 1998 – 2006" with no
+  qualifier, which puts Bell Atlantic's 1998-2000 under Lucent. Its own
+  bullet reinforces it with "carrier-grade CLEC network (1998-2002)".
+  Left as written.
+- AT&T appears as an employer in `ACBL`, `FordEnergy`, `MES-SCADA`,
+  `Novartis` and `Vertex`, and in the master not at all.
+- Lines condensing several employers under one span ("Lucent
+  Technologies and earlier, 1996 - 2006") are deliberate summarisation
+  and are correct as written. `scripts/audit_resume_dates.py` reports
+  them separately for this reason.
+
+**Tooling added, all reading `docs/personal/chronology.json` which
+holds the canonical dates and is gitignored with the material it
+describes.**
+
+`scripts/extract_docs.py` (docx/pdf/md to text, no new dependencies),
+`audit_resume_dates.py` (attributes date ranges to employers rather
+than searching outward from them, which halved a false-positive rate
+of 83 down to 21), `resume_to_md.py` (pandoc plus heading promotion
+and bold-run repair), `apply_resume_corrections.py` (the adjudicated
+corrections, every substitution counted and printed).
 
 ## 7. Documentation
 

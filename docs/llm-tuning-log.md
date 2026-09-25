@@ -1792,3 +1792,43 @@ something wrong with this run" while I was still treating it as a
 possible determinism failure. He was right, and the evidence for his
 reading was already on the table: zero failed calls and identical
 provenance describe a misconfigured run, not a flaky model.
+
+## 2026-09-25: a form default that pointed the wrong way
+
+The first live use of `/admin/corpus` published a document meant to be
+private. `visibility` defaulted to `public`, both dropdowns submitted
+their defaults, and the paste form reported success. Nothing in the
+result line was wrong: two chunks, both embedded, 768 dimensions, the
+right embedder. The fields it did not mention were the ones that
+mattered.
+
+**The default was the inverse of the one the same codebase already
+argues for.** `internal/corpusscope` makes `Public` the zero value on
+the reasoning that a caller who forgets to widen the scope retrieves
+*less*, not more; forgetting fails closed. In the ingest form the same
+word runs the other way: a document whose visibility is left alone is
+exposed further. Fail-open, in the one place where the API has no
+delete to undo it with. It is now `corpus_only`, which is also the
+commoner case, 23 of 28 documents.
+
+**The undo had to be built before it could be trusted, and building it
+was not the same as proving it.** `deploy/backup/corpus-snapshot.sh`
+was written first and tested second, and the test found two defects in
+it: a `created_at` column that does not exist on `corpus_documents`
+(it is `ingested_at`), and `docker exec -i` consuming the operator's
+stdin so that typing "yes" at the confirmation was swallowed and the
+script exited as though the revert had been declined. Both would have
+fired only at the moment the tool was actually needed.
+
+The verification was a scratch database seeded with real 768-dimension
+vectors and a fingerprint hashing every column including the vector as
+text, so a dump that dropped or rounded embeddings would fail. Both
+revert paths returned an exact match. The production revert then ran
+for real and restored 27 documents and 241 chunks.
+
+**What generalises:** a result that reports what succeeded, and is
+silent on the fields that decide exposure, reads as confirmation. The
+form said "ingested, 2 chunks, embedded 2" and every word was true.
+Checking the database was what showed `visibility | public`. The same
+shape as the two failures logged above: not a wrong computation, but a
+piece of state that no surface displayed.
