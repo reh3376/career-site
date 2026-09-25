@@ -78,9 +78,36 @@ query-filters:
 #     services/sidecar/src/career_sidecar/ and is deliberately NOT
 #     listed; the near-identical `career/` path is the generated one.
 #   * node_modules and the Next build output are third-party or derived.
+#   * The résumé archive tooling (scripts/audit_resume_dates.py,
+#     apply_resume_corrections.py, resume_to_md.py, extract_docs.py)
+#     trips py/clear-text-logging-sensitive-data. The rule is about
+#     secrets and personal data reaching application logs that other
+#     people can read. These are local developer CLIs: they read
+#     Roger's own gitignored material under docs/personal, print a
+#     report to the terminal of the person who ran them, and are never
+#     invoked by the deployed application, by a request path, or by CI
+#     (docs/personal/chronology.json does not exist on a CI checkout,
+#     so they exit before reading anything). Printing the finding IS
+#     the function; a report that cannot name the employer and the two
+#     dates that disagree tells the reader nothing, which is what the
+#     automated fix proposed on PR #141 and why it was not taken.
+#
+#     The genuine exposure in that output was reduced first rather than
+#     suppressed: the verbatim source line each finding came from is
+#     now behind --context, so the default report describes the
+#     documents instead of reproducing them. What remains is an
+#     employer name and two years, which is the finding itself.
+#
+#     Narrow by design. If any of these scripts ever gains a network
+#     call, a log file, or a CI invocation, this entry stops being
+#     true and must be removed.
 paths-ignore:
   - services/sidecar/src/career/**
   - services/sidecar/src/buf/**
   - apps/web/src/gen/**
   - "**/node_modules/**"
   - apps/web/.next/**
+  - scripts/audit_resume_dates.py
+  - scripts/apply_resume_corrections.py
+  - scripts/resume_to_md.py
+  - scripts/extract_docs.py
