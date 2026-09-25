@@ -152,6 +152,163 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **A LoRA adapter for résumé writing (owner, 2026-09-25).** Trained
+  locally on his M5 Max with MLX, so no GPU spend and nothing leaves his
+  machine. The training data is job descriptions paired with the
+  résumés he wrote for them himself.
+
+  The idea is sound and the data is the right data. What it needs is
+  sequencing, because three things are true today:
+
+  **There are four pairs, not a training set.** `docs/personal` holds
+  tailored résumés for 4IR, AWS, Heaven Hill and OpenAI. A LoRA that
+  teaches selection and phrasing wants tens to hundreds of examples; at
+  four it memorises four postings. That is an argument about order, not
+  about the idea.
+
+  **Four pairs are an excellent evaluation set**, and there is currently
+  no way at all to judge whether a change to the résumé writer helped.
+  The same four become the gold standard immediately, with no training
+  and no risk.
+
+  **The set builds itself if we capture it.** Every posting the owner
+  applies to produces another pair. The capture mechanism is worth more
+  today than the adapter, and costs an afternoon.
+
+  Order of work:
+
+  1. **Capture pairs.** A place to store (posting, the résumé he
+     actually sent) with enough provenance to be useful later: date,
+     employer, whether it was submitted, and the generated résumé
+     alongside his, so the delta is recorded rather than reconstructed.
+  2. **Use them as the eval set**, which is step 4 of the tailoring
+     roadmap and is blocking everything else.
+  3. **Try the cheap fixes first** and measure them against that set:
+     deduplication, removing the copied examples from rule 7, making
+     coverage structural. If prompt and code changes close most of the
+     gap, the adapter is a refinement rather than a rescue.
+  4. **Then train**, when there are enough pairs to generalise rather
+     than memorise.
+
+  Details that are easy to discover late and expensive to discover
+  then:
+
+  - **Train against the full-precision base, not the quantised one.**
+    Production serves `qwen3:4b-q8_0`; a LoRA is trained on `qwen3-4b`
+    and the result is converted. Adapter and base must match or the
+    weights are meaningless.
+  - **Train as MDEMG already does, serve through Ollama** (owner,
+    2026-09-25). Training stays `mlx_lm.lora` on the M5 Max, exactly as
+    `mdemg/docs/features/` documents it. What career-site does not adopt
+    is MDEMG's MLX serving and benchmarking path: this pipeline hands
+    off at the GGUF boundary instead, because Ollama is llama.cpp
+    underneath and loads a GGUF adapter from a Modelfile.
+
+    The conversion is already solved and must not be rewritten:
+    MLX safetensors → `scripts/mlx_adapter_to_peft.py` → PEFT directory
+    → `scripts/vendor/llama_cpp/convert_lora_to_gguf.py` → GGUF LoRA.
+    MDEMG's 14B adapter comes out at 257 MB f16.
+
+    Whatever adapter is served must be recorded on `jd_runs` beside the
+    model, for the reason 2026-09-25 established twice: a run that
+    cannot say what it was configured with costs an hour the next time
+    two scores disagree.
+
+  - **Reuse MDEMG's failure record rather than rediscovering it.**
+    `PHASE-E3-RETRAIN-BENCHMARK-001` failed at −0.153 aggregate against
+    a promotion gate of −0.010, and the post-mortem names the causes.
+    Two apply here directly:
+
+    *Sequence length.* That run lost accuracy to `max_seq=4096` while
+    real prompts reached 5,899 tokens. The résumé prompt on this project
+    was measured at 4,845 input tokens, so it would be truncated by the
+    same default. Set the training sequence length from the measured
+    prompt, not from a default.
+
+    *A dropped family dominating the result.* One task family stripped
+    in an earlier phase drove most of the regression. The equivalent
+    risk here is training only on postings that scored well, which would
+    teach the writer to describe a candidate who always fits.
+
+    MDEMG's shape is also worth copying: a held-out benchmark run twice,
+    an aggregate weighted score, and a promotion gate with a number in
+    it rather than a judgment.
+  - **The adapter shapes selection and phrasing. It must never become a
+    source of facts.** That is the owner's own rule, retrieve rather
+    than memorise. The existing guards hold the line: every résumé line
+    carries source ids and the entailment check verifies them against
+    the corpus, so an adapter cannot smuggle in a claim the evidence
+    does not support. It can only change what gets chosen and how it is
+    worded, which is exactly the part that is currently wrong.
+  - **Keep a held-out pair.** With a small set the temptation is to
+    train on everything. One posting never trained on is the only way to
+    tell generalisation from recall.
+
+- **Résumé tailoring: roadmap, 2026-09-25.** Diagnosed rather than
+  guessed. The writer already receives everything it needs: the full
+  posting, every requirement with its verdict, and the evidence. So this
+  is not plumbing, and the prompt already contains the instruction, as
+  rule 4: "Lead with what the posting asks for, in the posting's
+  vocabulary. Requirements judged met or partial tell you what to
+  emphasise."
+
+  It is ignored. Two pieces of evidence, both from the same generated
+  résumé for a capital-projects posting:
+
+  - The first two competencies were **"Rockwell ControlLogix and Ignition
+    HMI standards"** and **"MQTT / Unified Namespace data architecture"**,
+    which are the two examples given in rule 7 of the prompt, copied
+    verbatim. The writer reached for the examples rather than the
+    posting.
+  - "AI/ML and data platforms for predictive maintenance and
+    optimization" appeared **four times** in one list. Nothing
+    deduplicates.
+
+  This is the pattern already established twice in this project, with
+  the duration rule and the relationship rule: instructing the model in
+  prose changed nothing measurable, and moving the judgment into code
+  changed the result. The roadmap follows that, cheapest and most
+  certain first.
+
+  **1. Deduplicate in code.** Identical or near-identical competencies
+  and bullets collapse before the résumé is rendered. A model repeating
+  itself is not a judgment call and needs no prompt change. Half an
+  hour, no measurement required, and it removes an embarrassment that
+  would reach an employer.
+
+  **2. Take the examples out of rule 7.** They are being copied as
+  content rather than read as shape. Replace with a description of the
+  shape, or with examples generated from the posting's own vocabulary.
+  This is a prompt version bump and must be measured, not assumed:
+  the same change might simply remove the anchor without supplying a
+  better one.
+
+  **3. Make coverage structural.** Every competency should name the
+  requirement id it serves, the same way every résumé line already names
+  the chunk ids it came from. Then code can do what prose has failed to
+  do: order competencies by the weight of the requirement they serve,
+  and drop any that serve none. The writer already has the requirement
+  ids in its prompt, so this is a schema change plus a check, not new
+  information.
+
+  **4. Build a way to measure any of this.** There is currently no
+  instrument for résumé quality at all. The golden set measures scores
+  and says nothing about what gets written. The cheapest honest proxy is
+  code-checkable: the overlap between the résumé's competencies and the
+  vocabulary of the requirements judged met. A résumé for a
+  capital-projects posting that never says front-end loading, basis of
+  design, project controls or commissioning scores badly on that measure
+  without anyone reading it.
+
+  **5. Compare against the owner's own version.**
+  `docs/personal/reh-resume-HeavenHill.pdf` is the benchmark: the same
+  facts, ordered by what the posting asked for, leading with the $135M
+  build that the generated version omits entirely while that figure sits
+  in the corpus. It is the target, not a rival.
+
+  Do 1 immediately. Do 4 before 2 or 3, or there is no way to tell
+  whether either helped.
+
 - **The résumé writer does not tailor to the posting it just scored.**
   Found 2026-09-25 by comparing a generated résumé against one the owner
   wrote himself for the same job, a capital-projects role in distilled
