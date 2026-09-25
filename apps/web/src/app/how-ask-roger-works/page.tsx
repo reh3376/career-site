@@ -318,6 +318,50 @@ export default async function HowAskRogerWorksPage() {
           </p>
         </div>
       </section>
+
+      <section className="mt-14 border-t border-line pt-10">
+        <h2
+          className="font-display text-2xl leading-snug text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          Ask it twice and the answer is the same.
+        </h2>
+        <div className="mt-4 space-y-4 text-base leading-relaxed text-ink-2">
+          <p>
+            Submit the same posting against the same corpus and you get the
+            same verdicts and the same score. Not close to it. The same
+            number. When the reviewer&rsquo;s prompt was rewritten and the
+            whole fixed set of postings was scored again, the scores came
+            back identical to three decimal places.
+          </p>
+          <p>
+            Four things make that true, and none of them is the model being
+            reliable. The judge runs at temperature zero, so it is not
+            sampling. Its answer is constrained to a fixed shape. That answer
+            is one of three words, met, partial or unmet, not a number. And
+            the score is arithmetic performed in code on those three words.
+          </p>
+          <p>
+            <span className="text-ink">
+              The model itself is not deterministic and this does not claim
+              it is.
+            </span>{" "}
+            Its intermediate reasoning does vary between runs on identical
+            input. What the design does is put the decision somewhere that
+            variation cannot reach: it would have to be large enough to move
+            a requirement from met to partial before it could move a score at
+            all.
+          </p>
+          <p>
+            Which matters for a practical reason. If you disagree with a
+            result, it points at one requirement and the passage behind it,
+            and you can run it again and get the same thing to argue with.
+            And when a number does move, something really changed: the
+            corpus, the prompt, or the model. All three are recorded with
+            every run.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
