@@ -51,6 +51,7 @@ type Ops = {
   memAvailableMb?: number;
   diskFreeGb?: number;
   diskTotalGb?: number;
+  warnings?: string[];
 };
 
 async function fetchOps(): Promise<Ops | null> {
@@ -110,6 +111,19 @@ export default async function AdminOpsPage() {
         </p>
       ) : (
         <>
+          {(ops.warnings ?? []).length > 0 ? (
+            <ul className="mt-8 space-y-2">
+              {(ops.warnings ?? []).map((w) => (
+                <li
+                  key={w}
+                  className="border-l-2 border-danger bg-paper-2 px-4 py-3 text-sm text-ink"
+                >
+                  {w}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           <div
             className={
               "mt-8 border-l-2 px-5 py-4 " +
@@ -168,7 +182,11 @@ export default async function AdminOpsPage() {
 
           <Section title="submissions by status">
             {(ops.pipeline ?? []).length === 0 ? (
-              <p className="text-sm text-ink-3">No submissions.</p>
+              <p className="text-sm text-ink-3">
+                {(ops.warnings ?? []).some((w) => w.startsWith("submissions"))
+                  ? "Not read. See the warning above."
+                  : "No submissions."}
+              </p>
             ) : (
               <ul className="space-y-px">
                 {(ops.pipeline ?? []).map((p) => (

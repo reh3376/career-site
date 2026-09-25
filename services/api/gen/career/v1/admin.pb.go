@@ -10633,7 +10633,12 @@ type GetOpsStatusResponse struct {
 	// Free disk in gigabytes on the filesystem the api is running from.
 	DiskFreeGb int32 `protobuf:"varint,12,opt,name=disk_free_gb,json=diskFreeGb,proto3" json:"disk_free_gb,omitempty"`
 	// Total disk in gigabytes on that filesystem.
-	DiskTotalGb   int32 `protobuf:"varint,13,opt,name=disk_total_gb,json=diskTotalGb,proto3" json:"disk_total_gb,omitempty"`
+	DiskTotalGb int32 `protobuf:"varint,13,opt,name=disk_total_gb,json=diskTotalGb,proto3" json:"disk_total_gb,omitempty"`
+	// Anything this snapshot could not read. A section that failed and a
+	// section that is genuinely empty look identical otherwise, and on
+	// 2026-09-25 that difference hid a broken query behind the words "no
+	// submissions" for as long as nobody read the logs.
+	Warnings      []string `protobuf:"bytes,14,rep,name=warnings,proto3" json:"warnings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10757,6 +10762,13 @@ func (x *GetOpsStatusResponse) GetDiskTotalGb() int32 {
 		return x.DiskTotalGb
 	}
 	return 0
+}
+
+func (x *GetOpsStatusResponse) GetWarnings() []string {
+	if x != nil {
+		return x.Warnings
+	}
+	return nil
 }
 
 // One job the runner remembers.
@@ -11745,7 +11757,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1cSetJdSubmissionLimitResponse\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12!\n" +
 	"\fwindow_hours\x18\x02 \x01(\x05R\vwindowHours\"\x15\n" +
-	"\x13GetOpsStatusRequest\"\x85\x04\n" +
+	"\x13GetOpsStatusRequest\"\xa1\x04\n" +
 	"\x14GetOpsStatusResponse\x12%\n" +
 	"\x04jobs\x18\x01 \x03(\v2\x11.career.v1.JobRowR\x04jobs\x12\x12\n" +
 	"\x04busy\x18\x02 \x01(\bR\x04busy\x124\n" +
@@ -11763,7 +11775,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x10mem_available_mb\x18\v \x01(\x05R\x0ememAvailableMb\x12 \n" +
 	"\fdisk_free_gb\x18\f \x01(\x05R\n" +
 	"diskFreeGb\x12\"\n" +
-	"\rdisk_total_gb\x18\r \x01(\x05R\vdiskTotalGb\"\xf2\x01\n" +
+	"\rdisk_total_gb\x18\r \x01(\x05R\vdiskTotalGb\x12\x1a\n" +
+	"\bwarnings\x18\x0e \x03(\tR\bwarnings\"\xf2\x01\n" +
 	"\x06JobRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +

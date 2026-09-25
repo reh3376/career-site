@@ -376,15 +376,23 @@ type PipelineStatus struct {
 // excluded: they are a test of the reviewer rather than a queue of work
 // waiting on it, and counting them would make the pipeline look backed
 // up every time an evaluation runs.
+//
+// No tenant filter, because jd_submissions has no tenant_id. Migration
+// 00024 added the column to events, decision_log and llm_usage, and to
+// everything built after it, but not to the tables that predate it.
+// Filtering on a column that does not exist made this return an error
+// the handler logged and swallowed, so the console showed an empty
+// section rather than a fault. Add the filter here when the column
+// arrives, not before.
 func (r *Repo) PipelineCounts(ctx context.Context) ([]PipelineStatus, error) {
 	const q = `
     SELECT status, count(*), min(created_at)
       FROM jd_submissions
-     WHERE tenant_id = $1 AND NOT is_eval
+     WHERE NOT is_eval
      GROUP BY status
      ORDER BY count(*) DESC
   `
-	rows, err := r.pool.Query(ctx, q, tenant.FromContext(ctx).Int64())
+	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("pipeline counts: %w", err)
 	}

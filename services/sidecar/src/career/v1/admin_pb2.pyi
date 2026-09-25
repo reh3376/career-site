@@ -1759,7 +1759,7 @@ class GetOpsStatusRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetOpsStatusResponse(_message.Message):
-    __slots__ = ("jobs", "busy", "pipeline", "latest_eval", "calls_last_hour", "call_failures_last_hour", "avg_call_seconds", "load_1", "load_5", "mem_total_mb", "mem_available_mb", "disk_free_gb", "disk_total_gb")
+    __slots__ = ("jobs", "busy", "pipeline", "latest_eval", "calls_last_hour", "call_failures_last_hour", "avg_call_seconds", "load_1", "load_5", "mem_total_mb", "mem_available_mb", "disk_free_gb", "disk_total_gb", "warnings")
     JOBS_FIELD_NUMBER: _ClassVar[int]
     BUSY_FIELD_NUMBER: _ClassVar[int]
     PIPELINE_FIELD_NUMBER: _ClassVar[int]
@@ -1773,6 +1773,7 @@ class GetOpsStatusResponse(_message.Message):
     MEM_AVAILABLE_MB_FIELD_NUMBER: _ClassVar[int]
     DISK_FREE_GB_FIELD_NUMBER: _ClassVar[int]
     DISK_TOTAL_GB_FIELD_NUMBER: _ClassVar[int]
+    WARNINGS_FIELD_NUMBER: _ClassVar[int]
     jobs: _containers.RepeatedCompositeFieldContainer[JobRow]
     busy: bool
     pipeline: _containers.RepeatedCompositeFieldContainer[PipelineCount]
@@ -1786,7 +1787,8 @@ class GetOpsStatusResponse(_message.Message):
     mem_available_mb: int
     disk_free_gb: int
     disk_total_gb: int
-    def __init__(self, jobs: _Optional[_Iterable[_Union[JobRow, _Mapping]]] = ..., busy: _Optional[bool] = ..., pipeline: _Optional[_Iterable[_Union[PipelineCount, _Mapping]]] = ..., latest_eval: _Optional[_Union[EvalRun, _Mapping]] = ..., calls_last_hour: _Optional[int] = ..., call_failures_last_hour: _Optional[int] = ..., avg_call_seconds: _Optional[float] = ..., load_1: _Optional[float] = ..., load_5: _Optional[float] = ..., mem_total_mb: _Optional[int] = ..., mem_available_mb: _Optional[int] = ..., disk_free_gb: _Optional[int] = ..., disk_total_gb: _Optional[int] = ...) -> None: ...
+    warnings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, jobs: _Optional[_Iterable[_Union[JobRow, _Mapping]]] = ..., busy: _Optional[bool] = ..., pipeline: _Optional[_Iterable[_Union[PipelineCount, _Mapping]]] = ..., latest_eval: _Optional[_Union[EvalRun, _Mapping]] = ..., calls_last_hour: _Optional[int] = ..., call_failures_last_hour: _Optional[int] = ..., avg_call_seconds: _Optional[float] = ..., load_1: _Optional[float] = ..., load_5: _Optional[float] = ..., mem_total_mb: _Optional[int] = ..., mem_available_mb: _Optional[int] = ..., disk_free_gb: _Optional[int] = ..., disk_total_gb: _Optional[int] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class JobRow(_message.Message):
     __slots__ = ("id", "kind", "status", "progress", "summary", "started_at", "finished_at")

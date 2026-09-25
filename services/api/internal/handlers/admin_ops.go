@@ -69,15 +69,19 @@ func (a *Admin) GetOpsStatus(
 		}
 	} else {
 		a.log.Warn("ops: pipeline counts unavailable", slog.String("error", err.Error()))
+		out.Warnings = append(out.Warnings, "submissions by status could not be read: "+err.Error())
 	}
 
 	if calls, failures, avgSeconds, err := a.users.LLMActivity(ctx); err == nil {
 		out.CallsLastHour, out.CallFailuresLastHour, out.AvgCallSeconds = int32(calls), int32(failures), avgSeconds
 	} else {
 		a.log.Warn("ops: llm activity unavailable", slog.String("error", err.Error()))
+		out.Warnings = append(out.Warnings, "model activity could not be read: "+err.Error())
 	}
 
-	if runs, err := a.users.ListEvalRuns(ctx, 1); err == nil && len(runs) > 0 {
+	if runs, err := a.users.ListEvalRuns(ctx, 1); err != nil {
+		out.Warnings = append(out.Warnings, "the latest evaluation could not be read: "+err.Error())
+	} else if len(runs) > 0 {
 		e := runs[0]
 		out.LatestEval = &v1.EvalRun{
 			Id: e.ID, Note: e.Note, Status: e.Status,

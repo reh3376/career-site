@@ -3274,6 +3274,7 @@ _No fields; send `{}`._
 | `memAvailableMb` | `int32` | number |  | Host memory available in megabytes. |
 | `diskFreeGb` | `int32` | number |  | Free disk in gigabytes on the filesystem the api is running from. |
 | `diskTotalGb` | `int32` | number |  | Total disk in gigabytes on that filesystem. |
+| `warnings` | `string`[] | array of string |  | Anything this snapshot could not read. A section that failed and a section that is genuinely empty look identical otherwise, and on 2026-09-25 that difference hid a broken query behind the words "no submissions" for as long as nobody read the logs. |
 
 <details><summary>Example request body</summary>
 
@@ -6508,6 +6509,7 @@ this answer, and it was not visible anywhere.
 | `memAvailableMb` | `int32` | number |  | Host memory available in megabytes. |
 | `diskFreeGb` | `int32` | number |  | Free disk in gigabytes on the filesystem the api is running from. |
 | `diskTotalGb` | `int32` | number |  | Total disk in gigabytes on that filesystem. |
+| `warnings` | `string`[] | array of string |  | Anything this snapshot could not read. A section that failed and a section that is genuinely empty look identical otherwise, and on 2026-09-25 that difference hid a broken query behind the words "no submissions" for as long as nobody read the logs. |
 
 ### JobRow
 
