@@ -228,6 +228,79 @@ Not in this deploy. Follow-ups:
 - Object-storage snapshot for MinIO.
 - Runbook for restore.
 
+## Resizing the server
+
+Everything that must survive is a Docker volume on the root disk:
+`postgres_data`, `ollama_models`, `minio_data`, `caddy_data`,
+`caddy_config`. Nothing else is stateful. A Hetzner rescale keeps the
+disk and its volumes; the risk is not data loss, it is coming back up
+in a state nobody checked.
+
+**Decide the rescale type first, because one of them is one-way.**
+Changing CPU and RAM only is reversible. Growing the disk is not: once
+the disk is larger the server can never be scaled down again. At 69
+percent of 38 GB, growing it is probably right, but it should be a
+decision rather than a click.
+
+**Do not stop the containers by hand.** They run `unless-stopped`,
+which means "restart unless someone deliberately stopped you". A
+`docker compose stop` or `down` before shutdown marks them stopped, and
+they will not come back on boot. Shut the machine down and Docker
+restarts them itself.
+
+### Before
+
+1. Check `/admin/ops`. If a job is running, wait. An evaluation is
+   hours of work held only in the api process and a shutdown discards
+   it, the same way a deploy does.
+2. Take a fresh dump rather than trusting the nightly one:
+   `sudo systemctl start career-backup.service`, then confirm a new
+   file in `/opt/career-site-backups/`.
+3. Pull it to the Mac with `deploy/backup/pull-backups.sh`, so a copy
+   exists somewhere that is not the machine being altered.
+4. Note the running tag from `/api/readyz`. That is what to roll back
+   to if the new machine misbehaves.
+
+### After
+
+1. `df -h /` and confirm the filesystem actually grew. Hetzner images
+   expand the partition on boot, but confirm rather than assume; a
+   larger disk the filesystem has not claimed looks exactly like no
+   resize at all.
+2. `docker ps` and expect all seven containers. If any are missing,
+   something stopped them deliberately at some point:
+   `cd /opt/career-site && docker compose --env-file .env.prod -f
+   docker-compose.yml -f docker-compose.prod.yml up -d`.
+3. `curl -s https://rogerhenley.dev/api/readyz` and expect the same
+   version as before, with postgres and sidecar both true.
+4. Run `deploy/live-check.sh`. Twenty assertions, and it checks the
+   things a restart breaks quietly.
+5. Confirm the model is still resident: `docker exec career-site-ollama-1
+   ollama list`. It lives in a volume and should be, but a missing model
+   turns the first review into a multi-gigabyte download.
+6. `systemctl list-timers | grep career` and confirm both backup timers
+   are armed. A timer that did not come back is invisible until the day
+   you need the dump it never took.
+
+### What more resources do and do not buy
+
+More CPU makes reviews faster, because prompt evaluation is the cost
+and it runs at 12 to 13 tokens a second on the current box. More RAM
+does not, by itself.
+
+What RAM does buy is `OLLAMA_MAX_LOADED_MODELS=2`, so the embedding
+model and the judge can be resident together. Today, at 1, embedding
+evicts the judge and the next judge call pays a cold load. That is a
+real win and it needs memory to be safe.
+
+**Do not raise `OLLAMA_NUM_PARALLEL` above 1.** Parallel slots break
+the prompt-prefix cache the judge depends on, and that cache is the
+difference between 266 seconds and 128 for a single call. More
+concurrency here would make every call slower.
+
+Measure before changing either. The golden set is the instrument:
+record the run time before the resize and after, on the same postings.
+
 ## Secrets rotation
 
 - `DECISION_TOKEN_SECRET` — rotating invalidates every unclicked Accept/Decline email. Do it on suspected compromise; low-cost otherwise.
