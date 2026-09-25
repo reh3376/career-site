@@ -152,6 +152,68 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **A LoRA adapter for résumé writing (owner, 2026-09-25).** Trained
+  locally on his M5 Max with MLX, so no GPU spend and nothing leaves his
+  machine. The training data is job descriptions paired with the
+  résumés he wrote for them himself.
+
+  The idea is sound and the data is the right data. What it needs is
+  sequencing, because three things are true today:
+
+  **There are four pairs, not a training set.** `docs/personal` holds
+  tailored résumés for 4IR, AWS, Heaven Hill and OpenAI. A LoRA that
+  teaches selection and phrasing wants tens to hundreds of examples; at
+  four it memorises four postings. That is an argument about order, not
+  about the idea.
+
+  **Four pairs are an excellent evaluation set**, and there is currently
+  no way at all to judge whether a change to the résumé writer helped.
+  The same four become the gold standard immediately, with no training
+  and no risk.
+
+  **The set builds itself if we capture it.** Every posting the owner
+  applies to produces another pair. The capture mechanism is worth more
+  today than the adapter, and costs an afternoon.
+
+  Order of work:
+
+  1. **Capture pairs.** A place to store (posting, the résumé he
+     actually sent) with enough provenance to be useful later: date,
+     employer, whether it was submitted, and the generated résumé
+     alongside his, so the delta is recorded rather than reconstructed.
+  2. **Use them as the eval set**, which is step 4 of the tailoring
+     roadmap and is blocking everything else.
+  3. **Try the cheap fixes first** and measure them against that set:
+     deduplication, removing the copied examples from rule 7, making
+     coverage structural. If prompt and code changes close most of the
+     gap, the adapter is a refinement rather than a rescue.
+  4. **Then train**, when there are enough pairs to generalise rather
+     than memorise.
+
+  Details that are easy to discover late and expensive to discover
+  then:
+
+  - **Train against the full-precision base, not the quantised one.**
+    Production serves `qwen3:4b-q8_0`; a LoRA is trained on `qwen3-4b`
+    and the result is converted. Adapter and base must match or the
+    weights are meaningless.
+  - **Serving is its own task.** MLX emits safetensors; Ollama wants a
+    GGUF adapter referenced from a Modelfile. That conversion is a real
+    step with its own failure modes, and it adds a moving part to a
+    pipeline that spent 2026-09-25 learning what invisible state costs.
+    Whatever is served must be recorded on `jd_runs` beside the model,
+    or the next unexplained score difference will take an hour again.
+  - **The adapter shapes selection and phrasing. It must never become a
+    source of facts.** That is the owner's own rule, retrieve rather
+    than memorise. The existing guards hold the line: every résumé line
+    carries source ids and the entailment check verifies them against
+    the corpus, so an adapter cannot smuggle in a claim the evidence
+    does not support. It can only change what gets chosen and how it is
+    worded, which is exactly the part that is currently wrong.
+  - **Keep a held-out pair.** With a small set the temptation is to
+    train on everything. One posting never trained on is the only way to
+    tell generalisation from recall.
+
 - **Résumé tailoring: roadmap, 2026-09-25.** Diagnosed rather than
   guessed. The writer already receives everything it needs: the full
   posting, every requirement with its verdict, and the evidence. So this
