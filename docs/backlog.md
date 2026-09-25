@@ -161,8 +161,44 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   by email. Add an admin action that exports a member's rows as JSON
   and one that removes the account with the cascade rules written down
   (sessions end; reviews and events detach; reviews removed on request).
-- **JD text extraction for PDF and docx uploads** rides the sidecar;
-  today paste and plain text are the reliable paths.
+- **Upload a file instead of pasting (owner, 2026-09-24).** Today the
+  only reliable path is pasting text, which asks a recruiter to open a
+  PDF, select all, and paste, and quietly loses anyone who will not
+  bother. Wanted: a browse-your-computer button accepting `.pdf`,
+  `.txt` and the usual document formats, converted to plain text before
+  anything else happens. Nothing downstream changes: the extractor, the
+  gatekeeper, the judge and the scorer all keep taking a string, and
+  the conversion is a step in front of them.
+
+  The conversion belongs in the sidecar, which is already Python, is
+  already the only thing that touches untrusted bytes, and already
+  carries `pypdf` for locking the generated résumé. The same job serves
+  the content-management work further down this section, which needs
+  identical extraction for articles and documents.
+
+  **This is the attack surface the owner was right to worry about.**
+  Parsing a file someone else produced is a different risk from reading
+  text they typed, so the work is not finished without:
+
+  - a size ceiling enforced before anything is parsed, and a wall-clock
+    timeout on extraction, since a malformed or deliberately hostile
+    PDF is a denial-of-service before it is anything else;
+  - type decided by sniffing the content, never by the filename, and an
+    allow-list rather than a deny-list;
+  - extraction that only ever reads: no embedded scripts, no external
+    entity resolution, no following links inside the document;
+  - the extracted text treated exactly as pasted text is treated now,
+    which means the posting-check gatekeeper still decides whether it is
+    a job description, and the daily quota still applies.
+
+  **The failure worth designing for is a scanned PDF.** It has no text
+  layer, extraction returns nothing or near nothing, and the gatekeeper
+  would then refuse it as "not a posting", which is true but useless:
+  the visitor uploaded a real job description and is told it is not one.
+  That case has to be detected at extraction and answered in its own
+  words, either by saying the file has no readable text and asking for
+  a paste, or by adding OCR, which is a much larger piece of work and
+  should not be assumed.
 - **Phone-width check of the progress modal and result page** on a
   real device.
 
