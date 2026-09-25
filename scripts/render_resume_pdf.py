@@ -96,7 +96,31 @@ DENSITIES: list[tuple[str, dict[str, str]]] = [
 ]
 
 
+def sanitise(md: Path, tmp: Path) -> Path:
+    """Repair conversion artifacts before rendering.
+
+    The bold-run repair used to live only in the .docx to .md converter,
+    on the assumption that Markdown in hand is already clean. The master
+    résumé disproved that: hand-written .md, exported from Word at some
+    point in its history, carrying 57 `****` sequences that rendered as
+    literal asterisks. Anything that reaches the renderer gets the same
+    treatment, whatever produced it.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from resume_to_md import merge_bold_runs
+
+    text, merged = merge_bold_runs(md.read_text(encoding="utf-8"))
+    if not merged:
+        return md
+    clean = tmp / (md.stem + ".clean.md")
+    clean.write_text(text, encoding="utf-8")
+    return clean
+
+
 def render(md: Path, out_pdf: Path, tmp: Path, density: dict[str, str]) -> None:
+    md = sanitise(md, tmp)
     typ = tmp / (md.stem + ".typ")
     cmd = ["pandoc", str(md), "-t", "typst", f"--template={TEMPLATE}", "--wrap=none"]
     for key, value in density.items():

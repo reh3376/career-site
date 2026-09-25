@@ -1,0 +1,34 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "pdf",
+    "profile": "resume"
+  },
+  "fixture": {
+    "path": "../fixtures/dates-en-dash.md",
+    "sha256": "9c3349c0b1e33021a14704434cdb4c8dd51af29011d19045a8d379f81fb28b00"
+  },
+  "expected": {
+    "must_match": [
+      "2022\\s*(?:-{1,3}|[\\u2013\\u2014])\\s*Jul 2026",
+      "2017\\s*(?:-{1,3}|[\\u2013\\u2014])\\s*2022",
+      "2015\\s*(?:-{1,3}|[\\u2013\\u2014])\\s*2017",
+      "1/2006\\s+to\\s+1/2015"
+    ],
+    "min_chars": 200
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "3a8bdd05440a32be656fa62a74b6ef9cf8c409a2cf4c17600b0d726ede5e049a"
+  },
+  "metadata": {
+    "description": "Every date range survives the conversion, whichever dash the author used, and remains findable by a pattern that allows all of them.",
+    "tags": [
+      "ucts",
+      "dates",
+      "regression"
+    ],
+    "regression_of": "2026-09-25: pandoc writes an en dash as the two-character escape `--`, so a correction pattern built around a single-character dash class matched nothing in its output. It reported 4 files corrected out of 35 and looked plausible. The true number was 32. The 22 files it silently skipped would have kept a stale employment end date on resumes going to employers."
+  }
+}

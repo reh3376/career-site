@@ -1,0 +1,35 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "pdf",
+    "profile": "resume"
+  },
+  "fixture": {
+    "path": "../fixtures/split-bold-runs.md",
+    "sha256": "734651e65430bd1a476e33acb9ef34e9f8ef8833e4449660997ab8d6af0d9559"
+  },
+  "expected": {
+    "must_not_contain": [
+      "****",
+      "***"
+    ],
+    "must_contain": [
+      "Engineering & Technology Leadership"
+    ],
+    "min_chars": 200
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "ed313c16ab4a12c56814e993e9918a81b487b9cbad4c3281fa77972faad2ef57"
+  },
+  "metadata": {
+    "description": "Word's split bold runs do not reach the rendered output as literal asterisks.",
+    "tags": [
+      "ucts",
+      "artifact",
+      "regression"
+    ],
+    "regression_of": "2026-09-25: Word stores 'Engineering & Technology' as three runs when the ampersand was typed separately, and pandoc is faithful to that, emitting `**Engineering ****&**** Technology**`. Markdown reads the empty `****` as literal text. 57 of them reached the corpus inside the master resume and retrieval was matching against text with asterisks in it for four days before anyone looked."
+  }
+}

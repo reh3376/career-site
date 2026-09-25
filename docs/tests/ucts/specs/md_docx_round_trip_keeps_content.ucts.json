@@ -1,0 +1,36 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "docx",
+    "profile": "plain",
+    "round_trip": true
+  },
+  "fixture": {
+    "path": "../fixtures/resume-contact-block.md",
+    "sha256": "f7cd00cbaa2e4e4ee17f6b31f8ef1bb478886dc9aab5c5da519b84bd0195183a"
+  },
+  "expected": {
+    "must_contain": [
+      "jordan.sample@example.com",
+      "555-0100",
+      "Applied Mathematics",
+      "2022",
+      "Jul 2026"
+    ],
+    "retains_fraction": 0.85
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "737ac717eb9510d316f3f90eccb67156a750f583cf81f4b1362b8ae5d8e415d3"
+  },
+  "metadata": {
+    "description": "Markdown converted to .docx and back keeps its contact details, its dates and the bulk of its text.",
+    "tags": [
+      "ucts",
+      "docx",
+      "round-trip"
+    ],
+    "regression_of": "Not a past incident but the shape of one. A one-way conversion can only be checked against what the author remembers the document said; a round trip can be checked against the document. The retains_fraction floor is deliberately 0.85 rather than 1.0 because whitespace normalisation and list-marker rewriting cost a few percent legitimately, while losing a section costs far more than that."
+  }
+}
