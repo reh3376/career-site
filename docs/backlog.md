@@ -152,6 +152,54 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **Requirement extraction drops the words that disambiguate a
+  requirement, and the judge then guesses wrong.** Found 2026-09-25 on a
+  capital-projects posting the owner rated a very strong match. It
+  scored 0.929, thirteen requirements met and one unmet, and the unmet
+  one was wrong for an instructive reason.
+
+  The posting asked for "front-end development of future major
+  investments, including scope definition, alternatives evaluation,
+  preliminary engineering and basis of design, cost and schedule
+  development, financial justification, and Early Equipment Management".
+  The extractor reduced that to **"Develop front-end development for
+  major investments"**, which is ambiguous on its own, and the judge
+  read it in the software sense. Its rationale: "The documents focus on
+  backend systems, controls, and software architecture rather than
+  front-end development for major investments."
+
+  In capital projects, front-end development means early-stage project
+  definition. In software it means the user interface. The phrase is the
+  same and the corpus is full of software, so the judge resolved the
+  ambiguity toward what it had seen most of.
+
+  **This is not a corpus gap and adding documents will not fix it.** It
+  will recur on any posting whose industry vocabulary collides with
+  software, which for this candidate is a large fraction of them: "the
+  platform", "architecture", "deployment", "integration", "pipeline",
+  "commissioning" all carry two meanings across his two fields.
+
+  The work, in the order that would settle it:
+
+  - Establish how often it happens before changing anything. Every
+    requirement and verdict is in `decision_log` with the evidence; the
+    rationales that name the wrong sense are findable by reading them.
+  - Then choose between two fixes rather than doing both by reflex.
+    Either the extracted requirement keeps enough of its own sentence to
+    disambiguate, which lengthens every judge prompt and therefore every
+    review, or the judge is shown the requirement's surrounding text as
+    context separate from the evidence. The first is simpler; the second
+    costs fewer tokens.
+  - Whichever is chosen, the golden set decides whether it worked, and
+    this posting belongs in it as the case that exposed the fault.
+
+  **Do not let the corpus work absorb this.** The Whiskey House document
+  is about to be ingested and this posting re-run. If the score rises to
+  1.000, that will look like the document working, and it may instead be
+  capital-project evidence masking an extraction bug that is still
+  there. The two need opposite fixes and the distinction is worth
+  protecting.
+
 - **TOP PRIORITY. The startup probe confirms configuration, not
   capability.** On 2026-09-25, after a reboot, the judge was disabled by
   a failed health probe and the pipeline scored eight golden postings on
