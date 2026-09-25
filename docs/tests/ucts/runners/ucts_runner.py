@@ -41,7 +41,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from uxts_report import build_report, build_result, print_summary, save_report  # noqa: E402
