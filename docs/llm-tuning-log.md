@@ -1879,3 +1879,58 @@ re-run.** The baseline is 8/8 with 0 inversions and a margin of 0.143.
 A prompt change that improves one posting's reading can move others,
 and the only way to know is to measure. Until that run, the 8/8 figure
 describes a pipeline that no longer exists.
+
+## 2026-09-25: evaluation run 7, and a budget I did not adjust
+
+Run 7 was the first evaluation after the extraction fix and the corpus
+growth. Eight postings, 2 hours 51 minutes, on `141fda02df92` with
+`jd_requirements` v4 and `requirement_judge` v8.
+
+**Two of eight failed, and the cause was mine.** Both died on
+`decode jd_requirements output: unexpected end of JSON input`. Adding
+`source_quote` gave each requirement up to 300 more characters, against
+a call budgeted at 1,200 tokens. Twenty requirements at roughly 160
+tokens each is about 3,200, so the model ran out mid-object.
+
+The failures were marginal rather than universal, which is the
+signature and the reason it survived local testing: a 4,682-character
+posting fit and a 4,903-character one did not. Nothing in the unit
+tests exercises a full-length extraction, and the golden set was the
+first thing to try one.
+
+The budget is now 4,000 and derived from the schema's own limits rather
+than chosen. A cap costs nothing when it is not reached, so it is set
+where a full-length answer fits, not where a typical one does. The
+decode error now distinguishes truncation from malformed JSON by
+checking whether the completion hit the cap, because those need
+opposite fixes and the message pointed at neither.
+
+**What the six that ran do and do not say.**
+
+    gate correct      6 of 6
+    inversions        0
+    margin            0.214
+
+    above gate   1.000  0.893  0.857
+    below gate   0.643  0.500  0.250
+
+Gate accuracy and zero inversions are real: every posting landed on the
+side it was expected to, and no below-gate posting outscored an
+above-gate one.
+
+**The margin is not comparable to the 0.143 baseline and should not be
+reported as an improvement.** It is the gap between the lowest
+above-gate score and the highest below-gate one, and both postings that
+failed were above-gate. Their scores are missing from the calculation
+entirely. If either had scored below 0.857 the margin would be smaller,
+and the two that failed are the two longest above-gate postings, which
+are not obviously the easiest. The number is computed over a subset
+chosen by a bug, so it measures the subset.
+
+**The prediction I committed to could not be tested.** I said the
+Heaven Hill posting's front-end requirement should stop reading as web
+development, and that if it did not, the fix had not worked. It is in
+`golden_postings` and active, but its `expected_gate` is empty, so it
+is excluded from scoring and never ran. That prediction is still
+outstanding and needs a single submission through the new pipeline to
+settle.
