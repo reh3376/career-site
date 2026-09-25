@@ -380,19 +380,35 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   platform", "architecture", "deployment", "integration", "pipeline",
   "commissioning" all carry two meanings across his two fields.
 
-  The work, in the order that would settle it:
+  **FIXED 2026-09-25.** Of the two options set out here, the second was
+  taken: the judge is shown the posting's own words as context separate
+  from the evidence. Each requirement now carries `source_quote`, a
+  span copied verbatim from the posting, rendered as `<posting_says>`
+  beside the requirement, and rule 6a tells the judge the quote decides
+  the meaning where it and the summary differ. Extraction rule 3b names
+  the ambiguity class directly, with this posting's sentence as the
+  worked example. `jd_requirements` v4, `requirement_judge` v8.
 
-  - Establish how often it happens before changing anything. Every
-    requirement and verdict is in `decision_log` with the evidence; the
-    rationales that name the wrong sense are findable by reading them.
-  - Then choose between two fixes rather than doing both by reflex.
-    Either the extracted requirement keeps enough of its own sentence to
-    disambiguate, which lengthens every judge prompt and therefore every
-    review, or the judge is shown the requirement's surrounding text as
-    context separate from the evidence. The first is simpler; the second
-    costs fewer tokens.
-  - Whichever is chosen, the golden set decides whether it worked, and
-    this posting belongs in it as the case that exposed the fault.
+  A composed quote would be worse than none, since it looks like
+  evidence and is not, so `validateRequirements` checks every quote
+  against the posting text and drops any not found there, forgiving
+  only whitespace and case. The requirement survives; only the quote
+  goes. `internal/jd/quote_test.go` covers eight cases including the
+  paraphrase that started this, which is rejected.
+
+  **Still open, and it is the part that decides whether the fix
+  worked.** Two things were skipped to get the fix in:
+
+  - The prevalence measurement this entry originally called for. Every
+    requirement and verdict is in `decision_log` with its evidence, and
+    the rationales that name the wrong sense are findable by reading
+    them. Worth doing now as an after measurement rather than a before
+    one: it says how much of the problem the fix actually removed.
+  - **Re-run the golden set.** The baseline is 8/8, 0 inversions,
+    margin 0.143, and it describes a pipeline that no longer exists. A
+    prompt change that improves one posting's reading can move others.
+    The Heaven Hill posting belongs in the set permanently as the case
+    that exposed the fault.
 
   **Do not let the corpus work absorb this.** The Whiskey House document
   is about to be ingested and this posting re-run. If the score rises to

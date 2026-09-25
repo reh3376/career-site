@@ -234,7 +234,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		return nil, fmt.Errorf("requirements: %w", err)
 	}
 	out.Model = reqCall.Model
-	reqs, err := validateRequirements(reqDoc.Requirements)
+	reqs, err := validateRequirements(reqDoc.Requirements, jdText)
 	if err != nil {
 		return nil, fmt.Errorf("requirements: %w", err)
 	}
@@ -525,7 +525,26 @@ func verdictValue(v string) float64 {
 	}
 }
 
-func validateRequirements(in []prompts.Requirement) ([]prompts.Requirement, error) {
+// normaliseForQuote collapses whitespace and lowercases, so a quote
+// the model re-wrapped still matches the posting it came from. Only
+// whitespace and case are forgiven; a changed word is a changed quote.
+func normaliseForQuote(s string) string {
+	return strings.ToLower(strings.Join(strings.Fields(s), " "))
+}
+
+// quoteAppearsIn reports whether the quote is genuinely a span of the
+// posting. A source quote exists to give the judge the posting's own
+// words, so one the model composed rather than copied is worse than
+// none at all: it looks like evidence and is not.
+func quoteAppearsIn(quote, jd string) bool {
+	q := normaliseForQuote(quote)
+	if q == "" {
+		return false
+	}
+	return strings.Contains(normaliseForQuote(jd), q)
+}
+
+func validateRequirements(in []prompts.Requirement, jdText string) ([]prompts.Requirement, error) {
 	if len(in) == 0 {
 		return nil, errors.New("no requirements extracted")
 	}
@@ -548,6 +567,13 @@ func validateRequirements(in []prompts.Requirement) ([]prompts.Requirement, erro
 		}
 		if r.Weight < 1 || r.Weight > 3 {
 			r.Weight = 2
+		}
+		r.SourceQuote = strings.TrimSpace(r.SourceQuote)
+		if r.SourceQuote != "" && !quoteAppearsIn(r.SourceQuote, jdText) {
+			// Dropped rather than kept with a caveat. The judge cannot
+			// tell a copied quote from a composed one, so anything that
+			// reaches it must have been checked here.
+			r.SourceQuote = ""
 		}
 		out = append(out, r)
 	}
