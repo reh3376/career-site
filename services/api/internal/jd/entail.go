@@ -199,6 +199,17 @@ func partiesIn(line string) []string {
 			flush()
 			continue
 		}
+		// Punctuation ends a name, it does not vanish from the middle of
+		// one. Stripping it and carrying on joined two separate things
+		// across a comma: "B.S. Applied Mathematics, West Virginia State
+		// University" became the single organisation "Applied Mathematics
+		// West Virginia State University", which appears in no source
+		// because it does not exist. That dropped the candidate's degrees
+		// from a generated résumé on 2026-09-25. A comma, semicolon,
+		// bracket or full stop after a word closes the run it was part
+		// of.
+		endsRun := strings.ContainsAny(w[len(w)-1:], ".,;:()[]")
+
 		lower := strings.ToLower(trimmed)
 		if isAcronym(trimmed) && !commonCapitalised[lower] {
 			out = append(out, trimmed)
@@ -211,6 +222,9 @@ func partiesIn(line string) []string {
 				runStart = i
 			}
 			run = append(run, trimmed)
+			if endsRun {
+				flush()
+			}
 			continue
 		}
 		flush()
