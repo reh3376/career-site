@@ -84,6 +84,54 @@ def merge_bold_runs(text: str) -> tuple[str, int]:
     return text.replace("****", ""), count
 
 
+def preserve_row_blocks(text: str) -> tuple[str, int]:
+    """Keep a block laid out as rows from collapsing into a paragraph.
+
+    Markdown joins consecutive lines into one paragraph, which is right
+    for prose and wrong for a competencies block written as rows of
+    pipe-delimited terms. Roger's Heaven Hill résumé lays ten rows out
+    that way; rendered without this, they run together and "Alternatives
+    and Best Value Options Analysis" is followed on the same line by
+    "Total Installed Cost Estimating".
+
+    The obvious fix, pandoc's hard_line_breaks extension, turns every
+    newline into a break and so destroys every wrapped prose paragraph
+    in the archive. This is narrower: only a run of two or more adjacent
+    lines that each carry a pipe separator, which prose does not.
+
+    Applied at render time rather than to the source, because the source
+    is the author's document and this is a presentation concern.
+    """
+    lines = text.split("\n")
+
+    def is_row(line: str) -> bool:
+        s = line.strip()
+        return (
+            " | " in s
+            and not s.startswith(("#", "-", "*", ">", "|"))
+            and not s.endswith("|")
+        )
+
+    out, marked, i = [], 0, 0
+    while i < len(lines):
+        run_end = i
+        while run_end < len(lines) and is_row(lines[run_end]):
+            run_end += 1
+        if run_end - i >= 2:
+            # Every line but the last gets a hard break; the last ends
+            # the block normally so the following blank line still
+            # closes the paragraph.
+            for j in range(i, run_end - 1):
+                out.append(lines[j].rstrip() + "  ")
+                marked += 1
+            out.append(lines[run_end - 1])
+            i = run_end
+        else:
+            out.append(lines[i])
+            i += 1
+    return "\n".join(out), marked
+
+
 def promote_headings(text: str) -> tuple[str, int]:
     out, promoted = [], 0
     for line in text.split("\n"):

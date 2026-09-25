@@ -1,0 +1,38 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "pdf",
+    "profile": "resume"
+  },
+  "fixture": {
+    "path": "../fixtures/row-layout-block.md",
+    "sha256": "1ba61253bc283828528458fbd181796b8fdeab56899873ff093a805362105d8e"
+  },
+  "expected": {
+    "must_match": [
+      "(?m)^Total Installed Cost Estimating",
+      "(?m)^Risk Registers",
+      "(?m)^Construction Management"
+    ],
+    "must_not_contain": [
+      "Basis of Design Total Installed Cost Estimating",
+      "Cost Forecasting Risk Registers"
+    ],
+    "max_pages": 1
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "efdcfd83a2c810eac94e16bfba9950abd12a75be18c9ad251941fca2472faf7c"
+  },
+  "metadata": {
+    "description": "A competencies block laid out as rows renders as rows. Each row begins a line in the PDF rather than being run into its predecessor.",
+    "tags": [
+      "ucts",
+      "layout",
+      "resume",
+      "regression"
+    ],
+    "regression_of": "2026-09-25: Roger's hand-written Heaven Hill resume lays its competencies out as ten pipe-delimited rows. Markdown treats consecutive lines as one paragraph, so the render joined them and ten scannable rows became a wall of text reading 'Options Analysis Total Installed Cost Estimating'. No content was lost, which is why the QA pass missed it: it checked for missing strings and artifacts, not for preserved line structure. One resume of sixty was affected, and it was the one Roger opened first."
+  }
+}

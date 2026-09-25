@@ -109,10 +109,11 @@ def sanitise(md: Path, tmp: Path) -> Path:
     import sys as _sys
 
     _sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from resume_to_md import merge_bold_runs
+    from resume_to_md import merge_bold_runs, preserve_row_blocks
 
     text, merged = merge_bold_runs(md.read_text(encoding="utf-8"))
-    if not merged:
+    text, rows = preserve_row_blocks(text)
+    if not merged and not rows:
         return md
     clean = tmp / (md.stem + ".clean.md")
     clean.write_text(text, encoding="utf-8")

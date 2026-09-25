@@ -1,0 +1,31 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "md",
+    "profile": "plain"
+  },
+  "fixture": {
+    "path": "../fixtures/row-layout-block.md",
+    "sha256": "1ba61253bc283828528458fbd181796b8fdeab56899873ff093a805362105d8e"
+  },
+  "expected": {
+    "must_contain": [
+      "An ordinary prose paragraph, wrapped in the source across several lines the way prose usually is, and these lines are a single sentence that must be joined on render."
+    ],
+    "min_chars": 300
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "3e863409b2a8b230123ec07caaf64b6473b74e561239e2f415b5e9111a51a7ec"
+  },
+  "metadata": {
+    "description": "Prose wrapped across source lines is still joined into one paragraph. The guard against over-correcting the row-layout fix.",
+    "tags": [
+      "ucts",
+      "layout",
+      "guard"
+    ],
+    "regression_of": "The obvious fix for the row-layout defect is pandoc's hard_line_breaks extension, which turns every newline into a line break. That preserves the rows and destroys every prose paragraph in the archive, since résumé summaries are wrapped in the source exactly as this one is. This spec exists so the cure cannot ship without the disease being checked for. It runs md to md with --wrap=none, where a correctly joined paragraph is a single line and a wrongly broken one is not."
+  }
+}
