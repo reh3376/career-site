@@ -291,17 +291,27 @@ type ComparisonRow struct {
 // ReviewerComparison returns every posting in the last completed
 // evaluation beside its score in the one before it.
 //
-// Empty until two evaluations have completed, which is the honest
-// answer rather than a table of one column pretending to be evidence.
+// Empty until two evaluations have produced results, which is the
+// honest answer rather than a table of one column pretending to be
+// evidence. Completion is deliberately not required: a run stopped part
+// way still scored what it reached, and whether those scores reproduce
+// is the whole question.
 // The rounding to three places happens here so that "unchanged" means
 // the same thing as the number a reader sees, rather than differing in
 // a digit nobody is shown.
 func (r *Repo) ReviewerComparison(ctx context.Context) ([]ComparisonRow, error) {
 	const q = `
     WITH done AS (
-      SELECT id FROM eval_runs
-       WHERE tenant_id = $1 AND status = 'done' AND scored > 0
-       ORDER BY started_at DESC LIMIT 2
+      -- Runs that produced results, complete or not. A run stopped part
+      -- way still scored the postings it reached, and whether those
+      -- scores reproduce is exactly the question. Requiring completion
+      -- would throw away seven good measurements because an eighth
+      -- never ran.
+      SELECT r.id FROM eval_runs r
+       WHERE r.tenant_id = $1
+         AND EXISTS (SELECT 1 FROM eval_items i
+                      WHERE i.eval_run_id = r.id AND i.match_score IS NOT NULL)
+       ORDER BY r.started_at DESC LIMIT 2
     ), latest AS (SELECT min(id) AS id FROM (SELECT id FROM done ORDER BY id DESC LIMIT 1) x),
       prior AS (SELECT min(id) AS id FROM (SELECT id FROM done ORDER BY id ASC LIMIT 1) y)
     SELECT g.selection,
@@ -352,4 +362,56 @@ func (c ComparisonRow) PublicLabel() string {
 		return "drawn at random"
 	}
 	return "drawn at random: " + c.RoleHint
+}
+
+// PipelineStatus is how many submissions sit at one status, and how
+// long the oldest has been there.
+type PipelineStatus struct {
+	Status string
+	Count  int
+	Oldest *time.Time
+}
+
+// PipelineCounts groups real submissions by status. Evaluation rows are
+// excluded: they are a test of the reviewer rather than a queue of work
+// waiting on it, and counting them would make the pipeline look backed
+// up every time an evaluation runs.
+func (r *Repo) PipelineCounts(ctx context.Context) ([]PipelineStatus, error) {
+	const q = `
+    SELECT status, count(*), min(created_at)
+      FROM jd_submissions
+     WHERE tenant_id = $1 AND NOT is_eval
+     GROUP BY status
+     ORDER BY count(*) DESC
+  `
+	rows, err := r.pool.Query(ctx, q, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return nil, fmt.Errorf("pipeline counts: %w", err)
+	}
+	defer rows.Close()
+	var out []PipelineStatus
+	for rows.Next() {
+		var p PipelineStatus
+		if err := rows.Scan(&p.Status, &p.Count, &p.Oldest); err != nil {
+			return nil, fmt.Errorf("scan pipeline count: %w", err)
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// LLMActivity summarises the last hour of model calls: whether the box
+// is working, and whether it is failing while it does.
+func (r *Repo) LLMActivity(ctx context.Context) (calls, failures int, avgSeconds float64, err error) {
+	const q = `
+    SELECT count(*), count(*) FILTER (WHERE NOT ok),
+           COALESCE(round(avg(latency_ms) / 1000.0, 1), 0)::float8
+      FROM llm_usage
+     WHERE tenant_id = $1 AND created_at > now() - interval '1 hour'
+  `
+	if err := r.pool.QueryRow(ctx, q, tenant.FromContext(ctx).Int64()).
+		Scan(&calls, &failures, &avgSeconds); err != nil {
+		return 0, 0, 0, fmt.Errorf("llm activity: %w", err)
+	}
+	return calls, failures, avgSeconds, nil
 }

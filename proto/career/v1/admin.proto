@@ -339,6 +339,13 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns what the box is doing right now: jobs the runner knows
+  // about, the submission pipeline, recent model activity and host
+  // load. Backs /admin/ops.
+  rpc GetOpsStatus(GetOpsStatusRequest) returns (GetOpsStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Returns the criteria as a gate: one row per criterion with pass,
   // value, target and as_of, read from the views that define them.
   // /admin/analytics shows the same numbers arranged for reading; this
@@ -2374,3 +2381,72 @@ message SetJdSubmissionLimitResponse {
   int32 window_hours = 2;
 }
 
+
+// Empty.
+message GetOpsStatusRequest {}
+
+// What the box is doing.
+//
+// The reason this exists: the job runner keeps jobs in memory, so a
+// deploy recreates the api container and any running job dies with it.
+// That happened twice on 2026-09-24, the second time losing an
+// evaluation seven postings in. A deploy is safe or unsafe depending on
+// this answer, and it was not visible anywhere.
+message GetOpsStatusResponse {
+  // Jobs the runner still remembers, newest first. Finished jobs are
+  // forgotten after a day.
+  repeated JobRow jobs = 1;
+  // True when any job is running or queued, which is the one thing to
+  // check before deploying.
+  bool busy = 2;
+  // Submissions by pipeline status.
+  repeated PipelineCount pipeline = 3;
+  // The most recent evaluation, running or not.
+  EvalRun latest_eval = 4;
+  // Model calls in the last hour.
+  int32 calls_last_hour = 5;
+  // Of those, how many failed.
+  int32 call_failures_last_hour = 6;
+  // Average seconds per call in the last hour.
+  double avg_call_seconds = 7;
+  // Host load average over one minute, as the kernel reports it.
+  double load_1 = 8;
+  // Over five minutes.
+  double load_5 = 9;
+  // Total host memory in megabytes.
+  int32 mem_total_mb = 10;
+  // Host memory available in megabytes.
+  int32 mem_available_mb = 11;
+  // Free disk in gigabytes on the filesystem the api is running from.
+  int32 disk_free_gb = 12;
+  // Total disk in gigabytes on that filesystem.
+  int32 disk_total_gb = 13;
+}
+
+// One job the runner remembers.
+message JobRow {
+  // Runner id.
+  string id = 1;
+  // Which kind of work.
+  string kind = 2;
+  // queued, running, succeeded, failed or cancelled.
+  string status = 3;
+  // Percent complete, 0 when the job does not report progress.
+  int32 progress = 4;
+  // What it is doing, or what it finished with.
+  string summary = 5;
+  // When it started.
+  google.protobuf.Timestamp started_at = 6;
+  // When it ended; unset while running.
+  google.protobuf.Timestamp finished_at = 7;
+}
+
+// How many submissions sit at one pipeline status.
+message PipelineCount {
+  // The status.
+  string status = 1;
+  // How many.
+  int32 count = 2;
+  // The oldest one still at this status, for spotting something stuck.
+  google.protobuf.Timestamp oldest = 3;
+}

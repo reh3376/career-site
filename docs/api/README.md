@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 54 |
+| [`AdminService`](#adminservice) | Owner console. | 55 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1656,6 +1656,7 @@ Owner console.
 | [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
 | [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
 | [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
+| [`GetOpsStatus`](#adminservice-getopsstatus) | `/api/career.v1.AdminService/GetOpsStatus` | Admin (fresh MFA) | default | `GetOpsStatusRequest` → `GetOpsStatusResponse` | Returns what the box is doing right now: jobs the runner knows about, the submission pipeline, recent model activity and host load. |
 | [`GetGate`](#adminservice-getgate) | `/api/career.v1.AdminService/GetGate` | Admin (fresh MFA) | default | `GetGateRequest` → `GetGateResponse` | Returns the criteria as a gate: one row per criterion with pass, value, target and as_of, read from the views that define them. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
@@ -3235,6 +3236,44 @@ _No fields; send `{}`._
 | `completionTokens` | `int64` | string (decimal) |  | Completion tokens in the last 30 days. |
 | `latestEval` | [`EvalRun`](#evalrun) | object |  | Newest finished evaluation; unset before the first one. |
 | `outcomes` | [`OutcomeByFit`](#outcomebyfit)[] | array of object |  | Fit band against recorded outcomes. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.GetOpsStatus
+
+`POST /api/career.v1.AdminService/GetOpsStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns what the box is doing right now: jobs the runner knows
+about, the submission pipeline, recent model activity and host
+load. Backs /admin/ops.
+
+**Request** — [`GetOpsStatusRequest`](#getopsstatusrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetOpsStatusResponse`](#getopsstatusresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jobs` | [`JobRow`](#jobrow)[] | array of object |  | Jobs the runner still remembers, newest first. Finished jobs are forgotten after a day. |
+| `busy` | `bool` | boolean |  | True when any job is running or queued, which is the one thing to check before deploying. |
+| `pipeline` | [`PipelineCount`](#pipelinecount)[] | array of object |  | Submissions by pipeline status. |
+| `latestEval` | [`EvalRun`](#evalrun) | object |  | The most recent evaluation, running or not. |
+| `callsLastHour` | `int32` | number |  | Model calls in the last hour. |
+| `callFailuresLastHour` | `int32` | number |  | Of those, how many failed. |
+| `avgCallSeconds` | `double` | number |  | Average seconds per call in the last hour. |
+| `load1` | `double` | number |  | Host load average over one minute, as the kernel reports it. |
+| `load5` | `double` | number |  | Over five minutes. |
+| `memTotalMb` | `int32` | number |  | Total host memory in megabytes. |
+| `memAvailableMb` | `int32` | number |  | Host memory available in megabytes. |
+| `diskFreeGb` | `int32` | number |  | Free disk in gigabytes on the filesystem the api is running from. |
+| `diskTotalGb` | `int32` | number |  | Total disk in gigabytes on that filesystem. |
 
 <details><summary>Example request body</summary>
 
@@ -6437,6 +6476,62 @@ The limit as stored.
 |---|---|---|---|---|
 | `limit` | `int32` | number |  | Stored limit. |
 | `windowHours` | `int32` | number |  | How long the window is, in hours. |
+
+### GetOpsStatusRequest
+
+Empty.
+
+_No fields._
+
+### GetOpsStatusResponse
+
+What the box is doing.
+
+The reason this exists: the job runner keeps jobs in memory, so a
+deploy recreates the api container and any running job dies with it.
+That happened twice on 2026-09-24, the second time losing an
+evaluation seven postings in. A deploy is safe or unsafe depending on
+this answer, and it was not visible anywhere.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jobs` | [`JobRow`](#jobrow)[] | array of object |  | Jobs the runner still remembers, newest first. Finished jobs are forgotten after a day. |
+| `busy` | `bool` | boolean |  | True when any job is running or queued, which is the one thing to check before deploying. |
+| `pipeline` | [`PipelineCount`](#pipelinecount)[] | array of object |  | Submissions by pipeline status. |
+| `latestEval` | [`EvalRun`](#evalrun) | object |  | The most recent evaluation, running or not. |
+| `callsLastHour` | `int32` | number |  | Model calls in the last hour. |
+| `callFailuresLastHour` | `int32` | number |  | Of those, how many failed. |
+| `avgCallSeconds` | `double` | number |  | Average seconds per call in the last hour. |
+| `load1` | `double` | number |  | Host load average over one minute, as the kernel reports it. |
+| `load5` | `double` | number |  | Over five minutes. |
+| `memTotalMb` | `int32` | number |  | Total host memory in megabytes. |
+| `memAvailableMb` | `int32` | number |  | Host memory available in megabytes. |
+| `diskFreeGb` | `int32` | number |  | Free disk in gigabytes on the filesystem the api is running from. |
+| `diskTotalGb` | `int32` | number |  | Total disk in gigabytes on that filesystem. |
+
+### JobRow
+
+One job the runner remembers.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Runner id. |
+| `kind` | `string` | string |  | Which kind of work. |
+| `status` | `string` | string |  | queued, running, succeeded, failed or cancelled. |
+| `progress` | `int32` | number |  | Percent complete, 0 when the job does not report progress. |
+| `summary` | `string` | string |  | What it is doing, or what it finished with. |
+| `startedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it started. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ended; unset while running. |
+
+### PipelineCount
+
+How many submissions sit at one pipeline status.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | `string` | string |  | The status. |
+| `count` | `int32` | number |  | How many. |
+| `oldest` | `Timestamp` | string (RFC 3339, UTC) |  | The oldest one still at this status, for spotting something stuck. |
 
 ### RegisterRequest
 

@@ -1753,3 +1753,65 @@ class SetJdSubmissionLimitResponse(_message.Message):
     limit: int
     window_hours: int
     def __init__(self, limit: _Optional[int] = ..., window_hours: _Optional[int] = ...) -> None: ...
+
+class GetOpsStatusRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetOpsStatusResponse(_message.Message):
+    __slots__ = ("jobs", "busy", "pipeline", "latest_eval", "calls_last_hour", "call_failures_last_hour", "avg_call_seconds", "load_1", "load_5", "mem_total_mb", "mem_available_mb", "disk_free_gb", "disk_total_gb")
+    JOBS_FIELD_NUMBER: _ClassVar[int]
+    BUSY_FIELD_NUMBER: _ClassVar[int]
+    PIPELINE_FIELD_NUMBER: _ClassVar[int]
+    LATEST_EVAL_FIELD_NUMBER: _ClassVar[int]
+    CALLS_LAST_HOUR_FIELD_NUMBER: _ClassVar[int]
+    CALL_FAILURES_LAST_HOUR_FIELD_NUMBER: _ClassVar[int]
+    AVG_CALL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    LOAD_1_FIELD_NUMBER: _ClassVar[int]
+    LOAD_5_FIELD_NUMBER: _ClassVar[int]
+    MEM_TOTAL_MB_FIELD_NUMBER: _ClassVar[int]
+    MEM_AVAILABLE_MB_FIELD_NUMBER: _ClassVar[int]
+    DISK_FREE_GB_FIELD_NUMBER: _ClassVar[int]
+    DISK_TOTAL_GB_FIELD_NUMBER: _ClassVar[int]
+    jobs: _containers.RepeatedCompositeFieldContainer[JobRow]
+    busy: bool
+    pipeline: _containers.RepeatedCompositeFieldContainer[PipelineCount]
+    latest_eval: EvalRun
+    calls_last_hour: int
+    call_failures_last_hour: int
+    avg_call_seconds: float
+    load_1: float
+    load_5: float
+    mem_total_mb: int
+    mem_available_mb: int
+    disk_free_gb: int
+    disk_total_gb: int
+    def __init__(self, jobs: _Optional[_Iterable[_Union[JobRow, _Mapping]]] = ..., busy: _Optional[bool] = ..., pipeline: _Optional[_Iterable[_Union[PipelineCount, _Mapping]]] = ..., latest_eval: _Optional[_Union[EvalRun, _Mapping]] = ..., calls_last_hour: _Optional[int] = ..., call_failures_last_hour: _Optional[int] = ..., avg_call_seconds: _Optional[float] = ..., load_1: _Optional[float] = ..., load_5: _Optional[float] = ..., mem_total_mb: _Optional[int] = ..., mem_available_mb: _Optional[int] = ..., disk_free_gb: _Optional[int] = ..., disk_total_gb: _Optional[int] = ...) -> None: ...
+
+class JobRow(_message.Message):
+    __slots__ = ("id", "kind", "status", "progress", "summary", "started_at", "finished_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    kind: str
+    status: str
+    progress: int
+    summary: str
+    started_at: _timestamp_pb2.Timestamp
+    finished_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., kind: _Optional[str] = ..., status: _Optional[str] = ..., progress: _Optional[int] = ..., summary: _Optional[str] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PipelineCount(_message.Message):
+    __slots__ = ("status", "count", "oldest")
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    OLDEST_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    count: int
+    oldest: _timestamp_pb2.Timestamp
+    def __init__(self, status: _Optional[str] = ..., count: _Optional[int] = ..., oldest: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
