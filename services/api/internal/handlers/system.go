@@ -70,6 +70,20 @@ func (h *System) GetReviewerStatus(
 	if st.EvaluatedAt != nil {
 		resp.EvaluatedAt = timestamppb.New(*st.EvaluatedAt)
 	}
+	if rows, cErr := h.users.ReviewerComparison(ctx); cErr == nil {
+		for _, c := range rows {
+			resp.Comparison = append(resp.Comparison, &v1.ReviewerComparisonRow{
+				Label:     c.PublicLabel(),
+				Score:     c.Score,
+				Previous:  c.Previous,
+				Unchanged: c.Unchanged,
+			})
+		}
+	} else {
+		// The rest of the status is still worth returning; a missing
+		// comparison shows as an absent table rather than a broken page.
+		h.log.Warn("reviewer comparison unavailable", slog.String("error", cErr.Error()))
+	}
 	if b := st.Bands; b != nil {
 		resp.Bands = &v1.JdFitBandsPublic{
 			VeryStrong: b.VeryStrong, Strong: b.Strong,

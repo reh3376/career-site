@@ -146,6 +146,29 @@ message GetReviewerStatusResponse {
   // numbers derived from an environment default, which are right only
   // until the owner edits the bands.
   JdFitBandsPublic bands = 15;
+  // Every posting in the last completed evaluation beside its score in
+  // the evaluation before it. Empty until two have completed.
+  repeated ReviewerComparisonRow comparison = 16;
+}
+
+// One posting scored twice, which is the evidence that the same input
+// gives the same answer.
+//
+// Postings the owner applied for are labelled generically. Naming them
+// would tell those employers that he applied and what the reviewer
+// scored him at, which is his information to disclose and not a detail
+// the evidence needs. Randomly drawn postings carry their role, since
+// they are public advertisements and say nothing about him.
+message ReviewerComparisonRow {
+  // A description safe to publish, not the posting's stored name.
+  string label = 1;
+  // Score in the most recent completed evaluation.
+  double score = 2;
+  // Score in the evaluation before it. Unset when the posting was not
+  // in that one, which is what a newly added posting looks like.
+  optional double previous = 3;
+  // Whether the two agree to three decimal places.
+  bool unchanged = 4;
 }
 
 // The five fit bands: very strong, strong, possible, weak, very weak.
