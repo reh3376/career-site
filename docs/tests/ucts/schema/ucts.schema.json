@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rogerhenley.dev/schemas/ucts.schema.json",
+  "title": "UCTS, Universal Conversion Test Specification",
+  "description": "Declares one document conversion and what must be true of its output. Conversions between .md, .pdf, .docx and .typ are repeatable transforms, so their correctness is checkable rather than eyeballed. Every assertion here corresponds to a failure that actually occurred while converting Roger's résumé archive on 2026-09-25: a contact block silently dropped, Word's split bold runs surviving as asterisks, an en dash written as two hyphens so a date pattern stopped matching, and a résumé gaining a page its author had not written.",
+  "type": "object",
+  "required": ["ucts_version", "conversion", "fixture", "expected"],
+  "additionalProperties": false,
+  "properties": {
+    "ucts_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Spec dialect version. The runner refuses a major it does not implement rather than guessing."
+    },
+    "conversion": {
+      "type": "object",
+      "description": "What transform is under test.",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": ["md", "docx", "pdf"],
+          "description": "Input format."
+        },
+        "to": {
+          "type": "string",
+          "enum": ["md", "pdf", "docx"],
+          "description": "Output format."
+        },
+        "profile": {
+          "type": "string",
+          "enum": ["resume", "plain"],
+          "description": "Which converter configuration to use. 'resume' applies the Typst template and the density ladder; 'plain' is a bare pandoc conversion."
+        },
+        "round_trip": {
+          "type": "boolean",
+          "description": "Convert forward and back, then assert against the result. Catches loss that a one-way conversion hides."
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "description": "The input document. Hashed, so a spec cannot silently start testing different content than it was reviewed against.",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the fixture, relative to the spec file."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the fixture's bytes. Written by `add-hashes`, checked on every run."
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "The assertions. A spec with none is a failure, not a pass: the report treats zero evaluated assertions as a false pass and marks it failed.",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "must_contain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Strings that must survive the conversion. The contact block is the canonical case: the site's own résumé renderer has no field for one and drops it silently."
+        },
+        "must_not_contain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Strings that must not appear. Conversion artifacts live here: `****` is Word's bold run closing and reopening, which Markdown renders as literal asterisks."
+        },
+        "must_match": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regular expressions the output must match. Use for patterns whose punctuation varies by converter, such as a date range whose dash may be a hyphen, an en dash, or pandoc's two-hyphen escape."
+        },
+        "max_pages": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Page budget for a PDF output. Two is the standing rule for a résumé."
+        },
+        "min_chars": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Floor on extracted output length. Catches a conversion that produces a well-formed, nearly empty document."
+        },
+        "retains_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum share of the input's characters the output must retain. Whitespace normalisation costs a little; losing a section costs a lot."
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Runner settings and the spec's own integrity hash.",
+      "additionalProperties": false,
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "description": "Per-conversion timeout."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of this spec with this field removed. An edit that was not reviewed changes it, and the runner says so."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "What this spec is for, in words.",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "regression_of": {
+          "type": "string",
+          "description": "The incident this spec exists to prevent recurring. A spec that cannot name one is usually testing that the code does what the code does."
+        }
+      }
+    }
+  }
+}

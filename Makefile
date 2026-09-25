@@ -57,3 +57,14 @@ stage-corpus: ## Stage the private corpus into ./.corpus-private for the local d
 
 photos: ## Build gallery derivatives (WebP, EXIF stripped) from docs/personal/images per apps/web/content/photos
 	cd apps/web && node scripts/photos-build.mjs
+
+UCTS_PY ?= services/sidecar/.venv/bin/python
+
+ucts: ## Run the document-conversion test specs (UCTS)
+	@echo "Verifying UCTS spec integrity..."
+	$(UCTS_PY) docs/tests/ucts/runners/ucts_runner.py verify-hashes
+	@echo "Running UCTS specs..."
+	$(UCTS_PY) docs/tests/ucts/runners/ucts_runner.py validate-all
+
+ucts-hash: ## Rewrite UCTS spec and fixture hashes after an intentional edit
+	$(UCTS_PY) docs/tests/ucts/runners/ucts_runner.py add-hashes

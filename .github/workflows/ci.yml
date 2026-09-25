@@ -201,6 +201,44 @@ jobs:
         working-directory: services/sidecar
         run: uv run pytest
 
+  ucts:
+    name: ucts (document conversion)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      # pandoc converts; typst and pypdf come from the sidecar's own
+      # dependencies, so the suite runs against the same versions the
+      # conversion scripts use rather than a set pinned twice.
+      - name: install pandoc
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc
+
+      - name: sync deps
+        working-directory: services/sidecar
+        run: uv sync --frozen
+
+      # Integrity first. A spec edited without re-hashing is reported
+      # before any conversion runs, so a changed assertion cannot pass
+      # by being quietly different from the one that was reviewed.
+      - name: verify spec integrity
+        run: services/sidecar/.venv/bin/python docs/tests/ucts/runners/ucts_runner.py verify-hashes
+
+      - name: run conversion specs
+        run: services/sidecar/.venv/bin/python docs/tests/ucts/runners/ucts_runner.py validate-all --report ucts-report.json
+
+      - name: upload report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ucts-report
+          path: ucts-report.json
+          if-no-files-found: ignore
+
   web:
     name: web (typescript)
     runs-on: ubuntu-latest

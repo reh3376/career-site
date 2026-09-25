@@ -1,0 +1,37 @@
+{
+  "ucts_version": "1.0.0",
+  "conversion": {
+    "from": "md",
+    "to": "pdf",
+    "profile": "resume"
+  },
+  "fixture": {
+    "path": "../fixtures/resume-contact-block.md",
+    "sha256": "f7cd00cbaa2e4e4ee17f6b31f8ef1bb478886dc9aab5c5da519b84bd0195183a"
+  },
+  "expected": {
+    "must_contain": [
+      "jordan.sample@example.com",
+      "555-0100",
+      "linkedin.com/in/example",
+      "U.S. Citizen",
+      "Veteran"
+    ],
+    "max_pages": 2,
+    "min_chars": 900
+  },
+  "config": {
+    "timeout_ms": 120000,
+    "sha256": "b56a75a0056be75a8a961017151ab70c8ee5bd477d0fa8d85cf394e97a6347d3"
+  },
+  "metadata": {
+    "description": "A resume rendered to PDF keeps its contact block, its profile links and its citizenship and veteran status.",
+    "tags": [
+      "ucts",
+      "resume",
+      "contact",
+      "regression"
+    ],
+    "regression_of": "2026-09-25: the site's own resume renderer produced a clean, correct-looking PDF with no phone number and no email, because its JSON schema has no field for a contact block. Nothing errored and nothing warned. A resume with no way to contact its author is worse than no resume, and the only reason it was caught is that someone read the rendered text."
+  }
+}
