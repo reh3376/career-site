@@ -1649,3 +1649,50 @@ with a margin of 0.143, and that is the thing worth protecting.
 Recorded here because the next person to look at a 50-minute run will
 reach for the same optimisations, and should know they were measured,
 costed and declined rather than missed.
+
+## 2026-09-25: the reviewer scored eight postings without a reviewer
+
+The box was resized, rebooted, and an evaluation started. It finished in
+three seconds. Eight postings, every score between 0.620 and 0.718, four
+ordering violations, margin -0.054. The scores were cosine similarity.
+No requirements were extracted, no verdicts reached, no evidence read.
+
+The api log is the whole story:
+
+```
+01:48:17  jd assessor + résumé writer enabled   llm_provider: ollama:qwen3:4b-q8_0
+01:50:43  migrate failed: postgres connection refused
+01:50:44  jd assessor disabled; retrieval score is the gate   llm_provider: ""
+```
+
+On reboot the api started before postgres accepted connections, failed
+its migration, restarted, and on that restart the sidecar had not yet
+reported a model either. Whether the judge exists was decided by a
+single health probe at start-up, so an empty answer at that instant
+disabled it for the lifetime of the process. It never re-checked.
+
+**The degradation was silent and the output was plausible.** A retrieval
+score is a number between 0 and 1 that looks exactly like a match score.
+It went into the golden set as if it were a measurement. Had a member
+submitted a posting in that window they would have been given a score
+with nothing behind it, and the public page would have shown it.
+
+**What changed.** The probe now retries for thirty seconds, which covers
+the boot race. If it still reports no model, the scorer is not built at
+all: submissions stay at `received` and an evaluation refuses to start.
+Both say plainly that nothing happened, which retrieval-only scoring
+does not.
+
+**The principle, stated because it was already the rule everywhere
+else.** The model reports and the code decides, and the corollary is
+that when the model is absent the code must decline rather than
+substitute. Falling back to a cheaper number that resembles the real one
+is the worst available failure: it cannot be detected by looking at the
+output. `jd_runs` records the model per run, and that is how this was
+caught, after the fact.
+
+**The invalid run was deleted rather than kept.** Eight fabricated items
+removed, the run marked failed and voided in its note. The public
+comparison table draws from the two most recent runs with results, so
+leaving them would have put eight invented numbers on a page whose
+argument is that its numbers are checkable.

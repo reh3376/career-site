@@ -192,9 +192,28 @@ func main() {
 		// end-to-end exercises of the pipeline).
 		var assessor *jd.Assessor
 		var writer *jd.ResumeWriter
+		// Ask the sidecar what model is behind it, retrying, because this
+		// answer decides whether the reviewer exists for the whole life
+		// of the process.
+		//
+		// On 2026-09-25 the box rebooted, the api started before postgres
+		// was accepting connections, crashed on migrate, restarted, and
+		// on that restart the sidecar was not ready either. The probe
+		// returned nothing, the assessor was never built, and the
+		// pipeline quietly fell back to scoring on retrieval similarity.
+		// It then scored eight golden postings in three seconds with no
+		// verdicts behind any of them, and the numbers looked ordinary.
+		// One INFO line at boot was the only evidence.
 		provider := ""
-		if h, err := sc.Health(ctx); err == nil {
-			provider = h.LlmProvider
+		for attempt := 0; attempt < 10; attempt++ {
+			if h, err := sc.Health(ctx); err == nil && h.LlmProvider != "" {
+				provider = h.LlmProvider
+				break
+			}
+			if attempt == 0 {
+				log.Info("waiting for the sidecar to report a model")
+			}
+			time.Sleep(3 * time.Second)
 		}
 		if provider != "" && (cfg.LLMAllowStub || !strings.HasPrefix(provider, "stub")) {
 			gateway := llm.SidecarLLM{Client: sc}
@@ -206,14 +225,33 @@ func main() {
 				slog.Int("num_ctx", cfg.LLMNumCtx),
 				slog.Bool("pdf", cfg.ResumePDFOwnerPassword != ""))
 		} else {
-			log.Info("jd assessor disabled; retrieval score is the gate", slog.String("llm_provider", provider))
+			// A sidecar that cannot name a model means the reviewer is
+			// not available, and the reviewer is the product. Scoring on
+			// retrieval similarity alone produces a number between 0 and
+			// 1 that looks exactly like a real score and is not one: no
+			// requirements, no verdicts, no evidence. Publishing that to
+			// a hiring manager, or recording it in the golden set, is
+			// worse than refusing to score at all.
+			//
+			// So the scorer is left nil. Submissions stay at RECEIVED for
+			// triage and an evaluation refuses to start, both of which
+			// say plainly that nothing happened.
+			log.Error("jd assessor unavailable: the sidecar reported no model after retrying, so nothing will be scored",
+				slog.String("llm_provider", provider))
 		}
-		jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
-		jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
-		// Recorded on every run so a change in latency or in verdicts can
-		// be attributed to the machine rather than guessed at. One host
-		// today; the provider string is what distinguishes them.
-		jdScorer.SetHost(provider)
+		if assessor == nil {
+			// Nothing below this point is safe or meaningful without a
+			// scorer: the setters take a pointer receiver and the run
+			// record has no host to name.
+			log.Error("jd pipeline not wired; submissions will stay at received and evaluations will refuse to start")
+		} else {
+			jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
+			jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
+			// Recorded on every run so a change in latency or in verdicts can
+			// be attributed to the machine rather than guessed at. One host
+			// today; the provider string is what distinguishes them.
+			jdScorer.SetHost(provider)
+		}
 	}
 	if n, err := userRepo.FailStrandedJd(ctx); err != nil {
 		log.Warn("jd: stranded-run reconciliation failed", slog.String("error", err.Error()))
