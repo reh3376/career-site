@@ -277,3 +277,79 @@ func (r *Repo) ReviewerStatus(ctx context.Context) (*ReviewerStatus, error) {
 	}
 	return out, nil
 }
+
+// ComparisonRow is one golden posting scored in the two most recent
+// completed evaluations.
+type ComparisonRow struct {
+	Selection string
+	RoleHint  string
+	Score     float64
+	Previous  *float64
+	Unchanged bool
+}
+
+// ReviewerComparison returns every posting in the last completed
+// evaluation beside its score in the one before it.
+//
+// Empty until two evaluations have completed, which is the honest
+// answer rather than a table of one column pretending to be evidence.
+// The rounding to three places happens here so that "unchanged" means
+// the same thing as the number a reader sees, rather than differing in
+// a digit nobody is shown.
+func (r *Repo) ReviewerComparison(ctx context.Context) ([]ComparisonRow, error) {
+	const q = `
+    WITH done AS (
+      SELECT id FROM eval_runs
+       WHERE tenant_id = $1 AND status = 'done' AND scored > 0
+       ORDER BY started_at DESC LIMIT 2
+    ), latest AS (SELECT min(id) AS id FROM (SELECT id FROM done ORDER BY id DESC LIMIT 1) x),
+      prior AS (SELECT min(id) AS id FROM (SELECT id FROM done ORDER BY id ASC LIMIT 1) y)
+    SELECT g.selection,
+           COALESCE(g.role_hint, ''),
+           round(cur.match_score::numeric, 3)::float8,
+           round(prev.match_score::numeric, 3)::float8
+      FROM eval_items cur
+      JOIN golden_postings g ON g.id = cur.golden_id
+      LEFT JOIN eval_items prev
+        ON prev.golden_id = cur.golden_id
+       AND prev.eval_run_id = (SELECT id FROM prior)
+     WHERE cur.eval_run_id = (SELECT id FROM latest)
+       AND cur.match_score IS NOT NULL
+       AND (SELECT count(*) FROM done) = 2
+     ORDER BY cur.match_score DESC
+  `
+	rows, err := r.pool.Query(ctx, q, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return nil, fmt.Errorf("reviewer comparison: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ComparisonRow
+	for rows.Next() {
+		var c ComparisonRow
+		if err := rows.Scan(&c.Selection, &c.RoleHint, &c.Score, &c.Previous); err != nil {
+			return nil, fmt.Errorf("scan comparison row: %w", err)
+		}
+		c.Unchanged = c.Previous != nil && *c.Previous == c.Score
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// PublicLabel describes a posting without disclosing anything the owner
+// has not chosen to disclose.
+//
+// A posting he applied for is labelled by the fact that he applied,
+// nothing more. Naming it, or even its title, would tell that employer
+// he applied and what the reviewer scored him at. A randomly drawn
+// posting carries its role, because it is a public advertisement and
+// says nothing about him.
+func (c ComparisonRow) PublicLabel() string {
+	if c.Selection != "random" {
+		return "a role he applied for"
+	}
+	if c.RoleHint == "" {
+		return "drawn at random"
+	}
+	return "drawn at random: " + c.RoleHint
+}

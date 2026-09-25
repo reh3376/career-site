@@ -464,7 +464,10 @@ type GetReviewerStatusResponse struct {
 	// thresholds without a session. Without these an anonymous reader is shown
 	// numbers derived from an environment default, which are right only
 	// until the owner edits the bands.
-	Bands         *JdFitBandsPublic `protobuf:"bytes,15,opt,name=bands,proto3" json:"bands,omitempty"`
+	Bands *JdFitBandsPublic `protobuf:"bytes,15,opt,name=bands,proto3" json:"bands,omitempty"`
+	// Every posting in the last completed evaluation beside its score in
+	// the evaluation before it. Empty until two have completed.
+	Comparison    []*ReviewerComparisonRow `protobuf:"bytes,16,rep,name=comparison,proto3" json:"comparison,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -604,6 +607,94 @@ func (x *GetReviewerStatusResponse) GetBands() *JdFitBandsPublic {
 	return nil
 }
 
+func (x *GetReviewerStatusResponse) GetComparison() []*ReviewerComparisonRow {
+	if x != nil {
+		return x.Comparison
+	}
+	return nil
+}
+
+// One posting scored twice, which is the evidence that the same input
+// gives the same answer.
+//
+// Postings the owner applied for are labelled generically. Naming them
+// would tell those employers that he applied and what the reviewer
+// scored him at, which is his information to disclose and not a detail
+// the evidence needs. Randomly drawn postings carry their role, since
+// they are public advertisements and say nothing about him.
+type ReviewerComparisonRow struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A description safe to publish, not the posting's stored name.
+	Label string `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
+	// Score in the most recent completed evaluation.
+	Score float64 `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
+	// Score in the evaluation before it. Unset when the posting was not
+	// in that one, which is what a newly added posting looks like.
+	Previous *float64 `protobuf:"fixed64,3,opt,name=previous,proto3,oneof" json:"previous,omitempty"`
+	// Whether the two agree to three decimal places.
+	Unchanged     bool `protobuf:"varint,4,opt,name=unchanged,proto3" json:"unchanged,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewerComparisonRow) Reset() {
+	*x = ReviewerComparisonRow{}
+	mi := &file_career_v1_system_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewerComparisonRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewerComparisonRow) ProtoMessage() {}
+
+func (x *ReviewerComparisonRow) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_system_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewerComparisonRow.ProtoReflect.Descriptor instead.
+func (*ReviewerComparisonRow) Descriptor() ([]byte, []int) {
+	return file_career_v1_system_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ReviewerComparisonRow) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ReviewerComparisonRow) GetScore() float64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *ReviewerComparisonRow) GetPrevious() float64 {
+	if x != nil && x.Previous != nil {
+		return *x.Previous
+	}
+	return 0
+}
+
+func (x *ReviewerComparisonRow) GetUnchanged() bool {
+	if x != nil {
+		return x.Unchanged
+	}
+	return false
+}
+
 // The five fit bands: very strong, strong, possible, weak, very weak.
 //
 // Four numbers describe them, because each threshold opens a band and
@@ -628,7 +719,7 @@ type JdFitBandsPublic struct {
 
 func (x *JdFitBandsPublic) Reset() {
 	*x = JdFitBandsPublic{}
-	mi := &file_career_v1_system_proto_msgTypes[7]
+	mi := &file_career_v1_system_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -640,7 +731,7 @@ func (x *JdFitBandsPublic) String() string {
 func (*JdFitBandsPublic) ProtoMessage() {}
 
 func (x *JdFitBandsPublic) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_system_proto_msgTypes[7]
+	mi := &file_career_v1_system_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -653,7 +744,7 @@ func (x *JdFitBandsPublic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JdFitBandsPublic.ProtoReflect.Descriptor instead.
 func (*JdFitBandsPublic) Descriptor() ([]byte, []int) {
-	return file_career_v1_system_proto_rawDescGZIP(), []int{7}
+	return file_career_v1_system_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *JdFitBandsPublic) GetVeryStrong() float64 {
@@ -717,7 +808,7 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"frameworks\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12=\n" +
 	"\fpublished_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x1a\n" +
-	"\x18GetReviewerStatusRequest\"\xaf\x04\n" +
+	"\x18GetReviewerStatusRequest\"\xf1\x04\n" +
 	"\x19GetReviewerStatusResponse\x12\x16\n" +
 	"\x06graded\x18\x01 \x01(\x05R\x06graded\x12\x16\n" +
 	"\x06agreed\x18\x02 \x01(\x05R\x06agreed\x12#\n" +
@@ -736,8 +827,17 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"\x06margin\x18\f \x01(\x01H\x00R\x06margin\x88\x01\x01\x12=\n" +
 	"\fevaluated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\x12\x14\n" +
 	"\x05model\x18\x0e \x01(\tR\x05model\x121\n" +
-	"\x05bands\x18\x0f \x01(\v2\x1b.career.v1.JdFitBandsPublicR\x05bandsB\t\n" +
-	"\a_margin\"{\n" +
+	"\x05bands\x18\x0f \x01(\v2\x1b.career.v1.JdFitBandsPublicR\x05bands\x12@\n" +
+	"\n" +
+	"comparison\x18\x10 \x03(\v2 .career.v1.ReviewerComparisonRowR\n" +
+	"comparisonB\t\n" +
+	"\a_margin\"\x8f\x01\n" +
+	"\x15ReviewerComparisonRow\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
+	"\x05score\x18\x02 \x01(\x01R\x05score\x12\x1f\n" +
+	"\bprevious\x18\x03 \x01(\x01H\x00R\bprevious\x88\x01\x01\x12\x1c\n" +
+	"\tunchanged\x18\x04 \x01(\bR\tunchangedB\v\n" +
+	"\t_previous\"{\n" +
 	"\x10JdFitBandsPublic\x12\x1f\n" +
 	"\vvery_strong\x18\x01 \x01(\x01R\n" +
 	"veryStrong\x12\x16\n" +
@@ -764,7 +864,7 @@ func file_career_v1_system_proto_rawDescGZIP() []byte {
 	return file_career_v1_system_proto_rawDescData
 }
 
-var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_career_v1_system_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_career_v1_system_proto_goTypes = []any{
 	(*GetVersionRequest)(nil),           // 0: career.v1.GetVersionRequest
 	(*GetVersionResponse)(nil),          // 1: career.v1.GetVersionResponse
@@ -773,27 +873,29 @@ var file_career_v1_system_proto_goTypes = []any{
 	(*GetGovernanceStatusResponse)(nil), // 4: career.v1.GetGovernanceStatusResponse
 	(*GetReviewerStatusRequest)(nil),    // 5: career.v1.GetReviewerStatusRequest
 	(*GetReviewerStatusResponse)(nil),   // 6: career.v1.GetReviewerStatusResponse
-	(*JdFitBandsPublic)(nil),            // 7: career.v1.JdFitBandsPublic
-	(*timestamppb.Timestamp)(nil),       // 8: google.protobuf.Timestamp
+	(*ReviewerComparisonRow)(nil),       // 7: career.v1.ReviewerComparisonRow
+	(*JdFitBandsPublic)(nil),            // 8: career.v1.JdFitBandsPublic
+	(*timestamppb.Timestamp)(nil),       // 9: google.protobuf.Timestamp
 }
 var file_career_v1_system_proto_depIdxs = []int32{
-	8, // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
-	8, // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
-	3, // 2: career.v1.GetGovernanceStatusResponse.frameworks:type_name -> career.v1.FrameworkStatus
-	8, // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
-	8, // 4: career.v1.GetReviewerStatusResponse.evaluated_at:type_name -> google.protobuf.Timestamp
-	7, // 5: career.v1.GetReviewerStatusResponse.bands:type_name -> career.v1.JdFitBandsPublic
-	0, // 6: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
-	2, // 7: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
-	5, // 8: career.v1.SystemService.GetReviewerStatus:input_type -> career.v1.GetReviewerStatusRequest
-	1, // 9: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
-	4, // 10: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
-	6, // 11: career.v1.SystemService.GetReviewerStatus:output_type -> career.v1.GetReviewerStatusResponse
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	9,  // 0: career.v1.GetVersionResponse.built_at:type_name -> google.protobuf.Timestamp
+	9,  // 1: career.v1.FrameworkStatus.last_run_at:type_name -> google.protobuf.Timestamp
+	3,  // 2: career.v1.GetGovernanceStatusResponse.frameworks:type_name -> career.v1.FrameworkStatus
+	9,  // 3: career.v1.GetGovernanceStatusResponse.published_at:type_name -> google.protobuf.Timestamp
+	9,  // 4: career.v1.GetReviewerStatusResponse.evaluated_at:type_name -> google.protobuf.Timestamp
+	8,  // 5: career.v1.GetReviewerStatusResponse.bands:type_name -> career.v1.JdFitBandsPublic
+	7,  // 6: career.v1.GetReviewerStatusResponse.comparison:type_name -> career.v1.ReviewerComparisonRow
+	0,  // 7: career.v1.SystemService.GetVersion:input_type -> career.v1.GetVersionRequest
+	2,  // 8: career.v1.SystemService.GetGovernanceStatus:input_type -> career.v1.GetGovernanceStatusRequest
+	5,  // 9: career.v1.SystemService.GetReviewerStatus:input_type -> career.v1.GetReviewerStatusRequest
+	1,  // 10: career.v1.SystemService.GetVersion:output_type -> career.v1.GetVersionResponse
+	4,  // 11: career.v1.SystemService.GetGovernanceStatus:output_type -> career.v1.GetGovernanceStatusResponse
+	6,  // 12: career.v1.SystemService.GetReviewerStatus:output_type -> career.v1.GetReviewerStatusResponse
+	10, // [10:13] is the sub-list for method output_type
+	7,  // [7:10] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_system_proto_init() }
@@ -803,13 +905,14 @@ func file_career_v1_system_proto_init() {
 	}
 	file_career_v1_options_proto_init()
 	file_career_v1_system_proto_msgTypes[6].OneofWrappers = []any{}
+	file_career_v1_system_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_system_proto_rawDesc), len(file_career_v1_system_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

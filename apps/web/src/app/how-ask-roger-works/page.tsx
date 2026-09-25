@@ -361,6 +361,59 @@ export default async function HowAskRogerWorksPage() {
             every run.
           </p>
         </div>
+
+        {status && status.comparison.length > 0 ? (
+          <div className="mt-8">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              the same postings, scored before and after a prompt rewrite
+            </p>
+            <table className="mt-4 w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-left">
+                  <th className="py-2 pr-4 font-normal text-ink-3">posting</th>
+                  <th className="py-2 pr-4 text-right font-normal text-ink-3">
+                    before
+                  </th>
+                  <th className="py-2 pr-4 text-right font-normal text-ink-3">
+                    after
+                  </th>
+                  <th className="py-2 text-right font-normal text-ink-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {status.comparison.map((row, i) => (
+                  <tr key={`${row.label}-${i}`} className="border-b border-line">
+                    <td className="py-2 pr-4 text-ink-2">{row.label}</td>
+                    <td className="py-2 pr-4 text-right font-mono text-ink">
+                      {row.previous === undefined
+                        ? "not in that run"
+                        : row.previous.toFixed(3)}
+                    </td>
+                    <td className="py-2 pr-4 text-right font-mono text-ink">
+                      {row.score.toFixed(3)}
+                    </td>
+                    <td className="py-2 text-right font-mono text-[11px] uppercase tracking-[0.14em]">
+                      {row.previous === undefined ? (
+                        <span className="text-ink-4">new</span>
+                      ) : row.unchanged ? (
+                        <span className="text-success">same</span>
+                      ) : (
+                        <span className="text-danger">moved</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-4 text-sm leading-relaxed text-ink-3">
+              Read live from the evaluation records. The two postings Roger
+              applied for are not named: telling those employers he applied,
+              and what the reviewer scored him at, is his to disclose and is
+              not something the evidence needs. The rest are public job
+              advertisements drawn at random.
+            </p>
+          </div>
+        ) : null}
       </section>
     </div>
   );

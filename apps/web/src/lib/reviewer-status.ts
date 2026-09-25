@@ -24,9 +24,43 @@ export type ReviewerStatus = {
   margin?: number;
   evaluatedAt?: string;
   model: string;
+  comparison: ComparisonRow[];
+};
+
+// One posting scored in the two most recent completed evaluations.
+export type ComparisonRow = {
+  label: string;
+  score: number;
+  previous?: number;
+  unchanged: boolean;
 };
 
 type Raw = Partial<Record<keyof ReviewerStatus, unknown>>;
+
+type RawRow = {
+  label?: unknown;
+  score?: unknown;
+  previous?: unknown;
+  unchanged?: unknown;
+};
+
+// proto3 JSON omits zero values, so a score of exactly 0 arrives as an
+// absent field and a row that did not move arrives without `unchanged`
+// only when it is false. Both default correctly here.
+function readComparison(raw: unknown): ComparisonRow[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ComparisonRow[] = [];
+  for (const r of raw as RawRow[]) {
+    if (typeof r?.label !== "string") continue;
+    out.push({
+      label: r.label,
+      score: typeof r.score === "number" ? r.score : 0,
+      previous: typeof r.previous === "number" ? r.previous : undefined,
+      unchanged: r.unchanged === true,
+    });
+  }
+  return out;
+}
 
 function num(v: unknown): number {
   return typeof v === "number" ? v : 0;
@@ -55,6 +89,7 @@ export async function getReviewerStatus(): Promise<ReviewerStatus | undefined> {
       margin: typeof j.margin === "number" ? j.margin : undefined,
       evaluatedAt: typeof j.evaluatedAt === "string" ? j.evaluatedAt : undefined,
       model: typeof j.model === "string" ? j.model : "",
+      comparison: readComparison(j.comparison),
     };
     // Nothing graded and nothing scored means the page has nothing
     // true to say yet, which is different from the call failing.

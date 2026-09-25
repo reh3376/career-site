@@ -71,7 +71,7 @@ class GetReviewerStatusRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetReviewerStatusResponse(_message.Message):
-    __slots__ = ("graded", "agreed", "agreement_pct", "hard_disagreements", "too_harsh", "too_generous", "postings", "postings_random", "scored", "gate_correct", "inversions", "margin", "evaluated_at", "model", "bands")
+    __slots__ = ("graded", "agreed", "agreement_pct", "hard_disagreements", "too_harsh", "too_generous", "postings", "postings_random", "scored", "gate_correct", "inversions", "margin", "evaluated_at", "model", "bands", "comparison")
     GRADED_FIELD_NUMBER: _ClassVar[int]
     AGREED_FIELD_NUMBER: _ClassVar[int]
     AGREEMENT_PCT_FIELD_NUMBER: _ClassVar[int]
@@ -87,6 +87,7 @@ class GetReviewerStatusResponse(_message.Message):
     EVALUATED_AT_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     BANDS_FIELD_NUMBER: _ClassVar[int]
+    COMPARISON_FIELD_NUMBER: _ClassVar[int]
     graded: int
     agreed: int
     agreement_pct: float
@@ -102,7 +103,20 @@ class GetReviewerStatusResponse(_message.Message):
     evaluated_at: _timestamp_pb2.Timestamp
     model: str
     bands: JdFitBandsPublic
-    def __init__(self, graded: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., hard_disagreements: _Optional[int] = ..., too_harsh: _Optional[int] = ..., too_generous: _Optional[int] = ..., postings: _Optional[int] = ..., postings_random: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., inversions: _Optional[int] = ..., margin: _Optional[float] = ..., evaluated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., model: _Optional[str] = ..., bands: _Optional[_Union[JdFitBandsPublic, _Mapping]] = ...) -> None: ...
+    comparison: _containers.RepeatedCompositeFieldContainer[ReviewerComparisonRow]
+    def __init__(self, graded: _Optional[int] = ..., agreed: _Optional[int] = ..., agreement_pct: _Optional[float] = ..., hard_disagreements: _Optional[int] = ..., too_harsh: _Optional[int] = ..., too_generous: _Optional[int] = ..., postings: _Optional[int] = ..., postings_random: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., inversions: _Optional[int] = ..., margin: _Optional[float] = ..., evaluated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., model: _Optional[str] = ..., bands: _Optional[_Union[JdFitBandsPublic, _Mapping]] = ..., comparison: _Optional[_Iterable[_Union[ReviewerComparisonRow, _Mapping]]] = ...) -> None: ...
+
+class ReviewerComparisonRow(_message.Message):
+    __slots__ = ("label", "score", "previous", "unchanged")
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_FIELD_NUMBER: _ClassVar[int]
+    UNCHANGED_FIELD_NUMBER: _ClassVar[int]
+    label: str
+    score: float
+    previous: float
+    unchanged: bool
+    def __init__(self, label: _Optional[str] = ..., score: _Optional[float] = ..., previous: _Optional[float] = ..., unchanged: _Optional[bool] = ...) -> None: ...
 
 class JdFitBandsPublic(_message.Message):
     __slots__ = ("very_strong", "strong", "possible", "weak")

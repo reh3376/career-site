@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/system.proto.
  */
 export const file_career_v1_system: GenFile = /*@__PURE__*/
-  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhoKGEdldFJldmlld2VyU3RhdHVzUmVxdWVzdCKJAwoZR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZRIOCgZncmFkZWQYASABKAUSDgoGYWdyZWVkGAIgASgFEhUKDWFncmVlbWVudF9wY3QYAyABKAESGgoSaGFyZF9kaXNhZ3JlZW1lbnRzGAQgASgFEhEKCXRvb19oYXJzaBgFIAEoBRIUCgx0b29fZ2VuZXJvdXMYBiABKAUSEAoIcG9zdGluZ3MYByABKAUSFwoPcG9zdGluZ3NfcmFuZG9tGAggASgFEg4KBnNjb3JlZBgJIAEoBRIUCgxnYXRlX2NvcnJlY3QYCiABKAUSEgoKaW52ZXJzaW9ucxgLIAEoBRITCgZtYXJnaW4YDCABKAFIAIgBARIwCgxldmFsdWF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBW1vZGVsGA4gASgJEioKBWJhbmRzGA8gASgLMhsuY2FyZWVyLnYxLkpkRml0QmFuZHNQdWJsaWNCCQoHX21hcmdpbiJXChBKZEZpdEJhbmRzUHVibGljEhMKC3Zlcnlfc3Ryb25nGAEgASgBEg4KBnN0cm9uZxgCIAEoARIQCghwb3NzaWJsZRgDIAEoARIMCgR3ZWFrGAQgASgBMr4CCg1TeXN0ZW1TZXJ2aWNlElMKCkdldFZlcnNpb24SHC5jYXJlZXIudjEuR2V0VmVyc2lvblJlcXVlc3QaHS5jYXJlZXIudjEuR2V0VmVyc2lvblJlc3BvbnNlIgiAtRgBkLUYPBJuChNHZXRHb3Zlcm5hbmNlU3RhdHVzEiUuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXF1ZXN0GiYuY2FyZWVyLnYxLkdldEdvdmVybmFuY2VTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDwSaAoRR2V0UmV2aWV3ZXJTdGF0dXMSIy5jYXJlZXIudjEuR2V0UmV2aWV3ZXJTdGF0dXNSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldFJldmlld2VyU3RhdHVzUmVzcG9uc2UiCIC1GAGQtRg8QqUBCg1jb20uY2FyZWVyLnYxQgtTeXN0ZW1Qcm90b1ABWkJnaXRodWIuY29tL3JlaDMzNzYvY2FyZWVyLXNpdGUvc2VydmljZXMvYXBpL2dlbi9jYXJlZXIvdjE7Y2FyZWVydjGiAgNDWFiqAglDYXJlZXIuVjHKAglDYXJlZXJcVjHiAhVDYXJlZXJcVjFcR1BCTWV0YWRhdGHqAgpDYXJlZXI6OlYxYgZwcm90bzM", [file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChZjYXJlZXIvdjEvc3lzdGVtLnByb3RvEgljYXJlZXIudjEiEwoRR2V0VmVyc2lvblJlcXVlc3QikAEKEkdldFZlcnNpb25SZXNwb25zZRIPCgd2ZXJzaW9uGAEgASgJEg4KBmNvbW1pdBgCIAEoCRIsCghidWlsdF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZ29fdmVyc2lvbhgEIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YBSABKAkiHAoaR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3Qi7AEKD0ZyYW1ld29ya1N0YXR1cxIPCgdhY3JvbnltGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhEKCWdhdGVfbW9kZRgEIAEoCRISCgpzcGVjX2NvdW50GAUgASgFEg4KBnBhc3NlZBgGIAEoBRIOCgZmYWlsZWQYByABKAUSFwoPaGFzaGVzX3ZlcmlmaWVkGAggASgFEhkKEWhhc2hlc19taXNtYXRjaGVkGAkgASgFEi8KC2xhc3RfcnVuX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKPAQobR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlEi4KCmZyYW1ld29ya3MYASADKAsyGi5jYXJlZXIudjEuRnJhbWV3b3JrU3RhdHVzEg4KBmNvbW1pdBgCIAEoCRIwCgxwdWJsaXNoZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhoKGEdldFJldmlld2VyU3RhdHVzUmVxdWVzdCK/AwoZR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZRIOCgZncmFkZWQYASABKAUSDgoGYWdyZWVkGAIgASgFEhUKDWFncmVlbWVudF9wY3QYAyABKAESGgoSaGFyZF9kaXNhZ3JlZW1lbnRzGAQgASgFEhEKCXRvb19oYXJzaBgFIAEoBRIUCgx0b29fZ2VuZXJvdXMYBiABKAUSEAoIcG9zdGluZ3MYByABKAUSFwoPcG9zdGluZ3NfcmFuZG9tGAggASgFEg4KBnNjb3JlZBgJIAEoBRIUCgxnYXRlX2NvcnJlY3QYCiABKAUSEgoKaW52ZXJzaW9ucxgLIAEoBRITCgZtYXJnaW4YDCABKAFIAIgBARIwCgxldmFsdWF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBW1vZGVsGA4gASgJEioKBWJhbmRzGA8gASgLMhsuY2FyZWVyLnYxLkpkRml0QmFuZHNQdWJsaWMSNAoKY29tcGFyaXNvbhgQIAMoCzIgLmNhcmVlci52MS5SZXZpZXdlckNvbXBhcmlzb25Sb3dCCQoHX21hcmdpbiJsChVSZXZpZXdlckNvbXBhcmlzb25Sb3cSDQoFbGFiZWwYASABKAkSDQoFc2NvcmUYAiABKAESFQoIcHJldmlvdXMYAyABKAFIAIgBARIRCgl1bmNoYW5nZWQYBCABKAhCCwoJX3ByZXZpb3VzIlcKEEpkRml0QmFuZHNQdWJsaWMSEwoLdmVyeV9zdHJvbmcYASABKAESDgoGc3Ryb25nGAIgASgBEhAKCHBvc3NpYmxlGAMgASgBEgwKBHdlYWsYBCABKAEyvgIKDVN5c3RlbVNlcnZpY2USUwoKR2V0VmVyc2lvbhIcLmNhcmVlci52MS5HZXRWZXJzaW9uUmVxdWVzdBodLmNhcmVlci52MS5HZXRWZXJzaW9uUmVzcG9uc2UiCIC1GAGQtRg8Em4KE0dldEdvdmVybmFuY2VTdGF0dXMSJS5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1JlcXVlc3QaJi5jYXJlZXIudjEuR2V0R292ZXJuYW5jZVN0YXR1c1Jlc3BvbnNlIgiAtRgBkLUYPBJoChFHZXRSZXZpZXdlclN0YXR1cxIjLmNhcmVlci52MS5HZXRSZXZpZXdlclN0YXR1c1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0UmV2aWV3ZXJTdGF0dXNSZXNwb25zZSIIgLUYAZC1GDxCpQEKDWNvbS5jYXJlZXIudjFCC1N5c3RlbVByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Empty.
@@ -364,6 +364,14 @@ export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResp
    * @generated from field: career.v1.JdFitBandsPublic bands = 15;
    */
   bands?: JdFitBandsPublic | undefined;
+
+  /**
+   * Every posting in the last completed evaluation beside its score in
+   * the evaluation before it. Empty until two have completed.
+   *
+   * @generated from field: repeated career.v1.ReviewerComparisonRow comparison = 16;
+   */
+  comparison: ReviewerComparisonRow[];
 };
 
 /**
@@ -372,6 +380,56 @@ export type GetReviewerStatusResponse = Message<"career.v1.GetReviewerStatusResp
  */
 export const GetReviewerStatusResponseSchema: GenMessage<GetReviewerStatusResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_system, 6);
+
+/**
+ * One posting scored twice, which is the evidence that the same input
+ * gives the same answer.
+ *
+ * Postings the owner applied for are labelled generically. Naming them
+ * would tell those employers that he applied and what the reviewer
+ * scored him at, which is his information to disclose and not a detail
+ * the evidence needs. Randomly drawn postings carry their role, since
+ * they are public advertisements and say nothing about him.
+ *
+ * @generated from message career.v1.ReviewerComparisonRow
+ */
+export type ReviewerComparisonRow = Message<"career.v1.ReviewerComparisonRow"> & {
+  /**
+   * A description safe to publish, not the posting's stored name.
+   *
+   * @generated from field: string label = 1;
+   */
+  label: string;
+
+  /**
+   * Score in the most recent completed evaluation.
+   *
+   * @generated from field: double score = 2;
+   */
+  score: number;
+
+  /**
+   * Score in the evaluation before it. Unset when the posting was not
+   * in that one, which is what a newly added posting looks like.
+   *
+   * @generated from field: optional double previous = 3;
+   */
+  previous?: number | undefined;
+
+  /**
+   * Whether the two agree to three decimal places.
+   *
+   * @generated from field: bool unchanged = 4;
+   */
+  unchanged: boolean;
+};
+
+/**
+ * Describes the message career.v1.ReviewerComparisonRow.
+ * Use `create(ReviewerComparisonRowSchema)` to create a new message.
+ */
+export const ReviewerComparisonRowSchema: GenMessage<ReviewerComparisonRow> = /*@__PURE__*/
+  messageDesc(file_career_v1_system, 7);
 
 /**
  * The five fit bands: very strong, strong, possible, weak, very weak.
@@ -420,7 +478,7 @@ export type JdFitBandsPublic = Message<"career.v1.JdFitBandsPublic"> & {
  * Use `create(JdFitBandsPublicSchema)` to create a new message.
  */
 export const JdFitBandsPublicSchema: GenMessage<JdFitBandsPublic> = /*@__PURE__*/
-  messageDesc(file_career_v1_system, 7);
+  messageDesc(file_career_v1_system, 8);
 
 /**
  * Version and governance status.

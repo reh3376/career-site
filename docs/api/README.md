@@ -3588,6 +3588,7 @@ _No fields; send `{}`._
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
 | `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The five fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
+| `comparison` | [`ReviewerComparisonRow`](#reviewercomparisonrow)[] | array of object |  | Every posting in the last completed evaluation beside its score in the evaluation before it. Empty until two have completed. |
 
 <details><summary>Example request body</summary>
 
@@ -7337,6 +7338,25 @@ is worth less than the numbers it is failing on.
 | `evaluatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When that evaluation ran. |
 | `model` | `string` | string |  | The model that produced it. |
 | `bands` | [`JdFitBandsPublic`](#jdfitbandspublic) | object |  | The five fit bands in force, so a page can quote the real thresholds without a session. Without these an anonymous reader is shown numbers derived from an environment default, which are right only until the owner edits the bands. |
+| `comparison` | [`ReviewerComparisonRow`](#reviewercomparisonrow)[] | array of object |  | Every posting in the last completed evaluation beside its score in the evaluation before it. Empty until two have completed. |
+
+### ReviewerComparisonRow
+
+One posting scored twice, which is the evidence that the same input
+gives the same answer.
+
+Postings the owner applied for are labelled generically. Naming them
+would tell those employers that he applied and what the reviewer
+scored him at, which is his information to disclose and not a detail
+the evidence needs. Randomly drawn postings carry their role, since
+they are public advertisements and say nothing about him.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `label` | `string` | string |  | A description safe to publish, not the posting's stored name. |
+| `score` | `double` | number |  | Score in the most recent completed evaluation. |
+| `previous` | `double` | number |  | _(oneof `_previous`)_ Score in the evaluation before it. Unset when the posting was not in that one, which is what a newly added posting looks like. |
+| `unchanged` | `bool` | boolean |  | Whether the two agree to three decimal places. |
 
 ### JdFitBandsPublic
 
