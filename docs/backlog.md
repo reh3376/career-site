@@ -197,12 +197,42 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
     Production serves `qwen3:4b-q8_0`; a LoRA is trained on `qwen3-4b`
     and the result is converted. Adapter and base must match or the
     weights are meaningless.
-  - **Serving is its own task.** MLX emits safetensors; Ollama wants a
-    GGUF adapter referenced from a Modelfile. That conversion is a real
-    step with its own failure modes, and it adds a moving part to a
-    pipeline that spent 2026-09-25 learning what invisible state costs.
-    Whatever is served must be recorded on `jd_runs` beside the model,
-    or the next unexplained score difference will take an hour again.
+  - **Train as MDEMG already does, serve through Ollama** (owner,
+    2026-09-25). Training stays `mlx_lm.lora` on the M5 Max, exactly as
+    `mdemg/docs/features/` documents it. What career-site does not adopt
+    is MDEMG's MLX serving and benchmarking path: this pipeline hands
+    off at the GGUF boundary instead, because Ollama is llama.cpp
+    underneath and loads a GGUF adapter from a Modelfile.
+
+    The conversion is already solved and must not be rewritten:
+    MLX safetensors → `scripts/mlx_adapter_to_peft.py` → PEFT directory
+    → `scripts/vendor/llama_cpp/convert_lora_to_gguf.py` → GGUF LoRA.
+    MDEMG's 14B adapter comes out at 257 MB f16.
+
+    Whatever adapter is served must be recorded on `jd_runs` beside the
+    model, for the reason 2026-09-25 established twice: a run that
+    cannot say what it was configured with costs an hour the next time
+    two scores disagree.
+
+  - **Reuse MDEMG's failure record rather than rediscovering it.**
+    `PHASE-E3-RETRAIN-BENCHMARK-001` failed at −0.153 aggregate against
+    a promotion gate of −0.010, and the post-mortem names the causes.
+    Two apply here directly:
+
+    *Sequence length.* That run lost accuracy to `max_seq=4096` while
+    real prompts reached 5,899 tokens. The résumé prompt on this project
+    was measured at 4,845 input tokens, so it would be truncated by the
+    same default. Set the training sequence length from the measured
+    prompt, not from a default.
+
+    *A dropped family dominating the result.* One task family stripped
+    in an earlier phase drove most of the regression. The equivalent
+    risk here is training only on postings that scored well, which would
+    teach the writer to describe a candidate who always fits.
+
+    MDEMG's shape is also worth copying: a held-out benchmark run twice,
+    an aggregate weighted score, and a promotion gate with a number in
+    it rather than a judgment.
   - **The adapter shapes selection and phrasing. It must never become a
     source of facts.** That is the owner's own rule, retrieve rather
     than memorise. The existing guards hold the line: every résumé line
