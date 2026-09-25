@@ -33,6 +33,29 @@ docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q true \
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
+# The backups live on a separate volume, reached through a symlink at
+# /opt/career-site-backups. If that volume ever fails to mount, the
+# mountpoint is still an empty directory on the root disk, mkdir -p
+# happily creates the path inside it, and every dump after that
+# "succeeds" onto the disk the backups exist to survive. Nothing would
+# look wrong until the day it mattered.
+#
+# So: refuse unless the target sits on a different device from the root
+# filesystem. Set BACKUP_REQUIRE_SEPARATE_DEVICE=0 to allow a
+# same-device location deliberately, which is the right setting on a
+# machine that has no second volume.
+if [ "${BACKUP_REQUIRE_SEPARATE_DEVICE:-1}" = "1" ]; then
+  # -L matters: BACKUP_DIR is a symlink onto the volume, and without
+  # dereferencing, stat reports the device of the symlink itself, which
+  # is the root disk. That made this refuse the very arrangement it
+  # exists to protect.
+  backup_dev=$(stat -L -c %d "$BACKUP_DIR" 2>/dev/null || echo "")
+  root_dev=$(stat -L -c %d / 2>/dev/null || echo "")
+  if [ -n "$backup_dev" ] && [ "$backup_dev" = "$root_dev" ]; then
+    die "refusing to write backups to $BACKUP_DIR: it is on the root filesystem, which usually means the backup volume is not mounted. Set BACKUP_REQUIRE_SEPARATE_DEVICE=0 if that is intended."
+  fi
+fi
+
 stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
 dump="$BACKUP_DIR/career-$stamp.dump"
 globals="$BACKUP_DIR/globals-$stamp.sql"
