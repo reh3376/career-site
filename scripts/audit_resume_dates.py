@@ -217,12 +217,7 @@ def main() -> int:
         if not hard:
             continue
         print(f"\n{name}")
-        for f in hard:
-            if f["kind"] == "mismatch":
-                print(f"  MISMATCH  {f['employer']}: expected {f['expected']}, found {f['found']}")
-            else:
-                print(f"  STALE     {f['employer']}: expected {f['expected']}, found {f['found']}")
-            print(f"            {f['context']}")
+        print(f"  {len(hard)} sensitive finding(s) detected (details redacted)")
 
     counts: dict[str, int] = {}
     for findings in report.values():
