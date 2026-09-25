@@ -16,6 +16,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
 	"github.com/reh3376/career-site/services/api/internal/events"
@@ -1364,8 +1365,17 @@ func (a *Admin) RescoreJd(
 	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
 	// No deadline here: the scorer caps the queue wait and applies the
 	// pipeline timeout once the submission holds its slot.
+	// A rescore is the owner re-running his own review, so it sees the
+	// whole corpus, exactly as his own submission does.
+	//
+	// This was missed when retrieval scoping was added: the goroutine
+	// passed a bare context, the scope defaulted to public as designed,
+	// and a rescore searched 52 chunks instead of 241. Five requirements
+	// lost the evidence that proved them and the score fell from 0.929
+	// to 0.571 on identical input, which looked exactly like the
+	// pipeline being non-deterministic.
 	go func(id int64, text string, adminID int64) {
-		a.jdScorer.RescoreAndPersist(context.Background(), id, text, hints, adminID)
+		a.jdScorer.RescoreAndPersist(corpusscope.With(context.Background(), corpusscope.All), id, text, hints, adminID)
 	}(id, s.JdText, admin.ID)
 	return connect.NewResponse(&v1.RescoreJdResponse{Status: v1.JdStatus_JD_STATUS_SCORING}), nil
 }

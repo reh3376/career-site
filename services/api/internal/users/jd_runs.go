@@ -30,8 +30,10 @@ type JdRun struct {
 	EmbedderModel     string
 	Prompts           map[string]string // prompt id -> "v2:9f1c2e7a"
 	CorpusFingerprint string
-	CorpusDocuments   int
-	CorpusChunks      int
+	// RetrievalScope is what the run could read: all or public.
+	RetrievalScope  string
+	CorpusDocuments int
+	CorpusChunks    int
 
 	// Outcome.
 	ScoreFormula     string
@@ -68,16 +70,18 @@ func (r *Repo) StartJdRun(ctx context.Context, run JdRun) (int, error) {
     INSERT INTO jd_runs
       (run_id, tenant_id, submission_id, attempt, trigger, triggered_by, status,
        app_commit, host, model, num_ctx, embedder_model, prompts,
-       corpus_fingerprint, corpus_documents, corpus_chunks, queued_ms)
+       corpus_fingerprint, corpus_documents, corpus_chunks, queued_ms,
+       retrieval_scope)
     VALUES ($1::uuid, $2, $3,
             (SELECT coalesce(max(attempt), 0) + 1 FROM jd_runs WHERE submission_id = $3),
             $4, NULLIF($5, 0), 'running',
-            $6, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, $15)
+            $6, $7, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, $16)
     RETURNING attempt`,
 		run.RunID, tenant.FromContext(ctx).Int64(), run.SubmissionID,
 		run.Trigger, run.TriggeredBy,
 		run.AppCommit, run.Host, run.Model, run.NumCtx, run.EmbedderModel, string(raw),
 		run.CorpusFingerprint, run.CorpusDocuments, run.CorpusChunks, run.QueuedMs,
+		run.RetrievalScope,
 	).Scan(&attempt)
 	if err != nil {
 		return 0, fmt.Errorf("start jd run: %w", err)
