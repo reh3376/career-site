@@ -189,6 +189,11 @@ def main() -> int:
     ap.add_argument("--src", type=Path, default=Path("docs/personal/extracted/resume"))
     ap.add_argument("--chronology", type=Path, default=Path("docs/personal/chronology.json"))
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument(
+        "--context",
+        action="store_true",
+        help="also print the source line each finding came from. It is verbatim résumé text, so this is off by default.",
+    )
     args = ap.parse_args()
 
     if not args.chronology.exists():
@@ -217,7 +222,21 @@ def main() -> int:
         if not hard:
             continue
         print(f"\n{name}")
-        print(f"  {len(hard)} sensitive finding(s) detected (details redacted)")
+        for f in hard:
+            if f["kind"] == "mismatch":
+                print(f"  MISMATCH  {f['employer']}: expected {f['expected']}, found {f['found']}")
+            else:
+                print(f"  STALE     {f['employer']}: expected {f['expected']}, found {f['found']}")
+            # The context line is verbatim text from a résumé, so it is
+            # the one piece of output that reproduces the document
+            # rather than describing it. Off by default: the employer
+            # and the two dates are enough to decide whether a finding
+            # is real, and a report that is safe to paste into a chat
+            # or redirect to a file is more useful than one that is
+            # not. --context brings it back for the cases where the
+            # surrounding wording is what settles the question.
+            if args.context:
+                print(f"            {f['context']}")
 
     counts: dict[str, int] = {}
     for findings in report.values():
