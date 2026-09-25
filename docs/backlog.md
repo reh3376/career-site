@@ -152,6 +152,47 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **TOP PRIORITY. The startup probe confirms configuration, not
+  capability.** On 2026-09-25, after a reboot, the judge was disabled by
+  a failed health probe and the pipeline scored eight golden postings on
+  retrieval similarity alone, with no verdicts behind any of them. That
+  specific hole is closed: the probe retries, and if the sidecar reports
+  no model the scorer is not built, so submissions stay at `received`
+  and evaluations refuse to start.
+
+  **The hole next to it is still open.** Verifying the fix showed
+  something nobody had checked: stopping Ollama entirely did not change
+  the answer. The sidecar reports the model it is *configured* to use,
+  not one it has confirmed it can reach. So if Ollama is down, or the
+  model was never pulled, or it was deleted, the api still logs "jd
+  assessor enabled" and every call fails later, at request time, one
+  posting at a time.
+
+  What that failure looks like matters: a submission enters the
+  pipeline, the judge call fails, and what the submitter sees depends on
+  paths nobody has exercised. The gatekeeper fails open by design. The
+  assessor's behaviour on a hard LLM failure has never been tested
+  against a real submission, and the last time an untested degradation
+  path ran, it produced eight plausible numbers from nothing.
+
+  The work:
+
+  - The sidecar's health should answer "can I serve this model", not "am
+    I configured for one". Asking Ollama for its tag list, or a one
+    token generation, distinguishes the two.
+  - The api should treat "configured but unreachable" the same way it
+    now treats "no model": refuse rather than accept work it cannot do.
+  - A submission that cannot be judged must fail as a submission, with a
+    message saying the reviewer is unavailable, and must never reach a
+    score by another route.
+  - `/admin/ops` should show whether the model is actually reachable,
+    since it is the page built to answer "is it safe to proceed" and it
+    currently cannot answer this.
+
+  The principle is already settled everywhere else in this system and is
+  simply not enforced here: when the model is absent the code declines,
+  it does not substitute something cheaper that resembles the answer.
+
 - **Verify the submitter workflow on prod** end to end with a real
   submission after the next deploy: access request, approval, sign in,
   submit with an apply link, progress modal, email by category with the
