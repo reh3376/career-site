@@ -977,7 +977,49 @@ Roger consolidated ~63 tailored résumés into `docs/personal/resume/`
 converted to Markdown as the canonical form, and rendered to PDF. The
 audit and the Markdown conversion are done; what follows is open.
 
-**Owner decisions, blocking.**
+**Owner decisions. Roger delegated these on 2026-09-25 ("you make the
+final calls, you have full context"). Decided as follows; reverse any
+of them freely, the reasoning is written down so it can be argued
+with.**
+
+- **The Aerospace Defense résumé: quarantined, not corrected, not
+  deleted.** Moved to `docs/personal/quarantine/` with a README
+  stating exactly what it claims and what every other document says.
+  It is excluded from the render set, the corpus and the date audit.
+  Not corrected, because altering a document that may already have
+  been sent destroys the record of what was sent. Not deleted, for the
+  same reason. The open question is whether it is Roger's at all and
+  where it went; that one genuinely needs him.
+- **The cooling papers: ingest as `corpus_only`.** The hold reads
+  "Private. Publication hold. Scrub before any release." Ingestion at
+  `corpus_only` is not release: `corpusscope` enforces it in SQL with
+  `Public` as the fail-closed zero value, so a visitor's JD cannot
+  retrieve the material at all. The readers are Ask Roger and Roger's
+  own JD reviews. These are the strongest data-centre infrastructure
+  evidence he has, and the job search is the thing the hold exists to
+  protect, so withholding them from his own JD scoring serves nobody.
+  **Guardrail, and it is load-bearing:** Ask Roger changes who can
+  reach `corpus_only` material, because it paraphrases to visitors.
+  Before Ask Roger ships, every `corpus_only` document carrying a
+  publication hold must be re-reviewed against that new reader. Listed
+  again in the Ask Roger work so it cannot be missed there.
+- **The interview prep: scrubbed copy ingested, original untouched.**
+  `reh-interview-prep-general.corpus.md` sits beside the original;
+  the original is still the one to read when preparing for an
+  interview. Four passages were flagged; **three were scrubbed and one
+  was not**, on evidence rather than caution. Removed: the ownership
+  structure ("privately funded by the founders plus one silent
+  partner"), the procurement incident naming a department's conduct
+  and the vendor approached, and the sentence saying a former
+  employer's customers lost trust. **Kept: every budget and scale
+  figure.** `$135M` appears in 21 of Roger's own résumés, `$5M+` in 49
+  and in the master, `179 acres` in 8. Scrubbing figures from a
+  private corpus while broadcasting them on résumés sent to strangers
+  would be incoherent. "Silent partner" appears in zero résumés, which
+  is what separates it from the rest. Every metric survives: 40%+ gas,
+  $1.2M, 200% scale-up, 21 months, 3,275 tests, 0 to 95%, 7-8 months.
+
+**Still genuinely open for Roger.**
 
 - **`Resume Aerospace Defense` claims degrees that do not exist.** It
   lists "B.S. Electrical Engineering, West Virginia University, 2014"
@@ -992,17 +1034,19 @@ audit and the Markdown conversion are done; what follows is open.
   is not a call to make unasked. Roger needs to say whether it is his,
   and where it went. Degree verification is standard at defence
   contractors.
-- **Two cooling papers carry their own publication hold.** The
-  `dc-cooling` white paper and the `Dual Loop Liquid Cooling Discovery
-  Paper` both state "Private. Publication hold. Scrub before any
-  release", tied to the active hiring process. Ingestion as
-  `corpus_only` is not publication and `corpusscope` keeps a visitor's
-  JD from reaching it, but Ask Roger and Roger's own JD reviews would
-  draw on it. His call, not an inference to make for him.
-- **`MAINresumeV` and `MAINresumeV 3`** carry an entirely different job
-  history (11/2007-07/2009, 4/1999-11/2003). They are a much older
-  résumé rather than a variant, so the correction pass excludes them.
-  Supersede, archive or delete.
+That is the only item in this section that needs Roger. The other two
+former entries here, the cooling papers and the `MAINresumeV` files,
+are decided above and below respectively.
+
+- **`MAINresumeV` and `MAINresumeV 3`: quarantined as superseded.**
+  They carry an entirely different job history (11/2007-07/2009,
+  4/1999-11/2003, 9/1989-12/1995) that matches no other document, so
+  they are a much older résumé rather than a variant of the current
+  one. Left in `docs/personal/quarantine/` rather than deleted: they
+  were copied from Google Drive, never moved, so the cloud originals
+  are untouched either way, and an old résumé is a record of what was
+  once claimed. Quarantining them keeps them out of the render set,
+  where a PDF of a 1989 job history would look current.
 
 **Work, once those are answered.**
 
