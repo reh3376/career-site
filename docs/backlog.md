@@ -581,6 +581,40 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
+- **Job detail on `/admin/ops`: a row should open, and the runner
+  should stop discarding what a job reported.** Asked for 2026-09-25
+  while an evaluation was running; deferred rather than built, because
+  it needs proto, runner, handler and web changes, and recreating the
+  api container kills an in-flight job. That is the failure `/admin/ops`
+  was built to prevent, so building it carelessly would have caused it.
+
+  **The finding, which is the reason to do this rather than a styling
+  preference.** The runner's `Report(pct, summary)` overwrites `Summary`
+  on every call, and `JobRow` carries only the latest. So a nine-posting
+  evaluation shows "posting 4 of 9: scoring" and has already thrown away
+  that the first three took 28, 31 and 26 minutes. The pace is what
+  distinguishes a healthy run from one that is merely alive, and it is
+  being discarded as it arrives. The modal is the surface; keeping the
+  history is the fix.
+
+  Shape, when it is built:
+
+  - `jobs.Job` gains `Events []Event{At, Progress, Summary}`, appended
+    by the existing `report` closure, bounded (500 is generous for an
+    eight-hour job reporting on a coarse schedule; the cap exists so a
+    job reporting in a tight loop cannot exhaust memory).
+  - A separate `GetJobDetail(job_id)` RPC rather than widening `JobRow`.
+    `/admin/ops` polls the list, and putting a few hundred events per
+    job into that payload would make the page heavier the longer a run
+    goes on, which is backwards.
+  - Web: the row becomes a button opening a dialog with the timeline,
+    elapsed time and the gaps between reports. Keyboard dismissable,
+    focus trapped and restored.
+  - For an evaluation the timeline is per posting, which also answers
+    "how long will this take" from the run itself rather than from a
+    remembered average.
+
+
 - **Disk. Cleared 2026-09-22**, from 93 percent full to 68 percent
   (2.7 GB free to 12 GB), by dropping the build cache and 159 stale
   deploy image tags; the current and previous tags were kept so a
