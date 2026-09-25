@@ -11,7 +11,7 @@ box, the images, the models, the checkout, comes back with a deploy.
 
 | | what | where | how often | kept |
 |---|---|---|---|---|
-| dump | `pg_dump` custom format, plus the cluster roles | `/opt/career-site-backups` on the server | nightly, 03:15 UTC | 14 daily, 8 weekly, 6 monthly |
+| dump | `pg_dump` custom format, plus the cluster roles | `/opt/career-site-backups` on the server, a symlink onto the 15 GB volume | nightly, 03:15 UTC | 14 daily, 8 weekly, 6 monthly |
 | copy | the same files, pulled down | `~/backups/career-site` on the owner's Mac | daily, or on the next wake | 365 days |
 | proof | newest dump restored into a scratch database and counted | on the server | weekly, Sunday 04:30 UTC | n/a |
 
