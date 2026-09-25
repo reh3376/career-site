@@ -1050,10 +1050,30 @@ are decided above and below respectively.
 
 **Work, once those are answered.**
 
-- Render the 63 canonical `.md` to PDF. Template at
-  `scripts/templates/resume-pandoc.typ`, tuned by measurement so 10 of
-  12 sampled résumés land on the same page count as the hand-made
-  originals (at the site renderer's density, 8 of 12 spilled a page).
+- **Reindex the master into the corpus.** `reh-resume-Master.md` was
+  ingested on 2026-09-21 carrying 57 `****` artifacts, Word's way of
+  writing a bold run that closes and reopens around an ampersand
+  ("Engineering Executive \*\*\*\*&\*\*\*\* Hands-On Platform
+  Architect"). The file is repaired; the ingested chunks still have
+  the noise, so retrieval is matching against text with asterisks in
+  it. A reindex fixes it. Check the resulting `source_path` while
+  doing it: the existing row reads `reh-resume-Master.md` and the
+  manifest now says `resume/reh-resume-Master.md`, so a reindex may
+  add a second document rather than replacing the first, and there is
+  no delete to clean that up with.
+- Render the canonical `.md` to PDF. **Done 2026-09-25**, 60 files in
+  `docs/personal/resume-pdf/`, none longer than its original and 57 of
+  60 inside the two-page rule; the three that exceed it are the master
+  and two long-form variants, which are sources rather than
+  submissions. Every PDF carries the contact block and none contains a
+  stale date or a conversion artifact. Left to do: Roger looks at a
+  few, then the originals can go. The template
+  (`scripts/templates/resume-pandoc.typ`) carries the site renderer's
+  typography with a density ladder on top: `render_resume_pdf.py` sets
+  each document at the loosest of three levels that still fits two
+  pages, rather than setting all 60 tight enough for the longest one.
+  The ladder stops at 9pt deliberately; below that a résumé is not too
+  loosely set, it is too long.
 - Delete the `.docx` and `.pdf` originals **only** after Roger has seen
   rendered output he is happy with. `docs/personal/format-reference/`
   is exempt and says so in its README: one `.docx` and one `.pdf`

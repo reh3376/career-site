@@ -21,16 +21,22 @@
 // pages when the author wrote two has been changed, not converted.
 // These values bring 10 of 12 back to their original page count.
 //
+// The defaults above are overridable per document, because three
+// résumés still spilled a page at this density. render_resume_pdf.py
+// walks a ladder of progressively tighter settings until the output
+// fits the two-page rule, so a long résumé is set tighter rather
+// than every résumé being set tight enough for the longest.
+//
 // Used by scripts/render_resume_pdf.py.
 
 #set page(
   paper: "us-letter",
-  margin: (x: 0.7in, top: 0.55in, bottom: 0.55in),
+  margin: (x: $if(marginx)$$marginx$$else$0.7in$endif$, top: $if(marginy)$$marginy$$else$0.55in$endif$, bottom: $if(marginy)$$marginy$$else$0.55in$endif$),
 )
-#set text(font: "Libertinus Serif", size: 10pt)
-#set par(justify: false, leading: 0.5em)
-#set list(indent: 0.6em, body-indent: 0.5em, spacing: 0.35em)
-#set enum(indent: 0.6em, body-indent: 0.5em, spacing: 0.35em)
+#set text(font: "Libertinus Serif", size: $if(fontsize)$$fontsize$$else$10pt$endif$)
+#set par(justify: false, leading: $if(leading)$$leading$$else$0.5em$endif$)
+#set list(indent: 0.6em, body-indent: 0.5em, spacing: $if(listspacing)$$listspacing$$else$0.35em$endif$)
+#set enum(indent: 0.6em, body-indent: 0.5em, spacing: $if(listspacing)$$listspacing$$else$0.35em$endif$)
 
 // Level 1 is the name: the document title, set once at the top.
 #show heading.where(level: 1): it => block(above: 0em, below: 0.3em)[
