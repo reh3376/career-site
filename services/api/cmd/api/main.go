@@ -204,14 +204,26 @@ func main() {
 		// It then scored eight golden postings in three seconds with no
 		// verdicts behind any of them, and the numbers looked ordinary.
 		// One INFO line at boot was the only evidence.
-		provider := ""
+		// The probe now requires LlmReady, not merely a provider name.
+		// Those used to be the same thing: the sidecar reported the model
+		// it was configured for, so stopping Ollama entirely did not
+		// change the answer and the api started, announced the assessor
+		// enabled, and failed every call later at request time, one
+		// posting at a time. LlmReady is answered by asking Ollama for
+		// its tag list, which distinguishes a server that is down, a
+		// model never pulled, and a model deleted.
+		provider, llmDetail := "", ""
 		for attempt := 0; attempt < 10; attempt++ {
-			if h, err := sc.Health(ctx); err == nil && h.LlmProvider != "" {
-				provider = h.LlmProvider
-				break
+			h, err := sc.Health(ctx)
+			if err == nil {
+				llmDetail = h.LlmDetail
+				if h.LlmReady && h.LlmProvider != "" {
+					provider = h.LlmProvider
+					break
+				}
 			}
 			if attempt == 0 {
-				log.Info("waiting for the sidecar to report a model")
+				log.Info("waiting for the sidecar to report a usable model")
 			}
 			time.Sleep(3 * time.Second)
 		}
@@ -236,8 +248,9 @@ func main() {
 			// So the scorer is left nil. Submissions stay at RECEIVED for
 			// triage and an evaluation refuses to start, both of which
 			// say plainly that nothing happened.
-			log.Error("jd assessor unavailable: the sidecar reported no model after retrying, so nothing will be scored",
-				slog.String("llm_provider", provider))
+			log.Error("jd assessor unavailable: the sidecar reported no usable model after retrying, so nothing will be scored",
+				slog.String("llm_provider", provider),
+				slog.String("reason", llmDetail))
 		}
 		if assessor == nil {
 			// Nothing below this point is safe or meaningful without a

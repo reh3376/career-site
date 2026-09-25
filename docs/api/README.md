@@ -4059,9 +4059,10 @@ _No fields; send `{}`._
 | `rerankerReady` | `bool` | boolean |  | Reranker loaded (optional component). |
 | `storageReady` | `bool` | boolean |  | Object storage reachable. |
 | `version` | `string` | string |  | Sidecar version. |
-| `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
+| `llmReady` | `bool` | boolean |  | LLM provider reachable and serving its configured model, confirmed by asking it rather than by reading configuration. This used to report only that a provider was configured, which meant stopping Ollama did not change the answer and every call failed later, at request time, one posting at a time. |
 | `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
 | `rendererReady` | `bool` | boolean |  | PDF renderer available (Typst compiler importable). |
+| `llmDetail` | `string` | string |  | Why llm_ready is false: the server unreachable, the model absent from its tag list, and so on. Empty when llm_ready is true. Carried so the api can log a cause rather than the bare fact of a refusal. |
 
 <details><summary>Example request body</summary>
 
@@ -4349,9 +4350,10 @@ Readiness.
 | `rerankerReady` | `bool` | boolean |  | Reranker loaded (optional component). |
 | `storageReady` | `bool` | boolean |  | Object storage reachable. |
 | `version` | `string` | string |  | Sidecar version. |
-| `llmReady` | `bool` | boolean |  | LLM provider configured (does not probe the model). |
+| `llmReady` | `bool` | boolean |  | LLM provider reachable and serving its configured model, confirmed by asking it rather than by reading configuration. This used to report only that a provider was configured, which meant stopping Ollama did not change the answer and every call failed later, at request time, one posting at a time. |
 | `llmProvider` | `string` | string |  | LLM provider name (`stub`, `ollama:<model>`) so the API can decide whether structured pipelines are meaningful. |
 | `rendererReady` | `bool` | boolean |  | PDF renderer available (Typst compiler importable). |
+| `llmDetail` | `string` | string |  | Why llm_ready is false: the server unreachable, the model absent from its tag list, and so on. Empty when llm_ready is true. Carried so the api can log a cause rather than the bare fact of a refusal. |
 
 ### TrackWeight
 

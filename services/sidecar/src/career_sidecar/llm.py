@@ -47,6 +47,22 @@ class LLM(Protocol):
         json_schema: str = "",
     ) -> GenerateResult: ...
 
+    def probe(self) -> tuple[bool, str]:
+        """Can this provider actually serve its model right now?
+
+        Distinct from "is a provider configured", which is all the
+        health check used to report. On 2026-09-25 stopping Ollama
+        entirely did not change the sidecar's answer: it still said the
+        model was ready, because it was reading its own configuration.
+        Every call then failed later, at request time, one posting at a
+        time, and the previous time an untested degradation path ran it
+        produced eight plausible scores from nothing.
+
+        Returns (ok, detail). detail explains a false and is empty on
+        success.
+        """
+        ...
+
 
 def strip_thinking(text: str) -> str:
     return _THINK_RE.sub("", text).strip()
@@ -147,6 +163,46 @@ class OllamaLLM:
             finish_reason=str(payload.get("done_reason") or ""),
         )
 
+    # Deliberately short. A health check that can block for ten minutes
+    # is a second outage, and the question here is only whether the
+    # server answers and lists the model.
+    probe_timeout_seconds: int = 5
+
+    def probe(self) -> tuple[bool, str]:
+        """Ask Ollama for its tag list and look for the configured model.
+
+        Chosen over a one-token generation because it is cheap enough to
+        run on every health call and still distinguishes the three ways
+        this fails: the server being down, the model never having been
+        pulled, and the model having been deleted. A generation would
+        also prove the model loads, but loading a 4b model into memory
+        on each health check would make the check the problem.
+
+        Tags are reported as "name:tag". A model configured without an
+        explicit tag matches its ":latest" entry, which is how Ollama
+        itself resolves it.
+        """
+        url = f"{self.base_url.rstrip('/')}/api/tags"
+        req = urllib.request.Request(url, method="GET")
+        if self.api_key:
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+        try:
+            with urllib.request.urlopen(req, timeout=self.probe_timeout_seconds) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            return False, f"{url} returned HTTP {e.code}"
+        except urllib.error.URLError as e:
+            return False, f"{url} is unreachable: {e.reason}"
+        except Exception as e:  # noqa: BLE001 - a health check never raises
+            return False, f"{url} failed: {type(e).__name__}: {e}"
+
+        names = {str(m.get("name", "")) for m in (payload.get("models") or [])}
+        wanted = self.model if ":" in self.model else f"{self.model}:latest"
+        if wanted in names or self.model in names:
+            return True, ""
+        listed = ", ".join(sorted(n for n in names if n)) or "none"
+        return False, f"model {self.model!r} is not served by {url} (available: {listed})"
+
 
 def estimate_tokens(text: str) -> int:
     """Rough token estimate for English prose and markup (about 3.6
@@ -176,6 +232,11 @@ class StubLLM:
     """
 
     name: str = "stub"
+
+    def probe(self) -> tuple[bool, str]:
+        """Always serviceable: the stub is the implementation, so there
+        is nothing for it to be unable to reach."""
+        return True, ""
 
     def generate(
         self,
