@@ -459,3 +459,25 @@ func (r *Repo) CountJdSubmissionsSince(
 	}
 	return n, oldest, nil
 }
+
+// CountRationaleIssues reports how many judgments in a submission's
+// assessment carry a rationale that disagrees with its own record: a
+// span described but not reported, a quote from nowhere, a quote from
+// the evidence presented as the requirement.
+//
+// Read back from the stored assessment rather than carried through the
+// pipeline, because it is wanted once per evaluation rather than per
+// request, and a column on eval_items would be a migration for a number
+// that belongs in a run summary.
+func (r *Repo) CountRationaleIssues(ctx context.Context, submissionID int64) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx, `
+    SELECT coalesce(sum(jsonb_array_length(j->'rationale_issues')), 0)::int
+      FROM jd_submissions s,
+           jsonb_array_elements(coalesce(s.assessment->'judgments', '[]'::jsonb)) j
+     WHERE s.id = $1 AND j ? 'rationale_issues'`, submissionID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count rationale issues: %w", err)
+	}
+	return n, nil
+}

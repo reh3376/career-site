@@ -81,6 +81,10 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 	}
 
 	started := time.Now()
+	// Counted across the run and reported in the summary. Every other
+	// number here is about the verdict; this one is about whether the
+	// sentence under it agrees with the record.
+	unsoundRationales := 0
 	for i, g := range set {
 		if ctx.Err() != nil {
 			// Bookkeeping runs on a context that outlives the
@@ -117,6 +121,15 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 				run.Model = runs[0].Model
 			}
 		}
+		// Rationale soundness, counted across the run. Every other
+		// number here is about the verdict; this one is about whether
+		// the sentence under it agrees with the record. Run 9 passed 9
+		// of 9 with two judgments that did not, and nothing said so.
+		if item.SubmissionID != 0 {
+			if n, cErr := e.users.CountRationaleIssues(ctx, item.SubmissionID); cErr == nil {
+				unsoundRationales += n
+			}
+		}
 		if rErr := e.users.RecordEvalItem(ctx, run.ID, item); rErr != nil {
 			e.log.Warn("eval: could not record an item",
 				slog.String("posting", g.Name), slog.String("error", rErr.Error()))
@@ -135,6 +148,9 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 		run.GateCorrect, run.Scored, run.OrderViolations, run.Errors, time.Since(started).Round(time.Second))
 	if run.Margin != nil {
 		summary += fmt.Sprintf(", margin %.3f", *run.Margin)
+	}
+	if unsoundRationales > 0 {
+		summary += fmt.Sprintf(", %d unsound rationales", unsoundRationales)
 	}
 	e.log.Info("eval: finished", slog.String("summary", summary))
 	return summary, nil
