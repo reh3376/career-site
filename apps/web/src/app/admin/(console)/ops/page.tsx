@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { callApi } from "@/lib/api-fetch";
+import { JobList } from "./job-list";
 import { getSessionCookie } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Admin · Ops" };
@@ -145,39 +146,7 @@ export default async function AdminOpsPage() {
           </div>
 
           <Section title="jobs the runner remembers">
-            {running.length === 0 && finished.length === 0 ? (
-              <p className="text-sm text-ink-3">
-                None. The runner forgets finished jobs after a day, and
-                forgets everything when the api restarts.
-              </p>
-            ) : (
-              <ul className="space-y-px">
-                {[...running, ...finished].map((j) => (
-                  <li key={j.id} className="bg-paper-2 px-4 py-3">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <p className="font-mono text-sm text-ink">
-                        {j.kind}
-                        <span className="ml-3 text-ink-3">{j.status}</span>
-                        {!j.finishedAt && n(j.progress) > 0 ? (
-                          <span className="ml-3 text-accent">
-                            {n(j.progress)}%
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="font-mono text-[11px] text-ink-4">
-                        {when(j.startedAt)}
-                        {j.finishedAt ? ` to ${when(j.finishedAt)}` : ""}
-                      </p>
-                    </div>
-                    {j.summary ? (
-                      <p className="mt-1 text-sm leading-relaxed text-ink-2">
-                        {j.summary}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <JobList jobs={[...running, ...finished]} />
           </Section>
 
           <Section title="submissions by status">

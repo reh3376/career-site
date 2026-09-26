@@ -838,6 +838,56 @@ query, and it should stay that way.
 
 ## 6b. Evaluation roadmap
 
+- **TOP PRIORITY. Nothing measures whether a rationale is sound.**
+  Found 2026-09-26 in evaluation run 9, by reading the judgments behind
+  a 9 of 9 result. Two defects, both invisible to every metric the
+  evaluation computes:
+
+  - **A fabricated premise.** Blue Origin r9 asks for "Masters or
+    equivalent experience in Computer Science, Physics, Statistics or
+    other STEM degree". The judge answered met and justified it by
+    saying the degree "satisfies the 'bachelor's degree in engineering
+    or a related field' requirement". No such requirement exists in
+    that posting; all fourteen were checked. The verdict is right and
+    the second half of the rationale is sound, but it is arrived at
+    partly through something the model made up.
+  - **A verdict that contradicts its own reasoning.** Blue Origin r10
+    asks for "10+ Years of Software and systems engineering in fast
+    paced environments". Verdict: partial. Rationale: "over 30 years of
+    engineering experience, including leadership roles in engineering
+    teams at multiple companies, and has led development teams in
+    fast-paced environments." That is a description of met. It cost
+    0.036 on the posting that sets the margin.
+
+  **Gate accuracy, inversions and margin cannot see either.** All three
+  were computed correctly and all three passed. The rationale is the
+  part a human reads and the part the site promises is traceable, and
+  it is the only part nothing checks.
+
+  Worth considering, in rough order of cost:
+
+  - A code check that every requirement a rationale quotes actually
+    exists in that posting's requirement list. The fabrication above is
+    a quoted phrase that appears in no requirement, which is
+    mechanically detectable in the way `entail.go` already checks
+    résumé claims against the corpus.
+  - A verdict/rationale agreement check, which is harder because it
+    needs judgment. A second pass asking only "does this rationale
+    support this verdict" is one option and doubles judge calls; a
+    cheaper version flags the specific contradiction of a rationale
+    that states a quantity exceeding what the requirement asks while
+    the verdict is partial or unmet.
+  - Either way it wants a place in the evaluation output, so a run
+    reports unsound rationales alongside gate accuracy rather than
+    leaving them to be found by reading.
+
+- **Isolate the Orca r9 change.** Run 9 moved it from unmet to partial
+  with a defensible rationale, but both the judge prompt and the corpus
+  changed between runs 8 and 9, so the cause is unattributable. Not
+  urgent, and worth knowing: it is the only movement in three runs that
+  neither intended change explains.
+
+
 From an external review of the go-to-market response
 (`docs/personal/review/gtm-response-review01.md`, gitignored; its items
 are tagged `RR-NN` and referenced here by that id). Ordered cheapest and

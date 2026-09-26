@@ -2028,3 +2028,83 @@ check next time is Blue Origin's r9: if 4a works, it should move off
 unmet and Blue Origin should rise from 0.714, which would widen the
 margin. If it does not move, 4a failed and the conflict with rule 4
 needs resolving in the rule text rather than by adding another rule.
+
+## 2026-09-26: run 9, both fixes land, and two rationales that do not hold up
+
+Nine postings, 13:35 to 18:02 UTC, 4h 27m, on `5ed74a2fef68` with
+`jd_requirements` v4 and `requirement_judge` v9, corpus 31 documents
+and 270 chunks.
+
+    gate correct   9 of 9        inversions  0
+    margin         0.1071        errors      0
+
+                          run8    run9
+    heaven-hill  above   0.929   1.000   up
+    dover        above   1.000   1.000
+    ati          above   1.000   1.000
+    orca         above   0.857   0.893   up
+    cai          above   0.893   0.893
+    blue-origin  above   0.714   0.750   up
+    nexus        below   0.643   0.643
+    xai          below   0.500   0.500
+    profluent    below   0.250   0.250
+
+**Both changes did what they were built to do, and separably.**
+
+The capital-delivery document moved Heaven Hill's r2 from unmet to met,
+and the judgment's `evidence_ids` resolve to
+`capital-project-delivery.md`. Not an inference: the chunk it cited is
+the document written that morning. Its rationale names problem
+definition, alternatives analysis, basis of design, cost estimate,
+integrated schedule, risk register, execution strategy, ROI/business
+case and PSC, which is the requirement answered point by point.
+
+Rule 4a moved Blue Origin's r9 from unmet to met, with the rationale
+explicitly taking the branch it had refused: "the evidence shows
+extensive experience in controls, manufacturing systems, and applied
+AI, which supports the 'or equivalent experience' alternative specified
+in the requirement."
+
+Neither change touched the other's posting, and no below-gate score
+moved in either run. Three consecutive runs now reproduce the entire
+below-gate group exactly.
+
+**Two rationales do not survive reading, and the scores hide both.**
+
+Blue Origin r9, the one rule 4a fixed, opens by inventing a
+requirement: it says the degree "satisfies the 'bachelor's degree in
+engineering or a related field' requirement". No such requirement
+exists. All fourteen were checked; r9 is the only credential one and it
+asks for a Master's. The second half of the same rationale is correct.
+So the verdict is right, arrived at partly through a fabricated
+premise, on a site whose whole claim is that assertions trace to
+sources.
+
+Blue Origin r10 contradicts itself. Verdict `partial`, against "10+
+Years of Software and systems engineering in fast paced environments".
+Its rationale: "over 30 years of engineering experience, including
+leadership roles in engineering teams at multiple companies, and has
+led development teams in fast-paced environments." That describes
+`met`. The verdict does not follow from the model's own stated reason,
+and it cost 0.036 on the posting that sets the margin.
+
+**One change cannot be attributed.** Orca r9, "Partner with HR on
+workforce planning, organizational design and engagement", went unmet
+to partial. It has no alternative clause for 4a to act on and nothing
+to do with capital delivery. Its rationale is sound and the partial is
+defensible, but two things moved between runs, the judge prompt and the
+corpus, so this run cannot say which caused it. Isolating it needs a
+run that changes one.
+
+**What this says about the measurement.** Gate accuracy and inversions
+are doing their job: 9 of 9 and 0 across a prompt change and a corpus
+change. The margin widened from 0.0714 to 0.1071, and this time the
+comparison is like for like, same nine postings, same threshold.
+
+But three runs have now been graded on whether the number landed on the
+right side of a line, and reading the rationales underneath found a
+fabricated requirement and a self-contradicting verdict that the
+numbers gave no hint of. Both are invisible to gate accuracy, to
+inversions and to the margin. A reviewer that reaches the right verdict
+through fabricated reasoning is not a reviewer anyone should ship, and
+nothing currently measures it.
