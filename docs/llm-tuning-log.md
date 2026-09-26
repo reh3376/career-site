@@ -1934,3 +1934,97 @@ development, and that if it did not, the fix had not worked. It is in
 is excluded from scoring and never ran. That prediction is still
 outstanding and needs a single submission through the new pipeline to
 settle.
+
+## 2026-09-26: run 8 is the baseline
+
+Nine postings, 00:42 to 05:07 UTC, 4h 25m, on `466cba53195e` with
+`jd_requirements` v4 and `requirement_judge` v8, corpus fingerprint
+`e36de98f1ded` (30 documents, 266 chunks), `qwen3:4b-q8_0` at
+num_ctx 8192, threshold 0.7.
+
+    gate correct   9 of 9
+    inversions     0
+    margin         0.0714
+    errors         0
+
+    above gate   1.000  1.000  0.929  0.893  0.857  0.714
+    below gate                        0.643  0.500  0.250
+
+Perfect separation: every above-gate posting outscores every below-gate
+one. **This is the baseline to hold from here**, replacing the 8/8 with
+margin 0.143 from run 6, which measured eight postings against a
+27-document corpus and older prompts.
+
+**The token budget is proven, with evidence rather than absence of
+failure.** Both run 7 failures recovered, and their extractions came in
+at 1,275 and 1,280 tokens: above the old 1,200 cap, which is why they
+were truncated, and comfortably inside the new 4,000. Full series:
+1031, 1199, 1143, 1113, 1275, 1533, 1027, 1280, 1029. Largest is 1,533,
+leaving 2.6x headroom.
+
+**The margin halved, and it was one posting.**
+
+    posting                 side   run6    run7    run8
+    dover-process-control  above  0.956    err    1.000
+    ati-director           above  1.000   1.000   1.000
+    heaven-hill            above     -       -    0.929
+    cai-automation         above  0.865   0.893   0.893
+    orca-general-manager   above  0.786   0.857   0.857
+    blue-origin-mes-ai     above  0.857    err    0.714
+    nexus-power-system     below  0.643   0.643   0.643
+    xai-structural-data    below  0.357   0.500   0.500
+    profluent-ml           below  0.308   0.250   0.250
+
+Everything held or improved except Blue Origin, which fell 0.857 to
+0.714 and, being the lowest above-gate score, sets the margin by
+itself. Its requirement count is unchanged at 14; met went 11 to 9 and
+unmet 1 to 3. The three unmet are collaboration with Anthropic, AWS or
+OpenAI; aerospace software development; and a graduate degree. Roger
+has none of those, so **the lower score is the more accurate one** and
+the narrower margin is a consequence of stricter, better-founded
+judging rather than degradation.
+
+**The prediction I committed to was wrong, and usefully so.** I said
+the Heaven Hill front-end requirement would flip from unmet, and that
+if it did not the fix had failed. It is still unmet. But extraction
+went from "Develop front-end development for major investments" to the
+posting's full sentence, and the rationale went from "the documents
+focus on backend systems, controls, and software architecture" (the web
+reading) to naming problem definition, alternatives analysis and
+Capital Authorization Request. The term is no longer misread. I should
+have predicted the reasoning would change, because that is what the fix
+targets; the verdict depends on the evidence, which the fix does not
+touch.
+
+**And the evidence is missing.** A corpus search for "front-end
+loading", "basis of design", "capital authorization", "alternatives
+analysis", "total installed cost" and "risk register" returns one hit
+in 266 chunks. The unmet verdict is now correct. Run 7 marked it unmet
+for the wrong reason and hid a real gap; run 8 marks it unmet for the
+right reason and exposes one. Capital project delivery is the centre of
+the roles being targeted, and the reviewer cannot evidence it.
+
+**One judging defect, fixed in v9.** Blue Origin's r9 read "Masters or
+equivalent experience in Computer Science, Physics, Statistics or other
+STEM degree". The judge answered unmet because "no graduate-level
+degree or equivalent experience is stated in the evidence". Extraction
+rule 4 had correctly kept the alternative; the judge then declined to
+use it, because rule 4 of the judge prompt says a degree must be stated
+in the evidence before it can be relied on, and that is stated more
+forcefully and appears earlier than rule 7's allowance for
+alternatives. The judge resolved the conflict toward the stricter rule
+and never reached the other.
+
+New rule 4a names the distinction: rule 4 stops you awarding a
+credential nobody claimed, it does not stop you taking an alternative
+the posting itself offered. Answer unmet only when neither branch is
+supported, and do not require the evidence to contain the phrase
+"equivalent experience", because no CV says that and insisting on it
+makes the alternative impossible to satisfy.
+
+`requirement_judge` is v9. **This changes what the judge sees, so run 8
+is the baseline until the next run replaces it.** The specific thing to
+check next time is Blue Origin's r9: if 4a works, it should move off
+unmet and Blue Origin should rise from 0.714, which would widen the
+margin. If it does not move, 4a failed and the conflict with rule 4
+needs resolving in the rule text rather than by adding another rule.

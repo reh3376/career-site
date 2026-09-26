@@ -190,7 +190,7 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // model never emits a number.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 8,
+	Version: 9,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -208,6 +208,7 @@ Rules:
    - a certification, clearance, licence or degree;
    - a job title held, or an employer worked for.
    Calling a vendor's product or API is not a relationship with that vendor. Using a technology is not a partnership with the company that makes it. Do not describe integration as collaboration.
+4a. Rule 4 stops you awarding a credential nobody claimed. It does not stop you taking an alternative the posting itself offered instead of one. When a requirement reads "a Master's or equivalent experience in a STEM field", it is asking for the degree OR the experience, and experience the evidence does demonstrate satisfies the second branch. You are not granting a degree; you are using the option the posting wrote. Answer "unmet" only when neither branch is supported. Do not require the evidence to contain the phrase "equivalent experience", because no CV says that and insisting on it makes the alternative impossible to satisfy, which is the opposite of what offering it meant.
 5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries named_parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
 6. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere.
 6a. A <posting_says> element is the posting's own wording for the requirement above it, quoted. The requirement text is a short summary of it. Where the two differ, the quote decides what is being asked for, because a summary can lose the words that tell you which field a term belongs to. If the requirement says "front-end development" and the quote says "front-end development of future major investments, including scope definition", the ask is capital project definition, not web development.

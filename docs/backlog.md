@@ -1035,6 +1035,39 @@ are stable (`RR-20`).
 
 ## 6c. Résumé archive and corpus (opened 2026-09-25)
 
+- **TOP PRIORITY. The corpus cannot evidence capital project
+  delivery, which is the centre of the roles being targeted.** Found
+  2026-09-26 by evaluation run 8, and only visible because the
+  extraction fix made the requirement legible. A search across all 266
+  chunks for "front-end loading", "basis of design", "capital
+  authorization", "alternatives analysis", "total installed cost" and
+  "risk register" returns **one hit**.
+
+  The Heaven Hill requirement, "Lead front-end development of complex
+  or strategically important capital opportunities, including problem
+  definition, alternatives and Best Value Options Analysis,
+  preliminary engineering and basis of design, EEM, constructability,
+  cost estimate, integrated schedule, risk register, execution
+  strategy, ROI/business case, Project Success Criteria and Capital
+  Authorization Request", is marked unmet, and **correctly**: nothing
+  retrievable shows the work.
+
+  Roger's own Heaven Hill résumé answers it almost word for word:
+  "Led front-end loading (FEL): problem definition, alternatives
+  evaluation, preliminary engineering and basis of design,
+  constructability review, total installed cost estimate, integrated
+  schedule, risk register, execution strategy, and the business case
+  that secured capital authorization." That text is in
+  `docs/personal/resume/` and is not in the corpus; only the master
+  résumé is, and the master does not describe the work in those terms.
+
+  This is a document, not a prompt change. Every capital-projects
+  posting will keep losing this requirement until one exists, and each
+  time the reviewer will be right. It pairs with the front-end web
+  development gap below: the same evaluation exposed both, in opposite
+  directions.
+
+
 Roger consolidated ~63 tailored résumés into `docs/personal/resume/`
 (gitignored) and asked for them to be made consistent with the master,
 converted to Markdown as the canonical form, and rendered to PDF. The
