@@ -228,8 +228,22 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	var reqDoc struct {
 		Requirements []prompts.Requirement `json:"requirements"`
 	}
+	// The budget is arithmetic, not a guess. The schema allows 20
+	// requirements, each carrying text up to 200 characters and a
+	// source_quote up to 300, plus id, category, weight and
+	// named_parties: about 560 characters, call it 160 tokens. Twenty
+	// of those is 3,200, and the JSON wrapper rounds it up.
+	//
+	// It was 1,200, which was ample until source_quote was added on
+	// 2026-09-25 and roughly tripled the output. Evaluation run 7 then
+	// lost two of eight postings to "unexpected end of JSON input",
+	// marginally rather than universally: a 4,682-character posting fit
+	// and a 4,903-character one did not. A cap costs nothing when it is
+	// not reached, so it is set where a full-length answer fits rather
+	// than where a typical one does.
+	const requirementsTokenBudget = 4000
 	reqCall, err := a.call(ctx, submissionID, prompts.JDRequirements,
-		prompts.RenderRequirementsUser(jdText, hints), 1200, &reqDoc)
+		prompts.RenderRequirementsUser(jdText, hints), requirementsTokenBudget, &reqDoc)
 	if err != nil {
 		return nil, fmt.Errorf("requirements: %w", err)
 	}
@@ -635,6 +649,18 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 		LatencyMs: usage.LatencyMs,
 	}
 	if err := json.Unmarshal([]byte(resp.Text), dst); err != nil {
+		// Truncation and malformed JSON fail the same way here, and
+		// they need opposite fixes: one is a budget that is too small,
+		// the other is a model that cannot follow the schema. The
+		// completion hitting the cap distinguishes them, and saying so
+		// turns "unexpected end of JSON input" into an instruction.
+		// Evaluation run 7 lost two postings to this and the message
+		// pointed at neither cause.
+		if resp.CompletionTokens >= int32(maxTokens) && maxTokens > 0 {
+			return res, fmt.Errorf(
+				"decode %s output: the model filled its %d-token budget and the JSON is incomplete, so raise the budget for this call: %w",
+				p.ID, maxTokens, err)
+		}
 		return res, fmt.Errorf("decode %s output: %w", p.ID, err)
 	}
 	return res, nil
