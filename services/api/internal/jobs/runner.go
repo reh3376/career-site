@@ -36,7 +36,31 @@ type Job struct {
 	Summary    string
 	StartedAt  time.Time
 	FinishedAt *time.Time
+	// Events is every progress report the job made, in order.
+	//
+	// Summary holds only the latest, because each report overwrites it,
+	// and for a job measured in hours that is the least useful line: an
+	// evaluation says "posting 4 of 9: scoring" having already discarded
+	// that the first three took 28, 31 and 26 minutes. The pace is what
+	// separates a healthy run from one that is merely alive, and it was
+	// being thrown away as it arrived.
+	Events []Event
 }
+
+// Event is one progress report, kept with the time it arrived so the
+// gaps between reports can be read. The gap is the measurement; the
+// text is only how the job describes what it was doing.
+type Event struct {
+	At       time.Time
+	Progress int32
+	Summary  string
+}
+
+// MaxEvents bounds the history per job. An evaluation runs about four
+// hours and reports a few times per posting, so this is generous. The
+// cap exists because a job reporting in a tight loop should not be able
+// to exhaust memory on a box that also has to run the model.
+const MaxEvents = 500
 
 // Report lets a job publish progress while it runs.
 type Report func(pct int32, summary string)
@@ -119,6 +143,14 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 			if summary != "" {
 				x.Summary = summary
 			}
+			// Append rather than replace. When the cap is reached the
+			// oldest go first: a long run's recent history is what is
+			// being read, and dropping the tail instead would leave the
+			// start of a run visible and the part you are watching gone.
+			x.Events = append(x.Events, Event{At: time.Now().UTC(), Progress: pct, Summary: summary})
+			if len(x.Events) > MaxEvents {
+				x.Events = x.Events[len(x.Events)-MaxEvents:]
+			}
 		})
 	}
 	summary, err := fn(ctx, report)
@@ -128,6 +160,12 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 		if err != nil {
 			x.Status = StatusFailed
 			x.Summary = err.Error()
+			// The ending belongs in the timeline too. A history that
+			// stops at the last progress report leaves the reader
+			// guessing whether the job finished or stopped being
+			// observed, which is exactly the question it is there to
+			// answer.
+			x.Events = append(x.Events, Event{At: now, Progress: x.Progress, Summary: "failed: " + err.Error()})
 			return
 		}
 		x.Status = StatusSucceeded
@@ -135,6 +173,7 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 		if summary != "" {
 			x.Summary = summary
 		}
+		x.Events = append(x.Events, Event{At: now, Progress: 100, Summary: summary})
 	})
 	if err != nil {
 		r.log.Warn("job failed", slog.String("job", j.ID), slog.String("kind", j.Kind), slog.String("error", err.Error()))
@@ -193,6 +232,15 @@ func snapshot(j *Job) *Job {
 	if j.FinishedAt != nil {
 		t := *j.FinishedAt
 		c.FinishedAt = &t
+	}
+	// Events must be copied, not aliased. `c := *j` copies the slice
+	// header, so the caller would share a backing array that the job's
+	// own goroutine keeps appending to: a read while the runner appends
+	// is a data race, and a re-slice after the cap is reached would
+	// shift the caller's view under it. Everything else here is a value.
+	if j.Events != nil {
+		c.Events = make([]Event, len(j.Events))
+		copy(c.Events, j.Events)
 	}
 	return &c
 }

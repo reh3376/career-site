@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
+	"github.com/reh3376/career-site/services/api/internal/jobs"
 )
 
 // GetOpsStatus answers "what is the box doing", which until now was a
@@ -96,6 +97,64 @@ func (a *Admin) GetOpsStatus(
 	out.MemTotalMb, out.MemAvailableMb = hostMemoryMB()
 	out.DiskFreeGb, out.DiskTotalGb = diskGB("/")
 
+	return connect.NewResponse(out), nil
+}
+
+// GetJobDetail returns one job with every progress report it made.
+//
+// The list on /admin/ops shows a job's latest summary, which for a run
+// measured in hours is the least useful line: an evaluation says
+// "posting 4 of 9: scoring" having already discarded that the first
+// three took 28, 31 and 26 minutes. The pace is what separates a
+// healthy run from one that is merely alive.
+func (a *Admin) GetJobDetail(
+	ctx context.Context,
+	req *connect.Request[v1.GetJobDetailRequest],
+) (*connect.Response[v1.GetJobDetailResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	if a.jobs == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("job runner not wired"))
+	}
+	j, ok := a.jobs.Get(strings.TrimSpace(req.Msg.JobId))
+	if !ok {
+		// The runner forgets finished jobs after a day and everything
+		// when the api restarts, so a missing id is ordinary rather than
+		// a client error worth alarming about.
+		return nil, connect.NewError(connect.CodeNotFound,
+			errors.New("no such job; the runner forgets finished jobs after a day and all jobs when the api restarts"))
+	}
+
+	row := &v1.JobRow{
+		Id:       j.ID,
+		Kind:     j.Kind,
+		Status:   string(j.Status),
+		Progress: j.Progress,
+		Summary:  j.Summary,
+	}
+	if !j.StartedAt.IsZero() {
+		row.StartedAt = timestamppb.New(j.StartedAt)
+	}
+	if j.FinishedAt != nil {
+		row.FinishedAt = timestamppb.New(*j.FinishedAt)
+	}
+
+	out := &v1.GetJobDetailResponse{
+		Job: row,
+		// At the cap the runner drops the oldest, so a full slice means
+		// the timeline starts mid-run. Saying so beats letting a reader
+		// conclude the job began when its first visible event did.
+		Truncated: len(j.Events) >= jobs.MaxEvents,
+		Events:    make([]*v1.JobEvent, 0, len(j.Events)),
+	}
+	for _, e := range j.Events {
+		out.Events = append(out.Events, &v1.JobEvent{
+			At:       timestamppb.New(e.At),
+			Progress: e.Progress,
+			Summary:  e.Summary,
+		})
+	}
 	return connect.NewResponse(out), nil
 }
 

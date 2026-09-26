@@ -1758,6 +1758,32 @@ class GetOpsStatusRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class GetJobDetailRequest(_message.Message):
+    __slots__ = ("job_id",)
+    JOB_ID_FIELD_NUMBER: _ClassVar[int]
+    job_id: str
+    def __init__(self, job_id: _Optional[str] = ...) -> None: ...
+
+class GetJobDetailResponse(_message.Message):
+    __slots__ = ("job", "events", "truncated")
+    JOB_FIELD_NUMBER: _ClassVar[int]
+    EVENTS_FIELD_NUMBER: _ClassVar[int]
+    TRUNCATED_FIELD_NUMBER: _ClassVar[int]
+    job: JobRow
+    events: _containers.RepeatedCompositeFieldContainer[JobEvent]
+    truncated: bool
+    def __init__(self, job: _Optional[_Union[JobRow, _Mapping]] = ..., events: _Optional[_Iterable[_Union[JobEvent, _Mapping]]] = ..., truncated: _Optional[bool] = ...) -> None: ...
+
+class JobEvent(_message.Message):
+    __slots__ = ("at", "progress", "summary")
+    AT_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    at: _timestamp_pb2.Timestamp
+    progress: int
+    summary: str
+    def __init__(self, at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., progress: _Optional[int] = ..., summary: _Optional[str] = ...) -> None: ...
+
 class GetOpsStatusResponse(_message.Message):
     __slots__ = ("jobs", "busy", "pipeline", "latest_eval", "calls_last_hour", "call_failures_last_hour", "avg_call_seconds", "load_1", "load_5", "mem_total_mb", "mem_available_mb", "disk_free_gb", "disk_total_gb", "warnings")
     JOBS_FIELD_NUMBER: _ClassVar[int]

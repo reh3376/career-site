@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
-| [`AdminService`](#adminservice) | Owner console. | 55 |
+| [`AdminService`](#adminservice) | Owner console. | 56 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
@@ -1657,6 +1657,7 @@ Owner console.
 | [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
 | [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
 | [`GetOpsStatus`](#adminservice-getopsstatus) | `/api/career.v1.AdminService/GetOpsStatus` | Admin (fresh MFA) | default | `GetOpsStatusRequest` → `GetOpsStatusResponse` | Returns what the box is doing right now: jobs the runner knows about, the submission pipeline, recent model activity and host load. |
+| [`GetJobDetail`](#adminservice-getjobdetail) | `/api/career.v1.AdminService/GetJobDetail` | Admin (fresh MFA) | default | `GetJobDetailRequest` → `GetJobDetailResponse` | Returns one job with every progress report it made, for the detail view on /admin/ops. |
 | [`GetGate`](#adminservice-getgate) | `/api/career.v1.AdminService/GetGate` | Admin (fresh MFA) | default | `GetGateRequest` → `GetGateResponse` | Returns the criteria as a gate: one row per criterion with pass, value, target and as_of, read from the views that define them. |
 | [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
 | [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
@@ -3280,6 +3281,40 @@ _No fields; send `{}`._
 
 ```json
 {}
+```
+
+</details>
+
+### AdminService.GetJobDetail
+
+`POST /api/career.v1.AdminService/GetJobDetail` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns one job with every progress report it made, for the detail
+view on /admin/ops. Separate from GetOpsStatus because that call is
+polled: carrying a few hundred events per job in the list payload
+would make the page heavier the longer a run goes on, which is
+backwards for a page you open because something is running.
+
+**Request** — [`GetJobDetailRequest`](#getjobdetailrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jobId` | `string` | string | `string: min_len: 1 max_len: 64` | The runner id, as GetOpsStatus reports it. |
+
+**Response** — [`GetJobDetailResponse`](#getjobdetailresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `job` | [`JobRow`](#jobrow) | object |  | The job itself, the same row GetOpsStatus lists. |
+| `events` | [`JobEvent`](#jobevent)[] | array of object |  | Every progress report, oldest first, capped by the runner. |
+| `truncated` | `bool` | boolean |  | True when the runner dropped older events at its cap, so a reader knows the timeline starts mid-run rather than at the beginning. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "jobId": "string"
+}
 ```
 
 </details>
@@ -6485,6 +6520,36 @@ The limit as stored.
 Empty.
 
 _No fields._
+
+### GetJobDetailRequest
+
+Which job to describe.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jobId` | `string` | string | `string: min_len: 1 max_len: 64` | The runner id, as GetOpsStatus reports it. |
+
+### GetJobDetailResponse
+
+One job and everything it reported while it ran.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `job` | [`JobRow`](#jobrow) | object |  | The job itself, the same row GetOpsStatus lists. |
+| `events` | [`JobEvent`](#jobevent)[] | array of object |  | Every progress report, oldest first, capped by the runner. |
+| `truncated` | `bool` | boolean |  | True when the runner dropped older events at its cap, so a reader knows the timeline starts mid-run rather than at the beginning. |
+
+### JobEvent
+
+One progress report, kept with the time it arrived. The gap between
+consecutive events is the measurement; the text is only how the job
+described what it was doing.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `at` | `Timestamp` | string (RFC 3339, UTC) |  | When the report arrived. |
+| `progress` | `int32` | number |  | Percent complete at that moment, 0 when the job does not report it. |
+| `summary` | `string` | string |  | What the job said it was doing. |
 
 ### GetOpsStatusResponse
 

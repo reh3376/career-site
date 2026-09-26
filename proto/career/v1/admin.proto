@@ -346,6 +346,15 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns one job with every progress report it made, for the detail
+  // view on /admin/ops. Separate from GetOpsStatus because that call is
+  // polled: carrying a few hundred events per job in the list payload
+  // would make the page heavier the longer a run goes on, which is
+  // backwards for a page you open because something is running.
+  rpc GetJobDetail(GetJobDetailRequest) returns (GetJobDetailResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Returns the criteria as a gate: one row per criterion with pass,
   // value, target and as_of, read from the views that define them.
   // /admin/analytics shows the same numbers arranged for reading; this
@@ -2384,6 +2393,38 @@ message SetJdSubmissionLimitResponse {
 
 // Empty.
 message GetOpsStatusRequest {}
+
+// Which job to describe.
+message GetJobDetailRequest {
+  // The runner id, as GetOpsStatus reports it.
+  string job_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// One job and everything it reported while it ran.
+message GetJobDetailResponse {
+  // The job itself, the same row GetOpsStatus lists.
+  JobRow job = 1;
+  // Every progress report, oldest first, capped by the runner.
+  repeated JobEvent events = 2;
+  // True when the runner dropped older events at its cap, so a reader
+  // knows the timeline starts mid-run rather than at the beginning.
+  bool truncated = 3;
+}
+
+// One progress report, kept with the time it arrived. The gap between
+// consecutive events is the measurement; the text is only how the job
+// described what it was doing.
+message JobEvent {
+  // When the report arrived.
+  google.protobuf.Timestamp at = 1;
+  // Percent complete at that moment, 0 when the job does not report it.
+  int32 progress = 2;
+  // What the job said it was doing.
+  string summary = 3;
+}
 
 // What the box is doing.
 //

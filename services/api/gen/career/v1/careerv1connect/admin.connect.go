@@ -177,6 +177,9 @@ const (
 	// AdminServiceGetOpsStatusProcedure is the fully-qualified name of the AdminService's GetOpsStatus
 	// RPC.
 	AdminServiceGetOpsStatusProcedure = "/career.v1.AdminService/GetOpsStatus"
+	// AdminServiceGetJobDetailProcedure is the fully-qualified name of the AdminService's GetJobDetail
+	// RPC.
+	AdminServiceGetJobDetailProcedure = "/career.v1.AdminService/GetJobDetail"
 	// AdminServiceGetGateProcedure is the fully-qualified name of the AdminService's GetGate RPC.
 	AdminServiceGetGateProcedure = "/career.v1.AdminService/GetGate"
 	// AdminServiceListDecisionLogProcedure is the fully-qualified name of the AdminService's
@@ -383,6 +386,12 @@ type AdminServiceClient interface {
 	// about, the submission pipeline, recent model activity and host
 	// load. Backs /admin/ops.
 	GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error)
+	// Returns one job with every progress report it made, for the detail
+	// view on /admin/ops. Separate from GetOpsStatus because that call is
+	// polled: carrying a few hundred events per job in the list payload
+	// would make the page heavier the longer a run goes on, which is
+	// backwards for a page you open because something is running.
+	GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error)
 	// Returns the criteria as a gate: one row per criterion with pass,
 	// value, target and as_of, read from the views that define them.
 	// /admin/analytics shows the same numbers arranged for reading; this
@@ -709,6 +718,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetOpsStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		getJobDetail: connect.NewClient[v1.GetJobDetailRequest, v1.GetJobDetailResponse](
+			httpClient,
+			baseURL+AdminServiceGetJobDetailProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetJobDetail")),
+			connect.WithClientOptions(opts...),
+		),
 		getGate: connect.NewClient[v1.GetGateRequest, v1.GetGateResponse](
 			httpClient,
 			baseURL+AdminServiceGetGateProcedure,
@@ -809,6 +824,7 @@ type adminServiceClient struct {
 	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
 	getMetrics            *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
 	getOpsStatus          *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
+	getJobDetail          *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
 	getGate               *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
 	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
 	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
@@ -1054,6 +1070,11 @@ func (c *adminServiceClient) GetOpsStatus(ctx context.Context, req *connect.Requ
 	return c.getOpsStatus.CallUnary(ctx, req)
 }
 
+// GetJobDetail calls career.v1.AdminService.GetJobDetail.
+func (c *adminServiceClient) GetJobDetail(ctx context.Context, req *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error) {
+	return c.getJobDetail.CallUnary(ctx, req)
+}
+
 // GetGate calls career.v1.AdminService.GetGate.
 func (c *adminServiceClient) GetGate(ctx context.Context, req *connect.Request[v1.GetGateRequest]) (*connect.Response[v1.GetGateResponse], error) {
 	return c.getGate.CallUnary(ctx, req)
@@ -1275,6 +1296,12 @@ type AdminServiceHandler interface {
 	// about, the submission pipeline, recent model activity and host
 	// load. Backs /admin/ops.
 	GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error)
+	// Returns one job with every progress report it made, for the detail
+	// view on /admin/ops. Separate from GetOpsStatus because that call is
+	// polled: carrying a few hundred events per job in the list payload
+	// would make the page heavier the longer a run goes on, which is
+	// backwards for a page you open because something is running.
+	GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error)
 	// Returns the criteria as a gate: one row per criterion with pass,
 	// value, target and as_of, read from the views that define them.
 	// /admin/analytics shows the same numbers arranged for reading; this
@@ -1597,6 +1624,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetOpsStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetJobDetailHandler := connect.NewUnaryHandler(
+		AdminServiceGetJobDetailProcedure,
+		svc.GetJobDetail,
+		connect.WithSchema(adminServiceMethods.ByName("GetJobDetail")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetGateHandler := connect.NewUnaryHandler(
 		AdminServiceGetGateProcedure,
 		svc.GetGate,
@@ -1741,6 +1774,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetMetricsHandler.ServeHTTP(w, r)
 		case AdminServiceGetOpsStatusProcedure:
 			adminServiceGetOpsStatusHandler.ServeHTTP(w, r)
+		case AdminServiceGetJobDetailProcedure:
+			adminServiceGetJobDetailHandler.ServeHTTP(w, r)
 		case AdminServiceGetGateProcedure:
 			adminServiceGetGateHandler.ServeHTTP(w, r)
 		case AdminServiceListDecisionLogProcedure:
@@ -1952,6 +1987,10 @@ func (UnimplementedAdminServiceHandler) GetMetrics(context.Context, *connect.Req
 
 func (UnimplementedAdminServiceHandler) GetOpsStatus(context.Context, *connect.Request[v1.GetOpsStatusRequest]) (*connect.Response[v1.GetOpsStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetOpsStatus is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetJobDetail is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetGate(context.Context, *connect.Request[v1.GetGateRequest]) (*connect.Response[v1.GetGateResponse], error) {
