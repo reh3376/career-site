@@ -72,6 +72,12 @@ type VerdictOutput = {
   evidence_ids?: number[];
   rationale?: string;
   raw_verdict?: string;
+  // Why the code weakened the verdict, when it did.
+  adjusted?: string;
+  // Ways the rationale disagrees with its own record. They never change
+  // the verdict, so a reviewer can disagree with the check as readily as
+  // with the model, which is the point of grading these at all.
+  rationale_issues?: { kind?: string; detail?: string }[];
 };
 type GateInput = {
   score?: number;
@@ -366,6 +372,28 @@ function DecisionCard({ row }: { row: Row }) {
           <span className="text-ink-2">. {output.rationale}</span>
         ) : null}
       </p>
+      {output?.adjusted ? (
+        <p className="mt-2 text-sm text-ink-3">
+          Code weakened this verdict: {output.adjusted}
+        </p>
+      ) : null}
+      {(output?.rationale_issues ?? []).length > 0 ? (
+        <ul className="mt-3 space-y-1">
+          {(output?.rationale_issues ?? []).map((ri, i) => (
+            <li
+              key={i}
+              className="border-l-2 border-signal bg-signal-soft/40 px-3 py-2 text-sm text-ink"
+            >
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                {ri.kind === "span_mismatch"
+                  ? "span not reported"
+                  : "quote not in the requirement"}
+              </span>
+              <span className="ml-2 text-ink-2">{ri.detail}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {meta}
 
       <details className="mt-4">
