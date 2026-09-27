@@ -24,7 +24,7 @@
     "must_contain": [
       "> **Intuition rule**",
       "> **Recommended exercise**",
-      "*Figure 1. Hydraulic operating envelope for a beer column.*",
+      "Figure 1. Hydraulic operating envelope for a beer column.",
       "- [ ] I can identify a DP knee from historian data.",
       "See [4] for the standard treatment."
     ],
@@ -37,7 +37,7 @@
   },
   "config": {
     "timeout_ms": 120000,
-    "sha256": "3de1fa663af854c0f5318d1c3882392569fdd1708ea273dc06cb8c13e3c5f8d8"
+    "sha256": "e80fb061abc2755f5fb3d168410a77ae3c70fa2a1ea07d46fc167281962ec4ad"
   },
   "metadata": {
     "description": "A Word document's shaded callout boxes, figures and escaped brackets become Markdown a corpus can hold: blockquotes, an italic caption, a task list and plain citation markers, with no HTML left and exactly one H1.",
@@ -47,6 +47,6 @@
       "docx",
       "regression"
     ],
-    "regression_of": "2026-09-27: converting us_spirits_distillation_column_study_guide.docx with pandoc alone produced 28 raw <table> blocks and 6 <figure> blocks. Word shades a single-cell table to draw a sidebar and GFM has no equivalent, so pandoc falls back to HTML, and the six <img> tags pointed at a media directory that was never extracted. Nothing failed: pandoc exited 0 and the .md looked plausible in a skim. Ingested, the chunker would have embedded the tags, and a retrieved chunk would have handed the judge angle brackets instead of the sidebar's text. The same document also arrived with no H1, because a Word title is a paragraph style rather than a heading level, so its ten sections were peer H1s with the title sitting above them as bold body text."
+    "regression_of": "2026-09-27, second failure, found by this spec on its first CI run after passing locally: pandoc 3.9 reads a Word figure into <figure> with a <figcaption>, and pandoc 3.1.3, which is what `apt-get install pandoc` gives CI on Ubuntu, writes a bare <img> and leaves the caption as an ordinary paragraph. The repair only knew the <figure> shape, so on CI's pandoc the image tag survived into the output. The assertion on the caption is written against its text rather than its italics for the same reason: which of the two the caption gets depends on the converter, and the text is the part that matters. 2026-09-27, first failure: converting us_spirits_distillation_column_study_guide.docx with pandoc alone produced 28 raw <table> blocks and 6 <figure> blocks. Word shades a single-cell table to draw a sidebar and GFM has no equivalent, so pandoc falls back to HTML, and the six <img> tags pointed at a media directory that was never extracted. Nothing failed: pandoc exited 0 and the .md looked plausible in a skim. Ingested, the chunker would have embedded the tags, and a retrieved chunk would have handed the judge angle brackets instead of the sidebar's text. The same document also arrived with no H1, because a Word title is a paragraph style rather than a heading level, so its ten sections were peer H1s with the title sitting above them as bold body text."
   }
 }

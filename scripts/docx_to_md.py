@@ -116,19 +116,35 @@ def callouts_to_blockquotes(text: str) -> tuple[str, int, list[str]]:
     return TABLE_RE.sub(one, text), converted, problems
 
 
+# An image reference, in any of the three shapes a pandoc has produced
+# for the same .docx: wrapped in a <figure> with a <figcaption>, bare as
+# an HTML <img>, or as Markdown's own image syntax. All three point into
+# a media/ directory that is never extracted.
+IMG_TAG_RE = re.compile(r"<img\b[^>]*/?>")
+MD_IMG_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+
+
 def figures_to_captions(text: str) -> tuple[str, int, int]:
     """Keep the caption, drop the image reference.
 
-    The media directory is not extracted, so every img points at a file
-    that is not there. The caption names what the figure showed, which
-    is the part a retrieval system can use.
+    The media directory is not extracted, so every image points at a
+    file that is not there. The caption names what the figure showed,
+    which is the part a retrieval system can use.
+
+    Whether there is a caption to keep depends on the pandoc. 3.9 reads
+    a Word figure into a <figure> with a <figcaption>; 3.1.3, which is
+    what `apt-get install pandoc` gives CI on Ubuntu, writes a bare
+    <img> and leaves the caption as an ordinary paragraph. The first
+    CI run of the UCTS spec failed on exactly this, having passed
+    locally, which is the difference a fixture exists to find. Both
+    shapes are handled, and the caption text survives either way.
     """
     converted = dropped = 0
 
     def one(m: re.Match[str]) -> str:
         nonlocal converted, dropped
         block = m.group(0)
-        dropped += len(re.findall(r"<img ", block))
+        dropped += len(IMG_TAG_RE.findall(block))
         cap = re.search(r"<figcaption>(.*?)</figcaption>", block, re.S)
         if not cap:
             return ""
@@ -138,7 +154,20 @@ def figures_to_captions(text: str) -> tuple[str, int, int]:
         converted += 1
         return f"*{caption}*"
 
-    return FIGURE_RE.sub(one, text), converted, dropped
+    text = FIGURE_RE.sub(one, text)
+
+    # Whatever the <figure> pass did not account for. An image with no
+    # caption carries nothing a corpus can use, so it goes; leaving it
+    # would put a tag or a dead link in front of the embedder.
+    text, n_tags = IMG_TAG_RE.subn("", text)
+    text, n_md = MD_IMG_RE.subn("", text)
+    dropped += n_tags + n_md
+
+    # An image alone on its line leaves the line blank, which tidy()
+    # collapses. Nothing else is normalised here: a blanket squeeze of
+    # repeated spaces would also eat Markdown's two-space hard break
+    # and the padding inside a table row.
+    return text, converted, dropped
 
 
 def unescape_brackets(text: str) -> tuple[str, int, int]:
