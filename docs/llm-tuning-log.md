@@ -2108,3 +2108,85 @@ numbers gave no hint of. Both are invisible to gate accuracy, to
 inversions and to the margin. A reviewer that reaches the right verdict
 through fabricated reasoning is not a reviewer anyone should ship, and
 nothing currently measures it.
+
+## 2026-09-27: run 10, both rule fixes confirmed, and a profile edit that was not local
+
+Nine postings, 13:34 to 18:06 UTC, 4h 32m, on `1b577ef89114` with
+`jd_requirements` v4 and `requirement_judge` v10, corpus fingerprint
+`92f287605990` (31 documents, 270 chunks).
+
+    gate correct   9 of 9        inversions  0
+    margin         0.1786        errors      0
+
+                          run9    run10
+    heaven-hill  above   1.000   1.000
+    dover        above   1.000   1.000
+    ati          above   1.000   1.000
+    orca         above   0.893   0.964   up
+    cai          above   0.893   0.857   down
+    blue-origin  above   0.750   0.821   up
+    nexus        below   0.643   0.643
+    xai          below   0.500   0.571   up
+    profluent    below   0.250   0.250
+
+**Both rule fixes did what they were built for, and the evidence is in
+the structured fields rather than in the score.**
+
+Rule 4a held. Blue Origin r9 stayed met with the `career-facts.md` line
+that had also been asserting the conclusion now removed. Run 9 could
+not separate the rule from the corpus assertion because both were
+present; only the rule remains and the verdict held.
+
+Rule 6 worked, and the numbers say so plainly:
+
+    r10   run 9: partial, span blank   run 10: met,     span 30
+    r11   run 9: partial, span blank   run 10: met,     span 2
+    r12   run 9: partial, span blank   run 10: partial, span 2
+
+In run 9 the model wrote about durations in prose and reported none, so
+`applyDurationRule` downgraded all three. It now reports them, two
+stand, and the third is correctly still partial because 2 years does
+not satisfy a 5-year ask. That last one matters more than the two that
+improved: a change that made everything pass would have meant the guard
+was broken, not the reporting fixed.
+
+**Four of nine scores moved and only one was predicted.** That is the
+lesson of this run. `career-facts.md` is the profile document, rendered
+into every judge prompt for every requirement as the cached prefix.
+Editing one sentence in it changes the input to all 126 judgments. I
+described that edit as surgical when I made it. It was the opposite,
+and Orca, xAI and CAI are the consequence.
+
+Two of those movements are improvements Roger endorsed. xAI r14 moved
+unmet to met on structural design for mission-critical facilities,
+reasoning from NEBS and Telcordia; I called it wrong and he corrected
+me, because GR-63 carries structural criteria for exactly that class of
+facility.
+
+**CAI is a wrong verdict.** r11 asks for "3+ years' experience in
+automation engineering within a pharmaceutical, biotechnology, or
+regulated manufacturing environment". It answered unmet: "The
+candidate's experience is in distilleries, mining, and telecom, not in
+pharmaceutical or biotech sectors." Distilling is federally regulated
+manufacturing and the requirement offered that branch. The corpus
+listed the standards (FDA, TTB, EPA) and left the judge to infer that
+the industry is therefore regulated, and the inference failed.
+
+The fix is written and deliberately held: a line stating that distilled
+spirits production is federally regulated manufacturing under TTB, FDA
+and EPA, and that mining equipment manufacture is regulated under MSHA,
+with the years each covers. That is a fact about an industry, true
+whatever any posting asks, which is the test this document has to pass.
+It is batched with the front-end and data-centre corpus documents so
+one broad perturbation is measured once rather than three times.
+
+**The rationale check fired once, on a bug of mine.** It reported "s
+degree in Applied Mathematics and an Associate" as an unsupported
+quote; the apostrophes in two possessives had been read as a matched
+pair. Fixed, with the run 10 case pinned as a test, and verified by
+sweeping all 126 rationales: zero quoted spans now, none of them real
+ones lost. Worth recording that this model rarely quotes at all, so the
+`span_mismatch` arm is carrying the value and the quote arm is cheap
+insurance against a failure that would otherwise be invisible.
+
+**Run 10 is the baseline.** 9 of 9, 0 inversions, margin 0.1786.

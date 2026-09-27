@@ -1085,6 +1085,35 @@ are stable (`RR-20`).
 
 ## 6c. Résumé archive and corpus (opened 2026-09-25)
 
+**Corpus batch, held deliberately.** Three corpus changes are written
+or planned and none is synced, because `career-facts.md` is the profile
+document rendered into every judge prompt for every requirement, so
+editing it perturbs all 126 judgments. A one-sentence edit on
+2026-09-27 moved four of nine scores when one was predicted. At four and
+a half hours a run, one broad perturbation measured once beats three
+measured separately.
+
+In the batch:
+
+1. **Regulated manufacturing, written and held** in
+   `docs/personal/career-facts.md` locally. States that distilled
+   spirits production is federally regulated manufacturing under TTB
+   (27 CFR), FDA and EPA, and that mining equipment manufacture is
+   regulated under MSHA, with the years each covers. Fixes run 10's
+   wrong CAI verdict, which answered unmet on "pharmaceutical,
+   biotechnology, or regulated manufacturing" because the corpus listed
+   the standards and left the industry classification to inference.
+2. **Front-end and full-stack delivery**, not started. 36 pages, 27
+   client components, 17 server-action modules, Next.js 16, plus
+   MDEMG's 9 Grafana dashboards and 168 panels. See the entry below.
+3. **Data centre buildout**, not started, and blocked on detail only
+   Roger has. See the entry below.
+
+When the batch is ready: sync, reindex, then one evaluation. The
+current baseline to beat is run 10, 9 of 9 with 0 inversions and margin
+0.1786.
+
+
 - **The corpus cannot evidence data centre buildout, and the roles
   being targeted are data centre roles.** Found 2026-09-27 when Roger
   said, in passing, that he has "built out MDFs and server farms for
