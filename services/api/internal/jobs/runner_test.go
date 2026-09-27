@@ -63,6 +63,35 @@ func TestEventsRecordEveryReportInOrder(t *testing.T) {
 	}
 }
 
+func TestRefIsOptionalAndOnlyTheFirstIsKept(t *testing.T) {
+	r := quietRunner()
+	started, err := r.Start("test", func(_ context.Context, report Report) (string, error) {
+		// A job with nothing to point at, which is most of them, keeps
+		// calling report with two arguments and must still compile and
+		// record an empty ref.
+		report(10, "no ref")
+		report(50, "one ref", "eval:7:3")
+		// Extra arguments are ignored rather than joined, so a caller
+		// that passes two cannot produce a ref that resolves to neither.
+		report(90, "two refs", "eval:7:4", "eval:7:5")
+		return "done", nil
+	})
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	j := waitFor(t, r, started.ID)
+	want := []string{"", "eval:7:3", "eval:7:4", ""}
+	if len(j.Events) != len(want) {
+		t.Fatalf("got %d events, want %d: %+v", len(j.Events), len(want), j.Events)
+	}
+	for i, w := range want {
+		if j.Events[i].Ref != w {
+			t.Errorf("event %d ref = %q, want %q", i, j.Events[i].Ref, w)
+		}
+	}
+}
+
 func TestFailureIsRecordedInTheTimeline(t *testing.T) {
 	r := quietRunner()
 	started, _ := r.Start("test", func(_ context.Context, report Report) (string, error) {

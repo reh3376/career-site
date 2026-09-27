@@ -153,6 +153,7 @@ func (a *Admin) GetJobDetail(
 			At:       timestamppb.New(e.At),
 			Progress: e.Progress,
 			Summary:  e.Summary,
+			Ref:      e.Ref,
 		})
 	}
 	return connect.NewResponse(out), nil

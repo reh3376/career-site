@@ -1775,14 +1775,16 @@ class GetJobDetailResponse(_message.Message):
     def __init__(self, job: _Optional[_Union[JobRow, _Mapping]] = ..., events: _Optional[_Iterable[_Union[JobEvent, _Mapping]]] = ..., truncated: _Optional[bool] = ...) -> None: ...
 
 class JobEvent(_message.Message):
-    __slots__ = ("at", "progress", "summary")
+    __slots__ = ("at", "progress", "summary", "ref")
     AT_FIELD_NUMBER: _ClassVar[int]
     PROGRESS_FIELD_NUMBER: _ClassVar[int]
     SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
     at: _timestamp_pb2.Timestamp
     progress: int
     summary: str
-    def __init__(self, at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., progress: _Optional[int] = ..., summary: _Optional[str] = ...) -> None: ...
+    ref: str
+    def __init__(self, at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., progress: _Optional[int] = ..., summary: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
 
 class GetOpsStatusResponse(_message.Message):
     __slots__ = ("jobs", "busy", "pipeline", "latest_eval", "calls_last_hour", "call_failures_last_hour", "avg_call_seconds", "load_1", "load_5", "mem_total_mb", "mem_available_mb", "disk_free_gb", "disk_total_gb", "warnings")

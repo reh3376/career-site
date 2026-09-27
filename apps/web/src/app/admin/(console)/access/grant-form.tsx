@@ -111,7 +111,7 @@ function SubmitBtn({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-[34px] items-center border border-accent bg-accent px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-[34px] items-center border border-accent bg-accent px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Saving…" : label}
     </button>

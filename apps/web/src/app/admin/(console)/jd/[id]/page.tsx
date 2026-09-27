@@ -153,7 +153,7 @@ export default async function AdminJdDetailPage({
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
         <Link
           href="/admin/jd"
-          className="no-underline hover:text-accent-strong"
+          className="no-underline hover:text-accent-hover"
         >
           JD submissions
         </Link>

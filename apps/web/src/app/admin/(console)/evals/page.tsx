@@ -145,7 +145,7 @@ export default async function AdminEvalsPage() {
                     <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">
                       <Link
                         href={`/admin/evals/${r.id}`}
-                        className="text-accent no-underline hover:text-accent-strong"
+                        className="text-accent no-underline hover:text-accent-hover"
                       >
                         #{String(r.id)}
                       </Link>

@@ -6550,6 +6550,7 @@ described what it was doing.
 | `at` | `Timestamp` | string (RFC 3339, UTC) |  | When the report arrived. |
 | `progress` | `int32` | number |  | Percent complete at that moment, 0 when the job does not report it. |
 | `summary` | `string` | string |  | What the job said it was doing. |
+| `ref` | `string` | string |  | The record this report is about, empty when there is none. Opaque to the runner: the job that reports the event chooses the form. An evaluation writes "eval:<run id>:<golden id>", with golden id 0 meaning the run itself, so the console can open a posting's result from its line in the timeline instead of parsing the summary. |
 
 ### GetOpsStatusResponse
 

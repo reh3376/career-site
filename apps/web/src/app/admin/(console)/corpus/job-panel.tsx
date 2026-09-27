@@ -80,7 +80,7 @@ export function JobPanel({
               type="button"
               disabled={live || starting !== null}
               onClick={() => void start(j.kind)}
-              className="inline-flex h-9 items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {starting === j.kind ? "Starting..." : j.label}
             </button>
