@@ -1341,8 +1341,13 @@ match the chronology, and the page count does not exceed the source's.
   qualifier, which puts Bell Atlantic's 1998-2000 under Lucent. Its own
   bullet reinforces it with "carrier-grade CLEC network (1998-2002)".
   Left as written.
-- AT&T appears as an employer in `ACBL`, `FordEnergy`, `MES-SCADA`,
-  `Novartis` and `Vertex`, and in the master not at all.
+- ~~AT&T appears as an employer in five résumés and in the master not
+  at all.~~ **Resolved 2026-09-27, not an anomaly.** AT&T / CCG was a
+  real role, Field Service Technician at Scott Depot WV from 11/2003 to
+  10/2007, covering telecom physical plant: voice and data wiring in
+  cat3, cat5+, coaxial and fibre, and design of telecom, power and
+  grounding. The master simplifies the early career and drops it. Those
+  five résumés are right and the master is the abbreviation.
 - Lines condensing several employers under one span ("Lucent
   Technologies and earlier, 1996 - 2006") are deliberate summarisation
   and are correct as written. `scripts/audit_resume_dates.py` reports
