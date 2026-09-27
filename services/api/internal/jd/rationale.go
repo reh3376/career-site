@@ -50,7 +50,30 @@ type rationaleIssue struct {
 // quotedRe pulls quoted spans out of a rationale. Straight and curly
 // pairs both, because a model emits either and a check that only knows
 // one shape reports nothing on half the output.
-var quotedRe = regexp.MustCompile(`"([^"\n]{6,120})"|'([^'\n]{6,120})'|\x{201c}([^\x{201d}\n]{6,120})\x{201d}`)
+//
+// The apostrophe is the whole difficulty. Run 10 reported "s degree in
+// Applied Mathematics and an Associate" as an unsupported quote: the
+// rationale said "a Bachelor's degree in Applied Mathematics and an
+// Associate's degree in Electrical Engineering Technology", and a bare
+// `'...'` pattern read the two possessives as a matched pair. Nothing
+// was quoted at all.
+//
+// So a single-quoted span must open where a quote can open, after a
+// space or a bracket or at the start, and close where one can close,
+// before a space or punctuation or at the end. "Bachelor's" fails the
+// first test because a letter precedes the apostrophe, and "Associate's"
+// fails the second because a letter follows it.
+//
+// Inside such a span an apostrophe is allowed when a lowercase letter
+// follows it, which is what a possessive looks like and what a closing
+// quote does not. That keeps the original Blue Origin case, 'bachelor's
+// degree in engineering or a related field', matchable: it opens after
+// a space, its internal apostrophe is followed by "s", and it closes
+// before a space.
+var quotedRe = regexp.MustCompile(
+	`"([^"\n]{6,120})"` +
+		`|\x{201c}([^\x{201d}\n]{6,120})\x{201d}` +
+		`|(?:^|[\s([])'((?:[^'\n]|'[a-z]){6,120})'(?:[\s.,;:!?)\]]|$)`)
 
 // spanInProseRe finds a duration a rationale asserts: a number next to a
 // year word. Deliberately the same narrowness as RequiredYears, which
