@@ -118,6 +118,22 @@ def _pdf_text_and_pages(path: Path) -> tuple[str, int]:
 
 
 def convert(fixture: Path, frm: str, to: str, profile: str, tmp: Path, timeout_ms: int) -> tuple[str, int | None]:
+    if frm == "docx" and to == "md" and profile == "corpus":
+        # Same reason the resume profile calls render_resume_pdf: the
+        # production path for a corpus document is docx_to_md.py, and a
+        # runner that called pandoc directly here would assert against
+        # output that nothing ships. Bare pandoc leaves Word's shaded
+        # callouts as raw HTML, which is exactly what the spec checks
+        # has been repaired.
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        from docx_to_md import convert as convert_corpus
+
+        out = tmp / "out.md"
+        ok, notes = convert_corpus(fixture, out, dry_run=False)
+        if not ok:
+            raise RuntimeError("docx_to_md refused the conversion: " + "; ".join(notes))
+        return out.read_text(encoding="utf-8"), None
+
     if frm == "pdf" and to == "md":
         text, _ = _pdf_text_and_pages(fixture)
         return text, None

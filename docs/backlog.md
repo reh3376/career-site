@@ -1362,7 +1362,58 @@ describes.**
 than searching outward from them, which halved a false-positive rate
 of 83 down to 21), `resume_to_md.py` (pandoc plus heading promotion
 and bold-run repair), `apply_resume_corrections.py` (the adjudicated
-corrections, every substitution counted and printed).
+corrections, every substitution counted and printed),
+`docx_to_md.py` (prose and technical documents, below).
+
+**Long-document conversion, added 2026-09-27.**
+
+`scripts/docx_to_md.py` converts a prose or technical `.docx` for the
+corpus. It is pandoc plus three repairs and a refusal, not a converter:
+pandoc handles the document, including tables, and the script fixes only
+what GFM cannot express and pandoc therefore emits as raw HTML.
+
+- Word shades a single-cell table to draw a sidebar. The U.S. spirits
+  study guide had 28 of them, and pandoc wrote every one as a `<table>`
+  block. They become blockquotes.
+- A `<figure>` wraps an `<img>` pointing into a `media/` directory that
+  is never extracted, plus a `<figcaption>` that is real prose naming
+  what the figure showed. The caption is kept as an italic line and the
+  image reference dropped.
+- Pandoc escapes brackets, so a citation reads `\[10\]` and a checklist
+  box reads `\[ \]`. Citations are unescaped and checklist boxes become
+  GFM task-list items.
+
+A Word title is a paragraph style rather than a heading level, so a
+document arrives with the title as bold body text and its sections as
+peer H1s. The script gives the title the H1 and moves the headings down
+a level, refusing if that would pass H6.
+
+It exits non-zero rather than writing a file that still contains HTML.
+The failure this area keeps producing is a conversion that reports
+success, and both documents below read as plausible in a skim while
+carrying tags the chunker would have embedded.
+
+Covered by `docs/tests/ucts/specs/corpus_docx_callouts_are_repaired.ucts.json`
+against a fixture built to carry all four artifacts, under a new
+`corpus` conversion profile that calls the script rather than pandoc,
+for the same reason the `resume` profile calls the real renderer.
+
+**Converted and ready, not ingested.** Both are in
+`docs/personal/corpus/` and neither has been synced, because run 11 was
+in flight and a corpus change mid-run invalidates it.
+
+- `us_spirits_distillation_column_study_guide.md`, 6,778 words.
+  Thermodynamics, tray hydraulics, energy integration and advanced
+  control for a continuous beer column plus doubler.
+- `US_Spirits_Structural_Decline_vs_Tobacco_Rev2.md`, 7,958 words.
+
+Decide before ingesting whether the study guide belongs in the corpus
+at all. It is reference material on how distillation columns behave,
+not evidence of what Roger has done, and the retrieval scope does not
+distinguish the two. A requirement asking for distillation process
+knowledge would match it and the judge would read it as Roger's
+experience, which is the failure mode the grounded-résumé rule exists
+to prevent.
 
 ## 7. Documentation
 

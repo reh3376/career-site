@@ -30,8 +30,8 @@
         },
         "profile": {
           "type": "string",
-          "enum": ["resume", "plain"],
-          "description": "Which converter configuration to use. 'resume' applies the Typst template and the density ladder; 'plain' is a bare pandoc conversion."
+          "enum": ["resume", "plain", "corpus"],
+          "description": "Which converter configuration to use. 'resume' applies the Typst template and the density ladder; 'corpus' runs scripts/docx_to_md.py, which repairs the raw HTML pandoc emits for Word's shaded callout boxes and figures; 'plain' is a bare pandoc conversion."
         },
         "round_trip": {
           "type": "boolean",
