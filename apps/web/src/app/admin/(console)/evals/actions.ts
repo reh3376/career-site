@@ -91,3 +91,54 @@ export async function labelGoldenAction(
   revalidatePath("/admin/evals");
   return { saved: true };
 }
+
+// Find an evaluation the runner is already working on.
+//
+// The progress bar lived only in component state, set when the button
+// was pressed, so navigating away and back lost the job id and the page
+// looked as though nothing were running. The job was always fine; the
+// page had simply forgotten it was watching. An evaluation takes four
+// and a half hours, so leaving the page is the normal case rather than
+// the exception.
+//
+// Read from GetOpsStatus, which the runner answers from memory, because
+// that is already the authority for what is in flight and inventing a
+// second one would create two things to keep in step.
+export async function findRunningEvalAction(): Promise<{
+  jobId: string;
+  progressPct: number;
+  summary: string;
+} | null> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return null;
+
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetOpsStatus",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return null;
+
+  const j = (await resp.json()) as {
+    jobs?: {
+      id?: string;
+      kind?: string;
+      progress?: number;
+      summary?: string;
+      finishedAt?: string;
+      finished_at?: string;
+    }[];
+  };
+  const live = (j.jobs ?? []).find(
+    (x) =>
+      (x.kind ?? "").includes("EVAL") &&
+      !(x.finishedAt ?? x.finished_at) &&
+      (x.id ?? "") !== "",
+  );
+  if (!live) return null;
+  return {
+    jobId: live.id ?? "",
+    progressPct: live.progress ?? 0,
+    summary: live.summary ?? "",
+  };
+}

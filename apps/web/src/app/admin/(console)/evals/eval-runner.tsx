@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { getJobAction, runJobAction, type JobState } from "../corpus/actions";
+import { findRunningEvalAction } from "./actions";
 
 // Starts an evaluation and polls it. The job runner allows one per
 // kind, so the button is simply disabled while one is in flight; there
@@ -12,12 +13,6 @@ export function EvalRunner() {
   const [error, setError] = useState<string>("");
   const [note, setNote] = useState<string>("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
 
   const poll = (jobId: string) => {
     timer.current = setTimeout(async () => {
@@ -35,6 +30,39 @@ export function EvalRunner() {
       }
     }, 5000);
   };
+
+  // Reattach to an evaluation already in flight.
+  //
+  // The progress lived only in state set when the button was pressed,
+  // so navigating away and back lost the job id and the page looked
+  // idle while four hours of work carried on behind it. The job was
+  // never affected; the page had forgotten it was watching. At four and
+  // a half hours a run, leaving the page is the normal case.
+  //
+  // Declared after poll so it is not referenced before it exists.
+  useEffect(() => {
+    let stop = false;
+    async function resume(): Promise<void> {
+      const live = await findRunningEvalAction();
+      if (stop || !live) return;
+      setJob({
+        jobId: live.jobId,
+        kind: "JOB_KIND_EVAL_QUICK",
+        status: "JOB_STATUS_RUNNING",
+        progressPct: live.progressPct,
+        summary: live.summary,
+      });
+      poll(live.jobId);
+    }
+    void resume();
+    return () => {
+      stop = true;
+      if (timer.current) clearTimeout(timer.current);
+    };
+    // poll closes over nothing that changes, so listing it would
+    // re-run this on every render and start a second poller.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const start = async () => {
     setError("");
