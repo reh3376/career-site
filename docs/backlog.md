@@ -1085,6 +1085,35 @@ are stable (`RR-20`).
 
 ## 6c. Résumé archive and corpus (opened 2026-09-25)
 
+**Corpus batch, held deliberately.** Three corpus changes are written
+or planned and none is synced, because `career-facts.md` is the profile
+document rendered into every judge prompt for every requirement, so
+editing it perturbs all 126 judgments. A one-sentence edit on
+2026-09-27 moved four of nine scores when one was predicted. At four and
+a half hours a run, one broad perturbation measured once beats three
+measured separately.
+
+In the batch:
+
+1. **Regulated manufacturing, written and held** in
+   `docs/personal/career-facts.md` locally. States that distilled
+   spirits production is federally regulated manufacturing under TTB
+   (27 CFR), FDA and EPA, and that mining equipment manufacture is
+   regulated under MSHA, with the years each covers. Fixes run 10's
+   wrong CAI verdict, which answered unmet on "pharmaceutical,
+   biotechnology, or regulated manufacturing" because the corpus listed
+   the standards and left the industry classification to inference.
+2. **Front-end and full-stack delivery**, not started. 36 pages, 27
+   client components, 17 server-action modules, Next.js 16, plus
+   MDEMG's 9 Grafana dashboards and 168 panels. See the entry below.
+3. **Data centre buildout**, not started, and blocked on detail only
+   Roger has. See the entry below.
+
+When the batch is ready: sync, reindex, then one evaluation. The
+current baseline to beat is run 10, 9 of 9 with 0 inversions and margin
+0.1786.
+
+
 - **The corpus cannot evidence data centre buildout, and the roles
   being targeted are data centre roles.** Found 2026-09-27 when Roger
   said, in passing, that he has "built out MDFs and server farms for
@@ -1312,8 +1341,13 @@ match the chronology, and the page count does not exceed the source's.
   qualifier, which puts Bell Atlantic's 1998-2000 under Lucent. Its own
   bullet reinforces it with "carrier-grade CLEC network (1998-2002)".
   Left as written.
-- AT&T appears as an employer in `ACBL`, `FordEnergy`, `MES-SCADA`,
-  `Novartis` and `Vertex`, and in the master not at all.
+- ~~AT&T appears as an employer in five résumés and in the master not
+  at all.~~ **Resolved 2026-09-27, not an anomaly.** AT&T / CCG was a
+  real role, Field Service Technician at Scott Depot WV from 11/2003 to
+  10/2007, covering telecom physical plant: voice and data wiring in
+  cat3, cat5+, coaxial and fibre, and design of telecom, power and
+  grounding. The master simplifies the early career and drops it. Those
+  five résumés are right and the master is the abbreviation.
 - Lines condensing several employers under one span ("Lucent
   Technologies and earlier, 1996 - 2006") are deliberate summarisation
   and are correct as written. `scripts/audit_resume_dates.py` reports

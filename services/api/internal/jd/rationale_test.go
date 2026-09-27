@@ -148,3 +148,52 @@ func TestProseSpanTakesTheLargest(t *testing.T) {
 		t.Errorf("proseSpanYears = %d, %v; want 30, true", n, ok)
 	}
 }
+
+// Run 10 reported this as an unsupported quote. Nothing is quoted: the
+// apostrophes in "Bachelor's" and "Associate's" were read as a matched
+// single-quote pair. A false positive of this kind is how a check gets
+// ignored, which costs more than the detections it would have made.
+const r10CaiRationale = "The candidate holds a Bachelor's degree in Applied Mathematics and an " +
+	"Associate's degree in Electrical Engineering Technology, which are relevant to the " +
+	"requirement for a Bachelor's degree in a related discipline."
+
+func TestPossessivesAreNotQuotes(t *testing.T) {
+	if got := quotedSpans(r10CaiRationale); len(got) != 0 {
+		t.Errorf("possessive apostrophes were read as quotes: %q", got)
+	}
+	issues := checkRationale(r10CaiRationale,
+		"Bachelor's degree in Engineering or a related discipline", "", nil, 0)
+	for _, i := range issues {
+		if i.Kind == "quote_unsupported" {
+			t.Errorf("false positive survived: %s", i.Detail)
+		}
+	}
+}
+
+func TestSingleQuotesStillWorkWhenProperlyDelimited(t *testing.T) {
+	// Opens after a space, closes before a space. This is what a real
+	// single-quoted span looks like when it carries no possessive.
+	r := "The posting asks for 'hyperscale data centre experience' and the evidence shows none."
+	got := quotedSpans(r)
+	if len(got) != 1 || got[0] != "hyperscale data centre experience" {
+		t.Errorf("a properly delimited single-quoted span was missed: %q", got)
+	}
+}
+
+func TestCurlyQuotesAreMatched(t *testing.T) {
+	r := "It cites “ten years of Kubernetes administration” as the ask."
+	got := quotedSpans(r)
+	if len(got) != 1 || got[0] != "ten years of Kubernetes administration" {
+		t.Errorf("curly-quoted span missed: %q", got)
+	}
+}
+
+func TestApostropheInsideADoubleQuotedSpanIsFine(t *testing.T) {
+	// Double quotes carry no ambiguity, so a possessive inside one must
+	// not break the match.
+	r := `The requirement says "a Bachelor's degree in engineering" and it is not met.`
+	got := quotedSpans(r)
+	if len(got) != 1 || got[0] != "a Bachelor's degree in engineering" {
+		t.Errorf("possessive inside double quotes broke the match: %q", got)
+	}
+}
