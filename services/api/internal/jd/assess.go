@@ -104,6 +104,14 @@ type Judgment struct {
 	// the model's verdict stood. An adjustment that cannot be read is
 	// indistinguishable from the model having said so itself.
 	Adjusted string `json:"adjusted,omitempty"`
+	// RationaleIssues are the ways the rationale disagrees with the
+	// record it was written from: a span it describes but did not
+	// report, a quote from nowhere, a quote from the evidence that it
+	// calls the requirement. They never change the verdict. They exist
+	// because every other check here is about the verdict, and run 9
+	// passed 9 of 9 with two judgments underneath it that did not hold
+	// up. See rationale.go.
+	RationaleIssues []rationaleIssue `json:"rationale_issues,omitempty"`
 }
 
 // Assessment is the auditable record behind a match score: what the
@@ -399,6 +407,24 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 				}
 			}
 		}
+		// Does the sentence agree with the record it was written from?
+		// Nothing here changes the verdict; these are counted by a run
+		// and shown to a reader, because the failure this addresses is a
+		// wrong-but-plausible rationale passing every check there was.
+		// See rationale.go.
+		var issues []rationaleIssue
+		if req, ok := reqByID[j.RequirementID]; ok {
+			var cited []string
+			for _, h := range evidence[j.RequirementID] {
+				for _, id := range ids {
+					if h.Chunk.ID == id {
+						cited = append(cited, h.Chunk.Text)
+					}
+				}
+			}
+			issues = checkRationale(j.Rationale, req.Text, req.SourceQuote, cited, j.StatedSpanYears)
+		}
+
 		byReq[j.RequirementID] = Judgment{
 			RequirementID:    j.RequirementID,
 			Verdict:          verdict,
@@ -407,6 +433,7 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 			StatedSpanYears:  j.StatedSpanYears,
 			PartiesEvidenced: j.PartiesEvidenced,
 			Adjusted:         adjusted,
+			RationaleIssues:  issues,
 		}
 	}
 
@@ -502,6 +529,22 @@ func (a *Assessor) logVerdicts(
 			"verdict":      j.Verdict,
 			"evidence_ids": j.EvidenceIDs,
 			"rationale":    j.Rationale,
+		}
+		// Rationale issues ride on the decision row rather than getting
+		// a surface of their own, because this row is already the thing
+		// a person grades on /admin/decisions and already carries
+		// human_verdict, human_note and reviewed_by. A separate list
+		// would be a second place to look and a second thing to
+		// remember, and the judgment being questioned is right here.
+		//
+		// They never change the verdict, so a reader grading the verdict
+		// can disagree with the check as easily as with the model, which
+		// is the point of having a person in the loop at all.
+		if len(j.RationaleIssues) > 0 {
+			outDoc["rationale_issues"] = j.RationaleIssues
+		}
+		if j.Adjusted != "" {
+			outDoc["adjusted"] = j.Adjusted
 		}
 		if rj, ok := raw[r.ID]; ok {
 			outDoc["raw_verdict"] = rj.Verdict
