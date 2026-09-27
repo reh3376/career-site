@@ -10718,7 +10718,13 @@ type JobEvent struct {
 	// Percent complete at that moment, 0 when the job does not report it.
 	Progress int32 `protobuf:"varint,2,opt,name=progress,proto3" json:"progress,omitempty"`
 	// What the job said it was doing.
-	Summary       string `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	Summary string `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	// The record this report is about, empty when there is none. Opaque
+	// to the runner: the job that reports the event chooses the form.
+	// An evaluation writes "eval:<run id>:<golden id>", with golden id 0
+	// meaning the run itself, so the console can open a posting's result
+	// from its line in the timeline instead of parsing the summary.
+	Ref           string `protobuf:"bytes,4,opt,name=ref,proto3" json:"ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10770,6 +10776,13 @@ func (x *JobEvent) GetProgress() int32 {
 func (x *JobEvent) GetSummary() string {
 	if x != nil {
 		return x.Summary
+	}
+	return ""
+}
+
+func (x *JobEvent) GetRef() string {
+	if x != nil {
+		return x.Ref
 	}
 	return ""
 }
@@ -11940,11 +11953,12 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x14GetJobDetailResponse\x12#\n" +
 	"\x03job\x18\x01 \x01(\v2\x11.career.v1.JobRowR\x03job\x12+\n" +
 	"\x06events\x18\x02 \x03(\v2\x13.career.v1.JobEventR\x06events\x12\x1c\n" +
-	"\ttruncated\x18\x03 \x01(\bR\ttruncated\"l\n" +
+	"\ttruncated\x18\x03 \x01(\bR\ttruncated\"~\n" +
 	"\bJobEvent\x12*\n" +
 	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x1a\n" +
 	"\bprogress\x18\x02 \x01(\x05R\bprogress\x12\x18\n" +
-	"\asummary\x18\x03 \x01(\tR\asummary\"\xa1\x04\n" +
+	"\asummary\x18\x03 \x01(\tR\asummary\x12\x10\n" +
+	"\x03ref\x18\x04 \x01(\tR\x03ref\"\xa1\x04\n" +
 	"\x14GetOpsStatusResponse\x12%\n" +
 	"\x04jobs\x18\x01 \x03(\v2\x11.career.v1.JobRowR\x04jobs\x12\x12\n" +
 	"\x04busy\x18\x02 \x01(\bR\x04busy\x124\n" +

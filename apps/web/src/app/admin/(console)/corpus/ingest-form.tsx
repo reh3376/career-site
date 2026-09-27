@@ -173,7 +173,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 w-fit items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-9 w-fit items-center border border-accent bg-accent px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? "Ingesting…" : "Ingest document"}
     </button>

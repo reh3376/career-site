@@ -65,7 +65,7 @@ export default async function AdminGatePage() {
         The same measurements as{" "}
         <Link
           href="/admin/analytics"
-          className="text-accent no-underline hover:text-accent-strong"
+          className="text-accent no-underline hover:text-accent-hover"
         >
           analytics
         </Link>

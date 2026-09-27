@@ -39,8 +39,11 @@ func NewEvaluator(log *slog.Logger, repo *users.Repo, scorer *Scorer, ownerID in
 	return &Evaluator{log: log, users: repo, scorer: scorer, ownerID: ownerID}
 }
 
-// Report is the progress callback the job runner supplies.
-type Report func(pct int32, summary string)
+// Report is the progress callback the job runner supplies. The third
+// argument is jobs.Event.Ref, the record the report is about; this
+// package writes "eval:<run id>:<golden id>" so a reader of the job
+// timeline can open the posting's result without parsing the summary.
+type Report func(pct int32, summary string, ref ...string)
 
 // Run scores every active golden posting and records the evaluation.
 // It returns a one-line summary for the job log.
@@ -103,7 +106,14 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 			}
 			return "", ctx.Err()
 		}
-		report(int32(5+85*i/len(set)), fmt.Sprintf("scoring %s (%d of %d)", g.Name, i+1, len(set)))
+		// The ref points at the item this report is about. It is written
+		// before the posting is scored, because the report is what marks
+		// the start of the work and the gap to the next one is how long
+		// it took. So a reader who opens it while the run is live finds
+		// no item yet, which is the honest answer rather than an error.
+		report(int32(5+85*i/len(set)),
+			fmt.Sprintf("scoring %s (%d of %d)", g.Name, i+1, len(set)),
+			fmt.Sprintf("eval:%d:%d", run.ID, g.ID))
 
 		item := e.score(ctx, g, threshold)
 		if item.Error != "" {
@@ -142,7 +152,8 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 	if err := e.users.FinishEvalRun(ctx, run); err != nil {
 		return "", fmt.Errorf("close the evaluation: %w", err)
 	}
-	report(100, "done")
+	// Golden id 0 is no posting, so this ref opens the run itself.
+	report(100, "done", fmt.Sprintf("eval:%d:0", run.ID))
 
 	summary := fmt.Sprintf("%d of %d on the right side of the gate, %d ordering violations, %d errors, %s",
 		run.GateCorrect, run.Scored, run.OrderViolations, run.Errors, time.Since(started).Round(time.Second))

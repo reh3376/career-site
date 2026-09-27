@@ -54,6 +54,19 @@ type Event struct {
 	At       time.Time
 	Progress int32
 	Summary  string
+	// Ref names the record this event is about, when there is one, so a
+	// reader can open it. Opaque to the runner, which knows nothing
+	// about evaluations or postings: the job that reports the event
+	// chooses the form, and whatever reads the timeline understands it.
+	//
+	// The alternative was parsing the summary. "scoring
+	// random-nexus-power-system-studies (1 of 9)" does name the posting,
+	// and a regex over it would work until the day someone improves the
+	// wording. A progress message is prose for a person to read, and
+	// making it load-bearing means it can no longer be edited.
+	//
+	// The evaluator writes "eval:<run id>:<golden id>".
+	Ref string
 }
 
 // MaxEvents bounds the history per job. An evaluation runs about four
@@ -62,8 +75,11 @@ type Event struct {
 // to exhaust memory on a box that also has to run the model.
 const MaxEvents = 500
 
-// Report lets a job publish progress while it runs.
-type Report func(pct int32, summary string)
+// Report lets a job publish progress while it runs. The optional third
+// argument is Event.Ref, the record the report is about; it is variadic
+// so the jobs that have nothing to point at are unchanged. Only the
+// first is used.
+type Report func(pct int32, summary string, ref ...string)
 
 // Fn is the body of a job. It returns the final summary.
 type Fn func(ctx context.Context, report Report) (summary string, err error)
@@ -135,7 +151,11 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	r.set(j, func(x *Job) { x.Status = StatusRunning; x.StartedAt = time.Now().UTC() })
-	report := func(pct int32, summary string) {
+	report := func(pct int32, summary string, ref ...string) {
+		var r0 string
+		if len(ref) > 0 {
+			r0 = ref[0]
+		}
 		r.set(j, func(x *Job) {
 			if pct >= 0 && pct <= 100 {
 				x.Progress = pct
@@ -147,7 +167,7 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 			// oldest go first: a long run's recent history is what is
 			// being read, and dropping the tail instead would leave the
 			// start of a run visible and the part you are watching gone.
-			x.Events = append(x.Events, Event{At: time.Now().UTC(), Progress: pct, Summary: summary})
+			x.Events = append(x.Events, Event{At: time.Now().UTC(), Progress: pct, Summary: summary, Ref: r0})
 			if len(x.Events) > MaxEvents {
 				x.Events = x.Events[len(x.Events)-MaxEvents:]
 			}

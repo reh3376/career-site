@@ -249,7 +249,7 @@ function Row({ r, nowMs }: { r: JdRow; nowMs: number }) {
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <Link
           href={`/admin/jd/${r.id}`}
-          className="text-accent no-underline hover:text-accent-strong"
+          className="text-accent no-underline hover:text-accent-hover"
         >
           #{r.id}
         </Link>

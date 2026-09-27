@@ -284,7 +284,7 @@ export default async function AdminAnalyticsPage() {
               value={
                 <Link
                   href={`/admin/evals/${evalRun.id}`}
-                  className="text-accent no-underline hover:text-accent-strong"
+                  className="text-accent no-underline hover:text-accent-hover"
                 >
                   #{String(evalRun.id)}
                 </Link>

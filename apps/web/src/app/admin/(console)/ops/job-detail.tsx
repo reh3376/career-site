@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { getJobDetailAction, type JobDetail, type JobEvent } from "./actions";
+import { EventDetailDialog } from "./event-detail";
 
 // A job row opens its own timeline.
 //
@@ -52,6 +53,8 @@ export function JobDetailDialog({
   onClose: () => void;
 }) {
   const [detail, setDetail] = useState<JobDetail | null>(null);
+  // Which timeline row is open over this dialog, if any.
+  const [openEvent, setOpenEvent] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const returnFocusTo = useRef<Element | null>(null);
 
@@ -87,11 +90,16 @@ export function JobDetailDialog({
   useEffect(() => {
     panelRef.current?.focus();
     function onKey(e: KeyboardEvent) {
+      // The event dialog opens over this one and handles Escape itself,
+      // stopping it in the capture phase. This guard is the belt to
+      // that braces: without it, one Escape closes both and the reader
+      // is returned to the page rather than to the timeline.
+      if (openEvent !== null) return;
       if (e.key === "Escape") onClose();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, openEvent]);
 
   const events: JobEvent[] = detail?.ok ? detail.events : [];
 
@@ -175,30 +183,77 @@ export function JobDetailDialog({
               </p>
             ) : (
               <ol className="mt-2 space-y-px">
-                {events.map((e, i) => (
-                  <li
-                    key={`${e.at ?? i}-${i}`}
-                    className="bg-paper-2 px-4 py-2"
-                  >
-                    <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] text-ink-4">
-                      <span>{hhmm(e.at)}</span>
-                      {i > 0 ? (
-                        <span className="text-accent">
-                          {gap(events[i - 1].at, e.at)}
-                        </span>
-                      ) : null}
-                      {e.progress ? <span>{e.progress}%</span> : null}
-                    </div>
-                    <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
-                      {e.summary}
-                    </p>
-                  </li>
-                ))}
+                {events.map((e, i) => {
+                  // A row is clickable only when the job named a record
+                  // for it. Making every row look clickable and have
+                  // half of them do nothing is worse than a plain list.
+                  const openable = Boolean(e.ref);
+                  const body = (
+                    <>
+                      <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] text-ink-4">
+                        <span>{hhmm(e.at)}</span>
+                        {i > 0 ? (
+                          <span className="text-accent">
+                            {gap(events[i - 1].at, e.at)}
+                          </span>
+                        ) : null}
+                        {e.progress ? <span>{e.progress}%</span> : null}
+                        {openable ? (
+                          <span className="ml-auto text-accent">details</span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
+                        {e.summary}
+                      </p>
+                    </>
+                  );
+                  return (
+                    <li key={`${e.at ?? i}-${i}`}>
+                      {openable ? (
+                        <button
+                          type="button"
+                          onClick={() => setOpenEvent(i)}
+                          aria-haspopup="dialog"
+                          className="block w-full cursor-pointer bg-paper-2 px-4 py-2 text-left hover:bg-paper-3 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+                        >
+                          {body}
+                        </button>
+                      ) : (
+                        <div className="bg-paper-2 px-4 py-2">{body}</div>
+                      )}
+                    </li>
+                  );
+                })}
               </ol>
             )}
           </>
         )}
       </div>
+
+      {openEvent !== null && events[openEvent]?.ref ? (
+        <EventDetailDialog
+          eventRef={events[openEvent].ref}
+          label={events[openEvent].summary ?? ""}
+          timing={{
+            at: hhmm(events[openEvent].at),
+            gap:
+              openEvent > 0
+                ? gap(events[openEvent - 1].at, events[openEvent].at)
+                : "",
+            // How long the step this report opened actually took. An
+            // evaluation reports before it scores a posting, so the
+            // duration is the distance to the next report, not from
+            // the previous one. The last report has no next one yet,
+            // which the dialog shows as still in progress.
+            took:
+              openEvent + 1 < events.length
+                ? gap(events[openEvent].at, events[openEvent + 1].at)
+                : "",
+            progress: events[openEvent].progress,
+          }}
+          onClose={() => setOpenEvent(null)}
+        />
+      ) : null}
     </div>
   );
 }

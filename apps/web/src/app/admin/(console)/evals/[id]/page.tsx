@@ -98,7 +98,7 @@ export default async function EvalDetailPage({
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
         <Link
           href="/admin/evals"
-          className="no-underline hover:text-accent-strong"
+          className="no-underline hover:text-accent-hover"
         >
           evaluations
         </Link>
@@ -190,7 +190,7 @@ export default async function EvalDetailPage({
                   {sub ? (
                     <Link
                       href={`/admin/jd/${sub}`}
-                      className="text-[11px] uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-strong"
+                      className="text-[11px] uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-hover"
                     >
                       derivation
                     </Link>

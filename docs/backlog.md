@@ -614,6 +614,48 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
     "how long will this take" from the run itself rather than from a
     remembered average.
 
+  **Built 2026-09-27**, as described, and then extended the same day
+  when the timeline proved it could not answer the next question.
+
+  Reading "scoring random-xai-structural-data-centers (3 of 9)" and its
+  27 minute gap immediately raises "and how did it do", which meant
+  leaving `/admin/ops`, finding the run on `/admin/evals` and matching
+  rows up by name. A timeline row now opens a second dialog over the
+  first, showing that posting's score against the gate, which side it
+  was expected on and which it landed on, its fit band, and links to
+  the derivation and the run.
+
+  Over the first dialog rather than replacing it, because the timeline
+  is the context: the reader is comparing one posting against the pace
+  of the others, and closing the list to read one row loses the thing
+  being compared against.
+
+  `jobs.Event` gained `Ref`, an opaque string naming the record the
+  report is about, which the evaluator writes as
+  `eval:<run id>:<golden id>`. The alternative was a regex over the
+  summary, which does contain the posting name and would work until
+  someone improved the wording. A progress line is prose for a person
+  to read, and making it load-bearing means it can no longer be
+  edited. `Report` became variadic so the jobs with nothing to point at
+  are unchanged, and a row with no ref is not clickable rather than
+  clickable and inert.
+
+  The report is written when a posting starts scoring, not when it
+  finishes, so opening the newest row mid-run finds no result yet. That
+  is shown as pending, which is what it is.
+
+- **`accent-strong` was never a defined token.** Found 2026-09-27 while
+  building the above. Thirteen uses across eight admin surfaces, all
+  `hover:text-accent-strong`, all compiling to no rule at all, so those
+  links had no hover state. The real token is `--color-accent-hover`.
+  This is the second instance of the same defect, after `bg-canvas` was
+  referenced 28 times and never defined, which is what made the job
+  modal unreadable. Both were invisible because Tailwind drops an
+  unknown utility silently rather than failing the build. Worth a check
+  that every `text-*`, `bg-*` and `border-*` class in `src/` resolves to
+  a token defined in `globals.css`, run in CI, since the failure mode is
+  a style that quietly does nothing and nobody notices for weeks.
+
 
 - **Disk. Cleared 2026-09-22**, from 93 percent full to 68 percent
   (2.7 GB free to 12 GB), by dropping the build cache and 159 stale
