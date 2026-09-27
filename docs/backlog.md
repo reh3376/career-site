@@ -1085,6 +1085,47 @@ are stable (`RR-20`).
 
 ## 6c. Résumé archive and corpus (opened 2026-09-25)
 
+- **The corpus cannot evidence data centre buildout, and the roles
+  being targeted are data centre roles.** Found 2026-09-27 when Roger
+  said, in passing, that he has "built out MDFs and server farms for
+  intranet resources at multiple facilities" and that his telecom work
+  is "very similar to data center build out". None of that is written
+  down anywhere the reviewer can reach.
+
+      corpus, 270 chunks     1 hit, in an interview prep document
+      63 résumés             MDF 2 · data centre 3 · server farm 0
+                             main distribution frame 0 · intranet 0
+      master résumé          frames the Lucent and Bell Atlantic years
+                             as DC power distribution, rectifier plants,
+                             battery strings, UPS to 1 MW
+
+  The master describes the part that reads as telecom rather than the
+  part that reads as data centre infrastructure, so the strongest
+  version of that decade is invisible.
+
+  **Why it matters more than the other gaps.** The golden set already
+  carries an xAI structural data centres posting. The archive holds
+  OpenAI data-centre résumés. Both cooling papers are in the corpus, so
+  the reviewer can evidence that Roger has *designed* data centre
+  cooling and cannot evidence that he has *built* data centre
+  infrastructure, which is the stronger claim.
+
+  It also explains a disagreement worth recording: on run 10 the judge
+  moved that posting's "structural design for mission-critical or
+  hyperscale data center facilities" requirement from unmet to met,
+  reasoning from telecom infrastructure and NEBS/Telcordia. I called it
+  a wrong verdict; Roger disagreed and he is right, because NEBS and
+  Telcordia GR-63 carry structural criteria (floor loading, seismic
+  bracing, equipment framework) for exactly that class of facility. With
+  the buildout work documented it would not be a judgment call at all.
+
+  **What a document needs, and only Roger has it:** which facilities and
+  roughly when; how many MDFs or IDFs and at what scale; what the server
+  farms served, in what rooms, with what power and cooling; whether he
+  specified racks, structured cabling, grounding and bonding, fire
+  suppression, environmental monitoring; and where his scope ended.
+
+
 - **TOP PRIORITY. The corpus cannot evidence capital project
   delivery, which is the centre of the roles being targeted.** Found
   2026-09-26 by evaluation run 8, and only visible because the
