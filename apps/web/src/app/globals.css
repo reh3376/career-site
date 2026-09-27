@@ -15,6 +15,16 @@
   --color-paper: #f6f6f4;
   --color-paper-2: #eeede8;
   --color-paper-3: #e5e4de;
+  /* The writing surface: form fields, and any panel that floats above
+     the page. Distinct from paper so an input reads as somewhere you
+     type rather than as more page.
+
+     It was referenced 28 times before it existed. Tailwind emits no
+     rule for an undefined token, so every one of those elements simply
+     had no background. On a page that is invisible, because the paper
+     behind shows through and looks deliberate. Over a modal overlay it
+     is not: the first dialog to use it was unreadable. */
+  --color-canvas: #ffffff;
   --color-ink: #111417;
   --color-ink-2: #3a3f45;
   --color-ink-3: #7c828a;
@@ -172,6 +182,7 @@ html[data-mode="ot"] {
   --color-paper: #10141a;         /* deep graphite, the plant screen */
   --color-paper-2: #171d26;       /* panel surface */
   --color-paper-3: #1f2733;       /* panel elevation */
+  --color-canvas: #0b0e13;        /* recessed: an input reads as cut into the panel */
   --color-ink: #e6ebf2;           /* HMI foreground text */
   --color-ink-2: #a9b3c1;         /* secondary label */
   --color-ink-3: #6b7684;         /* tertiary label */
