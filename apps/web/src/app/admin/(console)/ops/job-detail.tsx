@@ -100,7 +100,7 @@ export function JobDetailDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="job-detail-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 p-4 backdrop-blur-sm sm:items-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -108,7 +108,7 @@ export function JobDetailDialog({
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto border border-line-strong bg-canvas p-6 shadow-xl outline-none"
+        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto border border-line-strong bg-canvas p-6 shadow-2xl ring-1 ring-line-strong outline-none"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
