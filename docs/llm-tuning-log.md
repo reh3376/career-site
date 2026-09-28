@@ -2190,3 +2190,115 @@ ones lost. Worth recording that this model rarely quotes at all, so the
 insurance against a failure that would otherwise be invisible.
 
 **Run 10 is the baseline.** 9 of 9, 0 inversions, margin 0.1786.
+
+## 2026-09-28: run 11, five documents at once, and what a bigger corpus costs
+
+The largest corpus change any run has seen: four new documents plus the
+held `career-facts.md` edit, taking the corpus from 31 documents and
+270 chunks to 35 and 297, fingerprint `cf474aec6714`. Batched on
+purpose, because the profile document is rendered into all 126 judge
+prompts and measuring three perturbations separately would have cost
+thirteen hours.
+
+    run 11   9 of 9, 0 inversions, margin 0.1071, 0 errors, 4h46m
+    run 10   9 of 9, 0 inversions, margin 0.1786
+    run  9   9 of 9, 0 inversions, margin 0.1071
+    run  8   9 of 9, 0 inversions, margin 0.0714
+
+    posting                                   expect  run11   run10   delta
+    heaven-hill-principal-project-manager     above   1.0000  1.0000   0
+    random-dover-process-control-engineer     above   1.0000  1.0000   0
+    ati-director-process-control-automation   above   1.0000  1.0000   0
+    random-orca-general-manager               above   0.9643  0.9643   0
+    random-cai-automation-engineer            above   0.9286  0.8571  +0.0714
+    blue-origin-mes-ai-manager                above   0.7500  0.8214  -0.0714
+    random-nexus-power-system-studies         below   0.6429  0.6429   0
+    random-xai-structural-data-centers        below   0.6429  0.5714  +0.0714
+    random-profluent-ml-pretraining           below   0.3571  0.2500  +0.1071
+
+Gate accuracy is unchanged and margin gave back everything run 10 won.
+Three scores rose, one fell, and the one that fell was the floor of the
+above-gate group, which is the only score margin is made of.
+
+**Adding corpus material took a met verdict away somewhere unrelated.**
+This is the finding. Blue Origin r11 asks for "2+ Years in building
+products that use or incorporate Large Language Models". In run 10 it
+was met on chunks 284, 293, 62 and 52. In run 11 it is unmet with an
+empty evidence list: "there is no explicit mention of LLMs in the
+evidence."
+
+All four chunks still exist. Nothing was removed, nothing was
+reindexed away. Twenty-seven new chunks entered the pool and those four
+stopped surfacing for that requirement.
+
+What they were is the point. Two are from an article about
+manufacturing decisions and two from scrubbed interview-prep notes.
+MDEMG is well represented, about 75 chunks across a readme and eleven
+sets of speaker notes, but nothing in the corpus is a career note
+stating plainly that Roger builds products incorporating LLMs. The
+requirement was resting on incidental mentions, and incidental mentions
+are the first thing to go when the pool grows. A capability the corpus
+only implies is a capability the corpus will eventually lose.
+
+That is a general property of this retrieval design rather than a
+one-off, and it sets a rule for the corpus: state a capability plainly
+in a document written for it, or expect to lose it to the next ingest.
+The LLM document is the fifth gap found this way and is open on a
+question only Roger can answer, since MDEMG's first commit is
+2026-01-15 and the requirement asks for two years.
+
+**The regulated-manufacturing fix did not work, and failed instructively.**
+CAI rose 0.0714, and not from the fix. Requirement ids are not stable
+across runs because requirements are re-extracted, so the comparison
+has to be by text; matched that way, the only verdict that moved was
+"Support qualification and automation readiness of laboratory and QC
+equipment", unmet to met. Coincidence, not the edit.
+
+The regulated-manufacturing requirement is still unmet. Its rationale
+changed, which is the instructive part:
+
+    run 10   "The candidate's experience is in distilleries, mining,
+              and telecom, not in pharmaceutical or biotech sectors."
+
+    run 11   "The candidate's experience is in distilleries and mining,
+              which are regulated but not in the specified industries."
+
+The corpus edit landed. The judge now states the industries are
+regulated, and then answers unmet to a requirement offering
+"pharmaceutical, biotechnology, or regulated manufacturing", having
+satisfied the third branch in its own sentence.
+
+So this was never an evidence gap. It is a reading failure, and it was
+one in run 10 too; the rationale said so and I read it as a missing
+fact. **Corpus changes what the judge knows. Prompt rules change what
+it does with what it knows.** This needed a prompt change and got a
+corpus line. Second time this pattern has appeared, after Heaven Hill
+r2 in run 10 moved its reasoning without moving its verdict.
+
+Rules 4a and 7 both cover alternatives and both are written around a
+credential, "a Master's or equivalent experience in a STEM field". The
+model is not ignoring 4a; it does not recognise a list of industries as
+the same shape as an escape hatch from a degree. A draft generalising
+4a with three examples across different kinds of list, and naming the
+self-contradiction the way rule 6 names the span contradiction, is
+held pending a run to validate it.
+
+**The rationale check is one arm short.** It fired once across 126
+judgments, and the CAI contradiction is exactly the class it exists for
+and exactly what it cannot see: it detects span mismatches and
+unsupported quotes, not a rationale asserting the requirement's own
+alternative and concluding unmet. A third arm can do this in code with
+no model call: when a verdict is unmet and the requirement contains
+"or", split on the disjunction and test whether the rationale asserts
+any branch. It reports rather than decides, so it cannot cost a verdict
+and needs no evaluation to be safe.
+
+**Verdicts across the run:** 100 met, 24 unmet, 2 partial, 1 rationale
+issue.
+
+**Residue.** 26 of 297 chunks still carry the `****` split-bold-run
+artifact from the pre-UCTS conversions, and chunk 62, one of the four
+that supported Blue Origin r11 in run 10, is one of them. UCTS prevents
+new instances; it does not clean what was ingested before it existed.
+
+**Run 11 is the baseline.** 9 of 9, 0 inversions, margin 0.1071.
