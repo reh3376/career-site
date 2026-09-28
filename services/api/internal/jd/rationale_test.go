@@ -42,7 +42,7 @@ func kinds(issues []rationaleIssue) []string {
 }
 
 func TestSpanMismatchIsReported(t *testing.T) {
-	issues := checkRationale(r10Rationale, r10Requirement, "", nil, 0)
+	issues := checkRationale(r10Rationale, r10Requirement, "", "met", nil, 0)
 	var found *rationaleIssue
 	for i := range issues {
 		if issues[i].Kind == "span_mismatch" {
@@ -59,7 +59,7 @@ func TestSpanMismatchIsReported(t *testing.T) {
 
 func TestSpanAgreementIsNotReported(t *testing.T) {
 	// The ordinary case: the model wrote about thirty years and said so.
-	if issues := checkRationale(r10Rationale, r10Requirement, "", nil, 30); len(issues) != 0 {
+	if issues := checkRationale(r10Rationale, r10Requirement, "", "met", nil, 30); len(issues) != 0 {
 		t.Errorf("a consistent rationale was reported: %v", issues)
 	}
 }
@@ -68,13 +68,13 @@ func TestRationaleWithNoSpanIsNotReported(t *testing.T) {
 	// Most rationales say nothing about duration, and a check that
 	// fires on them is noise that gets ignored.
 	r := "The evidence shows the candidate designed and commissioned medium-voltage distribution."
-	if issues := checkRationale(r, r10Requirement, "", nil, 0); len(issues) != 0 {
+	if issues := checkRationale(r, r10Requirement, "", "met", nil, 0); len(issues) != 0 {
 		t.Errorf("a rationale with no span was reported: %v", issues)
 	}
 }
 
 func TestQuoteFromEvidenceCalledARequirementIsReported(t *testing.T) {
-	issues := checkRationale(r9Rationale, r9Requirement, "", []string{r9FactsSheet}, 0)
+	issues := checkRationale(r9Rationale, r9Requirement, "", "met", []string{r9FactsSheet}, 0)
 	var detail string
 	for _, i := range issues {
 		if i.Kind == "quote_unsupported" {
@@ -97,7 +97,7 @@ func TestQuoteFromEvidenceCalledARequirementIsReported(t *testing.T) {
 
 func TestInventedQuoteIsReported(t *testing.T) {
 	r := `The evidence shows the candidate meets the "ten years of Kubernetes administration" requirement.`
-	issues := checkRationale(r, r10Requirement, "", []string{"Nothing about containers here."}, 12)
+	issues := checkRationale(r, r10Requirement, "", "met", []string{"Nothing about containers here."}, 12)
 	if len(issues) == 0 {
 		t.Fatal("a quote present in neither requirement nor evidence was not reported")
 	}
@@ -108,7 +108,7 @@ func TestInventedQuoteIsReported(t *testing.T) {
 
 func TestQuoteFromTheRequirementIsNotReported(t *testing.T) {
 	r := `The posting asks for "10+ Years of Software and systems engineering" and the evidence shows it.`
-	if issues := checkRationale(r, r10Requirement, "", nil, 12); len(issues) != 0 {
+	if issues := checkRationale(r, r10Requirement, "", "met", nil, 12); len(issues) != 0 {
 		t.Errorf("a quote taken from the requirement was reported: %v", issues)
 	}
 }
@@ -118,7 +118,7 @@ func TestQuoteFromTheSourceQuoteIsNotReported(t *testing.T) {
 	// it is quoting the posting.
 	src := "candidates should bring 10+ Years of Software and systems engineering in fast paced environments, ideally in aerospace"
 	r := `The posting says "ideally in aerospace" and the evidence does not show that.`
-	if issues := checkRationale(r, r10Requirement, src, nil, 12); len(issues) != 0 {
+	if issues := checkRationale(r, r10Requirement, src, "met", nil, 12); len(issues) != 0 {
 		t.Errorf("a quote taken from the source quote was reported: %v", issues)
 	}
 }
@@ -128,13 +128,13 @@ func TestQuotingEvidenceWithoutCallingItARequirementIsFine(t *testing.T) {
 	// requirement misleads a reader about what the posting asked for.
 	r := `The profile states "30 years of engineering practice", which covers the ask.`
 	ev := []string{"backed by 30 years of engineering practice, across mining and spirits."}
-	if issues := checkRationale(r, r10Requirement, "", ev, 30); len(issues) != 0 {
+	if issues := checkRationale(r, r10Requirement, "", "met", ev, 30); len(issues) != 0 {
 		t.Errorf("quoting the evidence was reported: %v", issues)
 	}
 }
 
 func TestEmptyRationaleIsNotReported(t *testing.T) {
-	if issues := checkRationale("  ", r10Requirement, "", nil, 0); issues != nil {
+	if issues := checkRationale("  ", r10Requirement, "", "met", nil, 0); issues != nil {
 		t.Errorf("an empty rationale produced issues: %v", issues)
 	}
 }
@@ -162,7 +162,7 @@ func TestPossessivesAreNotQuotes(t *testing.T) {
 		t.Errorf("possessive apostrophes were read as quotes: %q", got)
 	}
 	issues := checkRationale(r10CaiRationale,
-		"Bachelor's degree in Engineering or a related discipline", "", nil, 0)
+		"Bachelor's degree in Engineering or a related discipline", "", "met", nil, 0)
 	for _, i := range issues {
 		if i.Kind == "quote_unsupported" {
 			t.Errorf("false positive survived: %s", i.Detail)
@@ -195,5 +195,149 @@ func TestApostropheInsideADoubleQuotedSpanIsFine(t *testing.T) {
 	got := quotedSpans(r)
 	if len(got) != 1 || got[0] != "a Bachelor's degree in engineering" {
 		t.Errorf("possessive inside double quotes broke the match: %q", got)
+	}
+}
+
+// The run 11 CAI case: a requirement offering three industries,
+// answered "unmet" by a rationale that grants the third one.
+const r11CaiRequirement = "3+ years' experience in automation engineering within a " +
+	"pharmaceutical, biotechnology, or regulated manufacturing environment"
+
+const r11CaiRationale = "The evidence does not mention pharmaceutical, biotechnology, or " +
+	"regulated manufacturing environments. The candidate's experience is in distilleries " +
+	"and mining, which are regulated but not in the specified industries."
+
+func TestDisjunctionIgnoredIsReported(t *testing.T) {
+	issues := checkRationale(r11CaiRationale, r11CaiRequirement, "", "unmet", nil, 0)
+	var found *rationaleIssue
+	for i := range issues {
+		if issues[i].Kind == "disjunction_ignored" {
+			found = &issues[i]
+		}
+	}
+	if found == nil {
+		t.Fatalf("the run 11 CAI contradiction was not reported: %+v", issues)
+	}
+	if !strings.Contains(found.Detail, "regulated") {
+		t.Errorf("the report should name the branch that was granted: %s", found.Detail)
+	}
+}
+
+func TestRestatingTheRequirementToRefuseItIsNotAContradiction(t *testing.T) {
+	// The first sentence of the CAI rationale on its own. Every branch
+	// word is present and every one is denied. This is what an honest
+	// "unmet" looks like, and reporting it would make the check noise.
+	r := "The evidence does not mention pharmaceutical, biotechnology, or regulated " +
+		"manufacturing environments."
+	for _, i := range checkRationale(r, r11CaiRequirement, "", "unmet", nil, 0) {
+		if i.Kind == "disjunction_ignored" {
+			t.Errorf("a plain refusal was read as a contradiction: %s", i.Detail)
+		}
+	}
+}
+
+func TestDisjunctionArmIgnoresVerdictsTheCodeWeakened(t *testing.T) {
+	// applyDurationRule can turn the model's "met" into "unmet". That
+	// is the code disagreeing with the model, not the model with
+	// itself, so the model's own verdict is what this arm reads.
+	for _, i := range checkRationale(r11CaiRationale, r11CaiRequirement, "", "met", nil, 0) {
+		if i.Kind == "disjunction_ignored" {
+			t.Errorf("reported against a verdict the model did not give: %s", i.Detail)
+		}
+	}
+}
+
+func TestRequirementWithNoAlternativesIsNotChecked(t *testing.T) {
+	req := "5 years of hands-on PLC programming"
+	r := "The evidence shows PLC programming across several plants."
+	for _, i := range checkRationale(r, req, "", "unmet", nil, 0) {
+		if i.Kind == "disjunction_ignored" {
+			t.Errorf("reported on a requirement offering no alternatives: %s", i.Detail)
+		}
+	}
+}
+
+func TestThePostingsOwnWordingIsPreferredOverTheSummary(t *testing.T) {
+	// Extraction compresses, and a list is exactly what a summary
+	// drops. The quote is what the branches are read from.
+	summary := "automation engineering in a regulated industry"
+	quote := "3+ years in a pharmaceutical, biotechnology, or regulated manufacturing environment"
+	r := "His work is in distilleries, which are regulated but not the named sectors."
+	var kinds []string
+	for _, i := range checkRationale(r, summary, quote, "unmet", nil, 0) {
+		kinds = append(kinds, i.Kind)
+	}
+	if len(kinds) == 0 {
+		t.Errorf("the branches should have come from the quote; got no issues")
+	}
+}
+
+// The three false positives the first version of the disjunction arm
+// produced against real runs. Each is a rationale reciting a
+// qualification the candidate does hold, which shares a word with the
+// requirement and satisfies none of its branches. They are pinned
+// because every one of them looked like a contradiction at a glance,
+// which is exactly how a check like this becomes noise nobody reads.
+func TestDisjunctionFalsePositivesFromRuns9To11(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		req  string
+		why  string
+	}{
+		{
+			// Branch words came from "using tools like ...", which is
+			// prose introducing the list rather than an item in it.
+			name: "a tool list the evidence does not answer",
+			req: "Develop and review structural models, calculations, drawings, and " +
+				"specifications using tools like Tekla Structures, ETABS, RISA, STAAD, or equivalent",
+			why: "The evidence does not mention any use of structural modeling tools like " +
+				"Tekla Structures, ETABS, RISA, STAAD, or equivalent. The candidate's evidence " +
+				"focuses on control systems, AI, and manufacturing software rather than " +
+				"structural engineering tools.",
+		},
+		{
+			// "Bachelor" and "Science" are the frame a degree is stated
+			// in. The branches are civil and structural.
+			name: "a different degree in the same frame",
+			req:  "Bachelor of Science in Civil or Structural Engineering from an accredited university",
+			why: "The evidence does not show the candidate has a Bachelor of Science in Civil " +
+				"or Structural Engineering from an accredited university. The candidate has a " +
+				"Bachelor of Science in Applied Mathematics and an Associate of Science in " +
+				"Electrical Engineering Technology, but no degree in Civil or Structural Engineering.",
+		},
+		{
+			// "Applied" matched inside "Applied Mathematics", the name
+			// of a degree the candidate holds at a lower level than the
+			// one asked for.
+			name: "a branch word absorbed into a proper noun",
+			req: "PhD (or equivalent industry experience) in Computer Science, Machine Learning, " +
+				"Natural Language Processing, Applied Math, Computational Biology, Statistics, " +
+				"or a related field",
+			why: "The evidence does not mention a PhD or equivalent industry experience in " +
+				"Computer Science, Machine Learning, Natural Language Processing, Applied Math, " +
+				"Computational Biology, Statistics, or a related field. The candidate holds a " +
+				"B.S. in Applied Mathematics and an A.S. in Electrical Engineering Technology, " +
+				"but no graduate degree is mentioned.",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, i := range checkRationale(tc.why, tc.req, "", "unmet", nil, 0) {
+				if i.Kind == "disjunction_ignored" {
+					t.Errorf("false positive: %s", i.Detail)
+				}
+			}
+		})
+	}
+}
+
+func TestBranchMatchesAreWholeWords(t *testing.T) {
+	// "deregulated" is not "regulated", and reading it as one reports
+	// the opposite of what the rationale said.
+	req := "experience in a pharmaceutical, biotechnology, or regulated manufacturing environment"
+	why := "The candidate's markets are deregulated and the evidence names no regulated producer."
+	for _, i := range checkRationale(why, req, "", "unmet", nil, 0) {
+		if i.Kind == "disjunction_ignored" {
+			t.Errorf("a substring match was read as a branch: %s", i.Detail)
+		}
 	}
 }

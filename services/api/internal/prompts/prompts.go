@@ -188,9 +188,30 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // evidence shows the candidate meets it. The verdict vocabulary is
 // fixed and the score is computed in code from these verdicts; the
 // model never emits a number.
+//
+// v11 generalised rule 4a beyond credentials. Run 11 answered "unmet"
+// to "3+ years' experience in automation engineering within a
+// pharmaceutical, biotechnology, or regulated manufacturing
+// environment" with the rationale "the candidate's experience is in
+// distilleries and mining, which are regulated but not in the
+// specified industries": it satisfied the third branch in its own
+// sentence and then denied the requirement.
+//
+// 4a already said an offered alternative may be taken, and had done
+// since v9, but its only worked example was "a Master's or equivalent
+// experience in a STEM field". Every cue in that example is
+// degree-shaped, a qualification and an escape hatch from it, so the
+// rule was read as being about credentials. A list of industries is
+// the same logic and does not look the same. One example teaches the
+// example; three across different kinds teach the shape.
+//
+// The closing sentence naming the contradiction is copied from rule 6,
+// where it worked: the model stopped writing "over 30 years" alongside
+// stated_span_years 0 once the contradiction was named rather than
+// implied.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 10,
+	Version: 11,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -208,7 +229,11 @@ Rules:
    - a certification, clearance, licence or degree;
    - a job title held, or an employer worked for.
    Calling a vendor's product or API is not a relationship with that vendor. Using a technology is not a partnership with the company that makes it. Do not describe integration as collaboration.
-4a. Rule 4 stops you awarding a credential nobody claimed. It does not stop you taking an alternative the posting itself offered instead of one. When a requirement reads "a Master's or equivalent experience in a STEM field", it is asking for the degree OR the experience, and experience the evidence does demonstrate satisfies the second branch. You are not granting a degree; you are using the option the posting wrote. Answer "unmet" only when neither branch is supported. Do not require the evidence to contain the phrase "equivalent experience", because no CV says that and insisting on it makes the alternative impossible to satisfy, which is the opposite of what offering it meant.
+4a. Rule 4 stops you awarding a credential nobody claimed. It does not stop you taking an alternative the requirement itself offered. When a requirement lists options joined by "or", any one of them satisfies it, and you are granting nothing: you are using the option the posting wrote. Read the whole list before you answer, and answer "unmet" only when no branch is supported. This holds for every kind of list, not only for credentials:
+   - "a Master's or equivalent experience in a STEM field" asks for the degree OR the experience, and experience the evidence demonstrates satisfies the second branch. Do not require the evidence to contain the phrase "equivalent experience", because no CV says that and insisting on it makes the alternative impossible to satisfy, which is the opposite of what offering it meant.
+   - "pharmaceutical, biotechnology, or regulated manufacturing" names three industries, and evidence of any one satisfies it. Regulated manufacturing is the widest branch and is often the one that applies.
+   - "PLC, DCS or SCADA experience" names three platforms, and one is enough.
+   If your rationale says the evidence satisfies one of the branches, the verdict is "met". Writing that the candidate's industries "are regulated" and then answering "unmet" to a requirement offering "regulated manufacturing" contradicts yourself, and the verdict is the half that counts against him.
 5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries named_parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
 6. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere. If your rationale states a number of years, stated_span_years must be that same number. Writing "over 30 years of engineering experience" in the rationale and 0 in the field contradicts yourself, and the field is the one the comparison uses, so the contradiction costs the candidate the requirement.
 6a. A <posting_says> element is the posting's own wording for the requirement above it, quoted. The requirement text is a short summary of it. Where the two differ, the quote decides what is being asked for, because a summary can lose the words that tell you which field a term belongs to. If the requirement says "front-end development" and the quote says "front-end development of future major investments, including scope definition", the ask is capital project definition, not web development.

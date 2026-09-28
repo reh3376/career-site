@@ -422,7 +422,11 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 					}
 				}
 			}
-			issues = checkRationale(j.Rationale, req.Text, req.SourceQuote, cited, j.StatedSpanYears)
+			// j.Verdict, not the adjusted one: the disjunction arm asks
+			// whether the model contradicted itself, and a verdict the
+			// duration rule weakened is the code disagreeing with the
+			// model rather than the model with itself.
+			issues = checkRationale(j.Rationale, req.Text, req.SourceQuote, j.Verdict, cited, j.StatedSpanYears)
 		}
 
 		byReq[j.RequirementID] = Judgment{
