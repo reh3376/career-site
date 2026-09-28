@@ -2302,3 +2302,80 @@ that supported Blue Origin r11 in run 10, is one of them. UCTS prevents
 new instances; it does not clean what was ingested before it existed.
 
 **Run 11 is the baseline.** 9 of 9, 0 inversions, margin 0.1071.
+
+## 2026-09-28: rule 4a generalised, and a check that does not depend on it
+
+Two changes for one failure, run 11's CAI verdict: "3+ years'
+experience in automation engineering within a pharmaceutical,
+biotechnology, or regulated manufacturing environment", answered
+"unmet" by a rationale reading "the candidate's experience is in
+distilleries and mining, which are regulated but not in the specified
+industries". It satisfied the third branch in its own sentence and
+then denied the requirement.
+
+**requirement_judge v10 to v11.** Rule 4a already permitted taking an
+offered alternative, and had since v9. Its only worked example was "a
+Master's or equivalent experience in a STEM field", and every cue in
+that example is degree-shaped: a qualification and an escape hatch from
+it. The model was not ignoring the rule. It did not recognise a list of
+industries as the same shape. The rule is now stated abstractly first
+and illustrated three ways, a credential, a set of industries and a set
+of platforms, and it closes by naming the contradiction outright, which
+is the form that worked for rule 6's span: the model stopped writing
+"over 30 years" alongside stated_span_years 0 once the contradiction
+was named rather than implied.
+
+**The check that does not depend on the prompt holding.** A third arm
+on `checkRationale`, `disjunction_ignored`: when the model answers
+"unmet" to a requirement offering alternatives and its own rationale
+states one of them without denying it, say so. It reports and never
+decides, so an over-eager match costs a line in a report rather than a
+verdict.
+
+It reads the model's own verdict rather than the adjusted one. A
+verdict the duration or relationship rule weakened is the code
+disagreeing with the model, not the model disagreeing with itself, and
+reporting that would blame the wrong party.
+
+**Three false positives before it was worth shipping.** Measured
+against every unmet judgment in runs 9, 10 and 11, 77 of them, rather
+than reasoned about:
+
+    first version    4 flags: 1 real, 3 false
+    shipped version  1 flag:  1 real, 0 false
+
+The three that had to go were all the same shape, a rationale reciting
+a qualification the candidate does hold which shares a word with the
+requirement and satisfies none of its branches:
+
+- "Applied" matched inside "Applied Mathematics" against a requirement
+  wanting a PhD in Applied Math.
+- "engineering" matched inside "Electrical Engineering Technology"
+  against one wanting Civil or Structural Engineering.
+- "tools" and "bachelor" were pulled out of "using tools like Tekla
+  Structures, ETABS, RISA, STAAD, or equivalent" and "Bachelor of
+  Science in Civil or Structural Engineering", which is prose around
+  the list rather than items in it.
+
+Three guards answer them. Branches are read outward from the last "or"
+rather than from every comma. A branch absorbed into a capitalised
+multi-word name is naming a specific thing rather than granting a
+category, so it does not count. And the words a qualification is framed
+in, bachelor, science, degree, university, are never the branch that
+distinguishes one from another. All three are pinned as tests against
+the real rationales that produced them, because every one of them
+looked like a contradiction at a glance, which is how a check like this
+becomes noise nobody reads.
+
+**A confident wrong label, found on the way.** `/admin/decisions`
+rendered the issue kind with a two-branch ternary, so anything that was
+not `span_mismatch` was labelled "quote not in the requirement". The
+new kind would have rendered as a quote problem. It is a lookup now,
+and an unknown kind shows its own name rather than the else branch.
+
+**Cost.** The fingerprint changes, so the next run is not
+prompt-comparable with runs 8 to 11 for this prompt. The rendered
+prefix grows by about 120 tokens, paid once per judgment through the
+cached prefix. Neither change has been measured against the golden set;
+run 12 is what tells us whether CAI moves and whether anything else
+moved with it.

@@ -79,6 +79,17 @@ type VerdictOutput = {
   // with the model, which is the point of grading these at all.
   rationale_issues?: { kind?: string; detail?: string }[];
 };
+
+// A map rather than a ternary, because a ternary labels every kind it
+// has not heard of as the one in its else branch. When the disjunction
+// check was added, its issues rendered as "quote not in the
+// requirement", which is a confident wrong answer of exactly the sort
+// these checks exist to catch. An unknown kind now shows its own name.
+const RATIONALE_ISSUE_LABEL: Record<string, string> = {
+  span_mismatch: "span not reported",
+  quote_unsupported: "quote not in the requirement",
+  disjunction_ignored: "an offered alternative was refused",
+};
 type GateInput = {
   score?: number;
   retrieval_score?: number;
@@ -385,9 +396,7 @@ function DecisionCard({ row }: { row: Row }) {
               className="border-l-2 border-signal bg-signal-soft/40 px-3 py-2 text-sm text-ink"
             >
               <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                {ri.kind === "span_mismatch"
-                  ? "span not reported"
-                  : "quote not in the requirement"}
+                {RATIONALE_ISSUE_LABEL[ri.kind ?? ""] ?? ri.kind ?? "issue"}
               </span>
               <span className="ml-2 text-ink-2">{ri.detail}</span>
             </li>
