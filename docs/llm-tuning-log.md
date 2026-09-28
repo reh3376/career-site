@@ -2379,3 +2379,85 @@ prefix grows by about 120 tokens, paid once per judgment through the
 cached prefix. Neither change has been measured against the golden set;
 run 12 is what tells us whether CAI moves and whether anything else
 moved with it.
+
+## 2026-09-28: run 12, v11 lands, and the noise floor underneath every delta
+
+The first clean prompt comparison. The corpus did not change between
+runs 11 and 12, same 35 documents and 297 chunks, so every movement is
+attributable to requirement_judge v11 and the disjunction arm.
+
+    run 12   9 of 9, 0 inversions, margin 0.1071, 0 errors, 4h51m
+    run 11   9 of 9, 0 inversions, margin 0.1071
+    run 10   9 of 9, 0 inversions, margin 0.1786
+
+    posting                                   run12   run11   delta
+    heaven-hill-principal-project-manager     1.0000  1.0000    0
+    random-dover-process-control-engineer     1.0000  1.0000    0
+    ati-director-process-control-automation   1.0000  1.0000    0
+    random-orca-general-manager               0.9286  0.9643  -0.0357
+    random-cai-automation-engineer            0.9286  0.9286    0
+    blue-origin-mes-ai-manager                0.7500  0.7500    0
+    random-nexus-power-system-studies         0.6429  0.6429    0
+    random-xai-structural-data-centers        0.6429  0.6429    0
+    random-profluent-ml-pretraining           0.2500  0.3571  -0.1071
+
+**v11 did what it was written for.** CAI's regulated-manufacturing
+requirement flipped:
+
+    run 11   unmet, evidence []
+             "distilleries and mining, which are regulated but not in
+              the specified industries"
+
+    run 12   met, evidence [266, 238]
+             "over 15 years of experience in automation engineering
+              within regulated manufacturing environments, including
+              Sazerac, Bardstown Bourbon and Whiskey House, which are
+              federally regulated manufacturing facilities"
+
+The judge takes the third branch the posting offered, cites evidence
+for it, and reasons from the `career-facts.md` line. That also settles
+what the corpus edit was worth: the fact was necessary and was not
+sufficient, and the run 11 conclusion that this was a reading failure
+rather than an evidence gap was right.
+
+**And the fix is invisible in the score.** CAI is 0.9286 in both runs
+for different reasons. Regulated manufacturing gained; "Support
+qualification and automation readiness of laboratory and QC equipment"
+lost exactly as much. That requirement has now gone unmet, met, unmet
+across runs 10, 11 and 12 with nothing about its evidence changing.
+Orca's whole movement is the same shape: one requirement on partnering
+with HR, partial to unmet, worth 0.0357. Profluent has gone 0.2500,
+0.3571, 0.2500.
+
+**So there is a noise floor of roughly one requirement per posting per
+run**, at temperature 0, and a change has to clear it to be visible in
+a score. Three postings sat at exactly 1.0000 across all three runs, so
+this is not general instability; it is marginal requirements moving,
+and every posting has one or two.
+
+Two consequences. A single-posting delta below about 0.04 is not
+evidence of anything, which retires several readings made earlier in
+this log, including treating CAI's 0.0714 rise in run 11 as the
+regulated-manufacturing fix landing when it was a different
+requirement. And verdicts have to be diffed by requirement text on
+every run, because requirement ids are re-extracted and not stable, and
+because a score that does not move can still have two requirements
+swapped underneath it.
+
+**The disjunction arm reported nothing across 126 judgments.** The
+correct result, and not a null one: run 11's contradiction is gone and
+the check did not manufacture a replacement. With the 77 historical
+judgments it was measured against before shipping, it has now seen 203
+and fired once, on the real case.
+
+    met 99   unmet 26   partial 1   rationale issues 0
+
+**Margin is unchanged at 0.1071**, pinned by Blue Origin at 0.7500
+against nexus at 0.6429. Checked mid-run: Blue Origin's LLM requirement
+is unmet again with an empty evidence list and the same reasoning, so
+it is an evidence gap no prompt rule can reach. The corpus document is
+the only thing that moves margin now, and it is open on a question only
+Roger can answer.
+
+**Run 12 is the baseline.** 9 of 9, 0 inversions, margin 0.1071,
+requirement_judge v11.
