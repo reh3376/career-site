@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { getOpsJobsAction } from "./actions";
 import { JobDetailDialog } from "./job-detail";
 
 export type Job = {
@@ -26,9 +27,42 @@ function when(iso?: string): string {
 // summary shown here is only the job's latest report; every earlier one
 // is behind the click, and for a run measured in hours those are the
 // interesting ones.
-export function JobList({ jobs }: { jobs: Job[] }) {
+export function JobList({ jobs: initial }: { jobs: Job[] }) {
+  const [jobs, setJobs] = useState<Job[]>(initial);
   const [openId, setOpenId] = useState<string | null>(null);
   const open = jobs.find((j) => j.id === openId);
+
+  // Refresh while anything is running.
+  //
+  // The page is force-dynamic, so it arrives fresh and then never
+  // changes: the percentage on a five-hour evaluation sat at 42% until
+  // somebody reloaded by hand. This is the page you leave open to watch
+  // a run, so it is the page that most needs to move on its own.
+  //
+  // A failed poll keeps the previous jobs and tries again rather than
+  // clearing the list or stopping. The earlier version of this pattern
+  // in the detail modal stopped permanently on the first error, which
+  // is indistinguishable from a frozen page.
+  const anyRunning = jobs.some((j) => !j.finishedAt);
+  useEffect(() => {
+    if (!anyRunning) return;
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function tick() {
+      try {
+        const r = await getOpsJobsAction();
+        if (!stop && r.ok) setJobs(r.jobs);
+      } catch {
+        // Keep what is on screen and try again.
+      }
+      if (!stop) timer = setTimeout(tick, 15000);
+    }
+    timer = setTimeout(tick, 15000);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [anyRunning]);
 
   if (jobs.length === 0) {
     return (
