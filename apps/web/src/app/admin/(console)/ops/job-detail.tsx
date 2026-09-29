@@ -192,11 +192,23 @@ export function JobDetailDialog({
                     <>
                       <div className="flex flex-wrap items-baseline gap-x-3 font-mono text-[11px] text-ink-4">
                         <span>{hhmm(e.at)}</span>
-                        {i > 0 ? (
+                        {/* How long the work THIS line names took, which
+                            is the distance to the next report, not the
+                            one before it. A job reports when it starts a
+                            step, so the earlier version put the previous
+                            step's duration beside this step's label and
+                            read as though this one had taken it. That
+                            misled a reader on 2026-09-29: a 42 minute
+                            posting appeared to be the one that had just
+                            begun. Still running shows no number rather
+                            than a wrong one. */}
+                        {i + 1 < events.length ? (
                           <span className="text-accent">
-                            {gap(events[i - 1].at, e.at)}
+                            took {gap(e.at, events[i + 1].at).replace("+", "")}
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="text-ink-3">running</span>
+                        )}
                         {e.progress ? <span>{e.progress}%</span> : null}
                         {openable ? (
                           <span className="ml-auto text-accent">details</span>

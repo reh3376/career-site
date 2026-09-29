@@ -55,6 +55,23 @@ gate. The eval row is written only after all of that, so the gap
 between the last judgment and the row appearing is résumé generation,
 not a hang.
 
+Résumé generation is the long pole and only happens above the gate.
+A posting that scores 1.0 costs about 25 minutes of judging plus about
+10 minutes of résumé, which is why a strong posting takes 40 minutes
+and a weak one takes 25. A posting running longer than its neighbours
+is usually scoring well, not stuck.
+
+**A progress report is written when a step begins, not when it ends.**
+So on `/admin/ops` the duration belongs to the step named on the line,
+measured to the next report; the number sitting behind a line is the
+previous step's. That caused a wrong reading on 2026-09-29, where a 42
+minute posting appeared to be the one that had just started. Check
+`llm_usage` if the answer matters:
+
+    SELECT created_at::time, prompt_id, ok, latency_ms, completion_tokens
+      FROM llm_usage WHERE created_at > now() - interval '50 minutes'
+     ORDER BY created_at;
+
 ### Never deploy during a run
 
 The job runner keeps jobs in memory. Recreating the api container kills
