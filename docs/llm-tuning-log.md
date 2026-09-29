@@ -2461,3 +2461,86 @@ Roger can answer.
 
 **Run 12 is the baseline.** 9 of 9, 0 inversions, margin 0.1071,
 requirement_judge v11.
+
+
+## 2026-09-29: run 13 lost a posting to the evidence arriving
+
+Blue Origin errored four hours into run 13, on judge batch 11 of 14:
+
+    decode requirement_judge output: the model filled its 1200-token
+    budget and the JSON is incomplete
+
+Requirement 11 is "2+ Years in building products that use or
+incorporate Large Language Models", which is the requirement the run
+existed to test and the reason the LLM corpus document was written.
+
+**The document worked, and that is what broke it.** In runs 11 and 12
+the judge answered r11 in roughly 100 tokens because there was no
+evidence and it said so. This run it had three chunks on adapter
+routing, the J17 protocol and the prompt registry, and it filled 1,200
+tokens without closing the JSON. The judge averages 123 completion
+tokens across 1,343 recorded calls and exactly one had ever passed 500,
+at 1,200 and 448 seconds, which was almost certainly the same failure
+on an earlier run.
+
+Roger spotted it as "Blue Origin is taking longer than any run since I
+upgraded the server". The box was at 800% CPU the whole time, so
+nothing looked wrong from the outside; ollama's own log was generating
+token 1,194 of a response that had no business being that long.
+
+**Cost to the run.** `separation()` skips items with an error, and Blue
+Origin is the floor of the above-gate group, so run 13's margin would
+have been computed from a different set than run 12's. That is the run
+7 problem again: a margin that looks fine because the constraining
+posting is absent.
+
+**Run 13 was killed at 5 of 9** rather than allowed to finish, since it
+could no longer answer the question it was started for and would have
+held the box for another two hours. There is no cancel path for a job,
+so stopping it meant restarting the api container, and the run row was
+closed as failed by hand: `evaluate.go` closes a run properly on
+context cancellation, but a container that is killed outright never
+reaches that code, which is how a run sat at "running" for ever on
+2026-09-23.
+
+What it did establish before it died, on four postings: nexus, xai and
+ATI all identical to run 12, and profluent oscillating to 0.3571 for
+the fourth run running on the same single requirement. The below-gate
+ceiling held at 0.6429 with the new document in place, which was the
+risk worth checking, so the corpus addition did not pull anything
+toward the gate.
+
+**Fix: retry once at double the budget, rather than raise the ceiling.**
+A ceiling is a guess about the longest answer the model will ever want
+to give, and it will be wrong again the next time the corpus gets
+better at something. A retry costs one call when the guess is wrong
+instead of a whole run, and it logs that it happened so the ceiling can
+be raised deliberately rather than by accident. Malformed JSON well
+under budget still fails on the first call, because that is a model
+that cannot follow the schema and retrying it twice as expensively
+helps nobody.
+
+**And keep what the model said, when it fails.** `decision_log` carries
+`prompt_text` and `response_text` for every judgment and was written
+only after a successful decode, so the one response nobody could
+examine was the one that broke. Run 13's failure could not be diagnosed
+from the database at all, only inferred from a token count in
+`llm_usage`.
+
+A failing call now writes a `decision_log` row of kind
+`jd_call_failed` with the prompt and the whole response, untruncated,
+and the reason in a new `error` column (migration 00039). A log line
+would not have done: 400 characters of a 1,200-token response is not
+the data, it is a description of the data.
+
+Only on failure, and only when the failure is terminal. A truncation
+the retry recovers from leaves nothing behind, because nothing failed
+and a row for it would be noise on `/admin/decisions`. These rows are
+rare by construction: one call in 1,343 has ever hit this.
+
+**The general lesson, which is uncomfortable.** Every corpus document
+so far has been judged on whether it moves a score. This one moved
+something else: it gave the model enough material that the model's
+output outgrew a budget nobody had revisited since it was set. Adding
+evidence is not a safe operation, and the failure it caused looked like
+a slow server rather than a defect.
