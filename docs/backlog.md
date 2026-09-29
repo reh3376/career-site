@@ -565,6 +565,29 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   Thursday only, 09:00 to 12:00 and 14:00 to 16:00. Three days, two
   windows a day, five hours a day.
 
+  **Decided by the owner 2026-09-29, and one of them changes the
+  design rather than a setting.**
+
+  - **Members only, not public.** The FSD specified a public page. In
+    his words: "If a user isn't interested enough to request access I
+    do not want them spamming my schedule with fake meetings. A public
+    facing calendar is asking for trouble." The reason it matters more
+    than convenience: the target is his **main personal calendar**, so
+    an unauthenticated visitor could block real time on it. Behind the
+    gate every booking is attributable to an approved account.
+  - **Read through `freebusy.query`, never `events.list`.** Free/busy
+    returns intervals and nothing else: no titles, attendees,
+    locations or descriptions. Listing events would pull the content
+    of his private life into this application to answer a question
+    that only needs "is this interval taken", and would make a leaked
+    token far worse.
+  - **One time zone, his, stated next to every time.** Not converted
+    to the visitor's. A bare time with no zone is how somebody books
+    the wrong hour.
+  - **A downloadable `.ics` alongside the event**, so the member can
+    use Outlook or Apple Calendar rather than depending on a Google
+    invite email arriving and not being filtered.
+
   Details that decide whether this works or annoys people:
 
   - **The time zone has to be stated everywhere a time is shown.** The
