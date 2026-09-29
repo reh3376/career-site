@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Document ID | CAREER-SITE-FSD-2026-001 |
-| Version | 0.3.9, draft for owner review, synced to the shipped system |
+| Version | 0.3.10, draft for owner review, synced to the shipped system |
 | Date | 2026-09-29 |
 | Owner | Roger E. Henley II |
 | Prepared with | Claude (Anthropic), working from the owner's brief, master résumé, and published writing |
@@ -27,6 +27,7 @@
 | 0.3.5 | 2026-09-19 | R. Henley / Claude | Owner-added scope + repo-maturity policy. New FR-CNT-22..25 (contact/support form, meeting scheduler, quote of the day, GitHub repo cards + contributor request); FR-CHAT-13/16 amended (narrow tool-use allowlist; Ollama as an on-host LLM/embeddings option); FR-ADM-12..14 (curation surfaces for the new features); §6.11 added (NFR-DOC docs discipline, NFR-SUPP public-repo hygiene); §9.3 branch workflow expanded; §9.7 public-repo hygiene expanded; Phase 2 scope expanded (effort 8-10 → 12-15 days); D-21..26 opened (contact form / scheduler / QoD / contributor access / chatbot tool-use / on-host LLM); D-27 resolved (public-repo maturity policy; ADR-0027) |
 | 0.3.6 | 2026-09-19 | R. Henley / Claude | Frontend design system adopted ("blueprint editorial"). Cool-paper palette + blueprint-teal accent + safety-orange signal; Fraunces variable serif + Inter Tight + JetBrains Mono via `next/font`; editorial layout with real numbers used typographically; four curated work + personal images woven in (Hobet dragline, copper condenser, UK podium, home workshop, Whiskey House team); single motion moment (`system · nominal` pulse in header); underlined form fields on paper. ADR-0028 recorded. Note (§13.1): visual design is a build-phase artifact per this document; the ADR is the source of truth for tokens. |
 | 0.3.7 | 2026-09-19 | R. Henley / Claude | Admin console scaffolded + role-aware hamburger nav. New `/admin` (overview + `/admin/contacts`, `/admin/registrations`, `/admin/access` placeholders) gated server-side by admin role via `AdminLayout`; `/admin/decision` stays public through the `(console)` route group. `SiteHeader` becomes a server component that reads the session and hands role state to a new `HamburgerMenu` client drawer (per-role menu groups: browse / admin / your-account / access / elsewhere). Shared `signOutAction` at `apps/web/src/app/actions/session.ts` deduplicates the sign-out flow. `/login` accepts `?next=<same-origin-path>` for post-auth redirect (validated to prevent open-redirect). No proto changes; real data lands in v0.3.8 when the AdminService handlers ship. |
+| 0.3.10 | 2026-09-29 | R. Henley / Claude | Two subsystems that shipped and had no requirements at all. New §5.12 FR-DATA-01..08, the product event stream and what is done with the data in it: one append-only table across the anonymous and member boundary, identity attached by the api and never sent by the browser, no address and no user agent stored, query strings stripped but for `utm_*`, identity expiring on a nightly job while counts survive, a deleted user leaving an unattributable row, and every commitment stated on a page reachable without an account. FR-DATA-03 supersedes the hosted-analytics option FR-ANLT-01 left open. New §5.13 FR-EVAL-01..07, the evaluation harness: the golden set and its single owner-supplied label on capability only, running the production pipeline rather than a copy, gate accuracy with ordering violations and margin read together and why, the configuration a run records, the corpus manifest and the limitation that it captures identity rather than content, the deploy hazard and what controls it today, and the rationale check that reports without deciding. §7.1 sitemap gained the four admin routes it was missing (analytics, evals, gate, ops) and the §5.7 status line says twelve surfaces rather than nine. |
 | 0.3.9 | 2026-09-29 | R. Henley / Claude | Synced to the system as shipped through PR 172, sixty merges after 0.3.8. §8: Go 1.26 to 1.27 and Python 3.12 to 3.14 (the base images moved 2026-09-29 and CI now tests on what ships), migration series 00001 to 00022 corrected to 00036 throughout, with 00023 to 00036 summarised in §8.6. New FR-ADM-19..22: the operations surface (`GetOpsStatus`), a job's progress timeline with per-event references (`GetJobDetail`), the evaluation harness (`/admin/evals`, golden set, runs with gate accuracy, ordering violations and margin), and rationale soundness reported on the decision review surface. All five "(unverified)" markers resolved against the code, and three were overstatements: contact Reopen and Delete are not built, `TestRetrieval` has no UI, Radix and MDX are not dependencies, and two of the four whitelist templates do not exist. Those requirement rows now say so rather than claiming them. |
 | 0.3.8 | 2026-09-22 | R. Henley / Claude | Document synced to the system as shipped through PR 89. New §5.11 FR-JD (the JD reviewer: members-only upload, progress modal, reopenable review page and own-submissions list, owner-editable fit bands with "strong" as the résumé gate, one judge call per requirement, score formula v2, grounded résumé as a locked PDF, category-based submitter email, decision log). New J7 journey. FR-PUB-02, FR-AUTH-14/17/18, FR-ADM-10/11/14, FR-NOTF-05 annotated with shipped behaviour; FR-ADM-15..18 (JD submissions, decision review, corpus jobs, DB query) and FR-NOTF-07 (JD emails) added; FR-CHAT status note (Ask Roger chat not built; its corpus, embeddings, LLM gateway and decision log are live). §3.2 roles, §7.1 sitemap, §7.4 corpus workflow, §8.1 to 8.5 and §8.10 (Next.js 16 with `proxy.ts`, Go 1.26, Python 3.12, Ollama container, `JdService`, sidecar `Generate` and `RenderResume`, 90 public RPCs, migrations to 00022, Hetzner CPX31 at `/opt/career-site`, manual `IMAGE_TAG` rollout), §9.1/9.3/9.4 (workflows actually present, `protect-main` ruleset with five required checks, self-hosted fonts), §11.1, §12 status column, §14 (D-01, D-08, D-10, D-11, D-26 current state), §15.A note, §15.E template kinds. Statements neither in the current-state brief nor verifiable in the code are marked "(unverified)". No em dashes added. |
 
@@ -443,6 +444,45 @@ Open items for this module (not requirements yet): phone-width review of the res
 
 ---
 
+### 5.12 Product event stream and data handling (FR-DATA)
+
+One append-only table holds every product event the site records, across
+the anonymous and member boundary, because the questions worth asking
+cross it: how many landing visitors request access, verify, get
+approved, sign in, submit a posting and open the result is one query
+when the events share a table and a visitor id, and five joins when
+they do not. Full reference: [`docs/events/README.md`](events/README.md).
+
+| ID | Requirement | Priority | Acceptance criteria / notes |
+|---|---|---|---|
+| FR-DATA-01 | Product events shall be recorded in one append-only `events` table covering anonymous and member activity alike, with one visitor identifier spanning both. | Must (**Shipped**) | Migration 00023; replaced the member-only `activity_events`, whose rows were copied in tagged `backfilled_from: activity_events`. Emitted from the browser beacon (`EventService.Record`), from the api at each handler's success point (`handlers/events_wire.go`), and from the scheduler. |
+| FR-DATA-02 | The browser shall never send identity with an event. The api shall attach it from the session cookie and the anonymous cookie it already holds. | Must (**Shipped**) | `apps/web/src/lib/events-client.ts` queues and batches, `sendBeacon` on page hide. `career_anon` is set by `apps/web/src/proxy.ts` on first load: random UUID, HttpOnly, SameSite=Lax, 400 days. |
+| FR-DATA-03 | No third-party analytics, advertising or social-widget scripts shall load on any page. | Must (**Shipped**) | The beacon talks to this origin only; enforced by CSP and asserted in tests. Supersedes the hosted-provider option left open in FR-ANLT-01. |
+| FR-DATA-04 | An address shall never be stored. A user agent shall never be stored. | Must (**Shipped**) | The address becomes the first 8 bytes of SHA-256(`EVENT_IP_SALT` + address); the user agent becomes a device class of phone, tablet or desktop and is then discarded. |
+| FR-DATA-05 | Query strings shall be stripped from recorded paths, except campaign parameters. | Must (**Shipped**) | Only `utm_*` survives, so a path cannot carry a token, an email address or a search term into the event table by accident. |
+| FR-DATA-06 | Identity on an event shall expire while the count survives. | Must (**Shipped**) | The nightly `events-anonymize` job blanks `user_id`, `session_id`, `anon_id` and `ip_hash` on rows older than `EVENT_IDENTITY_RETENTION_DAYS` (default 400). The row and its counts remain, so history does not become a reason to keep identity. |
+| FR-DATA-07 | Deleting a user shall not delete their events, and shall not leave them attributable. | Must (**Shipped**) | `user_id` is `ON DELETE SET NULL`; the anonymous row remains. |
+| FR-DATA-08 | Every commitment above shall be stated on a public page reachable without an account. | Must (**Shipped**) | `/privacy`, in the `PUBLIC_PATHS` allow-list of FR-PUB-02. The page and `docs/events/README.md` describe the same behaviour; the code has to keep both. |
+
+### 5.13 Evaluation harness (FR-EVAL)
+
+The reviewer is a model pipeline, so "did that change help" is not
+answerable by reading the code. It is answerable only by scoring a
+fixed set of postings the owner has already judged, under one
+configuration, before and after. Everything in this section exists to
+make that pair of runs the evidence. Findings and history:
+[`docs/llm-tuning-log.md`](llm-tuning-log.md).
+
+| ID | Requirement | Priority | Acceptance criteria / notes |
+|---|---|---|---|
+| FR-EVAL-01 | A golden set of postings shall carry one owner-supplied label each: above or below the hiring gate, on capability only. | Must (**Shipped**) | `golden_postings` (00027, 00030). Never whether level, pay, location or hours suit him; those are parameter filters and not the reviewer's business. An unlabelled posting is excluded, because an evaluation compares against an expectation and a posting nobody has judged has none. |
+| FR-EVAL-02 | An evaluation shall score every active posting through the real pipeline, one at a time, and record what produced each result. | Must (**Shipped**) | `RunJob(JOB_KIND_EVAL_QUICK)`; `eval_runs` and `eval_items` (00027). Roughly 4h50m for nine postings on the CPX31. It runs the production path rather than a copy, so a run cannot pass against a pipeline that is not the one serving members. |
+| FR-EVAL-03 | A run shall record gate accuracy, ordering violations and margin. | Must (**Shipped**) | Margin is the gap between the lowest above-gate score and the highest below-gate score, computed by `separation()`. An ordering violation is a below-gate posting outscoring an above-gate one, and is worse than a gate miss because moving the gate cannot fix it. Margin narrows before gate accuracy breaks, which is why all three are read together. |
+| FR-EVAL-04 | A run shall record the configuration that produced it: model, context window, prompt fingerprints, corpus fingerprint, embedder, threshold and build. | Must (**Shipped**) | `eval_runs` columns; prompt fingerprints are `v{version}:{sha256(system+schema)[:4]}` from `internal/prompts`. A run whose configuration is unknown cannot be compared with another. |
+| FR-EVAL-05 | A run shall record which corpus documents it read. | Should (**Shipped**) | `eval_run_documents` (00038 era, migration 00037), captured at run start before anything is scored, denormalised so a later re-index does not rewrite the history of a run that read the earlier version. The fingerprint says whether two runs read the same corpus; this says what that corpus was. **Known limitation:** identity is captured, content is not, so an edit that preserves the chunk count is invisible. A `content_hash` per document version closes it and is in the backlog. |
+| FR-EVAL-06 | An evaluation shall not be silently destroyed by a deploy. | Must (partially **Shipped**) | The job runner keeps jobs in memory, so recreating the api container kills a run. `/admin/ops` (FR-ADM-19) answers whether one is in flight, which is the control today. All three services share one `IMAGE_TAG`, so there is no partial deploy that avoids this; per-service tags are in the backlog. |
+| FR-EVAL-07 | A rationale shall be checked against the record it was written from, and the check shall never change a verdict. | Should (**Shipped**) | FR-ADM-22. Reporting rather than deciding is the point: a check that can cost a verdict has to be right, and a check that only reports can be wrong cheaply and still be useful. |
+
 ## 6. Non-functional requirements
 
 ### 6.1 Security (NFR-SEC)
@@ -592,7 +632,10 @@ Routes marked **shipped** exist under `apps/web/src/app` as of 2026-09-22; the r
 | `/ask`, `/ask/:conversationId` | Member | planned | Assistant full-page view |
 | `/search` | Member | planned | Site search |
 | `/me/interests`, `/me/history`, `/me/saved`, `/me/conversations`, `/me/data` | Member | planned | Interests, history, saved items, conversations, export/delete |
-| `/admin`, `/admin/contacts`, `/admin/registrations[/:id]`, `/admin/access`, `/admin/activity`, `/admin/corpus`, `/admin/jd[/:id]`, `/admin/decisions`, `/admin/db` | Admin | shipped | Console (§5.7) |
+| `/admin`, `/admin/contacts`, `/admin/registrations[/:id]`, `/admin/access`, `/admin/activity`, `/admin/analytics`, `/admin/corpus`, `/admin/jd[/:id]`, `/admin/decisions`, `/admin/db` | Admin | shipped | Console (§5.7) |
+| `/admin/evals`, `/admin/evals/:id` | Admin | shipped | The golden set, starting an evaluation, and per-run results with the corpus it read (§5.13) |
+| `/admin/gate` | Admin | shipped | The criteria as a gate rather than a dashboard: seven rows, each pass, fail, or not enough data yet |
+| `/admin/ops` | Admin | shipped | Whether the box is busy, what the job runner remembers with per-job timelines, pipeline counts and host load (FR-ADM-19/20) |
 
 ### 7.2 Content types and frontmatter
 
