@@ -105,6 +105,47 @@ export default async function AdminGatePage() {
   );
 }
 
+// Where the number behind each criterion can actually be read.
+//
+// RR-14 asks that a row link to the runs behind it. A gate that states
+// a verdict and offers no way to check it asks to be taken on trust,
+// which is the opposite of what a gate is for: every one of these is
+// computed from rows somebody can go and look at.
+//
+// Keyed on the criterion text because that is what the view emits and
+// what the page already keys on. A criterion added later without an
+// entry here simply renders without a link rather than breaking.
+const EVIDENCE: Record<string, { href: string; label: string }> = {
+  Reliability: {
+    href: "/admin/jd",
+    label: "the runs",
+  },
+  Agreement: {
+    href: "/admin/decisions?all=1",
+    label: "the graded verdicts",
+  },
+  "Time to a result": {
+    href: "/admin/jd",
+    label: "per-submission timings",
+  },
+  Calibration: {
+    href: "/admin/evals",
+    label: "the evaluation",
+  },
+  "Does the score predict anything": {
+    href: "/admin/jd",
+    label: "record an outcome",
+  },
+  "Reach, last 30 days": {
+    href: "/admin/analytics",
+    label: "the funnel",
+  },
+  "Model load, last 30 days": {
+    href: "/admin/analytics",
+    label: "usage by day",
+  },
+};
+
 function GateRow({ row }: { row: Row }) {
   const asOf = row.asOf ?? row.as_of;
   // Four states, not three. "measured" is a row that is deliberately
@@ -124,6 +165,7 @@ function GateRow({ row }: { row: Row }) {
       : state === "not met"
         ? "border-l-danger"
         : "border-l-line-strong";
+  const evidence = row.criterion ? EVIDENCE[row.criterion] : undefined;
   const label =
     state === "met"
       ? "text-success"
@@ -152,11 +194,18 @@ function GateRow({ row }: { row: Row }) {
           {row.detail}
         </p>
       ) : null}
-      {asOf ? (
-        <p className="mt-2 font-mono text-[11px] text-ink-4">
-          as of {new Date(asOf).toLocaleString()}
-        </p>
-      ) : null}
+      <p className="mt-2 font-mono text-[11px] text-ink-4">
+        {asOf ? `as of ${new Date(asOf).toLocaleString()}` : ""}
+        {asOf && evidence ? " · " : ""}
+        {evidence ? (
+          <Link
+            href={evidence.href}
+            className="text-accent no-underline hover:text-accent-hover"
+          >
+            {evidence.label}
+          </Link>
+        ) : null}
+      </p>
     </li>
   );
 }
