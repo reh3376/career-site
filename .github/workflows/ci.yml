@@ -41,12 +41,20 @@ name: ci
 # PUSH, which is false anywhere but main.
 on:
   push:
-    branches:
-      - main
-      - "claude_dev*"
-      - "feat/*"
-      - "fix/*"
-      - "dependabot/**"
+    # A denylist, not an allowlist. The allowlist was four prefixes and
+    # anything outside them got no CI at all, silently: no run, no
+    # failing check, nothing to notice. Dependabot fell outside it for
+    # weeks (see below), and on 2026-09-29 two branches pushed during
+    # ordinary work fell outside it too, one named docs/ and one named
+    # without a prefix. Each time the branch looked fine because a
+    # workflow that never starts reports nothing.
+    #
+    # This repository is public, so Actions minutes are free and there
+    # is no reason to ration runs. Inverting it means a new prefix
+    # works the day someone invents it, and the failure mode becomes a
+    # wasted run rather than an untested merge.
+    branches-ignore:
+      - "backup/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
