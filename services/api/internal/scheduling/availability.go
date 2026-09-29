@@ -3,19 +3,18 @@
 // The owner's availability is a list of windows per weekday, not a
 // start and an end. His stated hours are Tuesday, Wednesday and
 // Thursday, 09:00 to 12:00 and 14:00 to 16:00, and building that as one
-// range with a break bolted on later is the usual way this ends up
-// wrong.
+// range with a lunch break bolted on later is the usual way this ends
+// up wrong.
 //
-// Everything here works in the owner's zone, America/New_York, and that
-// is deliberate rather than incidental. The zone is stored as an IANA
-// name and never as an offset: America/New_York is UTC-5 in winter and
-// UTC-4 in summer, so a 09:00 window expressed as an offset would drift
+// Everything works in the owner's zone, America/New_York, stored as an
+// IANA name and never as an offset. America/New_York is UTC-5 in winter
+// and UTC-4 in summer, so a 09:00 window held as an offset would drift
 // by an hour twice a year and nobody would notice until a meeting was
 // missed.
 //
 // The windows are the outer bound. The calendar subtracts from them and
 // never adds: a free Tuesday evening is still not bookable, because
-// availability is a decision the owner made and not a gap Google
+// availability is a decision the owner made rather than a gap Google
 // happens to report.
 package scheduling
 
@@ -25,17 +24,17 @@ import (
 	"time"
 )
 
-// Window is one bookable range on one weekday, in the owner's zone.
-// Start and End are minutes from midnight, so they survive a DST change
-// that moves the wall clock underneath them.
+// Window is one bookable range on one weekday. Start and End are
+// minutes from local midnight, so they survive a DST change that moves
+// the wall clock underneath them.
 type Window struct {
 	Weekday   time.Weekday
 	StartMins int
 	EndMins   int
 }
 
-// Interval is a half-open span [Start, End) in absolute time. Busy
-// intervals come from the calendar; booked ones from this application.
+// Interval is a half-open span [Start, End). Busy intervals come from
+// the calendar; booked ones from this application.
 type Interval struct {
 	Start time.Time
 	End   time.Time
@@ -48,27 +47,46 @@ func (i Interval) Overlaps(o Interval) bool {
 	return i.Start.Before(o.End) && o.Start.Before(i.End)
 }
 
-// Settings is the owner's configuration. Everything here is editable in
-// the admin surface; none of it is compiled in.
+// Settings is the owner's configuration, all of it editable in the
+// admin surface and none of it compiled in.
 type Settings struct {
-	// Zone is an IANA name, never an offset.
-	Zone string
-	// SlotMins is the length of a bookable meeting.
-	SlotMins int
-	// BufferMins is dead time kept after each booking, so three
-	// meetings in a morning are not back to back.
-	BufferMins int
-	// MaxPerDay caps bookings per calendar day in the owner's zone, so
-	// three available days do not become five conversations on a
-	// Wednesday.
-	MaxPerDay int
-	// LeadHours is how far ahead of now the first bookable slot sits.
-	// Nobody should be able to book a meeting starting in ten minutes.
-	LeadHours int
-	// HorizonDays is how far ahead the calendar is offered.
-	HorizonDays int
-	// Windows are the outer bound of availability.
-	Windows []Window
+	Zone string // IANA name, never an offset
+	// Durations a member may choose, in minutes. The owner offers 15,
+	// 30 and 45: the length is the member's decision because only they
+	// know whether they need a quick question answered or a real
+	// conversation, and offering one length makes both of those
+	// awkward.
+	Durations []int
+	// GapMins is clearance between meetings, applied on both sides of a
+	// candidate. It is not carved out of the grid in advance: nothing
+	// is held until something is actually booked, and then a 15-minute
+	// meeting occupies 30 minutes of the day, a 30 occupies 45 and a 45
+	// occupies 60.
+	GapMins int
+	// StepMins is how finely start times are offered.
+	StepMins    int
+	MaxPerDay   int // cap per calendar day in the owner's zone
+	LeadHours   int // how far ahead the first bookable slot sits
+	HorizonDays int // how far ahead the calendar is offered
+	Windows     []Window
+}
+
+// Allows reports whether a requested meeting length is one the owner
+// offers. A member picking a length nobody offered is a bad request,
+// not a silent round to the nearest.
+func (s Settings) Allows(mins int) bool {
+	for _, d := range s.Durations {
+		if d == mins {
+			return true
+		}
+	}
+	return false
+}
+
+// Footprint is how much of the day a meeting of this length consumes:
+// the meeting plus the clearance after it.
+func (s Settings) Footprint(mins int) time.Duration {
+	return time.Duration(mins+s.GapMins) * time.Minute
 }
 
 // Slot is one offered start time.
@@ -77,18 +95,26 @@ type Slot struct {
 	End   time.Time
 }
 
-// Validate reports a configuration that cannot produce sensible slots,
+// Validate rejects a configuration that cannot produce sensible slots,
 // so the admin surface refuses it rather than rendering an empty
-// calendar that looks like no availability.
+// calendar that reads as "no availability".
 func (s Settings) Validate() error {
 	if _, err := time.LoadLocation(s.Zone); err != nil {
 		return fmt.Errorf("zone %q is not an IANA location: %w", s.Zone, err)
 	}
-	if s.SlotMins <= 0 {
-		return fmt.Errorf("slot length must be positive, got %d", s.SlotMins)
+	if len(s.Durations) == 0 {
+		return fmt.Errorf("no meeting lengths are offered")
 	}
-	if s.BufferMins < 0 {
-		return fmt.Errorf("buffer cannot be negative, got %d", s.BufferMins)
+	for _, d := range s.Durations {
+		if d <= 0 {
+			return fmt.Errorf("meeting length must be positive, got %d", d)
+		}
+	}
+	if s.GapMins < 0 {
+		return fmt.Errorf("gap cannot be negative, got %d", s.GapMins)
+	}
+	if s.StepMins <= 0 {
+		return fmt.Errorf("step must be positive, got %d", s.StepMins)
 	}
 	if s.MaxPerDay <= 0 {
 		return fmt.Errorf("per-day cap must be positive, got %d", s.MaxPerDay)
@@ -98,26 +124,40 @@ func (s Settings) Validate() error {
 	}
 	for _, w := range s.Windows {
 		if w.StartMins < 0 || w.EndMins > 24*60 || w.StartMins >= w.EndMins {
-			return fmt.Errorf("window on %s is not a range: %d to %d",
-				w.Weekday, w.StartMins, w.EndMins)
+			return fmt.Errorf("window on %s is not a range: %d to %d", w.Weekday, w.StartMins, w.EndMins)
 		}
-		if w.EndMins-w.StartMins < s.SlotMins {
-			return fmt.Errorf("window on %s is shorter than one %d-minute slot",
-				w.Weekday, s.SlotMins)
+		if shortest := minOf(s.Durations); w.EndMins-w.StartMins < shortest {
+			return fmt.Errorf("window on %s is shorter than the shortest meeting offered (%d minutes)", w.Weekday, shortest)
 		}
 	}
 	return nil
 }
 
-// Slots returns every start time a member may book, in order.
+// Slots returns every start time a member may book for a meeting of
+// the requested length, in order.
 //
-// busy is what the calendar reports, and carries no detail about what
-// those intervals are: free/busy only. booked is what this application
-// has already taken, which is tracked separately because a held slot is
-// not yet on the calendar and would otherwise be offered twice.
-func Slots(s Settings, busy, booked []Interval, now time.Time) ([]Slot, error) {
+// The length is the member's choice, so availability has to be computed
+// per length rather than once: a 45-minute meeting has fewer places to
+// go than a 15-minute one, and computing the grid for the shortest and
+// then filtering would offer starts that cannot actually hold the
+// meeting asked for.
+//
+// busy is what the calendar reports, free/busy only and carrying no
+// detail about what those intervals are. booked is what this
+// application has already taken, tracked separately because a held slot
+// is not yet on the calendar and would otherwise be offered twice.
+//
+// Clearance is applied as a guard on both sides of the candidate rather
+// than baked into the stored intervals. Nothing is held until something
+// is booked, and then the clearance falls out of the arithmetic: a
+// 15-minute meeting leaves the next start 30 minutes away, a 30 leaves
+// it 45, a 45 leaves it 60.
+func Slots(s Settings, durationMins int, busy, booked []Interval, now time.Time) ([]Slot, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
+	}
+	if !s.Allows(durationMins) {
+		return nil, fmt.Errorf("%d minutes is not an offered meeting length; the owner offers %v", durationMins, s.Durations)
 	}
 	loc, err := time.LoadLocation(s.Zone)
 	if err != nil {
@@ -126,9 +166,9 @@ func Slots(s Settings, busy, booked []Interval, now time.Time) ([]Slot, error) {
 
 	earliest := now.Add(time.Duration(s.LeadHours) * time.Hour)
 	limit := now.AddDate(0, 0, s.HorizonDays)
+	meeting := time.Duration(durationMins) * time.Minute
+	gap := time.Duration(s.GapMins) * time.Minute
 
-	// Count what is already booked per day, so the cap is applied to
-	// the day a slot falls in rather than to the list as a whole.
 	perDay := map[string]int{}
 	for _, b := range booked {
 		perDay[b.Start.In(loc).Format("2006-01-02")]++
@@ -140,42 +180,39 @@ func Slots(s Settings, busy, booked []Interval, now time.Time) ([]Slot, error) {
 	}
 
 	var out []Slot
-	// Walk calendar days in the owner's zone. Adding 24 hours would
-	// drift across a DST boundary; AddDate on a midnight-anchored date
-	// lands on the next local midnight whatever the offset did.
-	day := time.Date(now.In(loc).Year(), now.In(loc).Month(), now.In(loc).Day(), 0, 0, 0, 0, loc)
+	// Walk local calendar days. Adding 24 hours would drift across a DST
+	// boundary; AddDate on a midnight-anchored date lands on the next
+	// local midnight whatever the offset did.
+	n := now.In(loc)
+	day := time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, loc)
 	for ; day.Before(limit); day = day.AddDate(0, 0, 1) {
 		windows := byWeekday[day.Weekday()]
 		if len(windows) == 0 {
 			continue
 		}
-		key := day.Format("2006-01-02")
+		// The cap limits meetings actually taken, not slots displayed.
+		// Once the day is full it offers nothing; until then it offers
+		// every free slot, because hiding them would only make the
+		// calendar look emptier than it is.
+		if perDay[day.Format("2006-01-02")] >= s.MaxPerDay {
+			continue
+		}
 		for _, w := range windows {
-			// Build each boundary from the local date plus minutes, so a
-			// spring-forward day simply has fewer slots rather than
-			// silently shifting them.
 			start := day.Add(time.Duration(w.StartMins) * time.Minute)
 			end := day.Add(time.Duration(w.EndMins) * time.Minute)
-			step := time.Duration(s.SlotMins+s.BufferMins) * time.Minute
-			for t := start; !t.Add(time.Duration(s.SlotMins) * time.Minute).After(end); t = t.Add(step) {
-				if perDay[key] >= s.MaxPerDay {
-					break
-				}
-				slot := Interval{Start: t, End: t.Add(time.Duration(s.SlotMins) * time.Minute)}
-				if slot.Start.Before(earliest) {
+			step := time.Duration(s.StepMins) * time.Minute
+			// The meeting must finish inside the window. Its clearance
+			// may run past the end: the window bounds the conversation,
+			// not the gap after it.
+			for t := start; !t.Add(meeting).After(end); t = t.Add(step) {
+				if t.Before(earliest) {
 					continue
 				}
-				// The buffer applies to conflicts as well as to spacing:
-				// a booking ending at 10:00 blocks a 10:00 start when a
-				// buffer is configured.
-				guard := Interval{
-					Start: slot.Start.Add(-time.Duration(s.BufferMins) * time.Minute),
-					End:   slot.End.Add(time.Duration(s.BufferMins) * time.Minute),
-				}
+				guard := Interval{Start: t.Add(-gap), End: t.Add(meeting).Add(gap)}
 				if anyOverlap(guard, busy) || anyOverlap(guard, booked) {
 					continue
 				}
-				out = append(out, Slot{Start: slot.Start, End: slot.End})
+				out = append(out, Slot{Start: t, End: t.Add(meeting)})
 			}
 		}
 	}
@@ -190,4 +227,14 @@ func anyOverlap(i Interval, list []Interval) bool {
 		}
 	}
 	return false
+}
+
+func minOf(xs []int) int {
+	m := xs[0]
+	for _, x := range xs[1:] {
+		if x < m {
+			m = x
+		}
+	}
+	return m
 }
