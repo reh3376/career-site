@@ -31,7 +31,14 @@ services:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 
   web:
-    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-web:${IMAGE_TAG:-latest}
+    # Per-service tags, each falling back to the shared IMAGE_TAG, so an
+    # ordinary rollout is unchanged and nothing has to be rewritten. The
+    # point of the override is that all three services sharing one
+    # variable meant `compose up -d` recreated the api for a CSS change,
+    # and the job runner keeps evaluations in memory, so a one-line
+    # front-end fix had to wait five hours for a run to finish. That
+    # happened four times on 2026-09-29.
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-web:${WEB_IMAGE_TAG:-${IMAGE_TAG:-latest}}
     # Kill the base compose's `build:` fallback in prod. Without this,
     # a missing tag on GHCR (e.g. IMAGE_TAG bumped ahead of the CI
     # publish) makes compose fall through to `docker build` locally on
@@ -55,7 +62,7 @@ services:
       JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
 
   api:
-    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${API_IMAGE_TAG:-${IMAGE_TAG:-latest}}
     build: !reset null
     pull_policy: always
     environment:
@@ -104,7 +111,7 @@ services:
       - ${CORPUS_PRIVATE_HOST_DIR:-/opt/career-site-private/corpus}:/corpus-private:ro
 
   sidecar:
-    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-sidecar:${SIDECAR_IMAGE_TAG:-${IMAGE_TAG:-latest}}
     build: !reset null
     pull_policy: always
     environment:

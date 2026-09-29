@@ -15,6 +15,23 @@ deploy/
 └── live-check.sh                functional check of a running deployment
 ```
 
+## Deploying one service
+
+`deploy/rollout.sh --only web [sha]` deploys a single service and leaves
+the others alone.
+
+All three share `IMAGE_TAG`, so an ordinary rollout recreates the api
+whatever changed, and the job runner keeps evaluations in memory: a
+one-line front-end fix would otherwise wait five hours for a run to
+finish. Use `--only web` for that case and the full rollout for
+everything else.
+
+It sets that service's own tag variable and leaves `IMAGE_TAG` alone,
+so the file still names what the untouched services run. A full rollout
+afterwards clears the override and puts the stack back on one tag.
+`live-check.sh` reports all three, so a mixture is visible rather than
+inferred.
+
 ## Sequence
 
 Do these in order. Each step is a hand-off between you and me.

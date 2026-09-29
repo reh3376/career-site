@@ -2,9 +2,16 @@
 # One rollout, start to finish: wait for the images, deploy, verify,
 # prune. Run it from a checkout on the owner's machine, not on the box.
 #
-#   deploy/rollout.sh                 # deploy the current origin/main
-#   deploy/rollout.sh <12-char-sha>   # deploy a specific build
-#   deploy/rollout.sh --rollback      # go back to the previous tag
+#   deploy/rollout.sh                    # deploy the current origin/main
+#   deploy/rollout.sh <12-char-sha>      # deploy a specific build
+#   deploy/rollout.sh --rollback         # go back to the previous tag
+#   deploy/rollout.sh --only web [sha]   # one service, leaving the rest
+#
+# --only exists because all three services shared one IMAGE_TAG, so
+# `compose up -d` recreated the api for a CSS change and killed any
+# evaluation in flight. Use it for a front-end fix while a run is going;
+# use the full rollout for anything else, which also clears the
+# override.
 #
 # Every step prints what it is doing and stops on the first failure, so
 # a half-finished rollout is visible rather than silent. The runbook in
@@ -24,6 +31,28 @@ say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 die() { printf '\nFAILED: %s\n' "$*" >&2; exit 1; }
 
 current_tag() { S "grep '^IMAGE_TAG=' $REMOTE/.env.prod | cut -d= -f2"; }
+
+# --only <service> deploys one service without touching the others.
+#
+# All three share IMAGE_TAG, so an ordinary rollout recreates the api
+# whatever changed, and the job runner keeps evaluations in memory. A
+# one-line front-end fix therefore waited on a five-hour run four times
+# on 2026-09-29. With --only web the api is left alone and the run
+# survives.
+#
+# It sets that service's own tag variable and leaves IMAGE_TAG alone, so
+# .env.prod still names what the untouched services are running and
+# --rollback and live-check keep telling the truth. A full rollout after
+# one of these clears the override.
+ONLY=""
+if [ "${1:-}" = "--only" ]; then
+  ONLY="${2:?--only needs a service: web, api or sidecar}"
+  case "$ONLY" in
+    web|api|sidecar) ;;
+    *) die "--only takes web, api or sidecar, not '$ONLY'" ;;
+  esac
+  shift 2
+fi
 
 if [ "${1:-}" = "--rollback" ]; then
   PREV=$(S "cat $REMOTE/.previous-image-tag 2>/dev/null || true")
@@ -45,7 +74,7 @@ say "deploying $TAG (currently $PREV_TAG)"
 # 1. The three images must all exist. Prod compose has build: !reset, so
 #    a missing tag fails the `up` rather than quietly building on the box.
 say "waiting for images"
-for repo in api sidecar web; do
+for repo in ${ONLY:-api sidecar web}; do
   for attempt in $(seq 1 60); do
     if S "docker manifest inspect ghcr.io/reh3376/career-site-$repo:$TAG >/dev/null 2>&1"; then
       echo "  ok   $repo"
@@ -61,18 +90,27 @@ done
 say "updating the checkout"
 S "cd $REMOTE && git pull -q --ff-only && git log -1 --format='%h %s'"
 
-say "pointing .env.prod at $TAG"
-S "cd $REMOTE && echo '$PREV_TAG' > .previous-image-tag && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env.prod && grep '^IMAGE_TAG=' .env.prod"
+if [ -n "$ONLY" ]; then
+  VAR=$(echo "$ONLY" | tr '[:lower:]' '[:upper:]')_IMAGE_TAG
+  say "pointing $VAR at $TAG (IMAGE_TAG stays $PREV_TAG)"
+  S "cd $REMOTE && sed -i '/^${VAR}=/d' .env.prod && echo '${VAR}=$TAG' >> .env.prod && grep -E '^(IMAGE_TAG|${VAR})=' .env.prod"
+else
+  say "pointing .env.prod at $TAG"
+  # A full rollout clears any per-service override, so the stack goes
+  # back to one tag and .env.prod cannot describe a mixture nobody
+  # intended.
+  S "cd $REMOTE && echo '$PREV_TAG' > .previous-image-tag && sed -i -E '/^(WEB|API|SIDECAR)_IMAGE_TAG=/d' .env.prod && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env.prod && grep '^IMAGE_TAG=' .env.prod"
+fi
 
 say "pulling"
 for attempt in 1 2 3; do
-  S "cd $REMOTE && $CS pull 2>&1 | tail -3" && break
+  S "cd $REMOTE && $CS pull ${ONLY} 2>&1 | tail -3" && break
   [ "$attempt" = 3 ] && die "image pull kept failing"
   echo "  retrying"; sleep 10
 done
 
 say "starting"
-S "cd $REMOTE && $CS up -d 2>&1 | tail -8"
+S "cd $REMOTE && $CS up -d ${ONLY} 2>&1 | tail -8"
 
 say "waiting for readiness"
 ok=no
@@ -85,16 +123,25 @@ for _ in $(seq 1 30); do
 done
 [ "$ok" = yes ] || die "readyz never came good; roll back with deploy/rollout.sh --rollback"
 
-# The version endpoint reports the commit the binary was built from, so
-# this catches an image that did not actually change.
+# The version endpoint reports the commit the api binary was built from,
+# so this catches an image that did not actually change. It speaks for
+# the api only, so on --only web or sidecar it should still be the tag
+# the api was already on.
 got=$(curl -s --max-time 10 "$SITE/api/readyz" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
-[ "$got" = "$TAG" ] || echo "  warning: readyz reports version '$got', expected '$TAG'"
+case "$ONLY" in
+  web|sidecar)
+    [ "$got" = "$PREV_TAG" ] || echo "  warning: readyz reports '$got'; the api was not deployed and should still be '$PREV_TAG'"
+    ;;
+  *)
+    [ "$got" = "$TAG" ] || echo "  warning: readyz reports version '$got', expected '$TAG'"
+    ;;
+esac
 
 say "migrations"
 S "cd $REMOTE && $CS logs api --since 5m 2>&1 | grep -iE 'goose|migrat' | tail -5 || echo '  none run'"
 
 say "pruning old images"
-S "KEEP=' $TAG $PREV_TAG latest '; n=0
+S "KEEP=\" $TAG $PREV_TAG latest \$(docker ps --format '{{.Image}}' | sed 's/.*://' | tr '\\n' ' ') \"; n=0
    for img in \$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^ghcr.io/reh3376/career-site-'); do
      t=\${img##*:}
      case \"\$KEEP\" in *\" \$t \"*) ;; *) docker rmi \"\$img\" >/dev/null 2>&1 && n=\$((n+1)) ;; esac

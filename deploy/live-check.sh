@@ -64,6 +64,11 @@ cd /opt/career-site || exit 1
 # http://localhost to HTTPS, and the api port is not published.
 # stdin is this script; `compose exec -T` would consume it, hence </dev/null.
 cs() { docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml "$@" </dev/null; }
+# What each service is actually running, not what IMAGE_TAG says. They
+# can legitimately differ after a `rollout.sh --only`, and a check that
+# reports one number for three services would hide exactly the state it
+# exists to describe.
+echo "  images running: $(docker ps --format '{{.Names}} {{.Image}}' | awk '/career-site-(api|web|sidecar)-1/ {split($2,a,":"); sub(/career-site-/,"",$1); sub(/-1$/,"",$1); printf "%s=%s ", $1, a[2]}')"
 echo "  image tag: $(grep ^IMAGE_TAG .env.prod | cut -d= -f2)  embed=$(grep ^SIDECAR_EMBED_PROVIDER .env.prod | cut -d= -f2)  llm=$(grep ^SIDECAR_LLM_PROVIDER .env.prod | cut -d= -f2)  pdf_pw_set=$([ -n "$(grep ^RESUME_PDF_OWNER_PASSWORD .env.prod | cut -d= -f2)" ] && echo yes || echo no)"
 echo "  containers:"; cs ps --format '    {{.Name}} {{.Status}}'
 echo "  migration: $(cs exec -T postgres psql -U career -d career -At -c 'select max(version_id) from goose_db_version' 2>/dev/null)"

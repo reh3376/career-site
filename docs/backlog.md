@@ -644,10 +644,27 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   per service too, or the readiness check starts lying about what is
   running.
 
-  **Not urgent.** It buys the ability to ship front-end fixes during a
-  long evaluation, which is a real but occasional annoyance. Worth
-  doing before evaluations become routine enough to be running most of
-  the time.
+  **BUILT 2026-09-29**, the same day it was written, after it forced a
+  fourth wait. `WEB_IMAGE_TAG` / `API_IMAGE_TAG` / `SIDECAR_IMAGE_TAG`
+  each fall back to the shared `IMAGE_TAG`, so an ordinary rollout is
+  unchanged. `rollout.sh --only web [sha]` sets one of them, waits for
+  one image, and brings up one service.
+
+  Three things had to follow from it rather than being left to drift:
+
+  - A full rollout deletes any per-service override, so `.env.prod`
+    cannot end up describing a mixture nobody intended.
+  - The image prune now keeps every tag a running container is using,
+    read from `docker ps`, rather than assuming the stack is on one or
+    two. Otherwise a partial deploy could prune the image another
+    service is running.
+  - `live-check.sh` reports what each service is actually running, not
+    what `IMAGE_TAG` says. A single number for three services would
+    hide exactly the state this change makes possible.
+
+  The readiness assertion also knows: `/api/readyz` reports the api's
+  build, so after `--only web` it should still show the previous tag,
+  and saying otherwise would be a false alarm every time.
 
 - **Job detail on `/admin/ops`: a row should open, and the runner
   should stop discarding what a job reported.** Asked for 2026-09-25
