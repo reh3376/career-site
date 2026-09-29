@@ -206,8 +206,17 @@ export function JobDetailDialog({
                           <span className="text-accent">
                             took {gap(e.at, events[i + 1].at).replace("+", "")}
                           </span>
+                        ) : detail?.ok && !detail.job.finishedAt ? (
+                          // The step in flight, counting from its own
+                          // report. "running" alone made the reader go
+                          // and work out the elapsed time by hand,
+                          // which is the thing this panel exists to
+                          // save them.
+                          <span className="text-accent">
+                            running {elapsed(e.at)}
+                          </span>
                         ) : (
-                          <span className="text-ink-3">running</span>
+                          <span className="text-ink-3">last report</span>
                         )}
                         {e.progress ? <span>{e.progress}%</span> : null}
                         {openable ? (

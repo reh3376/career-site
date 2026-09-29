@@ -61,6 +61,13 @@ A posting that scores 1.0 costs about 25 minutes of judging plus about
 and a weak one takes 25. A posting running longer than its neighbours
 is usually scoring well, not stuck.
 
+**The run order is below-gate first, then above-gate alphabetically.**
+`ListGoldenPostings` orders by `expected_gate DESC, name`, so the
+position in "scoring X (5 of 9)" follows that and not the order
+postings were added or their ids. Today that is nexus, profluent, xai,
+then ati, blue-origin, heaven-hill, cai, dover, orca. Worth knowing
+before counting positions off any other list.
+
 **A progress report is written when a step begins, not when it ends.**
 So on `/admin/ops` the duration belongs to the step named on the line,
 measured to the next report; the number sitting behind a line is the
