@@ -103,9 +103,6 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
           <div className="flex flex-wrap items-center gap-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-2">
             <StatusChip color="success">RUN</StatusChip>
             <ModeToggle current="ot" />
-            <span className="hidden items-center gap-2 lg:flex">
-              <OtSocialPills />
-            </span>
             <Link
               href="/login"
               className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
@@ -483,36 +480,6 @@ function StatusChip({
       <span className={`pilot text-${color}`} aria-hidden="true" />
       <span>{children}</span>
     </span>
-  );
-}
-
-// Top-bar profile pills next to [ SIGN IN ], so LinkedIn and GitHub are
-// visible without scrolling to the NAV panel.
-function OtSocialPills() {
-  const s = getSocialLinks();
-  return (
-    <>
-      {s.linkedin ? (
-        <a
-          href={s.linkedin}
-          rel="noopener noreferrer"
-          target="_blank"
-          className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
-        >
-          [ LINKEDIN ]
-        </a>
-      ) : null}
-      {s.github ? (
-        <a
-          href={s.github}
-          rel="noopener noreferrer"
-          target="_blank"
-          className="inline-flex min-h-[36px] items-center border border-line-strong px-3 py-1.5 text-ink-2 no-underline transition-colors hover:border-accent hover:text-accent"
-        >
-          [ GITHUB ]
-        </a>
-      ) : null}
-    </>
   );
 }
 
