@@ -1304,18 +1304,20 @@ class EvalRun(_message.Message):
     def __init__(self, id: _Optional[int] = ..., eval_id: _Optional[str] = ..., status: _Optional[str] = ..., note: _Optional[str] = ..., app_commit: _Optional[str] = ..., host: _Optional[str] = ..., model: _Optional[str] = ..., num_ctx: _Optional[int] = ..., embedder_model: _Optional[str] = ..., prompts_json: _Optional[str] = ..., corpus_fingerprint: _Optional[str] = ..., threshold: _Optional[float] = ..., total: _Optional[int] = ..., scored: _Optional[int] = ..., gate_correct: _Optional[int] = ..., order_violations: _Optional[int] = ..., margin: _Optional[float] = ..., errors: _Optional[int] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., items: _Optional[_Iterable[_Union[EvalItem, _Mapping]]] = ..., corpus_documents: _Optional[_Iterable[_Union[EvalCorpusDoc, _Mapping]]] = ...) -> None: ...
 
 class EvalCorpusDoc(_message.Message):
-    __slots__ = ("document_id", "title", "source_kind", "visibility", "chunk_count")
+    __slots__ = ("document_id", "title", "source_kind", "visibility", "chunk_count", "content_hash")
     DOCUMENT_ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
     VISIBILITY_FIELD_NUMBER: _ClassVar[int]
     CHUNK_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_HASH_FIELD_NUMBER: _ClassVar[int]
     document_id: int
     title: str
     source_kind: str
     visibility: str
     chunk_count: int
-    def __init__(self, document_id: _Optional[int] = ..., title: _Optional[str] = ..., source_kind: _Optional[str] = ..., visibility: _Optional[str] = ..., chunk_count: _Optional[int] = ...) -> None: ...
+    content_hash: str
+    def __init__(self, document_id: _Optional[int] = ..., title: _Optional[str] = ..., source_kind: _Optional[str] = ..., visibility: _Optional[str] = ..., chunk_count: _Optional[int] = ..., content_hash: _Optional[str] = ...) -> None: ...
 
 class EvalItem(_message.Message):
     __slots__ = ("golden_id", "golden_name", "expected_gate", "run_id", "submission_id", "match_score", "fit", "gate_side", "passed", "error")

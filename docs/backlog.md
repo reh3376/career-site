@@ -162,17 +162,24 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   reproducible when it is not, which is a worse failure than having no
   manifest, because it invites confidence.
 
-  **What closes it:** a `content_hash` per document version, written at
-  ingest and copied into `eval_run_documents` alongside the id. Then
-  two runs can be compared exactly, and a rationale citing chunk 62 can
-  be replayed against the text chunk 62 actually held that day rather
-  than the text it holds now.
+  **CLOSED 2026-09-29**, migration 00040. `corpus_documents` already
+  carried `content_hash` and already refreshed it on re-index, so
+  nothing new had to be computed: it simply was not being copied into
+  the manifest. Copied rather than joined, for the same reason the
+  title is, so a later re-index cannot rewrite the history of a run
+  that read the earlier version. Shown on `/admin/evals/<id>` beside
+  the chunk count.
 
-  Additive and testable against production, unlike the gate fix in §6b:
-  the hashes can be computed and checked before anything depends on
-  them. Deliberately not queued into the rollout that is already
-  waiting on run 13, which holds five merges and one migration; it goes
-  in the one after.
+  **The gap proved itself the same day it was named.** The ontology
+  article had 362 asterisk artifacts removed and came back from the
+  re-index with exactly 26 chunks, the number it had before. Identity,
+  title, kind, visibility and chunk count were all unchanged. Nothing
+  in the manifest would have shown the text was different. Its hash
+  is `cdf30bae...` and the previous one is gone, so runs 13 and 14
+  cannot be compared on that document even now; runs from here can.
+
+  Null for rows captured before this, which means unknown rather than
+  unchanged.
 
 ## 3. JD reviewer
 

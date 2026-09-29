@@ -35,6 +35,8 @@ type CorpusDoc = {
   visibility?: string;
   chunk_count?: number;
   chunkCount?: number;
+  content_hash?: string;
+  contentHash?: string;
 };
 
 type Run = {
@@ -260,6 +262,7 @@ export default async function EvalDetailPage({
                 const kind = d.source_kind ?? d.sourceKind ?? "";
                 const chunks = d.chunk_count ?? d.chunkCount ?? 0;
                 const vis = d.visibility ?? "";
+                const hash = d.content_hash ?? d.contentHash ?? "";
                 return (
                   <li
                     key={String(id)}
@@ -273,6 +276,13 @@ export default async function EvalDetailPage({
                       </span>
                     </p>
                     <span className="font-mono text-sm text-ink-3">
+                      {hash ? (
+                        // Which documents a run read is one question;
+                        // whether they were the same documents is
+                        // another, and an edit that preserves the chunk
+                        // count answers the first identically.
+                        <span className="mr-3 text-ink-4">{hash.slice(0, 12)}</span>
+                      ) : null}
                       {chunks} {chunks === 1 ? "chunk" : "chunks"}
                     </span>
                   </li>

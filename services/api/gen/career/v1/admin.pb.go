@@ -7864,7 +7864,13 @@ type EvalCorpusDoc struct {
 	// public or corpus_only.
 	Visibility string `protobuf:"bytes,4,opt,name=visibility,proto3" json:"visibility,omitempty"`
 	// Chunks the document held at capture.
-	ChunkCount    int32 `protobuf:"varint,5,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
+	ChunkCount int32 `protobuf:"varint,5,opt,name=chunk_count,json=chunkCount,proto3" json:"chunk_count,omitempty"`
+	// What the document's text hashed to at capture, hex. Empty for runs
+	// captured before this was recorded, which means unknown rather than
+	// unchanged. Without it the manifest says which documents a run read
+	// and not whether they were the same documents: an edit that
+	// preserves the chunk count is otherwise invisible.
+	ContentHash   string `protobuf:"bytes,6,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7932,6 +7938,13 @@ func (x *EvalCorpusDoc) GetChunkCount() int32 {
 		return x.ChunkCount
 	}
 	return 0
+}
+
+func (x *EvalCorpusDoc) GetContentHash() string {
+	if x != nil {
+		return x.ContentHash
+	}
+	return ""
 }
 
 // One posting's result inside one evaluation.
@@ -11829,7 +11842,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x10corpus_documents\x18\x16 \x03(\v2\x18.career.v1.EvalCorpusDocR\x0fcorpusDocumentsB\f\n" +
 	"\n" +
 	"_thresholdB\t\n" +
-	"\a_margin\"\xa8\x01\n" +
+	"\a_margin\"\xcb\x01\n" +
 	"\rEvalCorpusDoc\x12\x1f\n" +
 	"\vdocument_id\x18\x01 \x01(\x03R\n" +
 	"documentId\x12\x14\n" +
@@ -11840,7 +11853,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"visibility\x18\x04 \x01(\tR\n" +
 	"visibility\x12\x1f\n" +
 	"\vchunk_count\x18\x05 \x01(\x05R\n" +
-	"chunkCount\"\xbc\x02\n" +
+	"chunkCount\x12!\n" +
+	"\fcontent_hash\x18\x06 \x01(\tR\vcontentHash\"\xbc\x02\n" +
 	"\bEvalItem\x12\x1b\n" +
 	"\tgolden_id\x18\x01 \x01(\x03R\bgoldenId\x12\x1f\n" +
 	"\vgolden_name\x18\x02 \x01(\tR\n" +
