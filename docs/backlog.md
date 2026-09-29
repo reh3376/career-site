@@ -1259,8 +1259,14 @@ reliability number.
 **Left to do, two things.** Rows do not yet link to the runs behind
 them, which `RR-14` asks for.
 
-**And a criterion with no data vanishes instead of saying so.**
-Diagnosed 2026-09-29, not yet fixed. `v_gate` is a `UNION ALL` of seven
+**~~And a criterion with no data vanishes instead of saying so.~~
+FIXED 2026-09-29**, migration 00038, after building the empty database
+the diagnosis said was missing. Seven rows now, each reading "not
+enough data yet", where there was one. Verified twice: on a scratch
+database built from 00001 to 00037 with no rows, and against a copy of
+production, where the output is byte-identical before and after, so the
+fix changes nothing that currently works. The original diagnosis
+follows. `v_gate` is a `UNION ALL` of seven
 sub-views, and six of them select straight from a view that groups by
 tenant. An empty source table produces no group, so the sub-view
 produces no row, so the criterion is absent from `v_gate` rather than
@@ -1285,14 +1291,17 @@ SQL and several of these build their `value` string by concatenation.
 The six are reliability, agreement, latency, calibration, reach and
 model load.
 
-**Why it is not done yet.** Production shows all seven rows because
-production has data, so the bug cannot be reproduced there and a fix
-cannot be verified against it before shipping. It needs a scratch
-database with the migrations applied and no rows, which the weekly
-restore rehearsal already builds the machinery for. Latent today, and
-it bites two ways: anyone who clones this repository and runs it sees a
-gate that looks broken, and the second tenant under ADR 0029 would see
-the same.
+**On the reproduction.** Production shows all seven rows because
+production has data, so the bug is invisible there. The database it
+needed took ten minutes to build: create a scratch database, apply the
+Up half of every migration in order, and query. That is also what made
+the fix safe to ship, because the same method proved the output
+unchanged against a copy of production.
+
+One thing the fix corrected that the diagnosis had not spotted:
+`v_gate_calibration` took `LIMIT 1` across all tenants rather than per
+tenant, so with two tenants the second would have shown the first
+one's evaluation. It is a lateral join per tenant now.
 
 **Incident, 2026-09-24.** The first version of migration 00032 dropped
 `v_judge_agreement` and its summary. goose runs 00031 first, so
