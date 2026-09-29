@@ -13,8 +13,8 @@ Three services behind one contract:
 | Component | Path | Language | Role |
 |---|---|---|---|
 | Web app | `apps/web/` | Next.js 16 App Router / TypeScript | Public landing + members-only UI; `src/proxy.ts` enforces the access policy; calls the API through `connect-es`. Fonts (Fraunces, Inter Tight, JetBrains Mono) are self-hosted from `src/fonts` via `next/font/local`, so builds never touch Google. |
-| API | `services/api/` | Go 1.26 | ConnectRPC endpoints, auth, sessions, admin, scheduling, corpus ingest + retrieval, the JD pipeline (requirement extraction, per-requirement judging, score formula in code, grounded résumé) |
-| Sidecar | `services/sidecar/` | Python 3.12 | gRPC service: `Embed` (nomic-embed-text via Ollama), `Generate` (LLM gateway, JSON-schema constrained, refuses truncated results), `RenderResume` (Typst PDF locked with pypdf) |
+| API | `services/api/` | Go 1.27 | ConnectRPC endpoints, auth, sessions, admin, scheduling, corpus ingest + retrieval, the JD pipeline (requirement extraction, per-requirement judging, score formula in code, grounded résumé) |
+| Sidecar | `services/sidecar/` | Python 3.14 | gRPC service: `Embed` (nomic-embed-text via Ollama), `Generate` (LLM gateway, JSON-schema constrained, refuses truncated results), `RenderResume` (Typst PDF locked with pypdf) |
 
 Alongside: Postgres 16 + pgvector (768-dim HNSW cosine), an Ollama container (embeddings and the LLM, one loaded model at a time), and Caddy in front. Everything runs on one Hetzner CPX31 via Docker Compose; that box is the ceiling, so the workload is fitted to it rather than the other way round.
 
@@ -53,7 +53,7 @@ Generated code is committed and drift-checked; never edit it by hand. See [`prot
 ### Prerequisites
 
 - Go (current stable)
-- Python 3.12+ with [`uv`](https://docs.astral.sh/uv/)
+- Python 3.14 with [`uv`](https://docs.astral.sh/uv/) (`pyproject.toml` requires >=3.12; the image ships 3.14)
 - Node.js + pnpm (for the web app)
 - Docker + Compose for the full stack (`docker compose up -d`); for real embeddings and LLM calls in dev, point the sidecar at an Ollama on the host with `SIDECAR_EMBED_PROVIDER=ollama SIDECAR_LLM_PROVIDER=ollama` (see [`SERVICES.md`](SERVICES.md))
 
@@ -97,6 +97,10 @@ Full rules: [`proto/README.md`](proto/README.md).
 - [JD submitter workflow](docs/jd-submitter-workflow.md): the member-facing flow, progress modal, result panel and emails by fit category
 - [Local to prod cutover](docs/cutover-local-to-prod.md): how the LLM rollout was sequenced
 - [Services](SERVICES.md): every service, port, env var and migration, plus [`deploy/README.md`](deploy/README.md) for the rollout
+- [Backlog](docs/backlog.md): open work only, with the reasoning that opened each item
+- [Conversion test specs](docs/tests/ucts/README.md): UCTS, the framework that checks `.docx` / `.pdf` / `.md` / PDF conversions rather than eyeballing them
+- [Metrics](docs/metrics.md) and [events](docs/events/README.md): what is measured and what each event means
+- [Backups](deploy/backup/README.md): nightly dumps, the weekly restore rehearsal, and the corpus snapshot that gives an ingest an undo
 
 ## Contributing
 

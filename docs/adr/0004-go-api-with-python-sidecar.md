@@ -21,6 +21,6 @@ The site needs a serving path (auth, sessions, personalization, streaming chat, 
 
 ## Status update (2026-09-22)
 
-- The sidecar contract (`proto/career/sidecar/v1/`) grew two RPCs beyond the list above: `Generate` (schema-constrained LLM calls through the gateway) and `RenderResume` (Typst PDF render plus pypdf edit-lock). The sidecar is Python 3.12 and talks to an `ollama` container for both embeddings (`nomic-embed-text`) and the LLM (`qwen3:4b-q8_0`).
+- The sidecar contract (`proto/career/sidecar/v1/`) grew two RPCs beyond the list above: `Generate` (schema-constrained LLM calls through the gateway) and `RenderResume` (Typst PDF render plus pypdf edit-lock). The sidecar is Python 3.14 (raised from 3.12 on 2026-09-29) and talks to an `ollama` container for both embeddings (`nomic-embed-text`) and the LLM (`qwen3:4b-q8_0`).
 - `RunJob` / `GetJob` also exist on the api's `AdminService` (`proto/career/v1/admin.proto`): corpus reindex and the embed sweep run as api-side jobs with progress (PR 88).
 - "Short deadlines and fallbacks" applies to retrieval. The JD pipeline is asynchronous and long-running on purpose (`SIDECAR_LLM_TIMEOUT_SECONDS=3000`, `JD_PIPELINE_TIMEOUT_SECONDS=3600` on prod); with the assessor wired, an LLM failure marks the submission `failed` for Re-score rather than degrading to the retrieval score. See `docs/cutover-local-to-prod.md`.
