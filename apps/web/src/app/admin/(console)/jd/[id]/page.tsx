@@ -208,9 +208,15 @@ export default async function AdminJdDetailPage({
       ) : null}
 
       {errorMsg ? (
-        <p className="mt-4 border-l-2 border-signal bg-signal-soft/40 px-3 py-2 font-mono text-[11px] text-ink">
-          {errorMsg}
-        </p>
+        <div className="mt-4 border-l-2 border-signal bg-signal-soft/40 px-3 py-2">
+          <p className="font-mono text-[11px] text-ink">{errorMsg}</p>
+          <Link
+            href={`/admin/decisions?ref=${r.id}&failed=1`}
+            className="mt-1 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-hover"
+          >
+            what the model returned
+          </Link>
+        </div>
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-4">

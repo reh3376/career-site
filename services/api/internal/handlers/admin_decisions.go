@@ -31,6 +31,7 @@ func (a *Admin) ListDecisionLog(
 	f := users.DecisionFilter{
 		Kind:           strings.TrimSpace(req.Msg.GetKind()),
 		UnreviewedOnly: req.Msg.GetUnreviewedOnly(),
+		FailedOnly:     req.Msg.GetFailedOnly(),
 		Limit:          int(req.Msg.GetLimit()),
 	}
 	if s := strings.TrimSpace(req.Msg.GetRefId()); s != "" {
@@ -149,6 +150,7 @@ func decisionToProto(d *users.Decision) *v1.DecisionLogRow {
 		ResponseText:     d.ResponseText,
 		PromptTokens:     d.PromptTokens,
 		CompletionTokens: d.CompletionTok,
+		Error:            d.Error,
 		LatencyMs:        d.LatencyMs,
 		CreatedAt:        timestamppb.New(d.CreatedAt),
 		HumanVerdict:     d.HumanVerdict,

@@ -192,7 +192,21 @@ export default async function EvalDetailPage({
                     </span>
                   </p>
                   {it.error ? (
-                    <p className="mt-0.5 text-sm text-danger">{it.error}</p>
+                    <>
+                      <p className="mt-0.5 text-sm text-danger">{it.error}</p>
+                      {sub ? (
+                        // Straight to what the model actually returned.
+                        // A posting that errored is read here, not on
+                        // the decision surface, so the path to the
+                        // failing call has to start here.
+                        <Link
+                          href={`/admin/decisions?ref=${sub}&failed=1`}
+                          className="mt-1 inline-block font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-hover"
+                        >
+                          what the model returned
+                        </Link>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-4 font-mono text-sm">

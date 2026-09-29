@@ -2307,6 +2307,12 @@ message DecisionLogRow {
   string reviewed_by = 20;
   // When the review was saved; unset until reviewed.
   google.protobuf.Timestamp reviewed_at = 21;
+  // Why this call produced no usable verdict; empty when it produced
+  // one. A row carrying it still carries prompt_text and
+  // response_text, which is the point: the response that failed to
+  // decode is the one worth reading, and it used to be the only one
+  // not kept.
+  string error = 22;
 }
 
 // Filters for the decision-review list.
@@ -2319,6 +2325,10 @@ message ListDecisionLogRequest {
   bool unreviewed_only = 3;
   // Page size, newest first; server caps at 500 (default 200).
   int32 limit = 4;
+  // Only calls that produced no usable verdict. They are rare by
+  // construction and are the rows most worth reading, so finding them
+  // should not mean scrolling past two hundred successes.
+  bool failed_only = 5;
 }
 // A page of logged decisions plus table-wide counts.
 message ListDecisionLogResponse {
