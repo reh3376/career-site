@@ -146,9 +146,33 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   so `/admin/db` queries them directly.
 - **Metrics for adapter training** (Roger opted in 2026-09-21). D2 to
   D4 cover the shape; still open are the nightly export of interactions
-  and labels to object storage, and a corpus lineage table
-  (`content_hash` per document version) so an answer can be replayed
-  against the corpus revision that produced it.
+  and labels to object storage, and corpus lineage.
+
+  **Corpus lineage is now half done, and the missing half is named.**
+  `eval_run_documents` (migration 00037, 2026-09-29) captures what the
+  corpus held when an evaluation started: document id, title, source
+  kind, visibility and chunk count. That answers "which documents did
+  this run read", which was previously unanswerable once the corpus
+  moved on.
+
+  It does not answer "and were they the same documents". Identity is
+  captured, content is not. A document re-indexed with edited text
+  keeps its id, and if the edit does not change the chunk count the
+  manifest is byte-identical to the one before it. The run then looks
+  reproducible when it is not, which is a worse failure than having no
+  manifest, because it invites confidence.
+
+  **What closes it:** a `content_hash` per document version, written at
+  ingest and copied into `eval_run_documents` alongside the id. Then
+  two runs can be compared exactly, and a rationale citing chunk 62 can
+  be replayed against the text chunk 62 actually held that day rather
+  than the text it holds now.
+
+  Additive and testable against production, unlike the gate fix in §6b:
+  the hashes can be computed and checked before anything depends on
+  them. Deliberately not queued into the rollout that is already
+  waiting on run 13, which holds five merges and one migration; it goes
+  in the one after.
 
 ## 3. JD reviewer
 
