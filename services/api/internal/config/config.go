@@ -56,7 +56,7 @@ type Config struct {
 	JDPipelineTimeout time.Duration
 	// LLMNumCtx is the model context window the sidecar requests; the
 	// API budgets its judgment batches and résumé evidence to it so the
-	// pipeline fits the box (8192 on the CPX31 with qwen3:8b).
+	// pipeline fits the box (8192, set on the CPX31 with qwen3:8b).
 	LLMNumCtx int
 	// LLMAllowStub lets the structured JD assessor run against the
 	// sidecar's stub provider (schema-valid, meaningless output). Off

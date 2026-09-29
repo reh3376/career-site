@@ -44,7 +44,7 @@ It scores every active posting through the **production pipeline**, one
 at a time. Not a copy of the pipeline, so a run cannot pass against
 something that is not serving members.
 
-    about 30 to 50 minutes per posting on the CPX31
+    about 30 to 50 minutes per posting on the CPX41
     about 5 hours for nine
     one posting at a time; PipelineConcurrency = 1
 
@@ -72,8 +72,17 @@ before counting positions off any other list.
 So on `/admin/ops` the duration belongs to the step named on the line,
 measured to the next report; the number sitting behind a line is the
 previous step's. That caused a wrong reading on 2026-09-29, where a 42
-minute posting appeared to be the one that had just started. Check
-`llm_usage` if the answer matters:
+minute posting appeared to be the one that had just started. Since migration 00042 the per-phase split is recorded on the run
+itself, so this no longer has to be reconstructed:
+
+    SELECT r.run_id, p.key AS phase, (p.value::bigint/1000) AS seconds
+      FROM jd_runs r, jsonb_each_text(r.phase_ms) p
+     WHERE r.submission_id = $1 ORDER BY p.value::bigint DESC;
+
+`phase_ms` is empty for runs from before that migration, and for a run
+that died in the queue. It covers the time between progress reports, so
+it does not sum to `duration_ms`. Check `llm_usage` for per-call
+detail:
 
     SELECT created_at::time, prompt_id, ok, latency_ms, completion_tokens
       FROM llm_usage WHERE created_at > now() - interval '50 minutes'
@@ -192,18 +201,50 @@ removed and came back with exactly the 26 chunks it had before.
 
 ## 6. Failure modes seen so far
 
-**A judgment fills its token budget.** The judge averages 123
-completion tokens and is capped at 1200. On run 13 one judgment filled
-the cap, returned incomplete JSON, and aborted the whole posting four
-hours in. The requirement was the one the run existed to test: evidence
-had finally arrived for it and the model had a great deal to say.
+**A judgment will not stop writing.** The judge averages 123 completion
+tokens. On run 13 one judgment filled its 1200-token cap, returned
+incomplete JSON, and aborted the whole posting four hours in. The
+requirement was the one the run existed to test: evidence had finally
+arrived for it and the model had a great deal to say.
 
-Since then a truncated judgment retries once at double budget. Malformed
-JSON well under budget still fails immediately, because that is a model
-that cannot follow the schema and retrying it more expensively helps
-nobody. A recovered truncation records nothing; a terminal one writes
-the prompt and the whole response to `decision_log` with `error` set,
-readable on `/admin/decisions` under "failed calls only".
+A retry at double budget was added, and run 14 measured what that
+bought. The same requirement filled 1200, retried at 2400, and filled
+that too, both times without closing the object, costing thirteen
+minutes an attempt and losing the same posting a second time.
+
+**So a budget was the wrong instrument, and the limit moved into the
+grammar.** Ollama compiles the prompt's JSON schema into a decoding
+grammar, and a bound it can express cannot be exceeded whatever the
+model intends. `requirement_judge` v12 bounds every open field:
+`rationale` at 400 characters, the arrays at 12 and 8 entries,
+`judgments` at 1. Field order is load-bearing, because the grammar
+emits properties in schema order, so `verdict` and `evidence_ids` are
+settled before `rationale` can misbehave.
+
+Verified on the box against `qwen3:4b-q8_0`: asked for an exhaustive
+multi-paragraph rationale with `num_predict` at 2000, it stopped at 233
+tokens with `done_reason` "stop" and valid JSON, the rationale cut at
+exactly 400 characters. `TestJudgeSchemaBoundsEveryOpenField` keeps the
+bounds present; `TestJudgeSchemaBoundsHoldLive` re-checks against a real
+model when `JUDGE_SCHEMA_LIVE` is set.
+
+Rule 10 already asked for 200 characters and had done since version 1.
+The model obeys it almost always, and ignored it precisely on the
+requirement where it had most to say, which is why the instruction
+could not be the enforcement.
+
+Malformed JSON well under budget still fails immediately, because that
+is a model that cannot follow the schema and retrying it more
+expensively helps nobody. A recovered truncation records nothing; a
+terminal one writes the prompt and the whole response to `decision_log`
+with `error` set, readable on `/admin/decisions` under "failed calls
+only".
+
+**Both times, the response itself was unrecoverable.** The capture that
+would have kept it (migration 00039) was written after run 13 and was
+still sitting undeployed behind run 14 when run 14 hit the same wall.
+A fix for a failure mode is worth nothing until it is on the box, and
+"deploy after the run" means the next occurrence is also unreadable.
 
 **The health probe passes while the judge is unavailable.** On
 2026-09-25 a run scored eight postings on retrieval similarity alone

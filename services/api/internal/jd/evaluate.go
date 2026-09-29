@@ -45,9 +45,25 @@ func NewEvaluator(log *slog.Logger, repo *users.Repo, scorer *Scorer, ownerID in
 // timeline can open the posting's result without parsing the summary.
 type Report func(pct int32, summary string, ref ...string)
 
+// Status is the live-state callback. It replaces what the job says it
+// is doing now and adds no timeline entry, which is the difference that
+// matters: a run makes one milestone per posting and hundreds of stage
+// changes underneath them. Reporting the stages as milestones would
+// bury the nine lines that carry the pace.
+//
+// May be nil, in which case a run reports milestones only.
+type Status func(pct int32, summary string)
+
+func (s Status) set(pct int32, summary string) {
+	if s == nil {
+		return
+	}
+	s(pct, summary)
+}
+
 // Run scores every active golden posting and records the evaluation.
 // It returns a one-line summary for the job log.
-func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report Report) (string, error) {
+func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report Report, status Status) (string, error) {
 	if e == nil || e.scorer == nil {
 		return "", fmt.Errorf("the scoring pipeline is not wired")
 	}
@@ -125,11 +141,17 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 		// the start of the work and the gap to the next one is how long
 		// it took. So a reader who opens it while the run is live finds
 		// no item yet, which is the honest answer rather than an error.
-		report(int32(5+85*i/len(set)),
-			fmt.Sprintf("scoring %s (%d of %d)", g.Name, i+1, len(set)),
-			fmt.Sprintf("eval:%d:%d", run.ID, g.ID))
+		pct := int32(5 + 85*i/len(set))
+		head := fmt.Sprintf("scoring %s (%d of %d)", g.Name, i+1, len(set))
+		report(pct, head, fmt.Sprintf("eval:%d:%d", run.ID, g.ID))
 
-		item := e.score(ctx, g, threshold)
+		// The posting's own percentage stays on the line, not the
+		// submission's: a stage reporting 80 because it reached the
+		// résumé would otherwise drag the job's bar backwards on every
+		// posting. The stage is the detail, the milestone is the place.
+		item := e.score(ctx, g, threshold, func(_ int32, stage string) {
+			status.set(pct, head+", "+stage)
+		})
 		if item.Error != "" {
 			run.Errors++
 		} else {
@@ -182,7 +204,7 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 }
 
 // score runs one golden posting through the real pipeline.
-func (e *Evaluator) score(ctx context.Context, g users.GoldenPosting, threshold float64) users.EvalItem {
+func (e *Evaluator) score(ctx context.Context, g users.GoldenPosting, threshold float64, watch observer) users.EvalItem {
 	item := users.EvalItem{GoldenID: g.ID, GoldenName: g.Name, ExpectedGate: g.ExpectedGate}
 
 	sub, err := e.users.CreateJdSubmission(ctx, users.JdSubmitInput{
@@ -208,7 +230,7 @@ func (e *Evaluator) score(ctx context.Context, g users.GoldenPosting, threshold 
 	// the case the private material is there for. A member's submission
 	// is scoped to public documents in the handler, so the two paths
 	// differ, and the golden-set numbers describe the owner's path only.
-	e.scorer.ScoreAndPersist(corpusscope.With(ctx, corpusscope.All),
+	e.scorer.ScoreAndPersist(withObserver(corpusscope.With(ctx, corpusscope.All), watch),
 		sub.ID, g.JdText, prompts.Hints{Role: g.RoleHint, Employer: g.EmployerHint})
 
 	runs, err := e.users.ListJdRuns(ctx, sub.ID)

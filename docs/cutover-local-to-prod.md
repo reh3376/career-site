@@ -10,7 +10,7 @@ is the source of truth for the LLM rollout.
 
 ## 1. Where things stand
 
-| Layer | Local (owner's Mac) | Production (CPX31, 4 vCPU / 7.7 GB, since 2026-09-21) |
+| Layer | Local (owner's Mac) | Production (CPX41, 8 vCPU / 15.2 GB, since 2026-09-25) |
 |---|---|---|
 | Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container, `SIDECAR_EMBED_PROVIDER=ollama`, corpus fully on `ollama:nomic-embed-text#p1` (Phase A done 2026-09-21) |
 | LLM gateway | Ollama on the host, `qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192` | **live since 2026-09-22**: the box's `ollama`, `qwen3:4b-q8_0`, 8k context, `OLLAMA_MAX_LOADED_MODELS=1`, flash attention, q8 KV cache, `OLLAMA_MEM_LIMIT=7g` |
@@ -44,9 +44,9 @@ From the owner's design notes (see `project_llm_design_principles` memory):
    drops anything unsourced.
 4. PDF is rendered outside the model (sidecar, Typst).
 
-## 3. Sizing: the CPX31 is the ceiling
+## 3. Sizing: the CPX41 is the ceiling
 
-**Constraint (owner, 2026-09-21): no further server spend.** The CPX31
+**Constraint (owner, 2026-09-21): no further server spend.** The CPX41
 (4 vCPU / 7.7 GB) is the box; the design has to fit it. Two levers make
 that work, and both are in place:
 
@@ -72,8 +72,8 @@ that work, and both are in place:
 
 | Workload | Model | Where | Memory | Notes |
 |---|---|---|---|---|
-| Embeddings | `nomic-embed-text` | CPX31 `ollama` | ~0.6 GB loaded | done (Phase A); unloads while the LLM runs (`OLLAMA_MAX_LOADED_MODELS=1`) |
-| Assess + résumé | `qwen3:4b-q8_0` at 8k ctx | CPX31 `ollama` | ~5.5 GB peak | live; judge calls ~100 to 135 s each, résumé ~13 min |
+| Embeddings | `nomic-embed-text` | CPX41 `ollama` | ~0.6 GB loaded | done (Phase A); unloads while the LLM runs (`OLLAMA_MAX_LOADED_MODELS=1`) |
+| Assess + résumé | `qwen3:4b-q8_0` at 8k ctx | CPX41 `ollama` | ~5.5 GB peak | live; judge calls ~100 to 135 s each, résumé ~13 min |
 
 ### Historical sizing note (superseded; kept for the record)
 
@@ -103,7 +103,7 @@ prompt cache) and one résumé call (~1.6k output tokens) per above-gate JD.
 ### Phase A: embeddings on prod (done 2026-09-21)
 
 1. `.env.prod`: `SIDECAR_EMBED_PROVIDER=ollama`, `OLLAMA_MEM_LIMIT=2g`,
-   `OLLAMA_KEEP_ALIVE=10m` (the CPX31 has the headroom; raised to `30m`
+   `OLLAMA_KEEP_ALIVE=10m` (the box has the headroom; raised to `30m`
    once the LLM went live, which is the value on the box today). The limit was
    later raised to `7g` for the LLM (Phase C).
 2. `cs up -d ollama sidecar api`; wait for the model pull in `cs logs -f ollama`.
@@ -138,7 +138,7 @@ prompt cache) and one résumé call (~1.6k output tokens) per above-gate JD.
 
 ### Phase C: flip the LLM on prod (done 2026-09-22)
 
-The box is not resized for this; the CPX31 is the ceiling (section 3).
+The box is not resized for this; the CPX41 is the ceiling (section 3).
 
 1. `.env.prod`: `OLLAMA_MEM_LIMIT=7g`, `OLLAMA_MAX_LOADED_MODELS=1`,
    `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`,
@@ -214,4 +214,4 @@ value is never committed.
   anything.
 - Model: `OLLAMA_LLM_MODEL` back to the previous tag and `cs up -d sidecar
   api`; the previous blobs stay in the `ollama_models` volume until pruned.
-- Box: there is no box-level rollback; the CPX31 is fixed.
+- Box: there is no box-level rollback; the CPX41 is fixed.

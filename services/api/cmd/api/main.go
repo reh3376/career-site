@@ -278,6 +278,15 @@ func main() {
 	} else if n > 0 {
 		log.Info("jd: stranded run records closed after restart", slog.Int64("count", n))
 	}
+	// And the evaluations above them. Stopping a run means restarting
+	// the api, so this path is how most interrupted evaluations end;
+	// without it the row keeps the zeros it was created with and the
+	// postings that did score are lost from the summary.
+	if n, err := userRepo.FailStrandedEvalRuns(ctx); err != nil {
+		log.Warn("eval: stranded evaluations not reconciled", slog.String("error", err.Error()))
+	} else if n > 0 {
+		log.Info("eval: stranded evaluations closed after restart", slog.Int64("count", n))
+	}
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.

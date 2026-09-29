@@ -87,8 +87,8 @@ func (a *Admin) RunJob(
 		if scope == "private" && a.corpus.Private == "" {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("CORPUS_PRIVATE_ROOT is not configured"))
 		}
-		fn = func(jctx context.Context, report jobs.Report) (string, error) {
-			report(5, "walking "+scope+" corpus")
+		fn = func(jctx context.Context, rep jobs.Reporter) (string, error) {
+			rep.Report(5, "walking "+scope+" corpus")
 			res, kinds, err := a.reindexCorpus(jctx, scope, sourceKind)
 			if err != nil {
 				return "", err
@@ -105,14 +105,14 @@ func (a *Admin) RunJob(
 		// with progress for that reason, and only one runs at a time,
 		// which the runner already enforces per kind.
 		note := strings.TrimSpace(req.Msg.GetSourceKind()) // reused as the free note
-		fn = func(jctx context.Context, report jobs.Report) (string, error) {
-			return a.evaluator.Run(jctx, note, admin.ID, jd.Report(report))
+		fn = func(jctx context.Context, rep jobs.Reporter) (string, error) {
+			return a.evaluator.Run(jctx, note, admin.ID, jd.Report(rep.Report), jd.Status(rep.Status))
 		}
 	case v1.JobKind_JOB_KIND_EMBED_SWEEP:
 		if a.ingest == nil {
 			return nil, connect.NewError(connect.CodeUnavailable, errors.New("corpus ingester not wired"))
 		}
-		fn = func(jctx context.Context, report jobs.Report) (string, error) {
+		fn = func(jctx context.Context, rep jobs.Reporter) (string, error) {
 			var total, failed int
 			model := ""
 			for round := 0; ; round++ {
@@ -128,7 +128,7 @@ func (a *Admin) RunJob(
 				if done+int(res.Remaining) > 0 {
 					pct = int32(100 * done / (done + int(res.Remaining)))
 				}
-				report(pct, fmt.Sprintf("embedded %d, failed %d, remaining %d (%s)", total, failed, res.Remaining, model))
+				rep.Report(pct, fmt.Sprintf("embedded %d, failed %d, remaining %d (%s)", total, failed, res.Remaining, model))
 				if res.Remaining == 0 || res.Considered == 0 {
 					break
 				}

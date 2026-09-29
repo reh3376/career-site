@@ -2544,3 +2544,86 @@ something else: it gave the model enough material that the model's
 output outgrew a budget nobody had revisited since it was set. Adding
 evidence is not a safe operation, and the failure it caused looked like
 a slow server rather than a defect.
+
+## 2026-09-29: run 14, and why a bigger budget was the wrong fix
+
+**What changed since run 12:** nothing in the corpus. Run 13 had added
+a truncation retry, so run 14 was the first run to measure it.
+
+**Result: stopped by the owner at 5 of 9.** Four postings scored
+correctly (ATI 1.0000 above, nexus 0.6429 below, xai 0.6429 below,
+profluent 0.3571 below). Blue Origin errored again, in the same place
+as run 13: judge batch 11 of 14.
+
+    the model filled its 1200-token budget, and the retry at 2400
+    did not decode either (2400 tokens): unexpected end of JSON input
+
+**The retry worked and did not help.** It fired correctly, doubled the
+budget, and the model filled that too. 440 s for the first attempt,
+785 s for the retry, and the posting was lost anyway. The judge
+averages 123 completion tokens; this one requirement produces a
+generation that does not terminate, so every budget is a budget it
+will fill. Doubling again buys a longer runaway, which is precisely
+what this run measured.
+
+`think` is false on every call, so those 2,400 tokens were the JSON
+itself, not reasoning.
+
+**The fix is a grammar bound, not a budget.** `requirement_judge` v12
+bounds every open field in the schema: `rationale` at 400 characters,
+`evidence_ids` at 12, `parties_evidenced` at 8, `judgments` at 1,
+`requirement_id` at 32 characters. Ollama passes the schema to
+llama.cpp, which compiles it to GBNF and constrains decoding, so the
+bound holds regardless of what the model is trying to write.
+
+Field order in the schema is load-bearing: properties are emitted in
+the order written, so `verdict` and `evidence_ids` are already decided
+before `rationale` can run away, and bounding `rationale` is what
+allows `stated_span_years` and `parties_evidenced` to be reached at
+all. Worst case is now about 350 tokens against the 1200 budget.
+
+**Verified against the production model, not assumed.** Two checks on
+`qwen3:4b-q8_0` on the box:
+
+| check | result |
+|---|---|
+| a 120-character bound, `num_predict` 2000, asked to write at length | stopped at exactly 120 chars, `done_reason` "stop" |
+| the real v12 schema, asked for an exhaustive multi-paragraph rationale | 233 tokens, `done_reason` "stop", valid JSON, rationale exactly 400 chars |
+
+Before the bound the same request produced 2,400 tokens and no closing
+brace. `TestJudgeSchemaBoundsHoldLive` in `internal/prompts` re-runs
+the second check against any Ollama given `JUDGE_SCHEMA_LIVE`.
+
+**Rule 10 was already there.** It has asked for "one sentence, at most
+200 characters" since version 1, and the model normally obeys it. It
+ignored it on the one requirement where the evidence finally gave it
+something to say. An instruction shapes a good answer; it does not
+bound a bad one.
+
+**The thing that cost the most was not the bug.** Both times, the
+response that caused the failure was unrecoverable. Migration 00039
+captures exactly that response, was written in answer to run 13, and
+was still undeployed, waiting behind run 14, when run 14 hit the same
+wall. The operating rule "never deploy during a run" quietly implies
+that a fix for a run-killing failure will not be present for the next
+run. Run 15 goes out only after the whole queue is deployed.
+
+**Also landed with this, all in service of the next diagnosis:**
+
+- `phase_ms` on `jd_runs` (00042): milliseconds per pipeline phase,
+  derived from the progress reports the pipeline already makes.
+  Retrieval makes no model call and so was invisible in `llm_usage`;
+  a failed run kept no breakdown at all.
+- Live sub-stage reporting on the evaluation job, so `/admin/ops`
+  shows "scoring blue-origin (5 of 9), judging requirement 7 of 14"
+  rather than sitting unchanged for forty minutes.
+- Stranded evaluations are closed at boot with their counters recovered
+  from `eval_items`. Run 14's row read "scored 0, errors 0" beside five
+  finished items, because the counters lived only in memory and
+  stopping a run means restarting the api.
+
+**Next:** run 15 on v12 with the corpus unchanged, which makes it a
+clean comparison against run 12 (9/9, 0 inversions, margin 0.1071) and
+a real test of whether Blue Origin's r11 survives. The distillation
+study guide is ingested only after that, so it remains a single
+variable.

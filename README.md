@@ -16,7 +16,7 @@ Three services behind one contract:
 | API | `services/api/` | Go 1.27 | ConnectRPC endpoints, auth, sessions, admin, scheduling, corpus ingest + retrieval, the JD pipeline (requirement extraction, per-requirement judging, score formula in code, grounded résumé) |
 | Sidecar | `services/sidecar/` | Python 3.14 | gRPC service: `Embed` (nomic-embed-text via Ollama), `Generate` (LLM gateway, JSON-schema constrained, refuses truncated results), `RenderResume` (Typst PDF locked with pypdf) |
 
-Alongside: Postgres 16 + pgvector (768-dim HNSW cosine), an Ollama container (embeddings and the LLM, one loaded model at a time), and Caddy in front. Everything runs on one Hetzner CPX31 via Docker Compose; that box is the ceiling, so the workload is fitted to it rather than the other way round.
+Alongside: Postgres 16 + pgvector (768-dim HNSW cosine), an Ollama container (embeddings and the LLM, one loaded model at a time), and Caddy in front. Everything runs on one Hetzner CPX41 via Docker Compose; that box is the ceiling, so the workload is fitted to it rather than the other way round.
 
 The `.proto` files in `proto/` are the single source of truth. Everything else — Go, TypeScript, and Python stubs plus the API reference — is generated from them. See [ADR 0004](docs/adr/0004-go-api-with-python-sidecar.md) for the split and [ADR 0017](docs/adr/0017-connectrpc-transport.md) for the transport choice.
 

@@ -1857,7 +1857,7 @@ PR 172, sixty merges after the previous sync.
 
 ## Standing rules that shape all of the above
 
-- No server spend beyond the CPX31; fit the workload to the box.
+- No server spend beyond the CPX41; fit the workload to the box.
 - Document every experiment and decision in the same PR
   (`docs/llm-tuning-log.md` for the reviewer, `docs/events/README.md`
   for events, `docs/decision-log.md` for the human-in-the-loop labels).
