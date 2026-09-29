@@ -64,6 +64,10 @@ func TestTruncatedJudgeRetriesAtDoubleBudget(t *testing.T) {
 	if len(dst.Judgments) != 1 || dst.Judgments[0].Verdict != "met" {
 		t.Errorf("the retry's output was not decoded into dst: %+v", dst.Judgments)
 	}
+	// No failure row is written on this path. recordFailure is called
+	// only where the function returns an error, so a recovered
+	// truncation leaves nothing behind: the judgment succeeded, and a
+	// row for it would be noise on /admin/decisions.
 }
 
 // A model that cannot follow the schema is a different fault from a

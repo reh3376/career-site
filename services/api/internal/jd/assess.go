@@ -703,10 +703,8 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 		// pointed at neither cause.
 		truncated := resp.CompletionTokens >= int32(maxTokens) && maxTokens > 0
 		if !truncated {
-			a.log.Warn("judge output did not decode",
-				slog.Int64("jd_id", submissionID), slog.String("prompt", p.ID),
-				slog.Int("completion_tokens", int(resp.CompletionTokens)),
-				slog.String("response_head", head(resp.Text, 400)))
+			a.recordFailure(ctx, submissionID, p, user, resp,
+				fmt.Sprintf("decode failed under budget (%d of %d tokens): %v", resp.CompletionTokens, maxTokens, err))
 			return res, fmt.Errorf("decode %s output: %w", p.ID, err)
 		}
 
@@ -728,8 +726,7 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 		// deliberately rather than by accident.
 		a.log.Warn("judge output hit its token budget, retrying once at double",
 			slog.Int64("jd_id", submissionID), slog.String("prompt", p.ID),
-			slog.Int("budget", maxTokens),
-			slog.String("response_head", head(resp.Text, 400)))
+			slog.Int("budget", maxTokens))
 
 		wider := req
 		wider.MaxTokens = maxTokens * 2
@@ -754,6 +751,11 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 		}
 		a.recordUsage(ctx, submissionID, usage2)
 		if err2 != nil {
+			// The retry never produced a response, so the truncated
+			// first one is the only output there is to keep.
+			a.recordFailure(ctx, submissionID, p, user, resp,
+				fmt.Sprintf("filled its %d-token budget; the retry at %d failed to generate: %v",
+					maxTokens, wider.MaxTokens, err2))
 			return res, fmt.Errorf(
 				"decode %s output: the model filled its %d-token budget and the retry at %d failed: %w",
 				p.ID, maxTokens, wider.MaxTokens, err2)
@@ -764,6 +766,9 @@ func (a *Assessor) call(ctx context.Context, submissionID int64, p prompts.Promp
 			LatencyMs: usage2.LatencyMs,
 		}
 		if err3 := json.Unmarshal([]byte(resp2.Text), dst); err3 != nil {
+			a.recordFailure(ctx, submissionID, p, user, resp2,
+				fmt.Sprintf("retry at %d tokens did not decode either (%d used): %v",
+					wider.MaxTokens, resp2.CompletionTokens, err3))
 			return res, fmt.Errorf(
 				"decode %s output: the model filled its %d-token budget, and the retry at %d did not decode either (%d tokens): %w",
 				p.ID, maxTokens, wider.MaxTokens, resp2.CompletionTokens, err3)
@@ -791,18 +796,41 @@ func (a *Assessor) recordUsage(ctx context.Context, submissionID int64, u users.
 	}
 }
 
-// head returns the first n characters of a model response for a log
-// line. A decode failure previously left no record of what the model
-// actually produced: decision_log is written only after a successful
-// decode, so the response that broke it was the one thing not kept.
-// Run 13's failure could not be diagnosed from the database at all,
-// only inferred from a token count.
-func head(s string, n int) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= n {
-		return s
+// recordFailure keeps the prompt and the whole response of a call that
+// produced no usable verdict.
+//
+// decision_log carries prompt_text and response_text for every
+// judgment, and was written only after a successful decode, so the one
+// response nobody could examine was the one that broke. Run 13 lost a
+// posting to a judgment that filled its budget, and the response that
+// did it is gone: all that survives is a token count in llm_usage, from
+// which the cause had to be inferred rather than read.
+//
+// Behaviour at and near a failure is the behaviour least understood and
+// most worth keeping, so the whole response goes in, untruncated. These
+// rows are rare by construction; one call in 1,343 has ever hit this.
+//
+// Best-effort, and deliberately so: a failure to record a failure must
+// not replace the error the caller is about to return with a different
+// one.
+func (a *Assessor) recordFailure(ctx context.Context, submissionID int64, p prompts.Prompt, user string, resp *llm.Response, why string) {
+	if a.users == nil || resp == nil {
+		return
 	}
-	return s[:n] + "..."
+	row := users.Decision{
+		Kind: "jd_call_failed", RefKind: "jd_submission", RefID: submissionID,
+		Model: resp.Model, PromptID: p.ID, PromptVersion: p.Version, NumCtx: a.numCtx,
+		PromptText:   p.System + "\n\n---\n\n" + user,
+		ResponseText: resp.Text,
+		PromptTokens: resp.PromptTokens, CompletionTok: resp.CompletionTokens,
+		LatencyMs: resp.LatencyMs,
+		Error:     why,
+	}
+	if err := a.users.InsertDecisions(context.WithoutCancel(ctx), []users.Decision{row}); err != nil {
+		a.log.Warn("could not record the failing call",
+			slog.Int64("jd_id", submissionID), slog.String("prompt", p.ID),
+			slog.String("error", err.Error()))
+	}
 }
 
 func (a *Assessor) checkCap(ctx context.Context) error {

@@ -2504,11 +2504,23 @@ under budget still fails on the first call, because that is a model
 that cannot follow the schema and retrying it twice as expensively
 helps nobody.
 
-**And record what the model said.** `decision_log` is written only
-after a successful decode, so the response that broke the decode was
-the one thing not kept: run 13's failure could not be diagnosed from
-the database at all, only inferred from a token count in `llm_usage`.
-Both failure paths now log the first 400 characters.
+**And keep what the model said, when it fails.** `decision_log` carries
+`prompt_text` and `response_text` for every judgment and was written
+only after a successful decode, so the one response nobody could
+examine was the one that broke. Run 13's failure could not be diagnosed
+from the database at all, only inferred from a token count in
+`llm_usage`.
+
+A failing call now writes a `decision_log` row of kind
+`jd_call_failed` with the prompt and the whole response, untruncated,
+and the reason in a new `error` column (migration 00039). A log line
+would not have done: 400 characters of a 1,200-token response is not
+the data, it is a description of the data.
+
+Only on failure, and only when the failure is terminal. A truncation
+the retry recovers from leaves nothing behind, because nothing failed
+and a row for it would be noise on `/admin/decisions`. These rows are
+rare by construction: one call in 1,343 has ever hit this.
 
 **The general lesson, which is uncomfortable.** Every corpus document
 so far has been judged on whether it moves a score. This one moved

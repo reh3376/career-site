@@ -32,6 +32,12 @@ type Decision struct {
 	CompletionTok int32
 	LatencyMs     int64
 	CreatedAt     time.Time
+	// Error is why this call produced no usable verdict, empty when it
+	// produced one. A row carrying it still carries PromptText and
+	// ResponseText, which is the reason it exists: the response that
+	// failed to decode is the one worth reading, and it used to be the
+	// only one not kept.
+	Error string
 
 	HumanVerdict string
 	HumanNote    string
@@ -58,8 +64,8 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
     INSERT INTO decision_log
       (tenant_id, run_id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
        input, output, prompt_text, response_text,
-       prompt_tokens, completion_tokens, latency_ms)
-    VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       prompt_tokens, completion_tokens, latency_ms, error)
+    VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
   `
 	tid := tenant.FromContext(ctx).Int64()
 	rid := runid.FromContext(ctx)
@@ -76,7 +82,7 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
 			tid, rid,
 			d.Kind, d.RefKind, d.RefID, d.Key, d.Model, d.PromptID, d.PromptVersion, d.NumCtx,
 			in, out, d.PromptText, d.ResponseText,
-			d.PromptTokens, d.CompletionTok, d.LatencyMs,
+			d.PromptTokens, d.CompletionTok, d.LatencyMs, d.Error,
 		); err != nil {
 			return fmt.Errorf("insert decision %s/%s: %w", d.Kind, d.Key, err)
 		}
