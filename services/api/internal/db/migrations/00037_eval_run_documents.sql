@@ -1,4 +1,5 @@
 -- +goose Up
+-- +goose StatementBegin
 -- What the corpus held when an evaluation started.
 --
 -- A run already records corpus_fingerprint, which answers "was this the
@@ -26,5 +27,9 @@ CREATE TABLE eval_run_documents (
 
 CREATE INDEX idx_eval_run_documents_run ON eval_run_documents (eval_run_id);
 
+-- +goose StatementEnd
+
 -- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS eval_run_documents;
+-- +goose StatementEnd

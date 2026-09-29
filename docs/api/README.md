@@ -6133,6 +6133,7 @@ version before it.
 | `sourceKind` | `string` | string |  | Its source kind, such as career_note or article. |
 | `visibility` | `string` | string |  | public or corpus_only. |
 | `chunkCount` | `int32` | number |  | Chunks the document held at capture. |
+| `contentHash` | `string` | string |  | What the document's text hashed to at capture, hex. Empty for runs captured before this was recorded, which means unknown rather than unchanged. Without it the manifest says which documents a run read and not whether they were the same documents: an edit that preserves the chunk count is otherwise invisible. |
 
 ### EvalItem
 

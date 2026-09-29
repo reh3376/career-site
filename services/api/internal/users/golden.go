@@ -181,6 +181,13 @@ type EvalCorpusDoc struct {
 	SourceKind string
 	Visibility string
 	ChunkCount int
+	// ContentHash is what the document's text hashed to at capture.
+	// Empty for runs captured before it was recorded, which means
+	// unknown rather than unchanged. Without it the manifest proves
+	// which documents a run read and not whether they were the same
+	// documents, and an edit that preserves the chunk count is
+	// invisible.
+	ContentHash string
 }
 
 // EvalItem is one posting's result inside one evaluation.
@@ -228,9 +235,10 @@ func (r *Repo) StartEvalRun(ctx context.Context, e EvalRun) (int64, error) {
 // because an evaluation without its manifest is still worth having.
 func (r *Repo) SnapshotEvalCorpus(ctx context.Context, evalRunID int64) (int, error) {
 	tag, err := r.pool.Exec(ctx, `
-    INSERT INTO eval_run_documents (eval_run_id, document_id, title, source_kind, visibility, chunk_count)
+    INSERT INTO eval_run_documents (eval_run_id, document_id, title, source_kind, visibility, chunk_count, content_hash)
     SELECT $1, d.id, coalesce(d.title, ''), coalesce(d.source_kind, ''), coalesce(d.visibility, ''),
-           (SELECT count(*) FROM corpus_chunks c WHERE c.document_id = d.id)
+           (SELECT count(*) FROM corpus_chunks c WHERE c.document_id = d.id),
+           d.content_hash
       FROM corpus_documents d
     ON CONFLICT (eval_run_id, document_id) DO NOTHING`, evalRunID)
 	if err != nil {
@@ -339,7 +347,8 @@ func (r *Repo) GetEvalRun(ctx context.Context, id int64) (*EvalRun, error) {
 	// than an error: those runs are still readable, they just cannot
 	// say what they read.
 	docRows, err := r.pool.Query(ctx, `
-    SELECT document_id, title, source_kind, visibility, chunk_count
+    SELECT document_id, title, source_kind, visibility, chunk_count,
+           coalesce(encode(content_hash, 'hex'), '')
       FROM eval_run_documents
      WHERE eval_run_id = $1
      ORDER BY source_kind, title, document_id`, id)
@@ -349,7 +358,7 @@ func (r *Repo) GetEvalRun(ctx context.Context, id int64) (*EvalRun, error) {
 	defer docRows.Close()
 	for docRows.Next() {
 		var d EvalCorpusDoc
-		if err := docRows.Scan(&d.DocumentID, &d.Title, &d.SourceKind, &d.Visibility, &d.ChunkCount); err != nil {
+		if err := docRows.Scan(&d.DocumentID, &d.Title, &d.SourceKind, &d.Visibility, &d.ChunkCount, &d.ContentHash); err != nil {
 			return nil, fmt.Errorf("get eval corpus: scan: %w", err)
 		}
 		run.CorpusDocuments = append(run.CorpusDocuments, d)

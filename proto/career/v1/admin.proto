@@ -1909,6 +1909,12 @@ message EvalCorpusDoc {
   string visibility = 4;
   // Chunks the document held at capture.
   int32 chunk_count = 5;
+  // What the document's text hashed to at capture, hex. Empty for runs
+  // captured before this was recorded, which means unknown rather than
+  // unchanged. Without it the manifest says which documents a run read
+  // and not whether they were the same documents: an edit that
+  // preserves the chunk count is otherwise invisible.
+  string content_hash = 6;
 }
 
 // One posting's result inside one evaluation.

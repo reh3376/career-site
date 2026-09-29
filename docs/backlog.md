@@ -162,17 +162,24 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   reproducible when it is not, which is a worse failure than having no
   manifest, because it invites confidence.
 
-  **What closes it:** a `content_hash` per document version, written at
-  ingest and copied into `eval_run_documents` alongside the id. Then
-  two runs can be compared exactly, and a rationale citing chunk 62 can
-  be replayed against the text chunk 62 actually held that day rather
-  than the text it holds now.
+  **CLOSED 2026-09-29**, migration 00040. `corpus_documents` already
+  carried `content_hash` and already refreshed it on re-index, so
+  nothing new had to be computed: it simply was not being copied into
+  the manifest. Copied rather than joined, for the same reason the
+  title is, so a later re-index cannot rewrite the history of a run
+  that read the earlier version. Shown on `/admin/evals/<id>` beside
+  the chunk count.
 
-  Additive and testable against production, unlike the gate fix in §6b:
-  the hashes can be computed and checked before anything depends on
-  them. Deliberately not queued into the rollout that is already
-  waiting on run 13, which holds five merges and one migration; it goes
-  in the one after.
+  **The gap proved itself the same day it was named.** The ontology
+  article had 362 asterisk artifacts removed and came back from the
+  re-index with exactly 26 chunks, the number it had before. Identity,
+  title, kind, visibility and chunk count were all unchanged. Nothing
+  in the manifest would have shown the text was different. Its hash
+  is `cdf30bae...` and the previous one is gone, so runs 13 and 14
+  cannot be compared on that document even now; runs from here can.
+
+  Null for rows captured before this, which means unknown rather than
+  unchanged.
 
 ## 3. JD reviewer
 
@@ -1725,6 +1732,23 @@ experience, which is the failure mode the grounded-résumé rule exists
 to prevent.
 
 ## 7. Documentation
+
+**The migration replay check was reading the wrong range. Fixed
+2026-09-29.** CI extracts a migration's Up block with
+`sed -n '/-- +goose Up/,/-- +goose StatementEnd/p'`, which assumes
+every migration wraps its Up in a StatementBegin/End pair. goose does
+not require that. On a file without one the range ran to end of file
+and swept the Down block in with the Up, so the replay created a table
+and then dropped it, and `DROP TABLE IF EXISTS` said nothing.
+
+00037 was the only such file out of forty. It stayed silent for three
+migrations and surfaced on 00040, which needed the table 00037 was
+supposed to have left behind. The check exists precisely to catch a
+migration that is wrong in the order goose runs it, and it was itself
+wrong in a way that hid one.
+
+The range now ends at the Down marker, and 00037 carries the
+annotations the other thirty-nine have.
 
 **Docs sweep, 2026-09-29.** `docs/FSD.md` to 0.3.9, `SERVICES.md`,
 `README.md` and ADR 0004 reconciled to the system as shipped through
