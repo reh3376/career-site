@@ -1734,12 +1734,26 @@ PR 172, sixty merges after the previous sync.
 
 **Still open:**
 
-- Add the event stream and the privacy commitments to the FSD (a
-  FR-DATA section) and the privacy page to the route table.
-- The FSD still carries no section on the evaluation harness as a
-  subsystem. FR-ADM-21 describes the surface; the golden set, the
-  margin metric and the noise floor live only in `docs/backlog.md`
-  §6b and `docs/llm-tuning-log.md`.
+- ~~Add the event stream and the privacy commitments to the FSD (a
+  FR-DATA section) and the privacy page to the route table.~~
+  **DONE 2026-09-29**, §5.12, FR-DATA-01..08: one append-only stream
+  across the anonymous and member boundary, identity attached by the
+  api and never sent by the browser, no address and no user agent
+  stored, query strings stripped but for `utm_*`, identity expiring
+  while counts survive, and a deleted user leaving an unattributable
+  row. `/privacy` was already in the route table. FR-DATA-03 supersedes
+  the hosted-analytics option FR-ANLT-01 left open, which is no longer
+  the state of the system.
+- ~~The FSD carries no section on the evaluation harness.~~
+  **DONE 2026-09-29**, §5.13, FR-EVAL-01..07: the golden set and its
+  one owner-supplied label, running the production pipeline rather than
+  a copy, the three metrics read together and why margin is among them,
+  the configuration a run records, the corpus manifest and its known
+  limitation, the deploy hazard and what currently controls it, and the
+  rationale check that reports without deciding.
+- The sitemap was four admin routes behind: analytics, evals, gate and
+  ops are now listed, and the §5.7 status line says twelve surfaces
+  rather than nine.
 - `docs/decision-log.md`, `docs/events/README.md`,
   `docs/cutover-local-to-prod.md` and `docs/jd-submitter-workflow.md`
   were last touched 2026-09-22 and have not been re-read against the
