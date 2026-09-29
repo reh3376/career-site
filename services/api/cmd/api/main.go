@@ -292,7 +292,7 @@ func main() {
 	// until his OAuth client is configured; the handler reports that as
 	// "not switched on yet" rather than an empty calendar.
 	schedSettings := scheduling.NewSettingsStore(log, userRepo, scheduling.DefaultSettings())
-	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, nil)
+	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, nil, cfg.OwnerContactEmail)
 
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)

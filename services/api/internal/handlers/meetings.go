@@ -34,6 +34,9 @@ type Meetings struct {
 	auth     *Auth // session lookup; booking is members-only
 	settings *scheduling.SettingsStore
 	cal      calendar.Provider
+	// organizer is the address the calendar file comes from. Empty
+	// falls back to the site's own.
+	organizer string
 }
 
 // NewMeetings wires the handler. A nil calendar provider is not an
@@ -45,11 +48,12 @@ func NewMeetings(
 	auth *Auth,
 	settings *scheduling.SettingsStore,
 	cal calendar.Provider,
+	organizer string,
 ) *Meetings {
 	if cal == nil {
 		cal = calendar.NotConnected{}
 	}
-	return &Meetings{log: log, users: repo, auth: auth, settings: settings, cal: cal}
+	return &Meetings{log: log, users: repo, auth: auth, settings: settings, cal: cal, organizer: organizer}
 }
 
 // GetMeetingOptions returns what the member may choose and the clock it

@@ -102,6 +102,11 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /api/jd/resume/{file}", s.jd.ServeResumePDF)
 	}
 
+	if s.meetings != nil {
+		// A file a browser downloads, so plain HTTP rather than an RPC.
+		mux.HandleFunc("GET /api/meetings/{file}", s.meetings.ServeMeetingICS)
+	}
+
 	mount := func(path string, h http.Handler) {
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))
 	}

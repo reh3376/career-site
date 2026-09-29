@@ -101,9 +101,11 @@ type Slot struct {
 func (s Settings) Validate() error {
 	// LoadLocation("") returns UTC and no error, so an empty zone would
 	// pass every check here and then quietly offer the owner's mornings
-	// in UTC while the page beside them says America/New_York. Checked
-	// first, because it is the failure this package's whole zone policy
-	// exists to prevent and it is invisible for half the year.
+	// in UTC while the page beside them says America/New_York. That is
+	// 4 hours out under EDT and 5 under EST: wrong all year, never
+	// right, and silent. Distinct from the fixed-offset mistake below,
+	// which is right for half the year and so takes longer to notice.
+	// Checked first because it is the cheapest to get wrong.
 	if s.Zone == "" {
 		return fmt.Errorf("a time zone is required, as an IANA name such as America/New_York")
 	}
