@@ -635,6 +635,16 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
+- **The evaluation run order is invisible in the UI.** `/admin/evals`
+  and the progress line both follow `ORDER BY expected_gate DESC, name`
+  from `ListGoldenPostings`, so a run goes below-gate postings first
+  and then above-gate alphabetically. Nothing on the page says so, and
+  on 2026-09-29 a reader counting positions expected a different number
+  for the posting in flight. Either show the run position against each
+  posting on `/admin/evals`, or say what the order is. Small, and it
+  removes a class of "is this the right posting" doubt during a
+  five-hour run.
+
 - **One IMAGE_TAG for three services, so there is no such thing as a
   web-only deploy.** `docker-compose.prod.yml` interpolates the same
   `${IMAGE_TAG}` into `career-site-web`, `career-site-api` and
