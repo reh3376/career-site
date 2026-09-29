@@ -70,6 +70,21 @@ There is no cancel RPC. Stopping a run means restarting the api, and
 the `eval_runs` row then has to be closed by hand, because a container
 killed outright never reaches the code that closes it properly.
 
+### Verifying a reindex before you start
+
+Wait for the **job** to report done, not for the embedding backlog to
+reach zero. A reindex processes one document at a time, so there are
+brief moments between documents when no chunk is unembedded and the
+work is not finished. Polling for `embedding IS NULL = 0` therefore
+returns early and gives a partial count.
+
+That happened on 2026-09-29: the corpus was reported at 300 chunks and
+was actually still working its way to 303. The run started after it had
+genuinely finished, so nothing was lost, and the discrepancy only
+surfaced later because `eval_run_documents` had captured the real
+number. Read the job through `/admin/ops` or `GetJob`, or compare the
+count against the manifest of the run that follows.
+
 ## 3. Reading the result
 
 Three numbers, and they are read together.
@@ -128,8 +143,11 @@ Two consequences:
   reading ids across runs will attribute a change to the wrong
   requirement. That mistake was made on run 11 and corrected on run 12.
 
-`scripts/` has no tool for this yet; the query is in the tuning log
-entry for run 12.
+`scripts/eval_compare.sh <new> [old]` does all of this in one pass:
+scores with deltas, both run headers, the verdict diff matched by text,
+verdict totals, rationale issues, and which corpus documents differ
+between the two runs. Read-only and safe to run against a live
+evaluation.
 
 ## 5. What a run records
 
