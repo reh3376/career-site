@@ -129,8 +129,12 @@ export function EventDetailDialog({
 
         <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 border-y border-line py-3 font-mono text-xs sm:grid-cols-4">
           <Field label="reported" value={timing.at} />
-          <Field label="since previous" value={timing.gap || "first"} />
-          <Field label="this step took" value={timing.took || "in progress"} />
+          {/* "since previous" is the step BEFORE this one, and saying
+              so avoids the reading that cost a wrong conclusion on the
+              timeline: a report is written when a step begins, so the
+              gap behind it belongs to the step behind it. */}
+          <Field label="previous step took" value={timing.gap || "first"} />
+          <Field label="this step took" value={timing.took || "still running"} />
           <Field
             label="progress"
             value={timing.progress ? `${timing.progress}%` : "-"}
