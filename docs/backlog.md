@@ -1733,6 +1733,23 @@ to prevent.
 
 ## 7. Documentation
 
+**The migration replay check was reading the wrong range. Fixed
+2026-09-29.** CI extracts a migration's Up block with
+`sed -n '/-- +goose Up/,/-- +goose StatementEnd/p'`, which assumes
+every migration wraps its Up in a StatementBegin/End pair. goose does
+not require that. On a file without one the range ran to end of file
+and swept the Down block in with the Up, so the replay created a table
+and then dropped it, and `DROP TABLE IF EXISTS` said nothing.
+
+00037 was the only such file out of forty. It stayed silent for three
+migrations and surfaced on 00040, which needed the table 00037 was
+supposed to have left behind. The check exists precisely to catch a
+migration that is wrong in the order goose runs it, and it was itself
+wrong in a way that hid one.
+
+The range now ends at the Down marker, and 00037 carries the
+annotations the other thirty-nine have.
+
 **Docs sweep, 2026-09-29.** `docs/FSD.md` to 0.3.9, `SERVICES.md`,
 `README.md` and ADR 0004 reconciled to the system as shipped through
 PR 172, sixty merges after the previous sync.

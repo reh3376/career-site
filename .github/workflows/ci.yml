@@ -151,7 +151,15 @@ jobs:
           set -euo pipefail
           for f in $(ls services/api/internal/db/migrations/*.sql | sort); do
             echo "== $(basename "$f")"
-            sed -n '/-- +goose Up/,/-- +goose StatementEnd/p' "$f" \
+            # Up ends at the Down marker. Ending it at StatementEnd
+            # assumes every migration wraps its Up in a
+            # StatementBegin/End pair, which goose does not require: on
+            # a file without one the range ran to end of file and swept
+            # the Down block in with the Up. 00037 created a table and
+            # then dropped it in the same replay, and DROP TABLE IF
+            # EXISTS said nothing, so it stayed silent until 00040
+            # needed that table three migrations later.
+            sed -n '/-- +goose Up/,/-- +goose Down/p' "$f" \
               | grep -v '^-- +goose' \
               | psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q
           done
