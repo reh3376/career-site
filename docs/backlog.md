@@ -775,9 +775,23 @@ the real token is `--color-accent-hover`, so those links had no hover
 state. This is the same failure as `bg-canvas`, referenced 28 times
 and never defined, which is what made the job modal unreadable.
 Tailwind drops an unknown utility silently rather than failing the
-build, so both were invisible for weeks. **Left to do:** a CI check
-that every `text-*`, `bg-*` and `border-*` class in `apps/web/src`
-resolves to a token defined in `globals.css`.
+build, so both were invisible for weeks. **CLOSED 2026-09-29** by
+`scripts/check_design_tokens.py`, run as `make tokens` and gated in
+CI's web job before the build, because the build cannot catch this.
+
+It learns the palette from `globals.css` rather than knowing Tailwind's
+utility list, so a new token needs no change to it and a framework
+utility is never second-guessed: a class is judged only when its first
+segment names a family the project defines. `text-sm` and `bg-[#fff]`
+claim no family here and are left alone; `text-accent-strong` claims
+`accent` and must resolve.
+
+**It found a third instance on its first run**, in four places:
+`bg-canvas-2`, which had no token and is now `bg-paper-2`, and
+`bg-success-soft` in three admin surfaces, each paired with
+`border-success`. There the usage was right and the token was missing:
+`accent-soft` and `signal-soft` both existed and `success-soft` did
+not, so it is now defined in both the default and OT palettes.
 
 **5a. A submitted posting can no longer reach private material.
 SHIPPED 2026-09-24.** Retrieval had no visibility predicate:
