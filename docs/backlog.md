@@ -689,10 +689,11 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   row. Proven on a scratch database (both paths returned a fingerprint
   covering the full 768-dimension vectors to an exact match) and then
   for real in production, reverting a mis-ingested document back to 27
-  documents and 241 chunks. **Left to do:** it is only installed to
-  `/tmp` on the server and will not survive a reboot. Add it to
-  `deploy/backup/install-server.sh` beside `pg-backup.sh`. It needs no
-  timer; it is run by hand before a risky ingest.
+  documents and 241 chunks. **Resolved 2026-09-29:** it lives in the
+  server's checkout at `/opt/career-site/deploy/backup/`, which the
+  rollout keeps current with `git pull`, so it survives a reboot
+  without a separate install step. It needs no timer; it is run by hand
+  before a risky ingest.
 - **Consider a corpus delete path.** The absence of one is what made a
   wrong ingest a database operation rather than a click. A
   `DeleteCorpusDocument` RPC behind admin plus fresh MFA, or at least a
@@ -704,6 +705,42 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 Shipped so far: ruleset on `main` with required checks, gitleaks in
 CI, rate limits on login and events, client IP behind Caddy, body
 limits, security headers and CSP, noindex on member pages, HIBP fix.
+
+**5c. Dependency PRs were never tested. FIXED 2026-09-29.** `ci.yml`
+triggers on push rather than pull_request, deliberately, because
+bot-authored pull requests sit at `action_required` until a human
+approves each run. Its branch filter was `main`, `claude_dev*`,
+`feat/*`, `fix/*`, and a dependabot branch matches none of them, so
+every dependency PR since that change had been mergeable with no
+workflow having run against it. The same filter had been copied into
+`security.yml` (gitleaks, govulncheck, pip-audit, npm audit) and
+`codeql.yml`, so fixing only the one that was pointed at moved seven
+PRs from blocked on one missing workflow to blocked on two. All three
+now match `dependabot/**`.
+
+On their first real run the scans caught a genuine defect: dependabot
+had raised `codeql-action/init` to v4.38.2 and left
+`codeql-action/analyze` on v3.38.1, which fails with "Loaded a
+configuration file for version 4.38.2, but running version 3.38.1".
+They are one repository at one commit and move together. Untested,
+that would have merged and broken code scanning on `main`.
+
+**Left to do:** nothing here owns the relationship between a
+Dockerfile's base image and the workflow `env:` that is supposed to
+test it. Bumping python to 3.14 and go to 1.27 left CI checking 3.12
+and 1.26 until it was noticed by hand. A check that the two agree
+would catch the next one.
+
+**5d. An undefined design token compiles to nothing. Second instance
+2026-09-27.** `accent-strong` was used thirteen times across eight
+admin surfaces as `hover:text-accent-strong` and was never defined;
+the real token is `--color-accent-hover`, so those links had no hover
+state. This is the same failure as `bg-canvas`, referenced 28 times
+and never defined, which is what made the job modal unreadable.
+Tailwind drops an unknown utility silently rather than failing the
+build, so both were invisible for weeks. **Left to do:** a CI check
+that every `text-*`, `bg-*` and `border-*` class in `apps/web/src`
+resolves to a token defined in `globals.css`.
 
 **5a. A submitted posting can no longer reach private material.
 SHIPPED 2026-09-24.** Retrieval had no visibility predicate:
@@ -880,7 +917,52 @@ query, and it should stay that way.
 
 ## 6b. Evaluation roadmap
 
-- **TOP PRIORITY. Nothing measures whether a rationale is sound.**
+**Current baseline: run 12, 2026-09-28.** 9 of 9 on the right side of
+the gate, 0 ordering violations, margin 0.1071, 0 errors, 4h51m, on
+`requirement_judge` v11 and corpus fingerprint `cf474aec6714`.
+
+    run 12   9/9   0 inv   margin 0.1071   v11, corpus unchanged
+    run 11   9/9   0 inv   margin 0.1071   five corpus documents added
+    run 10   9/9   0 inv   margin 0.1786
+    run  9   9/9   0 inv   margin 0.1071
+    run  8   9/9   0 inv   margin 0.0714
+
+**There is a noise floor of about one requirement per posting per run**,
+at temperature 0, established by run 12 against run 11 with the corpus
+unchanged. CAI scored 0.9286 in both runs with two different
+requirements swapped underneath it; Orca's entire movement was one
+requirement on HR partnering; profluent has gone 0.2500, 0.3571,
+0.2500 across three runs with its evidence untouched. Three postings
+held at exactly 1.0000 throughout, so this is marginal requirements
+moving rather than general instability.
+
+Two consequences, both of which retire earlier readings in this file
+and in `docs/llm-tuning-log.md`:
+
+- A single-posting delta below about 0.04 is not evidence of anything.
+- Verdicts must be diffed by requirement **text**, not id. Requirements
+  are re-extracted each run and the ids are not stable, and a score
+  that does not move can still have two requirements swapped inside it.
+
+**Margin is pinned at 0.1071 by one requirement.** Blue Origin's "2+
+Years in building products that use or incorporate Large Language
+Models" is unmet with an empty evidence list in both runs 11 and 12. It
+is an evidence gap that no prompt rule reaches, so the LLM corpus
+document in §6c is the only thing that moves the number.
+
+
+- **~~TOP PRIORITY. Nothing measures whether a rationale is sound.~~
+  SHIPPED 2026-09-26 to 2026-09-29**, as `checkRationale` with three
+  arms: `span_mismatch`, `quote_unsupported` and `disjunction_ignored`.
+  Reported on `/admin/decisions` for human grading, never applied, so
+  the check cannot itself cost a verdict. Measured against 203 real
+  judgments across runs 9 to 12 before and after shipping; it fires
+  once, on the one genuine contradiction. The first version of the
+  disjunction arm flagged 4 of 77 with 3 false, all the same shape: a
+  rationale reciting a qualification the candidate does hold that
+  shares a word with the requirement. Three guards fixed it, and all
+  three false positives are pinned as tests. Original finding below.
+
   Found 2026-09-26 in evaluation run 9, by reading the judgments behind
   a 9 of 9 result. Two defects, both invisible to every metric the
   evaluation computes:
@@ -1135,24 +1217,57 @@ editing it perturbs all 126 judgments. A one-sentence edit on
 a half hours a run, one broad perturbation measured once beats three
 measured separately.
 
-In the batch:
+**Batch closed 2026-09-27, measured as run 11.** All five changes went
+in together and the corpus went from 31 documents and 270 chunks to 35
+and 297.
 
-1. **Regulated manufacturing, written and held** in
-   `docs/personal/career-facts.md` locally. States that distilled
-   spirits production is federally regulated manufacturing under TTB
-   (27 CFR), FDA and EPA, and that mining equipment manufacture is
-   regulated under MSHA, with the years each covers. Fixes run 10's
-   wrong CAI verdict, which answered unmet on "pharmaceutical,
-   biotechnology, or regulated manufacturing" because the corpus listed
-   the standards and left the industry classification to inference.
-2. **Front-end and full-stack delivery**, not started. 36 pages, 27
-   client components, 17 server-action modules, Next.js 16, plus
-   MDEMG's 9 Grafana dashboards and 168 panels. See the entry below.
-3. **Data centre buildout**, not started, and blocked on detail only
-   Roger has. See the entry below.
+1. **Regulated manufacturing**, added to `docs/personal/career-facts.md`.
+   States that distilled spirits production is federally regulated
+   manufacturing under TTB (27 CFR), FDA and EPA, and that mining
+   equipment manufacture is regulated under MSHA. It landed: run 11's
+   rationale changed from "not in pharmaceutical or biotech sectors" to
+   "distilleries and mining, which are regulated". The verdict did not
+   change, because the failure was the judge refusing an alternative
+   the posting offered rather than a missing fact. Fixed in
+   `requirement_judge` v11 and confirmed in run 12, where the
+   requirement flipped to met with cited evidence.
+2. **Front-end and full-stack delivery**, written and ingested.
+3. **Data centre buildout**, written and ingested as
+   `telecom-and-data-center-infrastructure.md`, after Roger supplied
+   the central-office detail the corpus lacked.
+4. **Industrial cooling and heat exchange**, written and ingested.
+5. **The data centre cooling white paper**, converted from PDF with its
+   six tables rebuilt by hand, and ingested.
 
-When the batch is ready: sync, reindex, then one evaluation. The
-current baseline to beat is run 10, 9 of 9 with 0 inversions and margin
+**What the batch cost, which is the finding.** Run 11 held 9 of 9 with
+0 inversions and margin fell from 0.1786 to 0.1071. Blue Origin's LLM
+requirement went from met on four chunks to unmet on none: the chunks
+still exist, and 27 new ones displaced them. The requirement had been
+resting on incidental mentions in an article and some interview-prep
+notes. A capability the corpus only implies is a capability the corpus
+will eventually lose, which is the rule the next document is written
+under.
+
+**Still open from this thread:**
+
+- **An LLM and applied-AI document.** The fifth gap, found the same way
+  as the other four. Roger dates the work to 2023; the public
+  repositories start 2026-01-15 (`mdemg`), so the depth is evidenced
+  and the span is not. Blocked on two answers: what the 2023 to 2025
+  work consisted of, and which Whiskey House systems incorporate an LLM
+  at runtime rather than having been built with AI assistance. The WHK
+  repositories are the employer's IP and cannot be cited, so that
+  strand is described as role and outcome, without artifacts.
+- **The distillation study guide**, converted and not ingested pending
+  a decision. It is reference material on how columns behave rather
+  than evidence of what Roger has done, and retrieval does not
+  distinguish the two: a requirement asking for distillation knowledge
+  would match it and the judge would read it as his experience.
+- **26 of 297 chunks still carry `****`**, the split-bold-run artifact
+  from the conversions that predate UCTS. One of them, chunk 62, was
+  cited as evidence in run 10. UCTS prevents new instances; it does not
+  clean what was already ingested.
+
 0.1786.
 
 
@@ -1197,8 +1312,16 @@ current baseline to beat is run 10, 9 of 9 with 0 inversions and margin
   suppression, environmental monitoring; and where his scope ended.
 
 
-- **TOP PRIORITY. The corpus cannot evidence capital project
-  delivery, which is the centre of the roles being targeted.** Found
+- **~~TOP PRIORITY. The corpus cannot evidence capital project
+  delivery.~~ CLOSED 2026-09-27.** `capital-project-delivery.md` was
+  written and ingested, and Heaven Hill's r2 moved from unmet to met on
+  it. Worth keeping the original entry because it is the template the
+  next four gaps were found by: a requirement the reviewer refuses,
+  correctly, because no document says the thing plainly. Front-end
+  delivery, data centre buildout, industrial cooling and the open LLM
+  document were all found this way. Original finding below.
+
+  Found
   2026-09-26 by evaluation run 8, and only visible because the
   extraction fix made the requirement legible. A search across all 266
   chunks for "front-end loading", "basis of design", "capital
@@ -1459,15 +1582,37 @@ to prevent.
 
 ## 7. Documentation
 
-- Five "(unverified)" markers remain in `docs/FSD.md` (registration
-  IP/UA columns, contact-page filters, retrieval-tester UI, whitelist
-  auto-approved template and digest, Radix/MDX). Verify each against
-  the code and remove the marker.
+**Docs sweep, 2026-09-29.** `docs/FSD.md` to 0.3.9, `SERVICES.md`,
+`README.md` and ADR 0004 reconciled to the system as shipped through
+PR 172, sixty merges after the previous sync.
+
+- ~~Five "(unverified)" markers in `docs/FSD.md`.~~ **All resolved
+  against the code.** Three were overstatements rather than
+  confirmations, and the requirement rows now say so: contact Reopen
+  and Delete do not exist (only `ListContactMessages` and
+  `ResolveContactMessage`), `TestRetrieval` has no UI, and neither
+  Radix nor MDX is a dependency. Two of the four whitelist templates
+  (auto-approved, digest) were never built.
+- ~~`SERVICES.md` "last verified" date after each infra change.~~ Now
+  2026-09-29 against build `7bccfa60532f`, and the migration table runs
+  to 00036.
+
+**Still open:**
+
 - Add the event stream and the privacy commitments to the FSD (a
   FR-DATA section) and the privacy page to the route table.
-- `SERVICES.md` "last verified" date after each infra change.
-- Keep the shared "current state" brief pattern for the next docs
-  sweep (one brief, one agent per doc group).
+- The FSD still carries no section on the evaluation harness as a
+  subsystem. FR-ADM-21 describes the surface; the golden set, the
+  margin metric and the noise floor live only in `docs/backlog.md`
+  §6b and `docs/llm-tuning-log.md`.
+- `docs/decision-log.md`, `docs/events/README.md`,
+  `docs/cutover-local-to-prod.md` and `docs/jd-submitter-workflow.md`
+  were last touched 2026-09-22 and have not been re-read against the
+  code. Nothing in them is known to be wrong; they are simply not yet
+  verified, which is a different claim from being current.
+- A convention for keeping a Dockerfile's base image and the workflow
+  `env:` that tests it in step. Bumping python to 3.14 and go to 1.27
+  left CI checking 3.12 and 1.26 until someone noticed by hand.
 
 ## Standing rules that shape all of the above
 

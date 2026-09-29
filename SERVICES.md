@@ -12,7 +12,7 @@ the dev compose file and never accepted by prod. See
 [`docker-compose.yml`](docker-compose.yml) for the base and
 [`docker-compose.prod.yml`](docker-compose.prod.yml) for the prod overlay.
 
-Last verified against the running stack: 2026-09-21 (`deploy/live-check.sh`);
+Last verified against the running stack: 2026-09-29 (`deploy/live-check.sh`, 20 checks green on `7bccfa60532f`);
 text updated 2026-09-22 for the LLM cutover (the JD reviewer now runs on the
 box's own Ollama).
 
@@ -24,8 +24,8 @@ box's own Ollama).
 |---|---|---|---|---|---|
 | **caddy** | `caddy:2-alpine` | in front of everything | prod: `80`, `443`; dev: `80` | Let's Encrypt via `LETSENCRYPT_EMAIL`, cert for `SITE_DOMAIN` | Routes `/api/*` to `api:8080` and everything else to `web:3000`; carries HSTS, CSP and the other security headers (`deploy/caddy/Caddyfile.prod`). Redirects plain HTTP to HTTPS, including `http://localhost` on the box. |
 | **web** | Next.js 16 (App Router), standalone build; `ghcr.io/reh3376/career-site-web:<sha>` | `web:3000` | none | forwards the session cookie to api; `src/proxy.ts` redirects signed-out visitors to `/login` for every route outside the public allow-list | Public: `/`, `/contact`, `/register`, `/login`, `/privacy`, `/terms`, verify / reset / one-click approval. Members: `/home`, `/articles`, `/gallery`, `/jd-upload` (+ `/jd-upload/<id>` reopenable review), `/settings`. Admin: `/admin/*` (Overview, Contact messages, Registrations, Access & whitelist, Activity, Corpus, JD submissions, Decision review, DB query). |
-| **api** | Go 1.26 ConnectRPC; `ghcr.io/reh3376/career-site-api:<sha>` | `api:8080` | none (prod); via caddy in dev | session cookie (`career_site_session`) for members and admins; `ADMIN_USERNAME` + `CAREER_SITE_ADMIN_PW` bootstrap the admin row on boot | Health: `GET /api/healthz`, `GET /api/readyz` (checks postgres + sidecar). Runs goose migrations on boot. Plain-HTTP routes besides Connect: `POST /api/admin/decision` (one-click approval token), `GET /api/jd/resume/<id>.pdf?t=<token>` (member session + result token). Distroless image: no shell inside the container. |
-| **sidecar** | Python 3.12 gRPC; `ghcr.io/reh3376/career-site-sidecar:<sha>` | `sidecar:50051` | none | none (compose network only) | `Embed` (nomic prefixes `search_document:` / `search_query:`, purpose-aware), `Generate` (LLM gateway, JSON-schema constrained; sends `num_ctx` and refuses truncated results), `RenderResume` (Typst + pypdf, owner-password locked PDF), `Health` reports `embedder_ready`, `llm_ready`, `llm_provider`, `renderer_ready`. Providers are env-selected (`stub` / `ollama`); the LLM can live on a different Ollama host than the embedder (`OLLAMA_LLM_URL`). |
+| **api** | Go 1.27 ConnectRPC; `ghcr.io/reh3376/career-site-api:<sha>` | `api:8080` | none (prod); via caddy in dev | session cookie (`career_site_session`) for members and admins; `ADMIN_USERNAME` + `CAREER_SITE_ADMIN_PW` bootstrap the admin row on boot | Health: `GET /api/healthz`, `GET /api/readyz` (checks postgres + sidecar). Runs goose migrations on boot. Plain-HTTP routes besides Connect: `POST /api/admin/decision` (one-click approval token), `GET /api/jd/resume/<id>.pdf?t=<token>` (member session + result token). Distroless image: no shell inside the container. |
+| **sidecar** | Python 3.14 gRPC; `ghcr.io/reh3376/career-site-sidecar:<sha>` | `sidecar:50051` | none | none (compose network only) | `Embed` (nomic prefixes `search_document:` / `search_query:`, purpose-aware), `Generate` (LLM gateway, JSON-schema constrained; sends `num_ctx` and refuses truncated results), `RenderResume` (Typst + pypdf, owner-password locked PDF), `Health` reports `embedder_ready`, `llm_ready`, `llm_provider`, `renderer_ready`. Providers are env-selected (`stub` / `ollama`); the LLM can live on a different Ollama host than the embedder (`OLLAMA_LLM_URL`). |
 | **ollama** | `ollama/ollama:latest` | `ollama:11434` | none | none | Embedding host (`nomic-embed-text`, ~275 MB, pulled on first boot into the `ollama_models` volume) and, since 2026-09-22, the LLM host (`qwen3:4b-q8_0`). One model resident at a time (`OLLAMA_MAX_LOADED_MODELS=1`; the embedder reloads in seconds), flash attention on, q8_0 KV cache. Always on in prod; dev opt-in via `docker compose --profile embed` (dev usually points the sidecar at the host's own Ollama instead). Memory-capped by `OLLAMA_MEM_LIMIT` (prod `7g`); `OLLAMA_KEEP_ALIVE` unloads idle models. |
 | **postgres** | `pgvector/pgvector:pg16` | `postgres:5432` | dev: `5432`; prod: none | app role `career` / `POSTGRES_PASSWORD`; read-only role `career_admin_readonly` / `DB_READONLY_PASSWORD` for `/admin/db` (migration `00005`) | Data volume `postgres_data`. pgvector with `vector(768)` + HNSW cosine index on `corpus_chunks`. |
 | **minio** | `quay.io/minio/minio:latest` | `minio:9000` (S3), `minio:9001` (console) | dev: `9000`, `9001`; prod: none | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | Provisioned for uploads and object storage; not yet used by the api (résumé PDFs are stored on the submission row for now). |
@@ -138,6 +138,20 @@ Migrations live in [`services/api/internal/db/migrations/`](services/api/interna
 | 00020 | `jd_apply_url.sql` | `jd_submissions.apply_url` (application link the submitter gives; surfaced in the owner's outcome email) |
 | 00021 | `jd_progress.sql` | `jd_submissions.progress_pct`, `progress_stage` (written by the pipeline, read by the submitter's progress modal) |
 | 00022 | `app_settings.sql` | key/value settings table; holds `jd_fit_bands` (owner-editable on `/admin/jd`, cached 15 s) |
+| 00023 | `events.sql` | `events` product-analytics stream (name, anon id, properties), indexed by name and time |
+| 00024 | `tenants.sql` | the tenancy seam of ADR 0029: `tenants` plus tenant columns on `events` and `decision_log`, one row, no behaviour change |
+| 00025 | `jd_runs.sql` | one immutable row per pipeline attempt: model, prompts, scores, timings. A re-score opens attempt two rather than overwriting attempt one |
+| 00026 | `outcomes_feedback.sql` | `jd_outcomes` (what happened to an application) and `jd_feedback` (the submitter's view of the review) |
+| 00027 | `golden_set.sql` | `golden_postings` with the owner's above/below-gate label, `eval_runs` and `eval_items`: the evaluation harness |
+| 00028 | `metric_views.sql` | the analytics views behind `/admin/analytics`: `v_jd_runs`, `v_reliability`, `v_judge_agreement` |
+| 00029 | `ungradeable.sql` | marks a judgment ungradeable so it leaves the agreement denominator instead of counting against the model |
+| 00030 | `golden_selection.sql` | partial index for finding unlabelled golden postings |
+| 00031 | `gate_views.sql` | `v_gate_reliability`, `v_gate_agreement`, `v_gate_latency` |
+| 00032 | `agreement_scope.sql` | scopes `v_judge_agreement` so eval submissions do not pollute the human-graded numbers |
+| 00033 | `reliability_scope.sql` | the same scoping for `v_reliability` |
+| 00034 | `agreement_counts_evals.sql` | corrects the agreement counts across evaluation runs |
+| 00035 | `expiry_warning_sent.sql` | `users.expiry_warning_sent_at`, which stopped the access-expiry reminder re-sending on every API restart |
+| 00036 | `run_retrieval_scope.sql` | `jd_runs.retrieval_scope`, so every run records which corpus scope it actually read |
 
 Roles: `career` (app owner, full DML), `career_admin_readonly` (SELECT-only; bounds the `/admin/db` blast radius).
 
@@ -154,7 +168,7 @@ Services shipped:
 - **ContactService**: SubmitContact (incl. hiring inquiry)
 - **ActivityService**: RecordEvents (client beacon)
 - **JdService** (members): SubmitJd / GetJdResult / ListMySubmissions / GetJdReviewConfig (the live fit bands); the owning member's session or the result token releases verdicts, résumé and PDF
-- **AdminService**: contacts, registrations + member detail (with email delivery history + resend), access whitelist, activity, db console, corpus (ingest, reindex public/private and embed sweep as jobs via RunJob / GetJob with progress), JD submissions + detail + re-score + fit bands (GetJdFitBands / SetJdFitBands), decision log (ListDecisionLog / ReviewDecision / ExportDecisionLog)
+- **AdminService**: contacts, registrations + member detail (with email delivery history + resend), access whitelist, activity, db console, corpus (ingest, reindex public/private and embed sweep as jobs via RunJob / GetJob with progress), JD submissions + detail + re-score + fit bands (GetJdFitBands / SetJdFitBands), decision log (ListDecisionLog / ReviewDecision / ExportDecisionLog), operations (GetOpsStatus: is the box busy, what the runner remembers, pipeline counts, host load; GetJobDetail: a job's full event timeline with the gap between reports), evaluations (ListGoldenPostings / UpsertGoldenPosting / SetGoldenActive / LabelGoldenPosting / ListEvalRuns / GetEvalRun, with RunJob(JOB_KIND_EVAL_QUICK) starting a run)
 - **SystemService**: GetVersion (build info); GetGovernanceStatus is declared in the proto but has no api handler (Unimplemented)
 - **SidecarService** (internal gRPC): Embed / Generate / RenderResume / Health; Rerank, Classify, RunJob, GetJob are declared but return UNIMPLEMENTED (the admin jobs run inside the api, not the sidecar)
 
@@ -166,6 +180,9 @@ Services shipped:
 - **Verify**: `deploy/live-check.sh [--submit] https://rogerhenley.dev` before and after any maintenance. It follows the members-only policy: the JD submission runs as the admin member from the server.
 - **Private corpus**: `make sync-corpus` (prod) / `make stage-corpus` (dev) from `docs/personal/corpus-manifest.txt`; then `/admin/corpus` → reindex + embed sweep. Both run as jobs with a progress readout; the page can be left and reopened.
 - **Gallery**: `make photos` builds EXIF-stripped WebP derivatives from `docs/personal/images` per `apps/web/content/photos/*.md`.
+- **Evaluations**: `/admin/evals` labels golden postings above or below the gate and starts a run as a job. A run scores every active posting through the real pipeline, about 4h50m for nine on the box, and records gate accuracy, ordering violations and margin. **Never deploy while one is running**: the runner keeps jobs in memory and recreating the api container kills them. `/admin/ops` answers whether anything is running. History and findings: [`docs/llm-tuning-log.md`](docs/llm-tuning-log.md).
+- **Document conversion**: `.docx` and `.pdf` into corpus Markdown via `scripts/docx_to_md.py` and `scripts/extract_docs.py`; résumés via `scripts/resume_to_md.py` and `scripts/render_resume_pdf.py`. Checked by UCTS (`make ucts`, gated in CI): see [`docs/tests/ucts/README.md`](docs/tests/ucts/README.md).
+- **Corpus undo**: `deploy/backup/corpus-snapshot.sh` (`status` / `snapshot` / `revert-since <id>` / `restore <dump>`). The API has no delete, so an ingest is otherwise permanent. Prefer `revert-since`: ingestion only inserts.
 - **JD reviewer**: one pipeline at a time, 15 to 30 min per JD on the box. A failed assessment marks the row failed (it never falls back to the retrieval score); use Re-score on `/admin/jd`. Fit bands (very strong ≥ 0.85, strong ≥ 0.70 = the résumé gate, possible ≥ 0.55, weak ≥ 0.35) are edited on `/admin/jd`. Every verdict lands in `/admin/decisions` for human review. Calibration and history: [`docs/llm-tuning-log.md`](docs/llm-tuning-log.md); the member-facing flow: [`docs/jd-submitter-workflow.md`](docs/jd-submitter-workflow.md); the review surface: [`docs/decision-log.md`](docs/decision-log.md).
 - **LLM cutover** (done 2026-09-22): [`docs/cutover-local-to-prod.md`](docs/cutover-local-to-prod.md).
 
