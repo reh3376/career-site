@@ -1,0 +1,222 @@
+// Meeting scheduling against Roger's own calendar. Signed-in members
+// see the slots he has opened, pick a length, and book one; the
+// application claims the interval in its own database first and only
+// then writes the event, because the database is the thing that can
+// settle a race between two members submitting the same slot.
+//
+// Members only, by the owner's decision (2026-09-29): the target is his
+// main personal calendar, so an unauthenticated visitor could hold real
+// hours on it. His words: "a public facing calendar is asking for
+// trouble."
+//
+// Two rules shape every message here.
+//
+// Free/busy only, never event contents. The application asks the
+// calendar which intervals are taken and nothing else, so a private
+// appointment's title never enters this system and cannot leak through
+// an availability response.
+//
+// One zone, stated, never converted. Times are carried as instants and
+// rendered in the owner's zone (an IANA name, never a fixed offset,
+// because America/New_York is UTC-5 in winter and UTC-4 in summer).
+// The zone travels with the response so a page can say which clock it
+// is quoting rather than silently using the visitor's.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Meeting scheduling, members only: a signed-in session is required to
+// see availability or to book, and the booking member is recorded on
+// the row.
+service MeetingService {
+  // Returns what the member is allowed to choose before they choose it:
+  // the meeting lengths on offer, the zone every time is quoted in, and
+  // how far ahead the calendar runs. Fetched once when the page opens
+  // so the form is built from the owner's live settings rather than
+  // from constants compiled into the frontend.
+  rpc GetMeetingOptions(GetMeetingOptionsRequest) returns (GetMeetingOptionsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
+  // Returns the start times a member may book for one meeting length.
+  // Computed per length rather than once, because a 45-minute meeting
+  // has fewer places to go than a 15-minute one and offering a start
+  // that cannot fit is worse than offering nothing.
+  rpc GetAvailability(GetAvailabilityRequest) returns (GetAvailabilityResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 30;
+  }
+  // Books one slot. Re-reads the calendar for the claimed interval
+  // first, because the list the member saw is stale by the time they
+  // submit, and returns ALREADY_EXISTS if the time went while they were
+  // deciding. Never partially succeeds: a claim whose calendar event
+  // cannot be created is released.
+  rpc BookMeeting(BookMeetingRequest) returns (BookMeetingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 6;
+  }
+  // Lists the calling member's own meetings, upcoming first, so a
+  // booking can be found again after the tab that made it is gone.
+  rpc ListMyMeetings(ListMyMeetingsRequest) returns (ListMyMeetingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 30;
+  }
+  // Cancels the caller's own meeting and frees the time. Cancelling
+  // something already cancelled succeeds, so a double click or a stale
+  // tab is not an error the member has to understand.
+  rpc CancelMeeting(CancelMeetingRequest) returns (CancelMeetingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.rate_limit_per_minute) = 10;
+  }
+}
+
+// Request for GetMeetingOptions. Empty: the options belong to the
+// owner, not to the caller, and a member cannot vary them.
+message GetMeetingOptionsRequest {}
+
+// What a member may choose, and the clock it is all quoted in.
+message GetMeetingOptionsResponse {
+  // Meeting lengths on offer, in minutes, shortest first. The owner
+  // offers 15, 30 and 45; the length is the member's decision because
+  // only they know whether they need a question answered or a real
+  // conversation.
+  repeated int32 duration_minutes = 1;
+  // IANA zone name every time in this API is rendered in, for example
+  // "America/New_York". Never an offset: an offset is correct for half
+  // the year. Show it beside the times rather than converting.
+  string zone = 2;
+  // Human label for the zone to print next to a time, for example
+  // "Eastern time". Sent by the server so the wording is the owner's
+  // and not the frontend's guess from the IANA name.
+  string zone_label = 3;
+  // How many days ahead the calendar is offered.
+  int32 horizon_days = 4;
+  // How far ahead the earliest bookable slot sits, in hours, so the
+  // page can say why today is not on offer.
+  int32 lead_hours = 5;
+  // Plain-language summary of the owner's stated hours, for example
+  // "Tuesday to Thursday, mornings and early afternoons". Rendered
+  // rather than derived, so a member reads intent instead of a grid.
+  string hours_summary = 6;
+  // False when the calendar is not connected or is unreachable, in
+  // which case no slots can be offered and the page should say so
+  // rather than show an empty calendar that reads as "never free".
+  bool available = 7;
+  // Why booking is unavailable, for the member, when available is
+  // false. Empty otherwise.
+  string unavailable_reason = 8;
+}
+
+// Request for GetAvailability.
+message GetAvailabilityRequest {
+  // Meeting length in minutes. Must be one of the lengths returned by
+  // GetMeetingOptions; a length nobody offered is a bad request rather
+  // than something to round to the nearest.
+  int32 duration_minutes = 1 [(buf.validate.field).int32.gt = 0];
+  // Start of the range to search, inclusive. Defaults to now when
+  // unset. Clamped to the lead time regardless of what is sent.
+  google.protobuf.Timestamp from = 2;
+  // End of the range, exclusive. Defaults to the horizon when unset,
+  // and is clamped to it, so a caller cannot ask about next year.
+  google.protobuf.Timestamp to = 3;
+}
+
+// One offered start time.
+message MeetingSlot {
+  // When the meeting would begin.
+  google.protobuf.Timestamp start = 1;
+  // When it would end. Sent rather than derived so the page cannot
+  // disagree with the server about the length it is showing.
+  google.protobuf.Timestamp end = 2;
+}
+
+// Available start times for the requested length.
+message GetAvailabilityResponse {
+  // Offered start times, in order. Empty means nothing is free in the
+  // range, which is a normal answer and not an error.
+  repeated MeetingSlot slots = 1;
+  // IANA zone the slots should be rendered in, repeated here so a
+  // response is self-describing without the options call.
+  string zone = 2;
+  // False when the calendar could not be read. Distinguishes "nothing
+  // is free" from "we do not know", which must not look the same.
+  bool available = 3;
+  // Why availability could not be computed, when available is false.
+  string unavailable_reason = 4;
+}
+
+// Request for BookMeeting.
+message BookMeetingRequest {
+  // The chosen start, exactly as returned by GetAvailability. The
+  // server re-checks it: this is a claim, not an instruction.
+  google.protobuf.Timestamp start = 1 [(buf.validate.field).required = true];
+  // Meeting length in minutes; must be one of the offered lengths.
+  int32 duration_minutes = 2 [(buf.validate.field).int32.gt = 0];
+  // What the member wants to discuss, in their words. Shown to the
+  // owner on the calendar entry so he arrives knowing the subject.
+  string topic = 3 [(buf.validate.field).string.max_len = 500];
+  // How the member would like to meet, in their words, for example a
+  // phone number or "your call, send a link". Optional.
+  string contact_preference = 4 [(buf.validate.field).string.max_len = 200];
+}
+
+// A booked meeting, as the member sees it.
+message Meeting {
+  // Stable id for this booking, used to cancel it.
+  int64 id = 1;
+  // When it begins.
+  google.protobuf.Timestamp start = 2;
+  // When it ends.
+  google.protobuf.Timestamp end = 3;
+  // Length in minutes, as booked.
+  int32 duration_minutes = 4;
+  // What the member said they wanted to discuss.
+  string topic = 5;
+  // IANA zone the times should be rendered in.
+  string zone = 6;
+  // Relative URL of the calendar file for this meeting, so the member
+  // can add it to their own calendar or forward an invitation of their
+  // own. Always present, including for a meeting booked in the app.
+  string ics_url = 7;
+  // Set when the meeting has been cancelled. Cancelled meetings stay
+  // in the list rather than vanishing, because a meeting that silently
+  // disappears reads as a bug.
+  google.protobuf.Timestamp cancelled_at = 8;
+}
+
+// Result of booking.
+message BookMeetingResponse {
+  // The meeting as booked.
+  Meeting meeting = 1;
+}
+
+// Request for ListMyMeetings.
+message ListMyMeetingsRequest {
+  // Include meetings that have already happened or been cancelled.
+  // False returns only what is still ahead.
+  bool include_past = 1;
+}
+
+// The caller's meetings.
+message ListMyMeetingsResponse {
+  // Meetings, soonest first.
+  repeated Meeting meetings = 1;
+}
+
+// Request for CancelMeeting.
+message CancelMeetingRequest {
+  // Which meeting to cancel. Must belong to the calling member.
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// Result of cancelling.
+message CancelMeetingResponse {
+  // The meeting, with cancelled_at set.
+  Meeting meeting = 1;
+}

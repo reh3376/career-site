@@ -119,14 +119,15 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`MemberService`](#memberservice) | Profile, interests, history, saved items, export, and deletion for the calling member. | 10 |
 | [`ContentService`](#contentservice) | Read access to the content catalog. | 6 |
 | [`HomeService`](#homeservice) | One-call assembly of everything the home page renders. | 1 |
-| [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
-| [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`DownloadService`](#downloadservice) | Lists what can be downloaded. | 1 |
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
+| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
+| [`MeetingService`](#meetingservice) | Meeting scheduling, members only: a signed-in session is required to see availability or to book, and the booking member is recorded on the row. | 5 |
+| [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
+| [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
+| [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`AdminService`](#adminservice) | Owner console. | 56 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
-| [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
-| [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -1115,72 +1116,460 @@ _No fields; send `{}`._
 
 </details>
 
-## ActivityService
+## DownloadService
 
-Batched, fire-and-forget activity reporting.
+Lists what can be downloaded.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | 120 | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
+| [`ListDownloads`](#downloadservice-listdownloads) | `/api/career.v1.DownloadService/ListDownloads` | Member | default | `ListDownloadsRequest` → `ListDownloadsResponse` | Lists downloadable files with the variant matching the member's tracks first. |
 
-### ActivityService.RecordEvents
+### DownloadService.ListDownloads
 
-`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** 120/min
+`POST /api/career.v1.DownloadService/ListDownloads` · **Auth:** Member · **Rate limit:** default/min
 
-Records a batch of events. Duplicate `client_event_id`s are ignored, so
-clients may retry a failed batch safely. Failures never affect page
-rendering; clients should send with `keepalive` on page hide.
+Lists downloadable files with the variant matching the member's tracks
+first.
 
-**Request** — [`RecordEventsRequest`](#recordeventsrequest)
+**Request** — [`ListDownloadsRequest`](#listdownloadsrequest)
 
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `events` | [`ActivityEvent`](#activityevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Events, 1–50 per batch. |
+_No fields; send `{}`._
 
-**Response** — [`RecordEventsResponse`](#recordeventsresponse)
+**Response** — [`ListDownloadsResponse`](#listdownloadsresponse)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `accepted` | `int32` | number |  | Events accepted (new). |
-| `duplicates` | `int32` | number |  | Events ignored as duplicates. |
+| `items` | [`DownloadItem`](#downloaditem)[] | array of object |  | Items, recommended first. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+## ContactService
+
+Reaching the owner outside the assistant.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`GetContactOptions`](#contactservice-getcontactoptions) | `/api/career.v1.ContactService/GetContactOptions` | Member | default | `GetContactOptionsRequest` → `GetContactOptionsResponse` | Returns the owner's availability statement and the contact channels he has chosen to publish. |
+| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
+
+### ContactService.GetContactOptions
+
+`POST /api/career.v1.ContactService/GetContactOptions` · **Auth:** Member · **Rate limit:** default/min
+
+Returns the owner's availability statement and the contact channels he
+has chosen to publish.
+
+**Request** — [`GetContactOptionsRequest`](#getcontactoptionsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetContactOptionsResponse`](#getcontactoptionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `availability` | `string` | string |  | Availability statement in the owner's words. |
+| `locationPreferences` | `string` | string |  | Location and remote preferences. |
+| `channels` | [`ContactChannel`](#contactchannel)[] | array of object |  | Channels in display order. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### ContactService.SubmitContact
+
+`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** 3/min
+
+Sends a message to the owner. Accepts both signed-in members (identity
+read from the session cookie) and anonymous visitors (name + email
+supplied on the form, Turnstile required). The owner receives the
+message with the sender's context and replies from their mailbox.
+
+**Request** — [`SubmitContactRequest`](#submitcontactrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `subject` | `string` | string | `string: min_len: 1 max_len: 200` | Subject line. |
+| `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
+| `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
+| `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
+| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
+| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
+| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
+| `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
+| `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
+| `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
+
+**Response** — [`SubmitContactResponse`](#submitcontactresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `ticketId` | `string` | string |  | Ticket identifier quoted in the owner's reply. |
 
 <details><summary>Example request body</summary>
 
 ```json
 {
-  "events": [
-    {
-      "kind": "KIND_VIEW",
-      "contentId": "string",
-      "occurredAt": "2026-09-18T12:00:00Z",
-      "dwellMs": 0,
-      "query": "string",
-      "conversationId": "string",
-      "variant": "string",
-      "clientEventId": "string",
-      "content": {
-        "id": "string",
-        "slug": "string",
-        "type": "CONTENT_TYPE_ROLE",
-        "title": "string",
-        "summary": "string",
-        "published": "2026-09-18T12:00:00Z",
-        "updated": "2026-09-18T12:00:00Z",
-        "tags": [
-          "string"
-        ],
-        "tracks": [
-          {}
-        ],
-        "relevance": 0.5,
-        "reason": "string",
-        "isNew": true,
-        "viewed": true,
-        "saved": true,
-        "path": "string"
-      }
-    }
-  ]
+  "subject": "string",
+  "message": "string",
+  "replyChannel": "REPLY_CHANNEL_EMAIL",
+  "conversationId": "string",
+  "category": "SUPPORT_CATEGORY_GENERAL_QUESTION",
+  "name": "string",
+  "email": "string",
+  "turnstileToken": "string",
+  "hiringRole": "string",
+  "hiringJdUrl": "string",
+  "hiringTargetStart": "string"
+}
+```
+
+</details>
+
+## JdService
+
+JD-upload flow, members only: a signed-in session is required to
+submit or poll, and the submitting member is recorded on the row.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
+| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
+| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
+
+### JdService.SubmitJd
+
+`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** 3/min
+
+Accepts a job description and stores it for scoring. Returns the
+submission id the caller uses to poll GetJdResult. Never blocks
+on the actual scoring / generation — those run out of band.
+
+**Request** — [`SubmitJdRequest`](#submitjdrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
+| `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
+| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the member is considering Roger for. Free-form; shown in admin triage and passed as a hint to the requirement and résumé prompts. |
+| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid and prompt hint as role_hint. |
+| `contactEmail` | `string` | string | `string: max_len: 254` | Optional extra address for the finished-review email; the member's account email always receives it. Never surfaced publicly. |
+| `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
+
+**Response** — [`SubmitJdResponse`](#submitjdresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
+| `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
+| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | What is left of the member's daily allowance after this submission, so the page can say so rather than let them discover the limit by hitting it. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "jdText": "string",
+  "source": "JD_SOURCE_PASTE",
+  "roleHint": "string",
+  "employerHint": "string",
+  "contactEmail": "string",
+  "applyUrl": "string"
+}
+```
+
+</details>
+
+### JdService.GetJdResult
+
+`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
+
+Returns the current state of a submission (received / scoring /
+below-threshold / generating / ready / failed) with progress, the
+score and fit category once known, and, for the submitting member
+or a caller holding the result token, the requirement verdicts plus
+the résumé and its PDF link when status is `ready`.
+
+**Request** — [`GetJdResultRequest`](#getjdresultrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
+| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional. Gates the verdicts and the résumé body unless the caller is the submitting member. |
+
+**Response** — [`GetJdResultResponse`](#getjdresultresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
+| `generatedResumeUrl` | `string` | string |  | Download path of the locked résumé PDF, with the result token appended, when status is READY and the caller may see the résumé; empty otherwise. |
+| `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
+| `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
+| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the caller is the submitting member or carried the result_token. |
+| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released to the submitting member (or with the result_token) whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
+| `metCount` | `int32` | number |  | Number of requirements judged met. |
+| `partialCount` | `int32` | number |  | Number judged partially met. |
+| `unmetCount` | `int32` | number |  | Number judged not evidenced. |
+| `matchThreshold` | `double` | number |  | The résumé gate in force: the "strong" fit band (owner-editable; JD_MATCH_THRESHOLD only seeds it the first time). |
+| `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
+| `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
+| `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string",
+  "resultToken": "string"
+}
+```
+
+</details>
+
+### JdService.ListMySubmissions
+
+`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** 30/min
+
+Lists the signed-in member's own submissions, newest first, so a
+review can be reopened after the tab that submitted it is gone.
+
+**Request** — [`ListMySubmissionsRequest`](#listmysubmissionsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListMySubmissionsResponse`](#listmysubmissionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissions` | [`MySubmission`](#mysubmission)[] | array of object |  | Up to 100 rows. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### JdService.GetJdReviewConfig
+
+`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** 60/min
+
+Returns the fit bands in force (the gate is the "strong" edge), so
+the JD pages quote the numbers the pipeline actually uses.
+
+**Request** — [`GetJdReviewConfigRequest`](#getjdreviewconfigrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetJdReviewConfigResponse`](#getjdreviewconfigresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
+| `quota` | [`JdQuota`](#jdquota) | object |  | The signed-in member's allowance as it stands now, so the upload page can state the limit before anyone spends it. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+## MeetingService
+
+Meeting scheduling, members only: a signed-in session is required to
+see availability or to book, and the booking member is recorded on
+the row.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`GetMeetingOptions`](#meetingservice-getmeetingoptions) | `/api/career.v1.MeetingService/GetMeetingOptions` | Member | 60 | `GetMeetingOptionsRequest` → `GetMeetingOptionsResponse` | Returns what the member is allowed to choose before they choose it: the meeting lengths on offer, the zone every time is quoted in, and how far ahead the calendar runs. |
+| [`GetAvailability`](#meetingservice-getavailability) | `/api/career.v1.MeetingService/GetAvailability` | Member | 30 | `GetAvailabilityRequest` → `GetAvailabilityResponse` | Returns the start times a member may book for one meeting length. |
+| [`BookMeeting`](#meetingservice-bookmeeting) | `/api/career.v1.MeetingService/BookMeeting` | Member | 6 | `BookMeetingRequest` → `BookMeetingResponse` | Books one slot. |
+| [`ListMyMeetings`](#meetingservice-listmymeetings) | `/api/career.v1.MeetingService/ListMyMeetings` | Member | 30 | `ListMyMeetingsRequest` → `ListMyMeetingsResponse` | Lists the calling member's own meetings, upcoming first, so a booking can be found again after the tab that made it is gone. |
+| [`CancelMeeting`](#meetingservice-cancelmeeting) | `/api/career.v1.MeetingService/CancelMeeting` | Member | 10 | `CancelMeetingRequest` → `CancelMeetingResponse` | Cancels the caller's own meeting and frees the time. |
+
+### MeetingService.GetMeetingOptions
+
+`POST /api/career.v1.MeetingService/GetMeetingOptions` · **Auth:** Member · **Rate limit:** 60/min
+
+Returns what the member is allowed to choose before they choose it:
+the meeting lengths on offer, the zone every time is quoted in, and
+how far ahead the calendar runs. Fetched once when the page opens
+so the form is built from the owner's live settings rather than
+from constants compiled into the frontend.
+
+**Request** — [`GetMeetingOptionsRequest`](#getmeetingoptionsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetMeetingOptionsResponse`](#getmeetingoptionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `durationMinutes` | `int32`[] | array of number |  | Meeting lengths on offer, in minutes, shortest first. The owner offers 15, 30 and 45; the length is the member's decision because only they know whether they need a question answered or a real conversation. |
+| `zone` | `string` | string |  | IANA zone name every time in this API is rendered in, for example "America/New_York". Never an offset: an offset is correct for half the year. Show it beside the times rather than converting. |
+| `zoneLabel` | `string` | string |  | Human label for the zone to print next to a time, for example "Eastern time". Sent by the server so the wording is the owner's and not the frontend's guess from the IANA name. |
+| `horizonDays` | `int32` | number |  | How many days ahead the calendar is offered. |
+| `leadHours` | `int32` | number |  | How far ahead the earliest bookable slot sits, in hours, so the page can say why today is not on offer. |
+| `hoursSummary` | `string` | string |  | Plain-language summary of the owner's stated hours, for example "Tuesday to Thursday, mornings and early afternoons". Rendered rather than derived, so a member reads intent instead of a grid. |
+| `available` | `bool` | boolean |  | False when the calendar is not connected or is unreachable, in which case no slots can be offered and the page should say so rather than show an empty calendar that reads as "never free". |
+| `unavailableReason` | `string` | string |  | Why booking is unavailable, for the member, when available is false. Empty otherwise. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### MeetingService.GetAvailability
+
+`POST /api/career.v1.MeetingService/GetAvailability` · **Auth:** Member · **Rate limit:** 30/min
+
+Returns the start times a member may book for one meeting length.
+Computed per length rather than once, because a 45-minute meeting
+has fewer places to go than a 15-minute one and offering a start
+that cannot fit is worse than offering nothing.
+
+**Request** — [`GetAvailabilityRequest`](#getavailabilityrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes. Must be one of the lengths returned by GetMeetingOptions; a length nobody offered is a bad request rather than something to round to the nearest. |
+| `from` | `Timestamp` | string (RFC 3339, UTC) |  | Start of the range to search, inclusive. Defaults to now when unset. Clamped to the lead time regardless of what is sent. |
+| `to` | `Timestamp` | string (RFC 3339, UTC) |  | End of the range, exclusive. Defaults to the horizon when unset, and is clamped to it, so a caller cannot ask about next year. |
+
+**Response** — [`GetAvailabilityResponse`](#getavailabilityresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `slots` | [`MeetingSlot`](#meetingslot)[] | array of object |  | Offered start times, in order. Empty means nothing is free in the range, which is a normal answer and not an error. |
+| `zone` | `string` | string |  | IANA zone the slots should be rendered in, repeated here so a response is self-describing without the options call. |
+| `available` | `bool` | boolean |  | False when the calendar could not be read. Distinguishes "nothing is free" from "we do not know", which must not look the same. |
+| `unavailableReason` | `string` | string |  | Why availability could not be computed, when available is false. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "durationMinutes": 0,
+  "from": "2026-09-18T12:00:00Z",
+  "to": "2026-09-18T12:00:00Z"
+}
+```
+
+</details>
+
+### MeetingService.BookMeeting
+
+`POST /api/career.v1.MeetingService/BookMeeting` · **Auth:** Member · **Rate limit:** 6/min
+
+Books one slot. Re-reads the calendar for the claimed interval
+first, because the list the member saw is stale by the time they
+submit, and returns ALREADY_EXISTS if the time went while they were
+deciding. Never partially succeeds: a claim whose calendar event
+cannot be created is released.
+
+**Request** — [`BookMeetingRequest`](#bookmeetingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `start` | `Timestamp` | string (RFC 3339, UTC) | `required: true` | The chosen start, exactly as returned by GetAvailability. The server re-checks it: this is a claim, not an instruction. |
+| `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes; must be one of the offered lengths. |
+| `topic` | `string` | string | `string: max_len: 500` | What the member wants to discuss, in their words. Shown to the owner on the calendar entry so he arrives knowing the subject. |
+| `contactPreference` | `string` | string | `string: max_len: 200` | How the member would like to meet, in their words, for example a phone number or "your call, send a link". Optional. |
+
+**Response** — [`BookMeetingResponse`](#bookmeetingresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`Meeting`](#meeting) | object |  | The meeting as booked. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "start": "2026-09-18T12:00:00Z",
+  "durationMinutes": 0,
+  "topic": "string",
+  "contactPreference": "string"
+}
+```
+
+</details>
+
+### MeetingService.ListMyMeetings
+
+`POST /api/career.v1.MeetingService/ListMyMeetings` · **Auth:** Member · **Rate limit:** 30/min
+
+Lists the calling member's own meetings, upcoming first, so a
+booking can be found again after the tab that made it is gone.
+
+**Request** — [`ListMyMeetingsRequest`](#listmymeetingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includePast` | `bool` | boolean |  | Include meetings that have already happened or been cancelled. False returns only what is still ahead. |
+
+**Response** — [`ListMyMeetingsResponse`](#listmymeetingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meetings` | [`Meeting`](#meeting)[] | array of object |  | Meetings, soonest first. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "includePast": true
+}
+```
+
+</details>
+
+### MeetingService.CancelMeeting
+
+`POST /api/career.v1.MeetingService/CancelMeeting` · **Auth:** Member · **Rate limit:** 10/min
+
+Cancels the caller's own meeting and frees the time. Cancelling
+something already cancelled succeeds, so a double click or a stale
+tab is not an error the member has to understand.
+
+**Request** — [`CancelMeetingRequest`](#cancelmeetingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) | `int64: gt: 0` | Which meeting to cancel. Must belong to the calling member. |
+
+**Response** — [`CancelMeetingResponse`](#cancelmeetingresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`Meeting`](#meeting) | object |  | The meeting, with cancelled_at set. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "0"
 }
 ```
 
@@ -1484,121 +1873,122 @@ _No fields; send `{}`._
 
 </details>
 
-## DownloadService
+## ActivityService
 
-Lists what can be downloaded.
-
-| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
-|---|---|---|---|---|---|
-| [`ListDownloads`](#downloadservice-listdownloads) | `/api/career.v1.DownloadService/ListDownloads` | Member | default | `ListDownloadsRequest` → `ListDownloadsResponse` | Lists downloadable files with the variant matching the member's tracks first. |
-
-### DownloadService.ListDownloads
-
-`POST /api/career.v1.DownloadService/ListDownloads` · **Auth:** Member · **Rate limit:** default/min
-
-Lists downloadable files with the variant matching the member's tracks
-first.
-
-**Request** — [`ListDownloadsRequest`](#listdownloadsrequest)
-
-_No fields; send `{}`._
-
-**Response** — [`ListDownloadsResponse`](#listdownloadsresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `items` | [`DownloadItem`](#downloaditem)[] | array of object |  | Items, recommended first. |
-
-<details><summary>Example request body</summary>
-
-```json
-{}
-```
-
-</details>
-
-## ContactService
-
-Reaching the owner outside the assistant.
+Batched, fire-and-forget activity reporting.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`GetContactOptions`](#contactservice-getcontactoptions) | `/api/career.v1.ContactService/GetContactOptions` | Member | default | `GetContactOptionsRequest` → `GetContactOptionsResponse` | Returns the owner's availability statement and the contact channels he has chosen to publish. |
-| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
+| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | 120 | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
 
-### ContactService.GetContactOptions
+### ActivityService.RecordEvents
 
-`POST /api/career.v1.ContactService/GetContactOptions` · **Auth:** Member · **Rate limit:** default/min
+`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** 120/min
 
-Returns the owner's availability statement and the contact channels he
-has chosen to publish.
+Records a batch of events. Duplicate `client_event_id`s are ignored, so
+clients may retry a failed batch safely. Failures never affect page
+rendering; clients should send with `keepalive` on page hide.
 
-**Request** — [`GetContactOptionsRequest`](#getcontactoptionsrequest)
-
-_No fields; send `{}`._
-
-**Response** — [`GetContactOptionsResponse`](#getcontactoptionsresponse)
+**Request** — [`RecordEventsRequest`](#recordeventsrequest)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `availability` | `string` | string |  | Availability statement in the owner's words. |
-| `locationPreferences` | `string` | string |  | Location and remote preferences. |
-| `channels` | [`ContactChannel`](#contactchannel)[] | array of object |  | Channels in display order. |
+| `events` | [`ActivityEvent`](#activityevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Events, 1–50 per batch. |
 
-<details><summary>Example request body</summary>
-
-```json
-{}
-```
-
-</details>
-
-### ContactService.SubmitContact
-
-`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** 3/min
-
-Sends a message to the owner. Accepts both signed-in members (identity
-read from the session cookie) and anonymous visitors (name + email
-supplied on the form, Turnstile required). The owner receives the
-message with the sender's context and replies from their mailbox.
-
-**Request** — [`SubmitContactRequest`](#submitcontactrequest)
+**Response** — [`RecordEventsResponse`](#recordeventsresponse)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `subject` | `string` | string | `string: min_len: 1 max_len: 200` | Subject line. |
-| `message` | `string` | string | `string: min_len: 1 max_len: 5000` | Message body. |
-| `replyChannel` | [`SubmitContactRequest.ReplyChannel`](#submitcontactrequestreplychannel) | string (enum name) | `enum: defined_only: true not_in: 0` | Preferred reply channel. |
-| `conversationId` | `string` | string | `string: max_len: 64` | Attach a conversation transcript for context; optional. |
-| `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
-| `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
-| `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
-| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
-| `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
-| `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
-| `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
-
-**Response** — [`SubmitContactResponse`](#submitcontactresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `ticketId` | `string` | string |  | Ticket identifier quoted in the owner's reply. |
+| `accepted` | `int32` | number |  | Events accepted (new). |
+| `duplicates` | `int32` | number |  | Events ignored as duplicates. |
 
 <details><summary>Example request body</summary>
 
 ```json
 {
-  "subject": "string",
-  "message": "string",
-  "replyChannel": "REPLY_CHANNEL_EMAIL",
-  "conversationId": "string",
-  "category": "SUPPORT_CATEGORY_GENERAL_QUESTION",
-  "name": "string",
-  "email": "string",
-  "turnstileToken": "string",
-  "hiringRole": "string",
-  "hiringJdUrl": "string",
-  "hiringTargetStart": "string"
+  "events": [
+    {
+      "kind": "KIND_VIEW",
+      "contentId": "string",
+      "occurredAt": "2026-09-18T12:00:00Z",
+      "dwellMs": 0,
+      "query": "string",
+      "conversationId": "string",
+      "variant": "string",
+      "clientEventId": "string",
+      "content": {
+        "id": "string",
+        "slug": "string",
+        "type": "CONTENT_TYPE_ROLE",
+        "title": "string",
+        "summary": "string",
+        "published": "2026-09-18T12:00:00Z",
+        "updated": "2026-09-18T12:00:00Z",
+        "tags": [
+          "string"
+        ],
+        "tracks": [
+          {}
+        ],
+        "relevance": 0.5,
+        "reason": "string",
+        "isNew": true,
+        "viewed": true,
+        "saved": true,
+        "path": "string"
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+## EventService
+
+Accepts browser-minted events. Public so the landing funnel is
+visible before sign-in; the api attaches identity (session member,
+anonymous id cookie), the client address hash and the device class
+itself and never trusts those from the client.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | 120 | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
+
+### EventService.Record
+
+`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** 120/min
+
+Records up to 50 events. Unknown names and oversized props are
+dropped, never errors; the response says how many were stored.
+
+**Request** — [`RecordRequest`](#recordrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `events` | [`BrowserEvent`](#browserevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Up to 50 events. |
+
+**Response** — [`RecordResponse`](#recordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `accepted` | `int32` | number |  | Events stored (duplicates and rejected events are not counted). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "events": [
+    {
+      "eventId": "string",
+      "name": "string",
+      "clientTsMs": "0",
+      "path": "string",
+      "referrer": "string",
+      "uiMode": "string",
+      "propsJson": "string"
+    }
+  ]
 }
 ```
 
@@ -3671,211 +4061,6 @@ _No fields; send `{}`._
 
 ```json
 {}
-```
-
-</details>
-
-## JdService
-
-JD-upload flow, members only: a signed-in session is required to
-submit or poll, and the submitting member is recorded on the row.
-
-| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
-|---|---|---|---|---|---|
-| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
-| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
-| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
-| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
-
-### JdService.SubmitJd
-
-`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** 3/min
-
-Accepts a job description and stores it for scoring. Returns the
-submission id the caller uses to poll GetJdResult. Never blocks
-on the actual scoring / generation — those run out of band.
-
-**Request** — [`SubmitJdRequest`](#submitjdrequest)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `jdText` | `string` | string | `string: max_len: 50000` | Full JD text pasted into the textarea. Capped at 50 000 chars by the RPC. Mutually exclusive with the byte-body fields below. |
-| `source` | [`JdSource`](#jdsource) | string (enum name) | `enum: defined_only: true not_in: 0` | Where the text came from — the frontend sets this so the backend knows what to record. |
-| `roleHint` | `string` | string | `string: max_len: 200` | Optional role / title the member is considering Roger for. Free-form; shown in admin triage and passed as a hint to the requirement and résumé prompts. |
-| `employerHint` | `string` | string | `string: max_len: 200` | Optional employer name (e.g. "Anthropic"). Same free-form triage aid and prompt hint as role_hint. |
-| `contactEmail` | `string` | string | `string: max_len: 254` | Optional extra address for the finished-review email; the member's account email always receives it. Never surfaced publicly. |
-| `applyUrl` | `string` | string | `string: max_len: 2048` | Optional link to apply for the position (http or https). Shown to Roger in the admin triage view; never surfaced publicly. |
-
-**Response** — [`SubmitJdResponse`](#submitjdresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `submissionId` | `string` | string |  | Server-issued id (numeric, stringified over the wire). |
-| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status — usually RECEIVED right at submit time. |
-| `message` | `string` | string |  | Fixed human-readable acknowledgement text the /jd-upload page renders back to the caller so the copy stays server-controlled. |
-| `resultToken` | `string` | string |  | Secret issued once per submission (hex). Present it on GetJdResult to receive the verdicts and the generated résumé. The submitting member's own session releases the same things without it, so a review can be reopened from /jd-upload/<id> later. |
-| `quota` | [`JdQuota`](#jdquota) | object |  | What is left of the member's daily allowance after this submission, so the page can say so rather than let them discover the limit by hitting it. |
-
-<details><summary>Example request body</summary>
-
-```json
-{
-  "jdText": "string",
-  "source": "JD_SOURCE_PASTE",
-  "roleHint": "string",
-  "employerHint": "string",
-  "contactEmail": "string",
-  "applyUrl": "string"
-}
-```
-
-</details>
-
-### JdService.GetJdResult
-
-`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
-
-Returns the current state of a submission (received / scoring /
-below-threshold / generating / ready / failed) with progress, the
-score and fit category once known, and, for the submitting member
-or a caller holding the result token, the requirement verdicts plus
-the résumé and its PDF link when status is `ready`.
-
-**Request** — [`GetJdResultRequest`](#getjdresultrequest)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | ID from SubmitJdResponse. |
-| `resultToken` | `string` | string | `string: max_len: 64` | Token from SubmitJdResponse; optional. Gates the verdicts and the résumé body unless the caller is the submitting member. |
-
-**Response** — [`GetJdResultResponse`](#getjdresultresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `status` | [`JdStatus`](#jdstatus) | string (enum name) |  | Current status. |
-| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ Match score in [0, 1] once known; unset before scoring runs and after a failure. |
-| `generatedResumeUrl` | `string` | string |  | Download path of the locked résumé PDF, with the result token appended, when status is READY and the caller may see the résumé; empty otherwise. |
-| `errorMessage` | `string` | string |  | Human-readable error text when status is FAILED; empty otherwise. |
-| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the submission was first accepted. |
-| `completedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the terminal state (ready / below_threshold / failed) was reached. Unset while the pipeline is still running. |
-| `resumeMarkdown` | `string` | string |  | Generated résumé in markdown, only when status is READY and the caller is the submitting member or carried the result_token. |
-| `verdicts` | [`RequirementVerdict`](#requirementverdict)[] | array of object |  | Requirement-by-requirement verdicts behind the score, released to the submitting member (or with the result_token) whatever the outcome, so a below-threshold result shows what was and was not evidenced instead of a bare number (the opposite of an ATS musts-and-misses filter). |
-| `metCount` | `int32` | number |  | Number of requirements judged met. |
-| `partialCount` | `int32` | number |  | Number judged partially met. |
-| `unmetCount` | `int32` | number |  | Number judged not evidenced. |
-| `matchThreshold` | `double` | number |  | The résumé gate in force: the "strong" fit band (owner-editable; JD_MATCH_THRESHOLD only seeds it the first time). |
-| `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
-| `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
-| `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
-
-<details><summary>Example request body</summary>
-
-```json
-{
-  "submissionId": "string",
-  "resultToken": "string"
-}
-```
-
-</details>
-
-### JdService.ListMySubmissions
-
-`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** 30/min
-
-Lists the signed-in member's own submissions, newest first, so a
-review can be reopened after the tab that submitted it is gone.
-
-**Request** — [`ListMySubmissionsRequest`](#listmysubmissionsrequest)
-
-_No fields; send `{}`._
-
-**Response** — [`ListMySubmissionsResponse`](#listmysubmissionsresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `submissions` | [`MySubmission`](#mysubmission)[] | array of object |  | Up to 100 rows. |
-
-<details><summary>Example request body</summary>
-
-```json
-{}
-```
-
-</details>
-
-### JdService.GetJdReviewConfig
-
-`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** 60/min
-
-Returns the fit bands in force (the gate is the "strong" edge), so
-the JD pages quote the numbers the pipeline actually uses.
-
-**Request** — [`GetJdReviewConfigRequest`](#getjdreviewconfigrequest)
-
-_No fields; send `{}`._
-
-**Response** — [`GetJdReviewConfigResponse`](#getjdreviewconfigresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `bands` | [`JdFitBands`](#jdfitbands) | object |  | Current bands. |
-| `quota` | [`JdQuota`](#jdquota) | object |  | The signed-in member's allowance as it stands now, so the upload page can state the limit before anyone spends it. |
-
-<details><summary>Example request body</summary>
-
-```json
-{}
-```
-
-</details>
-
-## EventService
-
-Accepts browser-minted events. Public so the landing funnel is
-visible before sign-in; the api attaches identity (session member,
-anonymous id cookie), the client address hash and the device class
-itself and never trusts those from the client.
-
-| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
-|---|---|---|---|---|---|
-| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | 120 | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
-
-### EventService.Record
-
-`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** 120/min
-
-Records up to 50 events. Unknown names and oversized props are
-dropped, never errors; the response says how many were stored.
-
-**Request** — [`RecordRequest`](#recordrequest)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `events` | [`BrowserEvent`](#browserevent)[] | array of object | `repeated: min_items: 1 max_items: 50` | Up to 50 events. |
-
-**Response** — [`RecordResponse`](#recordresponse)
-
-| Field (JSON) | Type | JSON encoding | Rules | Description |
-|---|---|---|---|---|
-| `accepted` | `int32` | number |  | Events stored (duplicates and rejected events are not counted). |
-
-<details><summary>Example request body</summary>
-
-```json
-{
-  "events": [
-    {
-      "eventId": "string",
-      "name": "string",
-      "clientTsMs": "0",
-      "path": "string",
-      "referrer": "string",
-      "uiMode": "string",
-      "propsJson": "string"
-    }
-  ]
-}
 ```
 
 </details>
@@ -7260,6 +7445,124 @@ Home page payload.
 | `suggestedQuestions` | `string`[] | array of string |  | Suggested assistant questions for the member's tracks. |
 | `questionnairePending` | `bool` | boolean |  | True when the first-visit questionnaire is still pending. |
 | `tailored` | `bool` | boolean |  | True when the page was tailored (tailoring on and interests present). |
+
+### GetMeetingOptionsRequest
+
+Request for GetMeetingOptions. Empty: the options belong to the
+owner, not to the caller, and a member cannot vary them.
+
+_No fields._
+
+### GetMeetingOptionsResponse
+
+What a member may choose, and the clock it is all quoted in.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `durationMinutes` | `int32`[] | array of number |  | Meeting lengths on offer, in minutes, shortest first. The owner offers 15, 30 and 45; the length is the member's decision because only they know whether they need a question answered or a real conversation. |
+| `zone` | `string` | string |  | IANA zone name every time in this API is rendered in, for example "America/New_York". Never an offset: an offset is correct for half the year. Show it beside the times rather than converting. |
+| `zoneLabel` | `string` | string |  | Human label for the zone to print next to a time, for example "Eastern time". Sent by the server so the wording is the owner's and not the frontend's guess from the IANA name. |
+| `horizonDays` | `int32` | number |  | How many days ahead the calendar is offered. |
+| `leadHours` | `int32` | number |  | How far ahead the earliest bookable slot sits, in hours, so the page can say why today is not on offer. |
+| `hoursSummary` | `string` | string |  | Plain-language summary of the owner's stated hours, for example "Tuesday to Thursday, mornings and early afternoons". Rendered rather than derived, so a member reads intent instead of a grid. |
+| `available` | `bool` | boolean |  | False when the calendar is not connected or is unreachable, in which case no slots can be offered and the page should say so rather than show an empty calendar that reads as "never free". |
+| `unavailableReason` | `string` | string |  | Why booking is unavailable, for the member, when available is false. Empty otherwise. |
+
+### GetAvailabilityRequest
+
+Request for GetAvailability.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes. Must be one of the lengths returned by GetMeetingOptions; a length nobody offered is a bad request rather than something to round to the nearest. |
+| `from` | `Timestamp` | string (RFC 3339, UTC) |  | Start of the range to search, inclusive. Defaults to now when unset. Clamped to the lead time regardless of what is sent. |
+| `to` | `Timestamp` | string (RFC 3339, UTC) |  | End of the range, exclusive. Defaults to the horizon when unset, and is clamped to it, so a caller cannot ask about next year. |
+
+### MeetingSlot
+
+One offered start time.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `start` | `Timestamp` | string (RFC 3339, UTC) |  | When the meeting would begin. |
+| `end` | `Timestamp` | string (RFC 3339, UTC) |  | When it would end. Sent rather than derived so the page cannot disagree with the server about the length it is showing. |
+
+### GetAvailabilityResponse
+
+Available start times for the requested length.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `slots` | [`MeetingSlot`](#meetingslot)[] | array of object |  | Offered start times, in order. Empty means nothing is free in the range, which is a normal answer and not an error. |
+| `zone` | `string` | string |  | IANA zone the slots should be rendered in, repeated here so a response is self-describing without the options call. |
+| `available` | `bool` | boolean |  | False when the calendar could not be read. Distinguishes "nothing is free" from "we do not know", which must not look the same. |
+| `unavailableReason` | `string` | string |  | Why availability could not be computed, when available is false. |
+
+### BookMeetingRequest
+
+Request for BookMeeting.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `start` | `Timestamp` | string (RFC 3339, UTC) | `required: true` | The chosen start, exactly as returned by GetAvailability. The server re-checks it: this is a claim, not an instruction. |
+| `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes; must be one of the offered lengths. |
+| `topic` | `string` | string | `string: max_len: 500` | What the member wants to discuss, in their words. Shown to the owner on the calendar entry so he arrives knowing the subject. |
+| `contactPreference` | `string` | string | `string: max_len: 200` | How the member would like to meet, in their words, for example a phone number or "your call, send a link". Optional. |
+
+### Meeting
+
+A booked meeting, as the member sees it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Stable id for this booking, used to cancel it. |
+| `start` | `Timestamp` | string (RFC 3339, UTC) |  | When it begins. |
+| `end` | `Timestamp` | string (RFC 3339, UTC) |  | When it ends. |
+| `durationMinutes` | `int32` | number |  | Length in minutes, as booked. |
+| `topic` | `string` | string |  | What the member said they wanted to discuss. |
+| `zone` | `string` | string |  | IANA zone the times should be rendered in. |
+| `icsUrl` | `string` | string |  | Relative URL of the calendar file for this meeting, so the member can add it to their own calendar or forward an invitation of their own. Always present, including for a meeting booked in the app. |
+| `cancelledAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set when the meeting has been cancelled. Cancelled meetings stay in the list rather than vanishing, because a meeting that silently disappears reads as a bug. |
+
+### BookMeetingResponse
+
+Result of booking.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`Meeting`](#meeting) | object |  | The meeting as booked. |
+
+### ListMyMeetingsRequest
+
+Request for ListMyMeetings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includePast` | `bool` | boolean |  | Include meetings that have already happened or been cancelled. False returns only what is still ahead. |
+
+### ListMyMeetingsResponse
+
+The caller's meetings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meetings` | [`Meeting`](#meeting)[] | array of object |  | Meetings, soonest first. |
+
+### CancelMeetingRequest
+
+Request for CancelMeeting.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) | `int64: gt: 0` | Which meeting to cancel. Must belong to the calling member. |
+
+### CancelMeetingResponse
+
+Result of cancelling.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`Meeting`](#meeting) | object |  | The meeting, with cancelled_at set. |
 
 ### GetMeRequest
 

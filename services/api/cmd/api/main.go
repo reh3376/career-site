@@ -21,6 +21,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
+	"github.com/reh3376/career-site/services/api/internal/scheduling"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -287,6 +288,12 @@ func main() {
 	} else if n > 0 {
 		log.Info("eval: stranded evaluations closed after restart", slog.Int64("count", n))
 	}
+	// Booking against the owner's own calendar. The provider is the stub
+	// until his OAuth client is configured; the handler reports that as
+	// "not switched on yet" rather than an empty calendar.
+	schedSettings := scheduling.NewSettingsStore(log, userRepo, scheduling.DefaultSettings())
+	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, nil)
+
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
@@ -330,6 +337,7 @@ func main() {
 		Admin:    adminHandler,
 		Activity: activityHandler,
 		Jd:       jdHandler,
+		Meetings: meetingsHandler,
 		Events:   eventsHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,

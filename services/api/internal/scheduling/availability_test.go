@@ -335,6 +335,25 @@ func TestBadSettingsAreRefusedRatherThanShowingAnEmptyCalendar(t *testing.T) {
 		{"zero cap", func(s *Settings) { s.MaxPerDay = 0 }},
 		{"backwards window", func(s *Settings) { s.Windows[0].EndMins = s.Windows[0].StartMins - 60 }},
 		{"window shorter than the shortest meeting", func(s *Settings) { s.Windows[0].EndMins = s.Windows[0].StartMins + 10 }},
+		// LoadLocation("") returns UTC with no error, so an empty zone
+		// used to pass every check and then offer the owner's mornings
+		// in UTC while the page beside them said America/New_York.
+		{"empty zone", func(s *Settings) { s.Zone = "" }},
+		// A fixed offset is right for half the year. America/New_York
+		// is UTC-5 in winter and UTC-4 in summer.
+		{"fixed offset instead of an IANA name", func(s *Settings) { s.Zone = "-05:00" }},
+		// Not an empty calendar, a calendar that can never fill.
+		{"no windows at all", func(s *Settings) { s.Windows = nil }},
+		{"negative lead time", func(s *Settings) { s.LeadHours = -1 }},
+		{"weekday out of range", func(s *Settings) { s.Windows[0].Weekday = 9 }},
+		// Would offer the same start time twice, invisibly.
+		{"two windows on one day overlap", func(s *Settings) {
+			s.Windows = append(s.Windows, Window{
+				Weekday:   s.Windows[0].Weekday,
+				StartMins: s.Windows[0].StartMins + 30,
+				EndMins:   s.Windows[0].EndMins + 30,
+			})
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := ownerSettings()

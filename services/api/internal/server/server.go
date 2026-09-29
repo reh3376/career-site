@@ -30,6 +30,7 @@ type Server struct {
 	admin    *handlers.Admin
 	activity *handlers.Activity
 	jd       *handlers.Jd
+	meetings *handlers.Meetings
 	events   *handlers.Events
 	sidecar  *sidecar.Client
 	db       *db.Pool
@@ -48,6 +49,7 @@ type Deps struct {
 	Admin    *handlers.Admin
 	Activity *handlers.Activity
 	Jd       *handlers.Jd
+	Meetings *handlers.Meetings
 	Events   *handlers.Events
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
@@ -66,6 +68,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		admin:    deps.Admin,
 		activity: deps.Activity,
 		jd:       deps.Jd,
+		meetings: deps.Meetings,
 		events:   deps.Events,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
@@ -134,6 +137,11 @@ func (s *Server) routes() http.Handler {
 	if s.jd != nil {
 		jdPath, jdHandler := careerv1connect.NewJdServiceHandler(s.jd)
 		mount(jdPath, jdHandler)
+	}
+
+	if s.meetings != nil {
+		meetingsPath, meetingsHandler := careerv1connect.NewMeetingServiceHandler(s.meetings)
+		mount(meetingsPath, meetingsHandler)
 	}
 
 	if s.events != nil {

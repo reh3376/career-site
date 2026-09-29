@@ -6,44 +6,44 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-29, 23:10 UTC.
+Last updated 2026-09-29, 23:30 UTC.
 
 ---
 
-## 1. Evaluation run 14, stopped. Run 15 is the next one
+## 1. Sequencing changed: the scheduler comes before run 15
 
-Stopped by hand at 5 of 9 on the owner's instruction, so that the
-diagnostics land before another five hours are spent. Its row is
-closed.
+Owner, 2026-09-29: *"I want the scheduler, deployed, fully tested, live
+tested, and working in this application before we start the next
+eval."*
 
-Four postings scored correctly. Blue Origin errored in the same place
-as run 13, judge batch 11 of 14, having filled 1200 tokens and then
-2400 on the retry. See the 2026-09-29 entry in
+So run 15 waits. One useful side effect: with no evaluation in flight,
+the "never deploy during a run" rule is not binding, and the scheduler
+can ship in as many small rollouts as it needs.
+
+Run 14 was stopped at 5 of 9 and its row is closed. Four postings
+scored correctly; Blue Origin errored in the same place as run 13. The
+diagnosis and the fix are in the 2026-09-29 entry of
 [`llm-tuning-log.md`](llm-tuning-log.md).
 
-**Run 15 starts only after the whole deploy queue is out**, because
-both times this failed, the capture that would have explained it was
-sitting undeployed behind the run that needed it.
+When run 15 does start, it changes one thing, `requirement_judge` v12,
+against an unchanged corpus, making it comparable with run 12 (9 of 9,
+0 inversions, margin 0.1071) and a direct test of Blue Origin's r11.
+The study guide is ingested only after that, so it stays a single
+variable.
 
-Run 15 changes one thing, `requirement_judge` v12, against an
-unchanged corpus. That makes it comparable with run 12 (9 of 9, 0
-inversions, margin 0.1071) and a direct test of Blue Origin's r11.
+## 2. Deploy queue, cleared
 
-**The bar the owner set:** similar or better than run 12.
+**Done 2026-09-29 23:25.** Production is on `7a3b6a22a83d`, database
+migrated to version 42, 20 live checks passed and none failed.
+Migrations 00040, 00041 and 00042 are applied.
 
-**Nothing may deploy during a run.** All three services share one
-`IMAGE_TAG`, so any rollout recreates the api and the job runner keeps
-jobs in memory.
-
-## 2. Deploy queue, now unblocked and next to go out
-
-Production is on `ccad59262fe5`. Main is many merges ahead and carries
-**migrations 00040, 00041 and 00042**, so this is not a no-op rollout.
-
-Run 14 is stopped, so nothing is holding this any more. It goes out
-before run 15 starts, and that ordering is the point: the capture that
-would have explained this failure was written after run 13 and was
-still queued here when run 14 hit the same wall.
+Two notes from the rollout. `FailStrandedEvalRuns` did not fire,
+correctly: runs 13 and 14 had already been closed by hand, and it only
+touches rows still marked running, so that code is verified against a
+scratch Postgres but not yet in production. Their counters were
+repaired by hand and now read 4 scored, 1 error. And `phase_ms` is
+empty on all 113 existing runs, as expected; it fills on the next
+submission.
 
 Queued, roughly in order merged: content hash in the eval manifest,
 failed-call visibility across three surfaces, the evaluation guide and
@@ -161,7 +161,22 @@ not spare capacity for the reviewer. `OLLAMA_MEM_LIMIT` stays at `7g`.
 See `project_ask_roger_phase4` in memory, which this supersedes in two
 places.
 
-## 8. Open questions for the owner
+## 8. MDEMG, investigated and not adopted
+
+Investigated 2026-09-29 at the owner's request: see
+[`mdemg-evaluation.md`](mdemg-evaluation.md).
+
+Outcome: two questions, two different answers. MDEMG does not do code
+complexity and does not claim to; the cheap answer there is
+golangci-lint / gocyclo / knip, none of which this repo runs, and
+ahead of those, the web app has **zero tests across 117 files**. The
+Jiminy guardrail is real, cheap to attach (hooks live in `.claude/`,
+blocking off by default, fails open) and worth a bounded advisory-mode
+experiment, but deferred until the eval and scheduler work lands.
+
+Nothing installed, nothing changed.
+
+## 9. Open questions for the owner
 
 - Which Whiskey House systems incorporate an LLM at runtime, as opposed
   to having been built with AI assistance. Only the on-prem SME chat
