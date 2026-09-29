@@ -18,6 +18,7 @@ evaluation set for the Ask Roger adapter.
 |---|---|---|---|
 | `jd_requirement_verdict` | requirement judged | requirement (id, text, category, weight) and the evidence as rendered to the model: the career facts sheet chunks (`source_kind = profile`, first, whole) then the retrieved chunks (chunk id, kind, access, title, similarity, capped text) | `verdict` (validated), `evidence_ids` (validated against what was offered), `rationale`, `raw_verdict` and `raw_evidence_ids` (before validation) |
 | `jd_gate` | submission scored | match score, retrieval score, threshold (the live "strong" fit band), requirement count, weight total, verdict counts, whether the assessor ran | `outcome` (`above_threshold` or `below_threshold`) |
+| `jd_call_failed` | model call that produced no usable verdict | the prompt exactly as sent (system + user) | the whole raw response, untruncated, with `error` saying why it was unusable |
 
 Every row also carries: `model` (for example `ollama:qwen3:4b-q8_0`),
 `prompt_id`, `prompt_version`, `num_ctx`, `prompt_text` (system + user,
@@ -26,6 +27,48 @@ latency, and the submission it belongs to (`ref_kind = jd_submission`,
 `ref_id`, `key` = requirement id).
 
 Code decisions (`jd_gate`) have `model = code` and empty prompt text.
+
+### Calls that failed (migration 00039)
+
+Every row above is written *after* the model's output decodes, which
+meant the one response nobody could examine was the response that
+broke.
+
+That is not a theoretical loss. Run 13 lost a posting four hours in to
+a judgment that filled its token budget and returned incomplete JSON,
+and the response that did it was gone: all that survived was a row in
+`llm_usage` saying 1200 tokens and 448 seconds, from which the cause
+had to be inferred rather than read. Run 14 lost the same posting the
+same way, because the capture built in answer to run 13 was still
+waiting to deploy.
+
+A `jd_call_failed` row keeps the prompt and the **whole** response,
+untruncated, because the behaviour at and near a failure is the
+behaviour least understood and most worth keeping. These rows are rare
+by construction: one call in 1,343 had ever hit this path when it was
+built.
+
+Two columns support them:
+
+| column | meaning |
+|---|---|
+| `error` | why the call produced no usable verdict. Empty on every successful row, so nothing needed a backfill and no existing query changed. |
+| `ok` | generated, `error = ''`. Stored rather than computed by each caller so the convention cannot be forgotten. |
+
+`idx_decision_log_failures` is a partial index on `created_at DESC
+WHERE error <> ''`, which keeps "show me the failures" cheap on a table
+that is almost entirely successes.
+
+**A recovered failure records nothing.** A truncated judgment retries
+once at double budget, and if the retry decodes, the run carries on and
+no row is written: the owner asked for the incomplete output only while
+it matters, which is when the call ends up failing. Only a terminal
+failure is kept.
+
+Read them on `/admin/decisions` under "failed calls only", or:
+
+    SELECT created_at, prompt_id, prompt_version, completion_tokens, error
+      FROM decision_log WHERE NOT ok ORDER BY created_at DESC;
 
 The reviewer's vocabulary mirrors the model's (`met` / `partial` /
 `unmet` for verdicts, `above_threshold` / `below_threshold` for the
@@ -49,6 +92,36 @@ fingerprint. That is what makes two labelled decisions comparable. Two
 verdicts on the same requirement mean something different if one was
 judged against a corpus the other never saw, and before `jd_runs` there
 was no way to tell. Rows written before that date have a null `run_id`.
+
+Since migration 00042 the run also carries **`phase_ms`**: milliseconds
+per pipeline phase, as jsonb keyed by the phases in
+`services/api/internal/jd/phases.go` (`setup`, `posting_check`,
+`extract`, `retrieval`, `judge`, `score`, `resume`, `render`, and
+`other`). It answers "where did the time go", which `duration_ms` and
+`queued_ms` between them could not: they separate waiting from working
+but say nothing about what the work was.
+
+The timings are derived from the progress reports the pipeline already
+makes for the member's benefit, so no phase boundary has to be
+maintained twice. A report marks the *start* of a stage, so a phase
+runs from its own report to the next one, the same convention the job
+timeline uses. Consequences worth knowing:
+
+- It does **not** sum to `duration_ms`. It only covers the span between
+  the first and last progress reports.
+- It is empty for runs before 00042, and for a run that died waiting
+  for a pipeline slot. Empty means unmeasured, not instant.
+- An `other` key means a stage was reworded and no longer matches the
+  mapping. It is deliberately visible rather than folded into whichever
+  phase happened to be adjacent.
+- A failed run keeps what it measured, which is the case it exists for:
+  the phase a run died in is the phase that holds the time.
+
+<!-- -->
+
+    SELECT p.key AS phase, (p.value::bigint/1000) AS seconds
+      FROM jd_runs r, jsonb_each_text(r.phase_ms) p
+     WHERE r.run_id = $1 ORDER BY p.value::bigint DESC;
 
 Later kinds (`resume_item`, `chat_answer`) are planned to use the same
 table and the same review flow; nothing here is JD-specific except the
@@ -99,7 +172,13 @@ future prompt version be re-run offline against the same evidence.
 - `services/api/internal/users/decision_log.go`: insert, list, review,
   export.
 - `services/api/internal/jd/assess.go` writes verdict rows after each
-  judge call; `scorer.go` writes the gate row.
+  judge call, and `recordFailure` there writes `jd_call_failed`;
+  `scorer.go` writes the gate row.
+- Migration `00039_decision_log_failures.sql` (the `error` and `ok`
+  columns), `00042_jd_run_phases.sql` (`phase_ms`).
+- `services/api/internal/jd/phases.go`: the phase timer and the
+  stage-to-phase mapping, with `phases_test.go` asserting every stage
+  the pipeline reports maps to a real phase.
 - `AdminService.ListDecisionLog`, `ReviewDecision`, `ExportDecisionLog`
   in `proto/career/v1/admin.proto`; handlers in
   `services/api/internal/handlers/admin_decisions.go`.

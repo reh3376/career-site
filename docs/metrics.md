@@ -19,6 +19,23 @@ to go and read what it means.
 | `v_judge_agreement` | For each reviewed requirement, the model's verdict beside the owner's. |
 | `v_judge_agreement_summary` | The agreement rate, split into soft disagreements (one side said partial, the judge was unsure) and hard ones (met against unmet, the judge was wrong). Counting them together would hide which is happening. |
 | `v_jd_latency` | Median and 95th percentile time to a result, with queue time reported apart from work time. |
+
+`v_jd_latency` answers how long a review took. It does not answer where
+that time went; `jd_runs.phase_ms` (migration 00042) does, per run:
+
+    SELECT p.key AS phase,
+           round(avg(p.value::bigint)/1000.0) AS avg_seconds,
+           count(*) AS runs
+      FROM jd_runs r, jsonb_each_text(r.phase_ms) p
+     WHERE r.finished_at > now() - interval '30 days'
+     GROUP BY 1 ORDER BY 2 DESC;
+
+There is no view over it yet. It is empty for runs before 00042, it
+covers only the span between the first and last progress report so it
+does not sum to `duration_ms`, and an `other` key means a stage was
+reworded and no longer matches the mapping in
+`services/api/internal/jd/phases.go`. Treat `other` as a bug in the
+mapping rather than a phase.
 | `v_llm_usage_daily` | Model calls, tokens, failures and average latency per day. Cost stays null on a self-hosted model; tokens are the real measure of what the box did. |
 | `v_funnel_30d` | One row per anonymous visitor in the last 30 days, with the steps they reached. |
 | `v_funnel_30d_summary` | That funnel as counts. |

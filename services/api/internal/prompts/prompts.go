@@ -211,7 +211,7 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // implied.
 var RequirementJudge = Prompt{
 	ID:      "requirement_judge",
-	Version: 11,
+	Version: 12,
 	System: strings.TrimSpace(`
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
@@ -244,6 +244,48 @@ Rules:
 11. Return exactly one judgment per requirement id, in the given order.
 Output only the JSON object.
 `),
+	// Every unbounded field here is bounded, and the bounds are the
+	// point of version 12.
+	//
+	// Rule 10 has asked for "one sentence, at most 200 characters"
+	// since version 1, and the model obeys it: the mean judgment is 123
+	// completion tokens. On one requirement it did not. Blue Origin's
+	// LLM requirement filled its 1200-token budget on run 13, and on
+	// run 14 filled 1200, retried at 2400, and filled that too, both
+	// times without closing the object. Each attempt cost 13 minutes
+	// and the posting was lost four hours in, twice.
+	//
+	// A budget is the wrong instrument. Doubling it buys a longer
+	// runaway, which is what run 14 measured. An instruction is also
+	// the wrong instrument here, because the instruction was already
+	// there and was ignored precisely on the requirement where the
+	// model had most to say.
+	//
+	// So the limit moves into the grammar. Ollama passes this schema to
+	// llama.cpp, which compiles it to a GBNF grammar and constrains
+	// decoding, and a bound it can express cannot be exceeded no matter
+	// what the model wants to write. Verified against qwen3:4b-q8_0 on
+	// the production box: asked for an exhaustive multi-paragraph
+	// rationale with a 120-character bound and num_predict 2000, it
+	// stopped at exactly 120 characters with done_reason "stop" and
+	// valid JSON.
+	//
+	// The bounds sit well above what a good answer needs, so a normal
+	// judgment still ends where the model chooses to end it and rule 10
+	// remains the thing that shapes it. 400 characters is twice what
+	// rule 10 asks for; the arrays are far above any real answer. They
+	// are a backstop, not a style guide.
+	//
+	// Field order matters and is load-bearing. The grammar emits
+	// properties in the order written here, so verdict and evidence_ids
+	// are already decided before rationale can misbehave, and
+	// bounding rationale is what lets stated_span_years and
+	// parties_evidenced be reached at all. Worst case is now about 350
+	// tokens against a 1200-token budget.
+	//
+	// judgments is capped at 1 because judgeBatchMax is 1: one
+	// requirement per call, so a second judgment is a malfunction
+	// rather than an answer.
 	Schema: `{
   "type": "object",
   "required": ["judgments"],
@@ -251,16 +293,17 @@ Output only the JSON object.
     "judgments": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 1,
       "items": {
         "type": "object",
         "required": ["requirement_id", "verdict", "evidence_ids", "rationale", "stated_span_years", "parties_evidenced"],
         "properties": {
-          "requirement_id": {"type": "string"},
+          "requirement_id": {"type": "string", "maxLength": 32},
           "verdict": {"type": "string", "enum": ["met", "partial", "unmet"]},
-          "evidence_ids": {"type": "array", "items": {"type": "string"}},
-          "rationale": {"type": "string"},
+          "evidence_ids": {"type": "array", "maxItems": 12, "items": {"type": "string", "maxLength": 24}},
+          "rationale": {"type": "string", "maxLength": 400},
           "stated_span_years": {"type": "number"},
-          "parties_evidenced": {"type": "array", "items": {"type": "string"}}
+          "parties_evidenced": {"type": "array", "maxItems": 8, "items": {"type": "string", "maxLength": 64}}
         }
       }
     }

@@ -79,10 +79,54 @@ const MaxEvents = 500
 // argument is Event.Ref, the record the report is about; it is variadic
 // so the jobs that have nothing to point at are unchanged. Only the
 // first is used.
+//
+// Every call appends to the timeline, so a Report is a milestone: the
+// thing a reader wants to see listed afterwards with how long it took.
+// For the state between milestones, use Status.
 type Report func(pct int32, summary string, ref ...string)
 
+// Status updates what a job is doing right now without adding a
+// timeline entry.
+//
+// An evaluation reports once per posting, so between those reports the
+// only thing on screen was "scoring blue-origin (5 of 9)" for forty
+// minutes, while underneath it the pipeline moved through extracting
+// requirements, fourteen judgments and writing a résumé. That detail
+// was already being recorded per submission and simply had nowhere to
+// surface.
+//
+// Reporting each sub-step as an event instead would work once and then
+// bury the milestones: nine postings would become several hundred
+// rows, and the durations that make the timeline worth reading would be
+// lost among them. So the timeline keeps one row per posting and the
+// summary carries the live detail.
+//
+// Deliberately not an exported named type: Status already means the
+// job's state in this package, and a second meaning for the same word
+// would be worse than a plain function signature.
+
 // Fn is the body of a job. It returns the final summary.
-type Fn func(ctx context.Context, report Report) (summary string, err error)
+type Fn func(ctx context.Context, rep Reporter) (summary string, err error)
+
+// Reporter is how a job says what it is doing. The two are different
+// things and were previously one, which is why an evaluation showed
+// "scoring blue-origin (5 of 9)" unchanged for forty minutes while the
+// pipeline underneath it moved through extraction, fourteen judgments
+// and a résumé.
+//
+// Report is a milestone: it appends to the timeline, and the reader
+// wants those listed afterwards with how long each took. Status is the
+// live state between milestones: it replaces the current summary and
+// adds no row, because nine postings reporting every sub-step would
+// become several hundred entries and bury the durations that make the
+// timeline worth reading.
+type Reporter struct {
+	// Report records a milestone and appends a timeline entry.
+	Report Report
+	// Status updates what the job is doing now, without a timeline
+	// entry.
+	Status func(pct int32, summary string)
+}
 
 // ErrAlreadyRunning is returned when a job of the same kind is running.
 var ErrAlreadyRunning = errors.New("a job of this kind is already running")
@@ -173,7 +217,17 @@ func (r *Runner) run(j *Job, timeout time.Duration, fn Fn) {
 			}
 		})
 	}
-	summary, err := fn(ctx, report)
+	status := func(pct int32, summary string) {
+		r.set(j, func(x *Job) {
+			if pct >= 0 && pct <= 100 {
+				x.Progress = pct
+			}
+			if summary != "" {
+				x.Summary = summary
+			}
+		})
+	}
+	summary, err := fn(ctx, Reporter{Report: report, Status: status})
 	now := time.Now().UTC()
 	r.set(j, func(x *Job) {
 		x.FinishedAt = &now

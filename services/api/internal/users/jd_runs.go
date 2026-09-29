@@ -49,6 +49,13 @@ type JdRun struct {
 
 	QueuedMs   int64
 	DurationMs int64
+	// PhaseMs is milliseconds per pipeline phase (migration 00042):
+	// setup, posting_check, extract, retrieval, judge, score, resume,
+	// render. Nil for a run that was never measured, which is every run
+	// before that migration and any run that died in the queue.
+	// DurationMs is the total and is not the sum of these, because the
+	// phases only cover the time between progress reports.
+	PhaseMs    map[string]int64
 	StartedAt  time.Time
 	FinishedAt *time.Time
 }
@@ -100,17 +107,38 @@ func (r *Repo) FinishJdRun(ctx context.Context, run JdRun) error {
       fit = $8, requirement_count = $9, met_count = $10, partial_count = $11,
       unmet_count = $12, resume_generated = $13,
       model = coalesce(NULLIF($14, ''), model),
-      queued_ms = $15, duration_ms = $16, finished_at = now()
+      queued_ms = $15, duration_ms = $16,
+      -- Keep whatever is already there if this close has nothing to
+      -- say, so a second close cannot erase the timings.
+      phase_ms = coalesce($17::jsonb, phase_ms),
+      finished_at = now()
     WHERE run_id = $1::uuid AND finished_at IS NULL`,
 		run.RunID, run.Status, truncRunErr(run.Error),
 		run.ScoreFormula, run.RetrievalScore, run.MatchScore, run.Threshold,
 		run.Fit, run.RequirementCount, run.MetCount, run.PartialCount,
 		run.UnmetCount, run.ResumeGenerated, run.Model, run.QueuedMs, run.DurationMs,
+		phaseJSON(run.PhaseMs),
 	)
 	if err != nil {
 		return fmt.Errorf("finish jd run: %w", err)
 	}
 	return nil
+}
+
+// phaseJSON encodes the phase timings for the jsonb column, returning
+// nil when there is nothing measured so the update leaves the existing
+// value alone rather than overwriting it with an empty object.
+func phaseJSON(ms map[string]int64) []byte {
+	if len(ms) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(ms)
+	if err != nil {
+		// A map[string]int64 does not fail to marshal. Losing the
+		// timings must never fail the close that records the verdict.
+		return nil
+	}
+	return b
 }
 
 // ListJdRuns returns a submission's runs, newest attempt first. The
@@ -122,7 +150,7 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
            prompts::text, corpus_fingerprint, corpus_documents, corpus_chunks,
            score_formula, retrieval_score, match_score, threshold, fit,
            requirement_count, met_count, partial_count, unmet_count,
-           resume_generated, queued_ms, duration_ms, started_at, finished_at
+           resume_generated, queued_ms, duration_ms, phase_ms::text, started_at, finished_at
       FROM jd_runs
      WHERE submission_id = $1
      ORDER BY attempt DESC`, submissionID)
@@ -135,6 +163,7 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
 	for rows.Next() {
 		var run JdRun
 		var promptsJSON string
+		var phaseJSONText string
 		if err := rows.Scan(
 			&run.RunID, &run.SubmissionID, &run.Attempt, &run.Trigger, &run.TriggeredBy,
 			&run.Status, &run.Error, &run.AppCommit, &run.Host, &run.Model, &run.NumCtx,
@@ -142,11 +171,12 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
 			&run.CorpusChunks, &run.ScoreFormula, &run.RetrievalScore, &run.MatchScore,
 			&run.Threshold, &run.Fit, &run.RequirementCount, &run.MetCount,
 			&run.PartialCount, &run.UnmetCount, &run.ResumeGenerated, &run.QueuedMs,
-			&run.DurationMs, &run.StartedAt, &run.FinishedAt,
+			&run.DurationMs, &phaseJSONText, &run.StartedAt, &run.FinishedAt,
 		); err != nil {
 			return nil, fmt.Errorf("list jd runs: scan: %w", err)
 		}
 		_ = json.Unmarshal([]byte(promptsJSON), &run.Prompts)
+		_ = json.Unmarshal([]byte(phaseJSONText), &run.PhaseMs)
 		out = append(out, run)
 	}
 	return out, rows.Err()

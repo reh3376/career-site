@@ -281,6 +281,45 @@ func (r *Repo) FinishEvalRun(ctx context.Context, e EvalRun) error {
 	return nil
 }
 
+// FailStrandedEvalRuns closes evaluations left open by a process that
+// died, and fills in their counters from the items that did land.
+//
+// An evaluation's counters live in memory until it finishes, so a run
+// killed part way through recorded nothing: run 14 was stopped after
+// five of nine postings and its row read "scored 0, errors 0" while
+// five eval_items sat beside it. The work was done and the summary of
+// it was thrown away, which is the wrong half to lose.
+//
+// There is no cancel RPC, so stopping a run means restarting the api
+// (docs/evaluation.md), and that is exactly the path that skips the
+// close. Deriving the counters from eval_items rather than trusting
+// the in-memory tally means a stopped run is still readable, and it is
+// the same arithmetic the evaluator does.
+//
+// margin is deliberately left alone. It is only comparable when every
+// posting scored, so computing one for a partial run would produce a
+// number that invites exactly the comparison it cannot support.
+// Called at boot beside FailStrandedRuns.
+func (r *Repo) FailStrandedEvalRuns(ctx context.Context) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `
+    UPDATE eval_runs e SET
+      status = 'failed',
+      note = trim(both ' |' from coalesce(e.note, '')) ||
+             ' | stopped in flight; counters recovered from the items that landed',
+      scored       = (SELECT count(*) FROM eval_items i
+                       WHERE i.eval_run_id = e.id AND i.error =  ''),
+      errors       = (SELECT count(*) FROM eval_items i
+                       WHERE i.eval_run_id = e.id AND i.error <> ''),
+      gate_correct = (SELECT count(*) FROM eval_items i
+                       WHERE i.eval_run_id = e.id AND i.error =  '' AND i.passed),
+      finished_at  = now()
+     WHERE e.status = 'running' AND e.finished_at IS NULL`)
+	if err != nil {
+		return 0, fmt.Errorf("fail stranded eval runs: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
 // ListEvalRuns returns evaluations newest first, without their items.
 func (r *Repo) ListEvalRuns(ctx context.Context, limit int) ([]EvalRun, error) {
 	if limit <= 0 || limit > 100 {

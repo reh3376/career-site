@@ -31,10 +31,10 @@ func waitFor(t *testing.T, r *Runner, id string) *Job {
 
 func TestEventsRecordEveryReportInOrder(t *testing.T) {
 	r := quietRunner()
-	started, err := r.Start("test", func(_ context.Context, report Report) (string, error) {
-		report(10, "first")
-		report(50, "second")
-		report(90, "third")
+	started, err := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
+		rep.Report(10, "first")
+		rep.Report(50, "second")
+		rep.Report(90, "third")
 		return "done", nil
 	})
 	if err != nil {
@@ -65,15 +65,15 @@ func TestEventsRecordEveryReportInOrder(t *testing.T) {
 
 func TestRefIsOptionalAndOnlyTheFirstIsKept(t *testing.T) {
 	r := quietRunner()
-	started, err := r.Start("test", func(_ context.Context, report Report) (string, error) {
+	started, err := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
 		// A job with nothing to point at, which is most of them, keeps
 		// calling report with two arguments and must still compile and
 		// record an empty ref.
-		report(10, "no ref")
-		report(50, "one ref", "eval:7:3")
+		rep.Report(10, "no ref")
+		rep.Report(50, "one ref", "eval:7:3")
 		// Extra arguments are ignored rather than joined, so a caller
 		// that passes two cannot produce a ref that resolves to neither.
-		report(90, "two refs", "eval:7:4", "eval:7:5")
+		rep.Report(90, "two refs", "eval:7:4", "eval:7:5")
 		return "done", nil
 	})
 	if err != nil {
@@ -94,8 +94,8 @@ func TestRefIsOptionalAndOnlyTheFirstIsKept(t *testing.T) {
 
 func TestFailureIsRecordedInTheTimeline(t *testing.T) {
 	r := quietRunner()
-	started, _ := r.Start("test", func(_ context.Context, report Report) (string, error) {
-		report(25, "got some way in")
+	started, _ := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
+		rep.Report(25, "got some way in")
 		return "", errors.New("the model went away")
 	})
 	j := waitFor(t, r, started.ID)
@@ -117,9 +117,9 @@ func TestFailureIsRecordedInTheTimeline(t *testing.T) {
 
 func TestEventsAreCappedAndDropTheOldest(t *testing.T) {
 	r := quietRunner()
-	started, _ := r.Start("test", func(_ context.Context, report Report) (string, error) {
+	started, _ := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
 		for i := 0; i < MaxEvents+50; i++ {
-			report(0, "tick")
+			rep.Report(0, "tick")
 		}
 		return "finished", nil
 	})
@@ -142,10 +142,10 @@ func TestSnapshotDoesNotShareEventsWithTheRunningJob(t *testing.T) {
 	// would shift the caller's view under it.
 	r := quietRunner()
 	release := make(chan struct{})
-	started, _ := r.Start("test", func(_ context.Context, report Report) (string, error) {
-		report(10, "before")
+	started, _ := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
+		rep.Report(10, "before")
 		<-release
-		report(20, "after")
+		rep.Report(20, "after")
 		return "done", nil
 	})
 
@@ -183,9 +183,9 @@ func TestSnapshotDoesNotShareEventsWithTheRunningJob(t *testing.T) {
 // what /admin/ops does.
 func TestConcurrentReadsWhileReporting(t *testing.T) {
 	r := quietRunner()
-	started, _ := r.Start("test", func(_ context.Context, report Report) (string, error) {
+	started, _ := r.Start("test", func(_ context.Context, rep Reporter) (string, error) {
 		for i := 0; i < 200; i++ {
-			report(int32(i%100), "working")
+			rep.Report(int32(i%100), "working")
 		}
 		return "done", nil
 	})

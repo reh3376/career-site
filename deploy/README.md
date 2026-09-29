@@ -1,6 +1,6 @@
 # Deploy
 
-career-site deploys as a single-host Docker Compose stack behind Caddy (auto-TLS via Let's Encrypt). Target host today: one Hetzner Cloud CPX31 (4 vCPU / 8 GB) in Ashburn, VA, at `5.161.62.205`, deploy dir `/opt/career-site`. That box is the ceiling: there is no budget for a bigger one, so the workload (embeddings and the LLM included) is sized to fit it. Everything the deploy needs lives in this directory:
+career-site deploys as a single-host Docker Compose stack behind Caddy (auto-TLS via Let's Encrypt). Target host today: one Hetzner Cloud CPX41 (8 vCPU / 16 GB) in Ashburn, VA, at `5.161.62.205`, deploy dir `/opt/career-site`. That box is the ceiling: there is no budget for a bigger one, so the workload (embeddings and the LLM included) is sized to fit it. Everything the deploy needs lives in this directory:
 
 ```
 deploy/
@@ -44,7 +44,7 @@ Do these in order. Each step is a hand-off between you and me.
 
 In the Hetzner Cloud console:
 
-1. **Server**: Add server → Location: **Ashburn, VA (US East)** → Image: **Ubuntu 24.04** → Type: **CPX31** (4 vCPU / 8 GB / 40 GB). The site started on a CPX11 and was rescaled on 2026-09-21 when the LLM landed (Rescale → keep disk, needs a power-off in the console); a fresh install should go straight to the CPX31. Add a 2 GB swapfile as the OOM safety net.
+1. **Server**: Add server → Location: **Ashburn, VA (US East)** → Image: **Ubuntu 24.04** → Type: **CPX41** (8 vCPU / 16 GB). The site started on a CPX11, was rescaled to a CPX31 on 2026-09-21 when the LLM landed, and to a CPX41 on 2026-09-25 (Rescale → keep disk, needs a power-off in the console); a fresh install should go straight to the CPX41. Add a 2 GB swapfile as the OOM safety net.
 2. **SSH key**: pick the ed25519 public key you added earlier (`macbook->macstudio-tb`).
 3. **Networking**: IPv4 + IPv6 both on; firewall rules **inbound tcp/22, 80, 443** and nothing else.
 4. **Backups**: enable (+$1/mo — worth it).
@@ -207,7 +207,13 @@ LLM model is pulled by hand once:
 cs exec ollama ollama pull qwen3:4b-q8_0     # cs = the compose alias from step 7
 ```
 
-**Sizing on the CPX31.** `OLLAMA_MEM_LIMIT=7g` caps the container. The
+**Sizing on the CPX41.** `OLLAMA_MEM_LIMIT=7g` caps the container. The
+value was chosen for the 8 GB CPX31 and deliberately left alone after
+the 2026-09-25 rescale: Ollama holds 5.3 GB of its 7 GB, and the
+roughly 8.9 GB now free is **reserved for Ask Roger** (owner,
+2026-09-29), not spare capacity for the reviewer. Do not raise this
+limit to give the JD pipeline a bigger model or a longer context; the
+headroom is already spoken for. The
 levers that make the 4b fit next to the embedder are
 `OLLAMA_MAX_LOADED_MODELS=1` (one resident model; the embedder reloads in
 seconds when needed), `OLLAMA_FLASH_ATTENTION=1` and

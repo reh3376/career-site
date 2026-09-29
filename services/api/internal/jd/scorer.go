@@ -256,10 +256,20 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	// Filled in as the run progresses; whatever is set when the function
 	// returns is what the record keeps.
 	outcome := &users.JdRun{RunID: run.RunID, Status: "failed", ScoreFormula: ScoreFormula}
+	// Assigned once the pipeline slot is held; nil until then, and every
+	// method on it is nil-safe so a run that dies in the queue still
+	// closes cleanly. Declared here because the defer below captures it.
+	var phases *phaseTimer
 	defer func() {
 		if !runOpen {
 			return
 		}
+		// Before DurationMs, so the last phase is closed at the same
+		// instant the run is. A failed run keeps its timings: this runs
+		// after the error has returned, which is the case the split
+		// exists for.
+		phases.stop()
+		outcome.PhaseMs = phases.snapshot()
 		outcome.DurationMs = time.Since(runStarted).Milliseconds()
 		if err := s.users.FinishJdRun(persist, *outcome); err != nil {
 			s.log.Warn("jd: could not close the run record",
@@ -300,10 +310,19 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	}
 	ctx, cancel := context.WithTimeout(ctx, s.pipelineTimeout)
 	defer cancel()
+	// Anyone watching this particular run, which today is an evaluation
+	// surfacing the stage to its job. Nil for a member's submission, and
+	// the stage is written to the submission either way.
+	watch := observerFrom(ctx)
+	// Where the time goes. Started here rather than at runStarted so the
+	// queue is not counted as work; queued_ms already records that.
+	phases = newPhaseTimer(time.Now())
 	progress := Progress(func(pct int32, stage string) {
+		phases.enter(stage)
 		if err := s.users.UpdateJdProgress(persist, submissionID, pct, stage); err != nil {
 			s.log.Warn("jd: progress write failed", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 		}
+		watch.notify(pct, stage)
 	})
 	progress(2, "starting")
 

@@ -42,7 +42,7 @@ box's own Ollama).
 
 | Host | Type | Access | Notes |
 |---|---|---|---|
-| `5.161.62.205` (rogerhenley.dev) | Hetzner **CPX31** (4 vCPU / 8 GB nominal, 7.7 GB usable / 40 GB, 2 GB swapfile), Ubuntu 24.04, Ashburn VA. Rescaled from CPX11 on 2026-09-21. This box is the ceiling: no further server spend, fit the workload to it. | `ssh career@5.161.62.205` (key auth; `career` has sudo and docker) | Deploy dir `/opt/career-site` (git checkout of `main`); private corpus at `/opt/career-site-private`. The stack returns after a reboot on Docker's `restart: unless-stopped` policy; there is no systemd unit (see `deploy/README.md`). Never `compose stop` before a planned reboot. |
+| `5.161.62.205` (rogerhenley.dev) | Hetzner **CPX41** (8 vCPU / 16 GB nominal, 15.2 GB usable / 40 GB disk, 2 GB swapfile), Ubuntu 24.04, Ashburn VA. Rescaled CPX11 to CPX31 on 2026-09-21, CPX31 to CPX41 on 2026-09-25. This box is the ceiling: no further server spend, fit the workload to it. | `ssh career@5.161.62.205` (key auth; `career` has sudo and docker) | Deploy dir `/opt/career-site` (git checkout of `main`); private corpus at `/opt/career-site-private`. The stack returns after a reboot on Docker's `restart: unless-stopped` policy; there is no systemd unit (see `deploy/README.md`). Never `compose stop` before a planned reboot. |
 | owner's Mac | local dev | n/a | `docker compose up -d` with the sidecar pointed at the host's Ollama (`host.docker.internal:11434`); `qwen3:4b-q8_0` and `nomic-embed-text` pulled locally. The 14b was dropped (does not fit the box) and the 8b OOM-killed it; the 4b is the model in both places. |
 
 ---
