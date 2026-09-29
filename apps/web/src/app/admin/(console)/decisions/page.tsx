@@ -40,6 +40,7 @@ type Row = {
   created_at?: string;
   createdAt?: string;
   human_verdict?: string;
+  error?: string;
   humanVerdict?: string;
   human_note?: string;
   humanNote?: string;
@@ -122,7 +123,12 @@ function parse<T>(s: string | undefined): T | null {
   }
 }
 
-type Search = { kind?: string; ref?: string; all?: string };
+type Search = {
+  kind?: string;
+  ref?: string;
+  all?: string;
+  failed?: string;
+};
 
 export default async function DecisionsPage({
   searchParams,
@@ -133,6 +139,9 @@ export default async function DecisionsPage({
   const kind = sp.kind ?? "";
   const ref = sp.ref ?? "";
   const unreviewedOnly = sp.all !== "1";
+  // Failures are rare by construction, so they need a way to be found
+  // that is not scrolling past two hundred successes.
+  const failedOnly = sp.failed === "1";
 
   const cookie = await getSessionCookie();
   let rows: Row[] = [];
@@ -144,7 +153,7 @@ export default async function DecisionsPage({
   } else {
     const resp = await callApi({
       path: "/api/career.v1.AdminService/ListDecisionLog",
-      body: { kind, refId: ref, unreviewedOnly, limit: 200 },
+      body: { kind, refId: ref, unreviewedOnly, failedOnly, limit: 200 },
       cookie,
     });
     if (!resp.ok) {
@@ -167,7 +176,13 @@ export default async function DecisionsPage({
 
   const filterHref = (next: Partial<Search>) => {
     const q = new URLSearchParams();
-    const merged = { kind, ref, all: unreviewedOnly ? "" : "1", ...next };
+    const merged = {
+      kind,
+      ref,
+      all: unreviewedOnly ? "" : "1",
+      failed: failedOnly ? "1" : "",
+      ...next,
+    };
     if (merged.kind) q.set("kind", merged.kind);
     if (merged.ref) q.set("ref", merged.ref);
     if (merged.all) q.set("all", merged.all);
@@ -212,6 +227,13 @@ export default async function DecisionsPage({
           className="text-accent"
         >
           {kind === "jd_gate" ? "all kinds" : "gate decisions only"}
+        </Link>
+        <span className="text-ink-3">·</span>
+        <Link
+          href={filterHref({ failed: failedOnly ? "" : "1" })}
+          className={failedOnly ? "text-danger" : "text-accent"}
+        >
+          {failedOnly ? "all calls" : "failed calls only"}
         </Link>
         {ref ? (
           <>
@@ -304,6 +326,42 @@ function DecisionCard({ row }: { row: Row }) {
       {reviewedAt ? " · reviewed" : ""}
     </p>
   );
+
+  // A call that produced no usable verdict. There is nothing to grade,
+  // so it gets no verdict form; what it has is the prompt and the whole
+  // response, which is the only reason the row exists. Before this,
+  // decision_log was written after a successful decode only, so the one
+  // response worth reading was the one thrown away.
+  if (row.error) {
+    return (
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-danger">
+          no verdict · {row.kind}
+        </p>
+        {meta}
+        <p className="mt-3 border-l-2 border-danger bg-paper-2 px-4 py-3 text-sm leading-relaxed text-ink">
+          {row.error}
+        </p>
+        <details className="mt-4">
+          <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            what the model returned (
+            {(row.response_text ?? row.responseText ?? "").length} characters)
+          </summary>
+          <pre className="mt-2 max-h-[28rem] overflow-auto bg-paper-2 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">
+            {row.response_text ?? row.responseText ?? "(nothing was returned)"}
+          </pre>
+        </details>
+        <details className="mt-2">
+          <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            the prompt it was answering
+          </summary>
+          <pre className="mt-2 max-h-[28rem] overflow-auto bg-paper-2 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">
+            {row.prompt_text ?? row.promptText ?? ""}
+          </pre>
+        </details>
+      </div>
+    );
+  }
 
   if (row.kind === "jd_gate") {
     const input = parse<GateInput>(row.input_json ?? row.inputJson);

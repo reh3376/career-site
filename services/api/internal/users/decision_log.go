@@ -98,14 +98,20 @@ type DecisionFilter struct {
 	Kind           string
 	RefID          int64
 	UnreviewedOnly bool
-	Limit          int
+	// FailedOnly narrows to calls that produced no usable verdict.
+	// These are rare by construction and are the rows most worth
+	// reading, so they need a way to be found that is not scrolling
+	// past two hundred successes.
+	FailedOnly bool
+	Limit      int
 }
 
 const decisionColumns = `
     id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
     input, output, prompt_text, response_text,
     prompt_tokens, completion_tokens, latency_ms, created_at,
-    coalesce(human_verdict, ''), coalesce(human_note, ''), reviewed_by, reviewed_at`
+    coalesce(human_verdict, ''), coalesce(human_note, ''), reviewed_by, reviewed_at,
+    coalesce(error, '')`
 
 // ListDecisions returns rows newest first for the review surface.
 func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision, error) {
@@ -121,6 +127,9 @@ func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision,
 	}
 	if f.UnreviewedOnly {
 		where = append(where, "reviewed_at IS NULL")
+	}
+	if f.FailedOnly {
+		where = append(where, "error <> ''")
 	}
 	limit := f.Limit
 	if limit <= 0 || limit > 500 {
@@ -144,7 +153,7 @@ func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision,
 			&d.ID, &d.Kind, &d.RefKind, &d.RefID, &d.Key, &d.Model, &d.PromptID, &d.PromptVersion, &d.NumCtx,
 			&d.Input, &d.Output, &d.PromptText, &d.ResponseText,
 			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.CreatedAt,
-			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt,
+			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt, &d.Error,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
@@ -214,9 +223,12 @@ func (r *Repo) DecisionKind(ctx context.Context, id int64) (string, error) {
 // ExportDecisions returns rows oldest first, optionally only the
 // reviewed ones, for the JSONL training export.
 func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decision, error) {
-	q := "SELECT " + decisionColumns + " FROM decision_log"
+	// The training export is verdicts the owner graded, so a failed
+	// call has nothing to teach and is excluded rather than exported
+	// with an empty verdict.
+	q := "SELECT " + decisionColumns + " FROM decision_log WHERE error = ''"
 	if reviewedOnly {
-		q += " WHERE reviewed_at IS NOT NULL"
+		q += " AND reviewed_at IS NOT NULL"
 	}
 	q += " ORDER BY id ASC"
 	rows, err := r.pool.Query(ctx, q)
@@ -231,7 +243,7 @@ func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decisi
 			&d.ID, &d.Kind, &d.RefKind, &d.RefID, &d.Key, &d.Model, &d.PromptID, &d.PromptVersion, &d.NumCtx,
 			&d.Input, &d.Output, &d.PromptText, &d.ResponseText,
 			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.CreatedAt,
-			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt,
+			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt, &d.Error,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}

@@ -3362,6 +3362,7 @@ human-in-the-loop review. Backs /admin/decisions.
 | `refId` | `string` | string |  | Restrict to one ref id (e.g. a JD submission); empty for all. |
 | `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
 | `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
+| `failedOnly` | `bool` | boolean |  | Only calls that produced no usable verdict. They are rare by construction and are the rows most worth reading, so finding them should not mean scrolling past two hundred successes. |
 
 **Response** — [`ListDecisionLogResponse`](#listdecisionlogresponse)
 
@@ -3378,7 +3379,8 @@ human-in-the-loop review. Backs /admin/decisions.
   "kind": "string",
   "refId": "string",
   "unreviewedOnly": true,
-  "limit": 0
+  "limit": 0,
+  "failedOnly": true
 }
 ```
 
@@ -6414,6 +6416,7 @@ what, and the owner's review of it. See docs/decision-log.md.
 | `humanNote` | `string` | string |  | The owner's free-text note on the review. |
 | `reviewedBy` | `string` | string |  | User id of the reviewer (numeric, stringified); empty until reviewed. |
 | `reviewedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the review was saved; unset until reviewed. |
+| `error` | `string` | string |  | Why this call produced no usable verdict; empty when it produced one. A row carrying it still carries prompt_text and response_text, which is the point: the response that failed to decode is the one worth reading, and it used to be the only one not kept. |
 
 ### ListDecisionLogRequest
 
@@ -6425,6 +6428,7 @@ Filters for the decision-review list.
 | `refId` | `string` | string |  | Restrict to one ref id (e.g. a JD submission); empty for all. |
 | `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
 | `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
+| `failedOnly` | `bool` | boolean |  | Only calls that produced no usable verdict. They are rare by construction and are the rows most worth reading, so finding them should not mean scrolling past two hundred successes. |
 
 ### ListDecisionLogResponse
 

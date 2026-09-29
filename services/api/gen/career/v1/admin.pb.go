@@ -9764,7 +9764,13 @@ type DecisionLogRow struct {
 	// User id of the reviewer (numeric, stringified); empty until reviewed.
 	ReviewedBy string `protobuf:"bytes,20,opt,name=reviewed_by,json=reviewedBy,proto3" json:"reviewed_by,omitempty"`
 	// When the review was saved; unset until reviewed.
-	ReviewedAt    *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
+	ReviewedAt *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
+	// Why this call produced no usable verdict; empty when it produced
+	// one. A row carrying it still carries prompt_text and
+	// response_text, which is the point: the response that failed to
+	// decode is the one worth reading, and it used to be the only one
+	// not kept.
+	Error         string `protobuf:"bytes,22,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9946,6 +9952,13 @@ func (x *DecisionLogRow) GetReviewedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *DecisionLogRow) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 // Filters for the decision-review list.
 type ListDecisionLogRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -9956,7 +9969,11 @@ type ListDecisionLogRequest struct {
 	// Only rows the owner has not reviewed yet.
 	UnreviewedOnly bool `protobuf:"varint,3,opt,name=unreviewed_only,json=unreviewedOnly,proto3" json:"unreviewed_only,omitempty"`
 	// Page size, newest first; server caps at 500 (default 200).
-	Limit         int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Only calls that produced no usable verdict. They are rare by
+	// construction and are the rows most worth reading, so finding them
+	// should not mean scrolling past two hundred successes.
+	FailedOnly    bool `protobuf:"varint,5,opt,name=failed_only,json=failedOnly,proto3" json:"failed_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10017,6 +10034,13 @@ func (x *ListDecisionLogRequest) GetLimit() int32 {
 		return x.Limit
 	}
 	return 0
+}
+
+func (x *ListDecisionLogRequest) GetFailedOnly() bool {
+	if x != nil {
+		return x.FailedOnly
+	}
+	return false
 }
 
 // A page of logged decisions plus table-wide counts.
@@ -11987,7 +12011,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"readyCount\x122\n" +
 	"\x15below_threshold_count\x18\x03 \x01(\x05R\x13belowThresholdCount\x12!\n" +
 	"\ffailed_count\x18\x04 \x01(\x05R\vfailedCount\x12&\n" +
-	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\xbf\x05\n" +
+	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\xd5\x05\n" +
 	"\x0eDecisionLogRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -12018,12 +12042,15 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\vreviewed_by\x18\x14 \x01(\tR\n" +
 	"reviewedBy\x12;\n" +
 	"\vreviewed_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"reviewedAt\"\x82\x01\n" +
+	"reviewedAt\x12\x14\n" +
+	"\x05error\x18\x16 \x01(\tR\x05error\"\xa3\x01\n" +
 	"\x16ListDecisionLogRequest\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x15\n" +
 	"\x06ref_id\x18\x02 \x01(\tR\x05refId\x12'\n" +
 	"\x0funreviewed_only\x18\x03 \x01(\bR\x0eunreviewedOnly\x12\x14\n" +
-	"\x05limit\x18\x04 \x01(\x05R\x05limit\"\x9a\x01\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1f\n" +
+	"\vfailed_only\x18\x05 \x01(\bR\n" +
+	"failedOnly\"\x9a\x01\n" +
 	"\x17ListDecisionLogResponse\x127\n" +
 	"\tdecisions\x18\x01 \x03(\v2\x19.career.v1.DecisionLogRowR\tdecisions\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x03R\n" +
