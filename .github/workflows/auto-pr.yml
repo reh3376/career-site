@@ -7,6 +7,13 @@
 
 name: auto-pr
 
+# This one keeps an allowlist on purpose, unlike ci.yml, security.yml
+# and codeql.yml, which were inverted to branches-ignore on 2026-09-29.
+# Those three should run on anything, because a branch with no CI is a
+# branch that can be merged untested. Opening a pull request is the
+# opposite: a scratch or backup branch should not acquire one just by
+# being pushed. So a branch outside these prefixes is tested and simply
+# does not get a PR opened for it, which is visible rather than silent.
 on:
   push:
     branches:

@@ -762,6 +762,20 @@ configuration file for version 4.38.2, but running version 3.38.1".
 They are one repository at one commit and move together. Untested,
 that would have merged and broken code scanning on `main`.
 
+**Branch filters inverted 2026-09-29.** The same allowlist that hid
+dependabot also hid two branches pushed during ordinary work that day,
+one named `docs/` and one with no prefix at all. A workflow that never
+starts reports nothing, so each looked fine. `ci.yml`, `security.yml`
+and `codeql.yml` now use `branches-ignore: [backup/**]`, so a new
+prefix works the day someone invents it and the failure mode is a
+wasted run rather than an untested merge. The repository is public, so
+Actions minutes are free and there was never anything to ration.
+
+`auto-pr.yml` keeps its allowlist deliberately: a branch with no CI can
+be merged untested, while a branch with no pull request is merely
+visible. A scratch or backup branch should not acquire a PR just by
+being pushed.
+
 **Left to do:** nothing here owns the relationship between a
 Dockerfile's base image and the workflow `env:` that is supposed to
 test it. Bumping python to 3.14 and go to 1.27 left CI checking 3.12
