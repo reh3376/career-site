@@ -10,6 +10,11 @@
 
 name: codeql
 
+# dependabot/** matches for the same reason it does in ci.yml: without
+# it these scans never run on a dependency branch, and the checks they
+# feed stay pending for ever, so the PR cannot merge. Adding it to
+# ci.yml alone on 2026-09-29 left seven dependency PRs blocked on this
+# workflow instead of on that one.
 on:
   push:
     branches:
@@ -17,6 +22,7 @@ on:
       - "claude_dev*"
       - "feat/*"
       - "fix/*"
+      - "dependabot/**"
   schedule:
     - cron: "23 6 * * 1" # 06:23 UTC every Monday
 
