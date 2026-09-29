@@ -2489,10 +2489,26 @@ nothing looked wrong from the outside; ollama's own log was generating
 token 1,194 of a response that had no business being that long.
 
 **Cost to the run.** `separation()` skips items with an error, and Blue
-Origin is the floor of the above-gate group, so run 13's margin is
-computed from a different set than run 12's. That is the run 7 problem
-again: a margin that looks fine because the constraining posting is
-absent. Run 13 cannot answer the question it was started for.
+Origin is the floor of the above-gate group, so run 13's margin would
+have been computed from a different set than run 12's. That is the run
+7 problem again: a margin that looks fine because the constraining
+posting is absent.
+
+**Run 13 was killed at 5 of 9** rather than allowed to finish, since it
+could no longer answer the question it was started for and would have
+held the box for another two hours. There is no cancel path for a job,
+so stopping it meant restarting the api container, and the run row was
+closed as failed by hand: `evaluate.go` closes a run properly on
+context cancellation, but a container that is killed outright never
+reaches that code, which is how a run sat at "running" for ever on
+2026-09-23.
+
+What it did establish before it died, on four postings: nexus, xai and
+ATI all identical to run 12, and profluent oscillating to 0.3571 for
+the fourth run running on the same single requirement. The below-gate
+ceiling held at 0.6429 with the new document in place, which was the
+risk worth checking, so the corpus addition did not pull anything
+toward the gate.
 
 **Fix: retry once at double the budget, rather than raise the ceiling.**
 A ceiling is a guess about the longest answer the model will ever want
