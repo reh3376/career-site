@@ -222,6 +222,17 @@ jobs:
         working-directory: services/sidecar
         run: uv run pytest
 
+  versions:
+    # No toolchain: it reads two files and compares two strings. Its own
+    # job so it fails in seconds and says so plainly, rather than being
+    # buried in a matrix that takes minutes to reach it.
+    name: runtime versions (images vs CI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: base images and workflow env agree
+        run: python3 scripts/check_runtime_versions.py
+
   ucts:
     name: ucts (document conversion)
     runs-on: ubuntu-latest

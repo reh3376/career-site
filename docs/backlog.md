@@ -776,11 +776,25 @@ be merged untested, while a branch with no pull request is merely
 visible. A scratch or backup branch should not acquire a PR just by
 being pushed.
 
-**Left to do:** nothing here owns the relationship between a
-Dockerfile's base image and the workflow `env:` that is supposed to
-test it. Bumping python to 3.14 and go to 1.27 left CI checking 3.12
-and 1.26 until it was noticed by hand. A check that the two agree
-would catch the next one.
+**Version drift closed 2026-09-29** by
+`scripts/check_runtime_versions.py`, run as `make versions` and gated in
+CI as its own job, because nothing owned the relationship between a
+Dockerfile's base image and the workflow `env:` that tests against it.
+Dependabot edits one and never sees the other, which is how raising the
+sidecar to python 3.14 and the api to golang 1.27 left CI testing,
+linting and vulnerability-scanning 3.12 and 1.26 until someone noticed
+by hand.
+
+Python is the one that mattered: 3.13 and 3.14 removed standard library
+modules, so sidecar code passing on 3.12 can fail inside the container,
+and embedding and résumé rendering both live there. Go is milder,
+because `go.mod` declares a language version and a newer toolchain
+builds it forward, which is why the `go.mod` directive is deliberately
+not compared.
+
+The job needs no toolchain, fails in seconds, and was verified by
+replaying the exact drift from that morning: it reports both
+mismatches and names the file each version came from.
 
 **5d. An undefined design token compiles to nothing. Second instance
 2026-09-27.** `accent-strong` was used thirteen times across eight
