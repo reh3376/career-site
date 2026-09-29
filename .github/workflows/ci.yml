@@ -27,6 +27,18 @@ name: ci
 # main is here because it publishes the GHCR images tagged with the
 # merge commit, which is what deploy/rollout.sh deploys. That tag
 # cannot exist before the merge does.
+# dependabot/** is here because without it a dependency bump gets no CI
+# at all. Its branches match none of the patterns below, so on
+# 2026-09-29 PR 160, bumping grpc, showed one skipped CodeRabbit check
+# and nothing else: not a stuck run, no run. Every dependency PR since
+# the pull_request trigger was removed has been mergeable without the
+# suite ever building against it, which is the opposite of what a
+# dependency bot is for.
+#
+# Dependabot runs get a read-only token and no repository secrets. Both
+# uses here survive that: buf-setup-action wants a token only for
+# release-download rate limiting, and the GHCR login is guarded by
+# PUSH, which is false anywhere but main.
 on:
   push:
     branches:
@@ -34,6 +46,7 @@ on:
       - "claude_dev*"
       - "feat/*"
       - "fix/*"
+      - "dependabot/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
