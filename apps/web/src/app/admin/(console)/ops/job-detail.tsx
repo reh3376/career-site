@@ -67,12 +67,23 @@ export function JobDetailDialog({
     // is open, and stops once the job finishes: nothing more will
     // arrive and polling a finished job is only load. Self-scheduling
     // rather than an interval, so a slow response cannot stack calls.
+    // A failed poll must not end the polling. The first version had no
+    // catch, so a single blip (an api restart, a session refresh, a
+    // dropped connection) stopped it for good and the panel sat there
+    // looking alive and showing nothing new. That is indistinguishable
+    // from a frozen page, and it is the failure the reader is least
+    // equipped to diagnose.
+    let live = true;
     async function tick(): Promise<void> {
-      const d = await getJobDetailAction(jobId);
-      if (stop) return;
-      setDetail(d);
-      const live = d.ok && !d.job.finishedAt;
-      if (live) timer = setTimeout(tick, 20000);
+      try {
+        const d = await getJobDetailAction(jobId);
+        if (stop) return;
+        setDetail(d);
+        live = d.ok && !d.job.finishedAt;
+      } catch {
+        // Keep what is on screen and try again.
+      }
+      if (!stop && live) timer = setTimeout(tick, 20000);
     }
     void tick();
 

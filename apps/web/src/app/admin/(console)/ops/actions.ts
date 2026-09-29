@@ -266,3 +266,61 @@ export async function getEventDetailAction(ref: string): Promise<EventDetail> {
     },
   };
 }
+
+
+// The jobs list, for polling while something is running.
+//
+// /admin/ops is force-dynamic, so it is fresh when you navigate to it
+// and then frozen: the percentage on a five-hour evaluation sat at 42%
+// until the page was reloaded by hand. The detail modal already
+// refreshes itself; the list it opens from did not, which is the wrong
+// way round, because the list is what somebody leaves open to watch.
+export async function getOpsJobsAction(): Promise<
+  { ok: true; jobs: JobRow[] } | { ok: false; error: string }
+> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Not signed in." };
+
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetOpsStatus",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` };
+
+  const raw = (await resp.json()) as {
+    jobs?: {
+      id?: string;
+      kind?: string;
+      status?: string;
+      progress?: number;
+      summary?: string;
+      startedAt?: string;
+      started_at?: string;
+      finishedAt?: string;
+      finished_at?: string;
+    }[];
+  };
+  return {
+    ok: true,
+    jobs: (raw.jobs ?? []).map((j) => ({
+      id: j.id,
+      kind: j.kind,
+      status: j.status,
+      progress: j.progress,
+      summary: j.summary,
+      startedAt: j.startedAt ?? j.started_at,
+      finishedAt: j.finishedAt ?? j.finished_at,
+    })),
+  };
+}
+
+export type JobRow = {
+  id?: string;
+  kind?: string;
+  status?: string;
+  progress?: number;
+  summary?: string;
+  startedAt?: string;
+  finishedAt?: string;
+};
