@@ -1218,11 +1218,43 @@ the gatekeeper refuses the right things is a separate question that
 belongs to agreement and the decision log, not hidden inside a
 reliability number.
 
-**Left to do:** rows do not yet link to the runs behind them, which
-`RR-14` asks for. A criterion whose source view returns no rows
-disappears from the gate entirely rather than saying it has no data,
-because each view groups by tenant and an empty table produces no
-group; on an empty database the gate shows one row instead of seven.
+**Left to do, two things.** Rows do not yet link to the runs behind
+them, which `RR-14` asks for.
+
+**And a criterion with no data vanishes instead of saying so.**
+Diagnosed 2026-09-29, not yet fixed. `v_gate` is a `UNION ALL` of seven
+sub-views, and six of them select straight from a view that groups by
+tenant. An empty source table produces no group, so the sub-view
+produces no row, so the criterion is absent from `v_gate` rather than
+present with `pass = NULL`. On a database with no data the gate renders
+one row instead of seven.
+
+That is the opposite of what the view was designed to do. Its own
+header comment says a null means "there is not enough data yet" and
+that collapsing that into false "would make the gate read as broken
+when it is merely young". A criterion that disappears does not even get
+to be young.
+
+**The fix is already written in the same file.** `v_gate_prediction`
+selects `FROM tenants t` and left joins its source, so it always
+produces a row per tenant and reads NULL when there is nothing to say.
+The other six need the same shape:
+
+    FROM tenants t LEFT JOIN v_reliability s ON s.tenant_id = t.id
+
+with the expressions made null-safe, because `'a' || NULL` is NULL in
+SQL and several of these build their `value` string by concatenation.
+The six are reliability, agreement, latency, calibration, reach and
+model load.
+
+**Why it is not done yet.** Production shows all seven rows because
+production has data, so the bug cannot be reproduced there and a fix
+cannot be verified against it before shipping. It needs a scratch
+database with the migrations applied and no rows, which the weekly
+restore rehearsal already builds the machinery for. Latent today, and
+it bites two ways: anyone who clones this repository and runs it sees a
+gate that looks broken, and the second tenant under ADR 0029 would see
+the same.
 
 **Incident, 2026-09-24.** The first version of migration 00032 dropped
 `v_judge_agreement` and its summary. goose runs 00031 first, so
