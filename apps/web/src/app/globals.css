@@ -43,6 +43,7 @@
 
   /* Semantic */
   --color-success: #166534;
+  --color-success-soft: #dcf0e4;
   --color-warning: #92400e;
   --color-danger: #991b1b;
 
@@ -201,6 +202,7 @@ html[data-mode="ot"] {
 
   /* Semantic, HMI-legible saturations */
   --color-success: #22c55e;       /* RUNNING */
+  --color-success-soft: rgba(34, 197, 94, 0.16);
   --color-warning: #f59e0b;       /* WARN */
   --color-danger:  #ef4444;       /* FAULT / E-STOP */
 

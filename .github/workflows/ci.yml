@@ -283,6 +283,11 @@ jobs:
         working-directory: apps/web
         run: pnpm lint
 
+      # Before the build, because the build cannot catch this: Tailwind
+      # drops an unrecognised utility silently and compiles happily.
+      - name: design tokens resolve
+        run: python3 scripts/check_design_tokens.py
+
       - name: build
         working-directory: apps/web
         run: pnpm build

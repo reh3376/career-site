@@ -14,7 +14,7 @@ BUILD := build
 
 GEN_PATHS := services/api/gen apps/web/src/gen services/sidecar/src/career services/sidecar/src/buf docs/api
 
-.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus stage-corpus photos
+.PHONY: help tools gen lint-proto breaking docs-api check-gen clean sync-corpus stage-corpus photos tokens
 
 CORPUS_MANIFEST ?= docs/personal/corpus-manifest.txt
 CORPUS_HOST     ?= career@5.161.62.205
@@ -59,6 +59,9 @@ photos: ## Build gallery derivatives (WebP, EXIF stripped) from docs/personal/im
 	cd apps/web && node scripts/photos-build.mjs
 
 UCTS_PY ?= services/sidecar/.venv/bin/python
+
+tokens: ## Check every colour utility resolves to a token in globals.css
+	python3 scripts/check_design_tokens.py
 
 ucts: ## Run the document-conversion test specs (UCTS)
 	@echo "Verifying UCTS spec integrity..."

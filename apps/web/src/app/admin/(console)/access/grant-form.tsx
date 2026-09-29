@@ -36,7 +36,7 @@ export function GrantForm({
   return (
     <form
       action={onSubmit}
-      className="grid gap-3 border border-line-strong bg-canvas-2 p-4 sm:grid-cols-[1fr_140px_1fr_180px_auto] sm:items-end"
+      className="grid gap-3 border border-line-strong bg-paper-2 p-4 sm:grid-cols-[1fr_140px_1fr_180px_auto] sm:items-end"
     >
       <label className="block text-xs">
         <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
