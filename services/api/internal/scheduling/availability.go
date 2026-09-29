@@ -137,17 +137,19 @@ func Slots(s Settings, busy, booked []Interval, now time.Time) ([]Slot, error) {
 		if len(windows) == 0 {
 			continue
 		}
-		key := day.Format("2006-01-02")
-		taken := perDay[key]
+		// The cap limits meetings actually taken, not slots displayed.
+		// Once the day is full it offers nothing; until then it offers
+		// every free slot, because hiding them would only make the
+		// calendar look emptier than it is.
+		if perDay[day.Format("2006-01-02")] >= s.MaxPerDay {
+			continue
+		}
 		for _, w := range windows {
 			start := day.Add(time.Duration(w.StartMins) * time.Minute)
 			end := day.Add(time.Duration(w.EndMins) * time.Minute)
 			slotLen := time.Duration(s.SlotMins) * time.Minute
 			step := time.Duration(s.SlotMins+s.BufferMins) * time.Minute
 			for t := start; !t.Add(slotLen).After(end); t = t.Add(step) {
-				if taken >= s.MaxPerDay {
-					break
-				}
 				slot := Interval{Start: t, End: t.Add(slotLen)}
 				if slot.Start.Before(earliest) {
 					continue
