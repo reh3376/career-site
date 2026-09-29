@@ -581,6 +581,43 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
+- **One IMAGE_TAG for three services, so there is no such thing as a
+  web-only deploy.** `docker-compose.prod.yml` interpolates the same
+  `${IMAGE_TAG}` into `career-site-web`, `career-site-api` and
+  `career-site-sidecar`, and `rollout.sh` bumps that single variable
+  and runs `compose up -d` across the stack. A CSS-only change
+  therefore gives the api container a new image reference and Compose
+  recreates it.
+
+  **Why that matters here rather than in general.** The job runner
+  keeps jobs in memory, so recreating the api kills any evaluation in
+  flight, and an evaluation is about five hours. On 2026-09-29 a
+  one-line front-end fix (PR 176, removing duplicate LinkedIn and
+  GitHub links from the OT command bar) had to wait on run 13 for that
+  reason alone. It is the second time this has shaped a day's
+  sequencing.
+
+  **The improvised version is worse than waiting.** `compose up -d web`
+  does recreate only that container, but it leaves `.env.prod` naming a
+  tag the api and sidecar are not running, and both
+  `rollout.sh --rollback` and `deploy/live-check.sh` read that variable
+  as the truth about the whole stack. A partial deploy would quietly
+  break the thing that makes a rollback safe.
+
+  **The shape, when it is built.** Per-service tags,
+  `WEB_IMAGE_TAG` / `API_IMAGE_TAG` / `SIDECAR_IMAGE_TAG`, defaulting
+  to a shared `IMAGE_TAG` so the ordinary full rollout is unchanged and
+  nothing has to be rewritten. `rollout.sh` grows a `--only web` that
+  sets one of them and brings up one service, and `live-check.sh`
+  reports all three rather than one. The version endpoint should report
+  per service too, or the readiness check starts lying about what is
+  running.
+
+  **Not urgent.** It buys the ability to ship front-end fixes during a
+  long evaluation, which is a real but occasional annoyance. Worth
+  doing before evaluations become routine enough to be running most of
+  the time.
+
 - **Job detail on `/admin/ops`: a row should open, and the runner
   should stop discarding what a job reported.** Asked for 2026-09-25
   while an evaluation was running; deferred rather than built, because
