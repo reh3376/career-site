@@ -219,6 +219,15 @@ func evalRunToProto(r users.EvalRun) *v1.EvalRun {
 			Error:        it.Error,
 		})
 	}
+	for _, d := range r.CorpusDocuments {
+		out.CorpusDocuments = append(out.CorpusDocuments, &v1.EvalCorpusDoc{
+			DocumentId: d.DocumentID,
+			Title:      d.Title,
+			SourceKind: d.SourceKind,
+			Visibility: d.Visibility,
+			ChunkCount: int32(d.ChunkCount),
+		})
+	}
 	return out
 }
 

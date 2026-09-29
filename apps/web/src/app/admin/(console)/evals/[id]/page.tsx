@@ -26,8 +26,21 @@ type Item = {
   error?: string;
 };
 
+type CorpusDoc = {
+  document_id?: string | number;
+  documentId?: string | number;
+  title?: string;
+  source_kind?: string;
+  sourceKind?: string;
+  visibility?: string;
+  chunk_count?: number;
+  chunkCount?: number;
+};
+
 type Run = {
   id?: string | number;
+  corpus_documents?: CorpusDoc[];
+  corpusDocuments?: CorpusDoc[];
   status?: string;
   note?: string;
   model?: string;
@@ -79,6 +92,11 @@ export default async function EvalDetailPage({
   if (!run) notFound();
 
   const items = run.items ?? [];
+  const corpusDocs = run.corpus_documents ?? run.corpusDocuments ?? [];
+  const totalChunks = corpusDocs.reduce(
+    (n, d) => n + (d.chunk_count ?? d.chunkCount ?? 0),
+    0,
+  );
   const correct = run.gate_correct ?? run.gateCorrect ?? 0;
   const violations = run.order_violations ?? run.orderViolations ?? 0;
   let prompts: [string, string][] = [];
@@ -200,6 +218,55 @@ export default async function EvalDetailPage({
             );
           })}
         </ul>
+      </section>
+
+      <section className="mt-10">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          corpus it read <span className="text-ink-4">·</span>{" "}
+          {corpusDocs.length
+            ? `${corpusDocs.length} documents, ${totalChunks} chunks`
+            : "not recorded"}
+        </p>
+        {corpusDocs.length === 0 ? (
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
+            This run predates the corpus manifest, so what it read cannot be
+            reconstructed. The fingerprint above still says whether another run
+            read the same corpus; it cannot say what that corpus was.
+          </p>
+        ) : (
+          <>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">
+              Captured when the run started, before anything was scored. The
+              corpus is mutable and has no delete, so without this an ingest
+              after the fact makes an older run unreadable.
+            </p>
+            <ul className="mt-4 divide-y divide-line border-y border-line">
+              {corpusDocs.map((d) => {
+                const id = d.document_id ?? d.documentId;
+                const kind = d.source_kind ?? d.sourceKind ?? "";
+                const chunks = d.chunk_count ?? d.chunkCount ?? 0;
+                const vis = d.visibility ?? "";
+                return (
+                  <li
+                    key={String(id)}
+                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2"
+                  >
+                    <p className="min-w-0 text-sm text-ink">
+                      {d.title || `document ${String(id)}`}
+                      <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                        {kind}
+                        {vis === "public" ? " · public" : ""}
+                      </span>
+                    </p>
+                    <span className="font-mono text-sm text-ink-3">
+                      {chunks} {chunks === 1 ? "chunk" : "chunks"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </section>
     </>
   );
