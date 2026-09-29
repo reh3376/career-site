@@ -170,6 +170,7 @@ Services shipped:
 - **JdService** (members): SubmitJd / GetJdResult / ListMySubmissions / GetJdReviewConfig (the live fit bands); the owning member's session or the result token releases verdicts, résumé and PDF
 - **AdminService**: contacts, registrations + member detail (with email delivery history + resend), access whitelist, activity, db console, corpus (ingest, reindex public/private and embed sweep as jobs via RunJob / GetJob with progress), JD submissions + detail + re-score + fit bands (GetJdFitBands / SetJdFitBands), decision log (ListDecisionLog / ReviewDecision / ExportDecisionLog), operations (GetOpsStatus: is the box busy, what the runner remembers, pipeline counts, host load; GetJobDetail: a job's full event timeline with the gap between reports), evaluations (ListGoldenPostings / UpsertGoldenPosting / SetGoldenActive / LabelGoldenPosting / ListEvalRuns / GetEvalRun, with RunJob(JOB_KIND_EVAL_QUICK) starting a run)
 - **SystemService**: GetVersion (build info); GetGovernanceStatus is declared in the proto but has no api handler (Unimplemented)
+- **Declared but unimplemented** (the proto is the contract, not the state): `AdminService.TestRetrieval` returns 501, so the retrieval tester of FR-ADM-06 has neither handler nor UI; `SystemService.GetGovernanceStatus` likewise; on the sidecar, `Rerank`, `Classify`, `RunJob` and `GetJob`
 - **SidecarService** (internal gRPC): Embed / Generate / RenderResume / Health; Rerank, Classify, RunJob, GetJob are declared but return UNIMPLEMENTED (the admin jobs run inside the api, not the sidecar)
 
 ---
