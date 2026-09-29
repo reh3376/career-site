@@ -471,7 +471,8 @@ The reviewer is a model pipeline, so "did that change help" is not
 answerable by reading the code. It is answerable only by scoring a
 fixed set of postings the owner has already judged, under one
 configuration, before and after. Everything in this section exists to
-make that pair of runs the evidence. Findings and history:
+make that pair of runs the evidence. How to run and read one:
+[`docs/evaluation.md`](evaluation.md). Findings and history:
 [`docs/llm-tuning-log.md`](llm-tuning-log.md).
 
 | ID | Requirement | Priority | Acceptance criteria / notes |

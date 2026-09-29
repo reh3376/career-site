@@ -92,6 +92,7 @@ Full rules: [`proto/README.md`](proto/README.md).
 - [API reference](docs/api/README.md) — generated from the contracts
 - [Endpoint index](docs/api/endpoints.json) — machine-readable, feeds tooling
 - [Architecture Decision Records](docs/adr/README.md)
+- [Evaluating the JD reviewer](docs/evaluation.md): how to run one, how to read the three numbers, the noise floor, and the failure modes; read before running or interpreting an evaluation
 - [LLM tuning log](docs/llm-tuning-log.md): models tried, prompts, score formula, calibration per model; read before touching the JD pipeline
 - [Decision log](docs/decision-log.md): the per-verdict review surface at `/admin/decisions` and the JSONL export for adapter training
 - [JD submitter workflow](docs/jd-submitter-workflow.md): the member-facing flow, progress modal, result panel and emails by fit category
