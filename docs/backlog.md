@@ -1263,8 +1263,17 @@ the gatekeeper refuses the right things is a separate question that
 belongs to agreement and the decision log, not hidden inside a
 reliability number.
 
-**Left to do, two things.** Rows do not yet link to the runs behind
-them, which `RR-14` asks for.
+**Left to do.** ~~Rows do not link to the runs behind them, which
+`RR-14` asks for.~~ **DONE 2026-09-29.** Each criterion now carries a
+link to where its number can actually be read: reliability and latency
+to `/admin/jd`, agreement to the graded verdicts, calibration to
+`/admin/evals`, reach and model load to `/admin/analytics`. A gate that
+states a verdict and offers no way to check it asks to be taken on
+trust, which is the opposite of what a gate is for.
+
+Keyed on the criterion text the view emits, so a criterion added later
+without an entry renders without a link rather than breaking. Verified
+that all seven emitted criteria have one and none is orphaned.
 
 **~~And a criterion with no data vanishes instead of saying so.~~
 FIXED 2026-09-29**, migration 00038, after building the empty database
