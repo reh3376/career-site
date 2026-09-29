@@ -164,6 +164,23 @@ type EvalRun struct {
 	StartedAt         time.Time
 	FinishedAt        *time.Time
 	Items             []EvalItem
+	// CorpusDocuments is what the corpus held when the run started,
+	// captured because the corpus is mutable and has no delete, so a
+	// later ingest otherwise makes an older run unreadable. Populated
+	// by GetEvalRun only.
+	CorpusDocuments []EvalCorpusDoc
+}
+
+// EvalCorpusDoc is one document the corpus held when a run began. The
+// title and kind are copied rather than joined, so re-indexing a
+// document later does not rewrite the history of a run that read the
+// version before it.
+type EvalCorpusDoc struct {
+	DocumentID int64
+	Title      string
+	SourceKind string
+	Visibility string
+	ChunkCount int
 }
 
 // EvalItem is one posting's result inside one evaluation.
@@ -200,6 +217,26 @@ func (r *Repo) StartEvalRun(ctx context.Context, e EvalRun) (int64, error) {
 		return 0, fmt.Errorf("start eval run: %w", err)
 	}
 	return id, nil
+}
+
+// SnapshotEvalCorpus records what the corpus held for this run.
+//
+// One statement rather than a row per document: the list is small and
+// this runs on the path that starts a four-hour job, so it should cost
+// nothing and never be the reason a run fails to start. A failure here
+// is returned and logged by the caller but does not stop the run,
+// because an evaluation without its manifest is still worth having.
+func (r *Repo) SnapshotEvalCorpus(ctx context.Context, evalRunID int64) (int, error) {
+	tag, err := r.pool.Exec(ctx, `
+    INSERT INTO eval_run_documents (eval_run_id, document_id, title, source_kind, visibility, chunk_count)
+    SELECT $1, d.id, coalesce(d.title, ''), coalesce(d.source_kind, ''), coalesce(d.visibility, ''),
+           (SELECT count(*) FROM corpus_chunks c WHERE c.document_id = d.id)
+      FROM corpus_documents d
+    ON CONFLICT (eval_run_id, document_id) DO NOTHING`, evalRunID)
+	if err != nil {
+		return 0, fmt.Errorf("snapshot eval corpus: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
 }
 
 // RecordEvalItem stores one posting's result.
@@ -293,7 +330,31 @@ func (r *Repo) GetEvalRun(ctx context.Context, id int64) (*EvalRun, error) {
 		}
 		run.Items = append(run.Items, it)
 	}
-	return &run, itemRows.Err()
+	if err := itemRows.Err(); err != nil {
+		return nil, err
+	}
+
+	// What the corpus held when this run started. Absent for runs that
+	// predate the snapshot, which is reported as an empty list rather
+	// than an error: those runs are still readable, they just cannot
+	// say what they read.
+	docRows, err := r.pool.Query(ctx, `
+    SELECT document_id, title, source_kind, visibility, chunk_count
+      FROM eval_run_documents
+     WHERE eval_run_id = $1
+     ORDER BY source_kind, title, document_id`, id)
+	if err != nil {
+		return nil, fmt.Errorf("get eval corpus: %w", err)
+	}
+	defer docRows.Close()
+	for docRows.Next() {
+		var d EvalCorpusDoc
+		if err := docRows.Scan(&d.DocumentID, &d.Title, &d.SourceKind, &d.Visibility, &d.ChunkCount); err != nil {
+			return nil, fmt.Errorf("get eval corpus: scan: %w", err)
+		}
+		run.CorpusDocuments = append(run.CorpusDocuments, d)
+	}
+	return &run, docRows.Err()
 }
 
 type rowScanner interface {

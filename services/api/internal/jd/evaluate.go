@@ -82,6 +82,20 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 	if err != nil {
 		return "", fmt.Errorf("open the evaluation: %w", err)
 	}
+	// Record what the corpus held, now, before anything is scored. The
+	// fingerprint says whether two runs read the same corpus; this says
+	// what that corpus was, which is the question asked every time a
+	// score moves and the corpus is the suspect. Failure is logged and
+	// not fatal: an evaluation without its manifest is still worth
+	// having, and this must never be the reason a four-hour run refuses
+	// to start.
+	if n, sErr := e.users.SnapshotEvalCorpus(ctx, run.ID); sErr != nil {
+		e.log.Warn("eval: could not record the corpus manifest",
+			slog.Int64("run", run.ID), slog.String("error", sErr.Error()))
+	} else {
+		e.log.Info("eval: corpus manifest recorded",
+			slog.Int64("run", run.ID), slog.Int("documents", n))
+	}
 
 	started := time.Now()
 	// Counted across the run and reported in the summary. Every other

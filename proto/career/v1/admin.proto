@@ -1887,6 +1887,28 @@ message EvalRun {
   google.protobuf.Timestamp finished_at = 20;
   // Per-posting results; populated by GetEvalRun only.
   repeated EvalItem items = 21;
+  // What the corpus held when the run started; populated by GetEvalRun
+  // only. The fingerprint above says whether two runs read the same
+  // corpus; this says what that corpus was. Empty for runs that predate
+  // the snapshot, which means unknown rather than none.
+  repeated EvalCorpusDoc corpus_documents = 22;
+}
+
+// One document the corpus held when an evaluation began. Title and kind
+// are copied at capture rather than joined at read, so re-indexing a
+// document later does not rewrite the history of a run that read the
+// version before it.
+message EvalCorpusDoc {
+  // Corpus document id.
+  int64 document_id = 1;
+  // Document title as it was at capture.
+  string title = 2;
+  // Its source kind, such as career_note or article.
+  string source_kind = 3;
+  // public or corpus_only.
+  string visibility = 4;
+  // Chunks the document held at capture.
+  int32 chunk_count = 5;
 }
 
 // One posting's result inside one evaluation.

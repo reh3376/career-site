@@ -6115,6 +6115,22 @@ One scoring of the whole active golden set under one configuration.
 | `startedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it started. |
 | `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it finished; unset while running. |
 | `items` | [`EvalItem`](#evalitem)[] | array of object |  | Per-posting results; populated by GetEvalRun only. |
+| `corpusDocuments` | [`EvalCorpusDoc`](#evalcorpusdoc)[] | array of object |  | What the corpus held when the run started; populated by GetEvalRun only. The fingerprint above says whether two runs read the same corpus; this says what that corpus was. Empty for runs that predate the snapshot, which means unknown rather than none. |
+
+### EvalCorpusDoc
+
+One document the corpus held when an evaluation began. Title and kind
+are copied at capture rather than joined at read, so re-indexing a
+document later does not rewrite the history of a run that read the
+version before it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documentId` | `int64` | string (decimal) |  | Corpus document id. |
+| `title` | `string` | string |  | Document title as it was at capture. |
+| `sourceKind` | `string` | string |  | Its source kind, such as career_note or article. |
+| `visibility` | `string` | string |  | public or corpus_only. |
+| `chunkCount` | `int32` | number |  | Chunks the document held at capture. |
 
 ### EvalItem
 
