@@ -6,11 +6,11 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-29, 23:30 UTC.
+Last updated 2026-09-30, 00:10 UTC.
 
 ---
 
-## 1. Sequencing changed: the scheduler comes before run 15
+## 1. Sequencing: the scheduler comes before run 15
 
 Owner, 2026-09-29: *"I want the scheduler, deployed, fully tested, live
 tested, and working in this application before we start the next
@@ -67,43 +67,41 @@ knee from historian data` is indistinguishable from him claiming it.
 **It gets its own run**, at the owner's request, so run 15 changes
 exactly one thing and is a genuine single-variable test.
 
-## 4. Meeting scheduler, actively being built
+## 4. Meeting scheduler, everything but the Google provider
 
-FR-CNT-23/26/27/28, FR-ADM-13, decision D-22.
+FR-CNT-23/26/27/28, FR-ADM-13, decision D-22. Branch
+`feat/scheduler-meetings`.
 
-**Settled by the owner 2026-09-29:**
+**Settled by the owner 2026-09-29:** members only, because the target is
+his main personal calendar and an open page would let anyone hold real
+hours on it. Free/busy only, never event contents. 15, 30 or 45 minutes,
+the member's choice. 15 minutes of clearance, not held in advance, so a
+15-minute meeting consumes 30 of the day, a 30 consumes 45, a 45
+consumes 60. The calendar is re-queried immediately before booking.
+America/New_York, stated beside every time, never converted. A
+downloadable `.ics` beside the event.
 
-- **Members only**, not the public page the FSD originally specified.
-  His reason: the target is his **main personal calendar**, so an
-  unauthenticated visitor could block real time on it.
-- **Free/busy only**, never `events.list`, for the same reason: this
-  application must never hold the contents of his private calendar.
-- **15, 30 or 45 minutes**, the member's choice.
-- **15 minutes of clearance** between meetings, not held in advance. A
-  15-minute meeting consumes 30 of the day, a 30 consumes 45, a 45
-  consumes 60.
-- **The calendar is re-queried immediately before booking**, because
-  the list the member saw is stale by the time they submit.
-- **America/New_York, stated next to every time**, not converted to the
-  visitor's zone. Stored as an IANA name, never an offset.
-- **A downloadable `.ics`** beside the calendar event.
-- Windows: Tue, Wed, Thu, 09:00 to 12:00 and 14:00 to 16:00.
-
-**Built and merged:** availability computation, clearance arithmetic,
+**Built and tested:** availability and clearance arithmetic, the
 confirmation re-check, the `calendar.Provider` seam with a stub and
-`NotConnected`, `meeting_bookings` with a gist exclusion constraint,
-and the repository translating `23P01` into a taken slot. 32 tests,
-including both DST offsets either side of 2026-11-01 and the
-constraint verified against `pgvector:pg16`.
+`NotConnected`, `meeting_bookings` with a gist exclusion constraint, the
+repository, the settings store, `MeetingService` and its handler, the
+`/meetings` page, the `.ics` endpoint, and `/admin/scheduler`. Both
+landing surfaces, the member home in both modes, the hamburger menu and
+the admin nav all point at it.
 
-**Not built:** the Google provider, the admin windows surface, the
-member booking UI, the `.ics` download, and OAuth token storage
-(needs AES-GCM; only HMAC exists today).
+**Not built: the Google provider.** Blocked on the owner's OAuth client
+(Web application, redirect
+`https://rogerhenley.dev/admin/scheduler/callback`, consent screen left
+in Testing with his address as the only test user). Also outstanding
+from FR-ADM-13: the connect flow, the encrypted refresh token (needs
+AES-GCM; only HMAC exists today) and the recent-bookings list.
 
-**Waiting on the owner:** a Google Cloud OAuth client (Web
-application), redirect `https://rogerhenley.dev/admin/scheduler/callback`.
-The consent screen can stay in Testing with his address as the only
-test user, which avoids Google's verification review.
+**Deliberately not deployed yet.** The copy on the landing pages
+promises booking, and `access-tiers.ts` says in its own header that the
+list must describe what the software does today. Shipping before the
+provider lands would make that a promise the software answers with "not
+switched on yet". The PR is open for review; the deploy waits for the
+provider.
 
 ## 5. Diagnostics for the next failure, built, awaiting deploy
 
