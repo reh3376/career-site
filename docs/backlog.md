@@ -48,6 +48,24 @@ in the sections below.
 - **Articles. DECIDED: public.** Most were posted publicly on LinkedIn
   already, so gating them buys nothing and costs discovery.
 
+## minio is no longer anonymously pullable
+
+`quay.io/minio/minio:latest` began returning 401 to anonymous pulls on
+2026-09-30, mid-rollout. Verified that quay issues an anonymous token
+and then still refuses the manifest, so this is a policy change rather
+than a blip, and pinning a tag does not help.
+
+Nothing is broken today: the running container keeps its cached image,
+and `deploy/rollout.sh` now pulls only the three images this repository
+publishes, so a release can no longer be broken by a third party.
+
+**Still open:** the box cannot pull a *new* minio. That matters the
+first time it has to be recreated on a fresh host, or when a
+vulnerability needs patching. Options are a registry credential in
+`.env.prod`, mirroring the image into ghcr next to ours, or replacing
+minio with something else. Object storage is only used for the private
+corpus, so the blast radius is small and the decision is not urgent.
+
 ## Pin the remaining remote buf plugins
 
 `proto/buf.gen.yaml` uses four unpinned remote plugins:
