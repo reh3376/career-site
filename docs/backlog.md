@@ -48,6 +48,27 @@ in the sections below.
 - **Articles. DECIDED: public.** Most were posted publicly on LinkedIn
   already, so gating them buys nothing and costs discovery.
 
+## Pin the remaining remote buf plugins
+
+`proto/buf.gen.yaml` uses four unpinned remote plugins:
+`protocolbuffers/go`, `connectrpc/go`, `protocolbuffers/python` and
+`protocolbuffers/pyi`. An unpinned remote plugin makes `make gen`
+non-reproducible: buf resolves the newest published version at
+generation time, so an upstream release changes the committed output
+with no code change, `check-gen` fails on main, and the `images` job
+that the deploy depends on is skipped.
+
+That is not hypothetical. It happened on 2026-09-30 with
+`bufbuild/es`, which was pinned to `v2.16.0` in response. The other
+four are the same hazard, unpinned only because pinning to a guessed
+version breaks generation outright and each needs its current version
+read off a successful run first.
+
+**How:** run `make gen`, read each generator's version from the header
+of a file it produced (`protoc-gen-go v1.36.12`, the Python runtime
+line, and so on), pin each as `remote: buf.build/<plugin>:<version>`,
+regenerate, and confirm the tree is unchanged before committing.
+
 ## 1b. Direction, settled 2026-09-22
 
 A go-to-market plan (`docs/personal/review/GTM.md`, gitignored) proposes
