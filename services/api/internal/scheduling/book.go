@@ -32,6 +32,9 @@ type Booking struct {
 	// the handler, which owns the wording, rather than here, which owns
 	// the booking.
 	ContactLine string
+	// ContactPreference is the member's own free text, kept apart from
+	// the structured fields so it reaches the owner unedited.
+	ContactPreference string
 }
 
 // Store is what booking needs from the database. Claim is the important

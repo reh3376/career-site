@@ -1,0 +1,35 @@
+<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;line-height:1.5;color:#1a1a1a">
+<p style="margin:0 0 4px"><strong>{{.MemberName}}</strong> booked {{.DurationMinutes}} minutes.</p>
+<p style="margin:0 0 16px;font-size:20px"><strong>{{.When}}</strong>
+<span style="color:#666;font-size:14px">({{.ZoneLabel}})</span></p>
+
+{{if .NoEvent}}
+<p style="margin:0 0 16px;padding:10px 12px;border-left:3px solid #b4471f;background:#faf6f4">
+<strong>The slot is held here but no event reached your calendar.</strong>
+Cancel and rebook it, or add it by hand, or the time is blocked for nobody.
+</p>
+{{end}}
+
+<table cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">
+<tr><td style="color:#666;padding:2px 16px 2px 0;vertical-align:top">Who</td>
+<td style="padding:2px 0">{{.MemberName}} &lt;{{.MemberEmail}}&gt;{{if .Organization}}<br>{{.Organization}}{{end}}{{if .StatedRole}}<br>{{.StatedRole}}{{end}}</td></tr>
+<tr><td style="color:#666;padding:2px 16px 2px 0;vertical-align:top">How</td>
+<td style="padding:2px 0">{{.HowLine}}</td></tr>
+{{if .MemberSince}}<tr><td style="color:#666;padding:2px 16px 2px 0;vertical-align:top">Member since</td>
+<td style="padding:2px 0">{{.MemberSince}}</td></tr>{{end}}
+{{if .Submissions}}<tr><td style="color:#666;padding:2px 16px 2px 0;vertical-align:top">JD reviews run</td>
+<td style="padding:2px 0">{{.Submissions}}</td></tr>{{end}}
+</table>
+
+{{if .Topic}}
+<p style="margin:0 0 4px;color:#666;font-size:14px">What they want to discuss</p>
+<p style="margin:0 0 16px;padding:10px 12px;background:#f4f2ee;white-space:pre-wrap">{{.Topic}}</p>
+{{end}}
+{{if .ContactPreference}}
+<p style="margin:0 0 16px;font-size:14px"><span style="color:#666">Also:</span> {{.ContactPreference}}</p>
+{{end}}
+
+<p style="margin:0"><a href="{{.SchedulerURL}}" style="color:#1f4b5f">Cancel or review on the scheduler</a></p>
+<p style="margin:24px 0 0;color:#999;font-size:12px">career-site (scheduler)</p>
+</body></html>
