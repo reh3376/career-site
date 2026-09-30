@@ -24,19 +24,43 @@ const (
 	meetingTypePhone = "phone"
 )
 
-// phonePattern is the owner's stated shape: a country code, a space,
-// then the ten-digit number. "+1 5135551234" and "1 5135551234" both
-// pass.
+// Phone numbers, validated by how much can honestly be asserted.
 //
-// Deliberately strict, and deliberately escapable. A number that does
-// not fit this shape is not an error the member should have to argue
-// with, so leaving it empty says "the number is in the comments" and
-// the booking proceeds. The rule exists to stop a mistyped number
-// reaching the owner looking correct, not to refuse foreign numbers.
-var phonePattern = regexp.MustCompile(`^\+?[0-9]{1,3} [0-9]{10}$`)
+// North American numbers are always ten digits after the +1, so saying
+// so catches a transposed or dropped digit, which is the whole reason
+// to have a rule: a mistyped number that reaches the owner looking
+// correct is worse than no number at all.
+//
+// Everywhere else the national length genuinely varies, from seven
+// digits to twelve, so a fixed rule would reject real numbers. The
+// check there is only that it is plausibly a phone number at all.
+// E.164 caps the whole thing at fifteen digits including the country
+// code, which is the outer bound used here.
+//
+// Both shapes are escapable. A number that fits neither is not an
+// error a member should have to argue with, so leaving it blank says
+// the number is in the comments and the booking proceeds.
+var (
+	phoneNANP  = regexp.MustCompile(`^\+?1 [0-9]{10}$`)
+	phoneOther = regexp.MustCompile(`^\+?[0-9]{1,3} [0-9]{4,14}$`)
+)
 
 var errPhoneShape = errors.New(
-	"give the number as a country code, a space, then ten digits, for example +1 5135551234, or leave it blank and say it in the comments")
+	"that does not look like a complete number; a North American number is ten digits after +1, or leave it blank and say it in the comments")
+
+// validPhone reports whether a submitted number is one we will pass on
+// to the owner.
+func validPhone(s string) bool {
+	if phoneNANP.MatchString(s) {
+		return true
+	}
+	// The NANP rule is the stricter one and owns +1 entirely, so a +1
+	// number that failed it must not fall through to the looser check.
+	if strings.HasPrefix(s, "+1 ") || strings.HasPrefix(s, "1 ") {
+		return false
+	}
+	return phoneOther.MatchString(s)
+}
 
 type meetingContact struct {
 	Type     string
@@ -70,7 +94,7 @@ func contactFromRequest(req *careerv1.BookMeetingRequest) (meetingContact, error
 		}
 		phone := strings.TrimSpace(req.GetPhoneNumber())
 		// Empty is the documented escape hatch, not an oversight.
-		if phone != "" && !phonePattern.MatchString(phone) {
+		if phone != "" && !validPhone(phone) {
 			return out, errPhoneShape
 		}
 		out.Phone = phone
