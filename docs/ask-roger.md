@@ -44,7 +44,7 @@ landed in the same commit as the persona and not after it.
 | `/ask` page and side panel | **Not built** | — |
 | Admin grading console for chat | **Not built** | `/admin/decisions` exists for JD rows |
 | Q&A bank admin surface | **Not built** | — |
-| Phrasing embedding job | **Not built** | repo methods exist, nothing calls them |
+| Phrasing embedding job | **Built, tested, scheduled** | `chat/qaembed.go`, every 5 min |
 | Golden set (FR-CHAT-15) | **Not built** | — |
 
 Migrations 00045 to 00048 are committed and have been applied to a
@@ -353,19 +353,18 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 8. Next steps, in order
 
-1. The phrasing embedding job, so bank entries can match at all. The
-   bank cannot fire until this exists, which means the fast path does
-   not yet exist either.
+1. **The Q&A bank admin surface**, so entries can be written at all.
+   Everything behind the bank now works and there is no way to put an
+   entry in it, so the fast path still does not exist in practice.
 2. `/ask` and the side panel. **Live test and UI/UX review before this
    is called done.**
 3. The admin grading console: the chat review queue, the rubric, and
    the `human_answer` box. Built for speed of grading, because the
    owner grading a hundred answers is what produces the dataset.
-4. The Q&A bank admin surface, so entries can be written at all.
-5. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
-6. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
-7. Escalation (FR-CHAT-10).
-8. The golden set (FR-CHAT-15), which then calibrates §6.1.
+4. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
+5. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
+6. Escalation (FR-CHAT-10).
+7. The golden set (FR-CHAT-15), which then calibrates §6.1.
 
 ---
 

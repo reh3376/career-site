@@ -191,6 +191,7 @@ func main() {
 	// because they share the gateway, the embedder and the same
 	// precondition: a sidecar that can name a real model.
 	var chatService *chat.Service
+	var qaEmbedder *chat.QAEmbedder
 	if sc != nil {
 		// The requirement-judgment assessor only makes sense with a
 		// real LLM behind the sidecar. The stub provider produces
@@ -244,6 +245,13 @@ func main() {
 			chatService = &chat.Service{
 				Embed: ingest.SidecarEmbed{Client: sc},
 				Model: gateway,
+				Store: userRepo,
+				Log:   log,
+			}
+			// Without this the Q&A bank is present, correct and
+			// unreachable: a phrasing with no vector never matches.
+			qaEmbedder = &chat.QAEmbedder{
+				Embed: ingest.SidecarEmbed{Client: sc},
 				Store: userRepo,
 				Log:   log,
 			}
@@ -414,6 +422,16 @@ func main() {
 		scheduler.Job{Name: "auto-decline", Interval: cfg.ExpirySchedulerInterval, Run: autoDecline.Run},
 		// Identity retention on the event stream: blank user, session,
 		// anon id and address hash on rows older than the window.
+		// Fills in Q&A phrasing vectors. Five minutes because the only
+		// thing waiting on it is an entry the owner just wrote or
+		// re-worded, and an entry that cannot be matched for an hour
+		// looks like the bank is broken.
+		scheduler.Job{Name: "qa-embed", Interval: 5 * time.Minute, Run: func(ctx context.Context) error {
+			if qaEmbedder == nil {
+				return nil
+			}
+			return qaEmbedder.Run(ctx)
+		}},
 		scheduler.Job{Name: "events-anonymize", Interval: 24 * time.Hour, Run: func(ctx context.Context) error {
 			n, err := eventWriter.AnonymizeOlderThan(ctx, cfg.EventIdentityRetention)
 			if err != nil {
