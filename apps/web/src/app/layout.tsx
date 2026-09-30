@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 
 import { EventBeacon } from "@/components/event-beacon";
 import { SiteFooter } from "@/components/site-footer";
+import { AskPanel } from "@/components/ask/ask-panel";
 import { SiteHeader } from "@/components/site-header";
 import { getUiMode } from "@/lib/ui-mode";
+import { getSessionUser } from "@/lib/session-user";
 
 import "./globals.css";
 
@@ -66,6 +68,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // this attribute; pages that want mode-specific structure branch on
   // getUiMode() themselves.
   const mode = await getUiMode();
+  // Whether to offer the assistant at all. A failure here must not take
+  // the whole site down for a garnish, so it degrades to "no panel".
+  let member = false;
+  try {
+    member = Boolean(await getSessionUser());
+  } catch {
+    member = false;
+  }
   return (
     <html
       lang="en"
@@ -76,6 +86,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        {/* Mounted in the layout, not in each page, so the thread
+            survives navigation (FR-CHAT-01). Rendered only for a
+            signed-in member: an anonymous visitor cannot use the
+            assistant and should not be offered it. */}
+        {member ? <AskPanel /> : null}
         <EventBeacon />
       </body>
     </html>

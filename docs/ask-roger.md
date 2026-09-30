@@ -42,7 +42,7 @@ landed in the same commit as the persona and not after it.
 | Answer pipeline | **Built, tested, wired** | `internal/chat/answer.go` |
 | Streaming transport | Stream is real, **one delta** until the sidecar streams | `handlers/chat.go` |
 | Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
-| `/ask` page and side panel | **Not built** | — |
+| `/ask` page and side panel | **Built, live tested locally** | `app/ask/`, `components/ask/` |
 | Admin grading console for chat | **Built, never seen live** | `/admin/decisions` |
 | Q&A bank admin surface | **Built, live tested locally** | `/admin/qa`, `handlers/admin_qa.go` |
 | Phrasing embedding job | **Built, tested, scheduled** | `chat/qaembed.go`, every 5 min |
@@ -366,21 +366,35 @@ including `first_token_ms`, and the `human` block with verdict, note,
 2. **FR-CHAT-11 is not met and will not be.** 2 s p50 to first token
    against 11 to 25 s measured. The requirement should be amended to
    match the hardware, or the hosted provider in §3 reopened.
-3. **Nothing streams.** The sidecar gateway is single-shot, so
+3. **Server streaming was broken until 2026-09-30.** The logging
+   middleware wrapped the `ResponseWriter` in a type that embedded the
+   interface, which gave it the interface's methods and none of the
+   optional ones, so `http.Flusher` was silently removed. connect-go
+   checks for it on a streaming handler and refused every call with
+   `*server.recorder does not implement http.Flusher`. `SendMessage`
+   is the only streaming RPC, so this was the whole assistant failing
+   with an internal error while every unary RPC on the same mux worked.
+
+   It compiled, it passed the Go tests and it passed the browser build.
+   It was found by sending a real Connect stream frame at a running
+   server, and there is now a type assertion in
+   `internal/server/recorder_test.go` so it cannot come back quietly.
+
+4. **Nothing streams yet.** The sidecar gateway is single-shot, so
    `first_token_ms` currently records the whole model call rather than
    the first token. It is written that way rather than left at zero,
    which would read as "instant" in the metrics, but it is not yet
    measuring what it is named for. Streaming needs a new sidecar RPC;
    the seam is `chat.Generator`.
-4. **The persona has no schema.** It is the only prompt in the registry
+5. **The persona has no schema.** It is the only prompt in the registry
    without one, because it streams prose. The grammar-level guarantee
    that stopped the judge runaway does not exist here; rules 9 and
    `AskRogerAnswerMaxTokens` are all that bound an answer, and a
    response that hits the cap stops mid-sentence.
-5. **`Fingerprints()` now includes the persona in every JD run record.**
+6. **`Fingerprints()` now includes the persona in every JD run record.**
    Noise in that record, kept deliberately: it is a snapshot of what
    every prompt was, not a list of which ran.
-6. **The local dev database is fixed.** It was stuck at migration 31
+7. **The local dev database is fixed.** It was stuck at migration 31
    with migration 32 failing against an older view shape. Resolved by
    dropping the derived views and re-applying migration 29's
    definitions by hand, then letting goose replay 31 to 48. Only views
@@ -395,7 +409,8 @@ including `first_token_ms`, and the `human` block with verdict, note,
    local database is still wedged**; production is unaffected and is on
    44. Recreating the local database is the fix and it destroys local
    dev data, so it is the owner's call.
-7. **Nothing here has been seen by a human.** No UI exists yet. Per the
+8. **Roger has not opened any of it.** The surfaces exist and have
+   been exercised locally, not reviewed. Per the
    owner's standing rule, no UI work counts as complete until it is
    deployed, opened, and reviewed with him.
 
