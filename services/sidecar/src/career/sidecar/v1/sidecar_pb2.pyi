@@ -211,20 +211,24 @@ class GenerateRequest(_message.Message):
     def __init__(self, system: _Optional[str] = ..., user: _Optional[str] = ..., max_tokens: _Optional[int] = ..., temperature: _Optional[float] = ..., json: _Optional[bool] = ..., trace_id: _Optional[str] = ..., json_schema: _Optional[str] = ...) -> None: ...
 
 class GenerateResponse(_message.Message):
-    __slots__ = ("text", "model", "prompt_tokens", "completion_tokens", "latency_ms", "finish_reason")
+    __slots__ = ("text", "model", "prompt_tokens", "completion_tokens", "latency_ms", "finish_reason", "prompt_eval_ms", "eval_ms")
     TEXT_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     PROMPT_TOKENS_FIELD_NUMBER: _ClassVar[int]
     COMPLETION_TOKENS_FIELD_NUMBER: _ClassVar[int]
     LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
     FINISH_REASON_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_EVAL_MS_FIELD_NUMBER: _ClassVar[int]
+    EVAL_MS_FIELD_NUMBER: _ClassVar[int]
     text: str
     model: str
     prompt_tokens: int
     completion_tokens: int
     latency_ms: int
     finish_reason: str
-    def __init__(self, text: _Optional[str] = ..., model: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., finish_reason: _Optional[str] = ...) -> None: ...
+    prompt_eval_ms: int
+    eval_ms: int
+    def __init__(self, text: _Optional[str] = ..., model: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., finish_reason: _Optional[str] = ..., prompt_eval_ms: _Optional[int] = ..., eval_ms: _Optional[int] = ...) -> None: ...
 
 class RenderResumeRequest(_message.Message):
     __slots__ = ("resume_json", "owner_password", "trace_id")

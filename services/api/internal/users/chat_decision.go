@@ -122,10 +122,20 @@ type ChatQALookup struct {
 
 // ChatTimings is where the reader's wait went.
 type ChatTimings struct {
-	EmbedMs      int64 `json:"embed_ms"`
-	QAMatchMs    int64 `json:"qa_match_ms"`
-	RetrieveMs   int64 `json:"retrieve_ms"`
+	EmbedMs    int64 `json:"embed_ms"`
+	QAMatchMs  int64 `json:"qa_match_ms"`
+	RetrieveMs int64 `json:"retrieve_ms"`
+	// FirstTokenMs is the wait before the first word. Until the gateway
+	// streams, this is the provider's own prompt-evaluation time, which
+	// is the thing a reader actually waits through and is measured
+	// rather than guessed.
 	FirstTokenMs int64 `json:"first_token_ms"`
+	// PromptEvalMs and GenerateMs are the provider's own split of the
+	// model call. Together they say whether a slow answer was slow
+	// because it read too much or because it wrote too much, which are
+	// fixed in completely different ways.
+	PromptEvalMs int64 `json:"prompt_eval_ms"`
+	GenerateMs   int64 `json:"generate_ms"`
 	TotalMs      int64 `json:"total_ms"`
 }
 
@@ -169,7 +179,8 @@ type ChatDecisionOutput struct {
 func NewChatDecision(
 	messageID int64, model, promptText, responseText string,
 	in ChatDecisionInput, out ChatDecisionOutput,
-	promptTokens, completionTokens int32, callErr string,
+	promptTokens, completionTokens int32, promptVersion, numCtx int,
+	callErr string,
 ) (Decision, error) {
 	inJSON, err := json.Marshal(in)
 	if err != nil {
@@ -188,11 +199,17 @@ func NewChatDecision(
 		model = "code"
 	}
 	return Decision{
-		Kind:          "chat_answer",
-		RefKind:       "chat_message",
-		RefID:         messageID,
-		Model:         model,
-		PromptID:      "ask_roger_persona",
+		Kind:     "chat_answer",
+		RefKind:  "chat_message",
+		RefID:    messageID,
+		Model:    model,
+		PromptID: "ask_roger_persona",
+		// Recorded rather than left at zero. A row that cannot say
+		// which persona version wrote it, or how much context the model
+		// was given, cannot be compared against another row, and
+		// comparing rows is the entire purpose of the table.
+		PromptVersion: promptVersion,
+		NumCtx:        numCtx,
 		Input:         inJSON,
 		Output:        outJSON,
 		PromptText:    promptText,

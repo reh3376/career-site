@@ -1181,7 +1181,19 @@ type GenerateResponse struct {
 	// Wall-clock time of the provider call in milliseconds.
 	LatencyMs int64 `protobuf:"varint,5,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`
 	// Provider finish reason (`stop`, `length`, ...), empty if unknown.
-	FinishReason  string `protobuf:"bytes,6,opt,name=finish_reason,json=finishReason,proto3" json:"finish_reason,omitempty"`
+	FinishReason string `protobuf:"bytes,6,opt,name=finish_reason,json=finishReason,proto3" json:"finish_reason,omitempty"`
+	// Milliseconds the provider spent evaluating the prompt, as it
+	// reported them. This is what a reader waits before the first word,
+	// so on a CPU-only host it is the number that decides whether an
+	// answer feels slow; latency_ms alone cannot separate it from the
+	// time spent writing. Zero when the provider does not report it.
+	PromptEvalMs int64 `protobuf:"varint,7,opt,name=prompt_eval_ms,json=promptEvalMs,proto3" json:"prompt_eval_ms,omitempty"`
+	// Milliseconds the provider spent generating, as it reported them.
+	// With prompt_eval_ms this splits the wait into the part that grows
+	// with retrieved context and the part that grows with answer length,
+	// which are fixed in completely different ways. Zero when the
+	// provider does not report it.
+	EvalMs        int64 `protobuf:"varint,8,opt,name=eval_ms,json=evalMs,proto3" json:"eval_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1256,6 +1268,20 @@ func (x *GenerateResponse) GetFinishReason() string {
 		return x.FinishReason
 	}
 	return ""
+}
+
+func (x *GenerateResponse) GetPromptEvalMs() int64 {
+	if x != nil {
+		return x.PromptEvalMs
+	}
+	return 0
+}
+
+func (x *GenerateResponse) GetEvalMs() int64 {
+	if x != nil {
+		return x.EvalMs
+	}
+	return 0
 }
 
 // Résumé render request.
@@ -1632,7 +1658,7 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x04json\x18\x05 \x01(\bR\x04json\x12\"\n" +
 	"\btrace_id\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18@R\atraceId\x12*\n" +
 	"\vjson_schema\x18\a \x01(\tB\t\xbaH\x06r\x04\x18\x80\xfa\x01R\n" +
-	"jsonSchema\"\xd2\x01\n" +
+	"jsonSchema\"\x91\x02\n" +
 	"\x10GenerateResponse\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12#\n" +
@@ -1640,7 +1666,9 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x11completion_tokens\x18\x04 \x01(\x05R\x10completionTokens\x12\x1d\n" +
 	"\n" +
 	"latency_ms\x18\x05 \x01(\x03R\tlatencyMs\x12#\n" +
-	"\rfinish_reason\x18\x06 \x01(\tR\ffinishReason\"\x9a\x01\n" +
+	"\rfinish_reason\x18\x06 \x01(\tR\ffinishReason\x12$\n" +
+	"\x0eprompt_eval_ms\x18\a \x01(\x03R\fpromptEvalMs\x12\x17\n" +
+	"\aeval_ms\x18\b \x01(\x03R\x06evalMs\"\x9a\x01\n" +
 	"\x13RenderResumeRequest\x12,\n" +
 	"\vresume_json\x18\x01 \x01(\tB\v\xbaH\br\x06\x10\x02\x18\xc0\x9a\fR\n" +
 	"resumeJson\x121\n" +

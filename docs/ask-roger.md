@@ -316,6 +316,36 @@ said, then what it was said from.
 until it is deployed, opened and reviewed with him, and there are no
 `chat_answer` rows anywhere yet to render.
 
+### What a row carries, and what it did not
+
+Found by reading the first three real production answers on
+2026-09-30. The rows recorded the answer and almost nothing that makes
+an answer comparable to another answer, which is the whole purpose of
+the table.
+
+| Field | Was | Now |
+|---|---|---|
+| `completion_tokens` | 0, hardcoded | the provider's count |
+| `prompt_version` | 0 | the persona version |
+| `num_ctx` | 0 | the configured window |
+| `run_id` | empty | one id per answer, joinable to the usage ledger |
+| `first_token_ms` | equal to `latency_ms` | the provider's own prompt-eval time |
+| `prompt_eval_ms` / `generate_ms` | absent | the provider's own split |
+| `llm_usage` row | **never written** | written per model call, success or failure |
+
+The last two matter most. Ollama reports `prompt_eval_duration` and
+`eval_duration` on every response and the sidecar simply never read
+them, so a 45 second answer recorded 44975 ms to first token and 45009
+ms total: the same number twice, saying nothing. Without the split
+there is no way to tell an answer that was slow because it **read** too
+much from one that was slow because it **wrote** too much, and those
+are fixed in opposite directions (show fewer passages, or ask for
+shorter answers).
+
+`llm_usage` was worse than incomplete, it was empty. That is the table
+the monthly budget cap reads from (FR-CHAT-12), so the cap could never
+have fired, and chat spend was invisible next to the JD reviewer's.
+
 ### Export
 
 `ExportDecisionLog` (admin, MFA-fresh) emits JSON Lines. Each line

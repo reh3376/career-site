@@ -309,6 +309,18 @@ message GenerateResponse {
   int64 latency_ms = 5;
   // Provider finish reason (`stop`, `length`, ...), empty if unknown.
   string finish_reason = 6;
+  // Milliseconds the provider spent evaluating the prompt, as it
+  // reported them. This is what a reader waits before the first word,
+  // so on a CPU-only host it is the number that decides whether an
+  // answer feels slow; latency_ms alone cannot separate it from the
+  // time spent writing. Zero when the provider does not report it.
+  int64 prompt_eval_ms = 7;
+  // Milliseconds the provider spent generating, as it reported them.
+  // With prompt_eval_ms this splits the wait into the part that grows
+  // with retrieved context and the part that grows with answer length,
+  // which are fixed in completely different ways. Zero when the
+  // provider does not report it.
+  int64 eval_ms = 8;
 }
 
 // Résumé render request.

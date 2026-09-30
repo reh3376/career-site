@@ -32,6 +32,10 @@ class GenerateResult:
     prompt_tokens: int
     completion_tokens: int
     finish_reason: str
+    # Ollama reports both in nanoseconds; carried here in milliseconds.
+    # Zero for providers that do not report them (the stub).
+    prompt_eval_ms: int = 0
+    eval_ms: int = 0
 
 
 class LLM(Protocol):
@@ -161,6 +165,12 @@ class OllamaLLM:
             prompt_tokens=prompt_tokens,
             completion_tokens=int(payload.get("eval_count") or 0),
             finish_reason=str(payload.get("done_reason") or ""),
+            # Ollama reports these in nanoseconds. They were already in
+            # the payload and simply never read, which left the API
+            # unable to say how much of a long answer was reading the
+            # prompt and how much was writing the reply.
+            prompt_eval_ms=int(payload.get("prompt_eval_duration") or 0) // 1_000_000,
+            eval_ms=int(payload.get("eval_duration") or 0) // 1_000_000,
         )
 
     # Deliberately short. A health check that can block for ten minutes

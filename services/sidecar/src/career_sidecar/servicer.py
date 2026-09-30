@@ -111,6 +111,8 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             completion_tokens=res.completion_tokens,
             latency_ms=int((time.monotonic() - started) * 1000),
             finish_reason=res.finish_reason,
+            prompt_eval_ms=res.prompt_eval_ms,
+            eval_ms=res.eval_ms,
         )
 
     def Embed(
