@@ -635,6 +635,25 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
+- **`quay.io/minio/minio:latest` is unpinned, and the registry refused
+  us twice on 2026-09-30.** Both rollouts logged
+  `401 Unauthorized` from `quay.io` on the MinIO manifest. Neither
+  failed, because the container kept running on the image already on
+  the box, which is exactly why it is worth fixing before it matters: a
+  deploy onto a host without that image cached would stop. `:latest`
+  also means nothing records which MinIO is actually running. Pin to a
+  digest, the way the other images are.
+
+- **Google refresh tokens expire after seven days while the consent
+  screen stays in Testing.** Connected 2026-09-30, so booking stops
+  around 2026-10-06 and the scheduler will report that Google rejected
+  the stored credential. Reconnect at `/admin/scheduler` fixes it in a
+  click. Two ways out if the weekly reconnect grates: publish the
+  consent screen and go through Google's verification, or accept it and
+  add a reminder. Recorded because a booking flow that stops a week
+  after it starts working looks like a bug and is not one.
+
+
 - **The evaluation run order is invisible in the UI.** `/admin/evals`
   and the progress line both follow `ORDER BY expected_gate DESC, name`
   from `ListGoldenPostings`, so a run goes below-gate postings first
@@ -817,6 +836,36 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   `DeleteCorpusDocument` RPC behind admin plus fresh MFA, or at least a
   documented runbook, would mean the snapshot script is a safety net
   rather than the only route.
+
+## 4c. Test and analysis gaps (opened 2026-09-30)
+
+Measured on 2026-09-30, not estimated. `apps/web` is 117 hand-written
+files and 36 pages.
+
+- **The web app has no tests at all.** Not a low number: zero. No test
+  script in `apps/web/package.json`, no testing dependency, no test
+  file. Go is 25 test files against 113 source files and the sidecar is
+  5 against 9, so this is the one area with nothing. It also covers the
+  whole admin console, where a mistake is only visible to Roger and
+  only after it has happened. Start with the surfaces where a silent
+  break is expensive rather than chasing coverage: the booking flow's
+  slot arithmetic and the clearance rule, the JD upload form's states,
+  and the admin scheduler's save-whole-or-refuse behaviour. Vitest plus
+  Testing Library matches the stack; Playwright only if a real
+  end-to-end case earns it.
+
+- **CI runs `go vet` and nothing else for Go.** No `golangci-lint`, no
+  `staticcheck`, no `gocyclo`. `go vet` catches a narrow, well-chosen
+  set and misses most of what a linter would. These are single-binary
+  additions with no service and no runtime cost. The reason to want
+  them here specifically: `internal/handlers` imports twelve other
+  internal packages and holds the only file over 800 lines, so it is
+  where unused code and accidental complexity will accumulate first.
+
+- **No TypeScript equivalent either.** `knip` or `ts-prune` would find
+  dead exports across a 117-file app that has grown fast. Low value
+  individually, but this is the cheapest way to stop the generated-code
+  and hand-written surfaces drifting apart.
 
 ## 5. Hardening (public repo)
 

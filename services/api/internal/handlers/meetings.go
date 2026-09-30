@@ -14,6 +14,7 @@ import (
 	careerv1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/calendar"
+	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/scheduling"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -37,6 +38,21 @@ type Meetings struct {
 	// organizer is the address the calendar file comes from. Empty
 	// falls back to the site's own.
 	organizer string
+	// Booking notices to the owner. A nil mailer or empty owner address
+	// means no notice, which is the dev default and never an error: the
+	// booking still happens and still shows on the scheduler page.
+	mailer     email.Provider
+	mailFrom   string
+	ownerEmail string
+	webBaseURL string
+}
+
+// SetOwnerNotice installs what the booking notice needs. Separate from
+// the constructor because the mailer is wrapped in the audit sink after
+// the repository exists, so it is not available when this handler is
+// built.
+func (h *Meetings) SetOwnerNotice(m email.Provider, from, owner, webBaseURL string) {
+	h.mailer, h.mailFrom, h.ownerEmail, h.webBaseURL = m, from, owner, webBaseURL
 }
 
 // NewMeetings wires the handler. A nil calendar provider is not an
@@ -178,10 +194,11 @@ func (h *Meetings) BookMeeting(
 		Start:   start,
 		DurMins: dur,
 
-		MeetingType:   contact.Type,
-		VideoProvider: contact.Provider,
-		PhoneNumber:   contact.Phone,
-		ContactLine:   contactLine(contact, member.Name),
+		MeetingType:       contact.Type,
+		VideoProvider:     contact.Provider,
+		PhoneNumber:       contact.Phone,
+		ContactLine:       contactLine(contact, member.Name),
+		ContactPreference: req.Msg.GetContactPreference(),
 	})
 	// Two ways the same thing happens: the database refused the claim
 	// (another member got there first), or the calendar's second look
@@ -202,6 +219,9 @@ func (h *Meetings) BookMeeting(
 			slog.Int64("user", member.ID), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("the meeting could not be booked"))
 	}
+
+	// After the booking is safely stored, and never allowed to fail it.
+	h.notifyOwnerBooked(ctx, member, booked, set, contact)
 
 	return connect.NewResponse(&careerv1.BookMeetingResponse{
 		Meeting: toProto(booked, set.Zone),

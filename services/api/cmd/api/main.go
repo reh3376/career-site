@@ -335,6 +335,10 @@ func main() {
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
+	// The owner hears when someone books. Installed here rather than in
+	// NewMeetings because the mailer is wrapped in the audit sink after
+	// the repository exists.
+	meetingsHandler.SetOwnerNotice(mailer, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL)
 	// The console edits the same settings the booking flow reads, and is
 	// told whether a calendar is connected behind them, so it cannot
 	// show a full week of windows that nobody can book.

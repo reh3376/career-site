@@ -1,0 +1,22 @@
+{{.MemberName}} booked {{.DurationMinutes}} minutes.
+
+When:    {{.When}} ({{.ZoneLabel}})
+Who:     {{.MemberName}} <{{.MemberEmail}}>{{if .Organization}}
+         {{.Organization}}{{end}}{{if .StatedRole}}
+         {{.StatedRole}}{{end}}
+How:     {{.HowLine}}
+{{if .Topic}}
+About:
+{{.Topic}}
+{{end}}{{if .ContactPreference}}
+Also:    {{.ContactPreference}}
+{{end}}{{if .NoEvent}}
+WARNING: the slot is held here but no event reached your calendar.
+Cancel and rebook it, or add it by hand, or the time is blocked for
+nobody. Details on the scheduler page below.
+{{end}}
+Cancel or review: {{.SchedulerURL}}
+{{if .MemberSince}}Member since:     {{.MemberSince}}
+{{end}}{{if .Submissions}}JD reviews run:   {{.Submissions}}
+{{end}}
+career-site (scheduler)

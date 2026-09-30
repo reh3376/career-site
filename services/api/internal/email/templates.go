@@ -50,6 +50,7 @@ var (
 	PasswordResetTemplate       = mustLoad("password_reset")
 	JdOutcomeTemplate           = mustLoad("jd_outcome")
 	JdResultTemplate            = mustLoad("jd_result")
+	MeetingBookedTemplate       = mustLoad("meeting_booked")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the
