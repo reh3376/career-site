@@ -80,14 +80,36 @@ var ErrQAEntryNotFound = errors.New("no such Q&A entry")
 // bank answer is not generated and therefore cannot qualify itself.
 // The first failure is slow and the second is wrong.
 //
-// NOT YET CALIBRATED. 0.85 is a starting point chosen for that
-// asymmetry, not a measurement. FR-CHAT-15's golden set is what should
-// settle it: the number wanted is the one that separates a paraphrase
-// of a banked question from a different question about the same
-// subject, and those two sit closer together than intuition suggests.
-// Until that runs, this is deliberately too strict rather than
-// approximately right.
-const QAMatchThreshold = 0.85
+// Measured on production against nomic-embed-text on 2026-09-30, with
+// one banked question and seven probes (disabled entries, deleted
+// afterwards, never servable):
+//
+//	1.0000  Are you open to relocating?        (the anchor)
+//	0.8824  are you willing to relocate        paraphrase
+//	0.7941  would you move?                    paraphrase
+//	0.7627  can you relocate for this role     paraphrase
+//	0.5453  where are you based?               same topic, different question
+//	0.4351  what PLC platforms have you used?  unrelated
+//	0.4248  what is your favourite pizza       unrelated
+//	0.3657  do you know Rockwell ControlLogix  unrelated
+//
+// That killed the first guess. 0.85 caught only the closest paraphrase
+// and would have sent "would you move?" to the model for fifteen to
+// twenty-five seconds, which is the exact wait the bank exists to
+// avoid, on a question it already had an answer to.
+//
+// The useful finding is the gap: real paraphrases bottom out around
+// 0.76 and the nearest non-match sits at 0.55, so anything in 0.6 to
+// 0.75 separates them. 0.72 takes all three paraphrases with 0.04 to
+// spare and clears the nearest non-match by 0.17, keeping most of the
+// margin on the side where a mistake is expensive.
+//
+// STILL PROVISIONAL. This is one question family, and a threshold
+// generalised from one anchor is a guess with better manners. It is
+// changed anyway because 0.85 was demonstrably wrong rather than
+// merely unverified. FR-CHAT-15's golden set is what should settle it
+// across many questions; see docs/ask-roger.md.
+const QAMatchThreshold = 0.72
 
 // MatchQA returns the best bank entry for an embedded question, or
 // false if nothing clears the threshold.

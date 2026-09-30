@@ -4,7 +4,8 @@ The state of Phase 4, written to be read cold. What exists, what does
 not, what is known to be wrong, and what is waiting on a decision.
 
 **Last updated 2026-09-30.** Branch `claude_dev01`, head `d16f429`, PR #217.
-Nothing in this document is deployed. Production is on `4afb563`.
+**Deployed to production on 2026-09-30 as `7ca0e52c43bf`**, database at
+migration 48.
 
 Specification lives in [`FSD.md`](FSD.md) §5.5 (FR-CHAT-01..21). This
 document is the state of the build against it and the reasoning that is
@@ -327,13 +328,41 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 6. Known issues and things that are not right yet
 
-1. **`QAMatchThreshold` is not calibrated.** 0.85 is reasoning, not
-   measurement. The asymmetry is why it starts strict: a miss costs the
-   reader the slow path, a false match costs them a confident verbatim
-   answer that *cannot hedge*, because a bank answer is not generated.
-   FR-CHAT-15's golden set is what should settle it. Until then it is
-   deliberately too strict rather than approximately right, and because
-   the bank is empty it currently never fires at all.
+1. **`QAMatchThreshold` is 0.72, measured, and still provisional.**
+   The original 0.85 was reasoning rather than measurement, and the
+   first real measurement killed it. Taken on production against
+   `nomic-embed-text` on 2026-09-30, with one banked question and
+   seven probes written as disabled entries, which can never be
+   matched or served, and deleted afterwards:
+
+       1.0000  Are you open to relocating?        the anchor
+       0.8824  are you willing to relocate        paraphrase
+       0.7941  would you move?                    paraphrase
+       0.7627  can you relocate for this role     paraphrase
+       0.5453  where are you based?               same topic, different question
+       0.4351  what PLC platforms have you used?  unrelated
+       0.4248  what is your favourite pizza       unrelated
+       0.3657  do you know Rockwell ControlLogix  unrelated
+
+   At 0.85 only the closest paraphrase matched. "would you move?"
+   would have gone to the model for fifteen to twenty-five seconds,
+   which is the exact wait the bank exists to avoid, on a question it
+   already had an answer to. The strictness was chosen because a false
+   match is worse than a miss, and that reasoning was sound; the
+   number was simply in the wrong place.
+
+   The useful finding is the gap: real paraphrases bottom out around
+   0.76, the nearest non-match sits at 0.55, so anything from 0.6 to
+   0.75 separates them cleanly. 0.72 takes all three paraphrases with
+   0.04 to spare and clears the nearest non-match by 0.17.
+
+   Still provisional: this is one question family, and a threshold
+   generalised from one anchor is a guess with better manners. It was
+   changed anyway because 0.85 was demonstrably wrong rather than
+   merely unverified. FR-CHAT-15's golden set should settle it across
+   many questions.
+
+   The bank is still empty, so it does not fire at all yet.
 2. **FR-CHAT-11 is not met and will not be.** 2 s p50 to first token
    against 11 to 25 s measured. The requirement should be amended to
    match the hardware, or the hosted provider in §3 reopened.
