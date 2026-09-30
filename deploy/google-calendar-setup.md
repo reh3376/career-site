@@ -171,21 +171,45 @@ Should print `44`.
 
 ### 3.4 Restart the api
 
-Only the environment changed, so the api alone needs recreating:
+Only the environment changed, so the api alone needs recreating. **Use
+the full invocation**, not a bare `docker compose up`:
 
-    docker compose up -d api
+    docker compose --env-file .env.prod \
+      -f docker-compose.yml -f docker-compose.prod.yml \
+      up -d api
+
+Both flags matter, and leaving either out fails in a way that does not
+mention the flag.
+
+`--env-file .env.prod` is what makes Compose read this file at all.
+Without it Compose looks for a plain `.env`, which does not exist here,
+so the container starts with no configuration and cannot even reach the
+database. The symptom is the api crash-looping on
+`password authentication failed for user "career"` and the site
+answering 502 from Caddy, which looks nothing like a missing env file.
+
+`-f docker-compose.prod.yml` is what makes it use the image CI built.
+The prod overlay clears the `build:` stanza, so without it Compose
+rebuilds the api from the server's source checkout, which is slow and
+leaves production running an image nobody has a record of.
 
 ### 3.5 Confirm it read them
 
-    docker compose logs api --since 2m | grep -i 'secrets\|google\|scheduler'
+    docker compose --env-file .env.prod \
+      -f docker-compose.yml -f docker-compose.prod.yml \
+      logs api --since 2m | grep -i 'secrets\|google'
 
 **Silence is success.** The api warns only when something is missing:
 
 - `SECRETS_KEY not set — the meeting scheduler cannot connect a calendar`
 - `Google client credentials not set — booking stays switched off`
 
-If either appears, the variable did not reach the container. Re-check
-3.3, then `docker compose up -d api` again.
+If either appears the variable did not reach the container. That is a
+different failure from the value being wrong: check 3.3, confirm the
+api service in `docker-compose.prod.yml` lists the variable under
+`environment:`, and recreate again. A value present in `.env.prod` but
+absent from the compose file is invisible to the container, because
+`--env-file` feeds Compose's own substitution rather than the process.
 
 ---
 

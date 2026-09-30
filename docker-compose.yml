@@ -70,6 +70,12 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PWNED_CHECK_ENABLED: "0"
+      # Meeting scheduler, optional in dev. Without them the scheduler
+      # pages render and report that booking is not switched on, which
+      # is the same thing production shows before it is connected.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      SECRETS_KEY: ${SECRETS_KEY:-}
       # Optional local admin bootstrap; set both in the repo-root .env
       # (gitignored) to sign into /admin without the email approval flow.
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
