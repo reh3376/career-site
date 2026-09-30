@@ -3,7 +3,7 @@
 The state of Phase 4, written to be read cold. What exists, what does
 not, what is known to be wrong, and what is waiting on a decision.
 
-**Last updated 2026-09-30.** Branch `claude_dev01`, head `f3d567f`.
+**Last updated 2026-09-30.** Branch `claude_dev01`, head `4b0f0a2`.
 Nothing in this document is deployed. Production is on `4afb563`.
 
 Specification lives in [`FSD.md`](FSD.md) §5.5 (FR-CHAT-01..21). This
@@ -38,7 +38,7 @@ landed in the same commit as the persona and not after it.
 | Q&A bank | **Built, tested, not deployed** | migration `00047`, `users/qa.go` |
 | Decision capture for answers | **Built, not deployed** | migration `00048`, `users/chat_decision.go` |
 | Grading vocabulary and rubric | **Built, not deployed** | `users/decision_log.go` |
-| Answer pipeline | **Not built** | — |
+| Answer pipeline | **Built, tested, not wired to an RPC** | `internal/chat/answer.go` |
 | Streaming transport | **Not built** | — |
 | `/ask` page and side panel | **Not built** | — |
 | Admin grading console for chat | **Not built** | `/admin/decisions` exists for JD rows |
@@ -122,24 +122,41 @@ with the owner on 2026-09-30 and not taken up. **Do not assume it.**
 
 Designed, partly built. Steps marked **[built]** exist and are tested.
 
-1. Embed the question once, with `nomic-embed-text`. **[not built]**
+1. Embed the question once, with `nomic-embed-text`. **[built]**
 2. **Q&A bank lookup** with that embedding. `MatchQA` above
    `QAMatchThreshold`. A hit returns the owner's words verbatim and
    stops. **[built]**
-3. **Scope check.** Out of scope, or a restricted topic with no
-   approved bank entry, returns a refusal. No model call. **[not built]**
+3. **Restricted topics.** Compensation, references,
+   employer-confidential matters and personal life (FR-CHAT-06) are
+   refused in code, with no model call. The bank is consulted first, so
+   reaching here means the owner has written no approved statement.
+   Checked in code as well as in persona rule 7 because it is the one
+   category where being talked into an answer does real damage, and
+   because refusing here costs nothing while asking the model to refuse
+   costs twenty seconds. The patterns are deliberately narrow: a false
+   positive silently refuses a fair question, which is the expensive
+   mistake. **[built]**
 4. **Retrieval.** `SearchCorpusForChat`, gated on `chatbot_include` and
    on visibility. Capped at 24 considered, 2 to 3 shown. **[built]**
 5. **Nothing retrieved** returns "I don't have anything in my records
-   about that" (FR-CHAT-03). No model call. **[not built]**
+   about that" (FR-CHAT-03). No model call. **[built]**
 6. **Render.** `RenderAskUser` builds history, numbered passages and
    the question, and returns the citation map. **[built]**
-7. **Generate** through the sidecar gateway, streamed. **[not built]**
+7. **Generate** through the sidecar gateway. **[built, not streamed]**
 8. **Validate citations** against the map; drop markers pointing at
-   nothing. **[not built]**
+   nothing, and tidy the text so the removal does not show. **[built]**
 9. **Persist** message and citations in one transaction. **[built]**
 10. **Log the decision** to `decision_log` as `chat_answer`, on the
-    same best-effort footing as the JD pipeline. **[built, uncalled]**
+    same best-effort footing as the JD pipeline. **[built]**
+
+**Four of the six stages can answer with no model call at all**, which
+is the entire point on this hardware.
+
+Everything except persisting the message is best-effort. A Q&A bank
+failure logs a warning and falls through to the model; a model outage
+degrades to an honest reply (FR-CHAT-17); a decision-log failure
+warns and returns the answer anyway. Only failing to persist the
+member's message is fatal, because then they have nothing.
 
 ### Citations are enforced by construction, not by instruction
 
@@ -275,26 +292,33 @@ including `first_token_ms`, and the `human` block with verdict, note,
    reader the slow path, a false match costs them a confident verbatim
    answer that *cannot hedge*, because a bank answer is not generated.
    FR-CHAT-15's golden set is what should settle it. Until then it is
-   deliberately too strict rather than approximately right.
+   deliberately too strict rather than approximately right, and because
+   the bank is empty it currently never fires at all.
 2. **FR-CHAT-11 is not met and will not be.** 2 s p50 to first token
    against 11 to 25 s measured. The requirement should be amended to
    match the hardware, or the hosted provider in §3 reopened.
-3. **The persona has no schema.** It is the only prompt in the registry
+3. **Nothing streams.** The sidecar gateway is single-shot, so
+   `first_token_ms` currently records the whole model call rather than
+   the first token. It is written that way rather than left at zero,
+   which would read as "instant" in the metrics, but it is not yet
+   measuring what it is named for. Streaming needs a new sidecar RPC;
+   the seam is `chat.Generator`.
+4. **The persona has no schema.** It is the only prompt in the registry
    without one, because it streams prose. The grammar-level guarantee
    that stopped the judge runaway does not exist here; rules 9 and
    `AskRogerAnswerMaxTokens` are all that bound an answer, and a
    response that hits the cap stops mid-sentence.
-4. **`Fingerprints()` now includes the persona in every JD run record.**
+5. **`Fingerprints()` now includes the persona in every JD run record.**
    Noise in that record, kept deliberately: it is a snapshot of what
    every prompt was, not a list of which ran.
-5. **The local dev database has drifted** from the migration history.
+6. **The local dev database has drifted** from the migration history.
    `goose_db_version` was at 30 while migration 31's views already
    existed, and migration 32 fails against the older view shape. Worked
    around by testing against a fresh `career_test` database. **The main
    local database is still wedged**; production is unaffected and is on
    44. Recreating the local database is the fix and it destroys local
    dev data, so it is the owner's call.
-6. **Nothing here has been seen by a human.** No UI exists yet. Per the
+7. **Nothing here has been seen by a human.** No UI exists yet. Per the
    owner's standing rule, no UI work counts as complete until it is
    deployed, opened, and reviewed with him.
 
@@ -321,8 +345,8 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 8. Next steps, in order
 
-1. The answer pipeline (`internal/chat`), wiring §4 steps 1, 3, 5, 7, 8
-   and calling the logging in step 10.
+1. **The `ChatService` RPCs**, so the pipeline is reachable. It is
+   built and tested and nothing outside the API can call it.
 2. The phrasing embedding job, so bank entries can match at all.
 3. Streaming transport, and the honest waiting state.
 4. `/ask` and the side panel. **Live test and UI/UX review before this
