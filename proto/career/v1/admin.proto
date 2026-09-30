@@ -2373,6 +2373,25 @@ message DecisionLogRow {
   // decode is the one worth reading, and it used to be the only one
   // not kept.
   string error = 22;
+  // The wording the owner would have given, for a decision whose
+  // output is prose rather than a label. This is what an adapter is
+  // trained on: with response_text it forms a preference pair, and on
+  // its own it is a supervised target. Empty for a classification
+  // decision, where human_verdict is already the gold output, and
+  // empty for an answer the owner thought was right.
+  string human_answer = 23;
+  // Per-rubric grades, e.g. grounded / citations / voice / scope /
+  // length, each marked yes, partial, no or n/a. One overall verdict
+  // cannot express an answer that is factually right and in the wrong
+  // voice, and cannot produce the grounding and citation-validity
+  // rates the chat acceptance criteria are stated in.
+  map<string, string> human_dimensions = 24;
+  // Milliseconds to the first token. Separate from latency_ms because
+  // on a CPU-only box the first-token wait tracks how much context was
+  // retrieved while the total tracks how much was written, and one
+  // number cannot tell a retrieval regression from a verbose one. Zero
+  // where it does not apply.
+  int64 first_token_ms = 25;
 }
 
 // Filters for the decision-review list.
@@ -2407,8 +2426,20 @@ message ReviewDecisionRequest {
   // The owner's verdict; the vocabulary of the row's output (met /
   // partial / unmet for requirement verdicts).
   string human_verdict = 2;
-  // Optional note explaining the label.
+  // Optional note explaining the label. Read by a human; never used as
+  // a training target. A rewrite goes in human_answer.
   string human_note = 3;
+  // The wording the owner would have given, for a decision whose
+  // output is prose. Optional, and the single most valuable field on
+  // this message: a graded answer with no correction can be counted,
+  // while a graded answer with one can be learned from.
+  string human_answer = 4;
+  // Per-rubric grades for kinds that have a rubric (chat answers:
+  // grounded, citations, voice, scope, length). Each value is yes,
+  // partial, no or n/a. Unknown keys and values are rejected rather
+  // than stored, because a grade nobody can interpret still counts in
+  // a rate.
+  map<string, string> human_dimensions = 5;
 }
 // Empty: success is the absence of an error.
 message ReviewDecisionResponse {}

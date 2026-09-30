@@ -29,7 +29,7 @@ type Prompt struct {
 }
 
 // Registry lists every prompt so an admin surface can enumerate them.
-var Registry = []Prompt{PostingCheck, JDRequirements, RequirementJudge, ResumeTailor}
+var Registry = []Prompt{PostingCheck, JDRequirements, RequirementJudge, ResumeTailor, AskRogerPersona}
 
 // Get returns a prompt by id.
 func Get(id string) (Prompt, bool) {
@@ -55,6 +55,13 @@ func (p Prompt) Fingerprint() string {
 }
 
 // Fingerprints is the whole registry, for a run record.
+//
+// A snapshot of what every prompt looked like at the time, not a list
+// of which ones ran. A JD run therefore carries the assistant's persona
+// fingerprint too, which is noise in that record and is kept anyway:
+// the question a run record has to answer is "what was this system
+// when it produced this", and a partial answer to that is the kind that
+// turns out to be missing exactly the prompt you wanted.
 func Fingerprints() map[string]string {
 	out := make(map[string]string, len(Registry))
 	for _, p := range Registry {

@@ -58,13 +58,17 @@ type ChatMessage struct {
 
 // ChatCitation is one source behind an assistant message. Denormalised
 // at write time so a re-index cannot rewrite what an answer cited.
+// Tagged because these are embedded verbatim in the decision-log
+// export, which is read by a training pipeline rather than by Go.
 type ChatCitation struct {
-	ChunkID   int64
-	ContentID string
-	Title     string
-	Path      string
-	Heading   string
-	Rank      int
+	ChunkID   int64  `json:"chunk_id"`
+	ContentID string `json:"content_id,omitempty"`
+	Title     string `json:"title,omitempty"`
+	// Path is empty for a private-corpus source, which is shown as a
+	// title and never linked (FR-CHAT-04).
+	Path    string `json:"path,omitempty"`
+	Heading string `json:"heading,omitempty"`
+	Rank    int    `json:"rank"`
 }
 
 // ErrConversationNotFound covers both "no such row" and "not yours",

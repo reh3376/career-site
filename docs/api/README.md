@@ -3804,7 +3804,9 @@ changed.
 |---|---|---|---|---|
 | `id` | `string` | string |  | Row id to label. |
 | `humanVerdict` | `string` | string |  | The owner's verdict; the vocabulary of the row's output (met / partial / unmet for requirement verdicts). |
-| `humanNote` | `string` | string |  | Optional note explaining the label. |
+| `humanNote` | `string` | string |  | Optional note explaining the label. Read by a human; never used as a training target. A rewrite goes in human_answer. |
+| `humanAnswer` | `string` | string |  | The wording the owner would have given, for a decision whose output is prose. Optional, and the single most valuable field on this message: a graded answer with no correction can be counted, while a graded answer with one can be learned from. |
+| `humanDimensions` | map<`string`, `string`> | object of string |  | Per-rubric grades for kinds that have a rubric (chat answers: grounded, citations, voice, scope, length). Each value is yes, partial, no or n/a. Unknown keys and values are rejected rather than stored, because a grade nobody can interpret still counts in a rate. |
 
 **Response** — [`ReviewDecisionResponse`](#reviewdecisionresponse)
 
@@ -3816,7 +3818,11 @@ _No fields; send `{}`._
 {
   "id": "string",
   "humanVerdict": "string",
-  "humanNote": "string"
+  "humanNote": "string",
+  "humanAnswer": "string",
+  "humanDimensions": {
+    "key": "string"
+  }
 }
 ```
 
@@ -6861,6 +6867,9 @@ what, and the owner's review of it. See docs/decision-log.md.
 | `reviewedBy` | `string` | string |  | User id of the reviewer (numeric, stringified); empty until reviewed. |
 | `reviewedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the review was saved; unset until reviewed. |
 | `error` | `string` | string |  | Why this call produced no usable verdict; empty when it produced one. A row carrying it still carries prompt_text and response_text, which is the point: the response that failed to decode is the one worth reading, and it used to be the only one not kept. |
+| `humanAnswer` | `string` | string |  | The wording the owner would have given, for a decision whose output is prose rather than a label. This is what an adapter is trained on: with response_text it forms a preference pair, and on its own it is a supervised target. Empty for a classification decision, where human_verdict is already the gold output, and empty for an answer the owner thought was right. |
+| `humanDimensions` | map<`string`, `string`> | object of string |  | Per-rubric grades, e.g. grounded / citations / voice / scope / length, each marked yes, partial, no or n/a. One overall verdict cannot express an answer that is factually right and in the wrong voice, and cannot produce the grounding and citation-validity rates the chat acceptance criteria are stated in. |
+| `firstTokenMs` | `int64` | string (decimal) |  | Milliseconds to the first token. Separate from latency_ms because on a CPU-only box the first-token wait tracks how much context was retrieved while the total tracks how much was written, and one number cannot tell a retrieval regression from a verbose one. Zero where it does not apply. |
 
 ### ListDecisionLogRequest
 
@@ -6892,7 +6901,9 @@ The owner's label for one decision.
 |---|---|---|---|---|
 | `id` | `string` | string |  | Row id to label. |
 | `humanVerdict` | `string` | string |  | The owner's verdict; the vocabulary of the row's output (met / partial / unmet for requirement verdicts). |
-| `humanNote` | `string` | string |  | Optional note explaining the label. |
+| `humanNote` | `string` | string |  | Optional note explaining the label. Read by a human; never used as a training target. A rewrite goes in human_answer. |
+| `humanAnswer` | `string` | string |  | The wording the owner would have given, for a decision whose output is prose. Optional, and the single most valuable field on this message: a graded answer with no correction can be counted, while a graded answer with one can be learned from. |
+| `humanDimensions` | map<`string`, `string`> | object of string |  | Per-rubric grades for kinds that have a rubric (chat answers: grounded, citations, voice, scope, length). Each value is yes, partial, no or n/a. Unknown keys and values are rejected rather than stored, because a grade nobody can interpret still counts in a rate. |
 
 ### ReviewDecisionResponse
 

@@ -44,6 +44,16 @@ type Row = {
   humanVerdict?: string;
   human_note?: string;
   humanNote?: string;
+  // The corrected wording, for a kind whose output is prose. This is
+  // the training target; human_note is a remark about the grade.
+  human_answer?: string;
+  humanAnswer?: string;
+  human_dimensions?: Record<string, string>;
+  humanDimensions?: Record<string, string>;
+  // Milliseconds to the first word, separate from latency_ms because on
+  // a CPU-only box the two move for different reasons.
+  first_token_ms?: number | string;
+  firstTokenMs?: number | string;
   reviewed_at?: string;
   reviewedAt?: string;
 };
@@ -102,6 +112,76 @@ type GateInput = {
 };
 type GateOutput = { outcome?: string };
 
+// One of Ask Roger's answers. Shapes pinned in
+// services/api/internal/users/chat_decision.go.
+type ChatRetrieved = {
+  chunk_id: number;
+  title?: string;
+  similarity: number;
+  citable: boolean;
+  shown: boolean;
+  marker?: number;
+};
+type ChatInput = {
+  question?: string;
+  path?: string;
+  persona_fingerprint?: string;
+  history_turns?: number;
+  corpus_scope?: string;
+  retrieved?: ChatRetrieved[];
+  qa?: {
+    matched?: boolean;
+    entry_id?: number;
+    phrasing?: string;
+    threshold?: number;
+    best_similarity?: number;
+  };
+  timings?: {
+    embed_ms?: number;
+    qa_match_ms?: number;
+    retrieve_ms?: number;
+    first_token_ms?: number;
+    total_ms?: number;
+  };
+};
+type ChatCitation = {
+  chunk_id?: number;
+  title?: string;
+  path?: string;
+  rank?: number;
+};
+type ChatOutput = {
+  text?: string;
+  citations?: ChatCitation[];
+  markers_offered?: number;
+  markers_written?: number;
+  markers_dropped?: number;
+  out_of_scope?: boolean;
+  no_support?: boolean;
+  degraded?: boolean;
+  qa_match?: boolean;
+  finish_reason?: string;
+  truncated?: boolean;
+};
+
+// How the answer was produced. Six different systems working or
+// failing, which render almost identically to a reader, so the grader
+// is told which one they are looking at before anything else.
+const CHAT_PATH_LABEL: Record<string, string> = {
+  qa_bank: "from your Q&A bank, no model",
+  model: "retrieved and generated",
+  degraded: "model unavailable, degraded reply",
+  out_of_scope: "refused as out of scope",
+  no_support: "nothing retrieved, said so",
+  error: "failed before it could answer",
+};
+
+// The rubric, mirroring users.ReviewDimensions. A kind with no entry
+// here is graded by its verdict alone.
+const DIMENSIONS: Record<string, string[]> = {
+  chat_answer: ["grounded", "citations", "voice", "scope", "length"],
+};
+
 // The owner's vocabulary. The first values mirror the model's, so
 // agreement is a direct comparison. `insufficient_evidence` is the
 // reviewer saying they could not judge this from what they were shown;
@@ -112,6 +192,16 @@ const VERDICT_OPTIONS: Record<string, string[]> = {
   jd_requirement_verdict: ["met", "partial", "unmet", "insufficient_evidence"],
   jd_gate: ["above_threshold", "below_threshold", "insufficient_evidence"],
   jd_posting_check: ["posting", "not_posting", "insufficient_evidence"],
+  // "rejected_correctly" exists so a correct refusal is not graded as a
+  // failure, and "needs_edit" is kept apart from "wrong" because it is
+  // the outcome that produces the most useful correction.
+  chat_answer: [
+    "good",
+    "needs_edit",
+    "wrong",
+    "rejected_correctly",
+    "insufficient_evidence",
+  ],
 };
 
 function parse<T>(s: string | undefined): T | null {
@@ -300,6 +390,150 @@ export default async function DecisionsPage({
   );
 }
 
+// One of Ask Roger's answers, laid out for grading rather than for
+// browsing.
+//
+// The order is the order the owner needs it in: what was asked, what
+// was said, then what it was said from. The correction box sits at the
+// bottom seeded with the model's own wording, because the point of
+// this page is not to count answers but to produce the corrected ones,
+// and a correction that costs a retype does not get written.
+function ChatAnswerCard({
+  row,
+  meta,
+  options,
+}: {
+  row: Row;
+  meta: React.ReactNode;
+  options: string[];
+}) {
+  const input = parse<ChatInput>(row.input_json ?? row.inputJson);
+  const output = parse<ChatOutput>(row.output_json ?? row.outputJson);
+  const human = row.human_verdict ?? row.humanVerdict ?? "";
+  const note = row.human_note ?? row.humanNote ?? "";
+  const humanAnswer = row.human_answer ?? row.humanAnswer ?? "";
+  const humanDims = row.human_dimensions ?? row.humanDimensions ?? {};
+  const path = input?.path ?? "";
+  const t = input?.timings ?? {};
+  const firstToken = Number(
+    row.first_token_ms ?? row.firstTokenMs ?? t.first_token_ms ?? 0,
+  );
+  const retrieved = input?.retrieved ?? [];
+  const dropped = output?.markers_dropped ?? 0;
+
+  return (
+    <div>
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        ask roger · {CHAT_PATH_LABEL[path] ?? path}
+      </p>
+      {meta}
+
+      <p className="mt-3 text-base leading-snug text-ink">
+        {input?.question ?? "(question missing)"}
+      </p>
+
+      <div className="mt-3 border-l-2 border-accent bg-paper-2 px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap text-ink">
+        {output?.text ?? row.response_text ?? row.responseText ?? ""}
+      </div>
+
+      {output?.truncated ? (
+        <p className="mt-2 text-sm text-danger">
+          Cut off at the token limit, so it stops mid sentence. That is the cap
+          doing its job, not the model losing the thread; grade the part that
+          is there.
+        </p>
+      ) : null}
+
+      {(output?.citations ?? []).length === 0 ? null : (
+        <ul className="mt-3 space-y-1 text-sm text-ink-2">
+          {(output?.citations ?? []).map((c) => (
+            <li key={`${c.rank}-${c.chunk_id}`}>
+              <span className="font-mono text-ink-3">[{c.rank}]</span>{" "}
+              {c.title || "(untitled)"}{" "}
+              {c.path ? (
+                <span className="font-mono text-[11px] text-ink-3">
+                  {c.path}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {dropped > 0 ? (
+        <p className="mt-2 text-sm text-danger">
+          {dropped} citation {dropped === 1 ? "marker" : "markers"} pointed at
+          nothing and{" "}
+          {dropped === 1 ? "was removed" : "were removed"} before this was
+          shown. The answer claimed support it did not have.
+        </p>
+      ) : null}
+
+      {/* What it was answering from. Grounding is a property of an
+          answer given what it was shown, so a grader cannot mark it
+          from the answer alone. */}
+      <details className="mt-4">
+        <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          what it was shown ({retrieved.filter((r) => r.shown).length} of{" "}
+          {retrieved.length} retrieved)
+        </summary>
+        <ul className="mt-2 space-y-1 text-sm">
+          {retrieved.map((r) => (
+            <li
+              key={r.chunk_id}
+              className={r.shown ? "text-ink" : "text-ink-3"}
+            >
+              <span className="font-mono text-[11px]">
+                {r.marker ? `[${r.marker}]` : "   "} {r.similarity.toFixed(3)}
+              </span>{" "}
+              {r.citable ? (r.title ?? "(untitled)") : "(private)"}{" "}
+              {r.shown ? "" : "· not shown"}
+            </li>
+          ))}
+          {retrieved.length === 0 ? (
+            <li className="text-ink-3">Nothing was retrieved.</li>
+          ) : null}
+        </ul>
+      </details>
+
+      {/* The bank lookup every question goes through. The near misses
+          are what calibrate the threshold, so a miss is worth reading. */}
+      <p className="mt-3 font-mono text-[11px] text-ink-3">
+        q&amp;a bank:{" "}
+        {input?.qa?.matched
+          ? `matched entry ${input.qa.entry_id} on "${input.qa.phrasing}" at ${(input.qa.best_similarity ?? 0).toFixed(3)}`
+          : `no match, closest ${(input?.qa?.best_similarity ?? 0).toFixed(3)} against ${(input?.qa?.threshold ?? 0).toFixed(2)}`}
+        {firstToken
+          ? ` · ${(firstToken / 1000).toFixed(1)} s to first word`
+          : ""}
+        {input?.history_turns
+          ? ` · ${input.history_turns} earlier ${input.history_turns === 1 ? "turn" : "turns"} in the prompt`
+          : ""}
+      </p>
+
+      <details className="mt-2">
+        <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+          the exact prompt
+        </summary>
+        <pre className="mt-2 max-h-[28rem] overflow-auto bg-paper-2 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-ink-2">
+          {row.prompt_text ?? row.promptText ?? "(no model was called)"}
+        </pre>
+      </details>
+
+      <ReviewForm
+        decisionId={row.id}
+        options={options}
+        current={human}
+        note={note}
+        dimensions={DIMENSIONS[row.kind] ?? []}
+        currentDimensions={humanDims}
+        modelAnswer={output?.text ?? ""}
+        currentAnswer={humanAnswer}
+      />
+    </div>
+  );
+}
+
 function DecisionCard({ row }: { row: Row }) {
   const human = row.human_verdict ?? row.humanVerdict ?? "";
   const note = row.human_note ?? row.humanNote ?? "";
@@ -361,6 +595,10 @@ function DecisionCard({ row }: { row: Row }) {
         </details>
       </div>
     );
+  }
+
+  if (row.kind === "chat_answer") {
+    return <ChatAnswerCard row={row} meta={meta} options={options} />;
   }
 
   if (row.kind === "jd_gate") {

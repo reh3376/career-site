@@ -1,4 +1,4 @@
-# Decision log: human-in-the-loop labels for the JD reviewer
+# Decision log: human-in-the-loop labels
 
 **Purpose (owner, 2026-09-21):** "collect logs on decisions, then I will
 review the decision logs to create human-in-the-loop training data."
@@ -12,6 +12,14 @@ rows in `/admin/decisions`, records his own verdict and a note, and
 exports the reviewed rows as JSONL. That export is the training and
 evaluation set for the Ask Roger adapter.
 
+**Since 2026-09-30 the table also holds the assistant's own answers**
+(`kind = chat_answer`), which changed what a row has to carry. The JD
+reviewer's task is classification, so the human verdict *is* the gold
+output and a label was enough. An answer is prose, and a label about
+prose cannot be trained on. Migration `00048` adds the three columns
+that close that gap; see "Generative kinds" below and
+[`ask-roger.md`](ask-roger.md) §5.
+
 ## What is logged
 
 | kind | one row per | input (what it was decided from) | output (what was decided) |
@@ -19,6 +27,29 @@ evaluation set for the Ask Roger adapter.
 | `jd_requirement_verdict` | requirement judged | requirement (id, text, category, weight) and the evidence as rendered to the model: the career facts sheet chunks (`source_kind = profile`, first, whole) then the retrieved chunks (chunk id, kind, access, title, similarity, capped text) | `verdict` (validated), `evidence_ids` (validated against what was offered), `rationale`, `raw_verdict` and `raw_evidence_ids` (before validation) |
 | `jd_gate` | submission scored | match score, retrieval score, threshold (the live "strong" fit band), requirement count, weight total, verdict counts, whether the assessor ran | `outcome` (`above_threshold` or `below_threshold`) |
 | `jd_call_failed` | model call that produced no usable verdict | the prompt exactly as sent (system + user) | the whole raw response, untruncated, with `error` saying why it was unusable |
+| `chat_answer` | answer the assistant gave | question, persona fingerprint, history turns, corpus scope, **the whole retrieval set** (similarity, citable, shown, marker offered), **the Q&A bank lookup whether or not it matched**, per-stage timings | the answer text, surviving citations, markers offered / written / dropped, the four flags (`out_of_scope`, `no_support`, `degraded`, `qa_match`), finish reason |
+
+The `chat_answer` shapes are pinned in Go
+(`users/chat_decision.go`) rather than left to each caller, because an
+export nobody can join on in six months is worth nothing. Three things
+there are not in the JD rows and each earns its place:
+
+- **The path taken** (`qa_bank`, `model`, `degraded`, `out_of_scope`,
+  `no_support`, `error`). Those are different systems working or
+  failing and they render almost identically to a reader. Without it,
+  "the assistant got worse" is unanswerable.
+- **What retrieval found but did not show.** An answer that missed an
+  obvious fact sitting below the cut is a tuning problem, not a model
+  problem, and only this distinguishes them.
+- **The Q&A bank's near misses.** They are the only thing that can
+  calibrate `QAMatchThreshold`, and they exist only because misses are
+  logged as well as hits.
+
+An answer served from the bank, a refusal and a no-support reply all
+have `model = code` and no prompt text. They are still logged: "did the
+bank fire when it should not have" is one of the most valuable labels
+the owner can give, and it cannot be asked about a row that was never
+written.
 
 Every row also carries: `model` (for example `ollama:qwen3:4b-q8_0`),
 `prompt_id`, `prompt_version`, `num_ctx`, `prompt_text` (system + user,
@@ -27,6 +58,12 @@ latency, and the submission it belongs to (`ref_kind = jd_submission`,
 `ref_id`, `key` = requirement id).
 
 Code decisions (`jd_gate`) have `model = code` and empty prompt text.
+
+`first_token_ms` (migration `00048`) sits alongside `latency_ms` and is
+zero where it does not apply. The two are separate because on a
+CPU-only box they move for different reasons: the first tracks how much
+context was retrieved, the second how much was written. One number
+cannot tell a retrieval regression from a verbose one.
 
 ### Calls that failed (migration 00039)
 
@@ -139,6 +176,53 @@ is kept. Reviewing is idempotent: saving again overwrites the label.
 The owner's `jd_outcome` email links straight to the decision review
 for that submission.
 
+### Generative kinds (migration `00048`)
+
+A `chat_answer` row is graded differently, because a verdict alone
+cannot be trained on.
+
+**Verdicts** (`ReviewVocabulary["chat_answer"]`): `good`, `needs_edit`,
+`wrong`, `rejected_correctly`, `insufficient_evidence`.
+
+`rejected_correctly` exists so a correct refusal or a correct "I don't
+know" is not graded as a failure; without it the assistant scores worst
+exactly where it behaved best. `needs_edit` is kept apart from `wrong`
+because it is the outcome that yields the best preference pair: the
+correction and the model's answer then differ in precisely the way an
+adapter needs to learn.
+
+**Dimensions** (`ReviewDimensions["chat_answer"]`), each marked `yes`,
+`partial`, `no` or `n/a`:
+
+    grounded    citations    voice    scope    length
+
+Grounding at 90 % (FR-CHAT-03) and citation validity at 95 %
+(FR-CHAT-04) are stated acceptance criteria, and neither can be
+computed from a single overall verdict. Unknown dimension keys and
+values are **refused**, not dropped: a grade nobody can interpret still
+lands in a rate.
+
+**`human_answer` is the training target.** It is the wording the owner
+would have given, and it is deliberately a separate column from
+`human_note`:
+
+- `human_note` explains the grade to a human reader.
+- `human_answer` is text a model is meant to imitate.
+
+An exporter cannot tell one from the other if they share a column, and
+a note like "too long, and he never worked at Amazon" would be exported
+as though it were a model answer. With `response_text` it is a
+preference pair (`human_answer` chosen, `response_text` rejected); on
+its own it is a supervised target.
+
+This is the highest-value thing the console can ask for. A graded
+answer with no correction can be counted; a graded answer with one can
+be learned from.
+
+**Citation validity is computed, not marked.** `markers_dropped`
+against `markers_written` across rows. A human will not mark several
+hundred answers; a query will.
+
 Rules the review surface keeps:
 
 - Private (`corpus_only`) evidence is shown to the admin in full. It
@@ -166,11 +250,40 @@ The pair (`prompt_text`, `human`) is directly usable as a supervised
 example; (`output`, `human`) is the agreement signal; `input` lets a
 future prompt version be re-run offline against the same evidence.
 
+For a `chat_answer` row the `human` block also carries `answer` and
+`dimensions`, and `usage` carries `first_token_ms`:
+
+```json
+{"id":"981","kind":"chat_answer","ref":{"kind":"chat_message","id":"4412"},
+ "model":"ollama:qwen3:4b-q8_0","prompt":{"id":"ask_roger_persona","version":1},
+ "input":{"question":"...","path":"model","retrieved":[...],"qa":{"matched":false,"best_similarity":0.61},
+          "timings":{"embed_ms":140,"retrieve_ms":22,"first_token_ms":12800,"total_ms":24100}},
+ "output":{"text":"...","citations":[...],"markers_offered":3,"markers_written":2,"markers_dropped":0},
+ "human":{"verdict":"needs_edit","note":"right facts, too formal",
+          "answer":"I ran that programme at Joy Global for eight years.",
+          "dimensions":{"grounded":"yes","citations":"yes","voice":"no","scope":"yes","length":"yes"},
+          "reviewed_at":"..."},
+ "usage":{"prompt_tokens":1019,"completion_tokens":118,"latency_ms":24100,"first_token_ms":12800},
+ "prompt_text":"...","response_text":"...","created_at":"..."}
+```
+
+Two training sets fall out of the same export. Rows where
+`human.answer` is non-empty give supervised pairs
+(`prompt_text` -> `human.answer`) and preference pairs
+(`human.answer` chosen over `response_text`). Rows where it is empty
+and the verdict is `good` confirm the model's own answer as the target.
+
 ## Where it lives in the code
 
 - Migration `00019_decision_log.sql`.
 - `services/api/internal/users/decision_log.go`: insert, list, review,
-  export.
+  export, plus `ReviewVocabulary`, `ReviewDimensions` and
+  `DecisionReview`.
+- Migrations `00039_decision_log_failures.sql` (keep the failing
+  response) and `00048_decision_log_training_targets.sql`
+  (`human_answer`, `human_dimensions`, `first_token_ms`).
+- `services/api/internal/users/chat_decision.go`: the `chat_answer`
+  input and output shapes, the path constants, and `NewChatDecision`.
 - `services/api/internal/jd/assess.go` writes verdict rows after each
   judge call, and `recordFailure` there writes `jd_call_failed`;
   `scorer.go` writes the gate row.

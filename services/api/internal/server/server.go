@@ -31,6 +31,7 @@ type Server struct {
 	activity *handlers.Activity
 	jd       *handlers.Jd
 	meetings *handlers.Meetings
+	chat     *handlers.Chat
 	events   *handlers.Events
 	sidecar  *sidecar.Client
 	db       *db.Pool
@@ -50,7 +51,11 @@ type Deps struct {
 	Activity *handlers.Activity
 	Jd       *handlers.Jd
 	Meetings *handlers.Meetings
-	Events   *handlers.Events
+	// Chat is Ask Roger. Nil leaves the service unmounted, which is
+	// what happens before the sidecar is reachable; the site is
+	// unaffected except that the panel cannot open.
+	Chat   *handlers.Chat
+	Events *handlers.Events
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
 	Users *users.Repo
@@ -69,6 +74,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		activity: deps.Activity,
 		jd:       deps.Jd,
 		meetings: deps.Meetings,
+		chat:     deps.Chat,
 		events:   deps.Events,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
@@ -147,6 +153,11 @@ func (s *Server) routes() http.Handler {
 	if s.meetings != nil {
 		meetingsPath, meetingsHandler := careerv1connect.NewMeetingServiceHandler(s.meetings)
 		mount(meetingsPath, meetingsHandler)
+	}
+
+	if s.chat != nil {
+		chatPath, chatHandler := careerv1connect.NewChatServiceHandler(s.chat)
+		mount(chatPath, chatHandler)
 	}
 
 	if s.events != nil {

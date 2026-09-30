@@ -6,7 +6,7 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-30, 13:10 UTC.
+Last updated 2026-09-30, 15:30 UTC.
 
 ---
 
@@ -111,7 +111,50 @@ model call so it left no `llm_usage` row to infer from.
 Still open: nothing aggregates across runs yet, so "is judging getting
 slower" is still a hand-written query.
 
-## 7. Ask Roger consumes all of this, at two access levels
+## 7. Ask Roger, under construction
+
+**Full state in [`ask-roger.md`](ask-roger.md).** Read that before
+touching anything in Phase 4; this is the summary.
+
+Built and tested on `claude_dev01` at `d16f429`, PR #217, **none of it
+deployed**: the conversation store (00045), the chat retrieval path
+(00046), the persona prompt `ask_roger_persona` v1, the Q&A bank
+(00047), the capture and grading of every answer as training data
+(00048), the answer pipeline (`internal/chat`), six of nine
+`ChatService` RPCs, the phrasing embedding job, and the admin grading
+console.
+
+Not built: the `/ask` page, the side panel, the Q&A bank admin surface
+(so no entry can be written yet, which means the fast path does not
+exist in practice), real streaming, quotas, escalation, the golden set.
+
+**Nothing has been seen live.** No UI has been opened and there are no
+`chat_answer` rows anywhere, so the grading console has never rendered
+a real row.
+
+**The decision that shapes it: build for the CPX41** (owner,
+2026-09-30). Inference stays on the box. Measured there, first token is
+11.4 s at two passages and 37.1 s at six, against FR-CHAT-11's 2 s,
+which is **not met and will not be** on this hardware. Prompt
+evaluation is 32 tok/s and generation 6.5; an identical prompt repeats
+at 0.4 s because Ollama reuses the KV cache. Hence: a byte-identical
+system prompt, few passages, short answers, and the Q&A bank as the
+main path rather than a fallback.
+
+**Training data is a first-class requirement** (owner, 2026-09-30):
+"the ability to quickly and effectively generate useful training
+datasets is just as important as the functionality at this point."
+Every answer writes a `decision_log` row with the retrieval set, the
+bank's near misses, per-stage timings and the citation markers, and the
+owner grades it with a verdict, a per-dimension rubric and **the wording
+he would have given** (`human_answer`), which is the SFT target and the
+chosen half of a preference pair. See
+[`decision-log.md`](decision-log.md).
+
+**No UI work counts as complete** until it is deployed, opened and
+reviewed with the owner (his standing rule, 2026-09-30).
+
+### Two access levels, and why the RPCs matter
 
 Stated by the owner on 2026-09-29: the observability work here is not
 only for the admin console. It is the surface Ask Roger will answer
@@ -147,6 +190,19 @@ Nothing installed, nothing changed.
 
 ## 9. Open questions for the owner
 
+- **Should Whiskey House / MDEMG material inform Ask Roger?** About 10
+  corpus documents. `chatbot_include` defaults to true, so today the
+  answer is yes by default; excluding them is one `UPDATE`.
+- **Deploy migrations 00045 to 00048?** Additive and safe: three new
+  tables, one new column on `corpus_documents`, three on
+  `decision_log`. Nothing reads them yet.
+- **Seed the Q&A bank.** It is the fast path and it is empty. Entries
+  need his own words, not generated ones: that is the property that
+  lets the bank answer restricted topics at all.
+- **The local dev database has drifted** from the migration history and
+  is stuck at 31. Tests now run against a fresh `career_test` database.
+  Recreating the main local database is the fix and it destroys local
+  dev data, so it is his call. Production is unaffected.
 - Which Whiskey House systems incorporate an LLM at runtime, as opposed
   to having been built with AI assistance. Only the on-prem SME chat
   agent is claimed today, deliberately.

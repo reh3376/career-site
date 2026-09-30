@@ -31,7 +31,13 @@ type Decision struct {
 	PromptTokens  int32
 	CompletionTok int32
 	LatencyMs     int64
-	CreatedAt     time.Time
+	// FirstTokenMs is the wait before the first word appeared. Separate
+	// from LatencyMs because on a CPU-only box the two move for
+	// different reasons: this tracks how much context was retrieved,
+	// LatencyMs tracks how much was written. Zero where it does not
+	// apply.
+	FirstTokenMs int64
+	CreatedAt    time.Time
 	// Error is why this call produced no usable verdict, empty when it
 	// produced one. A row carrying it still carries PromptText and
 	// ResponseText, which is the reason it exists: the response that
@@ -41,8 +47,17 @@ type Decision struct {
 
 	HumanVerdict string
 	HumanNote    string
-	ReviewedBy   *int64
-	ReviewedAt   *time.Time
+	// HumanAnswer is the owner's corrected wording for a generative
+	// kind, and is the thing an adapter would actually be trained on.
+	// Empty for a classification kind, where HumanVerdict is already the
+	// gold output, and empty for a graded answer the owner thought was
+	// right.
+	HumanAnswer string
+	// HumanDimensions is the per-rubric grade, e.g. grounded/citations/
+	// voice/scope/length. Vocabulary in ReviewDimensions.
+	HumanDimensions map[string]string
+	ReviewedBy      *int64
+	ReviewedAt      *time.Time
 }
 
 // Reviewed reports whether the owner has labelled this decision.
@@ -64,8 +79,8 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
     INSERT INTO decision_log
       (tenant_id, run_id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
        input, output, prompt_text, response_text,
-       prompt_tokens, completion_tokens, latency_ms, error)
-    VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+       prompt_tokens, completion_tokens, latency_ms, first_token_ms, error)
+    VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
   `
 	tid := tenant.FromContext(ctx).Int64()
 	rid := runid.FromContext(ctx)
@@ -82,7 +97,7 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
 			tid, rid,
 			d.Kind, d.RefKind, d.RefID, d.Key, d.Model, d.PromptID, d.PromptVersion, d.NumCtx,
 			in, out, d.PromptText, d.ResponseText,
-			d.PromptTokens, d.CompletionTok, d.LatencyMs, d.Error,
+			d.PromptTokens, d.CompletionTok, d.LatencyMs, d.FirstTokenMs, d.Error,
 		); err != nil {
 			return fmt.Errorf("insert decision %s/%s: %w", d.Kind, d.Key, err)
 		}
@@ -109,8 +124,9 @@ type DecisionFilter struct {
 const decisionColumns = `
     id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
     input, output, prompt_text, response_text,
-    prompt_tokens, completion_tokens, latency_ms, created_at,
-    coalesce(human_verdict, ''), coalesce(human_note, ''), reviewed_by, reviewed_at,
+    prompt_tokens, completion_tokens, latency_ms, first_token_ms, created_at,
+    coalesce(human_verdict, ''), coalesce(human_note, ''), coalesce(human_answer, ''),
+    coalesce(human_dimensions, '{}'::jsonb), reviewed_by, reviewed_at,
     coalesce(error, '')`
 
 // ListDecisions returns rows newest first for the review surface.
@@ -152,8 +168,9 @@ func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision,
 		if err := rows.Scan(
 			&d.ID, &d.Kind, &d.RefKind, &d.RefID, &d.Key, &d.Model, &d.PromptID, &d.PromptVersion, &d.NumCtx,
 			&d.Input, &d.Output, &d.PromptText, &d.ResponseText,
-			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.CreatedAt,
-			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt, &d.Error,
+			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.FirstTokenMs, &d.CreatedAt,
+			&d.HumanVerdict, &d.HumanNote, &d.HumanAnswer, &d.HumanDimensions,
+			&d.ReviewedBy, &d.ReviewedAt, &d.Error,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
@@ -173,12 +190,43 @@ func (r *Repo) CountDecisions(ctx context.Context) (total, reviewed int64, err e
 	return total, reviewed, nil
 }
 
+// DecisionReview is what the owner records about one decision.
+//
+// A struct rather than four positional strings because the last two
+// arrived later and are optional: a JD requirement is fully graded by
+// Verdict alone, while an assistant answer needs the corrected wording
+// and the per-dimension marks before it is worth anything as training
+// data.
+type DecisionReview struct {
+	// Verdict is from ReviewVocabulary for the row's kind.
+	Verdict string
+	// Note explains the grade to a human reader. Never a rewrite: see
+	// Answer.
+	Note string
+	// Answer is the wording the owner would have given, for a
+	// generative kind. This is the SFT target and the chosen half of a
+	// preference pair against the model's own response.
+	Answer string
+	// Dimensions are the per-rubric marks, keys from ReviewDimensions.
+	Dimensions map[string]string
+}
+
 // ReviewDecision records the owner's label. Saving again overwrites.
-func (r *Repo) ReviewDecision(ctx context.Context, id, reviewerID int64, verdict, note string) error {
+func (r *Repo) ReviewDecision(ctx context.Context, id, reviewerID int64, rev DecisionReview) error {
+	dims := rev.Dimensions
+	if dims == nil {
+		dims = map[string]string{}
+	}
+	dimsJSON, err := json.Marshal(dims)
+	if err != nil {
+		return fmt.Errorf("encode review dimensions: %w", err)
+	}
 	tag, err := r.pool.Exec(ctx, `
     UPDATE decision_log
-       SET human_verdict = $2, human_note = NULLIF($3, ''), reviewed_by = $4, reviewed_at = now()
-     WHERE id = $1`, id, verdict, note, reviewerID)
+       SET human_verdict = $2, human_note = NULLIF($3, ''),
+           human_answer = $5, human_dimensions = $6,
+           reviewed_by = $4, reviewed_at = now()
+     WHERE id = $1`, id, rev.Verdict, rev.Note, reviewerID, rev.Answer, dimsJSON)
 	if err != nil {
 		return fmt.Errorf("review decision: %w", err)
 	}
@@ -187,6 +235,31 @@ func (r *Repo) ReviewDecision(ctx context.Context, id, reviewerID int64, verdict
 	}
 	return nil
 }
+
+// ReviewDimensions is the grading rubric, per decision kind.
+//
+// One overall verdict is enough for a classification decision and not
+// enough for a generated answer, which fails in independent ways: it
+// can be factually grounded and in the wrong voice, correct and citing
+// the wrong passage, accurate and far too long for a reader waiting on
+// a CPU-only box. Collapsing those into one thumb throws away the part
+// that says what to fix.
+//
+// Two of these carry numbers already: grounding at 90 % (FR-CHAT-03)
+// and citation validity at 95 % (FR-CHAT-04). Neither rate can be
+// computed from an overall verdict, so they have to be marked
+// separately or the acceptance criteria cannot be measured at all.
+//
+// Every dimension takes the same three answers, deliberately. A rubric
+// whose scales differ per row is a rubric nobody fills in.
+var ReviewDimensions = map[string][]string{
+	"chat_answer": {"grounded", "citations", "voice", "scope", "length"},
+}
+
+// ReviewDimensionValues is what a dimension may be marked. Same three
+// everywhere, and "n/a" is the reviewer saying the dimension does not
+// apply to this row, which is not the same as passing it.
+var ReviewDimensionValues = []string{"yes", "partial", "no", "n/a"}
 
 // ReviewVocabulary is what the owner may answer, per decision kind.
 //
@@ -208,6 +281,23 @@ var ReviewVocabulary = map[string][]string{
 	"jd_requirement_verdict": {"met", "partial", "unmet", "insufficient_evidence"},
 	"jd_gate":                {"above_threshold", "below_threshold", "insufficient_evidence"},
 	"jd_posting_check":       {"posting", "not_posting", "insufficient_evidence"},
+
+	// The assistant's answers. The vocabulary is about the answer as a
+	// whole; ReviewDimensions is where it gets taken apart.
+	//
+	// "good" and "wrong" are not the interesting pair here. "needs_edit"
+	// is: an answer that is close but not what the owner would have
+	// said, which is the commonest outcome for a persona and the one
+	// that produces the best preference pair, because human_answer and
+	// response_text then differ in exactly the way the adapter needs to
+	// learn. Keeping it separate from "wrong" keeps that distinction
+	// available to the exporter.
+	//
+	// "rejected_correctly" covers a refusal or an "I don't know" that
+	// was the right call. Without it every correct refusal looks like a
+	// failure, and the assistant would be graded worst precisely where
+	// it behaved best.
+	"chat_answer": {"good", "needs_edit", "wrong", "rejected_correctly", "insufficient_evidence"},
 }
 
 // DecisionKind returns the kind of one logged decision, so a review can
@@ -242,8 +332,9 @@ func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decisi
 		if err := rows.Scan(
 			&d.ID, &d.Kind, &d.RefKind, &d.RefID, &d.Key, &d.Model, &d.PromptID, &d.PromptVersion, &d.NumCtx,
 			&d.Input, &d.Output, &d.PromptText, &d.ResponseText,
-			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.CreatedAt,
-			&d.HumanVerdict, &d.HumanNote, &d.ReviewedBy, &d.ReviewedAt, &d.Error,
+			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.FirstTokenMs, &d.CreatedAt,
+			&d.HumanVerdict, &d.HumanNote, &d.HumanAnswer, &d.HumanDimensions,
+			&d.ReviewedBy, &d.ReviewedAt, &d.Error,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
