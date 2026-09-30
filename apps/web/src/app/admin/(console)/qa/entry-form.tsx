@@ -102,9 +102,11 @@ export function QaEntryForm({
             other ways people ask it
           </span>
           <span className="mt-1 block text-sm text-ink-3">
-            One per line. Matching runs over every phrasing, so variants are how
-            one answer covers the several ways the same thing gets asked. You
-            can add more later.
+            One per line. Matching runs over every phrasing separately, so make
+            them as different from each other as you can: each one covers the
+            wording it is written in, and two that are nearly the same buy you
+            the same ground twice. Write the words people actually use. You can
+            add more later.
           </span>
           <textarea
             name="phrasings"

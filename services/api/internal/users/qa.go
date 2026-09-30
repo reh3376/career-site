@@ -115,10 +115,16 @@ var ErrQAEntryNotFound = errors.New("no such Q&A entry")
 //     cross-entry pair at 0.766. Above it, a match means the wording
 //     is genuinely close to something the owner wrote down.
 //   - Coverage comes from listing phrasings, not from semantic reach.
-//     The bank is an owner-curated near-exact lookup. A question asked
-//     in words nobody anticipated falls through to the model, which is
-//     slow and correct, rather than matching the wrong entry, which is
-//     fast and wrong.
+//     Matching runs over every phrasing and the best one wins, so each
+//     phrasing is its own target rather than a satellite of the
+//     canonical question. A phrasing far from its own canonical is not
+//     dead weight: it covers a different neighbourhood, and someone
+//     asking in those words hits it near 1.0. Phrasings should
+//     therefore be diverse rather than similar, because two
+//     near-identical ones buy the same ground twice.
+//   - A question asked in words nobody listed falls through to the
+//     model, which is slow and correct, rather than matching the wrong
+//     entry, which is fast and wrong.
 //   - A margin rule backs it up: see QAMatchMargin.
 //
 // Still provisional in the sense that six entries is not a golden set

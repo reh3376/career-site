@@ -76,7 +76,7 @@ export function Phrasings({
         <input
           name="text"
           maxLength={500}
-          placeholder="another way of asking it"
+          placeholder="another wording people use"
           className="w-full border border-line bg-transparent px-3 py-2 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none"
         />
         <AddButton />

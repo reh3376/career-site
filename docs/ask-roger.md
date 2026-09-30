@@ -372,12 +372,25 @@ including `first_token_ms`, and the `human` block with verdict, note,
    margin is scale-free and should outlive a change of embedding model,
    which a threshold will not.
 
-   **What this means for the bank, honestly:** it matches
-   near-restatements reliably and does not generalise across
-   vocabulary. Coverage comes from listing the wordings people actually
-   use, not from semantic reach. A question nobody anticipated falls
-   through to the model, which is slow and correct, rather than
-   matching the wrong entry, which is fast and wrong.
+   **What this means for the bank.** Matching runs over *every*
+   phrasing and the best one wins, so each phrasing is its own target
+   rather than a satellite of the canonical question. A phrasing that
+   scores 0.36 against its own canonical is not dead weight: it covers
+   a different vocabulary neighbourhood, and a visitor who asks in
+   those words hits it at close to 1.0.
+
+   So the rule for writing phrasings is the opposite of the obvious
+   one. They should be **diverse**, not similar to each other: each one
+   buys coverage around its own wording, and two phrasings that are
+   near-identical buy the same ground twice. What the bank cannot do is
+   bridge to vocabulary nobody listed, and a question asked in
+   unanticipated words falls through to the model, which is slow and
+   correct, rather than matching the wrong entry, which is fast and
+   wrong.
+
+   (An earlier version of this section said those distant variants
+   "will never fire". That was wrong, and wrong in a way that would
+   have led to writing worse phrasings.)
 
    *Superseded, for history:* 
    The original 0.85 was reasoning rather than measurement, and the
