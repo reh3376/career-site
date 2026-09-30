@@ -179,7 +179,11 @@ export async function connectCalendar(
     const body = (await resp.json().catch(() => ({}))) as { message?: string };
     return { ok: false, error: body.message || "The calendar could not be connected." };
   }
-  revalidatePath("/admin/scheduler");
+  // Deliberately no revalidatePath here, unlike the other mutations in
+  // this file. This one is called from the callback page during render,
+  // where Next.js forbids it: "used revalidatePath during render which
+  // is unsupported". It is also unnecessary, because /admin/scheduler
+  // is force-dynamic and re-reads its status on every visit.
   return { ok: true };
 }
 
