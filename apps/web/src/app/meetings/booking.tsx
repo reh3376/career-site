@@ -39,11 +39,15 @@ function zoneLine(zone: string, label: string, on: Date) {
     .find((x) => x.type === "timeZoneName")?.value;
   // "GMT-04:00" to "-4"; "GMT" itself means no offset.
   const m = part?.match(/GMT([+-])(\d{2}):(\d{2})/);
-  if (!m) return `Time displayed in ${label}`;
+  // The server's label is "Eastern time"; appending " Zone" to that
+  // gives "Eastern time Zone". Capitalise the word so it reads as the
+  // proper noun it is.
+  const proper = label.replace(/\btime\b/, "Time");
+  if (!m) return `Time displayed in ${proper}`;
   const hours = Number(m[2]);
   const mins = Number(m[3]);
   const off = mins === 0 ? `${m[1]}${hours}` : `${m[1]}${hours}:${m[3]}`;
-  return `Time displayed in ${label} Zone (UTC ${off})`;
+  return `Time displayed in ${proper} Zone (UTC ${off})`;
 }
 
 // How many days the picker shows at once, with arrows either side.
@@ -135,12 +139,16 @@ export function Booking({
   // selection or needing an effect to clear it.
   const day = days.find((d) => d.key === dayKey) ?? days[0] ?? null;
 
-  // Six at a time. Clamped rather than stored blind, so a page that no
-  // longer exists after the length changed falls back to the first
-  // rather than showing an empty row.
-  const pageCount = Math.max(1, Math.ceil(days.length / DAYS_PER_PAGE));
-  const pageIndex = Math.min(page, pageCount - 1);
-  const shown = days.slice(pageIndex * DAYS_PER_PAGE, pageIndex * DAYS_PER_PAGE + DAYS_PER_PAGE);
+  // Six at a time, as a sliding window rather than fixed pages.
+  //
+  // Paging in blocks meant the last one held whatever was left: with
+  // nine days the second page showed three, and with eight it showed
+  // two, which is not "the next six days" by any reading. Clamping the
+  // start instead keeps six on screen whenever six exist, so the row
+  // never collapses to a stub.
+  const maxStart = Math.max(0, days.length - DAYS_PER_PAGE);
+  const start = Math.min(page * DAYS_PER_PAGE, maxStart);
+  const shown = days.slice(start, start + DAYS_PER_PAGE);
 
   function refresh() {
     startLoading(async () => setAvailability(await getAvailability(duration)));
@@ -330,13 +338,13 @@ export function Booking({
                 </p>
               ) : null}
             </div>
-            <div className="mt-3 flex items-stretch gap-2">
+            <div className="mt-3 flex items-stretch gap-2 overflow-x-auto pb-1">
               {/* Back only when there is something behind, so the row
                   does not carry a control that does nothing. */}
-              {pageIndex > 0 ? (
+              {start > 0 ? (
                 <button
                   type="button"
-                  onClick={() => setPage(pageIndex - 1)}
+                  onClick={() => setPage(Math.max(0, Math.ceil(start / DAYS_PER_PAGE) - 1))}
                   aria-label="Earlier days"
                   className="shrink-0 rounded-md border border-line px-3 text-ink-2 transition-colors hover:border-accent hover:text-accent"
                 >
@@ -356,7 +364,7 @@ export function Booking({
                       setSelected(null);
                     }}
                     className={
-                      "min-w-[4.5rem] flex-1 rounded-md border px-3 py-3 text-center transition-colors " +
+                      "w-[4.75rem] shrink-0 rounded-md border px-2 py-3 text-center transition-colors " +
                       (active
                         ? "border-accent bg-accent text-white"
                         : "border-line bg-paper-2 text-ink-2 hover:border-accent hover:text-accent")
@@ -376,10 +384,10 @@ export function Booking({
                 );
               })}
 
-              {pageIndex < pageCount - 1 ? (
+              {start < maxStart ? (
                 <button
                   type="button"
-                  onClick={() => setPage(pageIndex + 1)}
+                  onClick={() => setPage(Math.floor(start / DAYS_PER_PAGE) + 1)}
                   aria-label="Later days"
                   className="shrink-0 rounded-md border border-line px-3 text-ink-2 transition-colors hover:border-accent hover:text-accent"
                 >
@@ -387,10 +395,9 @@ export function Booking({
                 </button>
               ) : null}
             </div>
-            {pageCount > 1 ? (
+            {days.length > DAYS_PER_PAGE ? (
               <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                days {pageIndex * DAYS_PER_PAGE + 1} to{" "}
-                {pageIndex * DAYS_PER_PAGE + shown.length} of {days.length}
+                days {start + 1} to {start + shown.length} of {days.length}
               </p>
             ) : null}
           </div>
