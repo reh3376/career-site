@@ -76,6 +76,32 @@ service MeetingService {
   }
 }
 
+// How the meeting happens. The owner's decision is that the member
+// brings their own video room rather than this application creating
+// one: no Meet, Teams or Zoom credentials are held here.
+enum MeetingType {
+  // Not set. Bookings made before this was asked carry this.
+  MEETING_TYPE_UNSPECIFIED = 0;
+  // A video call the member sets up in their own calendar.
+  MEETING_TYPE_VIDEO = 1;
+  // A phone call. The member says which number they will call from.
+  MEETING_TYPE_PHONE = 2;
+}
+
+// Which video service the member will host in. Named only so the
+// invitation says the right thing and the member is sent to the right
+// place; no room is created here.
+enum VideoProvider {
+  // Not set, and required to be unset unless the type is video.
+  VIDEO_PROVIDER_UNSPECIFIED = 0;
+  // Google Meet.
+  VIDEO_PROVIDER_GOOGLE_MEET = 1;
+  // Microsoft Teams.
+  VIDEO_PROVIDER_TEAMS = 2;
+  // Zoom.
+  VIDEO_PROVIDER_ZOOM = 3;
+}
+
 // Request for GetMeetingOptions. Empty: the options belong to the
 // owner, not to the caller, and a member cannot vary them.
 message GetMeetingOptionsRequest {}
@@ -164,6 +190,16 @@ message BookMeetingRequest {
   // How the member would like to meet, in their words, for example a
   // phone number or "your call, send a link". Optional.
   string contact_preference = 4 [(buf.validate.field).string.max_len = 200];
+  // Video or phone. Required on new bookings.
+  MeetingType meeting_type = 5;
+  // Which service, when meeting_type is video. Rejected otherwise.
+  VideoProvider video_provider = 6;
+  // The number the member will call FROM, when meeting_type is phone.
+  // Country code, a space, then the ten-digit number, for example
+  // "+1 5135551234". May be left empty to say the number is in the
+  // comments instead, which is the escape hatch for anyone whose
+  // number does not fit that shape.
+  string phone_number = 7 [(buf.validate.field).string.max_len = 32];
 }
 
 // A booked meeting, as the member sees it.
@@ -188,6 +224,13 @@ message Meeting {
   // in the list rather than vanishing, because a meeting that silently
   // disappears reads as a bug.
   google.protobuf.Timestamp cancelled_at = 8;
+  // Video or phone, as booked.
+  MeetingType meeting_type = 9;
+  // Which service, when the type is video.
+  VideoProvider video_provider = 10;
+  // The number the member said they would call from. Empty with a
+  // phone meeting means they said it is in the comments.
+  string phone_number = 11;
 }
 
 // Result of booking.

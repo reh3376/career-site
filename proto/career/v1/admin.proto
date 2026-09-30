@@ -2612,6 +2612,13 @@ message AdminMeeting {
   // Set when cancelled. Cancelled rows are kept rather than deleted, so
   // a meeting that vanished can be explained.
   google.protobuf.Timestamp cancelled_at = 11;
+  // video | phone, or empty for a booking made before this was asked.
+  string meeting_type = 12;
+  // google_meet | teams | zoom, when the type is video.
+  string video_provider = 13;
+  // The number the member will call from, when the type is phone.
+  // Empty on a phone meeting means they said it is in the comments.
+  string phone_number = 14;
 }
 
 // Request for ListMeetings.

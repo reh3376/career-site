@@ -26,8 +26,8 @@
 // @generated from file career/v1/meetings.proto (package career.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
 import { file_career_v1_options } from "./options_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
@@ -38,7 +38,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/meetings.proto.
  */
 export const file_career_v1_meetings: GenFile = /*@__PURE__*/
-  fileDesc("ChhjYXJlZXIvdjEvbWVldGluZ3MucHJvdG8SCWNhcmVlci52MSIaChhHZXRNZWV0aW5nT3B0aW9uc1JlcXVlc3QixwEKGUdldE1lZXRpbmdPcHRpb25zUmVzcG9uc2USGAoQZHVyYXRpb25fbWludXRlcxgBIAMoBRIMCgR6b25lGAIgASgJEhIKCnpvbmVfbGFiZWwYAyABKAkSFAoMaG9yaXpvbl9kYXlzGAQgASgFEhIKCmxlYWRfaG91cnMYBSABKAUSFQoNaG91cnNfc3VtbWFyeRgGIAEoCRIRCglhdmFpbGFibGUYByABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAggASgJIo0BChZHZXRBdmFpbGFiaWxpdHlSZXF1ZXN0EiEKEGR1cmF0aW9uX21pbnV0ZXMYASABKAVCB7pIBBoCIAASKAoEZnJvbRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImEKC01lZXRpbmdTbG90EikKBXN0YXJ0GAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgNlbmQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIn0KF0dldEF2YWlsYWJpbGl0eVJlc3BvbnNlEiUKBXNsb3RzGAEgAygLMhYuY2FyZWVyLnYxLk1lZXRpbmdTbG90EgwKBHpvbmUYAiABKAkSEQoJYXZhaWxhYmxlGAMgASgIEhoKEnVuYXZhaWxhYmxlX3JlYXNvbhgEIAEoCSKpAQoSQm9va01lZXRpbmdSZXF1ZXN0EjEKBXN0YXJ0GAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEiEKEGR1cmF0aW9uX21pbnV0ZXMYAiABKAVCB7pIBBoCIAASFwoFdG9waWMYAyABKAlCCLpIBXIDGPQDEiQKEmNvbnRhY3RfcHJlZmVyZW5jZRgEIAEoCUIIukgFcgMYyAEi4wEKB01lZXRpbmcSCgoCaWQYASABKAMSKQoFc3RhcnQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEicKA2VuZBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGAoQZHVyYXRpb25fbWludXRlcxgEIAEoBRINCgV0b3BpYxgFIAEoCRIMCgR6b25lGAYgASgJEg8KB2ljc191cmwYByABKAkSMAoMY2FuY2VsbGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI6ChNCb29rTWVldGluZ1Jlc3BvbnNlEiMKB21lZXRpbmcYASABKAsyEi5jYXJlZXIudjEuTWVldGluZyItChVMaXN0TXlNZWV0aW5nc1JlcXVlc3QSFAoMaW5jbHVkZV9wYXN0GAEgASgIIj4KFkxpc3RNeU1lZXRpbmdzUmVzcG9uc2USJAoIbWVldGluZ3MYASADKAsyEi5jYXJlZXIudjEuTWVldGluZyIrChRDYW5jZWxNZWV0aW5nUmVxdWVzdBITCgJpZBgBIAEoA0IHukgEIgIgACI8ChVDYW5jZWxNZWV0aW5nUmVzcG9uc2USIwoHbWVldGluZxgBIAEoCzISLmNhcmVlci52MS5NZWV0aW5nMvUDCg5NZWV0aW5nU2VydmljZRJoChFHZXRNZWV0aW5nT3B0aW9ucxIjLmNhcmVlci52MS5HZXRNZWV0aW5nT3B0aW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0TWVldGluZ09wdGlvbnNSZXNwb25zZSIIgLUYApC1GDwSYgoPR2V0QXZhaWxhYmlsaXR5EiEuY2FyZWVyLnYxLkdldEF2YWlsYWJpbGl0eVJlcXVlc3QaIi5jYXJlZXIudjEuR2V0QXZhaWxhYmlsaXR5UmVzcG9uc2UiCIC1GAKQtRgeElYKC0Jvb2tNZWV0aW5nEh0uY2FyZWVyLnYxLkJvb2tNZWV0aW5nUmVxdWVzdBoeLmNhcmVlci52MS5Cb29rTWVldGluZ1Jlc3BvbnNlIgiAtRgCkLUYBhJfCg5MaXN0TXlNZWV0aW5ncxIgLmNhcmVlci52MS5MaXN0TXlNZWV0aW5nc1JlcXVlc3QaIS5jYXJlZXIudjEuTGlzdE15TWVldGluZ3NSZXNwb25zZSIIgLUYApC1GB4SXAoNQ2FuY2VsTWVldGluZxIfLmNhcmVlci52MS5DYW5jZWxNZWV0aW5nUmVxdWVzdBogLmNhcmVlci52MS5DYW5jZWxNZWV0aW5nUmVzcG9uc2UiCIC1GAKQtRgKQqcBCg1jb20uY2FyZWVyLnYxQg1NZWV0aW5nc1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChhjYXJlZXIvdjEvbWVldGluZ3MucHJvdG8SCWNhcmVlci52MSIaChhHZXRNZWV0aW5nT3B0aW9uc1JlcXVlc3QixwEKGUdldE1lZXRpbmdPcHRpb25zUmVzcG9uc2USGAoQZHVyYXRpb25fbWludXRlcxgBIAMoBRIMCgR6b25lGAIgASgJEhIKCnpvbmVfbGFiZWwYAyABKAkSFAoMaG9yaXpvbl9kYXlzGAQgASgFEhIKCmxlYWRfaG91cnMYBSABKAUSFQoNaG91cnNfc3VtbWFyeRgGIAEoCRIRCglhdmFpbGFibGUYByABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAggASgJIo0BChZHZXRBdmFpbGFiaWxpdHlSZXF1ZXN0EiEKEGR1cmF0aW9uX21pbnV0ZXMYASABKAVCB7pIBBoCIAASKAoEZnJvbRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImEKC01lZXRpbmdTbG90EikKBXN0YXJ0GAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgNlbmQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIn0KF0dldEF2YWlsYWJpbGl0eVJlc3BvbnNlEiUKBXNsb3RzGAEgAygLMhYuY2FyZWVyLnYxLk1lZXRpbmdTbG90EgwKBHpvbmUYAiABKAkSEQoJYXZhaWxhYmxlGAMgASgIEhoKEnVuYXZhaWxhYmxlX3JlYXNvbhgEIAEoCSKoAgoSQm9va01lZXRpbmdSZXF1ZXN0EjEKBXN0YXJ0GAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEiEKEGR1cmF0aW9uX21pbnV0ZXMYAiABKAVCB7pIBBoCIAASFwoFdG9waWMYAyABKAlCCLpIBXIDGPQDEiQKEmNvbnRhY3RfcHJlZmVyZW5jZRgEIAEoCUIIukgFcgMYyAESLAoMbWVldGluZ190eXBlGAUgASgOMhYuY2FyZWVyLnYxLk1lZXRpbmdUeXBlEjAKDnZpZGVvX3Byb3ZpZGVyGAYgASgOMhguY2FyZWVyLnYxLlZpZGVvUHJvdmlkZXISHQoMcGhvbmVfbnVtYmVyGAcgASgJQge6SARyAhggItkCCgdNZWV0aW5nEgoKAmlkGAEgASgDEikKBXN0YXJ0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgNlbmQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGR1cmF0aW9uX21pbnV0ZXMYBCABKAUSDQoFdG9waWMYBSABKAkSDAoEem9uZRgGIAEoCRIPCgdpY3NfdXJsGAcgASgJEjAKDGNhbmNlbGxlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLAoMbWVldGluZ190eXBlGAkgASgOMhYuY2FyZWVyLnYxLk1lZXRpbmdUeXBlEjAKDnZpZGVvX3Byb3ZpZGVyGAogASgOMhguY2FyZWVyLnYxLlZpZGVvUHJvdmlkZXISFAoMcGhvbmVfbnVtYmVyGAsgASgJIjoKE0Jvb2tNZWV0aW5nUmVzcG9uc2USIwoHbWVldGluZxgBIAEoCzISLmNhcmVlci52MS5NZWV0aW5nIi0KFUxpc3RNeU1lZXRpbmdzUmVxdWVzdBIUCgxpbmNsdWRlX3Bhc3QYASABKAgiPgoWTGlzdE15TWVldGluZ3NSZXNwb25zZRIkCghtZWV0aW5ncxgBIAMoCzISLmNhcmVlci52MS5NZWV0aW5nIisKFENhbmNlbE1lZXRpbmdSZXF1ZXN0EhMKAmlkGAEgASgDQge6SAQiAiAAIjwKFUNhbmNlbE1lZXRpbmdSZXNwb25zZRIjCgdtZWV0aW5nGAEgASgLMhIuY2FyZWVyLnYxLk1lZXRpbmcqWwoLTWVldGluZ1R5cGUSHAoYTUVFVElOR19UWVBFX1VOU1BFQ0lGSUVEEAASFgoSTUVFVElOR19UWVBFX1ZJREVPEAESFgoSTUVFVElOR19UWVBFX1BIT05FEAIqggEKDVZpZGVvUHJvdmlkZXISHgoaVklERU9fUFJPVklERVJfVU5TUEVDSUZJRUQQABIeChpWSURFT19QUk9WSURFUl9HT09HTEVfTUVFVBABEhgKFFZJREVPX1BST1ZJREVSX1RFQU1TEAISFwoTVklERU9fUFJPVklERVJfWk9PTRADMvUDCg5NZWV0aW5nU2VydmljZRJoChFHZXRNZWV0aW5nT3B0aW9ucxIjLmNhcmVlci52MS5HZXRNZWV0aW5nT3B0aW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuR2V0TWVldGluZ09wdGlvbnNSZXNwb25zZSIIgLUYApC1GDwSYgoPR2V0QXZhaWxhYmlsaXR5EiEuY2FyZWVyLnYxLkdldEF2YWlsYWJpbGl0eVJlcXVlc3QaIi5jYXJlZXIudjEuR2V0QXZhaWxhYmlsaXR5UmVzcG9uc2UiCIC1GAKQtRgeElYKC0Jvb2tNZWV0aW5nEh0uY2FyZWVyLnYxLkJvb2tNZWV0aW5nUmVxdWVzdBoeLmNhcmVlci52MS5Cb29rTWVldGluZ1Jlc3BvbnNlIgiAtRgCkLUYBhJfCg5MaXN0TXlNZWV0aW5ncxIgLmNhcmVlci52MS5MaXN0TXlNZWV0aW5nc1JlcXVlc3QaIS5jYXJlZXIudjEuTGlzdE15TWVldGluZ3NSZXNwb25zZSIIgLUYApC1GB4SXAoNQ2FuY2VsTWVldGluZxIfLmNhcmVlci52MS5DYW5jZWxNZWV0aW5nUmVxdWVzdBogLmNhcmVlci52MS5DYW5jZWxNZWV0aW5nUmVzcG9uc2UiCIC1GAKQtRgKQqcBCg1jb20uY2FyZWVyLnYxQg1NZWV0aW5nc1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * Request for GetMeetingOptions. Empty: the options belong to the
@@ -288,6 +288,31 @@ export type BookMeetingRequest = Message<"career.v1.BookMeetingRequest"> & {
    * @generated from field: string contact_preference = 4;
    */
   contactPreference: string;
+
+  /**
+   * Video or phone. Required on new bookings.
+   *
+   * @generated from field: career.v1.MeetingType meeting_type = 5;
+   */
+  meetingType: MeetingType;
+
+  /**
+   * Which service, when meeting_type is video. Rejected otherwise.
+   *
+   * @generated from field: career.v1.VideoProvider video_provider = 6;
+   */
+  videoProvider: VideoProvider;
+
+  /**
+   * The number the member will call FROM, when meeting_type is phone.
+   * Country code, a space, then the ten-digit number, for example
+   * "+1 5135551234". May be left empty to say the number is in the
+   * comments instead, which is the escape hatch for anyone whose
+   * number does not fit that shape.
+   *
+   * @generated from field: string phone_number = 7;
+   */
+  phoneNumber: string;
 };
 
 /**
@@ -362,6 +387,28 @@ export type Meeting = Message<"career.v1.Meeting"> & {
    * @generated from field: google.protobuf.Timestamp cancelled_at = 8;
    */
   cancelledAt?: Timestamp | undefined;
+
+  /**
+   * Video or phone, as booked.
+   *
+   * @generated from field: career.v1.MeetingType meeting_type = 9;
+   */
+  meetingType: MeetingType;
+
+  /**
+   * Which service, when the type is video.
+   *
+   * @generated from field: career.v1.VideoProvider video_provider = 10;
+   */
+  videoProvider: VideoProvider;
+
+  /**
+   * The number the member said they would call from. Empty with a
+   * phone meeting means they said it is in the comments.
+   *
+   * @generated from field: string phone_number = 11;
+   */
+  phoneNumber: string;
 };
 
 /**
@@ -476,6 +523,85 @@ export type CancelMeetingResponse = Message<"career.v1.CancelMeetingResponse"> &
  */
 export const CancelMeetingResponseSchema: GenMessage<CancelMeetingResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_meetings, 11);
+
+/**
+ * How the meeting happens. The owner's decision is that the member
+ * brings their own video room rather than this application creating
+ * one: no Meet, Teams or Zoom credentials are held here.
+ *
+ * @generated from enum career.v1.MeetingType
+ */
+export enum MeetingType {
+  /**
+   * Not set. Bookings made before this was asked carry this.
+   *
+   * @generated from enum value: MEETING_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * A video call the member sets up in their own calendar.
+   *
+   * @generated from enum value: MEETING_TYPE_VIDEO = 1;
+   */
+  VIDEO = 1,
+
+  /**
+   * A phone call. The member says which number they will call from.
+   *
+   * @generated from enum value: MEETING_TYPE_PHONE = 2;
+   */
+  PHONE = 2,
+}
+
+/**
+ * Describes the enum career.v1.MeetingType.
+ */
+export const MeetingTypeSchema: GenEnum<MeetingType> = /*@__PURE__*/
+  enumDesc(file_career_v1_meetings, 0);
+
+/**
+ * Which video service the member will host in. Named only so the
+ * invitation says the right thing and the member is sent to the right
+ * place; no room is created here.
+ *
+ * @generated from enum career.v1.VideoProvider
+ */
+export enum VideoProvider {
+  /**
+   * Not set, and required to be unset unless the type is video.
+   *
+   * @generated from enum value: VIDEO_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Google Meet.
+   *
+   * @generated from enum value: VIDEO_PROVIDER_GOOGLE_MEET = 1;
+   */
+  GOOGLE_MEET = 1,
+
+  /**
+   * Microsoft Teams.
+   *
+   * @generated from enum value: VIDEO_PROVIDER_TEAMS = 2;
+   */
+  TEAMS = 2,
+
+  /**
+   * Zoom.
+   *
+   * @generated from enum value: VIDEO_PROVIDER_ZOOM = 3;
+   */
+  ZOOM = 3,
+}
+
+/**
+ * Describes the enum career.v1.VideoProvider.
+ */
+export const VideoProviderSchema: GenEnum<VideoProvider> = /*@__PURE__*/
+  enumDesc(file_career_v1_meetings, 1);
 
 /**
  * Meeting scheduling, members only: a signed-in session is required to

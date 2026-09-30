@@ -11368,7 +11368,14 @@ type AdminMeeting struct {
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Set when cancelled. Cancelled rows are kept rather than deleted, so
 	// a meeting that vanished can be explained.
-	CancelledAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=cancelled_at,json=cancelledAt,proto3" json:"cancelled_at,omitempty"`
+	CancelledAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=cancelled_at,json=cancelledAt,proto3" json:"cancelled_at,omitempty"`
+	// video | phone, or empty for a booking made before this was asked.
+	MeetingType string `protobuf:"bytes,12,opt,name=meeting_type,json=meetingType,proto3" json:"meeting_type,omitempty"`
+	// google_meet | teams | zoom, when the type is video.
+	VideoProvider string `protobuf:"bytes,13,opt,name=video_provider,json=videoProvider,proto3" json:"video_provider,omitempty"`
+	// The number the member will call from, when the type is phone.
+	// Empty on a phone meeting means they said it is in the comments.
+	PhoneNumber   string `protobuf:"bytes,14,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11478,6 +11485,27 @@ func (x *AdminMeeting) GetCancelledAt() *timestamppb.Timestamp {
 		return x.CancelledAt
 	}
 	return nil
+}
+
+func (x *AdminMeeting) GetMeetingType() string {
+	if x != nil {
+		return x.MeetingType
+	}
+	return ""
+}
+
+func (x *AdminMeeting) GetVideoProvider() string {
+	if x != nil {
+		return x.VideoProvider
+	}
+	return ""
+}
+
+func (x *AdminMeeting) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
+	}
+	return ""
 }
 
 // Request for ListMeetings.
@@ -13314,7 +13342,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\v2\x19.career.v1.CalendarStatusR\x06status\"\x1b\n" +
 	"\x19DisconnectCalendarRequest\"O\n" +
 	"\x1aDisconnectCalendarResponse\x121\n" +
-	"\x06status\x18\x01 \x01(\v2\x19.career.v1.CalendarStatusR\x06status\"\xb5\x03\n" +
+	"\x06status\x18\x01 \x01(\v2\x19.career.v1.CalendarStatusR\x06status\"\xa2\x04\n" +
 	"\fAdminMeeting\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x120\n" +
 	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
@@ -13329,7 +13357,10 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
-	"\fcancelled_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vcancelledAt\"8\n" +
+	"\fcancelled_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vcancelledAt\x12!\n" +
+	"\fmeeting_type\x18\f \x01(\tR\vmeetingType\x12%\n" +
+	"\x0evideo_provider\x18\r \x01(\tR\rvideoProvider\x12!\n" +
+	"\fphone_number\x18\x0e \x01(\tR\vphoneNumber\"8\n" +
 	"\x13ListMeetingsRequest\x12!\n" +
 	"\finclude_past\x18\x01 \x01(\bR\vincludePast\"_\n" +
 	"\x14ListMeetingsResponse\x123\n" +

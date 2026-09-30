@@ -33,7 +33,27 @@ export type Meeting = {
   zone: string;
   icsUrl: string;
   cancelledAt?: string;
+  // How the meeting happens. Absent on bookings made before this was
+  // asked, which is a real state rather than a gap to paper over.
+  meetingType?: "MEETING_TYPE_VIDEO" | "MEETING_TYPE_PHONE" | "MEETING_TYPE_UNSPECIFIED";
+  videoProvider?:
+    | "VIDEO_PROVIDER_GOOGLE_MEET"
+    | "VIDEO_PROVIDER_TEAMS"
+    | "VIDEO_PROVIDER_ZOOM"
+    | "VIDEO_PROVIDER_UNSPECIFIED";
+  phoneNumber?: string;
 };
+
+// Where a member is sent to create their own video room. This
+// application holds no credentials for any of them and creates no
+// rooms: the member sets it up in their own calendar and sends the
+// link, which is three fewer OAuth grants and three fewer things to
+// break.
+export const VIDEO_PROVIDERS = [
+  { value: "VIDEO_PROVIDER_GOOGLE_MEET", label: "Google Meet", setupUrl: "https://calendar.google.com/calendar/u/0/r/eventedit" },
+  { value: "VIDEO_PROVIDER_TEAMS", label: "Microsoft Teams", setupUrl: "https://outlook.office.com/calendar/deeplink/compose" },
+  { value: "VIDEO_PROVIDER_ZOOM", label: "Zoom", setupUrl: "https://zoom.us/meeting/schedule" },
+] as const;
 
 export type AvailabilityState = {
   slots: Slot[];
@@ -131,6 +151,9 @@ export async function bookMeetingAction(
   const durationMinutes = Number(formData.get("duration_minutes") ?? 0);
   const topic = String(formData.get("topic") ?? "").trim();
   const contactPreference = String(formData.get("contact_preference") ?? "").trim();
+  const meetingType = String(formData.get("meeting_type") ?? "");
+  const videoProvider = String(formData.get("video_provider") ?? "");
+  const phoneNumber = String(formData.get("phone_number") ?? "").trim();
 
   if (!start || !durationMinutes) {
     return { error: "Pick a time before booking." };
@@ -144,7 +167,15 @@ export async function bookMeetingAction(
 
   const resp = await callApi({
     path: "/api/career.v1.MeetingService/BookMeeting",
-    body: { start, durationMinutes, topic, contactPreference },
+    body: {
+      start,
+      durationMinutes,
+      topic,
+      contactPreference,
+      meetingType,
+      videoProvider: videoProvider || undefined,
+      phoneNumber,
+    },
     cookie,
   });
 

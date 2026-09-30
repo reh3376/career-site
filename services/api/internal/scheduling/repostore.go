@@ -43,6 +43,10 @@ func (s *RepoStore) Claim(ctx context.Context, b Booking) (int64, error) {
 		StartsAt:    b.Start,
 		DurationMin: b.DurMins,
 		GapMin:      s.Gap,
+
+		MeetingType:   b.MeetingType,
+		VideoProvider: b.VideoProvider,
+		PhoneNumber:   b.PhoneNumber,
 	})
 	if errors.Is(err, users.ErrSlotTaken) {
 		return 0, ErrAlreadyClaimed
@@ -86,6 +90,10 @@ func fromRow(r users.Booking) Booking {
 		EventID:  r.EventID,
 		Created:  r.CreatedAt,
 		Canceled: r.CancelledAt,
+
+		MeetingType:   r.MeetingType,
+		VideoProvider: r.VideoProvider,
+		PhoneNumber:   r.PhoneNumber,
 	}
 	if r.UserID != nil {
 		b.UserID = *r.UserID

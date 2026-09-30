@@ -37,6 +37,13 @@ type Booking struct {
 	EventID     string
 	CreatedAt   time.Time
 	CancelledAt *time.Time
+	// How the meeting happens (migration 00044). MeetingType is
+	// "video" or "phone", or empty for a booking made before this was
+	// asked. PhoneNumber empty on a phone meeting means the member said
+	// the number is in the comments.
+	MeetingType   string
+	VideoProvider string
+	PhoneNumber   string
 }
 
 // ClaimBooking takes the interval, or reports that somebody else has.
@@ -48,11 +55,13 @@ func (r *Repo) ClaimBooking(ctx context.Context, b Booking) (int64, error) {
 	var id int64
 	err := r.pool.QueryRow(ctx, `
     INSERT INTO meeting_bookings
-      (tenant_id, user_id, name, email, note, starts_at, duration_min, gap_min)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      (tenant_id, user_id, name, email, note, starts_at, duration_min, gap_min,
+       meeting_type, video_provider, phone_number)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING id`,
 		tenant.FromContext(ctx).Int64(), b.UserID, b.Name, b.Email, b.Note,
-		b.StartsAt, b.DurationMin, b.GapMin).Scan(&id)
+		b.StartsAt, b.DurationMin, b.GapMin,
+		b.MeetingType, b.VideoProvider, b.PhoneNumber).Scan(&id)
 	if err != nil {
 		// 23P01 is exclusion_violation, which here means exactly one
 		// thing: the time is held. Reporting it as a database error
@@ -112,7 +121,7 @@ func (r *Repo) CancelBooking(ctx context.Context, id int64) (Booking, error) {
 func (r *Repo) ActiveBookings(ctx context.Context, from, to time.Time) ([]Booking, error) {
 	rows, err := r.pool.Query(ctx, `
     SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
-           event_id, created_at, cancelled_at
+           event_id, created_at, cancelled_at, meeting_type, video_provider, phone_number
       FROM meeting_bookings
      WHERE tenant_id = $1 AND cancelled_at IS NULL AND held && tstzrange($2, $3, '[)')
      ORDER BY starts_at`, tenant.FromContext(ctx).Int64(), from, to)
@@ -128,7 +137,7 @@ func (r *Repo) ActiveBookings(ctx context.Context, from, to time.Time) ([]Bookin
 func (r *Repo) BookingsForUser(ctx context.Context, userID int64) ([]Booking, error) {
 	rows, err := r.pool.Query(ctx, `
     SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
-           event_id, created_at, cancelled_at
+           event_id, created_at, cancelled_at, meeting_type, video_provider, phone_number
       FROM meeting_bookings
      WHERE user_id = $1
      ORDER BY starts_at DESC`, userID)
@@ -145,7 +154,8 @@ func scanBookings(rows rowScanner) ([]Booking, error) {
 		var b Booking
 		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.Email, &b.Note,
 			&b.StartsAt, &b.DurationMin, &b.GapMin, &b.EventID,
-			&b.CreatedAt, &b.CancelledAt); err != nil {
+			&b.CreatedAt, &b.CancelledAt,
+			&b.MeetingType, &b.VideoProvider, &b.PhoneNumber); err != nil {
 			return nil, fmt.Errorf("scan booking: %w", err)
 		}
 		out = append(out, b)
@@ -176,7 +186,7 @@ func isExclusionViolation(err error, constraint string) bool {
 func (r *Repo) AllBookings(ctx context.Context, includePast bool) ([]Booking, error) {
 	q := `
     SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
-           event_id, created_at, cancelled_at
+           event_id, created_at, cancelled_at, meeting_type, video_provider, phone_number
       FROM meeting_bookings
      WHERE tenant_id = $1`
 	if !includePast {
@@ -196,7 +206,7 @@ func (r *Repo) AllBookings(ctx context.Context, includePast bool) ([]Booking, er
 func (r *Repo) BookingByID(ctx context.Context, id int64) (Booking, bool, error) {
 	rows, err := r.pool.Query(ctx, `
     SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
-           event_id, created_at, cancelled_at
+           event_id, created_at, cancelled_at, meeting_type, video_provider, phone_number
       FROM meeting_bookings
      WHERE tenant_id = $1 AND id = $2`, tenant.FromContext(ctx).Int64(), id)
 	if err != nil {

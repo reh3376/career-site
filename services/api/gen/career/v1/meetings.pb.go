@@ -47,6 +47,120 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// How the meeting happens. The owner's decision is that the member
+// brings their own video room rather than this application creating
+// one: no Meet, Teams or Zoom credentials are held here.
+type MeetingType int32
+
+const (
+	// Not set. Bookings made before this was asked carry this.
+	MeetingType_MEETING_TYPE_UNSPECIFIED MeetingType = 0
+	// A video call the member sets up in their own calendar.
+	MeetingType_MEETING_TYPE_VIDEO MeetingType = 1
+	// A phone call. The member says which number they will call from.
+	MeetingType_MEETING_TYPE_PHONE MeetingType = 2
+)
+
+// Enum value maps for MeetingType.
+var (
+	MeetingType_name = map[int32]string{
+		0: "MEETING_TYPE_UNSPECIFIED",
+		1: "MEETING_TYPE_VIDEO",
+		2: "MEETING_TYPE_PHONE",
+	}
+	MeetingType_value = map[string]int32{
+		"MEETING_TYPE_UNSPECIFIED": 0,
+		"MEETING_TYPE_VIDEO":       1,
+		"MEETING_TYPE_PHONE":       2,
+	}
+)
+
+func (x MeetingType) Enum() *MeetingType {
+	p := new(MeetingType)
+	*p = x
+	return p
+}
+
+func (x MeetingType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MeetingType) Descriptor() protoreflect.EnumDescriptor {
+	return file_career_v1_meetings_proto_enumTypes[0].Descriptor()
+}
+
+func (MeetingType) Type() protoreflect.EnumType {
+	return &file_career_v1_meetings_proto_enumTypes[0]
+}
+
+func (x MeetingType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MeetingType.Descriptor instead.
+func (MeetingType) EnumDescriptor() ([]byte, []int) {
+	return file_career_v1_meetings_proto_rawDescGZIP(), []int{0}
+}
+
+// Which video service the member will host in. Named only so the
+// invitation says the right thing and the member is sent to the right
+// place; no room is created here.
+type VideoProvider int32
+
+const (
+	// Not set, and required to be unset unless the type is video.
+	VideoProvider_VIDEO_PROVIDER_UNSPECIFIED VideoProvider = 0
+	// Google Meet.
+	VideoProvider_VIDEO_PROVIDER_GOOGLE_MEET VideoProvider = 1
+	// Microsoft Teams.
+	VideoProvider_VIDEO_PROVIDER_TEAMS VideoProvider = 2
+	// Zoom.
+	VideoProvider_VIDEO_PROVIDER_ZOOM VideoProvider = 3
+)
+
+// Enum value maps for VideoProvider.
+var (
+	VideoProvider_name = map[int32]string{
+		0: "VIDEO_PROVIDER_UNSPECIFIED",
+		1: "VIDEO_PROVIDER_GOOGLE_MEET",
+		2: "VIDEO_PROVIDER_TEAMS",
+		3: "VIDEO_PROVIDER_ZOOM",
+	}
+	VideoProvider_value = map[string]int32{
+		"VIDEO_PROVIDER_UNSPECIFIED": 0,
+		"VIDEO_PROVIDER_GOOGLE_MEET": 1,
+		"VIDEO_PROVIDER_TEAMS":       2,
+		"VIDEO_PROVIDER_ZOOM":        3,
+	}
+)
+
+func (x VideoProvider) Enum() *VideoProvider {
+	p := new(VideoProvider)
+	*p = x
+	return p
+}
+
+func (x VideoProvider) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VideoProvider) Descriptor() protoreflect.EnumDescriptor {
+	return file_career_v1_meetings_proto_enumTypes[1].Descriptor()
+}
+
+func (VideoProvider) Type() protoreflect.EnumType {
+	return &file_career_v1_meetings_proto_enumTypes[1]
+}
+
+func (x VideoProvider) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VideoProvider.Descriptor instead.
+func (VideoProvider) EnumDescriptor() ([]byte, []int) {
+	return file_career_v1_meetings_proto_rawDescGZIP(), []int{1}
+}
+
 // Request for GetMeetingOptions. Empty: the options belong to the
 // owner, not to the caller, and a member cannot vary them.
 type GetMeetingOptionsRequest struct {
@@ -421,8 +535,18 @@ type BookMeetingRequest struct {
 	// How the member would like to meet, in their words, for example a
 	// phone number or "your call, send a link". Optional.
 	ContactPreference string `protobuf:"bytes,4,opt,name=contact_preference,json=contactPreference,proto3" json:"contact_preference,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Video or phone. Required on new bookings.
+	MeetingType MeetingType `protobuf:"varint,5,opt,name=meeting_type,json=meetingType,proto3,enum=career.v1.MeetingType" json:"meeting_type,omitempty"`
+	// Which service, when meeting_type is video. Rejected otherwise.
+	VideoProvider VideoProvider `protobuf:"varint,6,opt,name=video_provider,json=videoProvider,proto3,enum=career.v1.VideoProvider" json:"video_provider,omitempty"`
+	// The number the member will call FROM, when meeting_type is phone.
+	// Country code, a space, then the ten-digit number, for example
+	// "+1 5135551234". May be left empty to say the number is in the
+	// comments instead, which is the escape hatch for anyone whose
+	// number does not fit that shape.
+	PhoneNumber   string `protobuf:"bytes,7,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BookMeetingRequest) Reset() {
@@ -483,6 +607,27 @@ func (x *BookMeetingRequest) GetContactPreference() string {
 	return ""
 }
 
+func (x *BookMeetingRequest) GetMeetingType() MeetingType {
+	if x != nil {
+		return x.MeetingType
+	}
+	return MeetingType_MEETING_TYPE_UNSPECIFIED
+}
+
+func (x *BookMeetingRequest) GetVideoProvider() VideoProvider {
+	if x != nil {
+		return x.VideoProvider
+	}
+	return VideoProvider_VIDEO_PROVIDER_UNSPECIFIED
+}
+
+func (x *BookMeetingRequest) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
+	}
+	return ""
+}
+
 // A booked meeting, as the member sees it.
 type Meeting struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -505,7 +650,14 @@ type Meeting struct {
 	// Set when the meeting has been cancelled. Cancelled meetings stay
 	// in the list rather than vanishing, because a meeting that silently
 	// disappears reads as a bug.
-	CancelledAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=cancelled_at,json=cancelledAt,proto3" json:"cancelled_at,omitempty"`
+	CancelledAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=cancelled_at,json=cancelledAt,proto3" json:"cancelled_at,omitempty"`
+	// Video or phone, as booked.
+	MeetingType MeetingType `protobuf:"varint,9,opt,name=meeting_type,json=meetingType,proto3,enum=career.v1.MeetingType" json:"meeting_type,omitempty"`
+	// Which service, when the type is video.
+	VideoProvider VideoProvider `protobuf:"varint,10,opt,name=video_provider,json=videoProvider,proto3,enum=career.v1.VideoProvider" json:"video_provider,omitempty"`
+	// The number the member said they would call from. Empty with a
+	// phone meeting means they said it is in the comments.
+	PhoneNumber   string `protobuf:"bytes,11,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -594,6 +746,27 @@ func (x *Meeting) GetCancelledAt() *timestamppb.Timestamp {
 		return x.CancelledAt
 	}
 	return nil
+}
+
+func (x *Meeting) GetMeetingType() MeetingType {
+	if x != nil {
+		return x.MeetingType
+	}
+	return MeetingType_MEETING_TYPE_UNSPECIFIED
+}
+
+func (x *Meeting) GetVideoProvider() VideoProvider {
+	if x != nil {
+		return x.VideoProvider
+	}
+	return VideoProvider_VIDEO_PROVIDER_UNSPECIFIED
+}
+
+func (x *Meeting) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
+	}
+	return ""
 }
 
 // Result of booking.
@@ -855,12 +1028,15 @@ const file_career_v1_meetings_proto_rawDesc = "" +
 	"\x05slots\x18\x01 \x03(\v2\x16.career.v1.MeetingSlotR\x05slots\x12\x12\n" +
 	"\x04zone\x18\x02 \x01(\tR\x04zone\x12\x1c\n" +
 	"\tavailable\x18\x03 \x01(\bR\tavailable\x12-\n" +
-	"\x12unavailable_reason\x18\x04 \x01(\tR\x11unavailableReason\"\xdb\x01\n" +
+	"\x12unavailable_reason\x18\x04 \x01(\tR\x11unavailableReason\"\x83\x03\n" +
 	"\x12BookMeetingRequest\x128\n" +
 	"\x05start\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x05start\x122\n" +
 	"\x10duration_minutes\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x0fdurationMinutes\x12\x1e\n" +
 	"\x05topic\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05topic\x127\n" +
-	"\x12contact_preference\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x11contactPreference\"\xa6\x02\n" +
+	"\x12contact_preference\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x11contactPreference\x129\n" +
+	"\fmeeting_type\x18\x05 \x01(\x0e2\x16.career.v1.MeetingTypeR\vmeetingType\x12?\n" +
+	"\x0evideo_provider\x18\x06 \x01(\x0e2\x18.career.v1.VideoProviderR\rvideoProvider\x12*\n" +
+	"\fphone_number\x18\a \x01(\tB\a\xbaH\x04r\x02\x18 R\vphoneNumber\"\xc5\x03\n" +
 	"\aMeeting\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x120\n" +
 	"\x05start\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +
@@ -869,7 +1045,11 @@ const file_career_v1_meetings_proto_rawDesc = "" +
 	"\x05topic\x18\x05 \x01(\tR\x05topic\x12\x12\n" +
 	"\x04zone\x18\x06 \x01(\tR\x04zone\x12\x17\n" +
 	"\aics_url\x18\a \x01(\tR\x06icsUrl\x12=\n" +
-	"\fcancelled_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vcancelledAt\"C\n" +
+	"\fcancelled_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vcancelledAt\x129\n" +
+	"\fmeeting_type\x18\t \x01(\x0e2\x16.career.v1.MeetingTypeR\vmeetingType\x12?\n" +
+	"\x0evideo_provider\x18\n" +
+	" \x01(\x0e2\x18.career.v1.VideoProviderR\rvideoProvider\x12!\n" +
+	"\fphone_number\x18\v \x01(\tR\vphoneNumber\"C\n" +
 	"\x13BookMeetingResponse\x12,\n" +
 	"\ameeting\x18\x01 \x01(\v2\x12.career.v1.MeetingR\ameeting\":\n" +
 	"\x15ListMyMeetingsRequest\x12!\n" +
@@ -879,7 +1059,16 @@ const file_career_v1_meetings_proto_rawDesc = "" +
 	"\x14CancelMeetingRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\x02id\"E\n" +
 	"\x15CancelMeetingResponse\x12,\n" +
-	"\ameeting\x18\x01 \x01(\v2\x12.career.v1.MeetingR\ameeting2\xf5\x03\n" +
+	"\ameeting\x18\x01 \x01(\v2\x12.career.v1.MeetingR\ameeting*[\n" +
+	"\vMeetingType\x12\x1c\n" +
+	"\x18MEETING_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12MEETING_TYPE_VIDEO\x10\x01\x12\x16\n" +
+	"\x12MEETING_TYPE_PHONE\x10\x02*\x82\x01\n" +
+	"\rVideoProvider\x12\x1e\n" +
+	"\x1aVIDEO_PROVIDER_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aVIDEO_PROVIDER_GOOGLE_MEET\x10\x01\x12\x18\n" +
+	"\x14VIDEO_PROVIDER_TEAMS\x10\x02\x12\x17\n" +
+	"\x13VIDEO_PROVIDER_ZOOM\x10\x032\xf5\x03\n" +
 	"\x0eMeetingService\x12h\n" +
 	"\x11GetMeetingOptions\x12#.career.v1.GetMeetingOptionsRequest\x1a$.career.v1.GetMeetingOptionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18<\x12b\n" +
 	"\x0fGetAvailability\x12!.career.v1.GetAvailabilityRequest\x1a\".career.v1.GetAvailabilityResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12V\n" +
@@ -902,50 +1091,57 @@ func file_career_v1_meetings_proto_rawDescGZIP() []byte {
 	return file_career_v1_meetings_proto_rawDescData
 }
 
+var file_career_v1_meetings_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_career_v1_meetings_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_career_v1_meetings_proto_goTypes = []any{
-	(*GetMeetingOptionsRequest)(nil),  // 0: career.v1.GetMeetingOptionsRequest
-	(*GetMeetingOptionsResponse)(nil), // 1: career.v1.GetMeetingOptionsResponse
-	(*GetAvailabilityRequest)(nil),    // 2: career.v1.GetAvailabilityRequest
-	(*MeetingSlot)(nil),               // 3: career.v1.MeetingSlot
-	(*GetAvailabilityResponse)(nil),   // 4: career.v1.GetAvailabilityResponse
-	(*BookMeetingRequest)(nil),        // 5: career.v1.BookMeetingRequest
-	(*Meeting)(nil),                   // 6: career.v1.Meeting
-	(*BookMeetingResponse)(nil),       // 7: career.v1.BookMeetingResponse
-	(*ListMyMeetingsRequest)(nil),     // 8: career.v1.ListMyMeetingsRequest
-	(*ListMyMeetingsResponse)(nil),    // 9: career.v1.ListMyMeetingsResponse
-	(*CancelMeetingRequest)(nil),      // 10: career.v1.CancelMeetingRequest
-	(*CancelMeetingResponse)(nil),     // 11: career.v1.CancelMeetingResponse
-	(*timestamppb.Timestamp)(nil),     // 12: google.protobuf.Timestamp
+	(MeetingType)(0),                  // 0: career.v1.MeetingType
+	(VideoProvider)(0),                // 1: career.v1.VideoProvider
+	(*GetMeetingOptionsRequest)(nil),  // 2: career.v1.GetMeetingOptionsRequest
+	(*GetMeetingOptionsResponse)(nil), // 3: career.v1.GetMeetingOptionsResponse
+	(*GetAvailabilityRequest)(nil),    // 4: career.v1.GetAvailabilityRequest
+	(*MeetingSlot)(nil),               // 5: career.v1.MeetingSlot
+	(*GetAvailabilityResponse)(nil),   // 6: career.v1.GetAvailabilityResponse
+	(*BookMeetingRequest)(nil),        // 7: career.v1.BookMeetingRequest
+	(*Meeting)(nil),                   // 8: career.v1.Meeting
+	(*BookMeetingResponse)(nil),       // 9: career.v1.BookMeetingResponse
+	(*ListMyMeetingsRequest)(nil),     // 10: career.v1.ListMyMeetingsRequest
+	(*ListMyMeetingsResponse)(nil),    // 11: career.v1.ListMyMeetingsResponse
+	(*CancelMeetingRequest)(nil),      // 12: career.v1.CancelMeetingRequest
+	(*CancelMeetingResponse)(nil),     // 13: career.v1.CancelMeetingResponse
+	(*timestamppb.Timestamp)(nil),     // 14: google.protobuf.Timestamp
 }
 var file_career_v1_meetings_proto_depIdxs = []int32{
-	12, // 0: career.v1.GetAvailabilityRequest.from:type_name -> google.protobuf.Timestamp
-	12, // 1: career.v1.GetAvailabilityRequest.to:type_name -> google.protobuf.Timestamp
-	12, // 2: career.v1.MeetingSlot.start:type_name -> google.protobuf.Timestamp
-	12, // 3: career.v1.MeetingSlot.end:type_name -> google.protobuf.Timestamp
-	3,  // 4: career.v1.GetAvailabilityResponse.slots:type_name -> career.v1.MeetingSlot
-	12, // 5: career.v1.BookMeetingRequest.start:type_name -> google.protobuf.Timestamp
-	12, // 6: career.v1.Meeting.start:type_name -> google.protobuf.Timestamp
-	12, // 7: career.v1.Meeting.end:type_name -> google.protobuf.Timestamp
-	12, // 8: career.v1.Meeting.cancelled_at:type_name -> google.protobuf.Timestamp
-	6,  // 9: career.v1.BookMeetingResponse.meeting:type_name -> career.v1.Meeting
-	6,  // 10: career.v1.ListMyMeetingsResponse.meetings:type_name -> career.v1.Meeting
-	6,  // 11: career.v1.CancelMeetingResponse.meeting:type_name -> career.v1.Meeting
-	0,  // 12: career.v1.MeetingService.GetMeetingOptions:input_type -> career.v1.GetMeetingOptionsRequest
-	2,  // 13: career.v1.MeetingService.GetAvailability:input_type -> career.v1.GetAvailabilityRequest
-	5,  // 14: career.v1.MeetingService.BookMeeting:input_type -> career.v1.BookMeetingRequest
-	8,  // 15: career.v1.MeetingService.ListMyMeetings:input_type -> career.v1.ListMyMeetingsRequest
-	10, // 16: career.v1.MeetingService.CancelMeeting:input_type -> career.v1.CancelMeetingRequest
-	1,  // 17: career.v1.MeetingService.GetMeetingOptions:output_type -> career.v1.GetMeetingOptionsResponse
-	4,  // 18: career.v1.MeetingService.GetAvailability:output_type -> career.v1.GetAvailabilityResponse
-	7,  // 19: career.v1.MeetingService.BookMeeting:output_type -> career.v1.BookMeetingResponse
-	9,  // 20: career.v1.MeetingService.ListMyMeetings:output_type -> career.v1.ListMyMeetingsResponse
-	11, // 21: career.v1.MeetingService.CancelMeeting:output_type -> career.v1.CancelMeetingResponse
-	17, // [17:22] is the sub-list for method output_type
-	12, // [12:17] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	14, // 0: career.v1.GetAvailabilityRequest.from:type_name -> google.protobuf.Timestamp
+	14, // 1: career.v1.GetAvailabilityRequest.to:type_name -> google.protobuf.Timestamp
+	14, // 2: career.v1.MeetingSlot.start:type_name -> google.protobuf.Timestamp
+	14, // 3: career.v1.MeetingSlot.end:type_name -> google.protobuf.Timestamp
+	5,  // 4: career.v1.GetAvailabilityResponse.slots:type_name -> career.v1.MeetingSlot
+	14, // 5: career.v1.BookMeetingRequest.start:type_name -> google.protobuf.Timestamp
+	0,  // 6: career.v1.BookMeetingRequest.meeting_type:type_name -> career.v1.MeetingType
+	1,  // 7: career.v1.BookMeetingRequest.video_provider:type_name -> career.v1.VideoProvider
+	14, // 8: career.v1.Meeting.start:type_name -> google.protobuf.Timestamp
+	14, // 9: career.v1.Meeting.end:type_name -> google.protobuf.Timestamp
+	14, // 10: career.v1.Meeting.cancelled_at:type_name -> google.protobuf.Timestamp
+	0,  // 11: career.v1.Meeting.meeting_type:type_name -> career.v1.MeetingType
+	1,  // 12: career.v1.Meeting.video_provider:type_name -> career.v1.VideoProvider
+	8,  // 13: career.v1.BookMeetingResponse.meeting:type_name -> career.v1.Meeting
+	8,  // 14: career.v1.ListMyMeetingsResponse.meetings:type_name -> career.v1.Meeting
+	8,  // 15: career.v1.CancelMeetingResponse.meeting:type_name -> career.v1.Meeting
+	2,  // 16: career.v1.MeetingService.GetMeetingOptions:input_type -> career.v1.GetMeetingOptionsRequest
+	4,  // 17: career.v1.MeetingService.GetAvailability:input_type -> career.v1.GetAvailabilityRequest
+	7,  // 18: career.v1.MeetingService.BookMeeting:input_type -> career.v1.BookMeetingRequest
+	10, // 19: career.v1.MeetingService.ListMyMeetings:input_type -> career.v1.ListMyMeetingsRequest
+	12, // 20: career.v1.MeetingService.CancelMeeting:input_type -> career.v1.CancelMeetingRequest
+	3,  // 21: career.v1.MeetingService.GetMeetingOptions:output_type -> career.v1.GetMeetingOptionsResponse
+	6,  // 22: career.v1.MeetingService.GetAvailability:output_type -> career.v1.GetAvailabilityResponse
+	9,  // 23: career.v1.MeetingService.BookMeeting:output_type -> career.v1.BookMeetingResponse
+	11, // 24: career.v1.MeetingService.ListMyMeetings:output_type -> career.v1.ListMyMeetingsResponse
+	13, // 25: career.v1.MeetingService.CancelMeeting:output_type -> career.v1.CancelMeetingResponse
+	21, // [21:26] is the sub-list for method output_type
+	16, // [16:21] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_meetings_proto_init() }
@@ -959,13 +1155,14 @@ func file_career_v1_meetings_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_meetings_proto_rawDesc), len(file_career_v1_meetings_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      2,
 			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_career_v1_meetings_proto_goTypes,
 		DependencyIndexes: file_career_v1_meetings_proto_depIdxs,
+		EnumInfos:         file_career_v1_meetings_proto_enumTypes,
 		MessageInfos:      file_career_v1_meetings_proto_msgTypes,
 	}.Build()
 	File_career_v1_meetings_proto = out.File

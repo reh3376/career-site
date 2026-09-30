@@ -6,6 +6,7 @@ import {
   bookMeetingAction,
   getAvailability,
   listMyMeetings,
+  VIDEO_PROVIDERS,
   type AvailabilityState,
   type BookState,
   type Meeting,
@@ -23,6 +24,29 @@ function fmt(iso: string, zone: string, opts: Intl.DateTimeFormatOptions) {
     new Date(iso),
   );
 }
+
+// "Time displayed in Eastern Time Zone (UTC -4)". The offset is read
+// from the zone at the date being shown, not from today, because the
+// horizon crosses a daylight-saving boundary twice a year and an
+// offset stated from today would be an hour wrong for half the list.
+function zoneLine(zone: string, label: string, on: Date) {
+  const part = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone || "UTC",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(on)
+    .find((x) => x.type === "timeZoneName")?.value;
+  // "GMT-04:00" to "-4"; "GMT" itself means no offset.
+  const m = part?.match(/GMT([+-])(\d{2}):(\d{2})/);
+  if (!m) return `Time displayed in ${label}`;
+  const hours = Number(m[2]);
+  const mins = Number(m[3]);
+  const off = mins === 0 ? `${m[1]}${hours}` : `${m[1]}${hours}:${m[3]}`;
+  return `Time displayed in ${label} Zone (UTC ${off})`;
+}
+
+// How many days the picker shows at once, with arrows either side.
+const DAYS_PER_PAGE = 6;
 
 type Day = {
   key: string;
@@ -68,9 +92,14 @@ export function Booking({
   const [duration, setDuration] = useState(durations[1] ?? durations[0] ?? 30);
   const [availability, setAvailability] = useState<AvailabilityState | null>(null);
   const [dayKey, setDayKey] = useState<string>("");
+  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Slot | null>(null);
   const [topic, setTopic] = useState("");
   const [contact, setContact] = useState("");
+  const [meetingType, setMeetingType] = useState<"video" | "phone" | "">("");
+  const [provider, setProvider] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneInComments, setPhoneInComments] = useState(false);
   const [result, setResult] = useState<BookState>({});
   // Seeded from the server render, then kept current here: booking adds
   // one and cancelling removes one, and a list that only reloads with
@@ -104,6 +133,13 @@ export function Booking({
   // selection or needing an effect to clear it.
   const day = days.find((d) => d.key === dayKey) ?? days[0] ?? null;
 
+  // Six at a time. Clamped rather than stored blind, so a page that no
+  // longer exists after the length changed falls back to the first
+  // rather than showing an empty row.
+  const pageCount = Math.max(1, Math.ceil(days.length / DAYS_PER_PAGE));
+  const pageIndex = Math.min(page, pageCount - 1);
+  const shown = days.slice(pageIndex * DAYS_PER_PAGE, pageIndex * DAYS_PER_PAGE + DAYS_PER_PAGE);
+
   function refresh() {
     startLoading(async () => setAvailability(await getAvailability(duration)));
   }
@@ -127,6 +163,10 @@ export function Booking({
         setSelected(null);
         setTopic("");
         setContact("");
+        setMeetingType("");
+        setProvider("");
+        setPhone("");
+        setPhoneInComments(false);
         refreshAll();
       }
       // Losing the race is the one error where the list on screen is
@@ -160,6 +200,7 @@ export function Booking({
 
   if (result.ok && result.meeting) {
     const m = result.meeting;
+    const setup = VIDEO_PROVIDERS.find((v) => v.value === m.videoProvider);
     return (
       <div className="mt-10 rounded-md border border-accent/40 bg-paper-2/60 p-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">booked</p>
@@ -176,10 +217,33 @@ export function Booking({
         <p className="mt-4 text-sm text-ink-3">
           It is on Roger&rsquo;s calendar and you should have an invitation by email.
         </p>
+        {/* The site creates no video rooms, so the member is sent to
+            their own calendar to make one. A new tab rather than a
+            redirect: losing this page would lose the calendar file. */}
+        {setup ? (
+          <p className="mt-4 rounded-md border border-line bg-paper p-4 text-sm text-ink-2">
+            You said you would host on <span className="text-ink">{setup.label}</span>. Create the
+            room in your calendar and send Roger the link.
+          </p>
+        ) : null}
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+          {setup ? (
+            <a
+              href={setup.setupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-accent-hover"
+            >
+              Set up the {setup.label} link
+            </a>
+          ) : null}
           <a
             href={m.icsUrl}
-            className="inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-accent-hover"
+            className={
+              setup
+                ? "inline-flex items-center rounded-md border border-line bg-paper-2 px-5 py-2.5 text-sm font-medium text-ink no-underline transition-colors hover:border-accent hover:text-accent"
+                : "inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-accent-hover"
+            }
           >
             Add to your calendar
           </a>
@@ -215,6 +279,7 @@ export function Booking({
                 // A start that fits 15 minutes may not fit 45, so a
                 // selection cannot survive the length changing.
                 setSelected(null);
+                setPage(0);
                 setDuration(d);
               }}
               className={
@@ -262,8 +327,21 @@ export function Booking({
                 </p>
               ) : null}
             </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
-              {days.map((d) => {
+            <div className="mt-3 flex items-stretch gap-2">
+              {/* Back only when there is something behind, so the row
+                  does not carry a control that does nothing. */}
+              {pageIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setPage(pageIndex - 1)}
+                  aria-label="Earlier days"
+                  className="shrink-0 rounded-md border border-line px-3 text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                >
+                  &#8249;
+                </button>
+              ) : null}
+
+              {shown.map((d) => {
                 const active = d.key === day?.key;
                 return (
                   <button
@@ -275,7 +353,7 @@ export function Booking({
                       setSelected(null);
                     }}
                     className={
-                      "shrink-0 rounded-md border px-4 py-3 text-center transition-colors " +
+                      "min-w-[4.5rem] flex-1 rounded-md border px-3 py-3 text-center transition-colors " +
                       (active
                         ? "border-accent bg-accent text-white"
                         : "border-line bg-paper-2 text-ink-2 hover:border-accent hover:text-accent")
@@ -294,7 +372,24 @@ export function Booking({
                   </button>
                 );
               })}
+
+              {pageIndex < pageCount - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setPage(pageIndex + 1)}
+                  aria-label="Later days"
+                  className="shrink-0 rounded-md border border-line px-3 text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                >
+                  &#8250;
+                </button>
+              ) : null}
             </div>
+            {pageCount > 1 ? (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+                days {pageIndex * DAYS_PER_PAGE + 1} to{" "}
+                {pageIndex * DAYS_PER_PAGE + shown.length} of {days.length}
+              </p>
+            ) : null}
           </div>
 
           {/* 3. Time, for that day only. */}
@@ -307,8 +402,8 @@ export function Booking({
                 >
                   {day.long}
                 </h2>
-                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                  all times {options.zoneLabel}
+                <p className="text-sm text-ink-3">
+                  {zoneLine(zone, options.zoneLabel, new Date(day.slots[0].start))}
                 </p>
               </div>
               <div
@@ -378,8 +473,106 @@ export function Booking({
             placeholder="A role you are hiring for, a plant problem, or the reviewer's output on a posting."
           />
 
+          {/* How the meeting happens. Asked here because a time with
+              no way to reach the other person is a second exchange of
+              emails to arrange the thing this was supposed to have
+              arranged. No video room is created by this site: you host
+              it and send the link. */}
+          <input type="hidden" name="meeting_type" value={
+            meetingType === "video" ? "MEETING_TYPE_VIDEO"
+            : meetingType === "phone" ? "MEETING_TYPE_PHONE" : ""
+          } />
+          <input type="hidden" name="video_provider" value={meetingType === "video" ? provider : ""} />
+          <input
+            type="hidden"
+            name="phone_number"
+            value={meetingType === "phone" && !phoneInComments ? phone : ""}
+          />
+
+          <fieldset className="mt-6">
+            <legend className="text-sm text-ink">How should you meet?</legend>
+            <div className="mt-2 inline-flex rounded-md border border-line p-1">
+              {(["video", "phone"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={meetingType === t}
+                  onClick={() => {
+                    setMeetingType(t);
+                    // The two are exclusive, and carrying a stale
+                    // provider into a phone call is refused by the
+                    // server anyway.
+                    setProvider("");
+                  }}
+                  className={
+                    meetingType === t
+                      ? "rounded px-4 py-2 text-sm font-medium text-white bg-accent transition-colors"
+                      : "rounded px-4 py-2 text-sm text-ink-2 transition-colors hover:text-accent"
+                  }
+                >
+                  {t === "video" ? "Video" : "Phone only"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {meetingType === "video" ? (
+            <div className="mt-4">
+              <label htmlFor="provider" className="block text-sm text-ink">
+                Which service will you host on?
+              </label>
+              <select
+                id="provider"
+                required
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              >
+                <option value="">Choose one</option>
+                {VIDEO_PROVIDERS.map((v) => (
+                  <option key={v.value} value={v.value}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-ink-3">
+                You create the room and send the link. After booking, a new tab opens on your
+                calendar so you can set it up straight away.
+              </p>
+            </div>
+          ) : null}
+
+          {meetingType === "phone" ? (
+            <div className="mt-4">
+              <label htmlFor="phone_display" className="block text-sm text-ink">
+                What number will you call from?
+              </label>
+              <input
+                id="phone_display"
+                type="tel"
+                inputMode="tel"
+                disabled={phoneInComments}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+                placeholder="+1 5135551234"
+              />
+              <p className="mt-1 text-xs text-ink-3">
+                Country code, a space, then ten digits.
+              </p>
+              <label className="mt-2 flex items-center gap-2 text-sm text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={phoneInComments}
+                  onChange={(e) => setPhoneInComments(e.target.checked)}
+                />
+                My number is in the comments above
+              </label>
+            </div>
+          ) : null}
+
           <label htmlFor="contact_preference" className="mt-4 block text-sm text-ink">
-            How should he reach you? <span className="text-ink-3">Optional</span>
+            Anything else he should know? <span className="text-ink-3">Optional</span>
           </label>
           <input
             id="contact_preference"
@@ -389,7 +582,7 @@ export function Booking({
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            placeholder="A phone number, or leave it and he will send a link."
+            placeholder="An extension, a preferred half of the call, anything useful."
           />
 
           {result.error ? (
@@ -401,7 +594,7 @@ export function Booking({
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
             <button
               type="submit"
-              disabled={booking}
+              disabled={booking || !meetingType || (meetingType === "video" && !provider)}
               className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
             >
               {booking ? "Booking..." : `Book ${duration} minutes`}

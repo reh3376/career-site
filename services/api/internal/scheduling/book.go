@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/calendar"
@@ -22,6 +23,15 @@ type Booking struct {
 	EventID  string
 	Created  time.Time
 	Canceled *time.Time
+	// How the meeting happens. Carried through to the row so the owner
+	// sees it on his calendar entry and in the console.
+	MeetingType   string
+	VideoProvider string
+	PhoneNumber   string
+	// ContactLine is the rendered "how to reach them" sentence. Built by
+	// the handler, which owns the wording, rather than here, which owns
+	// the booking.
+	ContactLine string
 }
 
 // Store is what booking needs from the database. Claim is the important
@@ -42,6 +52,24 @@ type Store interface {
 
 // ErrAlreadyClaimed means another member took the interval here first.
 var ErrAlreadyClaimed = errors.New("that time has just been taken")
+
+// describe is what the owner reads on his calendar entry: how to reach
+// the member, then what they want to discuss.
+//
+// The contact line comes first because it is the thing needed at the
+// moment the reminder fires. A calendar entry that says only the
+// subject leaves him looking for a phone number two minutes before the
+// call.
+func (b Booking) describe() string {
+	var parts []string
+	if line := b.ContactLine; line != "" {
+		parts = append(parts, line)
+	}
+	if b.Note != "" {
+		parts = append(parts, b.Note)
+	}
+	return strings.Join(parts, "\n\n")
+}
 
 // Service books meetings.
 type Service struct {
@@ -130,7 +158,7 @@ func (s *Service) Book(ctx context.Context, set Settings, b Booking) (Booking, e
 		Start:       b.Start,
 		End:         end,
 		Summary:     fmt.Sprintf("%s (%d min)", b.Name, b.DurMins),
-		Description: b.Note,
+		Description: b.describe(),
 		Attendee:    b.Email,
 	})
 	if err != nil {
