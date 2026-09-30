@@ -1738,6 +1738,158 @@ class ReviewDecisionResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
+class QaSource(_message.Message):
+    __slots__ = ("title", "path")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    path: str
+    def __init__(self, title: _Optional[str] = ..., path: _Optional[str] = ...) -> None: ...
+
+class QaPhrasing(_message.Message):
+    __slots__ = ("id", "text", "canonical", "embedded")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    CANONICAL_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    text: str
+    canonical: bool
+    embedded: bool
+    def __init__(self, id: _Optional[str] = ..., text: _Optional[str] = ..., canonical: _Optional[bool] = ..., embedded: _Optional[bool] = ...) -> None: ...
+
+class QaEntry(_message.Message):
+    __slots__ = ("id", "question", "answer", "sources", "tags", "covers_restricted", "enabled", "created_at", "updated_at", "phrasings")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    SOURCES_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    COVERS_RESTRICTED_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    PHRASINGS_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    question: str
+    answer: str
+    sources: _containers.RepeatedCompositeFieldContainer[QaSource]
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    covers_restricted: bool
+    enabled: bool
+    created_at: _timestamp_pb2.Timestamp
+    updated_at: _timestamp_pb2.Timestamp
+    phrasings: _containers.RepeatedCompositeFieldContainer[QaPhrasing]
+    def __init__(self, id: _Optional[str] = ..., question: _Optional[str] = ..., answer: _Optional[str] = ..., sources: _Optional[_Iterable[_Union[QaSource, _Mapping]]] = ..., tags: _Optional[_Iterable[str]] = ..., covers_restricted: _Optional[bool] = ..., enabled: _Optional[bool] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., phrasings: _Optional[_Iterable[_Union[QaPhrasing, _Mapping]]] = ...) -> None: ...
+
+class ListQaEntriesRequest(_message.Message):
+    __slots__ = ("include_disabled",)
+    INCLUDE_DISABLED_FIELD_NUMBER: _ClassVar[int]
+    include_disabled: bool
+    def __init__(self, include_disabled: _Optional[bool] = ...) -> None: ...
+
+class ListQaEntriesResponse(_message.Message):
+    __slots__ = ("entries", "awaiting_embedding")
+    ENTRIES_FIELD_NUMBER: _ClassVar[int]
+    AWAITING_EMBEDDING_FIELD_NUMBER: _ClassVar[int]
+    entries: _containers.RepeatedCompositeFieldContainer[QaEntry]
+    awaiting_embedding: int
+    def __init__(self, entries: _Optional[_Iterable[_Union[QaEntry, _Mapping]]] = ..., awaiting_embedding: _Optional[int] = ...) -> None: ...
+
+class CreateQaEntryRequest(_message.Message):
+    __slots__ = ("question", "answer", "sources", "tags", "covers_restricted", "enabled", "phrasings")
+    QUESTION_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    SOURCES_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    COVERS_RESTRICTED_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    PHRASINGS_FIELD_NUMBER: _ClassVar[int]
+    question: str
+    answer: str
+    sources: _containers.RepeatedCompositeFieldContainer[QaSource]
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    covers_restricted: bool
+    enabled: bool
+    phrasings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, question: _Optional[str] = ..., answer: _Optional[str] = ..., sources: _Optional[_Iterable[_Union[QaSource, _Mapping]]] = ..., tags: _Optional[_Iterable[str]] = ..., covers_restricted: _Optional[bool] = ..., enabled: _Optional[bool] = ..., phrasings: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class CreateQaEntryResponse(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class UpdateQaEntryRequest(_message.Message):
+    __slots__ = ("id", "question", "answer", "sources", "tags", "covers_restricted", "enabled")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    SOURCES_FIELD_NUMBER: _ClassVar[int]
+    TAGS_FIELD_NUMBER: _ClassVar[int]
+    COVERS_RESTRICTED_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    question: str
+    answer: str
+    sources: _containers.RepeatedCompositeFieldContainer[QaSource]
+    tags: _containers.RepeatedScalarFieldContainer[str]
+    covers_restricted: bool
+    enabled: bool
+    def __init__(self, id: _Optional[str] = ..., question: _Optional[str] = ..., answer: _Optional[str] = ..., sources: _Optional[_Iterable[_Union[QaSource, _Mapping]]] = ..., tags: _Optional[_Iterable[str]] = ..., covers_restricted: _Optional[bool] = ..., enabled: _Optional[bool] = ...) -> None: ...
+
+class UpdateQaEntryResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class SetQaEntryEnabledRequest(_message.Message):
+    __slots__ = ("id", "enabled")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    enabled: bool
+    def __init__(self, id: _Optional[str] = ..., enabled: _Optional[bool] = ...) -> None: ...
+
+class SetQaEntryEnabledResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class DeleteQaEntryRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class DeleteQaEntryResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class AddQaPhrasingRequest(_message.Message):
+    __slots__ = ("entry_id", "text")
+    ENTRY_ID_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    entry_id: str
+    text: str
+    def __init__(self, entry_id: _Optional[str] = ..., text: _Optional[str] = ...) -> None: ...
+
+class AddQaPhrasingResponse(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class DeleteQaPhrasingRequest(_message.Message):
+    __slots__ = ("entry_id", "phrasing_id")
+    ENTRY_ID_FIELD_NUMBER: _ClassVar[int]
+    PHRASING_ID_FIELD_NUMBER: _ClassVar[int]
+    entry_id: str
+    phrasing_id: str
+    def __init__(self, entry_id: _Optional[str] = ..., phrasing_id: _Optional[str] = ...) -> None: ...
+
+class DeleteQaPhrasingResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
 class ExportDecisionLogRequest(_message.Message):
     __slots__ = ("reviewed_only",)
     REVIEWED_ONLY_FIELD_NUMBER: _ClassVar[int]

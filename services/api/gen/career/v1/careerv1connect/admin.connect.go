@@ -203,6 +203,27 @@ const (
 	// AdminServiceSetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// SetSchedulerSettings RPC.
 	AdminServiceSetSchedulerSettingsProcedure = "/career.v1.AdminService/SetSchedulerSettings"
+	// AdminServiceListQaEntriesProcedure is the fully-qualified name of the AdminService's
+	// ListQaEntries RPC.
+	AdminServiceListQaEntriesProcedure = "/career.v1.AdminService/ListQaEntries"
+	// AdminServiceCreateQaEntryProcedure is the fully-qualified name of the AdminService's
+	// CreateQaEntry RPC.
+	AdminServiceCreateQaEntryProcedure = "/career.v1.AdminService/CreateQaEntry"
+	// AdminServiceUpdateQaEntryProcedure is the fully-qualified name of the AdminService's
+	// UpdateQaEntry RPC.
+	AdminServiceUpdateQaEntryProcedure = "/career.v1.AdminService/UpdateQaEntry"
+	// AdminServiceSetQaEntryEnabledProcedure is the fully-qualified name of the AdminService's
+	// SetQaEntryEnabled RPC.
+	AdminServiceSetQaEntryEnabledProcedure = "/career.v1.AdminService/SetQaEntryEnabled"
+	// AdminServiceDeleteQaEntryProcedure is the fully-qualified name of the AdminService's
+	// DeleteQaEntry RPC.
+	AdminServiceDeleteQaEntryProcedure = "/career.v1.AdminService/DeleteQaEntry"
+	// AdminServiceAddQaPhrasingProcedure is the fully-qualified name of the AdminService's
+	// AddQaPhrasing RPC.
+	AdminServiceAddQaPhrasingProcedure = "/career.v1.AdminService/AddQaPhrasing"
+	// AdminServiceDeleteQaPhrasingProcedure is the fully-qualified name of the AdminService's
+	// DeleteQaPhrasing RPC.
+	AdminServiceDeleteQaPhrasingProcedure = "/career.v1.AdminService/DeleteQaPhrasing"
 	// AdminServiceGetCalendarConnectURLProcedure is the fully-qualified name of the AdminService's
 	// GetCalendarConnectURL RPC.
 	AdminServiceGetCalendarConnectURLProcedure = "/career.v1.AdminService/GetCalendarConnectURL"
@@ -449,6 +470,30 @@ type AdminServiceClient interface {
 	// worse than an unchanged one. Existing bookings are never moved:
 	// narrowing the windows stops new bookings, it does not cancel.
 	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
+	// Lists the Q&A bank: the owner's own answers, served verbatim by
+	// Ask Roger with no model involved.
+	ListQaEntries(context.Context, *connect.Request[v1.ListQaEntriesRequest]) (*connect.Response[v1.ListQaEntriesResponse], error)
+	// Writes a new bank entry along with its canonical phrasing. The
+	// entry is unreachable until the embedding job has given its
+	// phrasings vectors, which happens within five minutes.
+	CreateQaEntry(context.Context, *connect.Request[v1.CreateQaEntryRequest]) (*connect.Response[v1.CreateQaEntryResponse], error)
+	// Replaces an entry's editable fields. Changing the question clears
+	// the canonical phrasing's vector, so the entry stops matching the
+	// old wording immediately and matches the new one once re-embedded.
+	UpdateQaEntry(context.Context, *connect.Request[v1.UpdateQaEntryRequest]) (*connect.Response[v1.UpdateQaEntryResponse], error)
+	// Approves or withdraws an entry. Enabling is the approval: a
+	// disabled entry is never matched and never served, which is how a
+	// statement is taken back without losing what it said.
+	SetQaEntryEnabled(context.Context, *connect.Request[v1.SetQaEntryEnabledRequest]) (*connect.Response[v1.SetQaEntryEnabledResponse], error)
+	// Deletes an entry and its phrasings.
+	DeleteQaEntry(context.Context, *connect.Request[v1.DeleteQaEntryRequest]) (*connect.Response[v1.DeleteQaEntryResponse], error)
+	// Adds another way of asking an existing entry's question. Matching
+	// runs over every phrasing, so variants are how one answer covers the
+	// several ways people ask for it.
+	AddQaPhrasing(context.Context, *connect.Request[v1.AddQaPhrasingRequest]) (*connect.Response[v1.AddQaPhrasingResponse], error)
+	// Removes one variant phrasing. The canonical phrasing cannot be
+	// removed: it is the entry's own question.
+	DeleteQaPhrasing(context.Context, *connect.Request[v1.DeleteQaPhrasingRequest]) (*connect.Response[v1.DeleteQaPhrasingResponse], error)
 	// Returns the Google consent URL the owner visits to connect his
 	// calendar, carrying a signed, short-lived state so the callback
 	// cannot be driven by anyone else.
@@ -826,6 +871,48 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		listQaEntries: connect.NewClient[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse](
+			httpClient,
+			baseURL+AdminServiceListQaEntriesProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListQaEntries")),
+			connect.WithClientOptions(opts...),
+		),
+		createQaEntry: connect.NewClient[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse](
+			httpClient,
+			baseURL+AdminServiceCreateQaEntryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("CreateQaEntry")),
+			connect.WithClientOptions(opts...),
+		),
+		updateQaEntry: connect.NewClient[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse](
+			httpClient,
+			baseURL+AdminServiceUpdateQaEntryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("UpdateQaEntry")),
+			connect.WithClientOptions(opts...),
+		),
+		setQaEntryEnabled: connect.NewClient[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse](
+			httpClient,
+			baseURL+AdminServiceSetQaEntryEnabledProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetQaEntryEnabled")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteQaEntry: connect.NewClient[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteQaEntryProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteQaEntry")),
+			connect.WithClientOptions(opts...),
+		),
+		addQaPhrasing: connect.NewClient[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse](
+			httpClient,
+			baseURL+AdminServiceAddQaPhrasingProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("AddQaPhrasing")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteQaPhrasing: connect.NewClient[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteQaPhrasingProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteQaPhrasing")),
+			connect.WithClientOptions(opts...),
+		),
 		getCalendarConnectURL: connect.NewClient[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse](
 			httpClient,
 			baseURL+AdminServiceGetCalendarConnectURLProcedure,
@@ -935,6 +1022,13 @@ type adminServiceClient struct {
 	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
 	getSchedulerSettings  *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
 	setSchedulerSettings  *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
+	listQaEntries         *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
+	createQaEntry         *connect.Client[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse]
+	updateQaEntry         *connect.Client[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse]
+	setQaEntryEnabled     *connect.Client[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse]
+	deleteQaEntry         *connect.Client[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse]
+	addQaPhrasing         *connect.Client[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse]
+	deleteQaPhrasing      *connect.Client[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse]
 	getCalendarConnectURL *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
 	connectCalendar       *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
 	getCalendarStatus     *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
@@ -1225,6 +1319,41 @@ func (c *adminServiceClient) SetSchedulerSettings(ctx context.Context, req *conn
 	return c.setSchedulerSettings.CallUnary(ctx, req)
 }
 
+// ListQaEntries calls career.v1.AdminService.ListQaEntries.
+func (c *adminServiceClient) ListQaEntries(ctx context.Context, req *connect.Request[v1.ListQaEntriesRequest]) (*connect.Response[v1.ListQaEntriesResponse], error) {
+	return c.listQaEntries.CallUnary(ctx, req)
+}
+
+// CreateQaEntry calls career.v1.AdminService.CreateQaEntry.
+func (c *adminServiceClient) CreateQaEntry(ctx context.Context, req *connect.Request[v1.CreateQaEntryRequest]) (*connect.Response[v1.CreateQaEntryResponse], error) {
+	return c.createQaEntry.CallUnary(ctx, req)
+}
+
+// UpdateQaEntry calls career.v1.AdminService.UpdateQaEntry.
+func (c *adminServiceClient) UpdateQaEntry(ctx context.Context, req *connect.Request[v1.UpdateQaEntryRequest]) (*connect.Response[v1.UpdateQaEntryResponse], error) {
+	return c.updateQaEntry.CallUnary(ctx, req)
+}
+
+// SetQaEntryEnabled calls career.v1.AdminService.SetQaEntryEnabled.
+func (c *adminServiceClient) SetQaEntryEnabled(ctx context.Context, req *connect.Request[v1.SetQaEntryEnabledRequest]) (*connect.Response[v1.SetQaEntryEnabledResponse], error) {
+	return c.setQaEntryEnabled.CallUnary(ctx, req)
+}
+
+// DeleteQaEntry calls career.v1.AdminService.DeleteQaEntry.
+func (c *adminServiceClient) DeleteQaEntry(ctx context.Context, req *connect.Request[v1.DeleteQaEntryRequest]) (*connect.Response[v1.DeleteQaEntryResponse], error) {
+	return c.deleteQaEntry.CallUnary(ctx, req)
+}
+
+// AddQaPhrasing calls career.v1.AdminService.AddQaPhrasing.
+func (c *adminServiceClient) AddQaPhrasing(ctx context.Context, req *connect.Request[v1.AddQaPhrasingRequest]) (*connect.Response[v1.AddQaPhrasingResponse], error) {
+	return c.addQaPhrasing.CallUnary(ctx, req)
+}
+
+// DeleteQaPhrasing calls career.v1.AdminService.DeleteQaPhrasing.
+func (c *adminServiceClient) DeleteQaPhrasing(ctx context.Context, req *connect.Request[v1.DeleteQaPhrasingRequest]) (*connect.Response[v1.DeleteQaPhrasingResponse], error) {
+	return c.deleteQaPhrasing.CallUnary(ctx, req)
+}
+
 // GetCalendarConnectURL calls career.v1.AdminService.GetCalendarConnectURL.
 func (c *adminServiceClient) GetCalendarConnectURL(ctx context.Context, req *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error) {
 	return c.getCalendarConnectURL.CallUnary(ctx, req)
@@ -1485,6 +1614,30 @@ type AdminServiceHandler interface {
 	// worse than an unchanged one. Existing bookings are never moved:
 	// narrowing the windows stops new bookings, it does not cancel.
 	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
+	// Lists the Q&A bank: the owner's own answers, served verbatim by
+	// Ask Roger with no model involved.
+	ListQaEntries(context.Context, *connect.Request[v1.ListQaEntriesRequest]) (*connect.Response[v1.ListQaEntriesResponse], error)
+	// Writes a new bank entry along with its canonical phrasing. The
+	// entry is unreachable until the embedding job has given its
+	// phrasings vectors, which happens within five minutes.
+	CreateQaEntry(context.Context, *connect.Request[v1.CreateQaEntryRequest]) (*connect.Response[v1.CreateQaEntryResponse], error)
+	// Replaces an entry's editable fields. Changing the question clears
+	// the canonical phrasing's vector, so the entry stops matching the
+	// old wording immediately and matches the new one once re-embedded.
+	UpdateQaEntry(context.Context, *connect.Request[v1.UpdateQaEntryRequest]) (*connect.Response[v1.UpdateQaEntryResponse], error)
+	// Approves or withdraws an entry. Enabling is the approval: a
+	// disabled entry is never matched and never served, which is how a
+	// statement is taken back without losing what it said.
+	SetQaEntryEnabled(context.Context, *connect.Request[v1.SetQaEntryEnabledRequest]) (*connect.Response[v1.SetQaEntryEnabledResponse], error)
+	// Deletes an entry and its phrasings.
+	DeleteQaEntry(context.Context, *connect.Request[v1.DeleteQaEntryRequest]) (*connect.Response[v1.DeleteQaEntryResponse], error)
+	// Adds another way of asking an existing entry's question. Matching
+	// runs over every phrasing, so variants are how one answer covers the
+	// several ways people ask for it.
+	AddQaPhrasing(context.Context, *connect.Request[v1.AddQaPhrasingRequest]) (*connect.Response[v1.AddQaPhrasingResponse], error)
+	// Removes one variant phrasing. The canonical phrasing cannot be
+	// removed: it is the entry's own question.
+	DeleteQaPhrasing(context.Context, *connect.Request[v1.DeleteQaPhrasingRequest]) (*connect.Response[v1.DeleteQaPhrasingResponse], error)
 	// Returns the Google consent URL the owner visits to connect his
 	// calendar, carrying a signed, short-lived state so the callback
 	// cannot be driven by anyone else.
@@ -1858,6 +2011,48 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListQaEntriesHandler := connect.NewUnaryHandler(
+		AdminServiceListQaEntriesProcedure,
+		svc.ListQaEntries,
+		connect.WithSchema(adminServiceMethods.ByName("ListQaEntries")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceCreateQaEntryHandler := connect.NewUnaryHandler(
+		AdminServiceCreateQaEntryProcedure,
+		svc.CreateQaEntry,
+		connect.WithSchema(adminServiceMethods.ByName("CreateQaEntry")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceUpdateQaEntryHandler := connect.NewUnaryHandler(
+		AdminServiceUpdateQaEntryProcedure,
+		svc.UpdateQaEntry,
+		connect.WithSchema(adminServiceMethods.ByName("UpdateQaEntry")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetQaEntryEnabledHandler := connect.NewUnaryHandler(
+		AdminServiceSetQaEntryEnabledProcedure,
+		svc.SetQaEntryEnabled,
+		connect.WithSchema(adminServiceMethods.ByName("SetQaEntryEnabled")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeleteQaEntryHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteQaEntryProcedure,
+		svc.DeleteQaEntry,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteQaEntry")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceAddQaPhrasingHandler := connect.NewUnaryHandler(
+		AdminServiceAddQaPhrasingProcedure,
+		svc.AddQaPhrasing,
+		connect.WithSchema(adminServiceMethods.ByName("AddQaPhrasing")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeleteQaPhrasingHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteQaPhrasingProcedure,
+		svc.DeleteQaPhrasing,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteQaPhrasing")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetCalendarConnectURLHandler := connect.NewUnaryHandler(
 		AdminServiceGetCalendarConnectURLProcedure,
 		svc.GetCalendarConnectURL,
@@ -2020,6 +2215,20 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
 			adminServiceSetSchedulerSettingsHandler.ServeHTTP(w, r)
+		case AdminServiceListQaEntriesProcedure:
+			adminServiceListQaEntriesHandler.ServeHTTP(w, r)
+		case AdminServiceCreateQaEntryProcedure:
+			adminServiceCreateQaEntryHandler.ServeHTTP(w, r)
+		case AdminServiceUpdateQaEntryProcedure:
+			adminServiceUpdateQaEntryHandler.ServeHTTP(w, r)
+		case AdminServiceSetQaEntryEnabledProcedure:
+			adminServiceSetQaEntryEnabledHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteQaEntryProcedure:
+			adminServiceDeleteQaEntryHandler.ServeHTTP(w, r)
+		case AdminServiceAddQaPhrasingProcedure:
+			adminServiceAddQaPhrasingHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteQaPhrasingProcedure:
+			adminServiceDeleteQaPhrasingHandler.ServeHTTP(w, r)
 		case AdminServiceGetCalendarConnectURLProcedure:
 			adminServiceGetCalendarConnectURLHandler.ServeHTTP(w, r)
 		case AdminServiceConnectCalendarProcedure:
@@ -2267,6 +2476,34 @@ func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *c
 
 func (UnimplementedAdminServiceHandler) SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetSchedulerSettings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListQaEntries(context.Context, *connect.Request[v1.ListQaEntriesRequest]) (*connect.Response[v1.ListQaEntriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListQaEntries is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) CreateQaEntry(context.Context, *connect.Request[v1.CreateQaEntryRequest]) (*connect.Response[v1.CreateQaEntryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.CreateQaEntry is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) UpdateQaEntry(context.Context, *connect.Request[v1.UpdateQaEntryRequest]) (*connect.Response[v1.UpdateQaEntryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.UpdateQaEntry is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetQaEntryEnabled(context.Context, *connect.Request[v1.SetQaEntryEnabledRequest]) (*connect.Response[v1.SetQaEntryEnabledResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetQaEntryEnabled is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteQaEntry(context.Context, *connect.Request[v1.DeleteQaEntryRequest]) (*connect.Response[v1.DeleteQaEntryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteQaEntry is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) AddQaPhrasing(context.Context, *connect.Request[v1.AddQaPhrasingRequest]) (*connect.Response[v1.AddQaPhrasingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.AddQaPhrasing is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteQaPhrasing(context.Context, *connect.Request[v1.DeleteQaPhrasingRequest]) (*connect.Response[v1.DeleteQaPhrasingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteQaPhrasing is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetCalendarConnectURL(context.Context, *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error) {

@@ -193,6 +193,22 @@ func main() {
 	var chatService *chat.Service
 	var qaEmbedder *chat.QAEmbedder
 	if sc != nil {
+		// The Q&A bank's embedding job depends on the *embedding*
+		// provider, not the generation one, so it is wired here rather
+		// than inside the model check below.
+		//
+		// This sat inside that check until a live run found it, and the
+		// bug was worse than a misplaced line. The bank is what answers
+		// when generation is unavailable (FR-CHAT-17), so tying its
+		// embeddings to generation meant the degrade path went dark
+		// exactly when it was needed: no model, therefore no embedding,
+		// therefore no bank, therefore no answer at all.
+		qaEmbedder = &chat.QAEmbedder{
+			Embed: ingest.SidecarEmbed{Client: sc},
+			Store: userRepo,
+			Log:   log,
+		}
+
 		// The requirement-judgment assessor only makes sense with a
 		// real LLM behind the sidecar. The stub provider produces
 		// schema-valid but meaningless output, so on stub the retrieval
@@ -245,13 +261,6 @@ func main() {
 			chatService = &chat.Service{
 				Embed: ingest.SidecarEmbed{Client: sc},
 				Model: gateway,
-				Store: userRepo,
-				Log:   log,
-			}
-			// Without this the Q&A bank is present, correct and
-			// unreachable: a phrasing with no vector never matches.
-			qaEmbedder = &chat.QAEmbedder{
-				Embed: ingest.SidecarEmbed{Client: sc},
 				Store: userRepo,
 				Log:   log,
 			}
