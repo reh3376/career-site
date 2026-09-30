@@ -42,7 +42,7 @@ landed in the same commit as the persona and not after it.
 | Streaming transport | Stream is real, **one delta** until the sidecar streams | `handlers/chat.go` |
 | Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
 | `/ask` page and side panel | **Not built** | — |
-| Admin grading console for chat | **Not built** | `/admin/decisions` exists for JD rows |
+| Admin grading console for chat | **Built, never seen live** | `/admin/decisions` |
 | Q&A bank admin surface | **Not built** | — |
 | Phrasing embedding job | **Built, tested, scheduled** | `chat/qaembed.go`, every 5 min |
 | Golden set (FR-CHAT-15) | **Not built** | — |
@@ -283,6 +283,38 @@ With `response_text` it forms a preference pair: `human_answer` chosen,
 graded answer with no correction can be counted. A graded answer with
 one can be learned from.
 
+### Grading, in the console
+
+`/admin/decisions` renders a `chat_answer` row for grading rather than
+for browsing, in the order the grader needs: what was asked, what was
+said, then what it was said from.
+
+- **The path is stated first**, in words ("from your Q&A bank, no
+  model", "model unavailable, degraded reply"), because six different
+  systems working or failing render almost identically to a reader.
+- **Citations** are listed, and dropped markers are called out as what
+  they are: the answer claimed support it did not have.
+- **What it was shown**, with similarities, and what was retrieved and
+  left out. Grounding is a property of an answer *given what it was
+  shown*, so it cannot be marked from the answer alone.
+- **The bank lookup**, matched or not, with the closest similarity
+  against the threshold. Reading the near misses is how the threshold
+  gets calibrated.
+- **The correction box is seeded with the model's own answer**, so a
+  correction costs an edit rather than a retype. That is the difference
+  between grading a hundred answers and grading five. The original
+  travels in a hidden field and an unchanged answer is dropped, because
+  saving `human_answer` identical to `response_text` would be a
+  preference pair of a thing against itself: noise nothing downstream
+  could detect.
+- Each rubric dimension carries a few words saying what it is asking,
+  since "scope" and "length" are otherwise guesses, and a mark made
+  from a guess still counts toward a rate.
+
+**Not yet seen live.** Per the owner's standing rule it is not complete
+until it is deployed, opened and reviewed with him, and there are no
+`chat_answer` rows anywhere yet to render.
+
 ### Export
 
 `ExportDecisionLog` (admin, MFA-fresh) emits JSON Lines. Each line
@@ -358,9 +390,6 @@ including `first_token_ms`, and the `human` block with verdict, note,
    entry in it, so the fast path still does not exist in practice.
 2. `/ask` and the side panel. **Live test and UI/UX review before this
    is called done.**
-3. The admin grading console: the chat review queue, the rubric, and
-   the `human_answer` box. Built for speed of grading, because the
-   owner grading a hundred answers is what produces the dataset.
 4. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
 5. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
 6. Escalation (FR-CHAT-10).
