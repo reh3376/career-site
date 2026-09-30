@@ -3,7 +3,7 @@
 The state of Phase 4, written to be read cold. What exists, what does
 not, what is known to be wrong, and what is waiting on a decision.
 
-**Last updated 2026-09-30.** Branch `claude_dev01`, head `4b0f0a2`.
+**Last updated 2026-09-30.** Branch `claude_dev01`, head `d16f429`, PR #217.
 Nothing in this document is deployed. Production is on `4afb563`.
 
 Specification lives in [`FSD.md`](FSD.md) §5.5 (FR-CHAT-01..21). This

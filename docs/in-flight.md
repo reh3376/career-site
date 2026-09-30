@@ -116,14 +116,21 @@ slower" is still a hand-written query.
 **Full state in [`ask-roger.md`](ask-roger.md).** Read that before
 touching anything in Phase 4; this is the summary.
 
-Built, tested, **not deployed**, on `claude_dev01` at `f3d567f`:
-conversation store (00045), chat retrieval path (00046), persona prompt
-`ask_roger_persona` v1, the Q&A bank (00047), and the capture and
-grading of every answer as training data (00048).
+Built and tested on `claude_dev01` at `d16f429`, PR #217, **none of it
+deployed**: the conversation store (00045), the chat retrieval path
+(00046), the persona prompt `ask_roger_persona` v1, the Q&A bank
+(00047), the capture and grading of every answer as training data
+(00048), the answer pipeline (`internal/chat`), six of nine
+`ChatService` RPCs, the phrasing embedding job, and the admin grading
+console.
 
-Not built: the answer pipeline, streaming, `/ask`, the side panel, the
-admin grading console, the Q&A admin surface, the phrasing embedding
-job, quotas, escalation, the golden set.
+Not built: the `/ask` page, the side panel, the Q&A bank admin surface
+(so no entry can be written yet, which means the fast path does not
+exist in practice), real streaming, quotas, escalation, the golden set.
+
+**Nothing has been seen live.** No UI has been opened and there are no
+`chat_answer` rows anywhere, so the grading console has never rendered
+a real row.
 
 **The decision that shapes it: build for the CPX41** (owner,
 2026-09-30). Inference stays on the box. Measured there, first token is
