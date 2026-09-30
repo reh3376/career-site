@@ -198,3 +198,50 @@ export async function disconnectCalendar(): Promise<{ ok: boolean; error?: strin
   revalidatePath("/admin/scheduler");
   return { ok: true };
 }
+
+// Mirrors career.v1.AdminMeeting. Carries who booked, which the
+// member-facing message deliberately does not.
+export type AdminMeeting = {
+  id: string;
+  start: string;
+  end: string;
+  durationMinutes: number;
+  topic: string;
+  memberName: string;
+  memberEmail: string;
+  memberId?: string;
+  eventId: string;
+  createdAt?: string;
+  cancelledAt?: string;
+};
+
+export async function listMeetings(
+  includePast = false,
+): Promise<{ meetings: AdminMeeting[]; zone: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { meetings: [], zone: "America/New_York" };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/ListMeetings",
+    body: { includePast },
+    cookie,
+  });
+  if (!resp.ok) return { meetings: [], zone: "America/New_York" };
+  const data = (await resp.json()) as { meetings?: AdminMeeting[]; zone?: string };
+  return { meetings: data.meetings ?? [], zone: data.zone || "America/New_York" };
+}
+
+export async function cancelMeetingAsAdmin(id: string): Promise<{ ok: boolean; error?: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Sign in again." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/CancelMeetingAsAdmin",
+    body: { id },
+    cookie,
+  });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => ({}))) as { message?: string };
+    return { ok: false, error: body.message || "The meeting could not be cancelled." };
+  }
+  revalidatePath("/admin/scheduler");
+  return { ok: true };
+}

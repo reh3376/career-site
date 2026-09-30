@@ -215,6 +215,12 @@ const (
 	// AdminServiceDisconnectCalendarProcedure is the fully-qualified name of the AdminService's
 	// DisconnectCalendar RPC.
 	AdminServiceDisconnectCalendarProcedure = "/career.v1.AdminService/DisconnectCalendar"
+	// AdminServiceListMeetingsProcedure is the fully-qualified name of the AdminService's ListMeetings
+	// RPC.
+	AdminServiceListMeetingsProcedure = "/career.v1.AdminService/ListMeetings"
+	// AdminServiceCancelMeetingAsAdminProcedure is the fully-qualified name of the AdminService's
+	// CancelMeetingAsAdmin RPC.
+	AdminServiceCancelMeetingAsAdminProcedure = "/career.v1.AdminService/CancelMeetingAsAdmin"
 	// AdminServiceGetJdSubmissionLimitProcedure is the fully-qualified name of the AdminService's
 	// GetJdSubmissionLimit RPC.
 	AdminServiceGetJdSubmissionLimitProcedure = "/career.v1.AdminService/GetJdSubmissionLimit"
@@ -457,6 +463,12 @@ type AdminServiceClient interface {
 	// Forgets the stored credential. Booking stops immediately; existing
 	// meetings are left alone, on the calendar and in this application.
 	DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error)
+	// Lists booked meetings, soonest first, so the owner can see what has
+	// been taken without opening Google. Cancelling here frees the time
+	// and removes the calendar event.
+	ListMeetings(context.Context, *connect.Request[v1.ListMeetingsRequest]) (*connect.Response[v1.ListMeetingsResponse], error)
+	// Cancels a meeting on the member's behalf and frees the slot.
+	CancelMeetingAsAdmin(context.Context, *connect.Request[v1.CancelMeetingAsAdminRequest]) (*connect.Response[v1.CancelMeetingAsAdminResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -838,6 +850,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DisconnectCalendar")),
 			connect.WithClientOptions(opts...),
 		),
+		listMeetings: connect.NewClient[v1.ListMeetingsRequest, v1.ListMeetingsResponse](
+			httpClient,
+			baseURL+AdminServiceListMeetingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListMeetings")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelMeetingAsAdmin: connect.NewClient[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse](
+			httpClient,
+			baseURL+AdminServiceCancelMeetingAsAdminProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("CancelMeetingAsAdmin")),
+			connect.WithClientOptions(opts...),
+		),
 		getJdSubmissionLimit: connect.NewClient[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse](
 			httpClient,
 			baseURL+AdminServiceGetJdSubmissionLimitProcedure,
@@ -915,6 +939,8 @@ type adminServiceClient struct {
 	connectCalendar       *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
 	getCalendarStatus     *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
 	disconnectCalendar    *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
+	listMeetings          *connect.Client[v1.ListMeetingsRequest, v1.ListMeetingsResponse]
+	cancelMeetingAsAdmin  *connect.Client[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse]
 	getJdSubmissionLimit  *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
 	setJdSubmissionLimit  *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
@@ -1219,6 +1245,16 @@ func (c *adminServiceClient) DisconnectCalendar(ctx context.Context, req *connec
 	return c.disconnectCalendar.CallUnary(ctx, req)
 }
 
+// ListMeetings calls career.v1.AdminService.ListMeetings.
+func (c *adminServiceClient) ListMeetings(ctx context.Context, req *connect.Request[v1.ListMeetingsRequest]) (*connect.Response[v1.ListMeetingsResponse], error) {
+	return c.listMeetings.CallUnary(ctx, req)
+}
+
+// CancelMeetingAsAdmin calls career.v1.AdminService.CancelMeetingAsAdmin.
+func (c *adminServiceClient) CancelMeetingAsAdmin(ctx context.Context, req *connect.Request[v1.CancelMeetingAsAdminRequest]) (*connect.Response[v1.CancelMeetingAsAdminResponse], error) {
+	return c.cancelMeetingAsAdmin.CallUnary(ctx, req)
+}
+
 // GetJdSubmissionLimit calls career.v1.AdminService.GetJdSubmissionLimit.
 func (c *adminServiceClient) GetJdSubmissionLimit(ctx context.Context, req *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
 	return c.getJdSubmissionLimit.CallUnary(ctx, req)
@@ -1463,6 +1499,12 @@ type AdminServiceHandler interface {
 	// Forgets the stored credential. Booking stops immediately; existing
 	// meetings are left alone, on the calendar and in this application.
 	DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error)
+	// Lists booked meetings, soonest first, so the owner can see what has
+	// been taken without opening Google. Cancelling here frees the time
+	// and removes the calendar event.
+	ListMeetings(context.Context, *connect.Request[v1.ListMeetingsRequest]) (*connect.Response[v1.ListMeetingsResponse], error)
+	// Cancels a meeting on the member's behalf and frees the slot.
+	CancelMeetingAsAdmin(context.Context, *connect.Request[v1.CancelMeetingAsAdminRequest]) (*connect.Response[v1.CancelMeetingAsAdminResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -1840,6 +1882,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("DisconnectCalendar")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListMeetingsHandler := connect.NewUnaryHandler(
+		AdminServiceListMeetingsProcedure,
+		svc.ListMeetings,
+		connect.WithSchema(adminServiceMethods.ByName("ListMeetings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceCancelMeetingAsAdminHandler := connect.NewUnaryHandler(
+		AdminServiceCancelMeetingAsAdminProcedure,
+		svc.CancelMeetingAsAdmin,
+		connect.WithSchema(adminServiceMethods.ByName("CancelMeetingAsAdmin")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetJdSubmissionLimitHandler := connect.NewUnaryHandler(
 		AdminServiceGetJdSubmissionLimitProcedure,
 		svc.GetJdSubmissionLimit,
@@ -1974,6 +2028,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetCalendarStatusHandler.ServeHTTP(w, r)
 		case AdminServiceDisconnectCalendarProcedure:
 			adminServiceDisconnectCalendarHandler.ServeHTTP(w, r)
+		case AdminServiceListMeetingsProcedure:
+			adminServiceListMeetingsHandler.ServeHTTP(w, r)
+		case AdminServiceCancelMeetingAsAdminProcedure:
+			adminServiceCancelMeetingAsAdminHandler.ServeHTTP(w, r)
 		case AdminServiceGetJdSubmissionLimitProcedure:
 			adminServiceGetJdSubmissionLimitHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdSubmissionLimitProcedure:
@@ -2225,6 +2283,14 @@ func (UnimplementedAdminServiceHandler) GetCalendarStatus(context.Context, *conn
 
 func (UnimplementedAdminServiceHandler) DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DisconnectCalendar is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListMeetings(context.Context, *connect.Request[v1.ListMeetingsRequest]) (*connect.Response[v1.ListMeetingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListMeetings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) CancelMeetingAsAdmin(context.Context, *connect.Request[v1.CancelMeetingAsAdminRequest]) (*connect.Response[v1.CancelMeetingAsAdminResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.CancelMeetingAsAdmin is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {

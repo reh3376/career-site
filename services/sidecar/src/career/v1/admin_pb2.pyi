@@ -1870,6 +1870,58 @@ class DisconnectCalendarResponse(_message.Message):
     status: CalendarStatus
     def __init__(self, status: _Optional[_Union[CalendarStatus, _Mapping]] = ...) -> None: ...
 
+class AdminMeeting(_message.Message):
+    __slots__ = ("id", "start", "end", "duration_minutes", "topic", "member_name", "member_email", "member_id", "event_id", "created_at", "cancelled_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    START_FIELD_NUMBER: _ClassVar[int]
+    END_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_NAME_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    CANCELLED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    start: _timestamp_pb2.Timestamp
+    end: _timestamp_pb2.Timestamp
+    duration_minutes: int
+    topic: str
+    member_name: str
+    member_email: str
+    member_id: int
+    event_id: str
+    created_at: _timestamp_pb2.Timestamp
+    cancelled_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[int] = ..., start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., member_name: _Optional[str] = ..., member_email: _Optional[str] = ..., member_id: _Optional[int] = ..., event_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., cancelled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class ListMeetingsRequest(_message.Message):
+    __slots__ = ("include_past",)
+    INCLUDE_PAST_FIELD_NUMBER: _ClassVar[int]
+    include_past: bool
+    def __init__(self, include_past: _Optional[bool] = ...) -> None: ...
+
+class ListMeetingsResponse(_message.Message):
+    __slots__ = ("meetings", "zone")
+    MEETINGS_FIELD_NUMBER: _ClassVar[int]
+    ZONE_FIELD_NUMBER: _ClassVar[int]
+    meetings: _containers.RepeatedCompositeFieldContainer[AdminMeeting]
+    zone: str
+    def __init__(self, meetings: _Optional[_Iterable[_Union[AdminMeeting, _Mapping]]] = ..., zone: _Optional[str] = ...) -> None: ...
+
+class CancelMeetingAsAdminRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: int
+    def __init__(self, id: _Optional[int] = ...) -> None: ...
+
+class CancelMeetingAsAdminResponse(_message.Message):
+    __slots__ = ("meeting",)
+    MEETING_FIELD_NUMBER: _ClassVar[int]
+    meeting: AdminMeeting
+    def __init__(self, meeting: _Optional[_Union[AdminMeeting, _Mapping]] = ...) -> None: ...
+
 class GetJdSubmissionLimitRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

@@ -438,6 +438,18 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Lists booked meetings, soonest first, so the owner can see what has
+  // been taken without opening Google. Cancelling here frees the time
+  // and removes the calendar event.
+  rpc ListMeetings(ListMeetingsRequest) returns (ListMeetingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Cancels a meeting on the member's behalf and frees the slot.
+  rpc CancelMeetingAsAdmin(CancelMeetingAsAdminRequest) returns (CancelMeetingAsAdminResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads how many postings one member may submit per rolling day.
   rpc GetJdSubmissionLimit(GetJdSubmissionLimitRequest) returns (GetJdSubmissionLimitResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
@@ -2571,6 +2583,61 @@ message DisconnectCalendarRequest {}
 message DisconnectCalendarResponse {
   // Current status.
   CalendarStatus status = 1;
+}
+
+// One booked meeting, as the owner sees it. Carries who booked it,
+// which the member-facing message deliberately does not.
+message AdminMeeting {
+  // Stable id, used to cancel.
+  int64 id = 1;
+  // When it begins.
+  google.protobuf.Timestamp start = 2;
+  // When it ends.
+  google.protobuf.Timestamp end = 3;
+  // Length in minutes, as booked.
+  int32 duration_minutes = 4;
+  // What the member said they wanted to discuss.
+  string topic = 5;
+  // The member's name, as held on their account.
+  string member_name = 6;
+  // The member's email.
+  string member_email = 7;
+  // The member's account id, 0 when the row has none.
+  int64 member_id = 8;
+  // The calendar event this created. Empty means the claim exists here
+  // but no event was made, which is worth seeing.
+  string event_id = 9;
+  // When the booking was made.
+  google.protobuf.Timestamp created_at = 10;
+  // Set when cancelled. Cancelled rows are kept rather than deleted, so
+  // a meeting that vanished can be explained.
+  google.protobuf.Timestamp cancelled_at = 11;
+}
+
+// Request for ListMeetings.
+message ListMeetingsRequest {
+  // Include meetings that have already happened or been cancelled.
+  bool include_past = 1;
+}
+
+// Booked meetings.
+message ListMeetingsResponse {
+  // Meetings, soonest first.
+  repeated AdminMeeting meetings = 1;
+  // IANA zone the times should be rendered in.
+  string zone = 2;
+}
+
+// Request for CancelMeetingAsAdmin.
+message CancelMeetingAsAdminRequest {
+  // Which meeting to cancel.
+  int64 id = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// The meeting after cancelling.
+message CancelMeetingAsAdminResponse {
+  // The cancelled meeting.
+  AdminMeeting meeting = 1;
 }
 
 // Read request.

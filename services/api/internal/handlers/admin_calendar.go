@@ -213,3 +213,100 @@ func (a *Admin) verifyCalendarState(state string, adminID int64) error {
 	}
 	return nil
 }
+
+// The owner's view of what has been booked.
+//
+// It carries the member's name and email, which the member-facing
+// Meeting message deliberately does not: a member has no business
+// knowing who else booked, and the owner has every reason to know who
+// he is meeting.
+
+func (a *Admin) ListMeetings(
+	ctx context.Context,
+	req *connect.Request[v1.ListMeetingsRequest],
+) (*connect.Response[v1.ListMeetingsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	rows, err := a.users.AllBookings(ctx, req.Msg.GetIncludePast())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("the meetings could not be read"))
+	}
+	out := &v1.ListMeetingsResponse{Zone: a.schedulerZone(ctx)}
+	for _, r := range rows {
+		out.Meetings = append(out.Meetings, adminMeetingToProto(r))
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (a *Admin) CancelMeetingAsAdmin(
+	ctx context.Context,
+	req *connect.Request[v1.CancelMeetingAsAdminRequest],
+) (*connect.Response[v1.CancelMeetingAsAdminResponse], error) {
+	admin, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	existing, ok, err := a.users.BookingByID(ctx, req.Msg.GetId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("the meeting could not be read"))
+	}
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("no such meeting"))
+	}
+	// Cancelling something already cancelled succeeds, so a double
+	// click or a stale tab is not an error to explain.
+	if existing.CancelledAt != nil {
+		return connect.NewResponse(&v1.CancelMeetingAsAdminResponse{
+			Meeting: adminMeetingToProto(existing),
+		}), nil
+	}
+
+	row, err := a.users.CancelBooking(ctx, req.Msg.GetId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("the meeting could not be cancelled"))
+	}
+	// The hold is released whatever the calendar says. A failure to
+	// remove the event leaves a stale entry on the owner's calendar,
+	// which he can see and delete, rather than time nobody can book.
+	if row.EventID != "" && a.calendar != nil {
+		if err := a.calendar.Cancel(ctx, row.EventID); err != nil {
+			a.log.Warn("meetings: cancelled here but the calendar event remains",
+				"booking", row.ID, "error", err.Error())
+		}
+	}
+	a.log.Info("meeting cancelled by the owner", "admin", admin.ID, "booking", row.ID)
+	return connect.NewResponse(&v1.CancelMeetingAsAdminResponse{
+		Meeting: adminMeetingToProto(row),
+	}), nil
+}
+
+// schedulerZone is the zone the console renders times in, taken from
+// the settings so it cannot disagree with the member-facing page.
+func (a *Admin) schedulerZone(ctx context.Context) string {
+	if a.scheduler == nil {
+		return "America/New_York"
+	}
+	return a.scheduler.Get(ctx).Zone
+}
+
+func adminMeetingToProto(b users.Booking) *v1.AdminMeeting {
+	m := &v1.AdminMeeting{
+		Id:              b.ID,
+		Start:           timestamppb.New(b.StartsAt),
+		End:             timestamppb.New(b.StartsAt.Add(time.Duration(b.DurationMin) * time.Minute)),
+		DurationMinutes: int32(b.DurationMin),
+		Topic:           b.Note,
+		MemberName:      b.Name,
+		MemberEmail:     b.Email,
+		EventId:         b.EventID,
+		CreatedAt:       timestamppb.New(b.CreatedAt),
+	}
+	if b.UserID != nil {
+		m.MemberId = *b.UserID
+	}
+	if b.CancelledAt != nil {
+		m.CancelledAt = timestamppb.New(*b.CancelledAt)
+	}
+	return m
+}
