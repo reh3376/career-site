@@ -6,44 +6,44 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-29, 23:10 UTC.
+Last updated 2026-09-30, 00:10 UTC.
 
 ---
 
-## 1. Evaluation run 14, stopped. Run 15 is the next one
+## 1. Sequencing: the scheduler comes before run 15
 
-Stopped by hand at 5 of 9 on the owner's instruction, so that the
-diagnostics land before another five hours are spent. Its row is
-closed.
+Owner, 2026-09-29: *"I want the scheduler, deployed, fully tested, live
+tested, and working in this application before we start the next
+eval."*
 
-Four postings scored correctly. Blue Origin errored in the same place
-as run 13, judge batch 11 of 14, having filled 1200 tokens and then
-2400 on the retry. See the 2026-09-29 entry in
+So run 15 waits. One useful side effect: with no evaluation in flight,
+the "never deploy during a run" rule is not binding, and the scheduler
+can ship in as many small rollouts as it needs.
+
+Run 14 was stopped at 5 of 9 and its row is closed. Four postings
+scored correctly; Blue Origin errored in the same place as run 13. The
+diagnosis and the fix are in the 2026-09-29 entry of
 [`llm-tuning-log.md`](llm-tuning-log.md).
 
-**Run 15 starts only after the whole deploy queue is out**, because
-both times this failed, the capture that would have explained it was
-sitting undeployed behind the run that needed it.
+When run 15 does start, it changes one thing, `requirement_judge` v12,
+against an unchanged corpus, making it comparable with run 12 (9 of 9,
+0 inversions, margin 0.1071) and a direct test of Blue Origin's r11.
+The study guide is ingested only after that, so it stays a single
+variable.
 
-Run 15 changes one thing, `requirement_judge` v12, against an
-unchanged corpus. That makes it comparable with run 12 (9 of 9, 0
-inversions, margin 0.1071) and a direct test of Blue Origin's r11.
+## 2. Deploy queue, cleared
 
-**The bar the owner set:** similar or better than run 12.
+**Done 2026-09-29 23:25.** Production is on `7a3b6a22a83d`, database
+migrated to version 42, 20 live checks passed and none failed.
+Migrations 00040, 00041 and 00042 are applied.
 
-**Nothing may deploy during a run.** All three services share one
-`IMAGE_TAG`, so any rollout recreates the api and the job runner keeps
-jobs in memory.
-
-## 2. Deploy queue, now unblocked and next to go out
-
-Production is on `ccad59262fe5`. Main is many merges ahead and carries
-**migrations 00040, 00041 and 00042**, so this is not a no-op rollout.
-
-Run 14 is stopped, so nothing is holding this any more. It goes out
-before run 15 starts, and that ordering is the point: the capture that
-would have explained this failure was written after run 13 and was
-still queued here when run 14 hit the same wall.
+Two notes from the rollout. `FailStrandedEvalRuns` did not fire,
+correctly: runs 13 and 14 had already been closed by hand, and it only
+touches rows still marked running, so that code is verified against a
+scratch Postgres but not yet in production. Their counters were
+repaired by hand and now read 4 scored, 1 error. And `phase_ms` is
+empty on all 113 existing runs, as expected; it fills on the next
+submission.
 
 Queued, roughly in order merged: content hash in the eval manifest,
 failed-call visibility across three surfaces, the evaluation guide and
@@ -67,43 +67,41 @@ knee from historian data` is indistinguishable from him claiming it.
 **It gets its own run**, at the owner's request, so run 15 changes
 exactly one thing and is a genuine single-variable test.
 
-## 4. Meeting scheduler, actively being built
+## 4. Meeting scheduler, everything but the Google provider
 
-FR-CNT-23/26/27/28, FR-ADM-13, decision D-22.
+FR-CNT-23/26/27/28, FR-ADM-13, decision D-22. Branch
+`feat/scheduler-meetings`.
 
-**Settled by the owner 2026-09-29:**
+**Settled by the owner 2026-09-29:** members only, because the target is
+his main personal calendar and an open page would let anyone hold real
+hours on it. Free/busy only, never event contents. 15, 30 or 45 minutes,
+the member's choice. 15 minutes of clearance, not held in advance, so a
+15-minute meeting consumes 30 of the day, a 30 consumes 45, a 45
+consumes 60. The calendar is re-queried immediately before booking.
+America/New_York, stated beside every time, never converted. A
+downloadable `.ics` beside the event.
 
-- **Members only**, not the public page the FSD originally specified.
-  His reason: the target is his **main personal calendar**, so an
-  unauthenticated visitor could block real time on it.
-- **Free/busy only**, never `events.list`, for the same reason: this
-  application must never hold the contents of his private calendar.
-- **15, 30 or 45 minutes**, the member's choice.
-- **15 minutes of clearance** between meetings, not held in advance. A
-  15-minute meeting consumes 30 of the day, a 30 consumes 45, a 45
-  consumes 60.
-- **The calendar is re-queried immediately before booking**, because
-  the list the member saw is stale by the time they submit.
-- **America/New_York, stated next to every time**, not converted to the
-  visitor's zone. Stored as an IANA name, never an offset.
-- **A downloadable `.ics`** beside the calendar event.
-- Windows: Tue, Wed, Thu, 09:00 to 12:00 and 14:00 to 16:00.
-
-**Built and merged:** availability computation, clearance arithmetic,
+**Built and tested:** availability and clearance arithmetic, the
 confirmation re-check, the `calendar.Provider` seam with a stub and
-`NotConnected`, `meeting_bookings` with a gist exclusion constraint,
-and the repository translating `23P01` into a taken slot. 32 tests,
-including both DST offsets either side of 2026-11-01 and the
-constraint verified against `pgvector:pg16`.
+`NotConnected`, `meeting_bookings` with a gist exclusion constraint, the
+repository, the settings store, `MeetingService` and its handler, the
+`/meetings` page, the `.ics` endpoint, and `/admin/scheduler`. Both
+landing surfaces, the member home in both modes, the hamburger menu and
+the admin nav all point at it.
 
-**Not built:** the Google provider, the admin windows surface, the
-member booking UI, the `.ics` download, and OAuth token storage
-(needs AES-GCM; only HMAC exists today).
+**Not built: the Google provider.** Blocked on the owner's OAuth client
+(Web application, redirect
+`https://rogerhenley.dev/admin/scheduler/callback`, consent screen left
+in Testing with his address as the only test user). Also outstanding
+from FR-ADM-13: the connect flow, the encrypted refresh token (needs
+AES-GCM; only HMAC exists today) and the recent-bookings list.
 
-**Waiting on the owner:** a Google Cloud OAuth client (Web
-application), redirect `https://rogerhenley.dev/admin/scheduler/callback`.
-The consent screen can stay in Testing with his address as the only
-test user, which avoids Google's verification review.
+**Deliberately not deployed yet.** The copy on the landing pages
+promises booking, and `access-tiers.ts` says in its own header that the
+list must describe what the software does today. Shipping before the
+provider lands would make that a promise the software answers with "not
+switched on yet". The PR is open for review; the deploy waits for the
+provider.
 
 ## 5. Diagnostics for the next failure, built, awaiting deploy
 
@@ -161,7 +159,22 @@ not spare capacity for the reviewer. `OLLAMA_MEM_LIMIT` stays at `7g`.
 See `project_ask_roger_phase4` in memory, which this supersedes in two
 places.
 
-## 8. Open questions for the owner
+## 8. MDEMG, investigated and not adopted
+
+Investigated 2026-09-29 at the owner's request: see
+[`mdemg-evaluation.md`](mdemg-evaluation.md).
+
+Outcome: two questions, two different answers. MDEMG does not do code
+complexity and does not claim to; the cheap answer there is
+golangci-lint / gocyclo / knip, none of which this repo runs, and
+ahead of those, the web app has **zero tests across 117 files**. The
+Jiminy guardrail is real, cheap to attach (hooks live in `.claude/`,
+blocking off by default, fails open) and worth a bounded advisory-mode
+experiment, but deferred until the eval and scheduler work lands.
+
+Nothing installed, nothing changed.
+
+## 9. Open questions for the owner
 
 - Which Whiskey House systems incorporate an LLM at runtime, as opposed
   to having been built with AI assistance. Only the on-prem SME chat

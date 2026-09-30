@@ -182,6 +182,17 @@ export default async function HomePage() {
             <span className="text-ink-3">: paste a posting, get a scored review</span>
           </li>
           <li>
+            <span className="text-signal">MEETING</span>{" "}
+            <span className="text-ink-3">·</span>{" "}
+            <Link
+              href="/meetings"
+              className="text-accent no-underline hover:text-accent-hover"
+            >
+              /meetings
+            </Link>{" "}
+            <span className="text-ink-3">: book time on Roger&rsquo;s calendar</span>
+          </li>
+          <li>
             <span className="text-signal">ARTICLES</span>{" "}
             <span className="text-ink-3">·</span>{" "}
             <Link
@@ -250,9 +261,9 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. Three surfaces are live today: the JD review,
-        the articles, and the gallery. Ask Roger, the fourth, lands with
-        Phase 4.
+        You&rsquo;re in. Four surfaces are live today: the JD review,
+        booking time with Roger, the articles, and the gallery. Ask
+        Roger, the fifth, lands with Phase 4.
       </p>
 
       <section className="mt-14 grid gap-6 md:grid-cols-3">
@@ -262,6 +273,13 @@ export default async function HomePage() {
           body="Paste a JD and Roger&rsquo;s reviewer scores it, requirement by requirement, against thirty years of manufacturing and applied-AI work. A strong fit or better gets a two-page résumé tailored to that posting, as a locked PDF."
           href="/jd-upload"
           cta="Upload a JD →"
+        />
+        <LiveCard
+          label="meetings · live"
+          title="Rather just talk?"
+          body="Pick fifteen, thirty or forty-five minutes from Roger&rsquo;s real availability and book it. Checked against his calendar as you confirm, in Eastern time, with a calendar file either way so you can send your own invitation."
+          href="/meetings"
+          cta="Book a meeting →"
         />
         <LiveCard
           label="articles · live"

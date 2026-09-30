@@ -81,33 +81,73 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           behind it, and how to reach me.
         </p>
 
+        {/* A signed-in member was being offered "Request access" and
+            "Already a member? Sign in", neither of which applies to
+            them, and was given no route to the two things their account
+            is actually for. Booking only appears here, because the
+            calendar writes to Roger's own and is members-only; an
+            anonymous visitor learns it exists from the copy below and
+            from "with an account" further down the page. */}
         <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
-          <Link
-            href="/register"
-            className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
-          >
-            Considering me for a role? Request access →
-          </Link>
-          <Link
-            href="/contact"
-            className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-          >
-            Or reach out directly
-          </Link>
-          <Link
-            href="/login"
-            className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
-          >
-            Already a member? Sign in
-          </Link>
+          {signedIn ? (
+            <>
+              <Link
+                href="/jd-upload"
+                className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+              >
+                Have a posting reviewed →
+              </Link>
+              <Link
+                href="/meetings"
+                className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+              >
+                Book a meeting
+              </Link>
+              <Link
+                href="/contact"
+                className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
+              >
+                Or reach out directly
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/register"
+                className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+              >
+                Considering me for a role? Request access →
+              </Link>
+              <Link
+                href="/contact"
+                className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+              >
+                Or reach out directly
+              </Link>
+              <Link
+                href="/login"
+                className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
+              >
+                Already a member? Sign in
+              </Link>
+            </>
+          )}
         </div>
-        <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
-          The writing and the work photos are open; read them first. An
-          account is for the reviewer: paste a posting and it reads it
-          requirement by requirement against thirty years of manufacturing
-          and applied-AI records, then writes a two-page résumé for that
-          specific job.
-        </p>
+        {signedIn ? (
+          <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
+            Paste a posting and it is read requirement by requirement, with a
+            two-page résumé written for it when the fit is strong. Or take
+            fifteen minutes of my calendar and ask me directly.
+          </p>
+        ) : (
+          <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
+            The writing and the work photos are open; read them first. An
+            account is for the reviewer: paste a posting and it reads it
+            requirement by requirement against thirty years of manufacturing
+            and applied-AI records, then writes a two-page résumé for that
+            specific job. It is also how you book time with me.
+          </p>
+        )}
       </section>
 
       {/* Rule with a thicker cap on one side, reads as a plotted trend

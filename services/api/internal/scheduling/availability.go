@@ -99,6 +99,19 @@ type Slot struct {
 // so the admin surface refuses it rather than rendering an empty
 // calendar that reads as "no availability".
 func (s Settings) Validate() error {
+	// LoadLocation("") returns UTC and no error, so an empty zone would
+	// pass every check here and then quietly offer the owner's mornings
+	// in UTC while the page beside them says America/New_York. That is
+	// 4 hours out under EDT and 5 under EST: wrong all year, never
+	// right, and silent. Distinct from the fixed-offset mistake below,
+	// which is right for half the year and so takes longer to notice.
+	// Checked first because it is the cheapest to get wrong.
+	if s.Zone == "" {
+		return fmt.Errorf("a time zone is required, as an IANA name such as America/New_York")
+	}
+	if s.Zone[0] == '+' || s.Zone[0] == '-' {
+		return fmt.Errorf("zone %q is a fixed offset; use an IANA name so it moves with daylight saving", s.Zone)
+	}
 	if _, err := time.LoadLocation(s.Zone); err != nil {
 		return fmt.Errorf("zone %q is not an IANA location: %w", s.Zone, err)
 	}
@@ -122,12 +135,38 @@ func (s Settings) Validate() error {
 	if s.HorizonDays <= 0 {
 		return fmt.Errorf("horizon must be positive, got %d days", s.HorizonDays)
 	}
+	if s.LeadHours < 0 {
+		return fmt.Errorf("lead time cannot be negative, got %d hours", s.LeadHours)
+	}
+	// No windows is not an empty calendar, it is a calendar that can
+	// never fill. The admin form has to refuse it, because saving it
+	// looks like success and reads to a member as "never available".
+	if len(s.Windows) == 0 {
+		return fmt.Errorf("at least one bookable window is required")
+	}
+	byDay := map[time.Weekday][]Window{}
 	for _, w := range s.Windows {
+		if w.Weekday < time.Sunday || w.Weekday > time.Saturday {
+			return fmt.Errorf("window weekday %d is not a day of the week", int(w.Weekday))
+		}
 		if w.StartMins < 0 || w.EndMins > 24*60 || w.StartMins >= w.EndMins {
 			return fmt.Errorf("window on %s is not a range: %d to %d", w.Weekday, w.StartMins, w.EndMins)
 		}
 		if shortest := minOf(s.Durations); w.EndMins-w.StartMins < shortest {
 			return fmt.Errorf("window on %s is shorter than the shortest meeting offered (%d minutes)", w.Weekday, shortest)
+		}
+		byDay[w.Weekday] = append(byDay[w.Weekday], w)
+	}
+	// Overlapping windows on one day would offer the same start time
+	// twice, and the duplicate is invisible until a member sees it.
+	for day, ws := range byDay {
+		sorted := append([]Window(nil), ws...)
+		sort.Slice(sorted, func(i, j int) bool { return sorted[i].StartMins < sorted[j].StartMins })
+		for i := 1; i < len(sorted); i++ {
+			if sorted[i].StartMins < sorted[i-1].EndMins {
+				return fmt.Errorf("two windows on %s overlap (%d to %d and %d to %d); merge them",
+					day, sorted[i-1].StartMins, sorted[i-1].EndMins, sorted[i].StartMins, sorted[i].EndMins)
+			}
 		}
 	}
 	return nil

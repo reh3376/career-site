@@ -37,6 +37,12 @@ export const OPEN_TO_ANYONE: AccessItem[] = [
 // What an account adds. Access is granted by Roger rather than issued
 // automatically, which is stated here because a visitor who expects an
 // instant login and gets a wait feels misled by the difference.
+//
+// Booking is in this list rather than the open one on purpose. It writes
+// to Roger's own calendar, so an anonymous visitor could hold real hours
+// on it; his decision, 2026-09-29: "a public facing calendar is asking
+// for trouble". Naming it here is what tells a visitor the feature
+// exists at all, since they cannot see it until they are approved.
 export const WITH_AN_ACCOUNT: AccessItem[] = [
   {
     label: "Have a posting reviewed",
@@ -47,6 +53,11 @@ export const WITH_AN_ACCOUNT: AccessItem[] = [
     label: "A résumé for that posting",
     detail:
       "When the fit is strong or better, a two-page résumé written for that specific posting, where every line has to be carried by a source. Delivered as a PDF and emailed to you.",
+  },
+  {
+    label: "Time on his calendar",
+    detail:
+      "Book a 15, 30 or 45 minute meeting against his real availability, shown in Eastern time. Confirm it in the app, or hold the slot and take the calendar file away with you.",
   },
   {
     label: "The full gallery",

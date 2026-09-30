@@ -1750,6 +1750,62 @@ class SetJdFitBandsResponse(_message.Message):
     bands: _jd_pb2.JdFitBands
     def __init__(self, bands: _Optional[_Union[_jd_pb2.JdFitBands, _Mapping]] = ...) -> None: ...
 
+class SchedulerWindow(_message.Message):
+    __slots__ = ("weekday", "start_minutes", "end_minutes")
+    WEEKDAY_FIELD_NUMBER: _ClassVar[int]
+    START_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    END_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    weekday: int
+    start_minutes: int
+    end_minutes: int
+    def __init__(self, weekday: _Optional[int] = ..., start_minutes: _Optional[int] = ..., end_minutes: _Optional[int] = ...) -> None: ...
+
+class SchedulerSettings(_message.Message):
+    __slots__ = ("zone", "duration_minutes", "gap_minutes", "step_minutes", "max_per_day", "lead_hours", "horizon_days", "windows")
+    ZONE_FIELD_NUMBER: _ClassVar[int]
+    DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    GAP_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    STEP_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    MAX_PER_DAY_FIELD_NUMBER: _ClassVar[int]
+    LEAD_HOURS_FIELD_NUMBER: _ClassVar[int]
+    HORIZON_DAYS_FIELD_NUMBER: _ClassVar[int]
+    WINDOWS_FIELD_NUMBER: _ClassVar[int]
+    zone: str
+    duration_minutes: _containers.RepeatedScalarFieldContainer[int]
+    gap_minutes: int
+    step_minutes: int
+    max_per_day: int
+    lead_hours: int
+    horizon_days: int
+    windows: _containers.RepeatedCompositeFieldContainer[SchedulerWindow]
+    def __init__(self, zone: _Optional[str] = ..., duration_minutes: _Optional[_Iterable[int]] = ..., gap_minutes: _Optional[int] = ..., step_minutes: _Optional[int] = ..., max_per_day: _Optional[int] = ..., lead_hours: _Optional[int] = ..., horizon_days: _Optional[int] = ..., windows: _Optional[_Iterable[_Union[SchedulerWindow, _Mapping]]] = ...) -> None: ...
+
+class GetSchedulerSettingsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetSchedulerSettingsResponse(_message.Message):
+    __slots__ = ("settings", "calendar_connected", "calendar_status")
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_CONNECTED_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_STATUS_FIELD_NUMBER: _ClassVar[int]
+    settings: SchedulerSettings
+    calendar_connected: bool
+    calendar_status: str
+    def __init__(self, settings: _Optional[_Union[SchedulerSettings, _Mapping]] = ..., calendar_connected: _Optional[bool] = ..., calendar_status: _Optional[str] = ...) -> None: ...
+
+class SetSchedulerSettingsRequest(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: SchedulerSettings
+    def __init__(self, settings: _Optional[_Union[SchedulerSettings, _Mapping]] = ...) -> None: ...
+
+class SetSchedulerSettingsResponse(_message.Message):
+    __slots__ = ("settings",)
+    SETTINGS_FIELD_NUMBER: _ClassVar[int]
+    settings: SchedulerSettings
+    def __init__(self, settings: _Optional[_Union[SchedulerSettings, _Mapping]] = ...) -> None: ...
+
 class GetJdSubmissionLimitRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

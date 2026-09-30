@@ -305,7 +305,17 @@ function buildGroups({
     { kind: "link", label: "Contact", href: "/contact" },
   ];
   if (signedIn) {
-    browse.splice(4, 0, { kind: "link", label: "JD upload", href: "/jd-upload" });
+    // Both in one splice so the second index does not have to account
+    // for the first insertion. They sit before Contact because both are
+    // things an account buys, and Contact is the route that was always
+    // open. Booking is members-only for the same reason the reviewer is,
+    // though a stronger one: it writes to Roger's own calendar.
+    browse.splice(
+      4,
+      0,
+      { kind: "link", label: "JD upload", href: "/jd-upload" },
+      { kind: "link", label: "Book a meeting", href: "/meetings" },
+    );
   }
   const groups: MenuGroup[] = [{ label: "browse", items: browse }];
 

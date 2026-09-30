@@ -16,6 +16,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/calendar"
 	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/db/adminquery"
@@ -25,6 +26,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/jobs"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
+	"github.com/reh3376/career-site/services/api/internal/scheduling"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -48,6 +50,11 @@ type Admin struct {
 	roPool   *db.Pool         // read-only pool used by the /admin/db surface
 	ingest   *ingest.Ingester // Ask Roger corpus ingest
 	corpus   CorpusRoots
+	// scheduler serves the meeting-scheduler settings the admin surface
+	// edits; calendar answers whether anything can actually be booked
+	// against them. Both nil until SetScheduler runs.
+	scheduler *scheduling.SettingsStore
+	calendar  calendar.Provider
 	// jdScorer and jdTimeout back RescoreJd; nil scorer disables it.
 	jdScorer  *jd.Scorer
 	jdTimeout time.Duration

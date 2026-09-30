@@ -6,8 +6,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/reh3376/career-site/services/api/internal/calendar"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/scheduling"
 )
 
 // SetEvents installs the product event writer on each handler that has
@@ -28,6 +30,16 @@ func (a *Admin) SetEvaluator(e *jd.Evaluator) { a.evaluator = e }
 // SetJdLimits installs the submission-limit store on the admin handler,
 // so the console edits the same value the JD handler enforces.
 func (a *Admin) SetJdLimits(s *jd.LimitStore) { a.jdLimits = s }
+
+// SetScheduler installs the meeting-scheduler settings store and the
+// calendar provider on the admin handler, so the console edits the same
+// settings the booking flow reads and can say whether a calendar is
+// actually connected behind them. Nil leaves both surfaces answering
+// Unavailable rather than showing windows nobody can book.
+func (a *Admin) SetScheduler(s *scheduling.SettingsStore, cal calendar.Provider) {
+	a.scheduler = s
+	a.calendar = cal
+}
 
 // uiModeCookie is the web app's mode cookie (apps/web/src/lib/ui-mode.ts).
 const uiModeCookie = "ui_mode"

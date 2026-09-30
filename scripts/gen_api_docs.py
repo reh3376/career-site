@@ -40,15 +40,32 @@ PUBLIC_PACKAGE = "career.v1"
 INTERNAL_PACKAGE = "career.sidecar.v1"
 BASE_PATH = "/api"
 
+# Services are listed by what they are for, not alphabetically, and the
+# methods inside each one come out in proto declaration order. Both are
+# deliberate: a reader arrives with a task rather than a name, so
+# AuthService reading Register, Verify, Login, Logout is a lifecycle,
+# while alphabetical order would scatter it and put ChangeEmail first.
+#
+# Anything missing from this list sorts to the end in declaration order,
+# which is how JdService, EventService and MeetingService ended up in an
+# arbitrary tail. Add a new service here when you add it to proto/.
 SERVICE_ORDER = [
+    # Getting in, and who you are.
     "AuthService",
     "MemberService",
+    # Reading the public site.
     "ContentService",
     "HomeService",
-    "ActivityService",
-    "ChatService",
     "DownloadService",
     "ContactService",
+    # What an account is for.
+    "JdService",
+    "MeetingService",
+    "ChatService",
+    # Telemetry the browser sends.
+    "ActivityService",
+    "EventService",
+    # Owner-only, and the build itself.
     "AdminService",
     "SystemService",
 ]

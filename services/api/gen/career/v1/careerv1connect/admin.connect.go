@@ -197,6 +197,12 @@ const (
 	// AdminServiceSetJdFitBandsProcedure is the fully-qualified name of the AdminService's
 	// SetJdFitBands RPC.
 	AdminServiceSetJdFitBandsProcedure = "/career.v1.AdminService/SetJdFitBands"
+	// AdminServiceGetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
+	// GetSchedulerSettings RPC.
+	AdminServiceGetSchedulerSettingsProcedure = "/career.v1.AdminService/GetSchedulerSettings"
+	// AdminServiceSetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
+	// SetSchedulerSettings RPC.
+	AdminServiceSetSchedulerSettingsProcedure = "/career.v1.AdminService/SetSchedulerSettings"
 	// AdminServiceGetJdSubmissionLimitProcedure is the fully-qualified name of the AdminService's
 	// GetJdSubmissionLimit RPC.
 	AdminServiceGetJdSubmissionLimitProcedure = "/career.v1.AdminService/GetJdSubmissionLimit"
@@ -415,6 +421,16 @@ type AdminServiceClient interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads the meeting-scheduler settings: the weekly windows a member
+	// may book into, the lengths on offer, the clearance between
+	// meetings, and the zone all of it is quoted in.
+	GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error)
+	// Replaces the meeting-scheduler settings (stored in app_settings;
+	// the api caches them for 15 s). Validated server-side and refused
+	// whole rather than in part, because a half-applied calendar is
+	// worse than an unchanged one. Existing bookings are never moved:
+	// narrowing the windows stops new bookings, it does not cancel.
+	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -760,6 +776,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 			connect.WithClientOptions(opts...),
 		),
+		getSchedulerSettings: connect.NewClient[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse](
+			httpClient,
+			baseURL+AdminServiceGetSchedulerSettingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetSchedulerSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		setSchedulerSettings: connect.NewClient[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse](
+			httpClient,
+			baseURL+AdminServiceSetSchedulerSettingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
+			connect.WithClientOptions(opts...),
+		),
 		getJdSubmissionLimit: connect.NewClient[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse](
 			httpClient,
 			baseURL+AdminServiceGetJdSubmissionLimitProcedure,
@@ -831,6 +859,8 @@ type adminServiceClient struct {
 	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
 	getJdFitBands         *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
 	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
+	getSchedulerSettings  *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
+	setSchedulerSettings  *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
 	getJdSubmissionLimit  *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
 	setJdSubmissionLimit  *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
@@ -1105,6 +1135,16 @@ func (c *adminServiceClient) SetJdFitBands(ctx context.Context, req *connect.Req
 	return c.setJdFitBands.CallUnary(ctx, req)
 }
 
+// GetSchedulerSettings calls career.v1.AdminService.GetSchedulerSettings.
+func (c *adminServiceClient) GetSchedulerSettings(ctx context.Context, req *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {
+	return c.getSchedulerSettings.CallUnary(ctx, req)
+}
+
+// SetSchedulerSettings calls career.v1.AdminService.SetSchedulerSettings.
+func (c *adminServiceClient) SetSchedulerSettings(ctx context.Context, req *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error) {
+	return c.setSchedulerSettings.CallUnary(ctx, req)
+}
+
 // GetJdSubmissionLimit calls career.v1.AdminService.GetJdSubmissionLimit.
 func (c *adminServiceClient) GetJdSubmissionLimit(ctx context.Context, req *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
 	return c.getJdSubmissionLimit.CallUnary(ctx, req)
@@ -1325,6 +1365,16 @@ type AdminServiceHandler interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads the meeting-scheduler settings: the weekly windows a member
+	// may book into, the lengths on offer, the clearance between
+	// meetings, and the zone all of it is quoted in.
+	GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error)
+	// Replaces the meeting-scheduler settings (stored in app_settings;
+	// the api caches them for 15 s). Validated server-side and refused
+	// whole rather than in part, because a half-applied calendar is
+	// worse than an unchanged one. Existing bookings are never moved:
+	// narrowing the windows stops new bookings, it does not cancel.
+	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -1666,6 +1716,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetSchedulerSettingsHandler := connect.NewUnaryHandler(
+		AdminServiceGetSchedulerSettingsProcedure,
+		svc.GetSchedulerSettings,
+		connect.WithSchema(adminServiceMethods.ByName("GetSchedulerSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetSchedulerSettingsHandler := connect.NewUnaryHandler(
+		AdminServiceSetSchedulerSettingsProcedure,
+		svc.SetSchedulerSettings,
+		connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetJdSubmissionLimitHandler := connect.NewUnaryHandler(
 		AdminServiceGetJdSubmissionLimitProcedure,
 		svc.GetJdSubmissionLimit,
@@ -1788,6 +1850,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetJdFitBandsHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdFitBandsProcedure:
 			adminServiceSetJdFitBandsHandler.ServeHTTP(w, r)
+		case AdminServiceGetSchedulerSettingsProcedure:
+			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
+		case AdminServiceSetSchedulerSettingsProcedure:
+			adminServiceSetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceGetJdSubmissionLimitProcedure:
 			adminServiceGetJdSubmissionLimitHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdSubmissionLimitProcedure:
@@ -2015,6 +2081,14 @@ func (UnimplementedAdminServiceHandler) GetJdFitBands(context.Context, *connect.
 
 func (UnimplementedAdminServiceHandler) SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdFitBands is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetSchedulerSettings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetSchedulerSettings is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {

@@ -20,6 +20,7 @@ const NAV = [
   { href: "/admin/activity", label: "Activity" },
   { href: "/admin/corpus", label: "Corpus" },
   { href: "/admin/jd", label: "JD submissions" },
+  { href: "/admin/scheduler", label: "Scheduler" },
   { href: "/admin/decisions", label: "Decision review" },
   { href: "/admin/evals", label: "Evaluations" },
   { href: "/admin/ops", label: "Ops" },

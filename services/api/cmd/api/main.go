@@ -21,6 +21,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
+	"github.com/reh3376/career-site/services/api/internal/scheduling"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -287,6 +288,12 @@ func main() {
 	} else if n > 0 {
 		log.Info("eval: stranded evaluations closed after restart", slog.Int64("count", n))
 	}
+	// Booking against the owner's own calendar. The provider is the stub
+	// until his OAuth client is configured; the handler reports that as
+	// "not switched on yet" rather than an empty calendar.
+	schedSettings := scheduling.NewSettingsStore(log, userRepo, scheduling.DefaultSettings())
+	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, nil, cfg.OwnerContactEmail)
+
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
@@ -305,6 +312,10 @@ func main() {
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
+	// The console edits the same settings the booking flow reads, and is
+	// told whether a calendar is connected behind them, so it cannot
+	// show a full week of windows that nobody can book.
+	adminHandler.SetScheduler(schedSettings, nil)
 	// The golden-set evaluator needs a member to own its submissions;
 	// the admin bootstrapped at boot is the one person here. Without a
 	// scorer there is nothing to evaluate, so it stays nil in dev
@@ -330,6 +341,7 @@ func main() {
 		Admin:    adminHandler,
 		Activity: activityHandler,
 		Jd:       jdHandler,
+		Meetings: meetingsHandler,
 		Events:   eventsHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
