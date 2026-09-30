@@ -28,13 +28,23 @@ const SettingKey = "scheduler_settings"
 // minutes of clearance between them, in America/New_York.
 func DefaultSettings() Settings {
 	return Settings{
-		Zone:        "America/New_York",
-		Durations:   []int{15, 30, 45},
-		GapMins:     15,
-		StepMins:    15,
-		MaxPerDay:   3,
-		LeadHours:   24,
-		HorizonDays: 21,
+		Zone:      "America/New_York",
+		Durations: []int{15, 30, 45},
+		GapMins:   15,
+		StepMins:  15,
+		MaxPerDay: 3,
+		LeadHours: 24,
+		// 90 days, not because anything breaks past it, but because
+		// free/busy can only subtract what is already on the calendar:
+		// the further out a member books, the more likely they take a
+		// slot the owner has not yet committed. That argues for "not two
+		// years", not for a tight limit.
+		//
+		// The first value here was 21, which was invented rather than
+		// asked for and which the owner rightly called arbitrary. With
+		// meetings on three weekdays it left eight openings, which reads
+		// as a man with no time rather than as a horizon.
+		HorizonDays: 90,
 		Windows: []Window{
 			{Weekday: time.Tuesday, StartMins: 9 * 60, EndMins: 12 * 60},
 			{Weekday: time.Tuesday, StartMins: 14 * 60, EndMins: 16 * 60},

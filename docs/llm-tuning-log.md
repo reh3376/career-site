@@ -2627,3 +2627,120 @@ clean comparison against run 12 (9/9, 0 inversions, margin 0.1071) and
 a real test of whether Blue Origin's r11 survives. The distillation
 study guide is ingested only after that, so it remains a single
 variable.
+
+## 2026-09-30: run 15, the first complete run since 12 and the first at ten
+
+**10 of 10 correct, 0 ordering violations, 0 errors, margin 0.1786, in
+6h40m.** `requirement_judge` v12, corpus `45302f207ba3`, ten postings.
+
+    ati            1.0000      dover        1.0000     heaven-hill  1.0000
+    cai            0.9286      cornerstone  0.9286     orca         0.9286
+    blue-origin    0.8214
+    ------------------------------------------------ gate 0.70
+    nexus          0.6429      xai          0.6429     profluent    0.3571
+
+### The bounded schema worked, and only did what it was for
+
+Blue Origin scored without error after dying at judge batch 11 of 14 in
+both runs 13 and 14. Across 112 judge calls the peak was **187
+completion tokens** against a 400-character bound, mean 125, no
+failures. The runs it replaced hit 1,200 and then 2,400 on a single
+judgment.
+
+That distinction matters more than the pass. The bound was meant to
+stop a generation that would not terminate, not to shorten ordinary
+answers, and a mean of 125 tokens says it did not touch them. Had
+scores moved because rationales were being clipped, this is where it
+would show.
+
+### Blue Origin's LLM requirement: the verdict is the wrong thing to read
+
+It went unmet to met, and Blue Origin rose 0.7500 to 0.8214. The
+tempting conclusion is that the LLM document worked. **That conclusion
+does not follow from the verdict**, because this requirement has read:
+
+    run 9  partial    run 10  met    run 11  unmet    run 12  unmet    run 15  met
+
+It was already met in run 10, before the document existed. A requirement
+that has moved four times in six runs is marginal, and one more flip is
+not evidence.
+
+What does distinguish them is the basis:
+
+| | run 10 | run 15 |
+|---|---|---|
+| evidence | 4 chunks: two articles, two interview-prep | 1 chunk: 337 |
+| document | "From Data to Decisions", scrubbed prep notes | "LLM and applied AI: three years, and what was actually shipped" |
+| reasoning | MDEMG *includes* LLM re-ranking, therefore he has built with LLMs | worked with LLMs since 2023, shipped features 2025, production 2026 |
+
+The requirement asks for **2+ years**. Run 10 never established a
+duration at all; it inferred capability from a system existing, which is
+rule 3 doing what rule 4 forbids it to do for a quantity. Run 15 cites a
+stated span with dates, from the document written for this requirement.
+
+So the honest claim is not "the document flipped the verdict". It is
+that the verdict now rests on stated evidence rather than on an
+inference, which is the difference between landing right and being
+right. Whether it stays met is a question for run 16.
+
+### Cornerstone, the only out-of-sample result in the set
+
+Added and labelled the night before, above the gate and very strong, by
+the owner. The reviewer had never seen it: not in the corpus, not in the
+prompts, not in any prior run. It scored **0.9286**, inside the
+very-strong band, 14 of 15 requirements met.
+
+The one unmet is "Lead recruiting efforts for Automation Services
+positions", which is a fair reading; the corpus describes building and
+running organisations, not recruiting for them.
+
+Every other posting in the set has been scored repeatedly and had
+prompts tuned against it. Cornerstone had not, which makes it worth more
+than the other nine put together as evidence the reviewer generalises.
+
+### The noise floor held, again
+
+CAI scored 0.9286 for the third time with **two different requirements
+swapped underneath it**: GMP compliance met to unmet, laboratory
+qualification unmet to met. Profluent moved 0.2500 to 0.3571 on the same
+single requirement it has oscillated on for six runs with untouched
+evidence.
+
+Both are the documented behaviour, not regressions. They are also the
+reason verdicts are diffed by requirement text: reading CAI's unchanged
+score as "nothing happened" would be wrong twice over.
+
+### Where the time goes, measured rather than inferred
+
+First run with `phase_ms` (migration 00042), averaged per posting:
+
+    judge          28 min
+    resume         10 min
+    extract         4 min
+    posting_check  25 s
+    retrieval       1 s
+
+Retrieval is one second, which is why reconstructing phase timings from
+`llm_usage` could never see it: it makes no model call and leaves no
+row. Judging is 70% of a posting and résumé generation is the reason an
+above-gate posting costs ten minutes more than a below-gate one.
+
+### Two corrections to earlier records
+
+**`docs/evaluation.md`'s worked example was wrong.** It showed Blue
+Origin at 0.8214 and margin 0.1786 labelled "run 12". Those are run
+**10**'s numbers. Run 12 was 0.7500 and 0.1071. Corrected in that
+document, and it is a reminder that a worked example copied from a run
+and mislabelled is worse than no example: it was quoted back as fact
+during this run's analysis before the database contradicted it.
+
+**The margin is not comparable to run 12's.** 0.1786 against 0.1071 is
+a different corpus and a different set size. What is fair to say: the
+margin did not narrow when Cornerstone joined at 0.9286, and the lowest
+above-gate posting rose.
+
+### Next
+
+Run 16 is the study guide, ingested alone, so it stays a single
+variable. The open question it inherits is whether Blue Origin's LLM
+requirement stays met now that it has a document to stand on.
