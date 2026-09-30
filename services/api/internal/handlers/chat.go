@@ -186,9 +186,6 @@ func (h *Chat) SendMessage(
 	if err != nil {
 		return err
 	}
-	if h.answer == nil {
-		return connect.NewError(connect.CodeUnavailable, errors.New("the assistant is not available"))
-	}
 	convID, err := parseID(req.Msg.GetConversationId())
 	if err != nil {
 		return err

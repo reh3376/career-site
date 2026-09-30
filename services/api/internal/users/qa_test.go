@@ -251,3 +251,58 @@ func TestCanonicalPhrasingCannotBeDeleted(t *testing.T) {
 		t.Errorf("deleting a variant should be allowed: %v", err)
 	}
 }
+
+// Close enough to two entries is not a match.
+//
+// Measured on production, "do you have leadership experience" and "How
+// much experience do you have?" scored 0.766 against each other while
+// belonging to different entries, and a real paraphrase of one of them
+// scored 0.605 against its own. The bands overlap, so a threshold alone
+// cannot tell "this one" from "one of these two", and being wrong here
+// means a confident verbatim answer to a question nobody asked.
+func TestAMatchTooCloseToASecondEntryIsRefused(t *testing.T) {
+	r, ctx := chatRepo(t)
+
+	a := makeEntry(t, r, ctx, QAEntry{Question: "entry A", Answer: "answer A", Enabled: true})
+	b := makeEntry(t, r, ctx, QAEntry{Question: "entry B", Answer: "answer B", Enabled: true})
+
+	// Two phrasings almost on top of each other, one per entry.
+	pending, err := r.QAPhrasingsNeedingEmbedding(ctx, 100)
+	if err != nil {
+		t.Fatalf("needing embedding: %v", err)
+	}
+	for _, p := range pending {
+		switch p.EntryID {
+		case a:
+			mustEmbed(t, r, ctx, p.ID, vec(11, 0))
+		case b:
+			mustEmbed(t, r, ctx, p.ID, vec(11, 0.0001))
+		}
+	}
+
+	// Asking exactly entry A's vector: it wins, but only just.
+	if _, ok, err := r.MatchQA(ctx, vec(11, 0), 0.5); err != nil || ok {
+		t.Errorf("a match that barely beat another entry was served (ok=%v, err=%v)", ok, err)
+	}
+
+	// Move B far away and the same question now matches cleanly.
+	for _, p := range pending {
+		if p.EntryID == b {
+			mustEmbed(t, r, ctx, p.ID, vec(400, 0))
+		}
+	}
+	m, ok, err := r.MatchQA(ctx, vec(11, 0), 0.5)
+	if err != nil || !ok {
+		t.Fatalf("an unambiguous match was refused (ok=%v, err=%v)", ok, err)
+	}
+	if m.Entry.ID != a {
+		t.Errorf("matched entry %d, want %d", m.Entry.ID, a)
+	}
+}
+
+func mustEmbed(t *testing.T, r *Repo, ctx context.Context, id int64, v []float32) {
+	t.Helper()
+	if err := r.SetQAPhrasingEmbedding(ctx, id, v); err != nil {
+		t.Fatalf("set embedding: %v", err)
+	}
+}

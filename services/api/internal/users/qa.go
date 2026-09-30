@@ -80,36 +80,69 @@ var ErrQAEntryNotFound = errors.New("no such Q&A entry")
 // bank answer is not generated and therefore cannot qualify itself.
 // The first failure is slow and the second is wrong.
 //
-// Measured on production against nomic-embed-text on 2026-09-30, with
-// one banked question and seven probes (disabled entries, deleted
-// afterwards, never servable):
+// Measured twice on production against nomic-embed-text, and the
+// second measurement overturned the first.
 //
-//	1.0000  Are you open to relocating?        (the anchor)
-//	0.8824  are you willing to relocate        paraphrase
-//	0.7941  would you move?                    paraphrase
-//	0.7627  can you relocate for this role     paraphrase
-//	0.5453  where are you based?               same topic, different question
-//	0.4351  what PLC platforms have you used?  unrelated
-//	0.4248  what is your favourite pizza       unrelated
-//	0.3657  do you know Rockwell ControlLogix  unrelated
+// The first probe used one question and its paraphrases and looked
+// clean: paraphrases 0.76 to 0.88, a different question on the same
+// topic at 0.55, unrelated questions below 0.44. That suggested 0.72.
+// It was wrong, and it was wrong because one question family cannot
+// show you a cross-entry collision.
 //
-// That killed the first guess. 0.85 caught only the closest paraphrase
-// and would have sent "would you move?" to the model for fifteen to
-// twenty-five seconds, which is the exact wait the bank exists to
-// avoid, on a question it already had an answer to.
+// The second probe, over six real entries and thirty phrasings, found
+// the bands overlap completely:
 //
-// The useful finding is the gap: real paraphrases bottom out around
-// 0.76 and the nearest non-match sits at 0.55, so anything in 0.6 to
-// 0.75 separates them. 0.72 takes all three paraphrases with 0.04 to
-// spare and clears the nearest non-match by 0.17, keeping most of the
-// margin on the side where a mistake is expensive.
+//	0.766  "do you have leadership experience"
+//	       against "How much experience do you have?"     DIFFERENT entries
+//	0.605  "do you have a masters"
+//	       against "What is your education?"              SAME entry
+//	0.572  "how many people have you managed"
+//	       against "How large were the teams ...?"        SAME entry
+//	0.475  "do you know Ignition"
+//	       against "What automation platforms ...?"       SAME entry
 //
-// STILL PROVISIONAL. This is one question family, and a threshold
-// generalised from one anchor is a guess with better manners. It is
-// changed anyway because 0.85 was demonstrably wrong rather than
-// merely unverified. FR-CHAT-15's golden set is what should settle it
-// across many questions; see docs/ask-roger.md.
-const QAMatchThreshold = 0.72
+// The model is scoring shared vocabulary far more than shared intent
+// on strings this short. "experience" in both sides carries 0.766
+// between two unrelated questions, while "Ignition" and "automation
+// platforms" share no words and score 0.475 despite being the same
+// question. No single threshold separates those two lists, so tuning
+// the number is the wrong move and this stopped being a threshold
+// problem.
+//
+// What follows, and it is a change of mechanism rather than of value:
+//
+//   - The threshold goes back up, to sit clear of the worst observed
+//     cross-entry pair at 0.766. Above it, a match means the wording
+//     is genuinely close to something the owner wrote down.
+//   - Coverage comes from listing phrasings, not from semantic reach.
+//     The bank is an owner-curated near-exact lookup. A question asked
+//     in words nobody anticipated falls through to the model, which is
+//     slow and correct, rather than matching the wrong entry, which is
+//     fast and wrong.
+//   - A margin rule backs it up: see QAMatchMargin.
+//
+// Still provisional in the sense that six entries is not a golden set
+// (FR-CHAT-15), but no longer provisional about the shape of the
+// problem.
+const QAMatchThreshold = 0.85
+
+// QAMatchMargin is how far the winner must beat the best candidate
+// from a *different* entry.
+//
+// The threshold alone answers "is this close enough to something the
+// owner wrote". It cannot answer "and is it clearly closer to this
+// entry than to another one", which is the failure the second probe
+// found: two entries both plausible, one picked on a hair, and the
+// reader handed a confident verbatim answer to a question they did not
+// ask.
+//
+// Scale-free on purpose. A margin survives the absolute similarities
+// drifting when the embedding model changes, which a threshold does
+// not, so this is the part expected to age well.
+//
+// Zero disables the check, which is what a caller passing an explicit
+// threshold of its own gets unless it opts in.
+const QAMatchMargin = 0.05
 
 // MatchQA returns the best bank entry for an embedded question, or
 // false if nothing clears the threshold.
@@ -138,21 +171,57 @@ func (r *Repo) MatchQA(ctx context.Context, embedding []float32, threshold float
        AND e.enabled
        AND e.tenant_id = $2
      ORDER BY p.embedding <=> $1
-     LIMIT 1`
+     LIMIT 8`
 
-	var m QAMatch
-	var sources []byte
-	err := r.pool.QueryRow(ctx, q, vectorLiteral(embedding), tenant.FromContext(ctx).Int64()).Scan(
-		&m.Entry.ID, &m.Entry.Question, &m.Entry.Answer, &sources, &m.Entry.Tags,
-		&m.Entry.CoversRestricted, &m.Entry.Enabled, &m.Entry.CreatedAt, &m.Entry.UpdatedAt,
-		&m.Phrasing, &m.Similarity)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return QAMatch{}, false, nil
-	}
+	rows, err := r.pool.Query(ctx, q, vectorLiteral(embedding), tenant.FromContext(ctx).Int64())
 	if err != nil {
 		return QAMatch{}, false, fmt.Errorf("match qa: %w", err)
 	}
+	defer rows.Close()
+
+	// The top few rather than the top one, so the margin below can be
+	// computed. Eight is enough to reach a different entry in a bank of
+	// any realistic size, and the rows are tiny.
+	var best QAMatch
+	var bestSources []byte
+	var runnerUp float64
+	var have bool
+	for rows.Next() {
+		var m QAMatch
+		var sources []byte
+		if err := rows.Scan(
+			&m.Entry.ID, &m.Entry.Question, &m.Entry.Answer, &sources, &m.Entry.Tags,
+			&m.Entry.CoversRestricted, &m.Entry.Enabled, &m.Entry.CreatedAt, &m.Entry.UpdatedAt,
+			&m.Phrasing, &m.Similarity); err != nil {
+			return QAMatch{}, false, fmt.Errorf("scan qa match: %w", err)
+		}
+		if !have {
+			best, bestSources, have = m, sources, true
+			continue
+		}
+		// The first row belonging to a different entry is the one the
+		// winner has to beat.
+		if m.Entry.ID != best.Entry.ID && runnerUp == 0 {
+			runnerUp = m.Similarity
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return QAMatch{}, false, fmt.Errorf("match qa: %w", err)
+	}
+	if !have {
+		return QAMatch{}, false, nil
+	}
+	m, sources := best, bestSources
+
 	if m.Similarity < threshold {
+		return QAMatch{}, false, nil
+	}
+	// Close enough to two entries is not a match. Measured on
+	// production, two unrelated questions sharing the word "experience"
+	// scored 0.766 against each other, so "clears the bar" and "is
+	// clearly this one" are different questions and both have to be
+	// answered before an owner-signed answer is served.
+	if runnerUp > 0 && m.Similarity-runnerUp < QAMatchMargin {
 		return QAMatch{}, false, nil
 	}
 	if err := json.Unmarshal(sources, &m.Entry.Sources); err != nil {

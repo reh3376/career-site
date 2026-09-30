@@ -328,7 +328,58 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 6. Known issues and things that are not right yet
 
-1. **`QAMatchThreshold` is 0.72, measured, and still provisional.**
+0. **The first real question on production failed, and why.** Roger
+   asked one on 2026-09-30 and got "network error". The handler had
+   worked: it logged status 200 after **44.9 seconds**. Go's
+   `http.Server.WriteTimeout` is 30 seconds and covers the whole
+   response, so the connection had been cut fourteen seconds before the
+   answer was ready.
+
+   Fixed by exempting only `SendMessage` from the deadline. Behind that
+   sat a second bug of the same family as the flusher one: clearing a
+   deadline goes through `http.ResponseController`, which walks
+   `Unwrap()` to find a capable writer, and the logging wrapper had no
+   `Unwrap`. Without it the exemption compiles, runs, reports nothing
+   and changes nothing. There is now a test that fails with "feature
+   not supported" if `Unwrap` is removed.
+
+   **Forty-five seconds is still too slow**, separately from the
+   timeout. That was a cold call with no warm prefix cache; it should
+   settle lower. Worth measuring before tuning `Show` down from 3.
+
+1. **`QAMatchThreshold` is back to 0.85, and the mechanism changed.**
+   The 0.72 above was measured off one question family and it was
+   wrong. A second probe over six real entries and thirty phrasings
+   found the bands overlap completely:
+
+       0.766  "do you have leadership experience"
+              vs "How much experience do you have?"   DIFFERENT entries
+       0.605  "do you have a masters"
+              vs "What is your education?"            SAME entry
+       0.475  "do you know Ignition"
+              vs "What automation platforms ...?"     SAME entry
+
+   `nomic-embed-text` is scoring shared vocabulary far more than shared
+   intent on strings this short. "experience" on both sides carries
+   0.766 between unrelated questions; "Ignition" and "automation
+   platforms" share no words and score 0.475 despite being the same
+   question. **No single threshold separates those lists**, so this
+   stopped being a threshold problem.
+
+   What changed: the threshold goes back above the worst observed
+   cross-entry pair, and `QAMatchMargin` (0.05) additionally requires
+   the winner to beat the best candidate from a *different* entry. The
+   margin is scale-free and should outlive a change of embedding model,
+   which a threshold will not.
+
+   **What this means for the bank, honestly:** it matches
+   near-restatements reliably and does not generalise across
+   vocabulary. Coverage comes from listing the wordings people actually
+   use, not from semantic reach. A question nobody anticipated falls
+   through to the model, which is slow and correct, rather than
+   matching the wrong entry, which is fast and wrong.
+
+   *Superseded, for history:* 
    The original 0.85 was reasoning rather than measurement, and the
    first real measurement killed it. Taken on production against
    `nomic-embed-text` on 2026-09-30, with one banked question and
