@@ -44,16 +44,6 @@ export type Meeting = {
   phoneNumber?: string;
 };
 
-// Where a member is sent to create their own video room. This
-// application holds no credentials for any of them and creates no
-// rooms: the member sets it up in their own calendar and sends the
-// link, which is three fewer OAuth grants and three fewer things to
-// break.
-export const VIDEO_PROVIDERS = [
-  { value: "VIDEO_PROVIDER_GOOGLE_MEET", label: "Google Meet", setupUrl: "https://calendar.google.com/calendar/u/0/r/eventedit" },
-  { value: "VIDEO_PROVIDER_TEAMS", label: "Microsoft Teams", setupUrl: "https://outlook.office.com/calendar/deeplink/compose" },
-  { value: "VIDEO_PROVIDER_ZOOM", label: "Zoom", setupUrl: "https://zoom.us/meeting/schedule" },
-] as const;
 
 export type AvailabilityState = {
   slots: Slot[];

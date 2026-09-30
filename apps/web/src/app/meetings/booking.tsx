@@ -6,13 +6,13 @@ import {
   bookMeetingAction,
   getAvailability,
   listMyMeetings,
-  VIDEO_PROVIDERS,
   type AvailabilityState,
   type BookState,
   type Meeting,
   type MeetingOptions,
   type Slot,
 } from "./actions";
+import { VIDEO_PROVIDERS } from "./providers";
 import { MyMeetings } from "./my-meetings";
 
 // Every time on this page is rendered in the owner's zone, never the

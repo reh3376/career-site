@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 
-import { cancelMeetingAction, VIDEO_PROVIDERS, type Meeting } from "./actions";
+import { cancelMeetingAction, type Meeting } from "./actions";
+import { VIDEO_PROVIDERS } from "./providers";
 
 function fmt(iso: string, zone: string, opts: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: zone || "UTC" }).format(
