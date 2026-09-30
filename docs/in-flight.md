@@ -6,25 +6,24 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-30, 10:15 UTC.
+Last updated 2026-09-30, 13:10 UTC.
 
 ---
 
-## 1. Run 15 is done; run 16 is the study guide
+## 1. The JD reviewer is finished, by the owner's call
 
-**10 of 10 correct, 0 inversions, 0 errors, margin 0.1786, 6h40m.**
-`requirement_judge` v12, corpus `45302f207ba3`, ten postings. Full
-analysis in the 2026-09-30 entry of
-[`llm-tuning-log.md`](llm-tuning-log.md).
+**Run 15, 2026-09-30: 10 of 10 correct, 0 inversions, 0 errors, margin
+0.1786, 6h40m.** `requirement_judge` v12, corpus `45302f207ba3`.
+Analysis in [`llm-tuning-log.md`](llm-tuning-log.md).
 
-The bounded schema held: peak judgment 187 tokens across 112 calls,
-against the 1,200 and 2,400 that killed runs 13 and 14.
+The owner called the JD analysis tools good on 2026-09-30 and moved on.
+Run 16, the study guide ingested alone, is written up in
+[`backlog.md`](backlog.md) §6b with what it involves and what it would
+answer. It is not queued.
 
-**Run 16: the distillation study guide, ingested alone** (see section
-3), so it stays a single variable. The open question it inherits is
-whether Blue Origin's LLM requirement stays met. It read met in run 15
-on the purpose-written document, but it has moved four times in six
-runs, so one reading is not a trend.
+**The scheduler is live and complete**: booking against his real
+calendar, members cancelling their own, both sides emailed, 37
+bookable days.
 
 ## 2. Deploy queue, cleared
 
@@ -62,44 +61,18 @@ knee from historian data` is indistinguishable from him claiming it.
 **It gets its own run**, at the owner's request, so run 15 changes
 exactly one thing and is a genuine single-variable test.
 
-## 4. Meeting scheduler, complete in code, waiting on credentials
+## 4. Meeting scheduler, done
 
-FR-CNT-23/26/27/28, FR-ADM-13, decision D-22. Branch
-`feat/scheduler-google`, PR to follow. PR 200 (everything but the
-provider) is merged.
+Shipped 2026-09-30. Booking against the owner's Google Calendar,
+free/busy only, members-only, 15/30/45 minutes with 15 minutes of
+clearance enforced by a database exclusion constraint. Video or phone,
+the member hosting their own room. Both sides emailed on booking.
+Day picker of six with a sliding window, 37 bookable days, times in one
+stated zone that moves with daylight saving.
 
-**Built and tested:** availability and clearance arithmetic, the
-confirmation re-check, `meeting_bookings` with a gist exclusion
-constraint, the repository, the settings store, `MeetingService` and
-its handler, `/meetings`, the `.ics` endpoint, `/admin/scheduler`, the
-Google provider, AES-256-GCM credential storage, and the OAuth connect
-flow. Both landing surfaces, the member home in both modes, the
-hamburger menu and the admin nav all point at it.
-
-**What is left is not code.** Three environment variables and one
-button:
-
-    GOOGLE_CLIENT_ID       from a Google Cloud OAuth client (Web application)
-    GOOGLE_CLIENT_SECRET   the same client
-    SECRETS_KEY            openssl rand -base64 32
-
-Redirect URI, character for character:
-`https://rogerhenley.dev/admin/scheduler/callback`. Consent screen may
-stay in Testing with the owner as the only test user, which avoids
-Google's verification review. Full runbook in `deploy/README.md`.
-
-Then `/admin/scheduler` → Connect Google Calendar.
-
-**Known limitation worth remembering:** an unverified app in Testing
-has its refresh tokens expire after seven days. If booking stops about
-a week after connecting, that is why, and Reconnect fixes it. Publishing
-the consent screen removes the limit and triggers Google's review.
-
-**Still open from FR-ADM-13:** the recent-bookings list with cancel
-links in the admin surface.
-
-**Deploy plan:** ship provider and all, then live-test a real booking
-against the owner's calendar, then start run 15.
+Known and recorded in the backlog rather than open here: the seven-day
+refresh-token expiry while the consent screen stays in Testing, which
+will stop booking around 2026-10-06 until Reconnect is pressed.
 
 ## 5. Diagnostics for the next failure, built, awaiting deploy
 

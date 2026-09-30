@@ -1,0 +1,23 @@
+Your meeting with Roger Henley is booked.
+
+{{.When}}
+{{.DurationMinutes}} minutes, {{.ZoneLabel}}
+
+{{.HowLine}}
+{{if .Topic}}
+You said you wanted to discuss:
+{{.Topic}}
+{{end}}{{if .VideoSetupLabel}}
+You are hosting on {{.VideoSetupLabel}}. Create the room in your own
+calendar and send Roger the link before the meeting.
+{{end}}
+Add it to your calendar: {{.IcsURL}}
+
+Need to change or cancel it? {{.MeetingsURL}}
+Cancelling frees the slot straight away, so please do rather than not
+turning up.
+
+---
+This is an automated confirmation from rogerhenley.dev. Replies to this
+address are not read; use the contact form if you need to reach Roger
+outside the meeting: {{.ContactURL}}

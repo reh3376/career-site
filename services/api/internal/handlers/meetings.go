@@ -220,8 +220,11 @@ func (h *Meetings) BookMeeting(
 		return nil, connect.NewError(connect.CodeInternal, errors.New("the meeting could not be booked"))
 	}
 
-	// After the booking is safely stored, and never allowed to fail it.
+	// After the booking is safely stored, and neither allowed to fail
+	// it. Both go out: the owner needs to know who is coming, the member
+	// needs to know how to cancel.
 	h.notifyOwnerBooked(ctx, member, booked, set, contact)
+	h.notifyMemberBooked(ctx, member, booked, set, contact)
 
 	return connect.NewResponse(&careerv1.BookMeetingResponse{
 		Meeting: toProto(booked, set.Zone),
