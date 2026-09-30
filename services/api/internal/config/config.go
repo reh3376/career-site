@@ -85,6 +85,17 @@ type Config struct {
 	// Auth / email
 	WebBaseURL        string
 	OwnerContactEmail string
+
+	// Google Calendar, for the meeting scheduler. Empty client
+	// credentials leave booking switched off, which the member-facing
+	// page states plainly rather than showing an empty calendar.
+	GoogleClientID     string
+	GoogleClientSecret string
+	// SecretsKey is the base64 AES-256 key that seals the stored refresh
+	// token (internal/secrets). Without it the connect flow refuses,
+	// because storing the token in plaintext is not an option this
+	// application offers.
+	SecretsKey        string
 	MailFrom          string
 	ConsentVersion    string
 	EmailProvider     string // "smtp" (default in dev) or "resend"
@@ -152,17 +163,20 @@ func Load() (Config, error) {
 		DBTimeout:              2 * time.Second,
 		SkipMigrate:            os.Getenv("API_SKIP_MIGRATE") == "1",
 
-		WebBaseURL:        envOr("WEB_BASE_URL", "http://localhost"),
-		OwnerContactEmail: envOr("OWNER_CONTACT_EMAIL", "rogerhenley345@gmail.com"),
-		MailFrom:          envOr("MAIL_FROM", "career-site <noreply@career-site.local>"),
-		ConsentVersion:    os.Getenv("CONSENT_VERSION"),
-		EmailProvider:     envOr("EMAIL_PROVIDER", "smtp"),
-		SMTPHost:          envOr("SMTP_HOST", "mailpit"),
-		SMTPPort:          envIntOr("SMTP_PORT", 1025),
-		SMTPUser:          os.Getenv("SMTP_USER"),
-		SMTPPass:          os.Getenv("SMTP_PASS"),
-		ResendAPIKey:      os.Getenv("RESEND_API_KEY"),
-		PwnedCheckEnabled: os.Getenv("PWNED_CHECK_ENABLED") == "1",
+		WebBaseURL:         envOr("WEB_BASE_URL", "http://localhost"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		SecretsKey:         os.Getenv("SECRETS_KEY"),
+		OwnerContactEmail:  envOr("OWNER_CONTACT_EMAIL", "rogerhenley345@gmail.com"),
+		MailFrom:           envOr("MAIL_FROM", "career-site <noreply@career-site.local>"),
+		ConsentVersion:     os.Getenv("CONSENT_VERSION"),
+		EmailProvider:      envOr("EMAIL_PROVIDER", "smtp"),
+		SMTPHost:           envOr("SMTP_HOST", "mailpit"),
+		SMTPPort:           envIntOr("SMTP_PORT", 1025),
+		SMTPUser:           os.Getenv("SMTP_USER"),
+		SMTPPass:           os.Getenv("SMTP_PASS"),
+		ResendAPIKey:       os.Getenv("RESEND_API_KEY"),
+		PwnedCheckEnabled:  os.Getenv("PWNED_CHECK_ENABLED") == "1",
 
 		ExpirySchedulerInterval: time.Duration(envIntOr("EXPIRY_INTERVAL_SECONDS", 3600)) * time.Second,
 		PendingApprovalTTL:      time.Duration(envIntOr("PENDING_APPROVAL_TTL_HOURS", 24*7)) * time.Hour,

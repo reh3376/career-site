@@ -1806,6 +1806,70 @@ class SetSchedulerSettingsResponse(_message.Message):
     settings: SchedulerSettings
     def __init__(self, settings: _Optional[_Union[SchedulerSettings, _Mapping]] = ...) -> None: ...
 
+class GetCalendarConnectURLRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetCalendarConnectURLResponse(_message.Message):
+    __slots__ = ("url",)
+    URL_FIELD_NUMBER: _ClassVar[int]
+    url: str
+    def __init__(self, url: _Optional[str] = ...) -> None: ...
+
+class ConnectCalendarRequest(_message.Message):
+    __slots__ = ("code", "state")
+    CODE_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    code: str
+    state: str
+    def __init__(self, code: _Optional[str] = ..., state: _Optional[str] = ...) -> None: ...
+
+class ConnectCalendarResponse(_message.Message):
+    __slots__ = ("status",)
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    status: CalendarStatus
+    def __init__(self, status: _Optional[_Union[CalendarStatus, _Mapping]] = ...) -> None: ...
+
+class GetCalendarStatusRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class CalendarStatus(_message.Message):
+    __slots__ = ("configured", "connected", "account_email", "calendar_id", "scopes", "connected_at", "last_ok_at", "last_error")
+    CONFIGURED_FIELD_NUMBER: _ClassVar[int]
+    CONNECTED_FIELD_NUMBER: _ClassVar[int]
+    ACCOUNT_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    CALENDAR_ID_FIELD_NUMBER: _ClassVar[int]
+    SCOPES_FIELD_NUMBER: _ClassVar[int]
+    CONNECTED_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_OK_AT_FIELD_NUMBER: _ClassVar[int]
+    LAST_ERROR_FIELD_NUMBER: _ClassVar[int]
+    configured: bool
+    connected: bool
+    account_email: str
+    calendar_id: str
+    scopes: str
+    connected_at: _timestamp_pb2.Timestamp
+    last_ok_at: _timestamp_pb2.Timestamp
+    last_error: str
+    def __init__(self, configured: _Optional[bool] = ..., connected: _Optional[bool] = ..., account_email: _Optional[str] = ..., calendar_id: _Optional[str] = ..., scopes: _Optional[str] = ..., connected_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_ok_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_error: _Optional[str] = ...) -> None: ...
+
+class GetCalendarStatusResponse(_message.Message):
+    __slots__ = ("status",)
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    status: CalendarStatus
+    def __init__(self, status: _Optional[_Union[CalendarStatus, _Mapping]] = ...) -> None: ...
+
+class DisconnectCalendarRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class DisconnectCalendarResponse(_message.Message):
+    __slots__ = ("status",)
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    status: CalendarStatus
+    def __init__(self, status: _Optional[_Union[CalendarStatus, _Mapping]] = ...) -> None: ...
+
 class GetJdSubmissionLimitRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

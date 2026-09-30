@@ -27,6 +27,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
 	"github.com/reh3376/career-site/services/api/internal/scheduling"
+	"github.com/reh3376/career-site/services/api/internal/secrets"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -55,6 +56,19 @@ type Admin struct {
 	// against them. Both nil until SetScheduler runs.
 	scheduler *scheduling.SettingsStore
 	calendar  calendar.Provider
+	// calProvider resolves the live calendar from the stored
+	// connection; the connect flow needs it to invalidate its cache.
+	calProvider *scheduling.Provider
+	// The Google client identifies this application to Google; the
+	// secret never leaves this process. sealer encrypts the refresh
+	// token before it reaches the database. stateSecret signs the OAuth
+	// state, and webBaseURL builds the redirect Google was registered
+	// with.
+	googleClientID     string
+	googleClientSecret string
+	sealer             *secrets.Sealer
+	stateSecret        []byte
+	webBaseURL         string
 	// jdScorer and jdTimeout back RescoreJd; nil scorer disables it.
 	jdScorer  *jd.Scorer
 	jdTimeout time.Duration

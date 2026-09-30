@@ -412,6 +412,32 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Returns the Google consent URL the owner visits to connect his
+  // calendar, carrying a signed, short-lived state so the callback
+  // cannot be driven by anyone else.
+  rpc GetCalendarConnectURL(GetCalendarConnectURLRequest) returns (GetCalendarConnectURLResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Completes the handshake: exchanges the authorisation code for a
+  // refresh token and stores it encrypted at rest. The code is
+  // single-use and the state is verified before anything is stored.
+  rpc ConnectCalendar(ConnectCalendarRequest) returns (ConnectCalendarResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Reads the calendar connection: which account, when it was
+  // connected, and whether it is currently working.
+  rpc GetCalendarStatus(GetCalendarStatusRequest) returns (GetCalendarStatusResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Forgets the stored credential. Booking stops immediately; existing
+  // meetings are left alone, on the calendar and in this application.
+  rpc DisconnectCalendar(DisconnectCalendarRequest) returns (DisconnectCalendarResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads how many postings one member may submit per rolling day.
   rpc GetJdSubmissionLimit(GetJdSubmissionLimitRequest) returns (GetJdSubmissionLimitResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
@@ -2479,6 +2505,72 @@ message SetSchedulerSettingsRequest {
 message SetSchedulerSettingsResponse {
   // Stored settings.
   SchedulerSettings settings = 1;
+}
+
+// Request for GetCalendarConnectURL.
+message GetCalendarConnectURLRequest {}
+
+// Where to send the owner to authorise.
+message GetCalendarConnectURLResponse {
+  // The full consent URL, including the signed state.
+  string url = 1;
+}
+
+// The authorisation code Google handed back.
+message ConnectCalendarRequest {
+  // The one-time code from the callback's query string.
+  string code = 1 [(buf.validate.field).string.min_len = 1];
+  // The state from the callback, verified against the one issued.
+  string state = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// The connection as stored.
+message ConnectCalendarResponse {
+  // Current status after connecting.
+  CalendarStatus status = 1;
+}
+
+// Request for GetCalendarStatus.
+message GetCalendarStatusRequest {}
+
+// Whether a calendar is connected, and whether it is working.
+message CalendarStatus {
+  // True when this deployment has the client credentials and sealing
+  // key needed to connect at all. False means set the environment
+  // variables, which is a different fix from pressing connect.
+  bool configured = 1;
+  // True when a credential is stored.
+  bool connected = 2;
+  // The Google account that authorised, for the owner to recognise.
+  string account_email = 3;
+  // Which calendar is written to; "primary" is the account's own.
+  string calendar_id = 4;
+  // Scopes Google actually granted, so a consent screen that returned
+  // less than was asked for is visible rather than surfacing later as
+  // a puzzling refusal.
+  string scopes = 5;
+  // When the owner connected it.
+  google.protobuf.Timestamp connected_at = 6;
+  // When Google last answered successfully. Absent means it has never
+  // worked, which is different from having stopped.
+  google.protobuf.Timestamp last_ok_at = 7;
+  // Why the last call failed, if it did. Empty when healthy.
+  string last_error = 8;
+}
+
+// The current connection.
+message GetCalendarStatusResponse {
+  // Current status.
+  CalendarStatus status = 1;
+}
+
+// Request for DisconnectCalendar.
+message DisconnectCalendarRequest {}
+
+// The connection after forgetting the credential.
+message DisconnectCalendarResponse {
+  // Current status.
+  CalendarStatus status = 1;
 }
 
 // Read request.

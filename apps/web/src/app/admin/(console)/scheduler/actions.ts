@@ -109,3 +109,92 @@ export async function saveSchedulerSettings(
   revalidatePath("/admin/scheduler");
   return { saved: true };
 }
+
+// Mirrors career.v1.CalendarStatus.
+export type CalendarStatus = {
+  configured: boolean;
+  connected: boolean;
+  accountEmail: string;
+  calendarId: string;
+  scopes: string;
+  connectedAt?: string;
+  lastOkAt?: string;
+  lastError: string;
+};
+
+const NO_CALENDAR: CalendarStatus = {
+  configured: false,
+  connected: false,
+  accountEmail: "",
+  calendarId: "",
+  scopes: "",
+  lastError: "",
+};
+
+export async function getCalendarStatus(): Promise<CalendarStatus> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return NO_CALENDAR;
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetCalendarStatus",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return NO_CALENDAR;
+  const data = (await resp.json()) as { status?: Partial<CalendarStatus> };
+  return { ...NO_CALENDAR, ...data.status };
+}
+
+// Returns the Google consent URL. The client secret never reaches the
+// browser: only the id, in a URL the server built.
+export async function getConnectUrl(): Promise<{ url?: string; error?: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Sign in again." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/GetCalendarConnectURL",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => ({}))) as { message?: string };
+    return { error: body.message || "A connect link could not be built." };
+  }
+  const data = (await resp.json()) as { url?: string };
+  return { url: data.url };
+}
+
+// Completes the handshake. The code is single-use, so this runs once
+// per callback and any error is final for that attempt.
+export async function connectCalendar(
+  code: string,
+  state: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Sign in again." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/ConnectCalendar",
+    body: { code, state },
+    cookie,
+  });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => ({}))) as { message?: string };
+    return { ok: false, error: body.message || "The calendar could not be connected." };
+  }
+  revalidatePath("/admin/scheduler");
+  return { ok: true };
+}
+
+export async function disconnectCalendar(): Promise<{ ok: boolean; error?: string }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { ok: false, error: "Sign in again." };
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/DisconnectCalendar",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) {
+    const body = (await resp.json().catch(() => ({}))) as { message?: string };
+    return { ok: false, error: body.message || "The calendar could not be disconnected." };
+  }
+  revalidatePath("/admin/scheduler");
+  return { ok: true };
+}

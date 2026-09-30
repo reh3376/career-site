@@ -22,6 +22,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/scheduler"
 	"github.com/reh3376/career-site/services/api/internal/scheduling"
+	"github.com/reh3376/career-site/services/api/internal/secrets"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
 	"github.com/reh3376/career-site/services/api/internal/users"
@@ -292,7 +293,29 @@ func main() {
 	// until his OAuth client is configured; the handler reports that as
 	// "not switched on yet" rather than an empty calendar.
 	schedSettings := scheduling.NewSettingsStore(log, userRepo, scheduling.DefaultSettings())
-	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, nil, cfg.OwnerContactEmail)
+	// The sealing key protects the stored refresh token. Booting without
+	// one is allowed so the site still runs; the connect flow refuses,
+	// because writing the token in plaintext is not an option offered.
+	sealKey, err := secrets.ParseKey(cfg.SecretsKey)
+	if err != nil {
+		log.Error("SECRETS_KEY is not usable", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	sealer, err := secrets.New(sealKey)
+	if err != nil {
+		log.Error("secrets init failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if !sealer.Enabled() {
+		log.Warn("SECRETS_KEY not set — the meeting scheduler cannot connect a calendar")
+	}
+	// Resolves the live calendar from the stored connection on each use,
+	// so connecting or disconnecting takes effect without a restart.
+	calProvider := scheduling.NewProvider(log, userRepo, sealer, cfg.GoogleClientID, cfg.GoogleClientSecret)
+	if !calProvider.Configured() {
+		log.Warn("Google client credentials not set — booking stays switched off")
+	}
+	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, calProvider, cfg.OwnerContactEmail)
 
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
@@ -315,7 +338,9 @@ func main() {
 	// The console edits the same settings the booking flow reads, and is
 	// told whether a calendar is connected behind them, so it cannot
 	// show a full week of windows that nobody can book.
-	adminHandler.SetScheduler(schedSettings, nil)
+	adminHandler.SetScheduler(schedSettings, calProvider)
+	adminHandler.SetCalendarConnect(calProvider, cfg.GoogleClientID, cfg.GoogleClientSecret,
+		sealer, cfg.DecisionTokenSecret, cfg.WebBaseURL)
 	// The golden-set evaluator needs a member to own its submissions;
 	// the admin bootstrapped at boot is the one person here. Without a
 	// scorer there is nothing to evaluate, so it stays nil in dev
