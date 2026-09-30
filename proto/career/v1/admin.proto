@@ -412,6 +412,51 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Lists the Q&A bank: the owner's own answers, served verbatim by
+  // Ask Roger with no model involved.
+  rpc ListQaEntries(ListQaEntriesRequest) returns (ListQaEntriesResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Writes a new bank entry along with its canonical phrasing. The
+  // entry is unreachable until the embedding job has given its
+  // phrasings vectors, which happens within five minutes.
+  rpc CreateQaEntry(CreateQaEntryRequest) returns (CreateQaEntryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Replaces an entry's editable fields. Changing the question clears
+  // the canonical phrasing's vector, so the entry stops matching the
+  // old wording immediately and matches the new one once re-embedded.
+  rpc UpdateQaEntry(UpdateQaEntryRequest) returns (UpdateQaEntryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Approves or withdraws an entry. Enabling is the approval: a
+  // disabled entry is never matched and never served, which is how a
+  // statement is taken back without losing what it said.
+  rpc SetQaEntryEnabled(SetQaEntryEnabledRequest) returns (SetQaEntryEnabledResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Deletes an entry and its phrasings.
+  rpc DeleteQaEntry(DeleteQaEntryRequest) returns (DeleteQaEntryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Adds another way of asking an existing entry's question. Matching
+  // runs over every phrasing, so variants are how one answer covers the
+  // several ways people ask for it.
+  rpc AddQaPhrasing(AddQaPhrasingRequest) returns (AddQaPhrasingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Removes one variant phrasing. The canonical phrasing cannot be
+  // removed: it is the entry's own question.
+  rpc DeleteQaPhrasing(DeleteQaPhrasingRequest) returns (DeleteQaPhrasingResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Returns the Google consent URL the owner visits to connect his
   // calendar, carrying a signed, short-lived state so the callback
   // cannot be driven by anyone else.
@@ -2443,6 +2488,192 @@ message ReviewDecisionRequest {
 }
 // Empty: success is the absence of an error.
 message ReviewDecisionResponse {}
+
+// A source shown beneath a Q&A bank answer.
+message QaSource {
+  // Title to display.
+  string title = 1 [(buf.validate.field).string.max_len = 200];
+  // Site path to link to.
+  string path = 2 [(buf.validate.field).string.max_len = 256];
+}
+
+// One way of asking a bank entry's question.
+message QaPhrasing {
+  // Phrasing id (numeric, stringified).
+  string id = 1;
+  // The wording.
+  string text = 2;
+  // True for the phrasing generated from the entry's own question.
+  // There is exactly one per entry and it cannot be deleted.
+  bool canonical = 3;
+  // Whether this phrasing has an embedding yet. A phrasing without one
+  // never matches, so this is the difference between an entry being in
+  // the bank and being reachable.
+  bool embedded = 4;
+}
+
+// One owner-written answer, served verbatim.
+message QaEntry {
+  // Entry id (numeric, stringified).
+  string id = 1;
+  // The question as the owner would put it. Also used as a suggested
+  // question, and it is the canonical phrasing.
+  string question = 2;
+  // The answer, in the owner's voice, served word for word. No model
+  // ever rewrites this.
+  string answer = 3;
+  // Sources to show beneath the answer.
+  repeated QaSource sources = 4;
+  // Free tags for filtering and grouping.
+  repeated string tags = 5;
+  // Marks an entry that deliberately answers something the assistant
+  // otherwise refuses: compensation, references, an employer matter,
+  // something personal. Not enforcement; this is so every such
+  // statement can be listed, and so opening one of those doors is a
+  // deliberate act.
+  bool covers_restricted = 6;
+  // Enabling is the approval. A disabled entry is never matched.
+  bool enabled = 7;
+  // When it was written.
+  google.protobuf.Timestamp created_at = 8;
+  // When it last changed.
+  google.protobuf.Timestamp updated_at = 9;
+  // Every way of asking it, canonical first.
+  repeated QaPhrasing phrasings = 10;
+}
+
+// Bank listing request.
+message ListQaEntriesRequest {
+  // Include entries that are not enabled. False for anything
+  // member-facing.
+  bool include_disabled = 1;
+}
+// The bank, newest first.
+message ListQaEntriesResponse {
+  // Entries.
+  repeated QaEntry entries = 1;
+  // Phrasings still waiting for an embedding across the whole bank. A
+  // non-zero count means part of the bank cannot match yet.
+  int32 awaiting_embedding = 2;
+}
+
+// New entry.
+message CreateQaEntryRequest {
+  // The question.
+  string question = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  // The answer, served verbatim.
+  string answer = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8000
+  }];
+  // Sources to show beneath it.
+  repeated QaSource sources = 3;
+  // Tags.
+  repeated string tags = 4;
+  // Whether this deliberately answers an otherwise-refused topic.
+  bool covers_restricted = 5;
+  // Whether to approve it now.
+  bool enabled = 6;
+  // Extra ways of asking it; the question itself is added
+  // automatically.
+  repeated string phrasings = 7;
+}
+// The new entry.
+message CreateQaEntryResponse {
+  // Entry id (numeric, stringified).
+  string id = 1;
+}
+
+// Entry edit.
+message UpdateQaEntryRequest {
+  // Entry to change.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The question. Changing it clears the canonical phrasing's vector.
+  string question = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  // The answer.
+  string answer = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 8000
+  }];
+  // Sources.
+  repeated QaSource sources = 4;
+  // Tags.
+  repeated string tags = 5;
+  // Whether this deliberately answers an otherwise-refused topic.
+  bool covers_restricted = 6;
+  // Whether it is approved.
+  bool enabled = 7;
+}
+// Empty: success is the absence of an error.
+message UpdateQaEntryResponse {}
+
+// Approval change.
+message SetQaEntryEnabledRequest {
+  // Entry to approve or withdraw.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // True approves it.
+  bool enabled = 2;
+}
+// Empty: success is the absence of an error.
+message SetQaEntryEnabledResponse {}
+
+// Entry removal.
+message DeleteQaEntryRequest {
+  // Entry to delete.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+// Empty: success is the absence of an error.
+message DeleteQaEntryResponse {}
+
+// New phrasing.
+message AddQaPhrasingRequest {
+  // Entry it belongs to.
+  string entry_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The wording.
+  string text = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+}
+// The new phrasing.
+message AddQaPhrasingResponse {
+  // Phrasing id (numeric, stringified).
+  string id = 1;
+}
+
+// Phrasing removal.
+message DeleteQaPhrasingRequest {
+  // Entry it belongs to.
+  string entry_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Phrasing to remove. The canonical one cannot be removed.
+  string phrasing_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+// Empty: success is the absence of an error.
+message DeleteQaPhrasingResponse {}
 
 // Selects which rows the JSONL export includes.
 message ExportDecisionLogRequest {

@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 64 |
+| [`AdminService`](#adminservice) | Owner console. | 71 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -2062,6 +2062,13 @@ Owner console.
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
+| [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
+| [`CreateQaEntry`](#adminservice-createqaentry) | `/api/career.v1.AdminService/CreateQaEntry` | Admin (fresh MFA) | default | `CreateQaEntryRequest` → `CreateQaEntryResponse` | Writes a new bank entry along with its canonical phrasing. |
+| [`UpdateQaEntry`](#adminservice-updateqaentry) | `/api/career.v1.AdminService/UpdateQaEntry` | Admin (fresh MFA) | default | `UpdateQaEntryRequest` → `UpdateQaEntryResponse` | Replaces an entry's editable fields. |
+| [`SetQaEntryEnabled`](#adminservice-setqaentryenabled) | `/api/career.v1.AdminService/SetQaEntryEnabled` | Admin (fresh MFA) | default | `SetQaEntryEnabledRequest` → `SetQaEntryEnabledResponse` | Approves or withdraws an entry. |
+| [`DeleteQaEntry`](#adminservice-deleteqaentry) | `/api/career.v1.AdminService/DeleteQaEntry` | Admin (fresh MFA) | default | `DeleteQaEntryRequest` → `DeleteQaEntryResponse` | Deletes an entry and its phrasings. |
+| [`AddQaPhrasing`](#adminservice-addqaphrasing) | `/api/career.v1.AdminService/AddQaPhrasing` | Admin (fresh MFA) | default | `AddQaPhrasingRequest` → `AddQaPhrasingResponse` | Adds another way of asking an existing entry's question. |
+| [`DeleteQaPhrasing`](#adminservice-deleteqaphrasing) | `/api/career.v1.AdminService/DeleteQaPhrasing` | Admin (fresh MFA) | default | `DeleteQaPhrasingRequest` → `DeleteQaPhrasingResponse` | Removes one variant phrasing. |
 | [`GetCalendarConnectURL`](#adminservice-getcalendarconnecturl) | `/api/career.v1.AdminService/GetCalendarConnectURL` | Admin (fresh MFA) | default | `GetCalendarConnectURLRequest` → `GetCalendarConnectURLResponse` | Returns the Google consent URL the owner visits to connect his calendar, carrying a signed, short-lived state so the callback cannot be driven by anyone else. |
 | [`ConnectCalendar`](#adminservice-connectcalendar) | `/api/career.v1.AdminService/ConnectCalendar` | Admin (fresh MFA) | default | `ConnectCalendarRequest` → `ConnectCalendarResponse` | Completes the handshake: exchanges the authorisation code for a refresh token and stores it encrypted at rest. |
 | [`GetCalendarStatus`](#adminservice-getcalendarstatus) | `/api/career.v1.AdminService/GetCalendarStatus` | Admin (fresh MFA) | default | `GetCalendarStatusRequest` → `GetCalendarStatusResponse` | Reads the calendar connection: which account, when it was connected, and whether it is currently working. |
@@ -3990,6 +3997,251 @@ narrowing the windows stops new bookings, it does not cancel.
       }
     ]
   }
+}
+```
+
+</details>
+
+### AdminService.ListQaEntries
+
+`POST /api/career.v1.AdminService/ListQaEntries` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists the Q&A bank: the owner's own answers, served verbatim by
+Ask Roger with no model involved.
+
+**Request** — [`ListQaEntriesRequest`](#listqaentriesrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeDisabled` | `bool` | boolean |  | Include entries that are not enabled. False for anything member-facing. |
+
+**Response** — [`ListQaEntriesResponse`](#listqaentriesresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entries` | [`QaEntry`](#qaentry)[] | array of object |  | Entries. |
+| `awaitingEmbedding` | `int32` | number |  | Phrasings still waiting for an embedding across the whole bank. A non-zero count means part of the bank cannot match yet. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "includeDisabled": true
+}
+```
+
+</details>
+
+### AdminService.CreateQaEntry
+
+`POST /api/career.v1.AdminService/CreateQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Writes a new bank entry along with its canonical phrasing. The
+entry is unreachable until the embedding job has given its
+phrasings vectors, which happens within five minutes.
+
+**Request** — [`CreateQaEntryRequest`](#createqaentryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `question` | `string` | string | `string: min_len: 1 max_len: 500` | The question. |
+| `answer` | `string` | string | `string: min_len: 1 max_len: 8000` | The answer, served verbatim. |
+| `sources` | [`QaSource`](#qasource)[] | array of object |  | Sources to show beneath it. |
+| `tags` | `string`[] | array of string |  | Tags. |
+| `coversRestricted` | `bool` | boolean |  | Whether this deliberately answers an otherwise-refused topic. |
+| `enabled` | `bool` | boolean |  | Whether to approve it now. |
+| `phrasings` | `string`[] | array of string |  | Extra ways of asking it; the question itself is added automatically. |
+
+**Response** — [`CreateQaEntryResponse`](#createqaentryresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Entry id (numeric, stringified). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "question": "string",
+  "answer": "string",
+  "sources": [
+    {
+      "title": "string",
+      "path": "string"
+    }
+  ],
+  "tags": [
+    "string"
+  ],
+  "coversRestricted": true,
+  "enabled": true,
+  "phrasings": [
+    "string"
+  ]
+}
+```
+
+</details>
+
+### AdminService.UpdateQaEntry
+
+`POST /api/career.v1.AdminService/UpdateQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Replaces an entry's editable fields. Changing the question clears
+the canonical phrasing's vector, so the entry stops matching the
+old wording immediately and matches the new one once re-embedded.
+
+**Request** — [`UpdateQaEntryRequest`](#updateqaentryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to change. |
+| `question` | `string` | string | `string: min_len: 1 max_len: 500` | The question. Changing it clears the canonical phrasing's vector. |
+| `answer` | `string` | string | `string: min_len: 1 max_len: 8000` | The answer. |
+| `sources` | [`QaSource`](#qasource)[] | array of object |  | Sources. |
+| `tags` | `string`[] | array of string |  | Tags. |
+| `coversRestricted` | `bool` | boolean |  | Whether this deliberately answers an otherwise-refused topic. |
+| `enabled` | `bool` | boolean |  | Whether it is approved. |
+
+**Response** — [`UpdateQaEntryResponse`](#updateqaentryresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string",
+  "question": "string",
+  "answer": "string",
+  "sources": [
+    {
+      "title": "string",
+      "path": "string"
+    }
+  ],
+  "tags": [
+    "string"
+  ],
+  "coversRestricted": true,
+  "enabled": true
+}
+```
+
+</details>
+
+### AdminService.SetQaEntryEnabled
+
+`POST /api/career.v1.AdminService/SetQaEntryEnabled` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Approves or withdraws an entry. Enabling is the approval: a
+disabled entry is never matched and never served, which is how a
+statement is taken back without losing what it said.
+
+**Request** — [`SetQaEntryEnabledRequest`](#setqaentryenabledrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to approve or withdraw. |
+| `enabled` | `bool` | boolean |  | True approves it. |
+
+**Response** — [`SetQaEntryEnabledResponse`](#setqaentryenabledresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string",
+  "enabled": true
+}
+```
+
+</details>
+
+### AdminService.DeleteQaEntry
+
+`POST /api/career.v1.AdminService/DeleteQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Deletes an entry and its phrasings.
+
+**Request** — [`DeleteQaEntryRequest`](#deleteqaentryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to delete. |
+
+**Response** — [`DeleteQaEntryResponse`](#deleteqaentryresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string"
+}
+```
+
+</details>
+
+### AdminService.AddQaPhrasing
+
+`POST /api/career.v1.AdminService/AddQaPhrasing` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Adds another way of asking an existing entry's question. Matching
+runs over every phrasing, so variants are how one answer covers the
+several ways people ask for it.
+
+**Request** — [`AddQaPhrasingRequest`](#addqaphrasingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entryId` | `string` | string | `string: min_len: 1 max_len: 64` | Entry it belongs to. |
+| `text` | `string` | string | `string: min_len: 1 max_len: 500` | The wording. |
+
+**Response** — [`AddQaPhrasingResponse`](#addqaphrasingresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Phrasing id (numeric, stringified). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "entryId": "string",
+  "text": "string"
+}
+```
+
+</details>
+
+### AdminService.DeleteQaPhrasing
+
+`POST /api/career.v1.AdminService/DeleteQaPhrasing` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Removes one variant phrasing. The canonical phrasing cannot be
+removed: it is the entry's own question.
+
+**Request** — [`DeleteQaPhrasingRequest`](#deleteqaphrasingrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entryId` | `string` | string | `string: min_len: 1 max_len: 64` | Entry it belongs to. |
+| `phrasingId` | `string` | string | `string: min_len: 1 max_len: 64` | Phrasing to remove. The canonical one cannot be removed. |
+
+**Response** — [`DeleteQaPhrasingResponse`](#deleteqaphrasingresponse)
+
+_No fields; send `{}`._
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "entryId": "string",
+  "phrasingId": "string"
 }
 ```
 
@@ -6906,6 +7158,163 @@ The owner's label for one decision.
 | `humanDimensions` | map<`string`, `string`> | object of string |  | Per-rubric grades for kinds that have a rubric (chat answers: grounded, citations, voice, scope, length). Each value is yes, partial, no or n/a. Unknown keys and values are rejected rather than stored, because a grade nobody can interpret still counts in a rate. |
 
 ### ReviewDecisionResponse
+
+Empty: success is the absence of an error.
+
+_No fields._
+
+### QaSource
+
+A source shown beneath a Q&A bank answer.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `title` | `string` | string | `string: max_len: 200` | Title to display. |
+| `path` | `string` | string | `string: max_len: 256` | Site path to link to. |
+
+### QaPhrasing
+
+One way of asking a bank entry's question.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Phrasing id (numeric, stringified). |
+| `text` | `string` | string |  | The wording. |
+| `canonical` | `bool` | boolean |  | True for the phrasing generated from the entry's own question. There is exactly one per entry and it cannot be deleted. |
+| `embedded` | `bool` | boolean |  | Whether this phrasing has an embedding yet. A phrasing without one never matches, so this is the difference between an entry being in the bank and being reachable. |
+
+### QaEntry
+
+One owner-written answer, served verbatim.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Entry id (numeric, stringified). |
+| `question` | `string` | string |  | The question as the owner would put it. Also used as a suggested question, and it is the canonical phrasing. |
+| `answer` | `string` | string |  | The answer, in the owner's voice, served word for word. No model ever rewrites this. |
+| `sources` | [`QaSource`](#qasource)[] | array of object |  | Sources to show beneath the answer. |
+| `tags` | `string`[] | array of string |  | Free tags for filtering and grouping. |
+| `coversRestricted` | `bool` | boolean |  | Marks an entry that deliberately answers something the assistant otherwise refuses: compensation, references, an employer matter, something personal. Not enforcement; this is so every such statement can be listed, and so opening one of those doors is a deliberate act. |
+| `enabled` | `bool` | boolean |  | Enabling is the approval. A disabled entry is never matched. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was written. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it last changed. |
+| `phrasings` | [`QaPhrasing`](#qaphrasing)[] | array of object |  | Every way of asking it, canonical first. |
+
+### ListQaEntriesRequest
+
+Bank listing request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeDisabled` | `bool` | boolean |  | Include entries that are not enabled. False for anything member-facing. |
+
+### ListQaEntriesResponse
+
+The bank, newest first.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entries` | [`QaEntry`](#qaentry)[] | array of object |  | Entries. |
+| `awaitingEmbedding` | `int32` | number |  | Phrasings still waiting for an embedding across the whole bank. A non-zero count means part of the bank cannot match yet. |
+
+### CreateQaEntryRequest
+
+New entry.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `question` | `string` | string | `string: min_len: 1 max_len: 500` | The question. |
+| `answer` | `string` | string | `string: min_len: 1 max_len: 8000` | The answer, served verbatim. |
+| `sources` | [`QaSource`](#qasource)[] | array of object |  | Sources to show beneath it. |
+| `tags` | `string`[] | array of string |  | Tags. |
+| `coversRestricted` | `bool` | boolean |  | Whether this deliberately answers an otherwise-refused topic. |
+| `enabled` | `bool` | boolean |  | Whether to approve it now. |
+| `phrasings` | `string`[] | array of string |  | Extra ways of asking it; the question itself is added automatically. |
+
+### CreateQaEntryResponse
+
+The new entry.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Entry id (numeric, stringified). |
+
+### UpdateQaEntryRequest
+
+Entry edit.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to change. |
+| `question` | `string` | string | `string: min_len: 1 max_len: 500` | The question. Changing it clears the canonical phrasing's vector. |
+| `answer` | `string` | string | `string: min_len: 1 max_len: 8000` | The answer. |
+| `sources` | [`QaSource`](#qasource)[] | array of object |  | Sources. |
+| `tags` | `string`[] | array of string |  | Tags. |
+| `coversRestricted` | `bool` | boolean |  | Whether this deliberately answers an otherwise-refused topic. |
+| `enabled` | `bool` | boolean |  | Whether it is approved. |
+
+### UpdateQaEntryResponse
+
+Empty: success is the absence of an error.
+
+_No fields._
+
+### SetQaEntryEnabledRequest
+
+Approval change.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to approve or withdraw. |
+| `enabled` | `bool` | boolean |  | True approves it. |
+
+### SetQaEntryEnabledResponse
+
+Empty: success is the absence of an error.
+
+_No fields._
+
+### DeleteQaEntryRequest
+
+Entry removal.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Entry to delete. |
+
+### DeleteQaEntryResponse
+
+Empty: success is the absence of an error.
+
+_No fields._
+
+### AddQaPhrasingRequest
+
+New phrasing.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entryId` | `string` | string | `string: min_len: 1 max_len: 64` | Entry it belongs to. |
+| `text` | `string` | string | `string: min_len: 1 max_len: 500` | The wording. |
+
+### AddQaPhrasingResponse
+
+The new phrasing.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Phrasing id (numeric, stringified). |
+
+### DeleteQaPhrasingRequest
+
+Phrasing removal.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `entryId` | `string` | string | `string: min_len: 1 max_len: 64` | Entry it belongs to. |
+| `phrasingId` | `string` | string | `string: min_len: 1 max_len: 64` | Phrasing to remove. The canonical one cannot be removed. |
+
+### DeleteQaPhrasingResponse
 
 Empty: success is the absence of an error.
 

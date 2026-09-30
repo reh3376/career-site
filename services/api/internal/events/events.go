@@ -64,12 +64,33 @@ var Registry = map[string]struct {
 	"jd.outcome_recorded":  {Props: []string{"submission_id", "status"}},
 	"jd.feedback_recorded": {Props: []string{"submission_id", "target", "rating"}},
 	"jd.poll_abandoned":    {Browser: true, Props: []string{"submission_id", "waited_ms"}},
+	// A member turned away at the daily cap. Emitted since the quota
+	// landed and never recorded, because the name was missing here;
+	// found by the registry test, not by anyone noticing the gap.
+	"jd.quota_blocked": {Props: []string{"submitted", "limit"}},
 	// Contact
 	"contact.submitted": {Props: []string{"category", "has_jd"}},
 	// Admin
-	"admin.decision_reviewed": {Props: []string{"decision_id", "verdict"}},
+	//
+	// decision_reviewed carries more than the verdict because the
+	// question it has to answer is how the training set is growing, and
+	// a graded row that gained a corrected answer is worth something a
+	// graded row without one is not. Props outside this list are
+	// dropped silently by Record, which is how "corrected" went
+	// unstored until a live run surfaced it.
+	"admin.decision_reviewed": {Props: []string{"decision_id", "kind", "verdict", "corrected", "dimensions"}},
 	"admin.rescore":           {Props: []string{"submission_id"}},
 	"admin.fit_bands_changed": {},
+	// Also emitted and never recorded until the registry test found it.
+	"admin.jd_limit_changed": {Props: []string{"limit"}},
+	// Q&A bank. covers_restricted is recorded because approving such an
+	// entry is the owner deciding the assistant may speak about
+	// compensation, references or something personal, which is the most
+	// consequential thing that happens on that screen.
+	"admin.qa_entry_created": {Props: []string{"entry_id", "enabled", "covers_restricted"}},
+	"admin.qa_entry_updated": {Props: []string{"entry_id", "enabled", "covers_restricted"}},
+	"admin.qa_entry_enabled": {Props: []string{"entry_id", "enabled"}},
+	"admin.qa_entry_deleted": {Props: []string{"entry_id"}},
 	// Backfill from activity_events keeps whatever kind it had.
 	"activity.download": {}, "activity.search": {}, "activity.save": {},
 	"activity.chat": {}, "activity.escalate": {}, "activity.logout": {},

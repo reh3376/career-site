@@ -43,7 +43,7 @@ landed in the same commit as the persona and not after it.
 | Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
 | `/ask` page and side panel | **Not built** | — |
 | Admin grading console for chat | **Built, never seen live** | `/admin/decisions` |
-| Q&A bank admin surface | **Not built** | — |
+| Q&A bank admin surface | **Built, live tested locally** | `/admin/qa`, `handlers/admin_qa.go` |
 | Phrasing embedding job | **Built, tested, scheduled** | `chat/qaembed.go`, every 5 min |
 | Golden set (FR-CHAT-15) | **Not built** | — |
 
@@ -351,7 +351,15 @@ including `first_token_ms`, and the `human` block with verdict, note,
 5. **`Fingerprints()` now includes the persona in every JD run record.**
    Noise in that record, kept deliberately: it is a snapshot of what
    every prompt was, not a list of which ran.
-6. **The local dev database has drifted** from the migration history.
+6. **The local dev database is fixed.** It was stuck at migration 31
+   with migration 32 failing against an older view shape. Resolved by
+   dropping the derived views and re-applying migration 29's
+   definitions by hand, then letting goose replay 31 to 48. Only views
+   were touched, so no data was lost. Recorded here because the same
+   drift will bite anyone who restores an old dump.
+
+   *Previously:* the local dev database had drifted from the migration
+   history.
    `goose_db_version` was at 30 while migration 31's views already
    existed, and migration 32 fails against the older view shape. Worked
    around by testing against a fresh `career_test` database. **The main
@@ -364,6 +372,45 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ---
 
+### What the local live test could and could not show
+
+Run on 2026-09-30 against the local stack, with a throwaway admin
+account that was removed afterwards.
+
+**Verified working:** the page renders; an entry saves with its
+canonical phrasing plus two variants; an off-site source path is
+refused with the reason shown; the awaiting-embedding banner appears
+and then clears; the embedding job picks the phrasings up and stores
+vectors; the nav entry appears; the count line reads correctly.
+
+**Could not be verified locally:** whether the bank *matches sensibly*.
+`SIDECAR_EMBED_PROVIDER=stub` on the local stack, so the vectors are
+placeholders, and two phrasings of the same question sit at a cosine
+similarity of about zero rather than the 0.8 to 0.9 real embeddings
+would give. The plumbing is proven; `QAMatchThreshold` can only be
+calibrated on the box with `nomic-embed-text`.
+
+**Three bugs it found that nothing else would have:**
+
+1. Four `admin.qa_entry_*` events were emitted but never registered, so
+   they were refused and logged as a warning nobody would read. Fixed,
+   and a test now parses this package's `requestEvent` calls and checks
+   every name and prop against the registry. That test immediately
+   found two more that had been missing far longer: `jd.quota_blocked`
+   and `admin.jd_limit_changed`.
+2. `admin.decision_reviewed` was given `kind`, `corrected` and
+   `dimensions` in the grading work above, precisely so the growth of
+   the training set could be read off the event stream. Props outside a
+   spec's list are dropped with no warning at all, so all three were
+   being discarded.
+3. **The embedding job was wired inside the generation-provider
+   check.** The bank is what answers when generation is unavailable
+   (FR-CHAT-17), so tying its embeddings to generation meant the
+   degrade path went dark exactly when it was needed: no model,
+   therefore no embedding, therefore no bank, therefore no answer at
+   all. Confirmed on the local stack, where generation is stubbed and
+   the job silently did nothing.
+
 ## 7. Waiting on the owner
 
 1. **Should Whiskey House / MDEMG material inform the assistant?**
@@ -374,7 +421,8 @@ including `first_token_ms`, and the `human` block with verdict, note,
 2. **Deploy migrations 00045 to 00048?** They are additive and safe:
    three new tables, one new column on `corpus_documents`, three on
    `decision_log`. Nothing reads them yet.
-3. **Seed the Q&A bank.** The bank is the fast path and it is empty. The
+3. **Seed the Q&A bank** at `/admin/qa`, now that there is somewhere to
+   put entries. The bank is the fast path and it is empty. The
    FSD (§ corpus inventory) names the interview-prep material as the
    strongest seed, after removing employer-specific and compensation
    content. Entries need his words, not generated ones: that is the
@@ -385,15 +433,12 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 8. Next steps, in order
 
-1. **The Q&A bank admin surface**, so entries can be written at all.
-   Everything behind the bank now works and there is no way to put an
-   entry in it, so the fast path still does not exist in practice.
-2. `/ask` and the side panel. **Live test and UI/UX review before this
+1. `/ask` and the side panel. **Live test and UI/UX review before this
    is called done.**
-4. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
-5. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
-6. Escalation (FR-CHAT-10).
-7. The golden set (FR-CHAT-15), which then calibrates §6.1.
+3. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
+4. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
+5. Escalation (FR-CHAT-10).
+6. The golden set (FR-CHAT-15), which then calibrates §6.1.
 
 ---
 
