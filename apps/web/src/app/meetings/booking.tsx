@@ -5,12 +5,14 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   bookMeetingAction,
   getAvailability,
+  listMyMeetings,
   type AvailabilityState,
   type BookState,
   type Meeting,
   type MeetingOptions,
   type Slot,
 } from "./actions";
+import { MyMeetings } from "./my-meetings";
 
 // Every time on this page is rendered in the owner's zone, never the
 // visitor's, and the zone is stated beside the times. Converting would
@@ -70,6 +72,10 @@ export function Booking({
   const [topic, setTopic] = useState("");
   const [contact, setContact] = useState("");
   const [result, setResult] = useState<BookState>({});
+  // Seeded from the server render, then kept current here: booking adds
+  // one and cancelling removes one, and a list that only reloads with
+  // the page is wrong the moment either happens.
+  const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
   const [loading, startLoading] = useTransition();
   const [booking, startBooking] = useTransition();
 
@@ -102,6 +108,17 @@ export function Booking({
     startLoading(async () => setAvailability(await getAvailability(duration)));
   }
 
+  // Both lists move together. A booking removes times and adds a
+  // meeting; a cancellation does the reverse, and showing one without
+  // the other leaves the page contradicting itself.
+  function refreshAll() {
+    startLoading(async () => {
+      const [next, mine] = await Promise.all([getAvailability(duration), listMyMeetings()]);
+      setAvailability(next);
+      setMeetings(mine);
+    });
+  }
+
   function submit(formData: FormData) {
     startBooking(async () => {
       const state = await bookMeetingAction({}, formData);
@@ -110,6 +127,7 @@ export function Booking({
         setSelected(null);
         setTopic("");
         setContact("");
+        refreshAll();
       }
       // Losing the race is the one error where the list on screen is
       // itself the problem, so it is refetched rather than left to be
@@ -234,9 +252,16 @@ export function Booking({
           {/* 2. Day. Only days he is actually free appear, so the
               choice is small and every option leads somewhere. */}
           <div className="mt-10">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              pick a day
-            </p>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                pick a day
+              </p>
+              {options.hoursSummary ? (
+                <p className="text-sm text-ink-3">
+                  Roger takes meetings {options.hoursSummary}.
+                </p>
+              ) : null}
+            </div>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
               {days.map((d) => {
                 const active = d.key === day?.key;
@@ -263,6 +288,9 @@ export function Booking({
                     <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] opacity-80">
                       {d.month}
                     </span>
+                    <span className="mt-1 block text-[10px] opacity-70">
+                      {d.slots.length} {d.slots.length === 1 ? "time" : "times"}
+                    </span>
                   </button>
                 );
               })}
@@ -283,7 +311,13 @@ export function Booking({
                   all times {options.zoneLabel}
                 </p>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div
+                className={
+                  "mt-4 grid grid-cols-2 gap-2 transition-opacity sm:grid-cols-4 " +
+                  (loading ? "opacity-50" : "")
+                }
+                aria-busy={loading}
+              >
                 {day.slots.map((slot) => {
                   const active = selected?.start === slot.start;
                   return (
@@ -387,38 +421,11 @@ export function Booking({
         </p>
       ) : null}
 
-      <MyMeetings initial={initialMeetings} zoneLabel={options.zoneLabel} />
+      <MyMeetings
+        meetings={meetings}
+        zoneLabel={options.zoneLabel}
+        onChanged={refreshAll}
+      />
     </div>
-  );
-}
-
-function MyMeetings({ initial, zoneLabel }: { initial: Meeting[]; zoneLabel: string }) {
-  const upcoming = initial.filter((m) => !m.cancelledAt);
-  if (upcoming.length === 0) return null;
-  return (
-    <section className="mt-16 border-t border-line pt-8">
-      <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        your meetings
-      </h2>
-      <ul className="mt-4 space-y-3">
-        {upcoming.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className="text-sm text-ink">
-              {fmt(m.start, m.zone, { weekday: "long", month: "long", day: "numeric" })},{" "}
-              {fmt(m.start, m.zone, { hour: "numeric", minute: "2-digit" })}
-            </span>
-            <span className="text-sm text-ink-3">
-              {m.durationMinutes} minutes, {zoneLabel}
-            </span>
-            <a
-              href={m.icsUrl}
-              className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-            >
-              Calendar file
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
