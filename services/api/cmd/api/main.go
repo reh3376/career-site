@@ -312,6 +312,10 @@ func main() {
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
+	// The console edits the same settings the booking flow reads, and is
+	// told whether a calendar is connected behind them, so it cannot
+	// show a full week of windows that nobody can book.
+	adminHandler.SetScheduler(schedSettings, nil)
 	// The golden-set evaluator needs a member to own its submissions;
 	// the admin bootstrapped at boot is the one person here. Without a
 	// scorer there is nothing to evaluate, so it stays nil in dev

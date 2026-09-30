@@ -396,6 +396,22 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Reads the meeting-scheduler settings: the weekly windows a member
+  // may book into, the lengths on offer, the clearance between
+  // meetings, and the zone all of it is quoted in.
+  rpc GetSchedulerSettings(GetSchedulerSettingsRequest) returns (GetSchedulerSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Replaces the meeting-scheduler settings (stored in app_settings;
+  // the api caches them for 15 s). Validated server-side and refused
+  // whole rather than in part, because a half-applied calendar is
+  // worse than an unchanged one. Existing bookings are never moved:
+  // narrowing the windows stops new bookings, it does not cancel.
+  rpc SetSchedulerSettings(SetSchedulerSettingsRequest) returns (SetSchedulerSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads how many postings one member may submit per rolling day.
   rpc GetJdSubmissionLimit(GetJdSubmissionLimitRequest) returns (GetJdSubmissionLimitResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
@@ -2396,6 +2412,73 @@ message SetJdFitBandsRequest {
 message SetJdFitBandsResponse {
   // Stored bands.
   JdFitBands bands = 1;
+}
+
+// One bookable range on one weekday. Held as minutes from local
+// midnight rather than as a clock time, so a window survives a
+// daylight-saving change underneath it instead of drifting an hour.
+message SchedulerWindow {
+  // Day of the week, 0 for Sunday through 6 for Saturday, matching
+  // Go's time.Weekday so the server needs no translation table.
+  int32 weekday = 1;
+  // Minutes from local midnight at which the window opens.
+  int32 start_minutes = 2;
+  // Minutes from local midnight at which it closes. Must be after the
+  // start and inside the same day.
+  int32 end_minutes = 3;
+}
+
+// The owner's availability, as the admin surface edits it.
+message SchedulerSettings {
+  // IANA zone name, for example "America/New_York". Never a fixed
+  // offset: an offset is correct for half the year and silently an
+  // hour wrong for the other half.
+  string zone = 1;
+  // Meeting lengths a member may choose, in minutes.
+  repeated int32 duration_minutes = 2;
+  // Clearance between meetings, in minutes, applied on both sides of a
+  // candidate. Not carved out of the grid in advance: nothing is held
+  // until something is booked.
+  int32 gap_minutes = 3;
+  // How finely start times are offered, in minutes.
+  int32 step_minutes = 4;
+  // Most meetings that may be taken in one day.
+  int32 max_per_day = 5;
+  // How far ahead the earliest bookable slot sits, in hours.
+  int32 lead_hours = 6;
+  // How many days ahead the calendar is offered.
+  int32 horizon_days = 7;
+  // The weekly windows. Two windows on one day are how a lunch break
+  // is expressed; one range with a break bolted on later is the usual
+  // way this ends up wrong.
+  repeated SchedulerWindow windows = 8;
+}
+
+// Request for GetSchedulerSettings.
+message GetSchedulerSettingsRequest {}
+
+// The settings in force.
+message GetSchedulerSettingsResponse {
+  // Current settings.
+  SchedulerSettings settings = 1;
+  // False when the calendar provider is not connected or unreachable,
+  // so the surface can say booking is off rather than implying these
+  // windows are live.
+  bool calendar_connected = 2;
+  // Why the calendar is not usable, when calendar_connected is false.
+  string calendar_status = 3;
+}
+
+// Replacement settings. Refused whole if any part is invalid.
+message SetSchedulerSettingsRequest {
+  // The settings to store.
+  SchedulerSettings settings = 1;
+}
+
+// The settings as stored.
+message SetSchedulerSettingsResponse {
+  // Stored settings.
+  SchedulerSettings settings = 1;
 }
 
 // Read request.

@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 56 |
+| [`AdminService`](#adminservice) | Owner console. | 58 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -2054,6 +2054,8 @@ Owner console.
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
 | [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
+| [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
+| [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin (fresh MFA) | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
 | [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin (fresh MFA) | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
 
@@ -3892,6 +3894,83 @@ existing scores are re-classified on read.
     "strong": 0.5,
     "possible": 0.5,
     "weak": 0.5
+  }
+}
+```
+
+</details>
+
+### AdminService.GetSchedulerSettings
+
+`POST /api/career.v1.AdminService/GetSchedulerSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads the meeting-scheduler settings: the weekly windows a member
+may book into, the lengths on offer, the clearance between
+meetings, and the zone all of it is quoted in.
+
+**Request** — [`GetSchedulerSettingsRequest`](#getschedulersettingsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetSchedulerSettingsResponse`](#getschedulersettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | Current settings. |
+| `calendarConnected` | `bool` | boolean |  | False when the calendar provider is not connected or unreachable, so the surface can say booking is off rather than implying these windows are live. |
+| `calendarStatus` | `string` | string |  | Why the calendar is not usable, when calendar_connected is false. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.SetSchedulerSettings
+
+`POST /api/career.v1.AdminService/SetSchedulerSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Replaces the meeting-scheduler settings (stored in app_settings;
+the api caches them for 15 s). Validated server-side and refused
+whole rather than in part, because a half-applied calendar is
+worse than an unchanged one. Existing bookings are never moved:
+narrowing the windows stops new bookings, it does not cancel.
+
+**Request** — [`SetSchedulerSettingsRequest`](#setschedulersettingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | The settings to store. |
+
+**Response** — [`SetSchedulerSettingsResponse`](#setschedulersettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | Stored settings. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "settings": {
+    "zone": "string",
+    "durationMinutes": [
+      0
+    ],
+    "gapMinutes": 0,
+    "stepMinutes": 0,
+    "maxPerDay": 0,
+    "leadHours": 0,
+    "horizonDays": 0,
+    "windows": [
+      {
+        "weekday": 0,
+        "startMinutes": 0,
+        "endMinutes": 0
+      }
+    ]
   }
 }
 ```
@@ -6688,6 +6767,65 @@ The bands as stored.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `bands` | [`JdFitBands`](#jdfitbands) | object |  | Stored bands. |
+
+### SchedulerWindow
+
+One bookable range on one weekday. Held as minutes from local
+midnight rather than as a clock time, so a window survives a
+daylight-saving change underneath it instead of drifting an hour.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `weekday` | `int32` | number |  | Day of the week, 0 for Sunday through 6 for Saturday, matching Go's time.Weekday so the server needs no translation table. |
+| `startMinutes` | `int32` | number |  | Minutes from local midnight at which the window opens. |
+| `endMinutes` | `int32` | number |  | Minutes from local midnight at which it closes. Must be after the start and inside the same day. |
+
+### SchedulerSettings
+
+The owner's availability, as the admin surface edits it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `zone` | `string` | string |  | IANA zone name, for example "America/New_York". Never a fixed offset: an offset is correct for half the year and silently an hour wrong for the other half. |
+| `durationMinutes` | `int32`[] | array of number |  | Meeting lengths a member may choose, in minutes. |
+| `gapMinutes` | `int32` | number |  | Clearance between meetings, in minutes, applied on both sides of a candidate. Not carved out of the grid in advance: nothing is held until something is booked. |
+| `stepMinutes` | `int32` | number |  | How finely start times are offered, in minutes. |
+| `maxPerDay` | `int32` | number |  | Most meetings that may be taken in one day. |
+| `leadHours` | `int32` | number |  | How far ahead the earliest bookable slot sits, in hours. |
+| `horizonDays` | `int32` | number |  | How many days ahead the calendar is offered. |
+| `windows` | [`SchedulerWindow`](#schedulerwindow)[] | array of object |  | The weekly windows. Two windows on one day are how a lunch break is expressed; one range with a break bolted on later is the usual way this ends up wrong. |
+
+### GetSchedulerSettingsRequest
+
+Request for GetSchedulerSettings.
+
+_No fields._
+
+### GetSchedulerSettingsResponse
+
+The settings in force.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | Current settings. |
+| `calendarConnected` | `bool` | boolean |  | False when the calendar provider is not connected or unreachable, so the surface can say booking is off rather than implying these windows are live. |
+| `calendarStatus` | `string` | string |  | Why the calendar is not usable, when calendar_connected is false. |
+
+### SetSchedulerSettingsRequest
+
+Replacement settings. Refused whole if any part is invalid.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | The settings to store. |
+
+### SetSchedulerSettingsResponse
+
+The settings as stored.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | Stored settings. |
 
 ### GetJdSubmissionLimitRequest
 
