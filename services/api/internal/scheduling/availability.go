@@ -89,6 +89,17 @@ func (s Settings) Footprint(mins int) time.Duration {
 	return time.Duration(mins+s.GapMins) * time.Minute
 }
 
+// Location resolves the zone. Validate has already refused an unknown
+// one, so a failure here means the setting changed underneath us; UTC
+// is the safe answer because it is wrong visibly rather than quietly.
+func (s Settings) Location() *time.Location {
+	loc, err := time.LoadLocation(s.Zone)
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}
+
 // Slot is one offered start time.
 type Slot struct {
 	Start time.Time

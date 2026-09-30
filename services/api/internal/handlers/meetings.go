@@ -298,7 +298,20 @@ func (h *Meetings) CancelMeeting(
 // so a caller cannot ask about last week or next year.
 func (h *Meetings) window(set scheduling.Settings, now, from, to time.Time, hasFrom, hasTo bool) (time.Time, time.Time) {
 	earliest := now.Add(time.Duration(set.LeadHours) * time.Hour)
-	latest := now.AddDate(0, 0, set.HorizonDays)
+
+	// The horizon is a date, not an instant. Measuring it as
+	// now + N*24h meant the furthest day was clipped by however late in
+	// the day someone looked: at 23:00 Eastern a 21-day horizon reached
+	// only to 23:00 on day 20, so the last two bookable days vanished,
+	// and they reappeared the next morning. Availability that shrinks
+	// as the evening goes on is indistinguishable from the owner
+	// filling up.
+	//
+	// Computed in the owner's zone, because "21 days out" means a day
+	// on his calendar rather than a number of hours from this instant.
+	loc := set.Location()
+	last := now.In(loc).AddDate(0, 0, set.HorizonDays)
+	latest := time.Date(last.Year(), last.Month(), last.Day(), 23, 59, 59, 0, loc)
 	if !hasFrom || from.Before(earliest) {
 		from = earliest
 	}
