@@ -22,7 +22,20 @@ plugins:
   # TypeScript: message types + service descriptors for connect-es (apps/web).
   # include_imports also emits apps/web/src/gen/buf/validate/validate_pb.ts so
   # the generated career/v1 files can resolve their `buf.validate` imports.
-  - remote: buf.build/bufbuild/es
+  #
+  # Pinned, unlike the plugins above and below, because an unpinned
+  # remote plugin makes `make gen` non-reproducible and this one proved
+  # it: on 2026-09-30 upstream published v2.16.0 between a local
+  # regeneration and CI's, so CI regenerated every _pb.ts with a new
+  # version stamp, found drift against the committed v2.15.0 output and
+  # failed check-gen on main. No code had changed. The images job is
+  # gated on that job, so nothing was published and the deploy stopped.
+  #
+  # Bump this deliberately and commit the regenerated output with it.
+  # The other four plugins here carry the same latent hazard and are
+  # tracked in docs/backlog.md; they are left alone rather than pinned
+  # to a guessed version, because a wrong pin breaks generation outright.
+  - remote: buf.build/bufbuild/es:v2.16.0
     out: apps/web/src/gen
     opt:
       - target=ts
