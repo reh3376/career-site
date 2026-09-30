@@ -293,3 +293,28 @@ func (r *recorder) WriteHeader(code int) {
 	r.status = code
 	r.ResponseWriter.WriteHeader(code)
 }
+
+// Flush passes through to the real writer.
+//
+// Without this every server-streaming RPC fails. Embedding
+// http.ResponseWriter gives this type the interface's methods but not
+// the optional ones the concrete writer also implements, so wrapping
+// the writer silently removed http.Flusher from it. connect-go checks
+// for that on a streaming handler and refuses the call:
+//
+//	*server.recorder does not implement http.Flusher
+//
+// The only streaming RPC is ChatService.SendMessage, so this was the
+// whole of Ask Roger failing with an internal error, on every call,
+// while every unary RPC on the same mux worked perfectly. Found by
+// sending a real Connect stream frame at it; nothing in the Go tests
+// or the browser build would have shown it, because the wrapper
+// satisfies http.ResponseWriter and compiles fine.
+//
+// Flushing is also what makes streaming worth having: it is what puts
+// each frame on the wire as it is produced rather than at the end.
+func (r *recorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}

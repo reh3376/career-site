@@ -313,6 +313,7 @@ function buildGroups({
     browse.splice(
       4,
       0,
+      { kind: "link", label: "Ask Roger", href: "/ask" },
       { kind: "link", label: "JD upload", href: "/jd-upload" },
       { kind: "link", label: "Book a meeting", href: "/meetings" },
     );
