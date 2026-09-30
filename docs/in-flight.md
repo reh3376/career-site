@@ -6,30 +6,25 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-30, 00:40 UTC.
+Last updated 2026-09-30, 10:15 UTC.
 
 ---
 
-## 1. Sequencing: the scheduler comes before run 15
+## 1. Run 15 is done; run 16 is the study guide
 
-Owner, 2026-09-29: *"I want the scheduler, deployed, fully tested, live
-tested, and working in this application before we start the next
-eval."*
-
-So run 15 waits. One useful side effect: with no evaluation in flight,
-the "never deploy during a run" rule is not binding, and the scheduler
-can ship in as many small rollouts as it needs.
-
-Run 14 was stopped at 5 of 9 and its row is closed. Four postings
-scored correctly; Blue Origin errored in the same place as run 13. The
-diagnosis and the fix are in the 2026-09-29 entry of
+**10 of 10 correct, 0 inversions, 0 errors, margin 0.1786, 6h40m.**
+`requirement_judge` v12, corpus `45302f207ba3`, ten postings. Full
+analysis in the 2026-09-30 entry of
 [`llm-tuning-log.md`](llm-tuning-log.md).
 
-When run 15 does start, it changes one thing, `requirement_judge` v12,
-against an unchanged corpus, making it comparable with run 12 (9 of 9,
-0 inversions, margin 0.1071) and a direct test of Blue Origin's r11.
-The study guide is ingested only after that, so it stays a single
-variable.
+The bounded schema held: peak judgment 187 tokens across 112 calls,
+against the 1,200 and 2,400 that killed runs 13 and 14.
+
+**Run 16: the distillation study guide, ingested alone** (see section
+3), so it stays a single variable. The open question it inherits is
+whether Blue Origin's LLM requirement stays met. It read met in run 15
+on the purpose-written document, but it has moved four times in six
+runs, so one reading is not a trend.
 
 ## 2. Deploy queue, cleared
 

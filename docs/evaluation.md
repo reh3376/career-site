@@ -135,10 +135,16 @@ below-gate score, computed by `separation()` in
 confidence score: it is the width of the empty band around the
 threshold.
 
-    run 12   Blue Origin  0.8214   lowest above the gate
+    run 15   Blue Origin  0.8214   lowest above the gate
              ----------- gate 0.70
              nexus        0.6429   highest below
              margin       0.1786
+
+This example was previously labelled run 12 and carried run 10's
+numbers. Run 12 was 0.7500 and 0.1071. A worked example copied from one
+run and labelled as another is worse than no example: this one was
+quoted back as fact during run 15's analysis before the database
+contradicted it. Take the numbers from `eval_runs`, not from here.
 
 Margin matters because the other two are step functions and hide
 trouble until it is already failure. A change can push a posting from
