@@ -13,34 +13,59 @@ import {
 } from "./actions";
 
 // Every time on this page is rendered in the owner's zone, never the
-// visitor's, and the zone is printed beside it. Converting to the
-// visitor's clock would be friendlier right up to the moment somebody
-// travels, and a meeting an hour out is worse than a label to read.
-function formatter(zone: string, opts: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: zone || "UTC" });
+// visitor's, and the zone is stated beside the times. Converting would
+// be friendlier right up to the moment somebody travels, and a meeting
+// an hour out is worse than a label to read.
+function fmt(iso: string, zone: string, opts: Intl.DateTimeFormatOptions) {
+  return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: zone || "UTC" }).format(
+    new Date(iso),
+  );
 }
 
-function dayKey(iso: string, zone: string) {
-  return formatter(zone, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
-}
-
-function dayLabel(iso: string, zone: string) {
-  return formatter(zone, { weekday: "long", month: "long", day: "numeric" }).format(new Date(iso));
-}
-
-function timeLabel(iso: string, zone: string) {
-  return formatter(zone, { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
-}
-
-type Props = {
-  options: MeetingOptions;
-  initialMeetings: Meeting[];
+type Day = {
+  key: string;
+  weekday: string;
+  dayNum: string;
+  month: string;
+  long: string;
+  slots: Slot[];
 };
 
-export function Booking({ options, initialMeetings }: Props) {
+// The first version of this page rendered every slot at once: 139
+// buttons over 21 days in one scroll, with no way to reach a
+// particular day. Availability is now read a day at a time, which is
+// the shape people already know from every other booking flow and
+// turns a wall of times into about fifteen.
+function groupByDay(slots: Slot[], zone: string): Day[] {
+  const out = new Map<string, Day>();
+  for (const slot of slots) {
+    const key = fmt(slot.start, zone, { year: "numeric", month: "2-digit", day: "2-digit" });
+    if (!out.has(key)) {
+      out.set(key, {
+        key,
+        weekday: fmt(slot.start, zone, { weekday: "short" }),
+        dayNum: fmt(slot.start, zone, { day: "numeric" }),
+        month: fmt(slot.start, zone, { month: "short" }),
+        long: fmt(slot.start, zone, { weekday: "long", month: "long", day: "numeric" }),
+        slots: [],
+      });
+    }
+    out.get(key)!.slots.push(slot);
+  }
+  return [...out.values()];
+}
+
+export function Booking({
+  options,
+  initialMeetings,
+}: {
+  options: MeetingOptions;
+  initialMeetings: Meeting[];
+}) {
   const durations = options.durationMinutes;
-  const [duration, setDuration] = useState(durations[0] ?? 30);
+  const [duration, setDuration] = useState(durations[1] ?? durations[0] ?? 30);
   const [availability, setAvailability] = useState<AvailabilityState | null>(null);
+  const [dayKey, setDayKey] = useState<string>("");
   const [selected, setSelected] = useState<Slot | null>(null);
   const [topic, setTopic] = useState("");
   const [contact, setContact] = useState("");
@@ -48,11 +73,8 @@ export function Booking({ options, initialMeetings }: Props) {
   const [loading, startLoading] = useTransition();
   const [booking, startBooking] = useTransition();
 
-  // Refetch whenever the length changes, because availability is
-  // computed per length rather than filtered from one list. Clearing
-  // the selection is done where the length is changed rather than here:
-  // it is a consequence of the click, and doing it in the effect body
-  // costs a second render pass for nothing.
+  // Refetched per length, because a 45-minute meeting has fewer places
+  // to go than a 15-minute one and cannot be filtered out of one list.
   useEffect(() => {
     let cancelled = false;
     startLoading(async () => {
@@ -65,17 +87,16 @@ export function Booking({ options, initialMeetings }: Props) {
   }, [duration]);
 
   const zone = availability?.zone || options.zone;
+  const days = useMemo(
+    () => groupByDay(availability?.slots ?? [], zone),
+    [availability, zone],
+  );
 
-  const days = useMemo(() => {
-    const slots = availability?.slots ?? [];
-    const grouped = new Map<string, { label: string; slots: Slot[] }>();
-    for (const slot of slots) {
-      const key = dayKey(slot.start, zone);
-      if (!grouped.has(key)) grouped.set(key, { label: dayLabel(slot.start, zone), slots: [] });
-      grouped.get(key)!.slots.push(slot);
-    }
-    return [...grouped.values()];
-  }, [availability, zone]);
+  // Derived rather than synced: if the chosen day is not in the current
+  // list, because the length changed or the calendar moved underneath,
+  // fall back to the first available day instead of keeping a stale
+  // selection or needing an effect to clear it.
+  const day = days.find((d) => d.key === dayKey) ?? days[0] ?? null;
 
   function refresh() {
     startLoading(async () => setAvailability(await getAvailability(duration)));
@@ -90,8 +111,9 @@ export function Booking({ options, initialMeetings }: Props) {
         setTopic("");
         setContact("");
       }
-      // A lost race is the one error where the list on screen is the
-      // problem, so it is refetched rather than left to be clicked again.
+      // Losing the race is the one error where the list on screen is
+      // itself the problem, so it is refetched rather than left to be
+      // clicked again.
       if (state.stale) {
         setSelected(null);
         refresh();
@@ -121,15 +143,22 @@ export function Booking({ options, initialMeetings }: Props) {
   if (result.ok && result.meeting) {
     const m = result.meeting;
     return (
-      <div className="mt-10 rounded-md border border-accent/40 bg-paper-2/60 p-6">
+      <div className="mt-10 rounded-md border border-accent/40 bg-paper-2/60 p-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">booked</p>
-        <p className="font-display mt-3 text-2xl text-ink">
-          {dayLabel(m.start, m.zone)}, {timeLabel(m.start, m.zone)}
+        <p
+          className="font-display mt-4 text-3xl leading-tight text-ink"
+          style={{ fontVariationSettings: '"opsz" 100, "SOFT" 40' }}
+        >
+          {fmt(m.start, m.zone, { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <p className="mt-2 text-sm text-ink-2">
-          {m.durationMinutes} minutes, {options.zoneLabel}. It is on Roger&rsquo;s calendar.
+        <p className="mt-1 text-lg text-ink-2">
+          {fmt(m.start, m.zone, { hour: "numeric", minute: "2-digit" })}, {m.durationMinutes}{" "}
+          minutes, {options.zoneLabel}
         </p>
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <p className="mt-4 text-sm text-ink-3">
+          It is on Roger&rsquo;s calendar and you should have an invitation by email.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
           <a
             href={m.icsUrl}
             className="inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-accent-hover"
@@ -152,50 +181,46 @@ export function Booking({ options, initialMeetings }: Props) {
   }
 
   return (
-    <div className="mt-10">
+    <div className="mt-12">
+      {/* 1. Length */}
       <fieldset>
         <legend className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           how long do you need
         </legend>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 inline-flex rounded-md border border-line p-1">
           {durations.map((d) => (
             <button
               key={d}
               type="button"
               aria-pressed={d === duration}
               onClick={() => {
-                // A start time that fits 15 minutes may not fit 45, so
-                // a selection cannot survive the length changing.
+                // A start that fits 15 minutes may not fit 45, so a
+                // selection cannot survive the length changing.
                 setSelected(null);
                 setDuration(d);
               }}
               className={
                 d === duration
-                  ? "rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors"
-                  : "rounded-md border border-line px-4 py-2 text-sm text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                  ? "rounded px-5 py-2 text-sm font-medium text-white bg-accent transition-colors"
+                  : "rounded px-5 py-2 text-sm text-ink-2 transition-colors hover:text-accent"
               }
             >
-              {d} minutes
+              {d} min
             </button>
           ))}
         </div>
       </fieldset>
 
-      <p className="mt-6 text-sm text-ink-3">
-        All times {options.zoneLabel}
-        {options.hoursSummary ? `, ${options.hoursSummary}` : ""}.
-      </p>
-
-      {loading ? (
-        <p className="mt-8 text-sm text-ink-3">Checking the calendar...</p>
+      {loading && !availability ? (
+        <p className="mt-10 text-sm text-ink-3">Checking Roger&rsquo;s calendar...</p>
       ) : availability && !availability.available ? (
-        <p className="mt-8 text-sm text-ink-2">
+        <p className="mt-10 text-sm text-ink-2">
           {availability.unavailableReason || "Availability could not be loaded."}
         </p>
       ) : days.length === 0 ? (
-        <p className="mt-8 text-sm text-ink-2">
-          Nothing is free in the next {options.horizonDays} days for a {duration} minute meeting.
-          Try a shorter one, or{" "}
+        <p className="mt-10 text-sm text-ink-2">
+          Nothing is free in the next {options.horizonDays} days for a {duration} minute
+          meeting. Try a shorter one, or{" "}
           <a
             href="/contact"
             className="underline decoration-line decoration-1 underline-offset-4 hover:text-accent hover:decoration-accent"
@@ -205,11 +230,60 @@ export function Booking({ options, initialMeetings }: Props) {
           .
         </p>
       ) : (
-        <div className="mt-8 space-y-8">
-          {days.map((day) => (
-            <div key={day.label}>
-              <h2 className="text-sm font-medium text-ink">{day.label}</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
+        <>
+          {/* 2. Day. Only days he is actually free appear, so the
+              choice is small and every option leads somewhere. */}
+          <div className="mt-10">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+              pick a day
+            </p>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+              {days.map((d) => {
+                const active = d.key === day?.key;
+                return (
+                  <button
+                    key={d.key}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => {
+                      setDayKey(d.key);
+                      setSelected(null);
+                    }}
+                    className={
+                      "shrink-0 rounded-md border px-4 py-3 text-center transition-colors " +
+                      (active
+                        ? "border-accent bg-accent text-white"
+                        : "border-line bg-paper-2 text-ink-2 hover:border-accent hover:text-accent")
+                    }
+                  >
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.14em] opacity-80">
+                      {d.weekday}
+                    </span>
+                    <span className="mt-1 block text-lg font-medium leading-none">{d.dayNum}</span>
+                    <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] opacity-80">
+                      {d.month}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. Time, for that day only. */}
+          {day ? (
+            <div className="mt-10">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2
+                  className="font-display text-2xl text-ink"
+                  style={{ fontVariationSettings: '"opsz" 72, "SOFT" 40' }}
+                >
+                  {day.long}
+                </h2>
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                  all times {options.zoneLabel}
+                </p>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {day.slots.map((slot) => {
                   const active = selected?.start === slot.start;
                   return (
@@ -219,27 +293,36 @@ export function Booking({ options, initialMeetings }: Props) {
                       aria-pressed={active}
                       onClick={() => setSelected(active ? null : slot)}
                       className={
-                        active
-                          ? "rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors"
-                          : "rounded-md border border-line px-4 py-2 text-sm text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                        "rounded-md border px-3 py-3 text-sm transition-colors " +
+                        (active
+                          ? "border-accent bg-accent font-medium text-white"
+                          : "border-line bg-paper text-ink-2 hover:border-accent hover:text-accent")
                       }
                     >
-                      {timeLabel(slot.start, zone)}
+                      {fmt(slot.start, zone, { hour: "numeric", minute: "2-digit" })}
                     </button>
                   );
                 })}
               </div>
             </div>
-          ))}
-        </div>
+          ) : null}
+        </>
       )}
 
+      {/* 4. Confirm. */}
       {selected ? (
-        <form action={submit} className="mt-10 rounded-md border border-line bg-paper-2/60 p-6">
+        <form action={submit} className="mt-10 rounded-md border border-accent/40 bg-paper-2/60 p-6">
           <input type="hidden" name="start" value={selected.start} />
           <input type="hidden" name="duration_minutes" value={duration} />
-          <p className="font-display text-xl text-ink">
-            {dayLabel(selected.start, zone)}, {timeLabel(selected.start, zone)}
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+            you are booking
+          </p>
+          <p
+            className="font-display mt-2 text-2xl text-ink"
+            style={{ fontVariationSettings: '"opsz" 72, "SOFT" 40' }}
+          >
+            {fmt(selected.start, zone, { weekday: "long", month: "long", day: "numeric" })},{" "}
+            {fmt(selected.start, zone, { hour: "numeric", minute: "2-digit" })}
           </p>
           <p className="mt-1 text-sm text-ink-3">
             {duration} minutes, {options.zoneLabel}.
@@ -321,7 +404,8 @@ function MyMeetings({ initial, zoneLabel }: { initial: Meeting[]; zoneLabel: str
         {upcoming.map((m) => (
           <li key={m.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span className="text-sm text-ink">
-              {dayLabel(m.start, m.zone)}, {timeLabel(m.start, m.zone)}
+              {fmt(m.start, m.zone, { weekday: "long", month: "long", day: "numeric" })},{" "}
+              {fmt(m.start, m.zone, { hour: "numeric", minute: "2-digit" })}
             </span>
             <span className="text-sm text-ink-3">
               {m.durationMinutes} minutes, {zoneLabel}
