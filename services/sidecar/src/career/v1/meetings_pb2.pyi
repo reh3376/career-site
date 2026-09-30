@@ -4,12 +4,33 @@ from buf.validate import validate_pb2 as _validate_pb2
 from career.v1 import options_pb2 as _options_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class MeetingType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    MEETING_TYPE_UNSPECIFIED: _ClassVar[MeetingType]
+    MEETING_TYPE_VIDEO: _ClassVar[MeetingType]
+    MEETING_TYPE_PHONE: _ClassVar[MeetingType]
+
+class VideoProvider(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    VIDEO_PROVIDER_UNSPECIFIED: _ClassVar[VideoProvider]
+    VIDEO_PROVIDER_GOOGLE_MEET: _ClassVar[VideoProvider]
+    VIDEO_PROVIDER_TEAMS: _ClassVar[VideoProvider]
+    VIDEO_PROVIDER_ZOOM: _ClassVar[VideoProvider]
+MEETING_TYPE_UNSPECIFIED: MeetingType
+MEETING_TYPE_VIDEO: MeetingType
+MEETING_TYPE_PHONE: MeetingType
+VIDEO_PROVIDER_UNSPECIFIED: VideoProvider
+VIDEO_PROVIDER_GOOGLE_MEET: VideoProvider
+VIDEO_PROVIDER_TEAMS: VideoProvider
+VIDEO_PROVIDER_ZOOM: VideoProvider
 
 class GetMeetingOptionsRequest(_message.Message):
     __slots__ = ()
@@ -65,19 +86,25 @@ class GetAvailabilityResponse(_message.Message):
     def __init__(self, slots: _Optional[_Iterable[_Union[MeetingSlot, _Mapping]]] = ..., zone: _Optional[str] = ..., available: _Optional[bool] = ..., unavailable_reason: _Optional[str] = ...) -> None: ...
 
 class BookMeetingRequest(_message.Message):
-    __slots__ = ("start", "duration_minutes", "topic", "contact_preference")
+    __slots__ = ("start", "duration_minutes", "topic", "contact_preference", "meeting_type", "video_provider", "phone_number")
     START_FIELD_NUMBER: _ClassVar[int]
     DURATION_MINUTES_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     CONTACT_PREFERENCE_FIELD_NUMBER: _ClassVar[int]
+    MEETING_TYPE_FIELD_NUMBER: _ClassVar[int]
+    VIDEO_PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
     start: _timestamp_pb2.Timestamp
     duration_minutes: int
     topic: str
     contact_preference: str
-    def __init__(self, start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., contact_preference: _Optional[str] = ...) -> None: ...
+    meeting_type: MeetingType
+    video_provider: VideoProvider
+    phone_number: str
+    def __init__(self, start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., contact_preference: _Optional[str] = ..., meeting_type: _Optional[_Union[MeetingType, str]] = ..., video_provider: _Optional[_Union[VideoProvider, str]] = ..., phone_number: _Optional[str] = ...) -> None: ...
 
 class Meeting(_message.Message):
-    __slots__ = ("id", "start", "end", "duration_minutes", "topic", "zone", "ics_url", "cancelled_at")
+    __slots__ = ("id", "start", "end", "duration_minutes", "topic", "zone", "ics_url", "cancelled_at", "meeting_type", "video_provider", "phone_number")
     ID_FIELD_NUMBER: _ClassVar[int]
     START_FIELD_NUMBER: _ClassVar[int]
     END_FIELD_NUMBER: _ClassVar[int]
@@ -86,6 +113,9 @@ class Meeting(_message.Message):
     ZONE_FIELD_NUMBER: _ClassVar[int]
     ICS_URL_FIELD_NUMBER: _ClassVar[int]
     CANCELLED_AT_FIELD_NUMBER: _ClassVar[int]
+    MEETING_TYPE_FIELD_NUMBER: _ClassVar[int]
+    VIDEO_PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
     id: int
     start: _timestamp_pb2.Timestamp
     end: _timestamp_pb2.Timestamp
@@ -94,7 +124,10 @@ class Meeting(_message.Message):
     zone: str
     ics_url: str
     cancelled_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[int] = ..., start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., zone: _Optional[str] = ..., ics_url: _Optional[str] = ..., cancelled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    meeting_type: MeetingType
+    video_provider: VideoProvider
+    phone_number: str
+    def __init__(self, id: _Optional[int] = ..., start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., zone: _Optional[str] = ..., ics_url: _Optional[str] = ..., cancelled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., meeting_type: _Optional[_Union[MeetingType, str]] = ..., video_provider: _Optional[_Union[VideoProvider, str]] = ..., phone_number: _Optional[str] = ...) -> None: ...
 
 class BookMeetingResponse(_message.Message):
     __slots__ = ("meeting",)

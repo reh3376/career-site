@@ -1496,6 +1496,9 @@ cannot be created is released.
 | `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes; must be one of the offered lengths. |
 | `topic` | `string` | string | `string: max_len: 500` | What the member wants to discuss, in their words. Shown to the owner on the calendar entry so he arrives knowing the subject. |
 | `contactPreference` | `string` | string | `string: max_len: 200` | How the member would like to meet, in their words, for example a phone number or "your call, send a link". Optional. |
+| `meetingType` | [`MeetingType`](#meetingtype) | string (enum name) |  | Video or phone. Required on new bookings. |
+| `videoProvider` | [`VideoProvider`](#videoprovider) | string (enum name) |  | Which service, when meeting_type is video. Rejected otherwise. |
+| `phoneNumber` | `string` | string | `string: max_len: 32` | The number the member will call FROM, when meeting_type is phone. Country code, a space, then the ten-digit number, for example "+1 5135551234". May be left empty to say the number is in the comments instead, which is the escape hatch for anyone whose number does not fit that shape. |
 
 **Response** — [`BookMeetingResponse`](#bookmeetingresponse)
 
@@ -1510,7 +1513,10 @@ cannot be created is released.
   "start": "2026-09-18T12:00:00Z",
   "durationMinutes": 0,
   "topic": "string",
-  "contactPreference": "string"
+  "contactPreference": "string",
+  "meetingType": "MEETING_TYPE_VIDEO",
+  "videoProvider": "VIDEO_PROVIDER_GOOGLE_MEET",
+  "phoneNumber": "string"
 }
 ```
 
@@ -7092,6 +7098,9 @@ which the member-facing message deliberately does not.
 | `eventId` | `string` | string |  | The calendar event this created. Empty means the claim exists here but no event was made, which is worth seeing. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the booking was made. |
 | `cancelledAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set when cancelled. Cancelled rows are kept rather than deleted, so a meeting that vanished can be explained. |
+| `meetingType` | `string` | string |  | video | phone, or empty for a booking made before this was asked. |
+| `videoProvider` | `string` | string |  | google_meet | teams | zoom, when the type is video. |
+| `phoneNumber` | `string` | string |  | The number the member will call from, when the type is phone. Empty on a phone meeting means they said it is in the comments. |
 
 ### ListMeetingsRequest
 
@@ -7945,6 +7954,9 @@ Request for BookMeeting.
 | `durationMinutes` | `int32` | number | `int32: gt: 0` | Meeting length in minutes; must be one of the offered lengths. |
 | `topic` | `string` | string | `string: max_len: 500` | What the member wants to discuss, in their words. Shown to the owner on the calendar entry so he arrives knowing the subject. |
 | `contactPreference` | `string` | string | `string: max_len: 200` | How the member would like to meet, in their words, for example a phone number or "your call, send a link". Optional. |
+| `meetingType` | [`MeetingType`](#meetingtype) | string (enum name) |  | Video or phone. Required on new bookings. |
+| `videoProvider` | [`VideoProvider`](#videoprovider) | string (enum name) |  | Which service, when meeting_type is video. Rejected otherwise. |
+| `phoneNumber` | `string` | string | `string: max_len: 32` | The number the member will call FROM, when meeting_type is phone. Country code, a space, then the ten-digit number, for example "+1 5135551234". May be left empty to say the number is in the comments instead, which is the escape hatch for anyone whose number does not fit that shape. |
 
 ### Meeting
 
@@ -7960,6 +7972,9 @@ A booked meeting, as the member sees it.
 | `zone` | `string` | string |  | IANA zone the times should be rendered in. |
 | `icsUrl` | `string` | string |  | Relative URL of the calendar file for this meeting, so the member can add it to their own calendar or forward an invitation of their own. Always present, including for a meeting booked in the app. |
 | `cancelledAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set when the meeting has been cancelled. Cancelled meetings stay in the list rather than vanishing, because a meeting that silently disappears reads as a bug. |
+| `meetingType` | [`MeetingType`](#meetingtype) | string (enum name) |  | Video or phone, as booked. |
+| `videoProvider` | [`VideoProvider`](#videoprovider) | string (enum name) |  | Which service, when the type is video. |
+| `phoneNumber` | `string` | string |  | The number the member said they would call from. Empty with a phone meeting means they said it is in the comments. |
 
 ### BookMeetingResponse
 
@@ -8678,6 +8693,31 @@ Credential kinds.
 | `KIND_EDUCATION` | 2 | Degree or certificate. |
 | `KIND_SERVICE` | 3 | Military or public service. |
 | `KIND_ELIGIBILITY` | 4 | Eligibility statement (citizenship, clearance eligibility). |
+
+### MeetingType
+
+How the meeting happens. The owner's decision is that the member
+brings their own video room rather than this application creating
+one: no Meet, Teams or Zoom credentials are held here.
+
+| Value | Number | Description |
+|---|---|---|
+| `MEETING_TYPE_UNSPECIFIED` | 0 | Not set. Bookings made before this was asked carry this. |
+| `MEETING_TYPE_VIDEO` | 1 | A video call the member sets up in their own calendar. |
+| `MEETING_TYPE_PHONE` | 2 | A phone call. The member says which number they will call from. |
+
+### VideoProvider
+
+Which video service the member will host in. Named only so the
+invitation says the right thing and the member is sent to the right
+place; no room is created here.
+
+| Value | Number | Description |
+|---|---|---|
+| `VIDEO_PROVIDER_UNSPECIFIED` | 0 | Not set, and required to be unset unless the type is video. |
+| `VIDEO_PROVIDER_GOOGLE_MEET` | 1 | Google Meet. |
+| `VIDEO_PROVIDER_TEAMS` | 2 | Microsoft Teams. |
+| `VIDEO_PROVIDER_ZOOM` | 3 | Zoom. |
 
 ### GetExportResponse.Status
 

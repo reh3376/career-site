@@ -1871,7 +1871,7 @@ class DisconnectCalendarResponse(_message.Message):
     def __init__(self, status: _Optional[_Union[CalendarStatus, _Mapping]] = ...) -> None: ...
 
 class AdminMeeting(_message.Message):
-    __slots__ = ("id", "start", "end", "duration_minutes", "topic", "member_name", "member_email", "member_id", "event_id", "created_at", "cancelled_at")
+    __slots__ = ("id", "start", "end", "duration_minutes", "topic", "member_name", "member_email", "member_id", "event_id", "created_at", "cancelled_at", "meeting_type", "video_provider", "phone_number")
     ID_FIELD_NUMBER: _ClassVar[int]
     START_FIELD_NUMBER: _ClassVar[int]
     END_FIELD_NUMBER: _ClassVar[int]
@@ -1883,6 +1883,9 @@ class AdminMeeting(_message.Message):
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     CANCELLED_AT_FIELD_NUMBER: _ClassVar[int]
+    MEETING_TYPE_FIELD_NUMBER: _ClassVar[int]
+    VIDEO_PROVIDER_FIELD_NUMBER: _ClassVar[int]
+    PHONE_NUMBER_FIELD_NUMBER: _ClassVar[int]
     id: int
     start: _timestamp_pb2.Timestamp
     end: _timestamp_pb2.Timestamp
@@ -1894,7 +1897,10 @@ class AdminMeeting(_message.Message):
     event_id: str
     created_at: _timestamp_pb2.Timestamp
     cancelled_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[int] = ..., start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., member_name: _Optional[str] = ..., member_email: _Optional[str] = ..., member_id: _Optional[int] = ..., event_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., cancelled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    meeting_type: str
+    video_provider: str
+    phone_number: str
+    def __init__(self, id: _Optional[int] = ..., start: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., end: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., duration_minutes: _Optional[int] = ..., topic: _Optional[str] = ..., member_name: _Optional[str] = ..., member_email: _Optional[str] = ..., member_id: _Optional[int] = ..., event_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., cancelled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., meeting_type: _Optional[str] = ..., video_provider: _Optional[str] = ..., phone_number: _Optional[str] = ...) -> None: ...
 
 class ListMeetingsRequest(_message.Message):
     __slots__ = ("include_past",)

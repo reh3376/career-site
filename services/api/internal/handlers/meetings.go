@@ -158,6 +158,13 @@ func (h *Meetings) BookMeeting(
 	}
 	start := req.Msg.GetStart().AsTime()
 
+	// Validated before anything is claimed, so a booking cannot be
+	// stored half-described and the member is told which part is wrong.
+	contact, err := contactFromRequest(req.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
 	svc := &scheduling.Service{
 		Cal:   h.cal,
 		Store: &scheduling.RepoStore{Repo: h.users, Gap: set.GapMins},
@@ -170,6 +177,11 @@ func (h *Meetings) BookMeeting(
 		Note:    req.Msg.GetTopic(),
 		Start:   start,
 		DurMins: dur,
+
+		MeetingType:   contact.Type,
+		VideoProvider: contact.Provider,
+		PhoneNumber:   contact.Phone,
+		ContactLine:   contactLine(contact, member.Name),
 	})
 	// Two ways the same thing happens: the database refused the claim
 	// (another member got there first), or the calendar's second look
@@ -355,6 +367,9 @@ func toProto(b scheduling.Booking, zone string) *careerv1.Meeting {
 		Topic:           b.Note,
 		Zone:            zone,
 		IcsUrl:          fmt.Sprintf("/api/meetings/%d.ics", b.ID),
+		MeetingType:     typeToProto(b.MeetingType),
+		VideoProvider:   providerToProto(b.VideoProvider),
+		PhoneNumber:     b.PhoneNumber,
 	}
 	if b.Canceled != nil {
 		m.CancelledAt = timestamppb.New(*b.Canceled)

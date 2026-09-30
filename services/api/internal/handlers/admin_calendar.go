@@ -301,6 +301,9 @@ func adminMeetingToProto(b users.Booking) *v1.AdminMeeting {
 		MemberEmail:     b.Email,
 		EventId:         b.EventID,
 		CreatedAt:       timestamppb.New(b.CreatedAt),
+		MeetingType:     b.MeetingType,
+		VideoProvider:   b.VideoProvider,
+		PhoneNumber:     b.PhoneNumber,
 	}
 	if b.UserID != nil {
 		m.MemberId = *b.UserID

@@ -27,7 +27,7 @@ from career.v1 import options_pb2 as career_dot_v1_dot_options__pb2
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x63\x61reer/v1/meetings.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x17\x63\x61reer/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1a\n\x18GetMeetingOptionsRequest\"\xad\x02\n\x19GetMeetingOptionsResponse\x12)\n\x10\x64uration_minutes\x18\x01 \x03(\x05R\x0f\x64urationMinutes\x12\x12\n\x04zone\x18\x02 \x01(\tR\x04zone\x12\x1d\n\nzone_label\x18\x03 \x01(\tR\tzoneLabel\x12!\n\x0chorizon_days\x18\x04 \x01(\x05R\x0bhorizonDays\x12\x1d\n\nlead_hours\x18\x05 \x01(\x05R\tleadHours\x12#\n\rhours_summary\x18\x06 \x01(\tR\x0choursSummary\x12\x1c\n\tavailable\x18\x07 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x08 \x01(\tR\x11unavailableReason\"\xa8\x01\n\x16GetAvailabilityRequest\x12\x32\n\x10\x64uration_minutes\x18\x01 \x01(\x05\x42\x07\xbaH\x04\x1a\x02 \x00R\x0f\x64urationMinutes\x12.\n\x04\x66rom\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x04\x66rom\x12*\n\x02to\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x02to\"m\n\x0bMeetingSlot\x12\x30\n\x05start\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x05start\x12,\n\x03\x65nd\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x03\x65nd\"\xa8\x01\n\x17GetAvailabilityResponse\x12,\n\x05slots\x18\x01 \x03(\x0b\x32\x16.career.v1.MeetingSlotR\x05slots\x12\x12\n\x04zone\x18\x02 \x01(\tR\x04zone\x12\x1c\n\tavailable\x18\x03 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x04 \x01(\tR\x11unavailableReason\"\xdb\x01\n\x12\x42ookMeetingRequest\x12\x38\n\x05start\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x05start\x12\x32\n\x10\x64uration_minutes\x18\x02 \x01(\x05\x42\x07\xbaH\x04\x1a\x02 \x00R\x0f\x64urationMinutes\x12\x1e\n\x05topic\x18\x03 \x01(\tB\x08\xbaH\x05r\x03\x18\xf4\x03R\x05topic\x12\x37\n\x12\x63ontact_preference\x18\x04 \x01(\tB\x08\xbaH\x05r\x03\x18\xc8\x01R\x11\x63ontactPreference\"\xa6\x02\n\x07Meeting\x12\x0e\n\x02id\x18\x01 \x01(\x03R\x02id\x12\x30\n\x05start\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x05start\x12,\n\x03\x65nd\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x03\x65nd\x12)\n\x10\x64uration_minutes\x18\x04 \x01(\x05R\x0f\x64urationMinutes\x12\x14\n\x05topic\x18\x05 \x01(\tR\x05topic\x12\x12\n\x04zone\x18\x06 \x01(\tR\x04zone\x12\x17\n\x07ics_url\x18\x07 \x01(\tR\x06icsUrl\x12=\n\x0c\x63\x61ncelled_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x0b\x63\x61ncelledAt\"C\n\x13\x42ookMeetingResponse\x12,\n\x07meeting\x18\x01 \x01(\x0b\x32\x12.career.v1.MeetingR\x07meeting\":\n\x15ListMyMeetingsRequest\x12!\n\x0cinclude_past\x18\x01 \x01(\x08R\x0bincludePast\"H\n\x16ListMyMeetingsResponse\x12.\n\x08meetings\x18\x01 \x03(\x0b\x32\x12.career.v1.MeetingR\x08meetings\"/\n\x14\x43\x61ncelMeetingRequest\x12\x17\n\x02id\x18\x01 \x01(\x03\x42\x07\xbaH\x04\"\x02 \x00R\x02id\"E\n\x15\x43\x61ncelMeetingResponse\x12,\n\x07meeting\x18\x01 \x01(\x0b\x32\x12.career.v1.MeetingR\x07meeting2\xf5\x03\n\x0eMeetingService\x12h\n\x11GetMeetingOptions\x12#.career.v1.GetMeetingOptionsRequest\x1a$.career.v1.GetMeetingOptionsResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18<\x12\x62\n\x0fGetAvailability\x12!.career.v1.GetAvailabilityRequest\x1a\".career.v1.GetAvailabilityResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12V\n\x0b\x42ookMeeting\x12\x1d.career.v1.BookMeetingRequest\x1a\x1e.career.v1.BookMeetingResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x06\x12_\n\x0eListMyMeetings\x12 .career.v1.ListMyMeetingsRequest\x1a!.career.v1.ListMyMeetingsResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12\\\n\rCancelMeeting\x12\x1f.career.v1.CancelMeetingRequest\x1a .career.v1.CancelMeetingResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\nB\xa7\x01\n\rcom.career.v1B\rMeetingsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x63\x61reer/v1/meetings.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x17\x63\x61reer/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1a\n\x18GetMeetingOptionsRequest\"\xad\x02\n\x19GetMeetingOptionsResponse\x12)\n\x10\x64uration_minutes\x18\x01 \x03(\x05R\x0f\x64urationMinutes\x12\x12\n\x04zone\x18\x02 \x01(\tR\x04zone\x12\x1d\n\nzone_label\x18\x03 \x01(\tR\tzoneLabel\x12!\n\x0chorizon_days\x18\x04 \x01(\x05R\x0bhorizonDays\x12\x1d\n\nlead_hours\x18\x05 \x01(\x05R\tleadHours\x12#\n\rhours_summary\x18\x06 \x01(\tR\x0choursSummary\x12\x1c\n\tavailable\x18\x07 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x08 \x01(\tR\x11unavailableReason\"\xa8\x01\n\x16GetAvailabilityRequest\x12\x32\n\x10\x64uration_minutes\x18\x01 \x01(\x05\x42\x07\xbaH\x04\x1a\x02 \x00R\x0f\x64urationMinutes\x12.\n\x04\x66rom\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x04\x66rom\x12*\n\x02to\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x02to\"m\n\x0bMeetingSlot\x12\x30\n\x05start\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x05start\x12,\n\x03\x65nd\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x03\x65nd\"\xa8\x01\n\x17GetAvailabilityResponse\x12,\n\x05slots\x18\x01 \x03(\x0b\x32\x16.career.v1.MeetingSlotR\x05slots\x12\x12\n\x04zone\x18\x02 \x01(\tR\x04zone\x12\x1c\n\tavailable\x18\x03 \x01(\x08R\tavailable\x12-\n\x12unavailable_reason\x18\x04 \x01(\tR\x11unavailableReason\"\x83\x03\n\x12\x42ookMeetingRequest\x12\x38\n\x05start\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x05start\x12\x32\n\x10\x64uration_minutes\x18\x02 \x01(\x05\x42\x07\xbaH\x04\x1a\x02 \x00R\x0f\x64urationMinutes\x12\x1e\n\x05topic\x18\x03 \x01(\tB\x08\xbaH\x05r\x03\x18\xf4\x03R\x05topic\x12\x37\n\x12\x63ontact_preference\x18\x04 \x01(\tB\x08\xbaH\x05r\x03\x18\xc8\x01R\x11\x63ontactPreference\x12\x39\n\x0cmeeting_type\x18\x05 \x01(\x0e\x32\x16.career.v1.MeetingTypeR\x0bmeetingType\x12?\n\x0evideo_provider\x18\x06 \x01(\x0e\x32\x18.career.v1.VideoProviderR\rvideoProvider\x12*\n\x0cphone_number\x18\x07 \x01(\tB\x07\xbaH\x04r\x02\x18 R\x0bphoneNumber\"\xc5\x03\n\x07Meeting\x12\x0e\n\x02id\x18\x01 \x01(\x03R\x02id\x12\x30\n\x05start\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x05start\x12,\n\x03\x65nd\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x03\x65nd\x12)\n\x10\x64uration_minutes\x18\x04 \x01(\x05R\x0f\x64urationMinutes\x12\x14\n\x05topic\x18\x05 \x01(\tR\x05topic\x12\x12\n\x04zone\x18\x06 \x01(\tR\x04zone\x12\x17\n\x07ics_url\x18\x07 \x01(\tR\x06icsUrl\x12=\n\x0c\x63\x61ncelled_at\x18\x08 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x0b\x63\x61ncelledAt\x12\x39\n\x0cmeeting_type\x18\t \x01(\x0e\x32\x16.career.v1.MeetingTypeR\x0bmeetingType\x12?\n\x0evideo_provider\x18\n \x01(\x0e\x32\x18.career.v1.VideoProviderR\rvideoProvider\x12!\n\x0cphone_number\x18\x0b \x01(\tR\x0bphoneNumber\"C\n\x13\x42ookMeetingResponse\x12,\n\x07meeting\x18\x01 \x01(\x0b\x32\x12.career.v1.MeetingR\x07meeting\":\n\x15ListMyMeetingsRequest\x12!\n\x0cinclude_past\x18\x01 \x01(\x08R\x0bincludePast\"H\n\x16ListMyMeetingsResponse\x12.\n\x08meetings\x18\x01 \x03(\x0b\x32\x12.career.v1.MeetingR\x08meetings\"/\n\x14\x43\x61ncelMeetingRequest\x12\x17\n\x02id\x18\x01 \x01(\x03\x42\x07\xbaH\x04\"\x02 \x00R\x02id\"E\n\x15\x43\x61ncelMeetingResponse\x12,\n\x07meeting\x18\x01 \x01(\x0b\x32\x12.career.v1.MeetingR\x07meeting*[\n\x0bMeetingType\x12\x1c\n\x18MEETING_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12MEETING_TYPE_VIDEO\x10\x01\x12\x16\n\x12MEETING_TYPE_PHONE\x10\x02*\x82\x01\n\rVideoProvider\x12\x1e\n\x1aVIDEO_PROVIDER_UNSPECIFIED\x10\x00\x12\x1e\n\x1aVIDEO_PROVIDER_GOOGLE_MEET\x10\x01\x12\x18\n\x14VIDEO_PROVIDER_TEAMS\x10\x02\x12\x17\n\x13VIDEO_PROVIDER_ZOOM\x10\x03\x32\xf5\x03\n\x0eMeetingService\x12h\n\x11GetMeetingOptions\x12#.career.v1.GetMeetingOptionsRequest\x1a$.career.v1.GetMeetingOptionsResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18<\x12\x62\n\x0fGetAvailability\x12!.career.v1.GetAvailabilityRequest\x1a\".career.v1.GetAvailabilityResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12V\n\x0b\x42ookMeeting\x12\x1d.career.v1.BookMeetingRequest\x1a\x1e.career.v1.BookMeetingResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x06\x12_\n\x0eListMyMeetings\x12 .career.v1.ListMyMeetingsRequest\x1a!.career.v1.ListMyMeetingsResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12\\\n\rCancelMeeting\x12\x1f.career.v1.CancelMeetingRequest\x1a .career.v1.CancelMeetingResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18\nB\xa7\x01\n\rcom.career.v1B\rMeetingsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -45,6 +45,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_BOOKMEETINGREQUEST'].fields_by_name['topic']._serialized_options = b'\272H\005r\003\030\364\003'
   _globals['_BOOKMEETINGREQUEST'].fields_by_name['contact_preference']._loaded_options = None
   _globals['_BOOKMEETINGREQUEST'].fields_by_name['contact_preference']._serialized_options = b'\272H\005r\003\030\310\001'
+  _globals['_BOOKMEETINGREQUEST'].fields_by_name['phone_number']._loaded_options = None
+  _globals['_BOOKMEETINGREQUEST'].fields_by_name['phone_number']._serialized_options = b'\272H\004r\002\030 '
   _globals['_CANCELMEETINGREQUEST'].fields_by_name['id']._loaded_options = None
   _globals['_CANCELMEETINGREQUEST'].fields_by_name['id']._serialized_options = b'\272H\004\"\002 \000'
   _globals['_MEETINGSERVICE'].methods_by_name['GetMeetingOptions']._loaded_options = None
@@ -57,6 +59,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MEETINGSERVICE'].methods_by_name['ListMyMeetings']._serialized_options = b'\200\265\030\002\220\265\030\036'
   _globals['_MEETINGSERVICE'].methods_by_name['CancelMeeting']._loaded_options = None
   _globals['_MEETINGSERVICE'].methods_by_name['CancelMeeting']._serialized_options = b'\200\265\030\002\220\265\030\n'
+  _globals['_MEETINGTYPE']._serialized_start=2080
+  _globals['_MEETINGTYPE']._serialized_end=2171
+  _globals['_VIDEOPROVIDER']._serialized_start=2174
+  _globals['_VIDEOPROVIDER']._serialized_end=2304
   _globals['_GETMEETINGOPTIONSREQUEST']._serialized_start=126
   _globals['_GETMEETINGOPTIONSREQUEST']._serialized_end=152
   _globals['_GETMEETINGOPTIONSRESPONSE']._serialized_start=155
@@ -68,19 +74,19 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETAVAILABILITYRESPONSE']._serialized_start=741
   _globals['_GETAVAILABILITYRESPONSE']._serialized_end=909
   _globals['_BOOKMEETINGREQUEST']._serialized_start=912
-  _globals['_BOOKMEETINGREQUEST']._serialized_end=1131
-  _globals['_MEETING']._serialized_start=1134
-  _globals['_MEETING']._serialized_end=1428
-  _globals['_BOOKMEETINGRESPONSE']._serialized_start=1430
-  _globals['_BOOKMEETINGRESPONSE']._serialized_end=1497
-  _globals['_LISTMYMEETINGSREQUEST']._serialized_start=1499
-  _globals['_LISTMYMEETINGSREQUEST']._serialized_end=1557
-  _globals['_LISTMYMEETINGSRESPONSE']._serialized_start=1559
-  _globals['_LISTMYMEETINGSRESPONSE']._serialized_end=1631
-  _globals['_CANCELMEETINGREQUEST']._serialized_start=1633
-  _globals['_CANCELMEETINGREQUEST']._serialized_end=1680
-  _globals['_CANCELMEETINGRESPONSE']._serialized_start=1682
-  _globals['_CANCELMEETINGRESPONSE']._serialized_end=1751
-  _globals['_MEETINGSERVICE']._serialized_start=1754
-  _globals['_MEETINGSERVICE']._serialized_end=2255
+  _globals['_BOOKMEETINGREQUEST']._serialized_end=1299
+  _globals['_MEETING']._serialized_start=1302
+  _globals['_MEETING']._serialized_end=1755
+  _globals['_BOOKMEETINGRESPONSE']._serialized_start=1757
+  _globals['_BOOKMEETINGRESPONSE']._serialized_end=1824
+  _globals['_LISTMYMEETINGSREQUEST']._serialized_start=1826
+  _globals['_LISTMYMEETINGSREQUEST']._serialized_end=1884
+  _globals['_LISTMYMEETINGSRESPONSE']._serialized_start=1886
+  _globals['_LISTMYMEETINGSRESPONSE']._serialized_end=1958
+  _globals['_CANCELMEETINGREQUEST']._serialized_start=1960
+  _globals['_CANCELMEETINGREQUEST']._serialized_end=2007
+  _globals['_CANCELMEETINGRESPONSE']._serialized_start=2009
+  _globals['_CANCELMEETINGRESPONSE']._serialized_end=2078
+  _globals['_MEETINGSERVICE']._serialized_start=2307
+  _globals['_MEETINGSERVICE']._serialized_end=2808
 # @@protoc_insertion_point(module_scope)
