@@ -6,7 +6,7 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-30, 15:30 UTC.
+Last updated 2026-09-30, 20:10 UTC.
 
 ---
 
@@ -115,6 +115,18 @@ slower" is still a hand-written query.
 
 **Full state in [`ask-roger.md`](ask-roger.md).** Read that before
 touching anything in Phase 4; this is the summary.
+
+**Shipped to production on 2026-09-30 as `7ca0e52c43bf`**, database at
+migration 48. The rollout passed 20 live checks with none failing. What
+is live: the conversation store, the chat retrieval path, the persona
+prompt, the Q&A bank and its admin surface at `/admin/qa`, the answer
+pipeline, six of nine `ChatService` RPCs, the phrasing embedding job,
+and the grading console at `/admin/decisions`.
+
+**Nothing member-facing exists yet.** There is no `/ask` page and no
+side panel, so no visitor can reach the assistant. The bank is empty,
+so it never fires. Both admin surfaces are deployed but have not been
+opened by a human.
 
 Built and tested on `claude_dev01` at `d16f429`, PR #217, **none of it
 deployed**: the conversation store (00045), the chat retrieval path
