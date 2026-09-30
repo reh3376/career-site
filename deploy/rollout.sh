@@ -102,9 +102,27 @@ else
   S "cd $REMOTE && echo '$PREV_TAG' > .previous-image-tag && sed -i -E '/^(WEB|API|SIDECAR)_IMAGE_TAG=/d' .env.prod && sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=$TAG/' .env.prod && grep '^IMAGE_TAG=' .env.prod"
 fi
 
-say "pulling"
+# Only the three images this repository builds.
+#
+# A bare `compose pull` pulls everything in the file, including
+# postgres, ollama and minio, none of which a career-site release
+# changes. That put a third party in the middle of every deploy, and on
+# 2026-09-30 one of them stepped on it: quay.io began refusing
+# anonymous pulls of minio/minio, the pull step failed 401, and the
+# rollout only survived because the three images that mattered had
+# already come down and minio kept its cached copy.
+#
+# Verified at the time: quay issues an anonymous token and still
+# refuses the manifest, so this is a policy change rather than a blip
+# and pinning a tag would not have helped.
+#
+# Naming the services means a release can only be broken by an image
+# this repository actually publishes. Third-party images still update,
+# deliberately, by pulling them by hand.
+PULL=${ONLY:-api sidecar web}
+say "pulling ($PULL)"
 for attempt in 1 2 3; do
-  S "cd $REMOTE && $CS pull ${ONLY} 2>&1 | tail -3" && break
+  S "cd $REMOTE && $CS pull ${PULL} 2>&1 | tail -3" && break
   [ "$attempt" = 3 ] && die "image pull kept failing"
   echo "  retrying"; sleep 10
 done
