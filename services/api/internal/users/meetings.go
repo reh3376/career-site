@@ -164,3 +164,51 @@ func isExclusionViolation(err error, constraint string) bool {
 	}
 	return constraint != "" && errorContains(err, constraint)
 }
+
+// AllBookings returns every booking for the owner's console, soonest
+// first.
+//
+// Unlike ActiveBookings this is not scoped to a window and optionally
+// includes what is finished or cancelled, because the question here is
+// "what has been taken" rather than "what holds time". Cancelled rows
+// are kept rather than deleted, so a meeting that vanished from
+// somebody's calendar can still be explained.
+func (r *Repo) AllBookings(ctx context.Context, includePast bool) ([]Booking, error) {
+	q := `
+    SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
+           event_id, created_at, cancelled_at
+      FROM meeting_bookings
+     WHERE tenant_id = $1`
+	if !includePast {
+		q += ` AND cancelled_at IS NULL AND starts_at >= now()`
+	}
+	q += ` ORDER BY starts_at`
+
+	rows, err := r.pool.Query(ctx, q, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return nil, fmt.Errorf("all bookings: %w", err)
+	}
+	defer rows.Close()
+	return scanBookings(rows)
+}
+
+// BookingByID returns one booking, or ok false.
+func (r *Repo) BookingByID(ctx context.Context, id int64) (Booking, bool, error) {
+	rows, err := r.pool.Query(ctx, `
+    SELECT id, user_id, name, email, note, starts_at, duration_min, gap_min,
+           event_id, created_at, cancelled_at
+      FROM meeting_bookings
+     WHERE tenant_id = $1 AND id = $2`, tenant.FromContext(ctx).Int64(), id)
+	if err != nil {
+		return Booking{}, false, fmt.Errorf("booking by id: %w", err)
+	}
+	defer rows.Close()
+	out, err := scanBookings(rows)
+	if err != nil {
+		return Booking{}, false, err
+	}
+	if len(out) == 0 {
+		return Booking{}, false, nil
+	}
+	return out[0], true, nil
+}

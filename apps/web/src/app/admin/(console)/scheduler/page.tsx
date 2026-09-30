@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
-import { getCalendarStatus, getSchedulerSettings } from "./actions";
+import { getCalendarStatus, getSchedulerSettings, listMeetings } from "./actions";
 import { ConnectPanel } from "./connect-panel";
+import { MeetingsList } from "./meetings-list";
 import { WindowsForm } from "./windows-form";
 
 export const metadata: Metadata = { title: "Scheduler" };
@@ -11,9 +12,10 @@ export const dynamic = "force-dynamic";
 // app_settings and read by the booking flow within seconds, so
 // "not next Tuesday" never needs a deploy.
 export default async function AdminSchedulerPage() {
-  const [{ settings }, calendar] = await Promise.all([
+  const [{ settings }, calendar, booked] = await Promise.all([
     getSchedulerSettings(),
     getCalendarStatus(),
+    listMeetings(),
   ]);
 
   return (
@@ -28,6 +30,8 @@ export default async function AdminSchedulerPage() {
       <ConnectPanel status={calendar} />
 
       <WindowsForm initial={settings} />
+
+      <MeetingsList meetings={booked.meetings} zone={booked.zone} />
     </div>
   );
 }

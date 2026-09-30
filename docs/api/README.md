@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 62 |
+| [`AdminService`](#adminservice) | Owner console. | 64 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -2060,6 +2060,8 @@ Owner console.
 | [`ConnectCalendar`](#adminservice-connectcalendar) | `/api/career.v1.AdminService/ConnectCalendar` | Admin (fresh MFA) | default | `ConnectCalendarRequest` → `ConnectCalendarResponse` | Completes the handshake: exchanges the authorisation code for a refresh token and stores it encrypted at rest. |
 | [`GetCalendarStatus`](#adminservice-getcalendarstatus) | `/api/career.v1.AdminService/GetCalendarStatus` | Admin (fresh MFA) | default | `GetCalendarStatusRequest` → `GetCalendarStatusResponse` | Reads the calendar connection: which account, when it was connected, and whether it is currently working. |
 | [`DisconnectCalendar`](#adminservice-disconnectcalendar) | `/api/career.v1.AdminService/DisconnectCalendar` | Admin (fresh MFA) | default | `DisconnectCalendarRequest` → `DisconnectCalendarResponse` | Forgets the stored credential. |
+| [`ListMeetings`](#adminservice-listmeetings) | `/api/career.v1.AdminService/ListMeetings` | Admin (fresh MFA) | default | `ListMeetingsRequest` → `ListMeetingsResponse` | Lists booked meetings, soonest first, so the owner can see what has been taken without opening Google. |
+| [`CancelMeetingAsAdmin`](#adminservice-cancelmeetingasadmin) | `/api/career.v1.AdminService/CancelMeetingAsAdmin` | Admin (fresh MFA) | default | `CancelMeetingAsAdminRequest` → `CancelMeetingAsAdminResponse` | Cancels a meeting on the member's behalf and frees the slot. |
 | [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin (fresh MFA) | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
 | [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin (fresh MFA) | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
 
@@ -4085,6 +4087,65 @@ _No fields; send `{}`._
 
 ```json
 {}
+```
+
+</details>
+
+### AdminService.ListMeetings
+
+`POST /api/career.v1.AdminService/ListMeetings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists booked meetings, soonest first, so the owner can see what has
+been taken without opening Google. Cancelling here frees the time
+and removes the calendar event.
+
+**Request** — [`ListMeetingsRequest`](#listmeetingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includePast` | `bool` | boolean |  | Include meetings that have already happened or been cancelled. |
+
+**Response** — [`ListMeetingsResponse`](#listmeetingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meetings` | [`AdminMeeting`](#adminmeeting)[] | array of object |  | Meetings, soonest first. |
+| `zone` | `string` | string |  | IANA zone the times should be rendered in. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "includePast": true
+}
+```
+
+</details>
+
+### AdminService.CancelMeetingAsAdmin
+
+`POST /api/career.v1.AdminService/CancelMeetingAsAdmin` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Cancels a meeting on the member's behalf and frees the slot.
+
+**Request** — [`CancelMeetingAsAdminRequest`](#cancelmeetingasadminrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) | `int64: gt: 0` | Which meeting to cancel. |
+
+**Response** — [`CancelMeetingAsAdminResponse`](#cancelmeetingasadminresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`AdminMeeting`](#adminmeeting) | object |  | The cancelled meeting. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "0"
+}
 ```
 
 </details>
@@ -7012,6 +7073,58 @@ The connection after forgetting the credential.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status. |
+
+### AdminMeeting
+
+One booked meeting, as the owner sees it. Carries who booked it,
+which the member-facing message deliberately does not.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) |  | Stable id, used to cancel. |
+| `start` | `Timestamp` | string (RFC 3339, UTC) |  | When it begins. |
+| `end` | `Timestamp` | string (RFC 3339, UTC) |  | When it ends. |
+| `durationMinutes` | `int32` | number |  | Length in minutes, as booked. |
+| `topic` | `string` | string |  | What the member said they wanted to discuss. |
+| `memberName` | `string` | string |  | The member's name, as held on their account. |
+| `memberEmail` | `string` | string |  | The member's email. |
+| `memberId` | `int64` | string (decimal) |  | The member's account id, 0 when the row has none. |
+| `eventId` | `string` | string |  | The calendar event this created. Empty means the claim exists here but no event was made, which is worth seeing. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the booking was made. |
+| `cancelledAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set when cancelled. Cancelled rows are kept rather than deleted, so a meeting that vanished can be explained. |
+
+### ListMeetingsRequest
+
+Request for ListMeetings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includePast` | `bool` | boolean |  | Include meetings that have already happened or been cancelled. |
+
+### ListMeetingsResponse
+
+Booked meetings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meetings` | [`AdminMeeting`](#adminmeeting)[] | array of object |  | Meetings, soonest first. |
+| `zone` | `string` | string |  | IANA zone the times should be rendered in. |
+
+### CancelMeetingAsAdminRequest
+
+Request for CancelMeetingAsAdmin.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `int64` | string (decimal) | `int64: gt: 0` | Which meeting to cancel. |
+
+### CancelMeetingAsAdminResponse
+
+The meeting after cancelling.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `meeting` | [`AdminMeeting`](#adminmeeting) | object |  | The cancelled meeting. |
 
 ### GetJdSubmissionLimitRequest
 
