@@ -97,17 +97,19 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
               >
                 Have a posting reviewed →
               </Link>
+              {/* Reviewing a posting and booking a meeting are peers:
+                  they are the two things an account is for. One filled
+                  and one as underlined text implied a ranking between
+                  them that does not exist, so both carry a background
+                  and the weight difference is fill against outline.
+                  Reaching out is not a peer, so it moved out of this
+                  row and into the line below rather than becoming a
+                  third button that would flatten all three. */}
               <Link
                 href="/meetings"
-                className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+                className="inline-flex items-center rounded-md border border-line bg-paper-2 px-6 py-3 text-sm font-medium text-ink no-underline transition-colors hover:border-accent hover:text-accent"
               >
-                Book a meeting
-              </Link>
-              <Link
-                href="/contact"
-                className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
-              >
-                Or reach out directly
+                Book a meeting →
               </Link>
             </>
           ) : (
@@ -136,8 +138,14 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
         {signedIn ? (
           <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
             Paste a posting and it is read requirement by requirement, with a
-            two-page résumé written for it when the fit is strong. Or take
-            fifteen minutes of my calendar and ask me directly.
+            two-page résumé written for it when the fit is strong. Or{" "}
+            <Link
+              href="/contact"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              reach out directly
+            </Link>
+            .
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
