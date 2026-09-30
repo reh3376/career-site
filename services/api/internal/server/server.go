@@ -157,7 +157,7 @@ func (s *Server) routes() http.Handler {
 
 	if s.chat != nil {
 		chatPath, chatHandler := careerv1connect.NewChatServiceHandler(s.chat)
-		mount(chatPath, chatHandler)
+		mount(chatPath, withoutWriteDeadline(chatHandler))
 	}
 
 	if s.events != nil {
@@ -293,6 +293,48 @@ func (r *recorder) WriteHeader(code int) {
 	r.status = code
 	r.ResponseWriter.WriteHeader(code)
 }
+
+// withoutWriteDeadline takes the streamed answer out from under the
+// server's write deadline.
+//
+// http.Server.WriteTimeout is 30 seconds and covers the whole response,
+// which is right for every unary RPC on this mux and fatally wrong for
+// one that streams. An Ask Roger answer is ten to twenty-five seconds
+// to the first token on this hardware and can run past forty in total.
+// The first real question asked on production took 44.9 seconds: the
+// handler finished and logged 200, and the browser had been cut off at
+// thirty and showed "network error".
+//
+// Only SendMessage is exempted. Clearing the deadline for the whole
+// service would drop the protection from six quick RPCs to buy nothing,
+// and clearing it globally would drop it from the entire API.
+//
+// The deadline is cleared rather than lengthened, because the useful
+// bound on a streaming handler is the request context, which already
+// carries the client going away. A second, longer wall-clock timeout
+// would only be a slower version of the same bug.
+func withoutWriteDeadline(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == careerv1connect.ChatServiceSendMessageProcedure {
+			// Errors are ignored deliberately: a transport that cannot
+			// do this is one where the deadline is not being enforced
+			// either, so there is nothing to fix and nothing to report.
+			_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Unwrap exposes the writer underneath, for http.ResponseController.
+//
+// Same trap as Flush below, one layer further out. ResponseController
+// reaches optional behaviour (deadlines, flushing) by walking Unwrap()
+// until it finds a writer that supports what it was asked for, and a
+// wrapper without Unwrap is where that walk stops. Without this,
+// SetWriteDeadline on a streaming handler returns
+// http.ErrNotSupported and the long-answer fix below silently does
+// nothing.
+func (r *recorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 // Flush passes through to the real writer.
 //

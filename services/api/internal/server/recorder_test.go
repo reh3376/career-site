@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // The logging wrapper must not hide the optional interfaces the real
@@ -81,4 +82,36 @@ func TestStatusIsStillRecorded(t *testing.T) {
 	if rec.Code != http.StatusTeapot {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusTeapot)
 	}
+}
+
+// The streaming path must actually escape the write deadline.
+//
+// This is two bugs in one place, and the second hid behind the first.
+// http.ResponseController reaches optional behaviour by walking
+// Unwrap() until it finds a writer that supports what it was asked
+// for, so a wrapper without Unwrap stops the walk and SetWriteDeadline
+// returns http.ErrNotSupported. The exemption would then compile, run,
+// report nothing, and leave the 30 second deadline exactly where it
+// was, which is the failure it exists to prevent.
+func TestStreamingPathCanClearTheWriteDeadline(t *testing.T) {
+	rw := &recorder{ResponseWriter: &deadlineWriter{header: http.Header{}}, status: 200}
+	if err := http.NewResponseController(rw).SetWriteDeadline(time.Time{}); err != nil {
+		t.Fatalf("SetWriteDeadline through the logging wrapper: %v", err)
+	}
+}
+
+// deadlineWriter supports write deadlines, the way a real
+// http.ResponseWriter from net/http does.
+type deadlineWriter struct {
+	header http.Header
+	status int
+	set    bool
+}
+
+func (d *deadlineWriter) Header() http.Header         { return d.header }
+func (d *deadlineWriter) Write(b []byte) (int, error) { return len(b), nil }
+func (d *deadlineWriter) WriteHeader(code int)        { d.status = code }
+func (d *deadlineWriter) SetWriteDeadline(time.Time) error {
+	d.set = true
+	return nil
 }
