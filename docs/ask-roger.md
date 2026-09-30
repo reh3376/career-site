@@ -31,21 +31,20 @@ landed in the same commit as the persona and not after it.
 
 | Piece | State | Where |
 |---|---|---|
-| `ChatService` proto contract | Exists, unimplemented | `proto/career/v1/chat.proto` |
+| `ChatService` RPCs | **Built and mounted**, 6 of 9 | `handlers/chat.go`, `server/server.go` |
 | Conversation store | **Built, tested, not deployed** | migration `00045`, `users/chat.go` |
 | Retrieval path for chat | **Built, tested, not deployed** | `users/chat_retrieval.go`, migration `00046` |
 | Persona prompt v1 | **Built, tested, not deployed** | `prompts/askroger.go` |
 | Q&A bank | **Built, tested, not deployed** | migration `00047`, `users/qa.go` |
 | Decision capture for answers | **Built, not deployed** | migration `00048`, `users/chat_decision.go` |
 | Grading vocabulary and rubric | **Built, not deployed** | `users/decision_log.go` |
-| Answer pipeline | **Built, tested, not wired to an RPC** | `internal/chat/answer.go` |
-| Streaming transport | **Not built** | — |
+| Answer pipeline | **Built, tested, wired** | `internal/chat/answer.go` |
+| Streaming transport | Stream is real, **one delta** until the sidecar streams | `handlers/chat.go` |
+| Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
 | `/ask` page and side panel | **Not built** | — |
 | Admin grading console for chat | **Not built** | `/admin/decisions` exists for JD rows |
 | Q&A bank admin surface | **Not built** | — |
 | Phrasing embedding job | **Not built** | repo methods exist, nothing calls them |
-| Quotas and budget cap (FR-CHAT-12) | **Not built** | — |
-| Escalation (FR-CHAT-10) | **Not built** | — |
 | Golden set (FR-CHAT-15) | **Not built** | — |
 
 Migrations 00045 to 00048 are committed and have been applied to a
@@ -119,6 +118,15 @@ with the owner on 2026-09-30 and not taken up. **Do not assume it.**
 ---
 
 ## 4. How an answer is produced
+
+Reachable from outside the API since `ChatService` was mounted:
+`CreateConversation`, `ListConversations`, `GetConversation`,
+`SendMessage`, `DeleteConversation`, `RateMessage` and
+`GetSuggestions` are implemented. `Escalate` and `GetQuota` refuse with
+`unimplemented` rather than returning plausible zeroes, because a
+stubbed quota would have the panel render an allowance the member does
+not have.
+
 
 Designed, partly built. Steps marked **[built]** exist and are tested.
 
@@ -345,17 +353,18 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 8. Next steps, in order
 
-1. **The `ChatService` RPCs**, so the pipeline is reachable. It is
-   built and tested and nothing outside the API can call it.
-2. The phrasing embedding job, so bank entries can match at all.
-3. Streaming transport, and the honest waiting state.
-4. `/ask` and the side panel. **Live test and UI/UX review before this
+1. The phrasing embedding job, so bank entries can match at all. The
+   bank cannot fire until this exists, which means the fast path does
+   not yet exist either.
+2. `/ask` and the side panel. **Live test and UI/UX review before this
    is called done.**
-5. The admin grading console: the chat review queue, the rubric, and
+3. The admin grading console: the chat review queue, the rubric, and
    the `human_answer` box. Built for speed of grading, because the
    owner grading a hundred answers is what produces the dataset.
-6. The Q&A bank admin surface.
-7. Quotas and budget cap (FR-CHAT-12).
+4. The Q&A bank admin surface, so entries can be written at all.
+5. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
+6. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
+7. Escalation (FR-CHAT-10).
 8. The golden set (FR-CHAT-15), which then calibrates §6.1.
 
 ---

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/auth"
+	"github.com/reh3376/career-site/services/api/internal/chat"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/db"
 	"github.com/reh3376/career-site/services/api/internal/email"
@@ -186,6 +187,10 @@ func main() {
 	// sidecar isn't dialled (rare — dev only) so /jd-upload still
 	// stores submissions even without scoring wired.
 	var jdScorer *jd.Scorer
+	// Ask Roger's answer pipeline, built alongside the JD assessor
+	// because they share the gateway, the embedder and the same
+	// precondition: a sidecar that can name a real model.
+	var chatService *chat.Service
 	if sc != nil {
 		// The requirement-judgment assessor only makes sense with a
 		// real LLM behind the sidecar. The stub provider produces
@@ -231,6 +236,17 @@ func main() {
 		}
 		if provider != "" && (cfg.LLMAllowStub || !strings.HasPrefix(provider, "stub")) {
 			gateway := llm.SidecarLLM{Client: sc}
+			// Ask Roger shares the gateway and the embedder with the JD
+			// reviewer, and is gated on the same check: a sidecar that
+			// cannot name a model cannot ground an answer either, and an
+			// assistant that answers from model knowledge alone is the
+			// one thing FR-CHAT-03 forbids.
+			chatService = &chat.Service{
+				Embed: ingest.SidecarEmbed{Client: sc},
+				Model: gateway,
+				Store: userRepo,
+				Log:   log,
+			}
 			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap, cfg.LLMNumCtx)
 			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,
 				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword, cfg.LLMNumCtx)
@@ -317,6 +333,15 @@ func main() {
 	}
 	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, calProvider, cfg.OwnerContactEmail)
 
+	// Ask Roger. A nil chatService leaves SendMessage refusing with
+	// Unavailable while the conversation list, history and deletion all
+	// still work, which is the right shape: a member can still read and
+	// remove what they asked before, and nothing pretends to answer.
+	chatHandler := handlers.NewChat(log, userRepo, authHandler, chatService)
+	if chatService == nil {
+		log.Warn("Ask Roger has no model — questions will be refused, history still works")
+	}
+
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
@@ -371,6 +396,7 @@ func main() {
 		Activity: activityHandler,
 		Jd:       jdHandler,
 		Meetings: meetingsHandler,
+		Chat:     chatHandler,
 		Events:   eventsHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
