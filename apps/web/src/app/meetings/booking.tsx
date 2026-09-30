@@ -12,6 +12,7 @@ import {
   type MeetingOptions,
   type Slot,
 } from "./actions";
+import { COUNTRY_CODES, DEFAULT_COUNTRY, numberHint } from "./countries";
 import { VIDEO_PROVIDERS } from "./providers";
 import { MyMeetings } from "./my-meetings";
 
@@ -98,6 +99,7 @@ export function Booking({
   const [contact, setContact] = useState("");
   const [meetingType, setMeetingType] = useState<"video" | "phone" | "">("");
   const [provider, setProvider] = useState("");
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [phoneInComments, setPhoneInComments] = useState(false);
   const [result, setResult] = useState<BookState>({});
@@ -165,6 +167,7 @@ export function Booking({
         setContact("");
         setMeetingType("");
         setProvider("");
+        setCountry(DEFAULT_COUNTRY);
         setPhone("");
         setPhoneInComments(false);
         refreshAll();
@@ -486,7 +489,11 @@ export function Booking({
           <input
             type="hidden"
             name="phone_number"
-            value={meetingType === "phone" && !phoneInComments ? phone : ""}
+            value={
+              meetingType === "phone" && !phoneInComments && phone.trim()
+                ? `${country} ${phone.replace(/[^0-9]/g, "")}`
+                : ""
+            }
           />
 
           <fieldset className="mt-6">
@@ -547,19 +554,37 @@ export function Booking({
               <label htmlFor="phone_display" className="block text-sm text-ink">
                 What number will you call from?
               </label>
-              <input
-                id="phone_display"
-                type="tel"
-                inputMode="tel"
-                disabled={phoneInComments}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
-                placeholder="+1 5135551234"
-              />
-              <p className="mt-1 text-xs text-ink-3">
-                Country code, a space, then ten digits.
-              </p>
+              {/* Country code and number are separate controls. Typing
+                  a code into a free-text field is where the format
+                  arguments come from, and +1 is the default because
+                  that is what almost every caller needs. */}
+              <div className="mt-2 flex gap-2">
+                <select
+                  aria-label="Country code"
+                  disabled={phoneInComments}
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-44 shrink-0 rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phone_display"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  disabled={phoneInComments}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+                  placeholder={country === "+1" ? "5135551234" : "Your number"}
+                />
+              </div>
+              <p className="mt-1 text-xs text-ink-3">{numberHint(country)}</p>
               <label className="mt-2 flex items-center gap-2 text-sm text-ink-2">
                 <input
                   type="checkbox"

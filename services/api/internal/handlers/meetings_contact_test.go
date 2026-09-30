@@ -48,9 +48,10 @@ func TestPhoneRejectsAVideoProvider(t *testing.T) {
 	}
 }
 
-// The owner's stated shape: country code, a space, ten digits.
-func TestPhoneShape(t *testing.T) {
-	for _, ok := range []string{"+1 5135551234", "1 5135551234", "+44 2079460958"} {
+// North American numbers are always ten digits after +1, so the rule
+// there is strict and catches a transposed or dropped digit.
+func TestNorthAmericanNumbersAreStrict(t *testing.T) {
+	for _, ok := range []string{"+1 5135551234", "1 5135551234"} {
 		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
 			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, ok)); err != nil {
 			t.Errorf("%q was refused: %v", ok, err)
@@ -67,6 +68,51 @@ func TestPhoneShape(t *testing.T) {
 		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
 			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, bad)); err == nil {
 			t.Errorf("%q was accepted", bad)
+		}
+	}
+}
+
+// Everywhere else there is no length rule (owner, 2026-09-30): the
+// only requirement is digits. Any length this code invented would turn
+// away real numbers somewhere.
+func TestOtherCountriesHaveNoLengthRule(t *testing.T) {
+	for _, ok := range []string{
+		"+44 2079460958",     // London, ten
+		"+353 15551234",      // Dublin, eight
+		"+61 291234567",      // Sydney, nine
+		"+86 13812345678",    // China mobile, eleven
+		"+44 123",            // short, and not ours to refuse
+		"+49 30123456789012", // long, likewise
+	} {
+		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
+			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, ok)); err != nil {
+			t.Errorf("%q was refused: %v", ok, err)
+		}
+	}
+	// Digits only: nothing to interpret, and nothing that could arrive
+	// looking like a number and not be one.
+	for _, bad := range []string{
+		"+44 20 7946 0958",  // spaces inside the number
+		"+44 207-946-0958",  // dashes
+		"+44 (20) 79460958", // parentheses
+		"+44 call me",       // words
+		"+44 ",              // a code and nothing else
+		"+44 0790x123456",   // a letter hiding in it
+	} {
+		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
+			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, bad)); err == nil {
+			t.Errorf("%q was accepted", bad)
+		}
+	}
+}
+
+// The looser rule must not become a way round the strict one: a +1
+// number of the wrong length has to stay refused.
+func TestLooseRuleDoesNotRescueABadPlusOne(t *testing.T) {
+	for _, bad := range []string{"+1 513555", "1 51355512345"} {
+		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
+			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, bad)); err == nil {
+			t.Errorf("%q was accepted by falling through to the loose rule", bad)
 		}
 	}
 }
