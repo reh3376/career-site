@@ -1,0 +1,34 @@
+<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;line-height:1.5;color:#1a1a1a">
+<p style="margin:0 0 4px;color:#666">Your meeting with Roger Henley is booked.</p>
+<p style="margin:0 0 2px;font-size:22px"><strong>{{.When}}</strong></p>
+<p style="margin:0 0 20px;color:#666">{{.DurationMinutes}} minutes, {{.ZoneLabel}}</p>
+
+<p style="margin:0 0 16px">{{.HowLine}}</p>
+
+{{if .Topic}}
+<p style="margin:0 0 4px;color:#666;font-size:14px">You said you wanted to discuss</p>
+<p style="margin:0 0 16px;padding:10px 12px;background:#f4f2ee;white-space:pre-wrap">{{.Topic}}</p>
+{{end}}
+
+{{if .VideoSetupLabel}}
+<p style="margin:0 0 16px;padding:10px 12px;border-left:3px solid #1f4b5f;background:#f4f2ee">
+You are hosting on <strong>{{.VideoSetupLabel}}</strong>. Create the room in your own
+calendar and send Roger the link before the meeting.
+</p>
+{{end}}
+
+<p style="margin:0 0 10px">
+<a href="{{.IcsURL}}" style="display:inline-block;padding:10px 18px;background:#1f4b5f;color:#fff;text-decoration:none;border-radius:6px">Add to your calendar</a>
+</p>
+<p style="margin:0 0 20px;font-size:14px">
+Need to change or cancel it? <a href="{{.MeetingsURL}}" style="color:#1f4b5f">Manage your meetings</a>.
+Cancelling frees the slot straight away, so please do rather than not turning up.
+</p>
+
+<p style="margin:24px 0 0;padding-top:12px;border-top:1px solid #e4e0d8;color:#999;font-size:12px">
+This is an automated confirmation from rogerhenley.dev. Replies to this address are not read;
+use the <a href="{{.ContactURL}}" style="color:#999">contact form</a> if you need to reach Roger
+outside the meeting.
+</p>
+</body></html>

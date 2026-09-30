@@ -1126,15 +1126,52 @@ query, and it should stay that way.
 
 ## 6b. Evaluation roadmap
 
-**Current baseline: run 12, 2026-09-28.** 9 of 9 on the right side of
-the gate, 0 ordering violations, margin 0.1071, 0 errors, 4h51m, on
-`requirement_judge` v11 and corpus fingerprint `cf474aec6714`.
+**Called good by the owner on 2026-09-30 after run 15.** The JD
+analysis tools are treated as finished for now; what follows is here so
+it can be picked up, not because it is queued.
 
+**Current baseline: run 15, 2026-09-30.** 10 of 10 on the right side of
+the gate, 0 ordering violations, 0 errors, margin 0.1786, 6h40m, on
+`requirement_judge` v12 and corpus fingerprint `45302f207ba3`.
+
+    run 15  10/10  0 inv   margin 0.1786   v12 bounded schema, cornerstone added
+    run 14   ---           stopped at 5 of 9, blue-origin runaway
+    run 13   ---           stopped at 5 of 9, blue-origin runaway
     run 12   9/9   0 inv   margin 0.1071   v11, corpus unchanged
     run 11   9/9   0 inv   margin 0.1071   five corpus documents added
     run 10   9/9   0 inv   margin 0.1786
     run  9   9/9   0 inv   margin 0.1071
     run  8   9/9   0 inv   margin 0.0714
+
+Margins are only comparable within one corpus and one set size. Runs 8
+to 12 were nine postings on earlier corpora; run 15 is ten on
+`45302f207ba3`.
+
+- **Run 16: the distillation study guide, ingested alone.** Not done.
+  The document is converted and sitting in
+  `docs/personal/corpus/us_spirits_distillation_column_study_guide.md`,
+  already listed in `docs/personal/corpus-manifest.txt` as `article`,
+  and **not synced**. The owner wrote it himself, which is why it was
+  reframed from borrowed reference material to a work sample: it
+  carries a provenance header saying so, and nine checklist stems were
+  reworded from "I can X" to "Able to X", because a retrieved chunk
+  reading `- [ ] I can identify a DP/flooding knee from historian data`
+  is indistinguishable from him claiming it.
+
+  What it involves: `make sync-corpus`, a reindex, wait for the **job**
+  to report done rather than for the embedding backlog to reach zero
+  (that reads early between documents), then a run. Roughly seven hours
+  at ten postings.
+
+  What it would answer: whether a document of genuine process depth,
+  written by him and about a domain the golden set barely touches,
+  moves anything. And the question run 15 left open, whether Blue
+  Origin's LLM requirement stays met now it has a document behind it,
+  given it has read partial, met, unmet, unmet, met across runs 9 to 15
+  and one reading is not a trend.
+
+  Ingest it alone. Adding it alongside anything else forfeits the only
+  thing a seven-hour run buys.
 
 **There is a noise floor of about one requirement per posting per run**,
 at temperature 0, established by run 12 against run 11 with the corpus
