@@ -93,14 +93,37 @@ func (a *Admin) ReviewDecision(
 	if len(note) > 4000 {
 		note = note[:4000]
 	}
-	if err := a.users.ReviewDecision(ctx, id, me.ID, verdict, note); err != nil {
+	// The corrected wording. Capped well above any answer the persona
+	// is allowed to give (rule 9 asks for 150 words) but not so tightly
+	// that the owner cannot write a fuller one where the model's was
+	// too thin.
+	answer := strings.TrimSpace(req.Msg.GetHumanAnswer())
+	if len(answer) > 8000 {
+		answer = answer[:8000]
+	}
+	dims, err := validateDimensions(kind, req.Msg.GetHumanDimensions())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	rev := users.DecisionReview{Verdict: verdict, Note: note, Answer: answer, Dimensions: dims}
+	if err := a.users.ReviewDecision(ctx, id, me.ID, rev); err != nil {
 		if errors.Is(err, users.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("decision not found"))
 		}
 		a.log.Error("ReviewDecision failed", slog.Int64("id", id), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("review failed"))
 	}
-	a.events.Emit(ctx, requestEvent(req, "admin.decision_reviewed", me.ID, map[string]any{"decision_id": id, "verdict": verdict}))
+	// Emitted with enough to answer "how is the training set growing"
+	// from the event stream alone: which kind was graded, what it was
+	// graded, and whether the row gained a target a model could learn
+	// from or only a label it could be counted in.
+	a.events.Emit(ctx, requestEvent(req, "admin.decision_reviewed", me.ID, map[string]any{
+		"decision_id": id,
+		"kind":        kind,
+		"verdict":     verdict,
+		"corrected":   answer != "",
+		"dimensions":  len(dims),
+	}))
 	return connect.NewResponse(&v1.ReviewDecisionResponse{}), nil
 }
 
@@ -155,6 +178,9 @@ func decisionToProto(d *users.Decision) *v1.DecisionLogRow {
 		CreatedAt:        timestamppb.New(d.CreatedAt),
 		HumanVerdict:     d.HumanVerdict,
 		HumanNote:        d.HumanNote,
+		HumanAnswer:      d.HumanAnswer,
+		HumanDimensions:  d.HumanDimensions,
+		FirstTokenMs:     d.FirstTokenMs,
 	}
 	if d.ReviewedBy != nil {
 		row.ReviewedBy = strconv.FormatInt(*d.ReviewedBy, 10)
@@ -179,9 +205,14 @@ func decisionExportLine(d *users.Decision) ([]byte, error) {
 		NumCtx  int    `json:"num_ctx,omitempty"`
 	}
 	type human struct {
-		Verdict    string `json:"verdict"`
-		Note       string `json:"note,omitempty"`
-		ReviewedAt string `json:"reviewed_at"`
+		Verdict string `json:"verdict"`
+		Note    string `json:"note,omitempty"`
+		// The corrected wording, and the reason this export is worth
+		// generating for a prose kind at all. A trainer reads this as
+		// the target and response_text as what to prefer it over.
+		Answer     string            `json:"answer,omitempty"`
+		Dimensions map[string]string `json:"dimensions,omitempty"`
+		ReviewedAt string            `json:"reviewed_at"`
 	}
 	line := map[string]any{
 		"id":            strconv.FormatInt(d.ID, 10),
@@ -194,16 +225,63 @@ func decisionExportLine(d *users.Decision) ([]byte, error) {
 		"prompt_text":   d.PromptText,
 		"response_text": d.ResponseText,
 		"usage": map[string]any{
-			"prompt_tokens": d.PromptTokens, "completion_tokens": d.CompletionTok, "latency_ms": d.LatencyMs,
+			"prompt_tokens": d.PromptTokens, "completion_tokens": d.CompletionTok,
+			"latency_ms": d.LatencyMs, "first_token_ms": d.FirstTokenMs,
 		},
 		"created_at": d.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 	}
 	if d.ReviewedAt != nil {
-		line["human"] = human{Verdict: d.HumanVerdict, Note: d.HumanNote, ReviewedAt: d.ReviewedAt.UTC().Format("2006-01-02T15:04:05Z07:00")}
+		h := human{
+			Verdict:    d.HumanVerdict,
+			Note:       d.HumanNote,
+			Answer:     d.HumanAnswer,
+			ReviewedAt: d.ReviewedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		}
+		if len(d.HumanDimensions) > 0 {
+			h.Dimensions = d.HumanDimensions
+		}
+		line["human"] = h
 	} else {
 		line["human"] = nil
 	}
 	return json.Marshal(line)
+}
+
+// validateDimensions checks the per-rubric grades against the rubric
+// for this decision kind.
+//
+// Unknown keys and values are refused rather than dropped or stored.
+// A grade nobody can interpret is not harmless: it still lands in the
+// table, and the grounding and citation-validity rates are computed by
+// counting grades, so a stray key becomes a number in an acceptance
+// criterion. Refusing is also the only way the owner finds out the
+// console and the rubric have drifted apart.
+func validateDimensions(kind string, in map[string]string) (map[string]string, error) {
+	if len(in) == 0 {
+		return map[string]string{}, nil
+	}
+	allowed, ok := users.ReviewDimensions[kind]
+	if !ok {
+		return nil, fmt.Errorf("a %s decision has no rubric; human_dimensions must be empty", kind)
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		k = strings.ToLower(strings.TrimSpace(k))
+		v = strings.ToLower(strings.TrimSpace(v))
+		if v == "" {
+			continue
+		}
+		if !slices.Contains(allowed, k) {
+			return nil, fmt.Errorf("%q is not a %s dimension; expected one of %s",
+				k, kind, strings.Join(allowed, ", "))
+		}
+		if !slices.Contains(users.ReviewDimensionValues, v) {
+			return nil, fmt.Errorf("dimension %q must be one of %s, not %q",
+				k, strings.Join(users.ReviewDimensionValues, ", "), v)
+		}
+		out[k] = v
+	}
+	return out, nil
 }
 
 func nonEmptyJSON(b []byte) []byte {
