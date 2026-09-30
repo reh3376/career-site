@@ -16,10 +16,18 @@ name: auto-pr
 # does not get a PR opened for it, which is visible rather than silent.
 on:
   push:
-    branches:
-      - "claude_dev*"
-      - "feat/*"
-      - "fix/*"
+    # A denylist, not an allowlist, for the same reason ci.yml became
+    # one: the allowlist was three prefixes and a branch outside them
+    # got no PR at all, silently. On 2026-09-29 a branch named docs/
+    # fell outside it, the PR was opened by hand instead, and that
+    # quietly broke review: a PR created with `gh pr create` is authored
+    # by whoever's token ran it, and GitHub does not let anyone approve
+    # their own pull request. The workaround was worse than the gap.
+    #
+    # Inverting it means a new prefix works the day someone invents it.
+    branches-ignore:
+      - main
+      - "backup/**"
 
 permissions:
   contents: read
