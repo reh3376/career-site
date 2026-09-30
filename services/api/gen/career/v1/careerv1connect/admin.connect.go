@@ -203,6 +203,18 @@ const (
 	// AdminServiceSetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// SetSchedulerSettings RPC.
 	AdminServiceSetSchedulerSettingsProcedure = "/career.v1.AdminService/SetSchedulerSettings"
+	// AdminServiceGetCalendarConnectURLProcedure is the fully-qualified name of the AdminService's
+	// GetCalendarConnectURL RPC.
+	AdminServiceGetCalendarConnectURLProcedure = "/career.v1.AdminService/GetCalendarConnectURL"
+	// AdminServiceConnectCalendarProcedure is the fully-qualified name of the AdminService's
+	// ConnectCalendar RPC.
+	AdminServiceConnectCalendarProcedure = "/career.v1.AdminService/ConnectCalendar"
+	// AdminServiceGetCalendarStatusProcedure is the fully-qualified name of the AdminService's
+	// GetCalendarStatus RPC.
+	AdminServiceGetCalendarStatusProcedure = "/career.v1.AdminService/GetCalendarStatus"
+	// AdminServiceDisconnectCalendarProcedure is the fully-qualified name of the AdminService's
+	// DisconnectCalendar RPC.
+	AdminServiceDisconnectCalendarProcedure = "/career.v1.AdminService/DisconnectCalendar"
 	// AdminServiceGetJdSubmissionLimitProcedure is the fully-qualified name of the AdminService's
 	// GetJdSubmissionLimit RPC.
 	AdminServiceGetJdSubmissionLimitProcedure = "/career.v1.AdminService/GetJdSubmissionLimit"
@@ -431,6 +443,20 @@ type AdminServiceClient interface {
 	// worse than an unchanged one. Existing bookings are never moved:
 	// narrowing the windows stops new bookings, it does not cancel.
 	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
+	// Returns the Google consent URL the owner visits to connect his
+	// calendar, carrying a signed, short-lived state so the callback
+	// cannot be driven by anyone else.
+	GetCalendarConnectURL(context.Context, *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error)
+	// Completes the handshake: exchanges the authorisation code for a
+	// refresh token and stores it encrypted at rest. The code is
+	// single-use and the state is verified before anything is stored.
+	ConnectCalendar(context.Context, *connect.Request[v1.ConnectCalendarRequest]) (*connect.Response[v1.ConnectCalendarResponse], error)
+	// Reads the calendar connection: which account, when it was
+	// connected, and whether it is currently working.
+	GetCalendarStatus(context.Context, *connect.Request[v1.GetCalendarStatusRequest]) (*connect.Response[v1.GetCalendarStatusResponse], error)
+	// Forgets the stored credential. Booking stops immediately; existing
+	// meetings are left alone, on the calendar and in this application.
+	DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -788,6 +814,30 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		getCalendarConnectURL: connect.NewClient[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse](
+			httpClient,
+			baseURL+AdminServiceGetCalendarConnectURLProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetCalendarConnectURL")),
+			connect.WithClientOptions(opts...),
+		),
+		connectCalendar: connect.NewClient[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse](
+			httpClient,
+			baseURL+AdminServiceConnectCalendarProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ConnectCalendar")),
+			connect.WithClientOptions(opts...),
+		),
+		getCalendarStatus: connect.NewClient[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse](
+			httpClient,
+			baseURL+AdminServiceGetCalendarStatusProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetCalendarStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		disconnectCalendar: connect.NewClient[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse](
+			httpClient,
+			baseURL+AdminServiceDisconnectCalendarProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DisconnectCalendar")),
+			connect.WithClientOptions(opts...),
+		),
 		getJdSubmissionLimit: connect.NewClient[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse](
 			httpClient,
 			baseURL+AdminServiceGetJdSubmissionLimitProcedure,
@@ -861,6 +911,10 @@ type adminServiceClient struct {
 	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
 	getSchedulerSettings  *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
 	setSchedulerSettings  *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
+	getCalendarConnectURL *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
+	connectCalendar       *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
+	getCalendarStatus     *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
+	disconnectCalendar    *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
 	getJdSubmissionLimit  *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
 	setJdSubmissionLimit  *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
@@ -1145,6 +1199,26 @@ func (c *adminServiceClient) SetSchedulerSettings(ctx context.Context, req *conn
 	return c.setSchedulerSettings.CallUnary(ctx, req)
 }
 
+// GetCalendarConnectURL calls career.v1.AdminService.GetCalendarConnectURL.
+func (c *adminServiceClient) GetCalendarConnectURL(ctx context.Context, req *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error) {
+	return c.getCalendarConnectURL.CallUnary(ctx, req)
+}
+
+// ConnectCalendar calls career.v1.AdminService.ConnectCalendar.
+func (c *adminServiceClient) ConnectCalendar(ctx context.Context, req *connect.Request[v1.ConnectCalendarRequest]) (*connect.Response[v1.ConnectCalendarResponse], error) {
+	return c.connectCalendar.CallUnary(ctx, req)
+}
+
+// GetCalendarStatus calls career.v1.AdminService.GetCalendarStatus.
+func (c *adminServiceClient) GetCalendarStatus(ctx context.Context, req *connect.Request[v1.GetCalendarStatusRequest]) (*connect.Response[v1.GetCalendarStatusResponse], error) {
+	return c.getCalendarStatus.CallUnary(ctx, req)
+}
+
+// DisconnectCalendar calls career.v1.AdminService.DisconnectCalendar.
+func (c *adminServiceClient) DisconnectCalendar(ctx context.Context, req *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error) {
+	return c.disconnectCalendar.CallUnary(ctx, req)
+}
+
 // GetJdSubmissionLimit calls career.v1.AdminService.GetJdSubmissionLimit.
 func (c *adminServiceClient) GetJdSubmissionLimit(ctx context.Context, req *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
 	return c.getJdSubmissionLimit.CallUnary(ctx, req)
@@ -1375,6 +1449,20 @@ type AdminServiceHandler interface {
 	// worse than an unchanged one. Existing bookings are never moved:
 	// narrowing the windows stops new bookings, it does not cancel.
 	SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error)
+	// Returns the Google consent URL the owner visits to connect his
+	// calendar, carrying a signed, short-lived state so the callback
+	// cannot be driven by anyone else.
+	GetCalendarConnectURL(context.Context, *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error)
+	// Completes the handshake: exchanges the authorisation code for a
+	// refresh token and stores it encrypted at rest. The code is
+	// single-use and the state is verified before anything is stored.
+	ConnectCalendar(context.Context, *connect.Request[v1.ConnectCalendarRequest]) (*connect.Response[v1.ConnectCalendarResponse], error)
+	// Reads the calendar connection: which account, when it was
+	// connected, and whether it is currently working.
+	GetCalendarStatus(context.Context, *connect.Request[v1.GetCalendarStatusRequest]) (*connect.Response[v1.GetCalendarStatusResponse], error)
+	// Forgets the stored credential. Booking stops immediately; existing
+	// meetings are left alone, on the calendar and in this application.
+	DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error)
 	// Reads how many postings one member may submit per rolling day.
 	GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error)
 	// Sets how many postings one member may submit per rolling day
@@ -1728,6 +1816,30 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetSchedulerSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetCalendarConnectURLHandler := connect.NewUnaryHandler(
+		AdminServiceGetCalendarConnectURLProcedure,
+		svc.GetCalendarConnectURL,
+		connect.WithSchema(adminServiceMethods.ByName("GetCalendarConnectURL")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceConnectCalendarHandler := connect.NewUnaryHandler(
+		AdminServiceConnectCalendarProcedure,
+		svc.ConnectCalendar,
+		connect.WithSchema(adminServiceMethods.ByName("ConnectCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceGetCalendarStatusHandler := connect.NewUnaryHandler(
+		AdminServiceGetCalendarStatusProcedure,
+		svc.GetCalendarStatus,
+		connect.WithSchema(adminServiceMethods.ByName("GetCalendarStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDisconnectCalendarHandler := connect.NewUnaryHandler(
+		AdminServiceDisconnectCalendarProcedure,
+		svc.DisconnectCalendar,
+		connect.WithSchema(adminServiceMethods.ByName("DisconnectCalendar")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetJdSubmissionLimitHandler := connect.NewUnaryHandler(
 		AdminServiceGetJdSubmissionLimitProcedure,
 		svc.GetJdSubmissionLimit,
@@ -1854,6 +1966,14 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
 			adminServiceSetSchedulerSettingsHandler.ServeHTTP(w, r)
+		case AdminServiceGetCalendarConnectURLProcedure:
+			adminServiceGetCalendarConnectURLHandler.ServeHTTP(w, r)
+		case AdminServiceConnectCalendarProcedure:
+			adminServiceConnectCalendarHandler.ServeHTTP(w, r)
+		case AdminServiceGetCalendarStatusProcedure:
+			adminServiceGetCalendarStatusHandler.ServeHTTP(w, r)
+		case AdminServiceDisconnectCalendarProcedure:
+			adminServiceDisconnectCalendarHandler.ServeHTTP(w, r)
 		case AdminServiceGetJdSubmissionLimitProcedure:
 			adminServiceGetJdSubmissionLimitHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdSubmissionLimitProcedure:
@@ -2089,6 +2209,22 @@ func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *c
 
 func (UnimplementedAdminServiceHandler) SetSchedulerSettings(context.Context, *connect.Request[v1.SetSchedulerSettingsRequest]) (*connect.Response[v1.SetSchedulerSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetSchedulerSettings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetCalendarConnectURL(context.Context, *connect.Request[v1.GetCalendarConnectURLRequest]) (*connect.Response[v1.GetCalendarConnectURLResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetCalendarConnectURL is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ConnectCalendar(context.Context, *connect.Request[v1.ConnectCalendarRequest]) (*connect.Response[v1.ConnectCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ConnectCalendar is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetCalendarStatus(context.Context, *connect.Request[v1.GetCalendarStatusRequest]) (*connect.Response[v1.GetCalendarStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetCalendarStatus is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DisconnectCalendar(context.Context, *connect.Request[v1.DisconnectCalendarRequest]) (*connect.Response[v1.DisconnectCalendarResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DisconnectCalendar is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetJdSubmissionLimit(context.Context, *connect.Request[v1.GetJdSubmissionLimitRequest]) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {

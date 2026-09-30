@@ -10,6 +10,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/scheduling"
+	"github.com/reh3376/career-site/services/api/internal/secrets"
 )
 
 // SetEvents installs the product event writer on each handler that has
@@ -39,6 +40,24 @@ func (a *Admin) SetJdLimits(s *jd.LimitStore) { a.jdLimits = s }
 func (a *Admin) SetScheduler(s *scheduling.SettingsStore, cal calendar.Provider) {
 	a.scheduler = s
 	a.calendar = cal
+}
+
+// SetCalendarConnect installs everything the Google connect flow needs.
+// Without it the surface reports "not configured", which is a different
+// message from "not connected" and needs a different fix.
+func (a *Admin) SetCalendarConnect(
+	p *scheduling.Provider,
+	clientID, clientSecret string,
+	sealer *secrets.Sealer,
+	stateSecret []byte,
+	webBaseURL string,
+) {
+	a.calProvider = p
+	a.googleClientID = clientID
+	a.googleClientSecret = clientSecret
+	a.sealer = sealer
+	a.stateSecret = stateSecret
+	a.webBaseURL = webBaseURL
 }
 
 // uiModeCookie is the web app's mode cookie (apps/web/src/lib/ui-mode.ts).

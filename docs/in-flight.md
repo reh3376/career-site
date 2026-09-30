@@ -6,7 +6,7 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-09-30, 00:10 UTC.
+Last updated 2026-09-30, 00:40 UTC.
 
 ---
 
@@ -67,41 +67,44 @@ knee from historian data` is indistinguishable from him claiming it.
 **It gets its own run**, at the owner's request, so run 15 changes
 exactly one thing and is a genuine single-variable test.
 
-## 4. Meeting scheduler, everything but the Google provider
+## 4. Meeting scheduler, complete in code, waiting on credentials
 
 FR-CNT-23/26/27/28, FR-ADM-13, decision D-22. Branch
-`feat/scheduler-meetings`.
-
-**Settled by the owner 2026-09-29:** members only, because the target is
-his main personal calendar and an open page would let anyone hold real
-hours on it. Free/busy only, never event contents. 15, 30 or 45 minutes,
-the member's choice. 15 minutes of clearance, not held in advance, so a
-15-minute meeting consumes 30 of the day, a 30 consumes 45, a 45
-consumes 60. The calendar is re-queried immediately before booking.
-America/New_York, stated beside every time, never converted. A
-downloadable `.ics` beside the event.
+`feat/scheduler-google`, PR to follow. PR 200 (everything but the
+provider) is merged.
 
 **Built and tested:** availability and clearance arithmetic, the
-confirmation re-check, the `calendar.Provider` seam with a stub and
-`NotConnected`, `meeting_bookings` with a gist exclusion constraint, the
-repository, the settings store, `MeetingService` and its handler, the
-`/meetings` page, the `.ics` endpoint, and `/admin/scheduler`. Both
-landing surfaces, the member home in both modes, the hamburger menu and
-the admin nav all point at it.
+confirmation re-check, `meeting_bookings` with a gist exclusion
+constraint, the repository, the settings store, `MeetingService` and
+its handler, `/meetings`, the `.ics` endpoint, `/admin/scheduler`, the
+Google provider, AES-256-GCM credential storage, and the OAuth connect
+flow. Both landing surfaces, the member home in both modes, the
+hamburger menu and the admin nav all point at it.
 
-**Not built: the Google provider.** Blocked on the owner's OAuth client
-(Web application, redirect
-`https://rogerhenley.dev/admin/scheduler/callback`, consent screen left
-in Testing with his address as the only test user). Also outstanding
-from FR-ADM-13: the connect flow, the encrypted refresh token (needs
-AES-GCM; only HMAC exists today) and the recent-bookings list.
+**What is left is not code.** Three environment variables and one
+button:
 
-**Deliberately not deployed yet.** The copy on the landing pages
-promises booking, and `access-tiers.ts` says in its own header that the
-list must describe what the software does today. Shipping before the
-provider lands would make that a promise the software answers with "not
-switched on yet". The PR is open for review; the deploy waits for the
-provider.
+    GOOGLE_CLIENT_ID       from a Google Cloud OAuth client (Web application)
+    GOOGLE_CLIENT_SECRET   the same client
+    SECRETS_KEY            openssl rand -base64 32
+
+Redirect URI, character for character:
+`https://rogerhenley.dev/admin/scheduler/callback`. Consent screen may
+stay in Testing with the owner as the only test user, which avoids
+Google's verification review. Full runbook in `deploy/README.md`.
+
+Then `/admin/scheduler` → Connect Google Calendar.
+
+**Known limitation worth remembering:** an unverified app in Testing
+has its refresh tokens expire after seven days. If booking stops about
+a week after connecting, that is why, and Reconnect fixes it. Publishing
+the consent screen removes the limit and triggers Google's review.
+
+**Still open from FR-ADM-13:** the recent-bookings list with cancel
+links in the admin surface.
+
+**Deploy plan:** ship provider and all, then live-test a real booking
+against the owner's calendar, then start run 15.
 
 ## 5. Diagnostics for the next failure, built, awaiting deploy
 

@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 58 |
+| [`AdminService`](#adminservice) | Owner console. | 62 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -2056,6 +2056,10 @@ Owner console.
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
+| [`GetCalendarConnectURL`](#adminservice-getcalendarconnecturl) | `/api/career.v1.AdminService/GetCalendarConnectURL` | Admin (fresh MFA) | default | `GetCalendarConnectURLRequest` → `GetCalendarConnectURLResponse` | Returns the Google consent URL the owner visits to connect his calendar, carrying a signed, short-lived state so the callback cannot be driven by anyone else. |
+| [`ConnectCalendar`](#adminservice-connectcalendar) | `/api/career.v1.AdminService/ConnectCalendar` | Admin (fresh MFA) | default | `ConnectCalendarRequest` → `ConnectCalendarResponse` | Completes the handshake: exchanges the authorisation code for a refresh token and stores it encrypted at rest. |
+| [`GetCalendarStatus`](#adminservice-getcalendarstatus) | `/api/career.v1.AdminService/GetCalendarStatus` | Admin (fresh MFA) | default | `GetCalendarStatusRequest` → `GetCalendarStatusResponse` | Reads the calendar connection: which account, when it was connected, and whether it is currently working. |
+| [`DisconnectCalendar`](#adminservice-disconnectcalendar) | `/api/career.v1.AdminService/DisconnectCalendar` | Admin (fresh MFA) | default | `DisconnectCalendarRequest` → `DisconnectCalendarResponse` | Forgets the stored credential. |
 | [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin (fresh MFA) | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
 | [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin (fresh MFA) | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
 
@@ -3973,6 +3977,114 @@ narrowing the windows stops new bookings, it does not cancel.
     ]
   }
 }
+```
+
+</details>
+
+### AdminService.GetCalendarConnectURL
+
+`POST /api/career.v1.AdminService/GetCalendarConnectURL` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Returns the Google consent URL the owner visits to connect his
+calendar, carrying a signed, short-lived state so the callback
+cannot be driven by anyone else.
+
+**Request** — [`GetCalendarConnectURLRequest`](#getcalendarconnecturlrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetCalendarConnectURLResponse`](#getcalendarconnecturlresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `url` | `string` | string |  | The full consent URL, including the signed state. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.ConnectCalendar
+
+`POST /api/career.v1.AdminService/ConnectCalendar` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Completes the handshake: exchanges the authorisation code for a
+refresh token and stores it encrypted at rest. The code is
+single-use and the state is verified before anything is stored.
+
+**Request** — [`ConnectCalendarRequest`](#connectcalendarrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `code` | `string` | string | `string: min_len: 1` | The one-time code from the callback's query string. |
+| `state` | `string` | string | `string: min_len: 1` | The state from the callback, verified against the one issued. |
+
+**Response** — [`ConnectCalendarResponse`](#connectcalendarresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status after connecting. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "code": "string",
+  "state": "string"
+}
+```
+
+</details>
+
+### AdminService.GetCalendarStatus
+
+`POST /api/career.v1.AdminService/GetCalendarStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads the calendar connection: which account, when it was
+connected, and whether it is currently working.
+
+**Request** — [`GetCalendarStatusRequest`](#getcalendarstatusrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetCalendarStatusResponse`](#getcalendarstatusresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.DisconnectCalendar
+
+`POST /api/career.v1.AdminService/DisconnectCalendar` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Forgets the stored credential. Booking stops immediately; existing
+meetings are left alone, on the calendar and in this application.
+
+**Request** — [`DisconnectCalendarRequest`](#disconnectcalendarrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`DisconnectCalendarResponse`](#disconnectcalendarresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
 ```
 
 </details>
@@ -6826,6 +6938,80 @@ The settings as stored.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `settings` | [`SchedulerSettings`](#schedulersettings) | object |  | Stored settings. |
+
+### GetCalendarConnectURLRequest
+
+Request for GetCalendarConnectURL.
+
+_No fields._
+
+### GetCalendarConnectURLResponse
+
+Where to send the owner to authorise.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `url` | `string` | string |  | The full consent URL, including the signed state. |
+
+### ConnectCalendarRequest
+
+The authorisation code Google handed back.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `code` | `string` | string | `string: min_len: 1` | The one-time code from the callback's query string. |
+| `state` | `string` | string | `string: min_len: 1` | The state from the callback, verified against the one issued. |
+
+### ConnectCalendarResponse
+
+The connection as stored.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status after connecting. |
+
+### GetCalendarStatusRequest
+
+Request for GetCalendarStatus.
+
+_No fields._
+
+### CalendarStatus
+
+Whether a calendar is connected, and whether it is working.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `configured` | `bool` | boolean |  | True when this deployment has the client credentials and sealing key needed to connect at all. False means set the environment variables, which is a different fix from pressing connect. |
+| `connected` | `bool` | boolean |  | True when a credential is stored. |
+| `accountEmail` | `string` | string |  | The Google account that authorised, for the owner to recognise. |
+| `calendarId` | `string` | string |  | Which calendar is written to; "primary" is the account's own. |
+| `scopes` | `string` | string |  | Scopes Google actually granted, so a consent screen that returned less than was asked for is visible rather than surfacing later as a puzzling refusal. |
+| `connectedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the owner connected it. |
+| `lastOkAt` | `Timestamp` | string (RFC 3339, UTC) |  | When Google last answered successfully. Absent means it has never worked, which is different from having stopped. |
+| `lastError` | `string` | string |  | Why the last call failed, if it did. Empty when healthy. |
+
+### GetCalendarStatusResponse
+
+The current connection.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status. |
+
+### DisconnectCalendarRequest
+
+Request for DisconnectCalendar.
+
+_No fields._
+
+### DisconnectCalendarResponse
+
+The connection after forgetting the credential.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | [`CalendarStatus`](#calendarstatus) | object |  | Current status. |
 
 ### GetJdSubmissionLimitRequest
 
