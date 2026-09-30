@@ -251,68 +251,25 @@ connect. Everything else about the scheduler works without them, and
 every surface says "not switched on yet" rather than showing an empty
 calendar that reads as "never free".
 
-### 1. The OAuth client (you, once)
-
-Google Cloud console, the project of your choice:
-
-1. APIs & Services → Library → enable **Google Calendar API**.
-2. OAuth consent screen → **External**, publishing status **Testing**,
-   and add your own address under Test users. Testing is deliberate: it
-   avoids Google's verification review, and a test user's refresh token
-   is all this needs. The seven-day refresh-token expiry that applies
-   to unverified apps in Testing is worth knowing about; if booking
-   stops after a week, press Reconnect.
-3. Credentials → Create credentials → **OAuth client ID** → **Web
-   application**.
-4. Authorised redirect URI, exactly:
-   `https://rogerhenley.dev/admin/scheduler/callback`
-   It must match character for character, including the scheme and no
-   trailing slash, or Google refuses with redirect_uri_mismatch.
-5. Copy the client ID and client secret.
-
-### 2. The sealing key (you, once)
-
-The refresh token is encrypted before it reaches the database. Generate
-a 32-byte key:
-
-    openssl rand -base64 32
-
-Keep it. **Losing it does not lose the calendar, but it does lose the
-stored credential**: the token cannot be opened, the api logs that it
-could not, and booking reports not-connected until you press Reconnect,
-which stores a fresh one under the new key.
-
-### 3. Set them in `.env.prod` on the server
-
     GOOGLE_CLIENT_ID=...apps.googleusercontent.com
     GOOGLE_CLIENT_SECRET=...
-    SECRETS_KEY=<the base64 from openssl>
+    SECRETS_KEY=<openssl rand -base64 32>
 
-Then `deploy/rollout.sh`, or `docker compose up -d api` if only the
-environment changed. The api warns at boot when either is missing, so
-`docker compose logs api` says which one.
+Redirect URI registered with Google, character for character:
+`https://rogerhenley.dev/admin/scheduler/callback`
 
-### 4. Connect (you, once)
+**Full walkthrough: [`google-calendar-setup.md`](google-calendar-setup.md).**
+Every click in the Google console, the `.env.prod` formatting rules that
+have caught people out, how to verify without printing the secrets, and
+six checks that prove it actually books rather than merely connects.
 
-`/admin/scheduler` → **Connect Google Calendar** → Google's own consent
-screen → back to the callback. The panel then names the account and
-shows when Google last answered.
-
-The consent screen is Google's own page, never embedded here: a page
-asking for Google credentials inside this site's chrome is the shape of
-a phishing page and should be refused by habit.
-
-### What it can and cannot see
-
-Free/busy only. The scope is `calendar.events` plus
-`calendar.freebusy`, so the application can create and delete its own
-events and ask when you are busy, and cannot read the title, attendees
-or contents of anything else on your calendar. That is a decision
-(FR-CNT-26), not an accident, and it is why the scope is not
-`calendar.readonly`.
-
-Disconnecting clears the credential and stops new bookings. Meetings
-already agreed are left alone, both on your calendar and here.
+Two things from it worth knowing before you start. The consent screen
+stays in **Testing**, which avoids Google's verification review but
+expires refresh tokens after **seven days**; if booking stops about a
+week after it starts, that is why, and Reconnect fixes it. And the
+scopes are `calendar.events` plus `calendar.freebusy`, so the
+application can manage its own events and see when you are busy, and
+cannot read anything else on your calendar (FR-CNT-26).
 
 ## Backups (next)
 
