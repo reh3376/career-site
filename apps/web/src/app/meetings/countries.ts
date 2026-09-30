@@ -62,5 +62,5 @@ export const DEFAULT_COUNTRY = "+1";
 export function numberHint(code: string) {
   return code === "+1"
     ? "Area code and number, ten digits."
-    : "Your number without the leading zero.";
+    : "Digits only, no spaces or punctuation.";
 }

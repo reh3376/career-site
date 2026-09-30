@@ -26,27 +26,29 @@ const (
 
 // Phone numbers, validated by how much can honestly be asserted.
 //
-// North American numbers are always ten digits after the +1, so saying
-// so catches a transposed or dropped digit, which is the whole reason
-// to have a rule: a mistyped number that reaches the owner looking
-// correct is worse than no number at all.
+// North American numbers are always ten digits after the +1, so the
+// rule there is exact. That is the whole reason to have one: it catches
+// a transposed or dropped digit, and a mistyped number that reaches the
+// owner looking correct is worse than no number at all.
 //
-// Everywhere else the national length genuinely varies, from seven
-// digits to twelve, so a fixed rule would reject real numbers. The
-// check there is only that it is plausibly a phone number at all.
-// E.164 caps the whole thing at fifteen digits including the country
-// code, which is the outer bound used here.
+// Everywhere else there is no length rule at all (owner, 2026-09-30).
+// National lengths genuinely vary, from seven digits to twelve and
+// beyond, and any number this code invented would turn away real
+// numbers. The only requirement is that it is digits: no spaces inside
+// it, no dashes, no parentheses, nothing to interpret. The proto caps
+// the field at 32 characters, which is a field limit rather than a
+// claim about telephony.
 //
-// Both shapes are escapable. A number that fits neither is not an
-// error a member should have to argue with, so leaving it blank says
-// the number is in the comments and the booking proceeds.
+// Both shapes are escapable. A number that fits neither is not an error
+// a member should have to argue with, so leaving it blank says the
+// number is in the comments and the booking proceeds.
 var (
 	phoneNANP  = regexp.MustCompile(`^\+?1 [0-9]{10}$`)
-	phoneOther = regexp.MustCompile(`^\+?[0-9]{1,3} [0-9]{4,14}$`)
+	phoneOther = regexp.MustCompile(`^\+?[0-9]{1,3} [0-9]+$`)
 )
 
 var errPhoneShape = errors.New(
-	"that does not look like a complete number; a North American number is ten digits after +1, or leave it blank and say it in the comments")
+	"a North American number is ten digits after +1; elsewhere give digits only, with no spaces or punctuation, or leave it blank and say it in the comments")
 
 // validPhone reports whether a submitted number is one we will pass on
 // to the owner.
@@ -54,8 +56,9 @@ func validPhone(s string) bool {
 	if phoneNANP.MatchString(s) {
 		return true
 	}
-	// The NANP rule is the stricter one and owns +1 entirely, so a +1
-	// number that failed it must not fall through to the looser check.
+	// The NANP rule owns +1 entirely, so a +1 number that failed it must
+	// not fall through to the digits-only check and be accepted at the
+	// wrong length.
 	if strings.HasPrefix(s, "+1 ") || strings.HasPrefix(s, "1 ") {
 		return false
 	}

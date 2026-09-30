@@ -72,27 +72,32 @@ func TestNorthAmericanNumbersAreStrict(t *testing.T) {
 	}
 }
 
-// Everywhere else the national length genuinely varies, so a ten-digit
-// rule would reject real numbers. The check is only that it is
-// plausibly a phone number.
-func TestOtherCountriesAreNotForcedToTenDigits(t *testing.T) {
+// Everywhere else there is no length rule (owner, 2026-09-30): the
+// only requirement is digits. Any length this code invented would turn
+// away real numbers somewhere.
+func TestOtherCountriesHaveNoLengthRule(t *testing.T) {
 	for _, ok := range []string{
-		"+44 2079460958",  // London, ten
-		"+44 7911123456",  // UK mobile, ten
-		"+353 15551234",   // Dublin, eight
-		"+49 3012345678",  // Berlin, ten
-		"+61 291234567",   // Sydney, nine
-		"+86 13812345678", // China mobile, eleven
+		"+44 2079460958",     // London, ten
+		"+353 15551234",      // Dublin, eight
+		"+61 291234567",      // Sydney, nine
+		"+86 13812345678",    // China mobile, eleven
+		"+44 123",            // short, and not ours to refuse
+		"+49 30123456789012", // long, likewise
 	} {
 		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
 			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, ok)); err != nil {
 			t.Errorf("%q was refused: %v", ok, err)
 		}
 	}
+	// Digits only: nothing to interpret, and nothing that could arrive
+	// looking like a number and not be one.
 	for _, bad := range []string{
-		"+44 123",              // too short to be a number
-		"+44 1234567890123456", // past E.164's fifteen digits
-		"+44 20 7946 0958",     // spaces inside the number
+		"+44 20 7946 0958",  // spaces inside the number
+		"+44 207-946-0958",  // dashes
+		"+44 (20) 79460958", // parentheses
+		"+44 call me",       // words
+		"+44 ",              // a code and nothing else
+		"+44 0790x123456",   // a letter hiding in it
 	} {
 		if _, err := contactFromRequest(req(careerv1.MeetingType_MEETING_TYPE_PHONE,
 			careerv1.VideoProvider_VIDEO_PROVIDER_UNSPECIFIED, bad)); err == nil {
