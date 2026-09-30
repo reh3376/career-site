@@ -41,26 +41,44 @@ later and does not mention it.
 
 Left menu → **APIs & Services** → **OAuth consent screen**.
 
-1. User type: **External**. Internal is only offered with Google
+1. **If Google asks "What data will you be accessing?", choose
+   `User data`.** This fork appears on some paths through the console
+   and not others; the wrong branch leads to a service-account flow that
+   cannot work here. See the note below.
+2. User type: **External**. Internal is only offered with Google
    Workspace, and even then External is what you want here.
-2. **Create**.
-3. App information:
+3. **Create**.
+4. App information:
    - App name: something you will recognise on the consent screen, for
      example `rogerhenley.dev scheduler`.
    - User support email: your own address.
    - Developer contact information: your own address.
-4. **Save and continue**.
-5. Scopes: **Save and continue** without adding any. The application
+5. **Save and continue**.
+6. Scopes: **Save and continue** without adding any. The application
    asks for its scopes at the moment it sends you to Google, so
    anything added here is redundant.
-6. Test users: **Add users**, enter your own Google address, **Add**,
+7. Test users: **Add users**, enter your own Google address, **Add**,
    then **Save and continue**.
-7. Summary: **Back to dashboard**.
+8. Summary: **Back to dashboard**.
 
 Leave the publishing status as **Testing**. Publishing triggers
-Google's verification review, which is weeks of work for an
-application with exactly one user. See the seven-day note at the end of
-this document for the one cost of staying in Testing.
+Google's verification review, which is weeks of work for an application
+with exactly one user. See the seven-day note at the end of this
+document for the one cost of staying in Testing.
+
+**Why User data and not Application data.** The distinction is whose
+data it is. User data belongs to a Google user and is reached by asking
+that user's permission, which is exactly this: it is your calendar, and
+you grant access on the consent screen in Part 4. Application data
+belongs to the application itself and is reached with a service account
+and no human consent.
+
+Application data is not merely the wrong choice here, it is impossible.
+A service account is its own identity with its own empty calendar and
+cannot read yours. Making one act as you requires domain-wide
+delegation, which needs a Google Workspace admin console; a personal
+Google account has none, and it would be a far heavier grant than
+booking a meeting needs.
 
 ### 1.4 Create the OAuth client
 
