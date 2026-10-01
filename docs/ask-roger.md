@@ -464,6 +464,25 @@ including `first_token_ms`, and the `human` block with verdict, note,
    the time, because the persona system prompt is byte-identical on
    every call and is exactly the thing a KV cache makes free.
 
+   **It front-loads on every restart.** The scheduler fires each job
+   once at start, so the warm begins within seconds of boot and the
+   cold 78 seconds lands inside the deploy window rather than on a
+   visitor: a deploy spends minutes pulling images, restarting and
+   running live checks before anyone can arrive. Confirmed on
+   production, first tick after a deploy 78.2 s, next tick 0.2 s.
+
+   The tick runs every minute, because a warm tick costs 0.2 s and the
+   interval is really a bound on how long someone can arrive to a cold
+   cache after something evicted it.
+
+   **It stands aside for a JD run.** There is one cache slot
+   (`OLLAMA_NUM_PARALLEL=1`), so a run and the chat prefix cannot both
+   be held. Warming through a run would evaluate two thousand tokens,
+   be evicted by the run's next call, and do it again a minute later:
+   CPU spent on a cache nothing will read, taken from the run that is
+   actually working. Chat is slow during an evaluation either way; this
+   stops it also making the evaluation slower.
+
    Measured on the box, warm, with a fixed system prompt and two
    *different* questions:
 

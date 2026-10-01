@@ -146,3 +146,74 @@ func (r *recordingModel) Generate(_ context.Context, req llm.Request) (*llm.Resp
 	}
 	return &llm.Response{Text: "ok", Model: "test"}, nil
 }
+
+type fakeBusy struct {
+	busy bool
+	err  error
+}
+
+func (f fakeBusy) JDRunInProgress(context.Context) (bool, error) { return f.busy, f.err }
+
+// The warmer stands aside while a JD run holds the cache slot.
+//
+// There is one slot. Warming through a run would evaluate two thousand
+// tokens, be evicted by the run's next call, and do it again a minute
+// later: CPU spent on a cache nothing will read, taken from the run
+// that is actually working.
+func TestTheWarmerStandsAsideForAJdRun(t *testing.T) {
+	m := &recordingModel{}
+	w := &Warmer{
+		Model: m,
+		Busy:  fakeBusy{busy: true},
+		Facts: &Facts{
+			Source: &fakeFactsSource{chunks: []users.CorpusHit{factChunk("Roles.")}},
+			TTL:    time.Hour,
+		},
+	}
+	if err := w.Run(context.Background()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if m.calls != 0 {
+		t.Errorf("warmed through a JD run (%d calls)", m.calls)
+	}
+}
+
+// With nothing running it warms as normal.
+func TestTheWarmerRunsWhenNothingHoldsTheSlot(t *testing.T) {
+	m := &recordingModel{}
+	w := &Warmer{
+		Model: m,
+		Busy:  fakeBusy{busy: false},
+		Facts: &Facts{
+			Source: &fakeFactsSource{chunks: []users.CorpusHit{factChunk("Roles.")}},
+			TTL:    time.Hour,
+		},
+	}
+	if err := w.Run(context.Background()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if m.calls != 1 {
+		t.Errorf("model calls = %d, want 1", m.calls)
+	}
+}
+
+// A database that will not answer must not stop the warming. Being
+// unable to ask whether something is running is not a reason to let the
+// cache go cold.
+func TestAFailedBusyCheckStillWarms(t *testing.T) {
+	m := &recordingModel{}
+	w := &Warmer{
+		Model: m,
+		Busy:  fakeBusy{err: errors.New("down")},
+		Facts: &Facts{
+			Source: &fakeFactsSource{chunks: []users.CorpusHit{factChunk("Roles.")}},
+			TTL:    time.Hour,
+		},
+	}
+	if err := w.Run(context.Background()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if m.calls != 1 {
+		t.Errorf("a failed busy check stopped the warming (%d calls)", m.calls)
+	}
+}

@@ -54,6 +54,11 @@ type WarmSource interface {
 	ListChunksByKind(ctx context.Context, sourceKind string, limit int) ([]users.CorpusHit, error)
 }
 
+// BusySource reports whether something else needs the one cache slot.
+type BusySource interface {
+	JDRunInProgress(ctx context.Context) (bool, error)
+}
+
 // Facts loads and renders the career facts sheet.
 //
 // Cached in memory with a short life. The text has to be byte-identical
@@ -130,7 +135,9 @@ func (f *Facts) log() *slog.Logger {
 type Warmer struct {
 	Model Generator
 	Facts *Facts
-	Log   *slog.Logger
+	// Busy is asked before every tick. Nil warms unconditionally.
+	Busy BusySource
+	Log  *slog.Logger
 }
 
 // Run sends the prefix and asks for one token.
@@ -142,6 +149,22 @@ func (w *Warmer) Run(ctx context.Context) error {
 	if w == nil || w.Model == nil {
 		return nil
 	}
+	// Stand aside for a JD run.
+	//
+	// There is one KV cache slot, so a run and the chat prefix cannot
+	// both be cached. Warming through a run would evaluate two thousand
+	// tokens, be evicted by the run's next call, and do it again on the
+	// next tick: minutes of CPU spent on a cache nothing will read,
+	// taken from the run that is actually working. Chat is slow during
+	// an evaluation either way; this stops it also making the
+	// evaluation slower.
+	if w.Busy != nil {
+		if busy, err := w.Busy.JDRunInProgress(ctx); err == nil && busy {
+			w.log().Debug("prefix warming paused; a JD run holds the cache slot")
+			return nil
+		}
+	}
+
 	facts := w.Facts.Text(ctx)
 	if facts == "" {
 		// Nothing stable to warm beyond the system prompt, which the
