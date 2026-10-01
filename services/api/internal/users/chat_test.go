@@ -199,3 +199,64 @@ func TestAppendingMovesTheConversationUpTheList(t *testing.T) {
 	}
 	_ = newer
 }
+
+// A chat answer's decision and usage rows must actually insert.
+//
+// They did not, and nothing caught it. run_id on both decision_log and
+// llm_usage is a foreign key to jd_runs, so a run id minted for a chat
+// answer matched no row and both inserts failed the constraint. Both
+// writes are best-effort by design, so the failure surfaced as a log
+// line nobody was reading, and two answers were served to Roger with no
+// training record at all.
+//
+// A unit test with fakes cannot catch this: the bug is a constraint,
+// and a fake store has none. It needs a real database, which is what
+// this file already uses.
+func TestAChatDecisionAndItsUsageRowActuallyInsert(t *testing.T) {
+	r, ctx := chatRepo(t)
+	u := makeMember(t, r, ctx, "chat-decision@example.test")
+	convID, err := r.CreateConversation(ctx, Conversation{UserID: u, PersonaVersion: "v2:test"})
+	if err != nil {
+		t.Fatalf("create conversation: %v", err)
+	}
+	msgID, err := r.AppendMessage(ctx, ChatMessage{
+		ConversationID: convID, Role: "assistant", Text: "an answer",
+	})
+	if err != nil {
+		t.Fatalf("append message: %v", err)
+	}
+
+	d, err := NewChatDecision(msgID, "ollama:qwen3:4b-q8_0", "prompt", "response",
+		ChatDecisionInput{Question: "q", Path: ChatPathModel},
+		ChatDecisionOutput{Text: "an answer"},
+		1201, 94, 2, 8192, "")
+	if err != nil {
+		t.Fatalf("build decision: %v", err)
+	}
+	if err := r.InsertDecisions(ctx, []Decision{d}); err != nil {
+		t.Fatalf("the decision row did not insert, so the answer left no training record: %v", err)
+	}
+
+	if err := r.RecordLLMUsage(ctx, LLMUsage{
+		Kind: "chat", RefID: convID, Model: "ollama:qwen3:4b-q8_0",
+		PromptID: "ask_roger_persona", PromptVersion: 2,
+		PromptTokens: 1201, CompletionTokens: 94, LatencyMs: 24000, OK: true,
+	}); err != nil {
+		t.Fatalf("the usage row did not insert, so the budget cap is blind: %v", err)
+	}
+
+	var decisions, usage int
+	if err := r.pool.QueryRow(ctx,
+		`SELECT (SELECT count(*) FROM decision_log WHERE ref_kind='chat_message' AND ref_id=$1),
+		        (SELECT count(*) FROM llm_usage WHERE kind='chat' AND ref_id=$2)`,
+		msgID, convID).Scan(&decisions, &usage); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if decisions != 1 || usage != 1 {
+		t.Errorf("decision rows = %d, usage rows = %d, want 1 and 1", decisions, usage)
+	}
+	t.Cleanup(func() {
+		_, _ = r.pool.Exec(context.Background(), `DELETE FROM decision_log WHERE ref_kind='chat_message' AND ref_id=$1`, msgID)
+		_, _ = r.pool.Exec(context.Background(), `DELETE FROM llm_usage WHERE kind='chat' AND ref_id=$1`, convID)
+	})
+}
