@@ -182,15 +182,54 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
 	return out, rows.Err()
 }
 
-// FailStrandedRuns closes runs left at `running` by a process that
-// died. Called at boot beside FailStrandedJd, so the run table never
-// implies work is still happening when nothing is.
+// jdRunTerminalStatuses are the states a run can legitimately rest in.
+//
+// Named as the terminal set rather than as a list of in-flight states on
+// purpose. A run row exists only once a run has started, so anything not
+// in this list means work was in flight and the process that owned it is
+// gone. Listing the in-flight states instead means every status added
+// later is stranded by default until someone remembers to add it here,
+// which is exactly what happened: see FailStrandedRuns.
+var jdRunTerminalStatuses = []string{
+	"ready", "failed", "below_threshold", "not_a_posting",
+}
+
+// FailStrandedRuns closes runs left in flight by a process that died.
+// Called at boot beside FailStrandedJd, so the run table never implies
+// work is still happening when nothing is.
+//
+// # Why this is not simply `status = 'running'`
+//
+// It was, and it missed two ways at once. Run 32 on production sat at
+// `generating` from 25 September to 1 October, six days, because:
+//
+//   - the status was `generating`, not `running`, so the equality
+//     matched nothing; and
+//   - `finished_at` had been written half a second after the run
+//     started, so the `finished_at IS NULL` guard excluded it as well.
+//
+// A process can die between writing finished_at and writing a terminal
+// status, so finished_at says nothing about whether the run concluded.
+// Only the status does, and a non-terminal status at boot means nobody
+// is coming back for it.
+//
+// That row was not merely untidy. JDRunInProgress asks this table
+// whether the one KV cache slot is in use, so a run stranded at
+// `running` would have paused chat prefix warming indefinitely, with no
+// symptom except answers quietly becoming a minute slower. Run 32
+// escaped that only by being stranded in the other status.
+//
+// finished_at is preserved where one was already written, because that
+// timestamp is evidence about when the work stopped and now() would
+// overwrite it with the time of an unrelated restart.
 func (r *Repo) FailStrandedRuns(ctx context.Context) (int64, error) {
 	tag, err := r.pool.Exec(ctx, `
     UPDATE jd_runs
-       SET status = 'failed', error = 'the process restarted while this run was in flight',
-           finished_at = now()
-     WHERE status = 'running' AND finished_at IS NULL`)
+       SET status = 'failed',
+           error = CASE WHEN error <> '' THEN error
+                        ELSE 'the process restarted while this run was in flight' END,
+           finished_at = coalesce(finished_at, now())
+     WHERE status <> ALL($1::text[])`, jdRunTerminalStatuses)
 	if err != nil {
 		return 0, fmt.Errorf("fail stranded runs: %w", err)
 	}
