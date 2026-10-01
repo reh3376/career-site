@@ -38,6 +38,18 @@ from pathlib import Path
 
 TEMPLATE = Path("scripts/templates/resume-pandoc.typ")
 
+# Résumés the two-page rule does not apply to.
+#
+# The master is the complete record every tailored résumé is cut down
+# from, so its length is the point. Squeezing it to two pages would
+# make the source document harder to read in order to satisfy a rule
+# written for the documents derived from it.
+#
+# Exempt means exempt twice over: no density tightening, and no flag in
+# the report. Flagging it every run trains the reader to ignore the
+# column that is supposed to catch a real regression.
+LENGTH_EXEMPT = {"reh-resume-Master"}
+
 
 def page_count(path: Path) -> int | None:
     try:
@@ -136,6 +148,11 @@ def render(md: Path, out_pdf: Path, tmp: Path, density: dict[str, str]) -> None:
 
 def render_to_fit(md: Path, out_pdf: Path, tmp: Path, max_pages: int) -> tuple[int, str]:
     """Render at the loosest density that still fits. Returns pages and level."""
+    if md.stem in LENGTH_EXEMPT:
+        # Loosest density, once, and take whatever length it comes to.
+        name, density = DENSITIES[0]
+        render(md, out_pdf, tmp, density)
+        return page_count(out_pdf) or 0, name
     pages, level = 0, DENSITIES[-1][0]
     for name, density in DENSITIES:
         render(md, out_pdf, tmp, density)
@@ -198,7 +215,7 @@ def main() -> int:
             rows.append((md.stem, old, new, level))
             if old is not None and new > old:
                 grew += 1
-            if new > args.max_pages:
+            if new > args.max_pages and md.stem not in LENGTH_EXEMPT:
                 over += 1
             ok += 1
 
@@ -209,7 +226,11 @@ def main() -> int:
         if old is not None and new > old:
             flags.append("longer than original")
         if new > args.max_pages:
-            flags.append(f"OVER {args.max_pages}-PAGE RULE")
+            flags.append(
+                "long by design"
+                if stem in LENGTH_EXEMPT
+                else f"OVER {args.max_pages}-PAGE RULE"
+            )
         note = ("  " + ", ".join(flags)) if flags else ""
         shown = level if level != "default" else ""
         print(f"{stem:<{width}} {str(old if old is not None else '-'):>5} {new:>5}  {shown:<8}{note}")
