@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CoreActionsOt } from "./core-actions";
 import { PodcastsOt } from "./podcasts";
+import { WhyThisExistsOt } from "./why-this-exists";
 
 import { setUiModeAction } from "@/app/actions/ui-mode";
 import { GithubReposOt } from "@/components/github-repos";
@@ -251,6 +252,12 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
         <section aria-label="Core functions" className="md:col-span-12">
           <PanelHeader tag="CF-1" title="CORE FUNCTIONS" />
           <CoreActionsOt signedIn={signedIn} />
+        </section>
+
+        {/* The argument the rest of the panel set is evidence for. */}
+        <section aria-label="Why this exists" className="md:col-span-12">
+          <PanelHeader tag="WX-1" title="DESIGN INTENT · WHY THIS EXISTS" />
+          <WhyThisExistsOt />
         </section>
 
         {/* Podcast appearances. Public, no account needed, and the same
