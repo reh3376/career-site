@@ -301,6 +301,9 @@ function buildGroups({
     { kind: "link", label: "Home", href: "/" },
     { kind: "link", label: "Articles", href: "/articles" },
     { kind: "link", label: "Gallery", href: "/gallery" },
+    // Anchors into the landing page, so it works from every page the
+    // menu appears on rather than only from the landing itself.
+    { kind: "link", label: "Podcasts", href: "/#podcasts" },
     { kind: "link", label: "How it works", href: "/how-ask-roger-works" },
     { kind: "link", label: "Contact", href: "/contact" },
   ];

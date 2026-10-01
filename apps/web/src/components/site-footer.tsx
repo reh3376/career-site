@@ -44,6 +44,16 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                {/* Anchors into the landing page rather than its own
+                    route, so it works from any page the footer is on. */}
+                <Link
+                  href="/#podcasts"
+                  className="text-ink-2 no-underline hover:text-accent"
+                >
+                  Podcasts
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>

@@ -233,6 +233,7 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
               </li>
               <NavRow tag="/articles" label="WRITING" href="/articles" note="open, no account" />
               <NavRow tag="/gallery" label="ON.THE.FLOOR" href="/gallery" note="work photos" />
+              <NavRow tag="#podcasts" label="GUEST.AUDIO" href="#podcasts" note="two episodes" />
               <NavRow tag="/register" label="ACCESS.REQ" href="/register" note="hiring managers" />
               <NavRow tag="/login" label="SESSION.NEW" href="/login" note="members" />
               <NavRow tag="/contact" label="MSG.OUT" href="/contact" note="email roger" />
@@ -254,7 +255,11 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
 
         {/* Podcast appearances. Public, no account needed, and the same
             two episodes the editorial mode lists, from the same array. */}
-        <section aria-label="Podcast appearances" className="md:col-span-12">
+        <section
+          id="podcasts"
+          aria-label="Podcast appearances"
+          className="scroll-mt-20 md:col-span-12"
+        >
           <PanelHeader tag="PC-1" title="GUEST APPEARANCES" />
           <PodcastsOt />
         </section>

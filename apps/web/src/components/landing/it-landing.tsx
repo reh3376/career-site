@@ -203,7 +203,28 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             >
               reach out directly
             </Link>
-            .
+            . The{" "}
+            <Link
+              href="/articles"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              writing
+            </Link>
+            , the{" "}
+            <Link
+              href="/gallery"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              work photos
+            </Link>{" "}
+            and the{" "}
+            <Link
+              href="#podcasts"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              podcast appearances
+            </Link>{" "}
+            are open to anyone.
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
@@ -220,6 +241,13 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
               className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
             >
               work photos
+            </Link>{" "}
+            and the{" "}
+            <Link
+              href="#podcasts"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              podcast appearances
             </Link>{" "}
             are open; read them first. An
             account is for the reviewer: paste a posting and it reads it
