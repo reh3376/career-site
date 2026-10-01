@@ -165,3 +165,32 @@ func TestPersonaIsRegisteredAndStable(t *testing.T) {
 		}
 	}
 }
+
+// Shortening the answer is a latency change, not a style change.
+//
+// Generation runs at about 8 tokens a second on the box, so the length
+// rule and the token cap are the two things that decide how long a
+// reader waits after the first word. Both were loosened against an
+// earlier, wrong estimate of the rate; this pins them so a later edit
+// has to mean it.
+func TestTheAnswerBoundsStayTightEnoughToWaitFor(t *testing.T) {
+	// 200 tokens at the measured 8 tok/s is 25 seconds in the worst
+	// case. Anything much above this stops being an answer someone
+	// waits for.
+	if AskRogerAnswerMaxTokens > 240 {
+		t.Errorf("AskRogerAnswerMaxTokens = %d; at 8 tok/s that is %d seconds of generation",
+			AskRogerAnswerMaxTokens, AskRogerAnswerMaxTokens/8)
+	}
+	if !strings.Contains(AskRogerPersona.System, "under 90 words") {
+		t.Error("rule 9 no longer states a word limit; it is the only thing bounding the usual case")
+	}
+}
+
+// A prompt change is a new version, which is the registry's own rule
+// and now also how a decision row says which persona wrote it.
+func TestThePersonaVersionMovedWithTheText(t *testing.T) {
+	if AskRogerPersona.Version < 2 {
+		t.Errorf("version = %d; rule 9 and the token cap changed and the version did not",
+			AskRogerPersona.Version)
+	}
+}

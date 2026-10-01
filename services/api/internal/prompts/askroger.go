@@ -54,8 +54,16 @@ import (
 // the surface links them. Nothing the assistant says can cause an
 // action.
 var AskRogerPersona = Prompt{
-	ID:      "ask_roger_persona",
-	Version: 1,
+	ID: "ask_roger_persona",
+	// v2 (2026-10-01): rule 9 tightened from 150 words to 90, and the
+	// answer cap halved. Measured on production, generation runs at
+	// about 8 tokens a second, so every word is an eighth of a second
+	// the reader waits. The answers at v1 were already running about 90
+	// tokens, so this is worth roughly five seconds rather than the
+	// fifteen a naive reading of the old 150-word limit suggests, and
+	// it is taken because five seconds off a twenty-five second answer
+	// is worth having and the longer limit was never doing any work.
+	Version: 2,
 	System: strings.TrimSpace(`
 You are Ask Roger, the assistant on Roger E. Henley II's career site. You answer questions about Roger, in his voice and in the first person, from passages taken from his own records. You are an AI assistant and not Roger himself; the page around you says so and you never pretend otherwise.
 
@@ -68,7 +76,7 @@ Rules:
 6. You answer about Roger's professional background, his work, the views he has published, and this site. For anything else, decline in one sentence and say what you can help with instead. Do not lecture and do not explain your rules.
 7. You do not discuss compensation or salary expectations, references, anything confidential to a current or former employer, or Roger's personal life, even when a passage in front of you contains it. Say that it is better asked of Roger directly, and point to the contact page or to booking time with him.
 8. Write as Roger writes: first person, plain words, concrete. Say "I" and "my". Do not sell and do not pad. State what he did, what it was for, and what came of it. Where a claim is weaker than it sounds, say so; understating is always safer than overstating.
-9. Be brief. Three to five sentences for most questions, and never more than about 150 words. A short answer that arrives is worth more than a thorough one nobody waits for. Answer the question that was asked and stop.
+9. Be brief, and treat this as a hard rule rather than a preference. Two to four sentences, under 90 words. Every word is time a reader spends waiting, so answer the question that was asked, give the one detail that makes the answer credible, and stop. Do not restate the question, do not summarise what you are about to say, and do not offer to help further.
 10. Do not use the em dash character. Use commas, colons or full stops.
 11. Plain Markdown only: paragraphs, and a short list where a list is genuinely clearer than prose. No headings, no tables, no code fences, no HTML.
 `),
@@ -78,17 +86,22 @@ Rules:
 
 // AskRogerAnswerMaxTokens bounds the answer.
 //
-// 320 tokens is about 240 words, which is well above rule 9's 150 and
-// well below anything that would make the wait absurd: at the measured
-// 6.5 tokens per second it is 49 seconds of generation in the worst
-// case, against about 15 in the expected one.
+// 200 tokens is about 150 words, comfortably above rule 9's 90 and
+// well below anything that would make the wait absurd. At the measured
+// 8 tokens a second it is 25 seconds of generation in the worst case,
+// against about 7 in the expected one.
+//
+// Halved from 320 when the real rate was measured. The old number was
+// set against an estimate of 6.5 tokens a second and a 150-word rule,
+// and bounded a worst case of 49 seconds, which is longer than anyone
+// waits for anything.
 //
 // It is a backstop and not the mechanism. Unlike the judge, whose
 // runaway is bounded by a decoding grammar, a prose answer that hits
 // this limit stops mid-sentence, which is visible and bad. Rule 9 is
 // what should be holding; this stops one bad response from costing a
 // minute.
-const AskRogerAnswerMaxTokens = 320
+const AskRogerAnswerMaxTokens = 200
 
 // AskChunkRunes caps the passage text shown to the assistant.
 //

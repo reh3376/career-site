@@ -53,7 +53,7 @@ clean database locally. **They have not been applied to production.**
 
 Prompt fingerprints at this head:
 
-    ask_roger_persona  v1:fb7c9aac
+    ask_roger_persona  v2:8a4c2f19
     requirement_judge  v12:df4c4cc7
     resume_tailor      v3:3e9fa0c1
     jd_requirements    v4:e13cbaeb
@@ -418,11 +418,20 @@ A *following* question should pay only the varying part, the evidence
 and the question, because the persona prefix is cached: expect
 somewhere near 24 s.
 
-**Generation is now the floor**, not retrieval. At 8 tok/s a 150-word
-answer is 25 seconds no matter what else is fixed. The two levers left
-are showing fewer passages (`Show` 3 to 2, about 175 tokens or 4.5 s)
-and asking the persona for shorter answers, and the second is worth
-more than the first.
+**Generation is now the floor**, not retrieval.
+
+The persona's answers at v1 were already running about 90 tokens, so
+the old 150-word rule was never binding and shortening it is worth
+about five seconds, not the fifteen the old limit implied. Taken
+anyway, as **persona v2** (`v2:8a4c2f19`): rule 9 goes from 150 words
+to 90 and `AskRogerAnswerMaxTokens` from 320 to 200. Five seconds off a
+twenty-five second answer is worth having, and a limit that never binds
+is not doing any work.
+
+The other lever is showing fewer passages, `Show` 3 to 2, worth about
+175 tokens or 4.5 s and costing grounding. Not taken: the two together
+would bring a cached follow-up from roughly 25 s to 15 s, and the
+retrieval one is the half that makes answers worse.
 
 1. **`QAMatchThreshold` is back to 0.85, and the mechanism changed.**
    The 0.72 above was measured off one question family and it was
