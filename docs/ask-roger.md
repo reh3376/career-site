@@ -667,10 +667,18 @@ document, ingested as a public corpus entry of kind `other`. It
 describes what each page does, what members can do, and what the
 assistant will not discuss.
 
-It is deliberately not an article, so no page is published for it. The
-walker takes any top-level directory named after a known source kind,
-and `other` is one, so it needs no code change. **It only enters the
-corpus on the next reindex**, which is a button on `/admin/corpus`.
+It is deliberately not an article, so no page is published for it.
+
+**It did need a code change, contrary to what this document first
+said.** The *private* reindex treats any directory named after a known
+kind as that kind; the *public* one walks an explicit map,
+`publicCorpusSubdirs`, so a folder not named there is never read. The
+first attempt added the file, reindexed, and the job reported "kinds
+article" and ingested nothing. `other` is now mapped, and a test walks
+the committed content tree and fails on any directory with no entry.
+
+**It only enters the corpus on a reindex**, which is "Reindex public
+content" on `/admin/corpus`.
 
 ### Citation links went nowhere
 

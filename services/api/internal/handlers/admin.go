@@ -641,6 +641,17 @@ type CorpusRoots struct {
 // it keeps its own layout here; the private root uses kind = directory.
 var publicCorpusSubdirs = map[string]string{
 	"article": "articles",
+	// The site's own documentation: what each page does, what a member
+	// can do, what the assistant will not discuss. Public because it
+	// describes public behaviour, and kind "other" because it is not an
+	// article and must not be published as one.
+	//
+	// It needs an entry here, which the private root would not. The
+	// public reindex walks this map rather than the directory listing,
+	// so a folder that is not named is never read: the first attempt
+	// added the file and reindexed, and the job reported "kinds
+	// article" and ingested nothing.
+	"other": "other",
 }
 
 func (a *Admin) ReindexCorpus(
