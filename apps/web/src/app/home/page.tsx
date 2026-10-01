@@ -214,12 +214,20 @@ export default async function HomePage() {
             </Link>{" "}
             <span className="text-ink-3">: on-the-floor photos with context</span>
           </li>
-          <SocialSurfaceRows />
           <li>
-            <span className="text-ink-3">ASK.ROGER</span>{" "}
+            <span className="text-signal">ASK.ROGER</span>{" "}
             <span className="text-ink-3">·</span>{" "}
-            <span className="text-ink-3">not built yet · available Q4 2026</span>
+            <Link
+              href="/ask"
+              className="text-accent no-underline hover:text-accent-hover"
+            >
+              /ask
+            </Link>{" "}
+            <span className="text-ink-3">
+              : grounded answers from Roger&rsquo;s own records
+            </span>
           </li>
+          <SocialSurfaceRows />
         </ul>
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
@@ -261,9 +269,8 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. Four surfaces are live today: the JD review,
-        booking time with Roger, the articles, and the gallery. Ask
-        Roger, the fifth, lands with Phase 4.
+        You&rsquo;re in. Five surfaces are live: the JD review, booking
+        time with Roger, Ask Roger, the articles, and the gallery.
       </p>
 
       <section className="mt-14 grid gap-6 md:grid-cols-3">
@@ -295,10 +302,12 @@ export default async function HomePage() {
           href="/gallery"
           cta="Open the gallery →"
         />
-        <ComingSoonCard
-          label="ask roger"
+        <LiveCard
+          label="ask roger · live"
           title="Ask Roger anything"
-          body="Planned: a retrieval-grounded assistant answering questions about Roger's career, projects, and how he thinks, with citations back to primary sources. Not built yet; available Q4 2026."
+          body="An assistant answering in Roger&rsquo;s voice, from his own records, showing you where each answer came from. Ask about his background, what he has built, or what he has written. It runs on one small server, so give it a few tens of seconds."
+          href="/ask"
+          cta="Ask a question →"
         />
       </section>
 
@@ -407,31 +416,6 @@ function AccessPill({
     <p className={base + " " + tone2}>
       access · {formatDaysUntil(expiresAt, nowMs)}
     </p>
-  );
-}
-
-function ComingSoonCard({
-  label,
-  title,
-  body,
-}: {
-  label: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="border border-line p-5">
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-        {label} · coming soon
-      </p>
-      <p
-        className="font-display mt-2 text-xl leading-snug text-ink"
-        style={{ fontVariationSettings: '"opsz" 40, "SOFT" 50' }}
-      >
-        {title}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
-    </div>
   );
 }
 
