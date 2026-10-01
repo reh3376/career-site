@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { chatClient } from "@/lib/chat-client";
 
 import { Message, type ChatMessage } from "./message";
+import { track } from "@/lib/events-client";
 import { Waiting, WaitingNote } from "./waiting";
 
 // The conversation, shared by the side panel and the full page at /ask.
@@ -36,6 +37,37 @@ export function Thread({ roomy = false, contextContentId }: Props) {
   const [asked, setAsked] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
+  // When the current wait started, so leaving mid-answer can be
+  // reported with how long they actually gave it. Zero means not
+  // waiting.
+  const waitStartedRef = useRef(0);
+
+  // Leaving while an answer is being written is the signal the answers
+  // themselves cannot carry: the ones that lose people produce no
+  // record at all, because nobody reads them. waited_ms is the useful
+  // half, since "left after 8 seconds" and "left after 50" argue for
+  // opposite work.
+  useEffect(() => {
+    const onHide = () => {
+      if (!waitStartedRef.current) return;
+      track(
+        "chat.abandoned",
+        {
+          waited_ms: Date.now() - waitStartedRef.current,
+          had_answer: false,
+        },
+        { flush: true },
+      );
+      waitStartedRef.current = 0;
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      // Unmounting while waiting is the panel being closed mid-answer,
+      // which is the same abandonment by a different route.
+      onHide();
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, []);
 
   // Open a conversation once, on first mount, and keep it for the life
   // of the panel. The disclosure comes back with it (FR-CHAT-02) and is
@@ -91,6 +123,7 @@ export function Thread({ roomy = false, contextContentId }: Props) {
       setAsked((n) => n + 1);
       setMessages((m) => [...m, { role: "user", text: question }]);
       setWaiting(true);
+      waitStartedRef.current = Date.now();
 
       try {
         let assistantText = "";
@@ -153,6 +186,9 @@ export function Thread({ roomy = false, contextContentId }: Props) {
         setError(friendly(e));
       } finally {
         setWaiting(false);
+        // The wait is over however it ended, so a later page exit must
+        // not be reported as an abandonment of it.
+        waitStartedRef.current = 0;
       }
     },
     [conversationId, contextContentId, waiting],

@@ -137,6 +137,13 @@ type Answer struct {
 	// the member presses; nothing here acts on it.
 	Intent *Intent
 
+	// MissReason and BestSimilarity describe the Q&A bank lookup when
+	// it did not match. Carried out to the surface so the event stream
+	// can rank the phrasings worth adding without joining back to
+	// decision_log.
+	MissReason     string
+	BestSimilarity float64
+
 	// FirstTokenMs and TotalMs are what the reader actually waited.
 	// Until streaming lands FirstTokenMs is the whole model call, and
 	// is recorded that way rather than left at zero, because a zero
@@ -430,6 +437,9 @@ func (s *Service) finish(
 		QAMatch:      o.Path == users.ChatPathQABank,
 		FirstTokenMs: in.Timings.FirstTokenMs,
 		TotalMs:      in.Timings.TotalMs,
+
+		MissReason:     in.QA.MissReason,
+		BestSimilarity: in.QA.BestSimilarity,
 	}
 
 	id, err := s.Store.AppendMessage(ctx, users.ChatMessage{

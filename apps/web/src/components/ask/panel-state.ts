@@ -1,3 +1,5 @@
+import { track } from "@/lib/events-client";
+
 // The panel's open/used state, as an external store.
 //
 // sessionStorage is an external system, not React state, and reading it
@@ -58,6 +60,13 @@ export function getPanelServerSnapshot(): Snapshot {
 }
 
 export function setPanelOpen(open: boolean): void {
+  // Opening is the top of the funnel. How many open the assistant and
+  // never ask is the number that says whether the wait is the problem
+  // or the invitation is, and it cannot be recovered from the answers,
+  // because the people it describes produce none.
+  if (open && !cached.open) {
+    track("chat.opened", { surface: "panel" });
+  }
   cached = { open, everOpened: cached.everOpened || open };
   try {
     sessionStorage.setItem(OPEN_KEY, open ? "1" : "0");

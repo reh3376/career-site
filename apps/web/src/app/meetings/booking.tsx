@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+
+import { track } from "@/lib/events-client";
 
 import {
   bookMeetingAction,
@@ -111,6 +113,33 @@ export function Booking({
   // one and cancelling removes one, and a list that only reloads with
   // the page is wrong the moment either happens.
   const [meetings, setMeetings] = useState<Meeting[]>(initialMeetings);
+  // Set by the effect below; called from the pickers so the abandon
+  // event knows how far they got.
+  const stepRef = useRef<(s: string) => void>(() => {});
+
+  // The funnel in front of a booking. Three bookings tell you nothing
+  // about the people who looked and left, and that is the group a
+  // scheduler is actually tuned for. step is how far they got, so an
+  // exit at "picked a time, never confirmed" reads differently from
+  // one at "saw the page".
+  useEffect(() => {
+    track("meeting.view", {});
+    const openedAt = Date.now();
+    let step = "viewed";
+    stepRef.current = (s: string) => {
+      step = s;
+    };
+    const onHide = () => {
+      if (step === "booked") return;
+      track(
+        "meeting.abandoned",
+        { step, elapsed_ms: Date.now() - openedAt },
+        { flush: true },
+      );
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, []);
   const [loading, startLoading] = useTransition();
   const [booking, startBooking] = useTransition();
 
@@ -170,6 +199,9 @@ export function Booking({
       const state = await bookMeetingAction({}, formData);
       setResult(state);
       if (state.ok) {
+        // The api writes meeting.booked; this only stops the exit from
+        // being counted as an abandonment of a booking that succeeded.
+        stepRef.current("booked");
         setSelected(null);
         setTopic("");
         setContact("");
@@ -292,6 +324,8 @@ export function Booking({
                 setSelected(null);
                 setPage(0);
                 setDuration(d);
+                track("meeting.duration_picked", { minutes: d });
+                stepRef.current("duration_picked");
               }}
               className={
                 d === duration
@@ -430,7 +464,19 @@ export function Booking({
                       key={slot.start}
                       type="button"
                       aria-pressed={active}
-                      onClick={() => setSelected(active ? null : slot)}
+                      onClick={() => {
+                        setSelected(active ? null : slot);
+                        if (!active) {
+                          track("meeting.slot_picked", {
+                            minutes: duration,
+                            lead_days: Math.round(
+                              (new Date(slot.start).getTime() - Date.now()) /
+                                86400000,
+                            ),
+                          });
+                          stepRef.current("slot_picked");
+                        }
+                      }}
                       className={
                         "rounded-md border px-3 py-3 text-sm transition-colors " +
                         (active
