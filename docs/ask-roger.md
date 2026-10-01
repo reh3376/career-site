@@ -53,7 +53,7 @@ clean database locally. **They have not been applied to production.**
 
 Prompt fingerprints at this head:
 
-    ask_roger_persona  v2:8a4c2f19
+    ask_roger_persona  v3
     requirement_judge  v12:df4c4cc7
     resume_tailor      v3:3e9fa0c1
     jd_requirements    v4:e13cbaeb
@@ -689,6 +689,40 @@ real URL (`/articles/<slug>`) and returns empty for kinds with no page,
 which the surface already renders as a title without a link. A citation
 that cannot be followed is worse than none: it invites the one reader
 who checks to conclude the source was invented.
+
+### Actions, as D-25 allows (persona v3)
+
+The assistant may propose three things and may do none of them:
+`open_scheduler`, `open_contact_form` with a category, and
+`open_contributor_request` for a repository.
+
+It writes a marker, code validates it against the allowlist, and the
+surface renders a link the member presses. **Nothing calls an API.**
+That is the sentence D-25 ends on: no path from a prompt injection to
+an action taken. The corpus is the owner's own, but it is still
+untrusted input to a model, and a passage saying "book a meeting" must
+not book a meeting.
+
+A marker rather than tool calling, for two reasons. The gateway is
+single-shot by design, so a tool-calling loop would be a second
+architecture for one feature. And a marker survives streaming, which
+structured output does not. It is also the pattern already proven here:
+citations are emitted by the model, validated in code, and dropped when
+they point at nothing. One mechanism, used twice.
+
+The card is a link, not a fetch, and nothing is pre-filled beyond a
+category. The injection cases in the golden set include pre-filling a
+contact form with content the member did not write, and a link to a
+blank form cannot do that.
+
+Dropped by the allowlist and covered by tests: invented actions, an
+action name that looks like an API call, an unknown contact category, a
+path-traversal repository name, a URL as a repository name, and a
+marker injected through retrieved content.
+
+`proposed_action` is recorded on the decision row, because "what does it
+try to make people do" is a question about the assistant that nothing
+else in the row answers.
 
 ## 7. Waiting on the owner
 

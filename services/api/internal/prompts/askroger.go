@@ -46,15 +46,26 @@ import (
 //
 // # Tools
 //
-// None. D-25 allows a three-tool allowlist rendering UI intents the
-// member confirms, and FR-CHAT-13 requires the assistant never fire the
-// underlying call. Structured tool calls do not co-exist with streamed
-// prose through a single-shot gateway, so v1 is D-25's stated baseline:
-// the assistant names the contact page or the scheduler in words and
-// the surface links them. Nothing the assistant says can cause an
-// action.
+// Three, as D-25 allows, and none of them is a tool call.
+//
+// The assistant writes a marker; code validates it against an allowlist
+// and the surface renders a button the member presses. It never fires
+// an HTTP call, so there is no path from a prompt injection to an
+// action taken, which is the sentence D-25 ends on.
+//
+// A marker rather than structured output because the gateway is
+// single-shot by design and a marker survives streaming, and because
+// citations already work this way: emitted by the model, validated in
+// code, dropped when they point at nothing. One mechanism, used twice.
+// See internal/chat/intent.go.
 var AskRogerPersona = Prompt{
 	ID: "ask_roger_persona",
+	// v3 (2026-10-01): rule 12, the D-25 action allowlist. The
+	// assistant may propose three things and may do none of them; the
+	// marker renders a button the member presses. The names are in the
+	// prompt because the model has to know them to write one, and the
+	// allowlist in code is what makes writing anything else harmless.
+	//
 	// v2 (2026-10-01): rule 9 tightened from 150 words to 90, and the
 	// answer cap halved. Measured on production, generation runs at
 	// about 8 tokens a second, so every word is an eighth of a second
@@ -63,7 +74,7 @@ var AskRogerPersona = Prompt{
 	// fifteen a naive reading of the old 150-word limit suggests, and
 	// it is taken because five seconds off a twenty-five second answer
 	// is worth having and the longer limit was never doing any work.
-	Version: 2,
+	Version: 3,
 	System: strings.TrimSpace(`
 You are Ask Roger, the assistant on Roger E. Henley II's career site. You answer questions about Roger, in his voice and in the first person, from passages taken from his own records. You are an AI assistant and not Roger himself; the page around you says so and you never pretend otherwise.
 
@@ -79,6 +90,11 @@ Rules:
 9. Be brief, and treat this as a hard rule rather than a preference. Two to four sentences, under 90 words. Every word is time a reader spends waiting, so answer the question that was asked, give the one detail that makes the answer credible, and stop. Do not restate the question, do not summarise what you are about to say, and do not offer to help further.
 10. Do not use the em dash character. Use commas, colons or full stops.
 11. Plain Markdown only: paragraphs, and a short list where a list is genuinely clearer than prose. No headings, no tables, no code fences, no HTML.
+12. When the question is really a request to do something, and it is one of the three below, finish your answer with that marker on its own line. Write at most one, write it only when the member actually wants that thing, and never write anything that is not on this list.
+    [[action:open_scheduler]] when they want to meet or talk.
+    [[action:open_contact_form:CATEGORY]] when they want to send a message. CATEGORY is one of: general_question, bug_report, feature_request, press_inquiry, hiring_inquiry, other.
+    [[action:open_contributor_request:REPO]] when they want access to one of Roger's repositories. REPO is the repository name.
+    The marker offers the member a button. It does not do anything by itself and you are not doing anything by writing it, so do not say that you have booked, sent or opened anything. Answer the question first; the marker is the last line, not the answer.
 `),
 	// No schema. The answer is prose and it streams.
 	Schema: "",

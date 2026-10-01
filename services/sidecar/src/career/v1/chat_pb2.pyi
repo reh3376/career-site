@@ -56,6 +56,14 @@ class Citation(_message.Message):
     rank: int
     def __init__(self, chunk_id: _Optional[str] = ..., content_id: _Optional[str] = ..., title: _Optional[str] = ..., path: _Optional[str] = ..., heading: _Optional[str] = ..., rank: _Optional[int] = ...) -> None: ...
 
+class ProposedAction(_message.Message):
+    __slots__ = ("action", "arg")
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    ARG_FIELD_NUMBER: _ClassVar[int]
+    action: str
+    arg: str
+    def __init__(self, action: _Optional[str] = ..., arg: _Optional[str] = ...) -> None: ...
+
 class MessageFlags(_message.Message):
     __slots__ = ("out_of_scope", "no_support", "degraded", "qa_match")
     OUT_OF_SCOPE_FIELD_NUMBER: _ClassVar[int]
@@ -69,7 +77,7 @@ class MessageFlags(_message.Message):
     def __init__(self, out_of_scope: _Optional[bool] = ..., no_support: _Optional[bool] = ..., degraded: _Optional[bool] = ..., qa_match: _Optional[bool] = ...) -> None: ...
 
 class Message(_message.Message):
-    __slots__ = ("id", "conversation_id", "role", "text", "created_at", "citations", "rating", "flags", "persona_version")
+    __slots__ = ("id", "conversation_id", "role", "text", "created_at", "citations", "rating", "flags", "persona_version", "proposed_action")
     class Role(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         ROLE_UNSPECIFIED: _ClassVar[Message.Role]
@@ -89,6 +97,7 @@ class Message(_message.Message):
     RATING_FIELD_NUMBER: _ClassVar[int]
     FLAGS_FIELD_NUMBER: _ClassVar[int]
     PERSONA_VERSION_FIELD_NUMBER: _ClassVar[int]
+    PROPOSED_ACTION_FIELD_NUMBER: _ClassVar[int]
     id: str
     conversation_id: str
     role: Message.Role
@@ -98,7 +107,8 @@ class Message(_message.Message):
     rating: Rating
     flags: MessageFlags
     persona_version: str
-    def __init__(self, id: _Optional[str] = ..., conversation_id: _Optional[str] = ..., role: _Optional[_Union[Message.Role, str]] = ..., text: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., citations: _Optional[_Iterable[_Union[Citation, _Mapping]]] = ..., rating: _Optional[_Union[Rating, str]] = ..., flags: _Optional[_Union[MessageFlags, _Mapping]] = ..., persona_version: _Optional[str] = ...) -> None: ...
+    proposed_action: ProposedAction
+    def __init__(self, id: _Optional[str] = ..., conversation_id: _Optional[str] = ..., role: _Optional[_Union[Message.Role, str]] = ..., text: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., citations: _Optional[_Iterable[_Union[Citation, _Mapping]]] = ..., rating: _Optional[_Union[Rating, str]] = ..., flags: _Optional[_Union[MessageFlags, _Mapping]] = ..., persona_version: _Optional[str] = ..., proposed_action: _Optional[_Union[ProposedAction, _Mapping]] = ...) -> None: ...
 
 class CreateConversationRequest(_message.Message):
     __slots__ = ("context_content_id",)

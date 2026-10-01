@@ -105,6 +105,24 @@ message Citation {
   int32 rank = 6;
 }
 
+// An action the assistant proposed, after the server validated it
+// against the allowlist (FR-CHAT-13 as amended by D-25).
+//
+// The assistant never performs the action. This renders a control the
+// member presses, and the press is what acts, so there is no path from
+// a prompt injection to an action taken. An action outside the
+// allowlist never reaches this message: the server drops it.
+message ProposedAction {
+  // One of: open_scheduler, open_contact_form,
+  // open_contributor_request. Clients must ignore anything else rather
+  // than guess, so a later server can add one without breaking them.
+  string action = 1;
+  // The single validated argument, or empty. A contact-form category
+  // for open_contact_form, a repository name for
+  // open_contributor_request, and never set for open_scheduler.
+  string arg = 2;
+}
+
 // Assistant-side flags on a message.
 message MessageFlags {
   // The question was outside the assistant's scope and was declined.
@@ -138,6 +156,9 @@ message Message {
   MessageFlags flags = 8;
   // Persona version used (assistant messages only).
   string persona_version = 9;
+  // An action the assistant offered, which the member confirms or
+  // ignores; unset when it offered none.
+  ProposedAction proposed_action = 10;
 
   // Message author.
   enum Role {

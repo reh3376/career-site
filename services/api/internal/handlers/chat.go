@@ -298,6 +298,7 @@ func (h *Chat) SendMessage(
 				Text:           ans.Text,
 				Citations:      citationsToProto(ans.Citations),
 				PersonaVersion: persona,
+				ProposedAction: proposedActionToProto(ans.Intent),
 				Flags: &careerv1.MessageFlags{
 					OutOfScope: ans.OutOfScope,
 					NoSupport:  ans.NoSupport,
@@ -411,6 +412,16 @@ var fallbackSuggestions = []string{
 	"What kind of work has he done in industrial controls?",
 	"Where has he applied AI to manufacturing problems?",
 	"What does MDEMG do, and why did he build it?",
+}
+
+// proposedActionToProto carries a validated action to the surface.
+// Nil stays nil: an answer that proposed nothing must not render a
+// control.
+func proposedActionToProto(in *chat.Intent) *careerv1.ProposedAction {
+	if in == nil {
+		return nil
+	}
+	return &careerv1.ProposedAction{Action: in.Action, Arg: in.Arg}
 }
 
 func conversationToProto(c users.Conversation) *careerv1.Conversation {

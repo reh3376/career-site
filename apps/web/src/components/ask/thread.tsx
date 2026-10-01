@@ -130,6 +130,12 @@ export function Thread({ roomy = false, contextContentId }: Props) {
                     heading: c.heading,
                     rank: c.rank,
                   })),
+                  proposedAction: msg.proposedAction
+                    ? {
+                        action: msg.proposedAction.action,
+                        arg: msg.proposedAction.arg,
+                      }
+                    : null,
                   flags: msg.flags
                     ? {
                         outOfScope: msg.flags.outOfScope,
