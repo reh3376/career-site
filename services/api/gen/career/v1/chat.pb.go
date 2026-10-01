@@ -502,14 +502,14 @@ type RunAdminQueryResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The query that ran, echoed so the surface can label the result.
 	Query *AdminQuery `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// When it ran.
+	RanAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
 	// Column headers, taken from the statement itself so a query and its
 	// header cannot drift apart.
-	Columns []string `protobuf:"bytes,2,rep,name=columns,proto3" json:"columns,omitempty"`
+	Columns []string `protobuf:"bytes,4,rep,name=columns,proto3" json:"columns,omitempty"`
 	// Rows, capped server side. Every query here aggregates, so a long
 	// result means a GROUP BY went wider than expected.
-	Rows []*AdminQueryRow `protobuf:"bytes,3,rep,name=rows,proto3" json:"rows,omitempty"`
-	// When it ran.
-	RanAt         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
+	Rows          []*AdminQueryRow `protobuf:"bytes,5,rep,name=rows,proto3" json:"rows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -551,6 +551,13 @@ func (x *RunAdminQueryResponse) GetQuery() *AdminQuery {
 	return nil
 }
 
+func (x *RunAdminQueryResponse) GetRanAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RanAt
+	}
+	return nil
+}
+
 func (x *RunAdminQueryResponse) GetColumns() []string {
 	if x != nil {
 		return x.Columns
@@ -561,13 +568,6 @@ func (x *RunAdminQueryResponse) GetColumns() []string {
 func (x *RunAdminQueryResponse) GetRows() []*AdminQueryRow {
 	if x != nil {
 		return x.Rows
-	}
-	return nil
-}
-
-func (x *RunAdminQueryResponse) GetRanAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.RanAt
 	}
 	return nil
 }
@@ -2415,12 +2415,12 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\x14RunAdminQueryRequest\x12\x19\n" +
 	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x02id\"%\n" +
 	"\rAdminQueryRow\x12\x14\n" +
-	"\x05cells\x18\x01 \x03(\tR\x05cells\"\xbf\x01\n" +
+	"\x05cells\x18\x01 \x03(\tR\x05cells\"\xcd\x01\n" +
 	"\x15RunAdminQueryResponse\x12+\n" +
-	"\x05query\x18\x01 \x01(\v2\x15.career.v1.AdminQueryR\x05query\x12\x18\n" +
-	"\acolumns\x18\x02 \x03(\tR\acolumns\x12,\n" +
-	"\x04rows\x18\x03 \x03(\v2\x18.career.v1.AdminQueryRowR\x04rows\x121\n" +
-	"\x06ran_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x05ranAt\"\xaf\x02\n" +
+	"\x05query\x18\x01 \x01(\v2\x15.career.v1.AdminQueryR\x05query\x121\n" +
+	"\x06ran_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05ranAt\x12\x18\n" +
+	"\acolumns\x18\x04 \x03(\tR\acolumns\x12,\n" +
+	"\x04rows\x18\x05 \x03(\v2\x18.career.v1.AdminQueryRowR\x04rowsJ\x04\b\x02\x10\x03R\x06result\"\xaf\x02\n" +
 	"\fConversation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x129\n" +
@@ -2644,8 +2644,8 @@ var file_career_v1_chat_proto_goTypes = []any{
 var file_career_v1_chat_proto_depIdxs = []int32{
 	4,  // 0: career.v1.ListAdminQueriesResponse.queries:type_name -> career.v1.AdminQuery
 	4,  // 1: career.v1.RunAdminQueryResponse.query:type_name -> career.v1.AdminQuery
-	8,  // 2: career.v1.RunAdminQueryResponse.rows:type_name -> career.v1.AdminQueryRow
-	39, // 3: career.v1.RunAdminQueryResponse.ran_at:type_name -> google.protobuf.Timestamp
+	39, // 2: career.v1.RunAdminQueryResponse.ran_at:type_name -> google.protobuf.Timestamp
+	8,  // 3: career.v1.RunAdminQueryResponse.rows:type_name -> career.v1.AdminQueryRow
 	39, // 4: career.v1.Conversation.started_at:type_name -> google.protobuf.Timestamp
 	39, // 5: career.v1.Conversation.last_message_at:type_name -> google.protobuf.Timestamp
 	1,  // 6: career.v1.Message.role:type_name -> career.v1.Message.Role

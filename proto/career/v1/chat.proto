@@ -121,16 +121,24 @@ message AdminQueryRow {
 
 // What the query returned.
 message RunAdminQueryResponse {
+  // 2 was `string result`, a single formatted sentence, replaced by the
+  // columns and rows below when the result became a table. Reserved
+  // rather than reused: a field number carries a type on the wire, and
+  // handing number 2 to a repeated string would make an older client
+  // misparse a newer response rather than ignore it.
+  reserved 2;
+  reserved "result";
+
   // The query that ran, echoed so the surface can label the result.
   AdminQuery query = 1;
+  // When it ran.
+  google.protobuf.Timestamp ran_at = 3;
   // Column headers, taken from the statement itself so a query and its
   // header cannot drift apart.
-  repeated string columns = 2;
+  repeated string columns = 4;
   // Rows, capped server side. Every query here aggregates, so a long
   // result means a GROUP BY went wider than expected.
-  repeated AdminQueryRow rows = 3;
-  // When it ran.
-  google.protobuf.Timestamp ran_at = 4;
+  repeated AdminQueryRow rows = 5;
 }
 
 // A conversation header.

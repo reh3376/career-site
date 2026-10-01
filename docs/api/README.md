@@ -1928,9 +1928,9 @@ refused. Results are counts, never rows about a person.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
+| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
 | `columns` | `string`[] | array of string |  | Column headers, taken from the statement itself so a query and its header cannot drift apart. |
 | `rows` | [`AdminQueryRow`](#adminqueryrow)[] | array of object |  | Rows, capped server side. Every query here aggregates, so a long result means a GROUP BY went wider than expected. |
-| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
 
 <details><summary>Example request body</summary>
 
@@ -5354,9 +5354,9 @@ What the query returned.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
+| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
 | `columns` | `string`[] | array of string |  | Column headers, taken from the statement itself so a query and its header cannot drift apart. |
 | `rows` | [`AdminQueryRow`](#adminqueryrow)[] | array of object |  | Rows, capped server side. Every query here aggregates, so a long result means a GROUP BY went wider than expected. |
-| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
 
 ### Conversation
 
