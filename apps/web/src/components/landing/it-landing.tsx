@@ -59,8 +59,14 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
         aria-labelledby="hero-heading"
         className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:px-10 sm:pb-24 sm:pt-28"
       >
+        {/* Was "coming soon · late 2026", which stopped being true: the
+            reviewer, the scheduler and the assistant all run. Beta is
+            the honest word, because some of it is rough rather than
+            unbuilt, and a visitor who hits a rough edge should have been
+            told rather than surprised. */}
         <p className="font-mono text-[11px] tracking-[0.14em] text-signal">
-          coming soon <span className="text-ink-4">·</span> late 2026
+          in beta <span className="text-ink-4">·</span> the core functions
+          work, some are rough
         </p>
         <h1
           id="hero-heading"

@@ -206,6 +206,12 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
             <dt className="text-ink-3">ASK.ROGER</dt>
             <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
+            {/* The beta warning the IT hero carries. Same page, same
+                URL, so a warning in one skin only is half a warning;
+                here it reads as a status value among status values,
+                which is the idiom of this mode. */}
+            <dt className="text-ink-3">BUILD</dt>
+            <dd className="m-0 text-right text-signal">BETA</dd>
           </dl>
         </section>
 
