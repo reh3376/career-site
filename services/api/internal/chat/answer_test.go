@@ -619,3 +619,45 @@ func splitOr(off bool, v int64) int64 {
 	}
 	return v
 }
+
+// A citation link has to go somewhere that exists.
+//
+// source_path is the file the walker read, so citations were linking to
+// "better-business-decisions-part-1.md" and every one of them 404'd. A
+// citation that cannot be followed is worse than none: it invites the
+// one reader who checks to conclude the source was invented.
+func TestCitationLinksPointAtRealPages(t *testing.T) {
+	cases := []struct{ kind, source, want string }{
+		{"article", "better-business-decisions-part-1.md", "/articles/better-business-decisions-part-1"},
+		{"article", "nested/dir/manufacturing-hub-teaser-post.md", "/articles/manufacturing-hub-teaser-post"},
+		// Kinds with no page on the site get no link, and the surface
+		// renders them as a title alone.
+		{"resume", "reh-resume-Master.md", ""},
+		{"profile", "career-facts.md", ""},
+		{"readme", "repo-mdemg-readme.md", ""},
+		{"article", "", ""},
+	}
+	for _, c := range cases {
+		if got := sitePath(c.kind, c.source); got != c.want {
+			t.Errorf("sitePath(%q, %q) = %q, want %q", c.kind, c.source, got, c.want)
+		}
+	}
+}
+
+// End to end: a cited article reaches the answer as a followable link.
+func TestAnAnsweredCitationCarriesAUsableLink(t *testing.T) {
+	h := hit(11, "Better Business Decisions", "better-business-decisions-part-1.md", "x", 0.9)
+	h.SourceKind = "article"
+	store := &fakeStore{hits: []users.CorpusHit{h}}
+	ans, err := svc(store, &fakeModel{text: "As I wrote [1]."}).Answer(
+		context.Background(), Request{ConversationID: 1, Question: "q"})
+	if err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if len(ans.Citations) != 1 {
+		t.Fatalf("citations = %d", len(ans.Citations))
+	}
+	if ans.Citations[0].Path != "/articles/better-business-decisions-part-1" {
+		t.Errorf("citation path = %q, which does not resolve on the site", ans.Citations[0].Path)
+	}
+}

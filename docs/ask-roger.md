@@ -658,6 +658,30 @@ calibrated on the box with `nomic-embed-text`.
    all. Confirmed on the local stack, where generation is stubbed and
    the job silently did nothing.
 
+### Answering about the site itself
+
+Asked "how do I upload a JD on this site", the assistant said it had
+nothing in its records. It was right: nothing in the corpus described
+the site. `apps/web/content/other/career-site-guide.md` is that
+document, ingested as a public corpus entry of kind `other`. It
+describes what each page does, what members can do, and what the
+assistant will not discuss.
+
+It is deliberately not an article, so no page is published for it. The
+walker takes any top-level directory named after a known source kind,
+and `other` is one, so it needs no code change. **It only enters the
+corpus on the next reindex**, which is a button on `/admin/corpus`.
+
+### Citation links went nowhere
+
+`corpus_documents.source_path` is the file the walker read, so a
+citation linked to `better-business-decisions-part-1.md` and **every
+citation on every answer 404'd**. `sitePath()` now maps a source to a
+real URL (`/articles/<slug>`) and returns empty for kinds with no page,
+which the surface already renders as a title without a link. A citation
+that cannot be followed is worse than none: it invites the one reader
+who checks to conclude the source was invented.
+
 ## 7. Waiting on the owner
 
 1. **Should Whiskey House / MDEMG material inform the assistant?**
