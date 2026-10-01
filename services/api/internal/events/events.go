@@ -68,6 +68,37 @@ var Registry = map[string]struct {
 	// landed and never recorded, because the name was missing here;
 	// found by the registry test, not by anyone noticing the gap.
 	"jd.quota_blocked": {Props: []string{"submitted", "limit"}},
+	// Ask Roger.
+	//
+	// The decision_log already says whether an answer was good. None of
+	// it says whether an answer was wanted: how many open the assistant
+	// and never ask, how many leave while one is being written, whether
+	// anyone follows a source. On a box where an answer costs forty
+	// seconds, "they left after twenty-five" is the number that decides
+	// whether the work goes into speed or into the Q&A bank.
+	//
+	// chat.answered carries the bank miss alongside the path, so the
+	// phrasings worth adding can be ranked from the event stream
+	// without joining to decision_log.
+	"chat.opened": {Browser: true, Props: []string{"surface"}},
+	"chat.asked":  {Props: []string{"conversation_id", "chars", "turn"}},
+	"chat.answered": {Props: []string{
+		"conversation_id", "path", "total_ms", "miss_reason", "best_similarity",
+	}},
+	"chat.abandoned":      {Browser: true, Props: []string{"waited_ms", "had_answer"}},
+	"chat.citation_click": {Browser: true, Props: []string{"href", "cta"}},
+	// Meetings.
+	//
+	// Three bookings and no idea how many people looked. The booked and
+	// cancelled rows are written by the api because they are the facts;
+	// the rest is the funnel in front of them, which is where a booking
+	// is actually lost.
+	"meeting.view":            {Browser: true, Props: []string{}},
+	"meeting.duration_picked": {Browser: true, Props: []string{"minutes"}},
+	"meeting.slot_picked":     {Browser: true, Props: []string{"minutes", "lead_days"}},
+	"meeting.booked":          {Props: []string{"booking_id", "minutes", "mode", "provider", "lead_days"}},
+	"meeting.cancelled":       {Props: []string{"booking_id", "by", "lead_days"}},
+	"meeting.abandoned":       {Browser: true, Props: []string{"step", "elapsed_ms"}},
 	// Contact
 	"contact.submitted": {Props: []string{"category", "has_jd"}},
 	// Admin

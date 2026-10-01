@@ -21,6 +21,8 @@ func (h *AdminDecision) SetEvents(w *events.Writer)   { h.events = w }
 func (h *Contact) SetEvents(w *events.Writer)         { h.events = w }
 func (h *Jd) SetEvents(w *events.Writer)              { h.events = w }
 func (a *Admin) SetEvents(w *events.Writer)           { a.events = w }
+func (h *Chat) SetEvents(w *events.Writer)            { h.events = w }
+func (h *Meetings) SetEvents(w *events.Writer)        { h.events = w }
 func (j *ExpiryJobs) SetEvents(w *events.Writer)      { j.events = w }
 func (j *AutoDeclineJobs) SetEvents(w *events.Writer) { j.events = w }
 

@@ -14,6 +14,7 @@ import (
 	careerv1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/chat"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -38,6 +39,8 @@ type Chat struct {
 	users  *users.Repo
 	auth   *Auth
 	answer *chat.Service
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 }
 
 // NewChat wires the handler. A nil answer service is not an error: the
@@ -194,6 +197,18 @@ func (h *Chat) SendMessage(
 	if question == "" {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("ask a question"))
 	}
+	// NewChat's contract: a nil answer service is the state before the
+	// sidecar is reachable, and SendMessage is supposed to refuse. It
+	// did not. It called Answer on a nil *chat.Service and panicked the
+	// connection, which is how a box with no model configured answered
+	// every question with a dropped stream and a stack trace.
+	//
+	// Refused before anything is written, so a question that cannot be
+	// answered does not leave half a conversation behind.
+	if h.answer == nil {
+		return connect.NewError(connect.CodeUnavailable,
+			errors.New("the assistant is not available just now"))
+	}
 
 	// Ownership is established by loading the thread, which is also
 	// where the history comes from. One query rather than a check
@@ -225,6 +240,17 @@ func (h *Chat) SendMessage(
 			h.log.Warn("could not title conversation", slog.String("error", err.Error()))
 		}
 	}
+
+	// Asked, before the wait. Emitted here rather than beside the answer
+	// so a question that is never answered (the member leaves, the model
+	// fails) still leaves a row: an abandoned question is the one most
+	// worth knowing about and it is exactly the one a success-only emit
+	// would lose.
+	h.events.Emit(ctx, requestEvent(req, "chat.asked", me.ID, map[string]any{
+		"conversation_id": convID,
+		"chars":           len(question),
+		"turn":            len(history) + 1,
+	}))
 
 	persona := prompts.AskRogerPersona.Fingerprint()
 	if err := stream.Send(&careerv1.SendMessageResponse{
@@ -268,6 +294,18 @@ func (h *Chat) SendMessage(
 			slog.Int64("conversation", convID), slog.String("error", err.Error()))
 		return connect.NewError(connect.CodeInternal, errors.New("could not answer just now"))
 	}
+
+	// Answered. path and the bank miss travel together on purpose: the
+	// list of phrasings worth adding is "model path, miss_reason
+	// threshold, ordered by best_similarity", and splitting those across
+	// two rows would make the obvious query a join.
+	h.events.Emit(ctx, requestEvent(req, "chat.answered", me.ID, map[string]any{
+		"conversation_id": convID,
+		"path":            ans.Path,
+		"total_ms":        ans.TotalMs,
+		"miss_reason":     ans.MissReason,
+		"best_similarity": ans.BestSimilarity,
+	}))
 
 	if err := stream.Send(&careerv1.SendMessageResponse{
 		Event: &careerv1.SendMessageResponse_Delta_{

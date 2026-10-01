@@ -137,6 +137,13 @@ type Answer struct {
 	// the member presses; nothing here acts on it.
 	Intent *Intent
 
+	// MissReason and BestSimilarity describe the Q&A bank lookup when
+	// it did not match. Carried out to the surface so the event stream
+	// can rank the phrasings worth adding without joining back to
+	// decision_log.
+	MissReason     string
+	BestSimilarity float64
+
 	// FirstTokenMs and TotalMs are what the reader actually waited.
 	// Until streaming lands FirstTokenMs is the whole model call, and
 	// is recorded that way rather than left at zero, because a zero
@@ -214,10 +221,16 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		// a question answered slowly beats a question not answered.
 		s.log().Warn("qa bank lookup failed", slog.String("error", qaErr.Error()))
 	}
+	// Recorded whether or not it matched. A miss carries how close it
+	// came and which gate refused it, which is the only evidence that
+	// says what to do about it: a threshold miss names the phrasing to
+	// add, a margin miss names two entries to pull apart.
 	in.QA = users.ChatQALookup{
 		Matched:        hit,
 		Threshold:      s.qaThreshold(),
 		BestSimilarity: match.Similarity,
+		RunnerUp:       match.RunnerUp,
+		MissReason:     match.MissReason,
 	}
 	if hit {
 		in.QA.EntryID = match.Entry.ID
@@ -424,6 +437,9 @@ func (s *Service) finish(
 		QAMatch:      o.Path == users.ChatPathQABank,
 		FirstTokenMs: in.Timings.FirstTokenMs,
 		TotalMs:      in.Timings.TotalMs,
+
+		MissReason:     in.QA.MissReason,
+		BestSimilarity: in.QA.BestSimilarity,
 	}
 
 	id, err := s.Store.AppendMessage(ctx, users.ChatMessage{

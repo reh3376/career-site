@@ -184,6 +184,12 @@ function Citations({ citations }: { citations?: Citation[] }) {
           {c.path ? (
             <Link
               href={c.path}
+              /* The beacon turns data-event into a tracked click, so a
+                 followed source needs no handler of its own. Whether
+                 anyone reads the sources is the question that says
+                 if citing them is worth the prompt budget. */
+              data-event="chat.citation_click"
+              data-cta={c.title || c.path}
               className="text-accent underline underline-offset-2"
             >
               {c.title || c.path}

@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/calendar"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/scheduling"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
@@ -35,6 +36,8 @@ type Meetings struct {
 	auth     *Auth // session lookup; booking is members-only
 	settings *scheduling.SettingsStore
 	cal      calendar.Provider
+	// events is the product event stream; nil is silent.
+	events *events.Writer
 	// organizer is the address the calendar file comes from. Empty
 	// falls back to the site's own.
 	organizer string
@@ -223,6 +226,17 @@ func (h *Meetings) BookMeeting(
 	// After the booking is safely stored, and neither allowed to fail
 	// it. Both go out: the owner needs to know who is coming, the member
 	// needs to know how to cancel.
+	// lead_days is how far ahead they booked. It is the one number that
+	// separates "needs to talk this week" from "planning ahead", and it
+	// cannot be recovered later once the slot is in the past.
+	h.events.Emit(ctx, requestEvent(req, "meeting.booked", member.ID, map[string]any{
+		"booking_id": booked.ID,
+		"minutes":    booked.DurMins,
+		"mode":       booked.MeetingType,
+		"provider":   booked.VideoProvider,
+		"lead_days":  int(time.Until(booked.Start).Hours() / 24),
+	}))
+
 	h.notifyOwnerBooked(ctx, member, booked, set, contact)
 	h.notifyMemberBooked(ctx, member, booked, set, contact)
 
@@ -303,6 +317,16 @@ func (h *Meetings) CancelMeeting(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("the meeting could not be cancelled"))
 	}
+	// lead_days here is how much notice the cancellation gave, which is
+	// a different thing from how far ahead it was booked and is the
+	// half that says whether the slot was recoverable.
+	b := scheduling.FromRow(row)
+	h.events.Emit(ctx, requestEvent(req, "meeting.cancelled", member.ID, map[string]any{
+		"booking_id": row.ID,
+		"by":         "member",
+		"lead_days":  int(time.Until(b.Start).Hours() / 24),
+	}))
+
 	// The hold is released whatever the calendar says; a failure to
 	// remove the event leaves a stale entry on the owner's calendar,
 	// which is visible and fixable, rather than time nobody can book.

@@ -306,3 +306,99 @@ func mustEmbed(t *testing.T, r *Repo, ctx context.Context, id int64, v []float32
 		t.Fatalf("set embedding: %v", err)
 	}
 }
+
+// A miss must carry its measurements.
+//
+// This is the gap that cost real evidence. On production, "Do you have
+// ci-cap circuit experience?" missed by 0.0134 against a phrasing that
+// read "hi-cap", one wrong letter in the term carrying the meaning.
+// The row written for it said best_similarity 0, because both miss
+// paths returned a zero QAMatch, so the near miss was invisible and had
+// to be measured by hand afterwards.
+//
+// The score is what names the phrasing to add, and the reason is what
+// says whether adding one is even the right move.
+func TestAMissRecordsHowCloseItCame(t *testing.T) {
+	r, ctx := chatRepo(t)
+	id := makeEntry(t, r, ctx, QAEntry{
+		Question: "Do you have hi-cap circuit experience?",
+		Answer:   "Yes, through the telecom years.",
+		Enabled:  true,
+	})
+	phrasings, _ := r.QAPhrasingsNeedingEmbedding(ctx, 100)
+	for _, p := range phrasings {
+		if p.EntryID == id {
+			if err := r.SetQAPhrasingEmbedding(ctx, p.ID, vec(5, 0)); err != nil {
+				t.Fatalf("set embedding: %v", err)
+			}
+		}
+	}
+
+	// Near, but held under the bar by an impossible threshold: the
+	// shape of a real near miss.
+	near := vec(5, 0.02)
+	m, ok, err := r.MatchQA(ctx, near, 0.999)
+	if err != nil {
+		t.Fatalf("match: %v", err)
+	}
+	if ok {
+		t.Fatal("a near miss was served as a match")
+	}
+	if m.Similarity <= 0 {
+		t.Error("a miss recorded similarity 0; the near miss is invisible " +
+			"and nothing says which phrasing to add")
+	}
+	if m.MissReason != QAMissThreshold {
+		t.Errorf("miss reason = %q, want %q", m.MissReason, QAMissThreshold)
+	}
+	// The entry must not travel with a rejected lookup, or something
+	// downstream can serve an answer the gates refused.
+	if m.Entry.ID != 0 || m.Entry.Answer != "" || m.Phrasing != "" {
+		t.Errorf("a rejected lookup carried its entry: %+v", m.Entry)
+	}
+}
+
+// A margin miss and a threshold miss need opposite fixes, so they must
+// be told apart in the record. One wants a new phrasing; the other
+// wants two entries pulled apart.
+func TestAMarginMissSaysSo(t *testing.T) {
+	r, ctx := chatRepo(t)
+	for _, q := range []string{
+		"What experience do you have with historians?",
+		"What experience do you have with hydraulics?",
+	} {
+		id := makeEntry(t, r, ctx, QAEntry{
+			Question: q, Answer: "An answer.", Enabled: true,
+		})
+		phrasings, _ := r.QAPhrasingsNeedingEmbedding(ctx, 100)
+		for _, p := range phrasings {
+			if p.EntryID == id {
+				// Both entries sit a hair apart, so neither clearly wins.
+				var off float32
+				if q[len(q)-10:] == "draulics?" {
+					off = 0.001
+				}
+				if err := r.SetQAPhrasingEmbedding(ctx, p.ID, vec(9, off)); err != nil {
+					t.Fatalf("set embedding: %v", err)
+				}
+			}
+		}
+	}
+
+	m, ok, err := r.MatchQA(ctx, vec(9, 0), 0.5)
+	if err != nil {
+		t.Fatalf("match: %v", err)
+	}
+	if ok {
+		t.Fatal("two equally plausible entries produced a confident answer")
+	}
+	if m.MissReason != QAMissMargin {
+		t.Errorf("miss reason = %q, want %q; a margin miss reported as a "+
+			"threshold miss sends the owner to write a phrasing that cannot help",
+			m.MissReason, QAMissMargin)
+	}
+	if m.RunnerUp <= 0 {
+		t.Error("a margin miss recorded no runner-up, so the margin it " +
+			"failed on cannot be reconstructed")
+	}
+}
