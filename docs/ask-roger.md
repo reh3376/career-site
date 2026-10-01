@@ -358,6 +358,37 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 6. Known issues and things that are not right yet
 
+0b. **The assistant could not see the career record at all.** Roger
+   noticed every answer came from the same published article. It was
+   worse than that: *every chunk of every answer* did.
+
+       corpus_only (private)   31 docs   251 chunks
+       public                   5 docs    52 chunks, 50 of them one article
+
+   Retrieval defaults to public and the handler never widened it, so
+   the assistant was answering career questions from one marketing
+   article. "Does he have capital project experience" came back empty
+   from a corpus whose own facts sheet answers it in a sentence.
+
+   The private-corpus path was built and tested and never switched on.
+   Fixed by setting `AllowPrivate` in the handler. The flag is not what
+   keeps that material safe: private passages reach the model
+   unnumbered and untitled so there is no marker it could cite,
+   `Citable()` keeps them out of the source list, the persona is told
+   they may inform and may never be named, and `chatbot_include`
+   excludes a document outright.
+
+   **The typo hypothesis was wrong.** The misspelt question scored
+   0.574 and the corrected one 0.580, and both retrieved the same
+   article. Spelling was not the problem; the corpus boundary was.
+
+   **Still lopsided, and worth a look.** Even private is dominated by
+   documentation: the UxTS guide is 50 chunks, while the résumé is 6
+   and the career facts sheet is 2. The JD reviewer solved this by
+   always putting the facts sheet first and whole, where it is also a
+   stable prefix and therefore cached. Chat takes the top three by
+   similarity and does neither. That is the next thing to try.
+
 0a. **Two answers were served with no training record, and the cause
    was the instrumentation work itself.** Messages 10 and 12 on
    production have no `decision_log` row and no `llm_usage` row.

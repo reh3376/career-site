@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -112,5 +113,30 @@ func TestParseIDRejectsNonsense(t *testing.T) {
 	}
 	if id, err := parseID(" 42 "); err != nil || id != 42 {
 		t.Errorf("parseID(\" 42 \") = %d, %v", id, err)
+	}
+}
+
+// The assistant must be able to see the private corpus.
+//
+// Retrieval defaults to public, and the handler left it there. The
+// result on production was 52 public chunks across two articles, 50 of
+// them from one, against 251 chunks of actual career record in
+// corpus_only, so every answer came back drawn from a single marketing
+// article. "Does he have capital project experience" returned nothing,
+// from a corpus whose facts sheet answers it in a sentence.
+//
+// The flag is not what keeps private material safe. Private passages
+// reach the model unnumbered and untitled, Citable() keeps them out of
+// the source list, and chatbot_include excludes a document entirely.
+// This asserts the flag is set, because the feature is close to
+// useless without it and nothing else in the suite would notice.
+func TestTheAssistantIsGivenThePrivateCorpus(t *testing.T) {
+	src, err := os.ReadFile("chat.go")
+	if err != nil {
+		t.Fatalf("read handler: %v", err)
+	}
+	if !strings.Contains(string(src), "AllowPrivate: true") {
+		t.Error("SendMessage no longer widens retrieval to the private corpus; " +
+			"the assistant can only see published articles")
 	}
 }
