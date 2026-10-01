@@ -89,12 +89,33 @@ The FSD's own persona P6 (anonymous visitor, 30 to 90 seconds) and requirement F
 - **Action.** Link "the writing" and "the work photos" in that sentence, and drop `RecentWriting` into the IT landing after the practice section.
 - **Effort.** Small, since the component already exists.
 
-### 1.5 Offer a public résumé
+### 1.5 Offer a public résumé — DECLINED 2026-10-01
 
 - **Evidence.** There's no `/downloads` route in `apps/web/src/app` (it redirects to `/login`). No public page links a PDF (checked `/`, `/contact`, `/how-ask-roger-works`). FR-CNT-13 specifies résumé downloads, and it's unbuilt.
 - **Why it matters.** A recruiter's first action is to forward a résumé. Right now that requires an approved account.
 - **Action.** Publish one general résumé PDF behind no gate, with the phone number removed if you prefer. This doesn't weaken the reviewer, because the reviewer's value is the *tailored* résumé.
 - **Effort.** Small.
+- **Decision, 2026-10-01: not doing this.** Roger's call, and the
+  reasoning is stronger than the item it overrides. He rarely releases a
+  résumé without a posting to tailor it to, because a long and varied
+  career cannot be captured generically, and a recruiter scanning for
+  keywords they do not recognise as equivalent will screen him out on
+  the strength of a document that was never meant to be read that way.
+  That failure is common and it is the expensive kind, because it
+  happens before any conversation.
+
+  It also cuts against the site's own argument. Everything here holds
+  that generic keyword matching is the broken part and evidence against
+  a specific posting is the fix. Publishing the generic document hands a
+  recruiter the exact artifact the site exists to argue against.
+
+  **The underlying problem this item named is still real and is not a
+  résumé problem.** A recruiter cannot forward anything: `/jd-upload`
+  requires a member, so the path is register, verify, wait for manual
+  approval, paste a posting, wait 30 to 60 minutes. That is a long way
+  from intent to artifact at the moment intent is highest. If this is
+  revisited, it should be revisited as time-to-first-artifact, not as a
+  PDF.
 
 ---
 
@@ -240,6 +261,6 @@ A technical interviewer will open `reh3376/career-site`, and it's already one of
 | When | Items | Outcome |
 |---|---|---|
 | By Oct 6 | 0.1 to 0.4 | Nothing broken or overstated reaches a reviewer |
-| Next 1 to 2 weeks | 1.1 to 1.5, 2.1 | A cold visitor sees who you are, what you delivered, and how to get a résumé |
+| Next 1 to 2 weeks | 1.1 to 1.4, 2.1 | A cold visitor sees who you are and what you delivered. 1.5 declined; see the note on that item |
 | After Phase 1 | 2.2, 2.3, 3.x | The URL goes on résumés; content and cross-asset claims are consistent |
 | Ongoing | 4.x, 5.x | Lower-friction access for hiring teams; the repo reads as accurately as it is built |

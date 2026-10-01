@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CoreActions } from "./core-actions";
 import { Podcasts } from "./podcasts";
 import { RecentWritingStrip } from "./recent-writing";
+import { WhyThisExists } from "./why-this-exists";
 
 import { GithubReposIt } from "@/components/github-repos";
 import {
@@ -325,6 +326,12 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           </div>
         </dl>
       </section>
+
+      {/* The argument the rest of the page is evidence for. High on
+          purpose: without it a visitor reads everything below as a
+          portfolio, and the reviewer looks like a gimmick rather than
+          the answer to a specific problem. */}
+      <WhyThisExists />
 
       {/* -----------------------------------------------------------------
        * IMAGE + PULL QUOTE, top bubble tray of a continuous distillation
