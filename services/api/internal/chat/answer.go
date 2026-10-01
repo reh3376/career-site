@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -449,7 +450,7 @@ func validateCitations(text string, offered []users.CorpusHit) (string, []users.
 			cites = append(cites, users.ChatCitation{
 				ChunkID: h.Chunk.ID,
 				Title:   h.Title,
-				Path:    h.SourcePath,
+				Path:    sitePath(h.SourceKind, h.SourcePath),
 				Rank:    len(cites) + 1,
 			})
 		}
@@ -609,4 +610,28 @@ func errString(err error, fallback string) string {
 		return err.Error()
 	}
 	return fallback
+}
+
+// sitePath turns a corpus source into a URL on this site, or into
+// nothing when the document has no page.
+//
+// corpus_documents.source_path is the file the walker read, relative to
+// its root: "better-business-decisions-part-1.md". That was being used
+// as the citation link directly, so every citation on every answer
+// pointed at a path that does not exist and 404'd. A citation that
+// cannot be followed is worse than none, because it invites the one
+// reader who checks to conclude the source was invented.
+//
+// Only kinds with a real page get a link. Everything else returns
+// empty, which the surface already renders as a title with no link, the
+// same way a private source is shown.
+func sitePath(kind, source string) string {
+	if kind != "article" {
+		return ""
+	}
+	slug := strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+	if slug == "" || slug == "." {
+		return ""
+	}
+	return "/articles/" + slug
 }
