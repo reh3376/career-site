@@ -241,6 +241,27 @@ func (h *Chat) SendMessage(
 		UserID:         me.ID,
 		Question:       question,
 		History:        turnsFrom(history),
+		// The private corpus informs the answer, and this was the
+		// missing half of the feature.
+		//
+		// Retrieval defaults to public, and with it left there the
+		// assistant could see 52 chunks across two published articles,
+		// 50 of them from one, against 251 chunks of actual career
+		// record sitting in corpus_only. Every answer therefore came
+		// back drawn from one marketing article, including "does he
+		// have capital project experience", which his own facts sheet
+		// answers plainly.
+		//
+		// This is what FR-CHAT-20 ingests that material for. The
+		// protections are already in place and tested, and none of them
+		// is this flag: private passages reach the model unnumbered and
+		// untitled so there is no marker it could cite, Citable() keeps
+		// them out of the source list, and the persona is told they may
+		// inform an answer and may never be quoted at length or named.
+		// A document the owner does not want speaking for him at all is
+		// excluded with chatbot_include, which is the control built for
+		// that job.
+		AllowPrivate: true,
 	})
 	if err != nil {
 		h.log.Error("SendMessage: answer failed",
