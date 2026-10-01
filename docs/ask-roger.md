@@ -32,24 +32,30 @@ landed in the same commit as the persona and not after it.
 
 | Piece | State | Where |
 |---|---|---|
-| `ChatService` RPCs | **Built and mounted**, 6 of 9 | `handlers/chat.go`, `server/server.go` |
-| Conversation store | **Built, tested, not deployed** | migration `00045`, `users/chat.go` |
-| Retrieval path for chat | **Built, tested, not deployed** | `users/chat_retrieval.go`, migration `00046` |
-| Persona prompt v1 | **Built, tested, not deployed** | `prompts/askroger.go` |
-| Q&A bank | **Built, tested, not deployed** | migration `00047`, `users/qa.go` |
-| Decision capture for answers | **Built, not deployed** | migration `00048`, `users/chat_decision.go` |
-| Grading vocabulary and rubric | **Built, not deployed** | `users/decision_log.go` |
-| Answer pipeline | **Built, tested, wired** | `internal/chat/answer.go` |
-| Streaming transport | Stream is real, **one delta** until the sidecar streams | `handlers/chat.go` |
+| `ChatService` RPCs | **Live**, 8 of 11 | `handlers/chat.go` |
+| Conversation store | **Live** | migration `00045`, `users/chat.go` |
+| Retrieval, public and private | **Live** | `users/chat_retrieval.go`, `00046` |
+| Persona prompt | **Live, v3** (`v3`) | `prompts/askroger.go` |
+| Q&A bank + admin surface | **Live**, 2 entries approved | `00047`, `/admin/qa` |
+| Phrasing embedding job | **Live**, every 5 min | `chat/qaembed.go` |
+| Decision capture and grading | **Live** | `00048`, `users/chat_decision.go` |
+| Answer pipeline | **Live** | `internal/chat/answer.go` |
+| `/ask` page and side panel | **Live**, used by the owner | `app/ask/`, `components/ask/` |
+| Site guide in the corpus | **Live**, top hit for site questions | `content/other/career-site-guide.md` |
+| Action intents (D-25) | **Live**, never yet seen to fire | `chat/intent.go` |
+| Admin database queries | **Live**, dropdown on `/ask` | `users/admin_queries.go` |
+| Admin grading console | **Live**, no row graded yet | `/admin/decisions` |
+| Streaming transport | Stream is real, **one delta** | `handlers/chat.go` |
 | Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
-| `/ask` page and side panel | **Built, live tested locally** | `app/ask/`, `components/ask/` |
-| Admin grading console for chat | **Built, never seen live** | `/admin/decisions` |
-| Q&A bank admin surface | **Built, live tested locally** | `/admin/qa`, `handlers/admin_qa.go` |
-| Phrasing embedding job | **Built, tested, scheduled** | `chat/qaembed.go`, every 5 min |
 | Golden set (FR-CHAT-15) | **Not built** | — |
 
-Migrations 00045 to 00048 are committed and have been applied to a
-clean database locally. **They have not been applied to production.**
+Migrations 00045 to 00048 are applied in production; the database is at
+48.
+
+**Everything above is deployed and in use.** What remains unproven is
+not the plumbing but the behaviour: no action intent has been observed
+firing, no decision row has been graded, and the Q&A bank has two
+approved entries against a corpus of 36 documents.
 
 Prompt fingerprints at this head:
 
@@ -782,12 +788,36 @@ is called `meeting_bookings`.
 
 ## 8. Next steps, in order
 
-1. `/ask` and the side panel. **Live test and UI/UX review before this
-   is called done.**
-3. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
-4. Quotas and budget cap (FR-CHAT-12), and `GetQuota`.
-5. Escalation (FR-CHAT-10).
-6. The golden set (FR-CHAT-15), which then calibrates §6.1.
+Everything structural is built. What is left divides into making what
+exists work better, and the requirements still unimplemented.
+
+**Making it work better, highest value first.**
+
+1. **Seed the Q&A bank.** Two approved entries. It is the only path
+   that answers instantly, and it is nearly empty, so almost every
+   question takes the twenty to thirty second route. Nothing else on
+   this list changes the experience as much.
+2. **Grade some answers.** No decision row has been graded. The
+   console, the rubric and the correction box all exist and have never
+   been used, so the training set is still zero rows.
+3. **Split the site guide.** Two chunks for the whole site means a
+   question about the scheduler and one about JD upload compete for the
+   same passage. One document per feature would sharpen retrieval more
+   than any tuning.
+4. **Put the career facts sheet in every prompt**, the way the JD
+   reviewer does. It is 2 chunks against the UxTS guide's 50, so career
+   questions currently compete with documentation, and as a stable
+   prefix it would also be cached and therefore nearly free.
+
+**Still unimplemented.**
+
+5. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
+   Would not make an answer faster, but would make the wait legible.
+6. Quotas and budget cap (FR-CHAT-12), and `GetQuota`. `llm_usage` now
+   has chat rows, so the cap finally has something to read.
+7. Escalation (FR-CHAT-10).
+8. The golden set (FR-CHAT-15), which then settles the Q&A threshold
+   properly rather than from one question family.
 
 ---
 
