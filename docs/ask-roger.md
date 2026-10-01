@@ -53,7 +53,7 @@ clean database locally. **They have not been applied to production.**
 
 Prompt fingerprints at this head:
 
-    ask_roger_persona  v1:fb7c9aac
+    ask_roger_persona  v2:8a4c2f19
     requirement_judge  v12:df4c4cc7
     resume_tailor      v3:3e9fa0c1
     jd_requirements    v4:e13cbaeb
@@ -381,15 +381,57 @@ including `first_token_ms`, and the `human` block with verdict, note,
    generates, so one slot meant every question evicted the 5 GB
    language model to load a 376 MB embedder and then reloaded it.
 
-   Measured on the box after moving to two slots: both models resident
-   at **4.71 GiB of the 7 GiB cap**, embed 0.3 s, generate 4.7 s, a
-   second embed 0.3 s instead of a multi-gigabyte reload, no OOM. The
-   headroom exists because the model is 4b, not the 8b the old number
-   was sized for.
+   Both models now sit resident at the app's own 8192 context:
+   qwen3 at 5.2 GB, the embedder at 376 MB, **5.19 GiB of the 7 GiB
+   cap**, and they survive an api restart.
 
-   Still to confirm under load: the test ran at a 4096 context while
-   the app uses 8192, which grows the KV cache. Expect roughly 5.6 GiB
-   resident, about 1.4 GiB of headroom.
+   **The reload was not the expensive part, and I said it was.** The
+   5 GB model comes back from page cache quickly. What eviction
+   actually destroyed was qwen3's **KV cache**, and that is what cost
+   the time, because the persona system prompt is byte-identical on
+   every call and is exactly the thing a KV cache makes free.
+
+   Measured on the box, warm, with a fixed system prompt and two
+   *different* questions:
+
+       question A   428 prompt tokens   prompt_eval  9.5 s
+       question B   428 prompt tokens   prompt_eval  0.4 s
+
+   The prefix caches across different questions. With one model slot
+   the embedding call between two questions evicted qwen3 and threw
+   that away, so every question paid full prompt evaluation. With two
+   slots it survives.
+
+### Where the seconds actually go
+
+Measured on production, warm, 2026-10-01:
+
+| | rate | cost |
+|---|---|---|
+| prompt evaluation, uncached | ~39 tok/s | 874 tokens = 22.3 s |
+| prompt evaluation, cached prefix | — | 0.4 to 0.6 s |
+| generation | ~8 tok/s | 120 tokens = 15.0 s |
+
+So a first question after a quiet spell is roughly 1,200 prompt tokens
+(31 s) plus a 90-token answer (11 s), which is the 45 s Roger saw.
+A *following* question should pay only the varying part, the evidence
+and the question, because the persona prefix is cached: expect
+somewhere near 24 s.
+
+**Generation is now the floor**, not retrieval.
+
+The persona's answers at v1 were already running about 90 tokens, so
+the old 150-word rule was never binding and shortening it is worth
+about five seconds, not the fifteen the old limit implied. Taken
+anyway, as **persona v2** (`v2:8a4c2f19`): rule 9 goes from 150 words
+to 90 and `AskRogerAnswerMaxTokens` from 320 to 200. Five seconds off a
+twenty-five second answer is worth having, and a limit that never binds
+is not doing any work.
+
+The other lever is showing fewer passages, `Show` 3 to 2, worth about
+175 tokens or 4.5 s and costing grounding. Not taken: the two together
+would bring a cached follow-up from roughly 25 s to 15 s, and the
+retrieval one is the half that makes answers worse.
 
 1. **`QAMatchThreshold` is back to 0.85, and the mechanism changed.**
    The 0.72 above was measured off one question family and it was
