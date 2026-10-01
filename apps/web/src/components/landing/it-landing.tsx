@@ -100,32 +100,38 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             what the thing is, a way to find out how it works, and Ask
             Roger in the hero rather than only as a corner button.
 
-            All three are members-only, so an anonymous visitor sees the
-            access route instead and learns these exist from the copy
-            below. */}
-        {signedIn ? (
-          <CoreActions />
-        ) : (
-          <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
+            All three are members-only, and everyone sees them anyway.
+            Roger's call: showing the buttons only to members meant a
+            hiring manager arriving cold saw none of the three things
+            this site is for. A signed-out press goes through the login
+            page to the thing they pressed, and the line underneath says
+            what the gate is before they touch it. */}
+        <CoreActions signedIn={signedIn} />
+        {signedIn ? null : (
+          <p className="mt-5 max-w-xl text-sm leading-relaxed text-ink-3">
+            Members only.{" "}
             <Link
               href="/register"
-              className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 transition-colors hover:decoration-accent"
             >
-              Considering me for a role? Request access →
+              Request access
             </Link>
-            <Link
-              href="/contact"
-              className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-            >
-              Or reach out directly
-            </Link>
+            , or{" "}
             <Link
               href="/login"
-              className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
             >
-              Already a member? Sign in
+              sign in
             </Link>
-          </div>
+            . Not looking to hire?{" "}
+            <Link
+              href="/contact"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              Reach out directly
+            </Link>
+            .
+          </p>
         )}
         {signedIn ? (
           /* The sentence that used to sit here explained the reviewer,

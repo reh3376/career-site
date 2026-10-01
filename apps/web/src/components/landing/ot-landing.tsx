@@ -239,12 +239,16 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
           </div>
         </section>
 
-        {signedIn ? (
-          <section aria-label="Core functions" className="md:col-span-12">
-            <PanelHeader tag="CF-1" title="CORE FUNCTIONS" />
-            <CoreActionsOt />
-          </section>
-        ) : null}
+        {/* Shown signed out as well as signed in. The ACCESS SCOPE panel
+            below still spells out what an account buys; this one says
+            what the functions are, which a visitor could previously only
+            find by reading the access panel's list of what they were
+            missing. Each row marks itself members when signed out and
+            the press routes through the login page. */}
+        <section aria-label="Core functions" className="md:col-span-12">
+          <PanelHeader tag="CF-1" title="CORE FUNCTIONS" />
+          <CoreActionsOt signedIn={signedIn} />
+        </section>
 
         {!signedIn ? (
           <section aria-label="Access" className="md:col-span-12">
