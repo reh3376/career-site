@@ -232,3 +232,22 @@ func truncRunErr(s string) string {
 	}
 	return s
 }
+
+// JDRunInProgress reports whether a JD run is in flight.
+//
+// Asked by the chat prompt warmer. Ollama holds one KV cache slot
+// (OLLAMA_NUM_PARALLEL=1), so a JD run and the chat prefix cannot both
+// be cached. While a run is going, warming would evaluate two thousand
+// tokens, be evicted by the run's next call, and do it again on the
+// following tick: minutes of CPU spent on a cache nothing will read,
+// stolen from the run that is actually working.
+func (r *Repo) JDRunInProgress(ctx context.Context) (bool, error) {
+	var n int
+	err := r.pool.QueryRow(ctx, `
+    SELECT count(*) FROM jd_runs
+     WHERE status = 'running' AND finished_at IS NULL`).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("jd run in progress: %w", err)
+	}
+	return n > 0, nil
+}

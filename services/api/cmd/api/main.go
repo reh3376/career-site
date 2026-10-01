@@ -273,7 +273,7 @@ func main() {
 				NumCtx: cfg.LLMNumCtx,
 				Facts:  facts,
 			}
-			warmer = &chat.Warmer{Model: gateway, Facts: facts, Log: log}
+			warmer = &chat.Warmer{Model: gateway, Facts: facts, Busy: userRepo, Log: log}
 			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap, cfg.LLMNumCtx)
 			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,
 				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword, cfg.LLMNumCtx)
@@ -454,9 +454,14 @@ func main() {
 		// only after something evicted it, which on this box means a
 		// JD evaluation was running.
 		//
-		// Four minutes rather than five so a tick always lands inside
-		// Ollama's keep_alive window with room to spare.
-		scheduler.Job{Name: "prompt-warm", Interval: 4 * time.Minute, Run: func(ctx context.Context) error {
+		// Every minute, not every four. A tick that finds the cache
+		// intact costs 0.2 s, measured on the box, so the loop is
+		// cheap and the interval is really a bound on how long a
+		// visitor can arrive to a cold cache after something evicted
+		// it. One minute instead of four is worth 0.2 s of CPU a
+		// minute. The warmer stands aside while a JD run holds the
+		// slot, so the shorter interval cannot turn into a fight.
+		scheduler.Job{Name: "prompt-warm", Interval: time.Minute, Run: func(ctx context.Context) error {
 			if warmer == nil {
 				return nil
 			}
