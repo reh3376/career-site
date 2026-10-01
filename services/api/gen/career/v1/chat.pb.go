@@ -139,7 +139,7 @@ func (x Message_Role) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Message_Role.Descriptor instead.
 func (Message_Role) EnumDescriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{4, 0}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{9, 0}
 }
 
 // Escalation lifecycle.
@@ -196,7 +196,7 @@ func (x Escalation_Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Escalation_Status.Descriptor instead.
 func (Escalation_Status) EnumDescriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{19, 0}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{24, 0}
 }
 
 // Global assistant budget state.
@@ -253,7 +253,264 @@ func (x GetQuotaResponse_BudgetMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use GetQuotaResponse_BudgetMode.Descriptor instead.
 func (GetQuotaResponse_BudgetMode) EnumDescriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{24, 0}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{29, 0}
+}
+
+// One query offered in the admin dropdown.
+type AdminQuery struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable id sent back to run it.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// What the dropdown shows.
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// What the result means.
+	Detail        string `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdminQuery) Reset() {
+	*x = AdminQuery{}
+	mi := &file_career_v1_chat_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdminQuery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdminQuery) ProtoMessage() {}
+
+func (x *AdminQuery) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_chat_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdminQuery.ProtoReflect.Descriptor instead.
+func (*AdminQuery) Descriptor() ([]byte, []int) {
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AdminQuery) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AdminQuery) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *AdminQuery) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+// Empty: the list is the same for every admin.
+type ListAdminQueriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminQueriesRequest) Reset() {
+	*x = ListAdminQueriesRequest{}
+	mi := &file_career_v1_chat_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminQueriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminQueriesRequest) ProtoMessage() {}
+
+func (x *ListAdminQueriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_chat_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminQueriesRequest.ProtoReflect.Descriptor instead.
+func (*ListAdminQueriesRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{1}
+}
+
+// The queries an admin may run.
+type ListAdminQueriesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Offered queries, in display order.
+	Queries       []*AdminQuery `protobuf:"bytes,1,rep,name=queries,proto3" json:"queries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminQueriesResponse) Reset() {
+	*x = ListAdminQueriesResponse{}
+	mi := &file_career_v1_chat_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminQueriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminQueriesResponse) ProtoMessage() {}
+
+func (x *ListAdminQueriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_chat_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminQueriesResponse.ProtoReflect.Descriptor instead.
+func (*ListAdminQueriesResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListAdminQueriesResponse) GetQueries() []*AdminQuery {
+	if x != nil {
+		return x.Queries
+	}
+	return nil
+}
+
+// Run one named query.
+type RunAdminQueryRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Id from ListAdminQueries. Anything else is refused.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunAdminQueryRequest) Reset() {
+	*x = RunAdminQueryRequest{}
+	mi := &file_career_v1_chat_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunAdminQueryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunAdminQueryRequest) ProtoMessage() {}
+
+func (x *RunAdminQueryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_chat_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunAdminQueryRequest.ProtoReflect.Descriptor instead.
+func (*RunAdminQueryRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RunAdminQueryRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// What the query returned.
+type RunAdminQueryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The query that ran, echoed so the surface can label the result.
+	Query *AdminQuery `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// The single-row result, already formatted for reading.
+	Result string `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	// When it ran.
+	RanAt         *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunAdminQueryResponse) Reset() {
+	*x = RunAdminQueryResponse{}
+	mi := &file_career_v1_chat_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunAdminQueryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunAdminQueryResponse) ProtoMessage() {}
+
+func (x *RunAdminQueryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_chat_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunAdminQueryResponse.ProtoReflect.Descriptor instead.
+func (*RunAdminQueryResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RunAdminQueryResponse) GetQuery() *AdminQuery {
+	if x != nil {
+		return x.Query
+	}
+	return nil
+}
+
+func (x *RunAdminQueryResponse) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
+func (x *RunAdminQueryResponse) GetRanAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RanAt
+	}
+	return nil
 }
 
 // A conversation header.
@@ -279,7 +536,7 @@ type Conversation struct {
 
 func (x *Conversation) Reset() {
 	*x = Conversation{}
-	mi := &file_career_v1_chat_proto_msgTypes[0]
+	mi := &file_career_v1_chat_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -291,7 +548,7 @@ func (x *Conversation) String() string {
 func (*Conversation) ProtoMessage() {}
 
 func (x *Conversation) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[0]
+	mi := &file_career_v1_chat_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -304,7 +561,7 @@ func (x *Conversation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conversation.ProtoReflect.Descriptor instead.
 func (*Conversation) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{0}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Conversation) GetId() string {
@@ -377,7 +634,7 @@ type Citation struct {
 
 func (x *Citation) Reset() {
 	*x = Citation{}
-	mi := &file_career_v1_chat_proto_msgTypes[1]
+	mi := &file_career_v1_chat_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +646,7 @@ func (x *Citation) String() string {
 func (*Citation) ProtoMessage() {}
 
 func (x *Citation) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[1]
+	mi := &file_career_v1_chat_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -402,7 +659,7 @@ func (x *Citation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Citation.ProtoReflect.Descriptor instead.
 func (*Citation) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{1}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Citation) GetChunkId() string {
@@ -470,7 +727,7 @@ type ProposedAction struct {
 
 func (x *ProposedAction) Reset() {
 	*x = ProposedAction{}
-	mi := &file_career_v1_chat_proto_msgTypes[2]
+	mi := &file_career_v1_chat_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -482,7 +739,7 @@ func (x *ProposedAction) String() string {
 func (*ProposedAction) ProtoMessage() {}
 
 func (x *ProposedAction) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[2]
+	mi := &file_career_v1_chat_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -495,7 +752,7 @@ func (x *ProposedAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposedAction.ProtoReflect.Descriptor instead.
 func (*ProposedAction) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{2}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ProposedAction) GetAction() string {
@@ -530,7 +787,7 @@ type MessageFlags struct {
 
 func (x *MessageFlags) Reset() {
 	*x = MessageFlags{}
-	mi := &file_career_v1_chat_proto_msgTypes[3]
+	mi := &file_career_v1_chat_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -542,7 +799,7 @@ func (x *MessageFlags) String() string {
 func (*MessageFlags) ProtoMessage() {}
 
 func (x *MessageFlags) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[3]
+	mi := &file_career_v1_chat_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -555,7 +812,7 @@ func (x *MessageFlags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageFlags.ProtoReflect.Descriptor instead.
 func (*MessageFlags) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{3}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MessageFlags) GetOutOfScope() bool {
@@ -616,7 +873,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_career_v1_chat_proto_msgTypes[4]
+	mi := &file_career_v1_chat_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -628,7 +885,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[4]
+	mi := &file_career_v1_chat_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -641,7 +898,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{4}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Message) GetId() string {
@@ -726,7 +983,7 @@ type CreateConversationRequest struct {
 
 func (x *CreateConversationRequest) Reset() {
 	*x = CreateConversationRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[5]
+	mi := &file_career_v1_chat_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -738,7 +995,7 @@ func (x *CreateConversationRequest) String() string {
 func (*CreateConversationRequest) ProtoMessage() {}
 
 func (x *CreateConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[5]
+	mi := &file_career_v1_chat_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -751,7 +1008,7 @@ func (x *CreateConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateConversationRequest.ProtoReflect.Descriptor instead.
 func (*CreateConversationRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{5}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateConversationRequest) GetContextContentId() string {
@@ -774,7 +1031,7 @@ type CreateConversationResponse struct {
 
 func (x *CreateConversationResponse) Reset() {
 	*x = CreateConversationResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[6]
+	mi := &file_career_v1_chat_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -786,7 +1043,7 @@ func (x *CreateConversationResponse) String() string {
 func (*CreateConversationResponse) ProtoMessage() {}
 
 func (x *CreateConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[6]
+	mi := &file_career_v1_chat_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -799,7 +1056,7 @@ func (x *CreateConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateConversationResponse.ProtoReflect.Descriptor instead.
 func (*CreateConversationResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{6}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateConversationResponse) GetConversation() *Conversation {
@@ -827,7 +1084,7 @@ type ListConversationsRequest struct {
 
 func (x *ListConversationsRequest) Reset() {
 	*x = ListConversationsRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[7]
+	mi := &file_career_v1_chat_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -839,7 +1096,7 @@ func (x *ListConversationsRequest) String() string {
 func (*ListConversationsRequest) ProtoMessage() {}
 
 func (x *ListConversationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[7]
+	mi := &file_career_v1_chat_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -852,7 +1109,7 @@ func (x *ListConversationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationsRequest.ProtoReflect.Descriptor instead.
 func (*ListConversationsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{7}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListConversationsRequest) GetPage() *PageRequest {
@@ -875,7 +1132,7 @@ type ListConversationsResponse struct {
 
 func (x *ListConversationsResponse) Reset() {
 	*x = ListConversationsResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[8]
+	mi := &file_career_v1_chat_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +1144,7 @@ func (x *ListConversationsResponse) String() string {
 func (*ListConversationsResponse) ProtoMessage() {}
 
 func (x *ListConversationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[8]
+	mi := &file_career_v1_chat_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,7 +1157,7 @@ func (x *ListConversationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationsResponse.ProtoReflect.Descriptor instead.
 func (*ListConversationsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{8}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListConversationsResponse) GetConversations() []*Conversation {
@@ -928,7 +1185,7 @@ type GetConversationRequest struct {
 
 func (x *GetConversationRequest) Reset() {
 	*x = GetConversationRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[9]
+	mi := &file_career_v1_chat_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -940,7 +1197,7 @@ func (x *GetConversationRequest) String() string {
 func (*GetConversationRequest) ProtoMessage() {}
 
 func (x *GetConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[9]
+	mi := &file_career_v1_chat_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -953,7 +1210,7 @@ func (x *GetConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationRequest.ProtoReflect.Descriptor instead.
 func (*GetConversationRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{9}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetConversationRequest) GetConversationId() string {
@@ -976,7 +1233,7 @@ type GetConversationResponse struct {
 
 func (x *GetConversationResponse) Reset() {
 	*x = GetConversationResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[10]
+	mi := &file_career_v1_chat_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1245,7 @@ func (x *GetConversationResponse) String() string {
 func (*GetConversationResponse) ProtoMessage() {}
 
 func (x *GetConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[10]
+	mi := &file_career_v1_chat_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +1258,7 @@ func (x *GetConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationResponse.ProtoReflect.Descriptor instead.
 func (*GetConversationResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{10}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetConversationResponse) GetConversation() *Conversation {
@@ -1033,7 +1290,7 @@ type SendMessageRequest struct {
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[11]
+	mi := &file_career_v1_chat_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1302,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[11]
+	mi := &file_career_v1_chat_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1315,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{11}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SendMessageRequest) GetConversationId() string {
@@ -1099,7 +1356,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_career_v1_chat_proto_msgTypes[12]
+	mi := &file_career_v1_chat_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1111,7 +1368,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[12]
+	mi := &file_career_v1_chat_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1124,7 +1381,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{12}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Usage) GetInputTokens() int32 {
@@ -1174,7 +1431,7 @@ type SendMessageResponse struct {
 
 func (x *SendMessageResponse) Reset() {
 	*x = SendMessageResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[13]
+	mi := &file_career_v1_chat_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1186,7 +1443,7 @@ func (x *SendMessageResponse) String() string {
 func (*SendMessageResponse) ProtoMessage() {}
 
 func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[13]
+	mi := &file_career_v1_chat_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1199,7 +1456,7 @@ func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{13}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SendMessageResponse) GetEvent() isSendMessageResponse_Event {
@@ -1305,7 +1562,7 @@ type DeleteConversationRequest struct {
 
 func (x *DeleteConversationRequest) Reset() {
 	*x = DeleteConversationRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[14]
+	mi := &file_career_v1_chat_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1317,7 +1574,7 @@ func (x *DeleteConversationRequest) String() string {
 func (*DeleteConversationRequest) ProtoMessage() {}
 
 func (x *DeleteConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[14]
+	mi := &file_career_v1_chat_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1330,7 +1587,7 @@ func (x *DeleteConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteConversationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteConversationRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{14}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DeleteConversationRequest) GetConversationId() string {
@@ -1349,7 +1606,7 @@ type DeleteConversationResponse struct {
 
 func (x *DeleteConversationResponse) Reset() {
 	*x = DeleteConversationResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[15]
+	mi := &file_career_v1_chat_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1361,7 +1618,7 @@ func (x *DeleteConversationResponse) String() string {
 func (*DeleteConversationResponse) ProtoMessage() {}
 
 func (x *DeleteConversationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[15]
+	mi := &file_career_v1_chat_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1374,7 +1631,7 @@ func (x *DeleteConversationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteConversationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteConversationResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{15}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{20}
 }
 
 // Rating request.
@@ -1392,7 +1649,7 @@ type RateMessageRequest struct {
 
 func (x *RateMessageRequest) Reset() {
 	*x = RateMessageRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[16]
+	mi := &file_career_v1_chat_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1404,7 +1661,7 @@ func (x *RateMessageRequest) String() string {
 func (*RateMessageRequest) ProtoMessage() {}
 
 func (x *RateMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[16]
+	mi := &file_career_v1_chat_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1417,7 +1674,7 @@ func (x *RateMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RateMessageRequest.ProtoReflect.Descriptor instead.
 func (*RateMessageRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{16}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RateMessageRequest) GetMessageId() string {
@@ -1450,7 +1707,7 @@ type RateMessageResponse struct {
 
 func (x *RateMessageResponse) Reset() {
 	*x = RateMessageResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[17]
+	mi := &file_career_v1_chat_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1462,7 +1719,7 @@ func (x *RateMessageResponse) String() string {
 func (*RateMessageResponse) ProtoMessage() {}
 
 func (x *RateMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[17]
+	mi := &file_career_v1_chat_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1475,7 +1732,7 @@ func (x *RateMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RateMessageResponse.ProtoReflect.Descriptor instead.
 func (*RateMessageResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{17}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{22}
 }
 
 // Escalation request.
@@ -1493,7 +1750,7 @@ type EscalateRequest struct {
 
 func (x *EscalateRequest) Reset() {
 	*x = EscalateRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[18]
+	mi := &file_career_v1_chat_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1505,7 +1762,7 @@ func (x *EscalateRequest) String() string {
 func (*EscalateRequest) ProtoMessage() {}
 
 func (x *EscalateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[18]
+	mi := &file_career_v1_chat_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1518,7 +1775,7 @@ func (x *EscalateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EscalateRequest.ProtoReflect.Descriptor instead.
 func (*EscalateRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{18}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *EscalateRequest) GetConversationId() string {
@@ -1561,7 +1818,7 @@ type Escalation struct {
 
 func (x *Escalation) Reset() {
 	*x = Escalation{}
-	mi := &file_career_v1_chat_proto_msgTypes[19]
+	mi := &file_career_v1_chat_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1573,7 +1830,7 @@ func (x *Escalation) String() string {
 func (*Escalation) ProtoMessage() {}
 
 func (x *Escalation) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[19]
+	mi := &file_career_v1_chat_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1586,7 +1843,7 @@ func (x *Escalation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Escalation.ProtoReflect.Descriptor instead.
 func (*Escalation) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{19}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *Escalation) GetId() string {
@@ -1635,7 +1892,7 @@ type EscalateResponse struct {
 
 func (x *EscalateResponse) Reset() {
 	*x = EscalateResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[20]
+	mi := &file_career_v1_chat_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1904,7 @@ func (x *EscalateResponse) String() string {
 func (*EscalateResponse) ProtoMessage() {}
 
 func (x *EscalateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[20]
+	mi := &file_career_v1_chat_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1917,7 @@ func (x *EscalateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EscalateResponse.ProtoReflect.Descriptor instead.
 func (*EscalateResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{20}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *EscalateResponse) GetEscalation() *Escalation {
@@ -1683,7 +1940,7 @@ type GetSuggestionsRequest struct {
 
 func (x *GetSuggestionsRequest) Reset() {
 	*x = GetSuggestionsRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[21]
+	mi := &file_career_v1_chat_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1695,7 +1952,7 @@ func (x *GetSuggestionsRequest) String() string {
 func (*GetSuggestionsRequest) ProtoMessage() {}
 
 func (x *GetSuggestionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[21]
+	mi := &file_career_v1_chat_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1708,7 +1965,7 @@ func (x *GetSuggestionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSuggestionsRequest.ProtoReflect.Descriptor instead.
 func (*GetSuggestionsRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{21}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetSuggestionsRequest) GetPath() string {
@@ -1736,7 +1993,7 @@ type GetSuggestionsResponse struct {
 
 func (x *GetSuggestionsResponse) Reset() {
 	*x = GetSuggestionsResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[22]
+	mi := &file_career_v1_chat_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1748,7 +2005,7 @@ func (x *GetSuggestionsResponse) String() string {
 func (*GetSuggestionsResponse) ProtoMessage() {}
 
 func (x *GetSuggestionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[22]
+	mi := &file_career_v1_chat_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1761,7 +2018,7 @@ func (x *GetSuggestionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSuggestionsResponse.ProtoReflect.Descriptor instead.
 func (*GetSuggestionsResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{22}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetSuggestionsResponse) GetQuestions() []string {
@@ -1780,7 +2037,7 @@ type GetQuotaRequest struct {
 
 func (x *GetQuotaRequest) Reset() {
 	*x = GetQuotaRequest{}
-	mi := &file_career_v1_chat_proto_msgTypes[23]
+	mi := &file_career_v1_chat_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1792,7 +2049,7 @@ func (x *GetQuotaRequest) String() string {
 func (*GetQuotaRequest) ProtoMessage() {}
 
 func (x *GetQuotaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[23]
+	mi := &file_career_v1_chat_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1805,7 +2062,7 @@ func (x *GetQuotaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetQuotaRequest.ProtoReflect.Descriptor instead.
 func (*GetQuotaRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{23}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{28}
 }
 
 // Allowance and budget mode.
@@ -1825,7 +2082,7 @@ type GetQuotaResponse struct {
 
 func (x *GetQuotaResponse) Reset() {
 	*x = GetQuotaResponse{}
-	mi := &file_career_v1_chat_proto_msgTypes[24]
+	mi := &file_career_v1_chat_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1837,7 +2094,7 @@ func (x *GetQuotaResponse) String() string {
 func (*GetQuotaResponse) ProtoMessage() {}
 
 func (x *GetQuotaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[24]
+	mi := &file_career_v1_chat_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1850,7 +2107,7 @@ func (x *GetQuotaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetQuotaResponse.ProtoReflect.Descriptor instead.
 func (*GetQuotaResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{24}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetQuotaResponse) GetDailyLimit() int32 {
@@ -1896,7 +2153,7 @@ type SendMessageResponse_Start struct {
 
 func (x *SendMessageResponse_Start) Reset() {
 	*x = SendMessageResponse_Start{}
-	mi := &file_career_v1_chat_proto_msgTypes[25]
+	mi := &file_career_v1_chat_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1908,7 +2165,7 @@ func (x *SendMessageResponse_Start) String() string {
 func (*SendMessageResponse_Start) ProtoMessage() {}
 
 func (x *SendMessageResponse_Start) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[25]
+	mi := &file_career_v1_chat_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1921,7 +2178,7 @@ func (x *SendMessageResponse_Start) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse_Start.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse_Start) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{13, 0}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{18, 0}
 }
 
 func (x *SendMessageResponse_Start) GetUserMessageId() string {
@@ -1956,7 +2213,7 @@ type SendMessageResponse_Delta struct {
 
 func (x *SendMessageResponse_Delta) Reset() {
 	*x = SendMessageResponse_Delta{}
-	mi := &file_career_v1_chat_proto_msgTypes[26]
+	mi := &file_career_v1_chat_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1968,7 +2225,7 @@ func (x *SendMessageResponse_Delta) String() string {
 func (*SendMessageResponse_Delta) ProtoMessage() {}
 
 func (x *SendMessageResponse_Delta) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[26]
+	mi := &file_career_v1_chat_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1981,7 +2238,7 @@ func (x *SendMessageResponse_Delta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse_Delta.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse_Delta) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{13, 1}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{18, 1}
 }
 
 func (x *SendMessageResponse_Delta) GetText() string {
@@ -2002,7 +2259,7 @@ type SendMessageResponse_Citations struct {
 
 func (x *SendMessageResponse_Citations) Reset() {
 	*x = SendMessageResponse_Citations{}
-	mi := &file_career_v1_chat_proto_msgTypes[27]
+	mi := &file_career_v1_chat_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2014,7 +2271,7 @@ func (x *SendMessageResponse_Citations) String() string {
 func (*SendMessageResponse_Citations) ProtoMessage() {}
 
 func (x *SendMessageResponse_Citations) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[27]
+	mi := &file_career_v1_chat_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2027,7 +2284,7 @@ func (x *SendMessageResponse_Citations) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse_Citations.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse_Citations) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{13, 2}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{18, 2}
 }
 
 func (x *SendMessageResponse_Citations) GetCitations() []*Citation {
@@ -2048,7 +2305,7 @@ type SendMessageResponse_Done struct {
 
 func (x *SendMessageResponse_Done) Reset() {
 	*x = SendMessageResponse_Done{}
-	mi := &file_career_v1_chat_proto_msgTypes[28]
+	mi := &file_career_v1_chat_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2060,7 +2317,7 @@ func (x *SendMessageResponse_Done) String() string {
 func (*SendMessageResponse_Done) ProtoMessage() {}
 
 func (x *SendMessageResponse_Done) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_chat_proto_msgTypes[28]
+	mi := &file_career_v1_chat_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2073,7 +2330,7 @@ func (x *SendMessageResponse_Done) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse_Done.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse_Done) Descriptor() ([]byte, []int) {
-	return file_career_v1_chat_proto_rawDescGZIP(), []int{13, 3}
+	return file_career_v1_chat_proto_rawDescGZIP(), []int{18, 3}
 }
 
 func (x *SendMessageResponse_Done) GetMessage() *Message {
@@ -2087,7 +2344,21 @@ var File_career_v1_chat_proto protoreflect.FileDescriptor
 
 const file_career_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x14career/v1/chat.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16career/v1/common.proto\x1a\x17career/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x02\n" +
+	"\x14career/v1/chat.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16career/v1/common.proto\x1a\x17career/v1/options.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"J\n" +
+	"\n" +
+	"AdminQuery\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
+	"\x06detail\x18\x03 \x01(\tR\x06detail\"\x19\n" +
+	"\x17ListAdminQueriesRequest\"K\n" +
+	"\x18ListAdminQueriesResponse\x12/\n" +
+	"\aqueries\x18\x01 \x03(\v2\x15.career.v1.AdminQueryR\aqueries\"1\n" +
+	"\x14RunAdminQueryRequest\x12\x19\n" +
+	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x02id\"\x8f\x01\n" +
+	"\x15RunAdminQueryResponse\x12+\n" +
+	"\x05query\x18\x01 \x01(\v2\x15.career.v1.AdminQueryR\x05query\x12\x16\n" +
+	"\x06result\x18\x02 \x01(\tR\x06result\x121\n" +
+	"\x06ran_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05ranAt\"\xaf\x02\n" +
 	"\fConversation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x129\n" +
@@ -2234,7 +2505,7 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\x06Rating\x12\x16\n" +
 	"\x12RATING_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tRATING_UP\x10\x01\x12\x0f\n" +
-	"\vRATING_DOWN\x10\x022\xce\x06\n" +
+	"\vRATING_DOWN\x10\x022\x8b\b\n" +
 	"\vChatService\x12k\n" +
 	"\x12CreateConversation\x12$.career.v1.CreateConversationRequest\x1a%.career.v1.CreateConversationResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x14\x12d\n" +
 	"\x11ListConversations\x12#.career.v1.ListConversationsRequest\x1a$.career.v1.ListConversationsResponse\"\x04\x80\xb5\x18\x02\x12^\n" +
@@ -2244,7 +2515,9 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\vRateMessage\x12\x1d.career.v1.RateMessageRequest\x1a\x1e.career.v1.RateMessageResponse\"\x04\x80\xb5\x18\x02\x12M\n" +
 	"\bEscalate\x12\x1a.career.v1.EscalateRequest\x1a\x1b.career.v1.EscalateResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x05\x12[\n" +
 	"\x0eGetSuggestions\x12 .career.v1.GetSuggestionsRequest\x1a!.career.v1.GetSuggestionsResponse\"\x04\x80\xb5\x18\x02\x12I\n" +
-	"\bGetQuota\x12\x1a.career.v1.GetQuotaRequest\x1a\x1b.career.v1.GetQuotaResponse\"\x04\x80\xb5\x18\x02B\xa3\x01\n" +
+	"\bGetQuota\x12\x1a.career.v1.GetQuotaRequest\x1a\x1b.career.v1.GetQuotaResponse\"\x04\x80\xb5\x18\x02\x12a\n" +
+	"\x10ListAdminQueries\x12\".career.v1.ListAdminQueriesRequest\x1a#.career.v1.ListAdminQueriesResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rRunAdminQuery\x12\x1f.career.v1.RunAdminQueryRequest\x1a .career.v1.RunAdminQueryResponse\"\x04\x80\xb5\x18\x03B\xa3\x01\n" +
 	"\rcom.career.v1B\tChatProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -2261,97 +2534,109 @@ func file_career_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_career_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_career_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_career_v1_chat_proto_goTypes = []any{
 	(Rating)(0),                           // 0: career.v1.Rating
 	(Message_Role)(0),                     // 1: career.v1.Message.Role
 	(Escalation_Status)(0),                // 2: career.v1.Escalation.Status
 	(GetQuotaResponse_BudgetMode)(0),      // 3: career.v1.GetQuotaResponse.BudgetMode
-	(*Conversation)(nil),                  // 4: career.v1.Conversation
-	(*Citation)(nil),                      // 5: career.v1.Citation
-	(*ProposedAction)(nil),                // 6: career.v1.ProposedAction
-	(*MessageFlags)(nil),                  // 7: career.v1.MessageFlags
-	(*Message)(nil),                       // 8: career.v1.Message
-	(*CreateConversationRequest)(nil),     // 9: career.v1.CreateConversationRequest
-	(*CreateConversationResponse)(nil),    // 10: career.v1.CreateConversationResponse
-	(*ListConversationsRequest)(nil),      // 11: career.v1.ListConversationsRequest
-	(*ListConversationsResponse)(nil),     // 12: career.v1.ListConversationsResponse
-	(*GetConversationRequest)(nil),        // 13: career.v1.GetConversationRequest
-	(*GetConversationResponse)(nil),       // 14: career.v1.GetConversationResponse
-	(*SendMessageRequest)(nil),            // 15: career.v1.SendMessageRequest
-	(*Usage)(nil),                         // 16: career.v1.Usage
-	(*SendMessageResponse)(nil),           // 17: career.v1.SendMessageResponse
-	(*DeleteConversationRequest)(nil),     // 18: career.v1.DeleteConversationRequest
-	(*DeleteConversationResponse)(nil),    // 19: career.v1.DeleteConversationResponse
-	(*RateMessageRequest)(nil),            // 20: career.v1.RateMessageRequest
-	(*RateMessageResponse)(nil),           // 21: career.v1.RateMessageResponse
-	(*EscalateRequest)(nil),               // 22: career.v1.EscalateRequest
-	(*Escalation)(nil),                    // 23: career.v1.Escalation
-	(*EscalateResponse)(nil),              // 24: career.v1.EscalateResponse
-	(*GetSuggestionsRequest)(nil),         // 25: career.v1.GetSuggestionsRequest
-	(*GetSuggestionsResponse)(nil),        // 26: career.v1.GetSuggestionsResponse
-	(*GetQuotaRequest)(nil),               // 27: career.v1.GetQuotaRequest
-	(*GetQuotaResponse)(nil),              // 28: career.v1.GetQuotaResponse
-	(*SendMessageResponse_Start)(nil),     // 29: career.v1.SendMessageResponse.Start
-	(*SendMessageResponse_Delta)(nil),     // 30: career.v1.SendMessageResponse.Delta
-	(*SendMessageResponse_Citations)(nil), // 31: career.v1.SendMessageResponse.Citations
-	(*SendMessageResponse_Done)(nil),      // 32: career.v1.SendMessageResponse.Done
-	(*timestamppb.Timestamp)(nil),         // 33: google.protobuf.Timestamp
-	(*PageRequest)(nil),                   // 34: career.v1.PageRequest
-	(*PageResponse)(nil),                  // 35: career.v1.PageResponse
+	(*AdminQuery)(nil),                    // 4: career.v1.AdminQuery
+	(*ListAdminQueriesRequest)(nil),       // 5: career.v1.ListAdminQueriesRequest
+	(*ListAdminQueriesResponse)(nil),      // 6: career.v1.ListAdminQueriesResponse
+	(*RunAdminQueryRequest)(nil),          // 7: career.v1.RunAdminQueryRequest
+	(*RunAdminQueryResponse)(nil),         // 8: career.v1.RunAdminQueryResponse
+	(*Conversation)(nil),                  // 9: career.v1.Conversation
+	(*Citation)(nil),                      // 10: career.v1.Citation
+	(*ProposedAction)(nil),                // 11: career.v1.ProposedAction
+	(*MessageFlags)(nil),                  // 12: career.v1.MessageFlags
+	(*Message)(nil),                       // 13: career.v1.Message
+	(*CreateConversationRequest)(nil),     // 14: career.v1.CreateConversationRequest
+	(*CreateConversationResponse)(nil),    // 15: career.v1.CreateConversationResponse
+	(*ListConversationsRequest)(nil),      // 16: career.v1.ListConversationsRequest
+	(*ListConversationsResponse)(nil),     // 17: career.v1.ListConversationsResponse
+	(*GetConversationRequest)(nil),        // 18: career.v1.GetConversationRequest
+	(*GetConversationResponse)(nil),       // 19: career.v1.GetConversationResponse
+	(*SendMessageRequest)(nil),            // 20: career.v1.SendMessageRequest
+	(*Usage)(nil),                         // 21: career.v1.Usage
+	(*SendMessageResponse)(nil),           // 22: career.v1.SendMessageResponse
+	(*DeleteConversationRequest)(nil),     // 23: career.v1.DeleteConversationRequest
+	(*DeleteConversationResponse)(nil),    // 24: career.v1.DeleteConversationResponse
+	(*RateMessageRequest)(nil),            // 25: career.v1.RateMessageRequest
+	(*RateMessageResponse)(nil),           // 26: career.v1.RateMessageResponse
+	(*EscalateRequest)(nil),               // 27: career.v1.EscalateRequest
+	(*Escalation)(nil),                    // 28: career.v1.Escalation
+	(*EscalateResponse)(nil),              // 29: career.v1.EscalateResponse
+	(*GetSuggestionsRequest)(nil),         // 30: career.v1.GetSuggestionsRequest
+	(*GetSuggestionsResponse)(nil),        // 31: career.v1.GetSuggestionsResponse
+	(*GetQuotaRequest)(nil),               // 32: career.v1.GetQuotaRequest
+	(*GetQuotaResponse)(nil),              // 33: career.v1.GetQuotaResponse
+	(*SendMessageResponse_Start)(nil),     // 34: career.v1.SendMessageResponse.Start
+	(*SendMessageResponse_Delta)(nil),     // 35: career.v1.SendMessageResponse.Delta
+	(*SendMessageResponse_Citations)(nil), // 36: career.v1.SendMessageResponse.Citations
+	(*SendMessageResponse_Done)(nil),      // 37: career.v1.SendMessageResponse.Done
+	(*timestamppb.Timestamp)(nil),         // 38: google.protobuf.Timestamp
+	(*PageRequest)(nil),                   // 39: career.v1.PageRequest
+	(*PageResponse)(nil),                  // 40: career.v1.PageResponse
 }
 var file_career_v1_chat_proto_depIdxs = []int32{
-	33, // 0: career.v1.Conversation.started_at:type_name -> google.protobuf.Timestamp
-	33, // 1: career.v1.Conversation.last_message_at:type_name -> google.protobuf.Timestamp
-	1,  // 2: career.v1.Message.role:type_name -> career.v1.Message.Role
-	33, // 3: career.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	5,  // 4: career.v1.Message.citations:type_name -> career.v1.Citation
-	0,  // 5: career.v1.Message.rating:type_name -> career.v1.Rating
-	7,  // 6: career.v1.Message.flags:type_name -> career.v1.MessageFlags
-	6,  // 7: career.v1.Message.proposed_action:type_name -> career.v1.ProposedAction
-	4,  // 8: career.v1.CreateConversationResponse.conversation:type_name -> career.v1.Conversation
-	8,  // 9: career.v1.CreateConversationResponse.disclosure:type_name -> career.v1.Message
-	34, // 10: career.v1.ListConversationsRequest.page:type_name -> career.v1.PageRequest
-	4,  // 11: career.v1.ListConversationsResponse.conversations:type_name -> career.v1.Conversation
-	35, // 12: career.v1.ListConversationsResponse.page:type_name -> career.v1.PageResponse
-	4,  // 13: career.v1.GetConversationResponse.conversation:type_name -> career.v1.Conversation
-	8,  // 14: career.v1.GetConversationResponse.messages:type_name -> career.v1.Message
-	29, // 15: career.v1.SendMessageResponse.start:type_name -> career.v1.SendMessageResponse.Start
-	30, // 16: career.v1.SendMessageResponse.delta:type_name -> career.v1.SendMessageResponse.Delta
-	31, // 17: career.v1.SendMessageResponse.citations:type_name -> career.v1.SendMessageResponse.Citations
-	16, // 18: career.v1.SendMessageResponse.usage:type_name -> career.v1.Usage
-	32, // 19: career.v1.SendMessageResponse.done:type_name -> career.v1.SendMessageResponse.Done
-	0,  // 20: career.v1.RateMessageRequest.rating:type_name -> career.v1.Rating
-	2,  // 21: career.v1.Escalation.status:type_name -> career.v1.Escalation.Status
-	33, // 22: career.v1.Escalation.created_at:type_name -> google.protobuf.Timestamp
-	33, // 23: career.v1.Escalation.replied_at:type_name -> google.protobuf.Timestamp
-	23, // 24: career.v1.EscalateResponse.escalation:type_name -> career.v1.Escalation
-	3,  // 25: career.v1.GetQuotaResponse.budget_mode:type_name -> career.v1.GetQuotaResponse.BudgetMode
-	5,  // 26: career.v1.SendMessageResponse.Citations.citations:type_name -> career.v1.Citation
-	8,  // 27: career.v1.SendMessageResponse.Done.message:type_name -> career.v1.Message
-	9,  // 28: career.v1.ChatService.CreateConversation:input_type -> career.v1.CreateConversationRequest
-	11, // 29: career.v1.ChatService.ListConversations:input_type -> career.v1.ListConversationsRequest
-	13, // 30: career.v1.ChatService.GetConversation:input_type -> career.v1.GetConversationRequest
-	15, // 31: career.v1.ChatService.SendMessage:input_type -> career.v1.SendMessageRequest
-	18, // 32: career.v1.ChatService.DeleteConversation:input_type -> career.v1.DeleteConversationRequest
-	20, // 33: career.v1.ChatService.RateMessage:input_type -> career.v1.RateMessageRequest
-	22, // 34: career.v1.ChatService.Escalate:input_type -> career.v1.EscalateRequest
-	25, // 35: career.v1.ChatService.GetSuggestions:input_type -> career.v1.GetSuggestionsRequest
-	27, // 36: career.v1.ChatService.GetQuota:input_type -> career.v1.GetQuotaRequest
-	10, // 37: career.v1.ChatService.CreateConversation:output_type -> career.v1.CreateConversationResponse
-	12, // 38: career.v1.ChatService.ListConversations:output_type -> career.v1.ListConversationsResponse
-	14, // 39: career.v1.ChatService.GetConversation:output_type -> career.v1.GetConversationResponse
-	17, // 40: career.v1.ChatService.SendMessage:output_type -> career.v1.SendMessageResponse
-	19, // 41: career.v1.ChatService.DeleteConversation:output_type -> career.v1.DeleteConversationResponse
-	21, // 42: career.v1.ChatService.RateMessage:output_type -> career.v1.RateMessageResponse
-	24, // 43: career.v1.ChatService.Escalate:output_type -> career.v1.EscalateResponse
-	26, // 44: career.v1.ChatService.GetSuggestions:output_type -> career.v1.GetSuggestionsResponse
-	28, // 45: career.v1.ChatService.GetQuota:output_type -> career.v1.GetQuotaResponse
-	37, // [37:46] is the sub-list for method output_type
-	28, // [28:37] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	4,  // 0: career.v1.ListAdminQueriesResponse.queries:type_name -> career.v1.AdminQuery
+	4,  // 1: career.v1.RunAdminQueryResponse.query:type_name -> career.v1.AdminQuery
+	38, // 2: career.v1.RunAdminQueryResponse.ran_at:type_name -> google.protobuf.Timestamp
+	38, // 3: career.v1.Conversation.started_at:type_name -> google.protobuf.Timestamp
+	38, // 4: career.v1.Conversation.last_message_at:type_name -> google.protobuf.Timestamp
+	1,  // 5: career.v1.Message.role:type_name -> career.v1.Message.Role
+	38, // 6: career.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	10, // 7: career.v1.Message.citations:type_name -> career.v1.Citation
+	0,  // 8: career.v1.Message.rating:type_name -> career.v1.Rating
+	12, // 9: career.v1.Message.flags:type_name -> career.v1.MessageFlags
+	11, // 10: career.v1.Message.proposed_action:type_name -> career.v1.ProposedAction
+	9,  // 11: career.v1.CreateConversationResponse.conversation:type_name -> career.v1.Conversation
+	13, // 12: career.v1.CreateConversationResponse.disclosure:type_name -> career.v1.Message
+	39, // 13: career.v1.ListConversationsRequest.page:type_name -> career.v1.PageRequest
+	9,  // 14: career.v1.ListConversationsResponse.conversations:type_name -> career.v1.Conversation
+	40, // 15: career.v1.ListConversationsResponse.page:type_name -> career.v1.PageResponse
+	9,  // 16: career.v1.GetConversationResponse.conversation:type_name -> career.v1.Conversation
+	13, // 17: career.v1.GetConversationResponse.messages:type_name -> career.v1.Message
+	34, // 18: career.v1.SendMessageResponse.start:type_name -> career.v1.SendMessageResponse.Start
+	35, // 19: career.v1.SendMessageResponse.delta:type_name -> career.v1.SendMessageResponse.Delta
+	36, // 20: career.v1.SendMessageResponse.citations:type_name -> career.v1.SendMessageResponse.Citations
+	21, // 21: career.v1.SendMessageResponse.usage:type_name -> career.v1.Usage
+	37, // 22: career.v1.SendMessageResponse.done:type_name -> career.v1.SendMessageResponse.Done
+	0,  // 23: career.v1.RateMessageRequest.rating:type_name -> career.v1.Rating
+	2,  // 24: career.v1.Escalation.status:type_name -> career.v1.Escalation.Status
+	38, // 25: career.v1.Escalation.created_at:type_name -> google.protobuf.Timestamp
+	38, // 26: career.v1.Escalation.replied_at:type_name -> google.protobuf.Timestamp
+	28, // 27: career.v1.EscalateResponse.escalation:type_name -> career.v1.Escalation
+	3,  // 28: career.v1.GetQuotaResponse.budget_mode:type_name -> career.v1.GetQuotaResponse.BudgetMode
+	10, // 29: career.v1.SendMessageResponse.Citations.citations:type_name -> career.v1.Citation
+	13, // 30: career.v1.SendMessageResponse.Done.message:type_name -> career.v1.Message
+	14, // 31: career.v1.ChatService.CreateConversation:input_type -> career.v1.CreateConversationRequest
+	16, // 32: career.v1.ChatService.ListConversations:input_type -> career.v1.ListConversationsRequest
+	18, // 33: career.v1.ChatService.GetConversation:input_type -> career.v1.GetConversationRequest
+	20, // 34: career.v1.ChatService.SendMessage:input_type -> career.v1.SendMessageRequest
+	23, // 35: career.v1.ChatService.DeleteConversation:input_type -> career.v1.DeleteConversationRequest
+	25, // 36: career.v1.ChatService.RateMessage:input_type -> career.v1.RateMessageRequest
+	27, // 37: career.v1.ChatService.Escalate:input_type -> career.v1.EscalateRequest
+	30, // 38: career.v1.ChatService.GetSuggestions:input_type -> career.v1.GetSuggestionsRequest
+	32, // 39: career.v1.ChatService.GetQuota:input_type -> career.v1.GetQuotaRequest
+	5,  // 40: career.v1.ChatService.ListAdminQueries:input_type -> career.v1.ListAdminQueriesRequest
+	7,  // 41: career.v1.ChatService.RunAdminQuery:input_type -> career.v1.RunAdminQueryRequest
+	15, // 42: career.v1.ChatService.CreateConversation:output_type -> career.v1.CreateConversationResponse
+	17, // 43: career.v1.ChatService.ListConversations:output_type -> career.v1.ListConversationsResponse
+	19, // 44: career.v1.ChatService.GetConversation:output_type -> career.v1.GetConversationResponse
+	22, // 45: career.v1.ChatService.SendMessage:output_type -> career.v1.SendMessageResponse
+	24, // 46: career.v1.ChatService.DeleteConversation:output_type -> career.v1.DeleteConversationResponse
+	26, // 47: career.v1.ChatService.RateMessage:output_type -> career.v1.RateMessageResponse
+	29, // 48: career.v1.ChatService.Escalate:output_type -> career.v1.EscalateResponse
+	31, // 49: career.v1.ChatService.GetSuggestions:output_type -> career.v1.GetSuggestionsResponse
+	33, // 50: career.v1.ChatService.GetQuota:output_type -> career.v1.GetQuotaResponse
+	6,  // 51: career.v1.ChatService.ListAdminQueries:output_type -> career.v1.ListAdminQueriesResponse
+	8,  // 52: career.v1.ChatService.RunAdminQuery:output_type -> career.v1.RunAdminQueryResponse
+	42, // [42:53] is the sub-list for method output_type
+	31, // [31:42] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_chat_proto_init() }
@@ -2361,7 +2646,7 @@ func file_career_v1_chat_proto_init() {
 	}
 	file_career_v1_common_proto_init()
 	file_career_v1_options_proto_init()
-	file_career_v1_chat_proto_msgTypes[13].OneofWrappers = []any{
+	file_career_v1_chat_proto_msgTypes[18].OneofWrappers = []any{
 		(*SendMessageResponse_Start_)(nil),
 		(*SendMessageResponse_Delta_)(nil),
 		(*SendMessageResponse_Citations_)(nil),
@@ -2374,7 +2659,7 @@ func file_career_v1_chat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_chat_proto_rawDesc), len(file_career_v1_chat_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   29,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

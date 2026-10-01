@@ -69,6 +69,56 @@ service ChatService {
   rpc GetQuota(GetQuotaRequest) returns (GetQuotaResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
   }
+  // Lists the database queries an admin may run from the assistant, for
+  // the dropdown. Names and descriptions only; the SQL never leaves the
+  // server.
+  rpc ListAdminQueries(ListAdminQueriesRequest) returns (ListAdminQueriesResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+  }
+  // Runs one named query and returns its result.
+  //
+  // The id selects a fixed statement and is never interpolated into
+  // one, so there is nothing to inject into and an unknown id is simply
+  // refused. Results are counts, never rows about a person.
+  rpc RunAdminQuery(RunAdminQueryRequest) returns (RunAdminQueryResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+  }
+}
+
+// One query offered in the admin dropdown.
+message AdminQuery {
+  // Stable id sent back to run it.
+  string id = 1;
+  // What the dropdown shows.
+  string label = 2;
+  // What the result means.
+  string detail = 3;
+}
+
+// Empty: the list is the same for every admin.
+message ListAdminQueriesRequest {}
+// The queries an admin may run.
+message ListAdminQueriesResponse {
+  // Offered queries, in display order.
+  repeated AdminQuery queries = 1;
+}
+
+// Run one named query.
+message RunAdminQueryRequest {
+  // Id from ListAdminQueries. Anything else is refused.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+// What the query returned.
+message RunAdminQueryResponse {
+  // The query that ran, echoed so the surface can label the result.
+  AdminQuery query = 1;
+  // The single-row result, already formatted for reading.
+  string result = 2;
+  // When it ran.
+  google.protobuf.Timestamp ran_at = 3;
 }
 
 // A conversation header.

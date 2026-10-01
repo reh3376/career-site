@@ -123,7 +123,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ContactService`](#contactservice) | Reaching the owner outside the assistant. | 2 |
 | [`JdService`](#jdservice) | JD-upload flow, members only: a signed-in session is required to submit or poll, and the submitting member is recorded on the row. | 4 |
 | [`MeetingService`](#meetingservice) | Meeting scheduling, members only: a signed-in session is required to see availability or to book, and the booking member is recorded on the row. | 5 |
-| [`ChatService`](#chatservice) | Conversations with the assistant. | 9 |
+| [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`AdminService`](#adminservice) | Owner console. | 71 |
@@ -1596,6 +1596,8 @@ Conversations with the assistant.
 | [`Escalate`](#chatservice-escalate) | `/api/career.v1.ChatService/Escalate` | Member | 5 | `EscalateRequest` → `EscalateResponse` | Sends a question, with the conversation context, to the owner. |
 | [`GetSuggestions`](#chatservice-getsuggestions) | `/api/career.v1.ChatService/GetSuggestions` | Member | default | `GetSuggestionsRequest` → `GetSuggestionsResponse` | Returns suggested questions for the current page and the member's tracks (at least three). |
 | [`GetQuota`](#chatservice-getquota) | `/api/career.v1.ChatService/GetQuota` | Member | default | `GetQuotaRequest` → `GetQuotaResponse` | Returns the member's remaining allowance and the global budget mode so the panel can show limits before they are hit. |
+| [`ListAdminQueries`](#chatservice-listadminqueries) | `/api/career.v1.ChatService/ListAdminQueries` | Admin | default | `ListAdminQueriesRequest` → `ListAdminQueriesResponse` | Lists the database queries an admin may run from the assistant, for the dropdown. |
+| [`RunAdminQuery`](#chatservice-runadminquery) | `/api/career.v1.ChatService/RunAdminQuery` | Admin | default | `RunAdminQueryRequest` → `RunAdminQueryResponse` | Runs one named query and returns its result. |
 
 ### ChatService.CreateConversation
 
@@ -1875,6 +1877,66 @@ _No fields; send `{}`._
 
 ```json
 {}
+```
+
+</details>
+
+### ChatService.ListAdminQueries
+
+`POST /api/career.v1.ChatService/ListAdminQueries` · **Auth:** Admin · **Rate limit:** default/min
+
+Lists the database queries an admin may run from the assistant, for
+the dropdown. Names and descriptions only; the SQL never leaves the
+server.
+
+**Request** — [`ListAdminQueriesRequest`](#listadminqueriesrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListAdminQueriesResponse`](#listadminqueriesresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `queries` | [`AdminQuery`](#adminquery)[] | array of object |  | Offered queries, in display order. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### ChatService.RunAdminQuery
+
+`POST /api/career.v1.ChatService/RunAdminQuery` · **Auth:** Admin · **Rate limit:** default/min
+
+Runs one named query and returns its result.
+
+The id selects a fixed statement and is never interpolated into
+one, so there is nothing to inject into and an unknown id is simply
+refused. Results are counts, never rows about a person.
+
+**Request** — [`RunAdminQueryRequest`](#runadminqueryrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Id from ListAdminQueries. Anything else is refused. |
+
+**Response** — [`RunAdminQueryResponse`](#runadminqueryresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
+| `result` | `string` | string |  | The single-row result, already formatted for reading. |
+| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string"
+}
 ```
 
 </details>
@@ -5243,6 +5305,48 @@ Batch result.
 |---|---|---|---|---|
 | `accepted` | `int32` | number |  | Events accepted (new). |
 | `duplicates` | `int32` | number |  | Events ignored as duplicates. |
+
+### AdminQuery
+
+One query offered in the admin dropdown.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Stable id sent back to run it. |
+| `label` | `string` | string |  | What the dropdown shows. |
+| `detail` | `string` | string |  | What the result means. |
+
+### ListAdminQueriesRequest
+
+Empty: the list is the same for every admin.
+
+_No fields._
+
+### ListAdminQueriesResponse
+
+The queries an admin may run.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `queries` | [`AdminQuery`](#adminquery)[] | array of object |  | Offered queries, in display order. |
+
+### RunAdminQueryRequest
+
+Run one named query.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Id from ListAdminQueries. Anything else is refused. |
+
+### RunAdminQueryResponse
+
+What the query returned.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
+| `result` | `string` | string |  | The single-row result, already formatted for reading. |
+| `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
 
 ### Conversation
 
