@@ -206,12 +206,6 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
             <dt className="text-ink-3">ASK.ROGER</dt>
             <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
-            {/* The beta warning the IT hero carries. Same page, same
-                URL, so a warning in one skin only is half a warning;
-                here it reads as a status value among status values,
-                which is the idiom of this mode. */}
-            <dt className="text-ink-3">BUILD</dt>
-            <dd className="m-0 text-right text-signal">BETA</dd>
           </dl>
         </section>
 
@@ -395,9 +389,12 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
           <span>
             JD.REVIEW <span className="text-ink">ONLINE</span>
           </span>
+          <span>
+            ASK.ROGER <span className="text-ink">ONLINE</span>
+          </span>
           <span className="ml-auto flex items-center gap-2">
-            <span className="pilot text-success" aria-hidden="true" />
-            <span className="text-success">SYSTEM · NOMINAL</span>
+            <span className="pilot text-signal" aria-hidden="true" />
+            <span className="text-signal">SYSTEM · BETA</span>
           </span>
         </div>
       </div>

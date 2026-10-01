@@ -74,15 +74,15 @@ export async function SiteHeader() {
               header stays a two-thing header on phones. */}
           <div
             className="hidden items-center gap-2 md:flex"
-            aria-label="Site status: nominal"
-            title="system.nominal, the site itself is a working plant"
+            aria-label="Site status: beta"
+            title="system.beta, the core functions work and some are rough"
           >
             <span className="relative inline-flex h-2.5 w-2.5">
               <span className="pulse-signal absolute inline-flex h-full w-full rounded-full bg-signal" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-signal" />
             </span>
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              system<span className="text-ink-4"> · </span>nominal
+              system<span className="text-ink-4"> · </span>beta
             </span>
           </div>
 
