@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/llm"
@@ -33,10 +34,11 @@ func (f fakeEmbed) Embed(_ context.Context, texts []string, _ ingest.EmbedPurpos
 }
 
 type fakeModel struct {
-	text   string
-	finish string
-	err    error
-	calls  int
+	text    string
+	finish  string
+	err     error
+	calls   int
+	noSplit bool
 }
 
 func (f *fakeModel) Generate(_ context.Context, _ llm.Request) (*llm.Response, error) {
@@ -44,7 +46,11 @@ func (f *fakeModel) Generate(_ context.Context, _ llm.Request) (*llm.Response, e
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &llm.Response{Text: f.text, Model: "ollama:qwen3:4b-q8_0", FinishReason: f.finish}, nil
+	return &llm.Response{
+		Text: f.text, Model: "ollama:qwen3:4b-q8_0", FinishReason: f.finish,
+		PromptTokens: 1019, CompletionTokens: 187,
+		PromptEvalMs: splitOr(f.noSplit, 31000), EvalMs: splitOr(f.noSplit, 14000),
+	}, nil
 }
 
 type fakeStore struct {
@@ -53,6 +59,7 @@ type fakeStore struct {
 	hits     []users.CorpusHit
 	messages []users.ChatMessage
 	logged   []users.Decision
+	usage    []users.LLMUsage
 	nextID   int64
 }
 
@@ -70,6 +77,10 @@ func (f *fakeStore) AppendMessage(_ context.Context, m users.ChatMessage) (int64
 }
 func (f *fakeStore) InsertDecisions(_ context.Context, rows []users.Decision) error {
 	f.logged = append(f.logged, rows...)
+	return nil
+}
+func (f *fakeStore) RecordLLMUsage(_ context.Context, u users.LLMUsage) error {
+	f.usage = append(f.usage, u)
 	return nil
 }
 
@@ -450,4 +461,161 @@ func TestEmptyQuestionIsACallerBug(t *testing.T) {
 	if len(store.messages) != 0 {
 		t.Error("an empty question still wrote a message")
 	}
+}
+
+// Completion tokens have to reach the decision row.
+//
+// They were hardcoded to zero, which was invisible until production
+// answers started taking forty-five seconds and there was no way to
+// tell how much of that was generation. At roughly 6.5 tokens a second
+// on this box, the completion count IS the generation time, so losing
+// it means losing the only number that says whether to write shorter
+// answers or retrieve fewer passages.
+func TestTokenCountsReachTheDecisionRow(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "Roles", "/cv", "x", 0.9)}}
+	if _, err := svc(store, &fakeModel{text: "An answer [1]."}).Answer(
+		context.Background(), Request{ConversationID: 1, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if len(store.logged) != 1 {
+		t.Fatalf("logged %d decisions", len(store.logged))
+	}
+	d := store.logged[0]
+	if d.PromptTokens != 1019 {
+		t.Errorf("prompt tokens = %d, want 1019", d.PromptTokens)
+	}
+	if d.CompletionTok != 187 {
+		t.Errorf("completion tokens = %d, want 187; generation time cannot be read back without it", d.CompletionTok)
+	}
+}
+
+// Everything a row needs to be comparable with another row.
+//
+// A production row was found carrying prompt_version 0, num_ctx 0,
+// completion_tokens 0 and no run id, which makes it a record of an
+// answer and not a usable training or evaluation example: nothing about
+// it can be compared against a row from a different persona version or
+// a different context window, and it cannot be joined to the usage
+// ledger.
+func TestADecisionRowIsComparable(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "Roles", "/cv", "x", 0.9)}}
+	s := svc(store, &fakeModel{text: "An answer [1]."})
+	s.NumCtx = 8192
+	if _, err := s.Answer(context.Background(), Request{ConversationID: 7, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	d := store.logged[0]
+	if d.PromptVersion != prompts.AskRogerPersona.Version {
+		t.Errorf("prompt_version = %d, want %d", d.PromptVersion, prompts.AskRogerPersona.Version)
+	}
+	if d.NumCtx != 8192 {
+		t.Errorf("num_ctx = %d, want 8192", d.NumCtx)
+	}
+	if d.Model == "" {
+		t.Error("model is empty")
+	}
+}
+
+// The usage ledger is where the budget cap reads from (FR-CHAT-12) and
+// where tokens are totted up across surfaces. The chat path wrote
+// nothing to it at all, so the cap could never have fired and chat
+// spend was invisible next to the JD reviewer's.
+func TestTheModelCallIsRecordedInTheUsageLedger(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "t", "/p", "x", 0.9)}}
+	if _, err := svc(store, &fakeModel{text: "a [1]"}).Answer(
+		context.Background(), Request{ConversationID: 7, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if len(store.usage) != 1 {
+		t.Fatalf("usage rows = %d, want 1", len(store.usage))
+	}
+	u := store.usage[0]
+	if u.Kind != "chat" || u.RefID != 7 || !u.OK {
+		t.Errorf("usage row wrong: %+v", u)
+	}
+	if u.CompletionTokens != 187 || u.PromptTokens != 1019 {
+		t.Errorf("usage tokens = %d/%d, want 1019/187", u.PromptTokens, u.CompletionTokens)
+	}
+}
+
+// A failed call costs time and sometimes tokens, and a ledger that
+// omits it reports a system cheaper and healthier than it is.
+func TestAFailedModelCallIsAlsoRecorded(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "t", "/p", "x", 0.9)}}
+	if _, err := svc(store, &fakeModel{err: errors.New("down")}).Answer(
+		context.Background(), Request{ConversationID: 7, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if len(store.usage) != 1 {
+		t.Fatalf("usage rows = %d, want 1 even on failure", len(store.usage))
+	}
+	if store.usage[0].OK || store.usage[0].Error == "" {
+		t.Errorf("the failure was recorded as a success: %+v", store.usage[0])
+	}
+}
+
+// Paths that never call a model must not invent a ledger row.
+func TestNonModelPathsWriteNoUsage(t *testing.T) {
+	store := &fakeStore{qaHit: true, qa: users.QAMatch{Entry: users.QAEntry{Answer: "a"}}}
+	if _, err := svc(store, &fakeModel{}).Answer(
+		context.Background(), Request{ConversationID: 7, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if len(store.usage) != 0 {
+		t.Errorf("a bank hit wrote %d usage rows", len(store.usage))
+	}
+}
+
+// The provider's own split has to survive into the row.
+//
+// A production answer took 45 seconds and the row recorded
+// first_token_ms as 44975 and latency_ms as 45009, which is the same
+// number twice and says nothing. Ollama had reported the split all
+// along in prompt_eval_duration and eval_duration; the sidecar simply
+// never read them. Without it there is no way to tell an answer that
+// was slow because it read too much from one that was slow because it
+// wrote too much, and those are fixed in opposite directions.
+func TestTheProviderTimingSplitIsRecorded(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "t", "/p", "x", 0.9)}}
+	if _, err := svc(store, &fakeModel{text: "a [1]"}).Answer(
+		context.Background(), Request{ConversationID: 1, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	in := store.decisionInput(t)
+	if in.Timings.PromptEvalMs != 31000 || in.Timings.GenerateMs != 14000 {
+		t.Errorf("split = %d/%d, want 31000/14000",
+			in.Timings.PromptEvalMs, in.Timings.GenerateMs)
+	}
+	// The honest first-token figure is the prompt evaluation, not the
+	// whole call.
+	if in.Timings.FirstTokenMs != 31000 {
+		t.Errorf("first_token_ms = %d, want the prompt-eval time 31000", in.Timings.FirstTokenMs)
+	}
+}
+
+// A provider that reports no split must not leave the row claiming an
+// instant first token.
+func TestFirstTokenFallsBackToTheWholeCall(t *testing.T) {
+	store := &fakeStore{hits: []users.CorpusHit{hit(1, "t", "/p", "x", 0.9)}}
+	m := &fakeModel{text: "a [1]", noSplit: true}
+	svc := svc(store, m)
+	// A fake model answers instantly, so without a clock the fallback
+	// is legitimately zero and the test would prove nothing. Each read
+	// advances a second.
+	now := time.Unix(0, 0)
+	svc.Now = func() time.Time { now = now.Add(time.Second); return now }
+	if _, err := svc.Answer(
+		context.Background(), Request{ConversationID: 1, Question: "q"}); err != nil {
+		t.Fatalf("answer: %v", err)
+	}
+	if store.decisionInput(t).Timings.FirstTokenMs == 0 {
+		t.Error("first_token_ms is zero, which reads as instant")
+	}
+}
+
+func splitOr(off bool, v int64) int64 {
+	if off {
+		return 0
+	}
+	return v
 }

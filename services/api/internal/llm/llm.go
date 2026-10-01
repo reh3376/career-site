@@ -33,6 +33,14 @@ type Response struct {
 	CompletionTokens int32
 	LatencyMs        int64
 	FinishReason     string
+	// PromptEvalMs and EvalMs split LatencyMs into the part that grows
+	// with retrieved context and the part that grows with answer
+	// length. On a CPU-only host those are the two things a slow answer
+	// can be, and they are fixed in completely different ways: show
+	// fewer passages, or write shorter answers. Zero when the provider
+	// does not report them.
+	PromptEvalMs int64
+	EvalMs       int64
 }
 
 // Client is what generation callers depend on; a fake satisfies it in
@@ -69,5 +77,7 @@ func (s SidecarLLM) Generate(ctx context.Context, req Request) (*Response, error
 		CompletionTokens: resp.CompletionTokens,
 		LatencyMs:        resp.LatencyMs,
 		FinishReason:     resp.FinishReason,
+		PromptEvalMs:     resp.PromptEvalMs,
+		EvalMs:           resp.EvalMs,
 	}, nil
 }

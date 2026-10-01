@@ -316,6 +316,36 @@ said, then what it was said from.
 until it is deployed, opened and reviewed with him, and there are no
 `chat_answer` rows anywhere yet to render.
 
+### What a row carries, and what it did not
+
+Found by reading the first three real production answers on
+2026-09-30. The rows recorded the answer and almost nothing that makes
+an answer comparable to another answer, which is the whole purpose of
+the table.
+
+| Field | Was | Now |
+|---|---|---|
+| `completion_tokens` | 0, hardcoded | the provider's count |
+| `prompt_version` | 0 | the persona version |
+| `num_ctx` | 0 | the configured window |
+| `run_id` | empty | one id per answer, joinable to the usage ledger |
+| `first_token_ms` | equal to `latency_ms` | the provider's own prompt-eval time |
+| `prompt_eval_ms` / `generate_ms` | absent | the provider's own split |
+| `llm_usage` row | **never written** | written per model call, success or failure |
+
+The last two matter most. Ollama reports `prompt_eval_duration` and
+`eval_duration` on every response and the sidecar simply never read
+them, so a 45 second answer recorded 44975 ms to first token and 45009
+ms total: the same number twice, saying nothing. Without the split
+there is no way to tell an answer that was slow because it **read** too
+much from one that was slow because it **wrote** too much, and those
+are fixed in opposite directions (show fewer passages, or ask for
+shorter answers).
+
+`llm_usage` was worse than incomplete, it was empty. That is the table
+the monthly budget cap reads from (FR-CHAT-12), so the cap could never
+have fired, and chat spend was invisible next to the JD reviewer's.
+
 ### Export
 
 `ExportDecisionLog` (admin, MFA-fresh) emits JSON Lines. Each line
@@ -343,9 +373,23 @@ including `first_token_ms`, and the `human` block with verdict, note,
    and changes nothing. There is now a test that fails with "feature
    not supported" if `Unwrap` is removed.
 
-   **Forty-five seconds is still too slow**, separately from the
-   timeout. That was a cold call with no warm prefix cache; it should
-   settle lower. Worth measuring before tuning `Show` down from 3.
+   **Forty-five seconds was model thrash, and it is fixed.** Both of
+   Roger's questions took almost exactly the same time, 44.9 s and
+   45.0 s, which ruled out the cold-cache explanation. The cause was
+   `OLLAMA_MAX_LOADED_MODELS=1`, carried over from the CPX31 when the
+   model was qwen3:8b. The chat pipeline embeds the question and then
+   generates, so one slot meant every question evicted the 5 GB
+   language model to load a 376 MB embedder and then reloaded it.
+
+   Measured on the box after moving to two slots: both models resident
+   at **4.71 GiB of the 7 GiB cap**, embed 0.3 s, generate 4.7 s, a
+   second embed 0.3 s instead of a multi-gigabyte reload, no OOM. The
+   headroom exists because the model is 4b, not the 8b the old number
+   was sized for.
+
+   Still to confirm under load: the test ran at a 4096 context while
+   the app uses 8192, which grows the KV cache. Expect roughly 5.6 GiB
+   resident, about 1.4 GiB of headroom.
 
 1. **`QAMatchThreshold` is back to 0.85, and the mechanism changed.**
    The 0.72 above was measured off one question family and it was
@@ -372,12 +416,25 @@ including `first_token_ms`, and the `human` block with verdict, note,
    margin is scale-free and should outlive a change of embedding model,
    which a threshold will not.
 
-   **What this means for the bank, honestly:** it matches
-   near-restatements reliably and does not generalise across
-   vocabulary. Coverage comes from listing the wordings people actually
-   use, not from semantic reach. A question nobody anticipated falls
-   through to the model, which is slow and correct, rather than
-   matching the wrong entry, which is fast and wrong.
+   **What this means for the bank.** Matching runs over *every*
+   phrasing and the best one wins, so each phrasing is its own target
+   rather than a satellite of the canonical question. A phrasing that
+   scores 0.36 against its own canonical is not dead weight: it covers
+   a different vocabulary neighbourhood, and a visitor who asks in
+   those words hits it at close to 1.0.
+
+   So the rule for writing phrasings is the opposite of the obvious
+   one. They should be **diverse**, not similar to each other: each one
+   buys coverage around its own wording, and two phrasings that are
+   near-identical buy the same ground twice. What the bank cannot do is
+   bridge to vocabulary nobody listed, and a question asked in
+   unanticipated words falls through to the model, which is slow and
+   correct, rather than matching the wrong entry, which is fast and
+   wrong.
+
+   (An earlier version of this section said those distant variants
+   "will never fire". That was wrong, and wrong in a way that would
+   have led to writing worse phrasings.)
 
    *Superseded, for history:* 
    The original 0.85 was reasoning rather than measurement, and the

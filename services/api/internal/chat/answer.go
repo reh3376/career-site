@@ -36,6 +36,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
+	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -60,6 +61,7 @@ type Store interface {
 	SearchCorpusForChat(ctx context.Context, embedding []float32, topK int) ([]users.CorpusHit, error)
 	AppendMessage(ctx context.Context, m users.ChatMessage) (int64, error)
 	InsertDecisions(ctx context.Context, rows []users.Decision) error
+	RecordLLMUsage(ctx context.Context, u users.LLMUsage) error
 }
 
 // Service answers questions.
@@ -81,6 +83,11 @@ type Service struct {
 	Consider int
 	// QAThreshold overrides users.QAMatchThreshold. Zero uses it.
 	QAThreshold float64
+	// NumCtx is the context window the sidecar is configured with. The
+	// API does not set it per call, but a decision row that cannot say
+	// how much context the model had cannot be compared with one from a
+	// different configuration.
+	NumCtx int
 
 	// Now is injectable for tests.
 	Now func() time.Time
@@ -146,6 +153,12 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		return Answer{}, ErrNoQuestion
 	}
 
+	// One id for this answer, carried on the context so the decision
+	// row and the usage ledger row are written with the same value and
+	// can be joined. The JD pipeline uses it per run; here the unit is
+	// one answer, which is the thing anyone would ask a question about.
+	ctx = runid.With(ctx, runid.New())
+
 	in := users.ChatDecisionInput{
 		Question:           question,
 		PersonaFingerprint: prompts.AskRogerPersona.Fingerprint(),
@@ -167,7 +180,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		// honest reply is the no-support one rather than an ungrounded
 		// guess.
 		return s.finish(ctx, req, in, started, users.ChatPathError,
-			noSupportText, nil, "", "", "", nil, 0, 0, errString(err, "embedding unavailable"))
+			noSupportText, nil, "", "", "", nil, 0, 0, 0, errString(err, "embedding unavailable"))
 	}
 	embedding := vecs[0]
 
@@ -193,7 +206,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		out := users.ChatDecisionOutput{Text: match.Entry.Answer, QAMatch: true}
 		out.Citations = qaCitations(match.Entry.Sources)
 		return s.finish(ctx, req, in, started, users.ChatPathQABank,
-			match.Entry.Answer, out.Citations, "", "", "", &out, 0, 0, "")
+			match.Entry.Answer, out.Citations, "", "", "", &out, 0, 0, 0, "")
 	}
 
 	// 3. Restricted topics (FR-CHAT-06). Compensation, references,
@@ -210,7 +223,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		text := restrictedReply(topic)
 		out := users.ChatDecisionOutput{Text: text, OutOfScope: true}
 		return s.finish(ctx, req, in, started, users.ChatPathOutOfScope,
-			text, nil, "", "", "", &out, 0, 0, "")
+			text, nil, "", "", "", &out, 0, 0, 0, "")
 	}
 
 	// 4. Retrieval. Gated on chatbot_include and on visibility in the
@@ -220,7 +233,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	in.Timings.RetrieveMs = s.since(retStart)
 	if err != nil {
 		return s.finish(ctx, req, in, started, users.ChatPathError,
-			noSupportText, nil, "", "", "", nil, 0, 0, fmt.Sprintf("retrieval failed: %v", err))
+			noSupportText, nil, "", "", "", nil, 0, 0, 0, fmt.Sprintf("retrieval failed: %v", err))
 	}
 
 	shown := hits
@@ -235,7 +248,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	if len(shown) == 0 {
 		out := users.ChatDecisionOutput{Text: noSupportText, NoSupport: true}
 		return s.finish(ctx, req, in, started, users.ChatPathNoSupport,
-			noSupportText, nil, "", "", "", &out, 0, 0, "")
+			noSupportText, nil, "", "", "", &out, 0, 0, 0, "")
 	}
 
 	// 6. The model.
@@ -250,6 +263,32 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		Temperature: 0,
 	})
 	callMs := s.since(callStart)
+
+	// The usage ledger, written for a failed call as well as a good
+	// one. It is where the monthly budget cap reads from (FR-CHAT-12)
+	// and where token cost across surfaces is totted up, and a ledger
+	// that silently omits the calls that went wrong reports a system
+	// cheaper and healthier than it is.
+	usage := users.LLMUsage{
+		Kind:          "chat",
+		RefID:         req.ConversationID,
+		PromptID:      prompts.AskRogerPersona.ID,
+		PromptVersion: prompts.AskRogerPersona.Version,
+		LatencyMs:     callMs,
+		OK:            err == nil && resp != nil && strings.TrimSpace(resp.Text) != "",
+	}
+	if resp != nil {
+		usage.Model = resp.Model
+		usage.PromptTokens = resp.PromptTokens
+		usage.CompletionTokens = resp.CompletionTokens
+	}
+	if err != nil {
+		usage.Error = err.Error()
+	}
+	if uerr := s.Store.RecordLLMUsage(ctx, usage); uerr != nil {
+		s.log().Warn("chat usage not recorded", slog.String("error", uerr.Error()))
+	}
+
 	if err != nil || resp == nil || strings.TrimSpace(resp.Text) == "" {
 		// FR-CHAT-17: degrade rather than fail. The bank has already
 		// been consulted and did not match, so there is nothing to fall
@@ -258,7 +297,7 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		out := users.ChatDecisionOutput{Text: text, Degraded: true}
 		return s.finish(ctx, req, in, started, users.ChatPathDegraded,
 			text, nil, "", prompts.AskRogerPersona.System+"\n\n"+userTurn, "", &out,
-			0, callMs, errString(err, "the model returned nothing"))
+			0, 0, callMs, errString(err, "the model returned nothing"))
 	}
 
 	text, cites, written, dropped := validateCitations(resp.Text, offered)
@@ -271,13 +310,21 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		FinishReason:   resp.FinishReason,
 		Truncated:      resp.FinishReason == "length",
 	}
-	// Without streaming the first token and the whole call are the same
-	// event. Recorded as equal rather than as zero so the metric is
-	// honest about what it measured.
-	in.Timings.FirstTokenMs = callMs
+	// The provider's own split, rather than the whole call recorded
+	// twice. prompt_eval is what a reader waits through before the
+	// first word, so it is the honest first-token figure until the
+	// gateway streams; generation is what follows. A provider that
+	// reports neither falls back to the whole call, which at least does
+	// not claim to be something it is not.
+	in.Timings.PromptEvalMs = resp.PromptEvalMs
+	in.Timings.GenerateMs = resp.EvalMs
+	in.Timings.FirstTokenMs = resp.PromptEvalMs
+	if in.Timings.FirstTokenMs == 0 {
+		in.Timings.FirstTokenMs = callMs
+	}
 	return s.finish(ctx, req, in, started, users.ChatPathModel,
 		text, cites, resp.Model, prompts.AskRogerPersona.System+"\n\n"+userTurn, resp.Text,
-		&out, resp.PromptTokens, callMs, "")
+		&out, resp.PromptTokens, resp.CompletionTokens, in.Timings.FirstTokenMs, "")
 }
 
 // finish persists the answer, logs the decision, and returns it.
@@ -292,7 +339,7 @@ func (s *Service) finish(
 	path, text string, cites []users.ChatCitation,
 	model, promptText, responseText string,
 	out *users.ChatDecisionOutput,
-	promptTokens int32, firstTokenMs int64, callErr string,
+	promptTokens, completionTokens int32, firstTokenMs int64, callErr string,
 ) (Answer, error) {
 	in.Path = path
 	if firstTokenMs > 0 {
@@ -340,7 +387,8 @@ func (s *Service) finish(
 	// to be shown; losing the training record is bad, and failing the
 	// member's question to protect it would be worse.
 	d, derr := users.NewChatDecision(id, model, promptText, responseText,
-		in, *out, promptTokens, 0, callErr)
+		in, *out, promptTokens, completionTokens,
+		prompts.AskRogerPersona.Version, s.NumCtx, callErr)
 	if derr != nil {
 		s.log().Warn("chat decision not encoded", slog.String("error", derr.Error()))
 		return ans, nil

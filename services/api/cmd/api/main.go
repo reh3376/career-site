@@ -259,10 +259,11 @@ func main() {
 			// assistant that answers from model knowledge alone is the
 			// one thing FR-CHAT-03 forbids.
 			chatService = &chat.Service{
-				Embed: ingest.SidecarEmbed{Client: sc},
-				Model: gateway,
-				Store: userRepo,
-				Log:   log,
+				Embed:  ingest.SidecarEmbed{Client: sc},
+				Model:  gateway,
+				Store:  userRepo,
+				Log:    log,
+				NumCtx: cfg.LLMNumCtx,
 			}
 			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap, cfg.LLMNumCtx)
 			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,

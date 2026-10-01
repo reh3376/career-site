@@ -4843,6 +4843,8 @@ caller and can be minutes on CPU inference.
 | `completionTokens` | `int32` | number |  | Completion tokens as reported by the provider; 0 if unknown. |
 | `latencyMs` | `int64` | string (decimal) |  | Wall-clock time of the provider call in milliseconds. |
 | `finishReason` | `string` | string |  | Provider finish reason (`stop`, `length`, ...), empty if unknown. |
+| `promptEvalMs` | `int64` | string (decimal) |  | Milliseconds the provider spent evaluating the prompt, as it reported them. This is what a reader waits before the first word, so on a CPU-only host it is the number that decides whether an answer feels slow; latency_ms alone cannot separate it from the time spent writing. Zero when the provider does not report it. |
+| `evalMs` | `int64` | string (decimal) |  | Milliseconds the provider spent generating, as it reported them. With prompt_eval_ms this splits the wait into the part that grows with retrieved context and the part that grows with answer length, which are fixed in completely different ways. Zero when the provider does not report it. |
 
 <details><summary>Example request body</summary>
 
@@ -5050,6 +5052,8 @@ Completion result plus the accounting the API's usage ledger needs.
 | `completionTokens` | `int32` | number |  | Completion tokens as reported by the provider; 0 if unknown. |
 | `latencyMs` | `int64` | string (decimal) |  | Wall-clock time of the provider call in milliseconds. |
 | `finishReason` | `string` | string |  | Provider finish reason (`stop`, `length`, ...), empty if unknown. |
+| `promptEvalMs` | `int64` | string (decimal) |  | Milliseconds the provider spent evaluating the prompt, as it reported them. This is what a reader waits before the first word, so on a CPU-only host it is the number that decides whether an answer feels slow; latency_ms alone cannot separate it from the time spent writing. Zero when the provider does not report it. |
+| `evalMs` | `int64` | string (decimal) |  | Milliseconds the provider spent generating, as it reported them. With prompt_eval_ms this splits the wait into the part that grows with retrieved context and the part that grows with answer length, which are fixed in completely different ways. Zero when the provider does not report it. |
 
 ### RenderResumeRequest
 
