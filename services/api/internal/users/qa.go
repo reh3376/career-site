@@ -59,12 +59,40 @@ type QAPhrasing struct {
 	HasVector bool
 }
 
-// QAMatch is a bank hit.
+// QAMatch is a bank lookup: a hit, or a miss carrying its measurements.
+//
+// On a miss Entry and Phrasing are deliberately left zero, so nothing
+// downstream can serve an answer the lookup rejected, while Similarity,
+// RunnerUp and MissReason are still filled in. Those three are the only
+// evidence that says which phrasing to add next, and discarding them
+// was costing exactly the signal the bank is tuned on.
 type QAMatch struct {
 	Entry      QAEntry
 	Phrasing   string
 	Similarity float64
+	// RunnerUp is the best similarity from a *different* entry, or 0
+	// when the bank holds nothing else close. It is what the margin
+	// rule is computed against.
+	RunnerUp float64
+	// MissReason is empty on a hit, and otherwise says which gate
+	// refused it:
+	//
+	//	threshold  nothing was close enough; the fix is a phrasing
+	//	margin     two entries were both plausible; the fix is to
+	//	           disambiguate or merge them
+	//	empty      the bank has no embedded phrasings to compare
+	//
+	// The two failures need opposite work, so a miss that does not say
+	// which one it was cannot be acted on.
+	MissReason string
 }
+
+// Miss reasons recorded on a QAMatch.
+const (
+	QAMissThreshold = "threshold"
+	QAMissMargin    = "margin"
+	QAMissEmpty     = "empty"
+)
 
 // ErrQAEntryNotFound is returned for a missing or other-tenant entry.
 var ErrQAEntryNotFound = errors.New("no such Q&A entry")
@@ -215,12 +243,20 @@ func (r *Repo) MatchQA(ctx context.Context, embedding []float32, threshold float
 		return QAMatch{}, false, fmt.Errorf("match qa: %w", err)
 	}
 	if !have {
-		return QAMatch{}, false, nil
+		return QAMatch{MissReason: QAMissEmpty}, false, nil
 	}
 	m, sources := best, bestSources
+	m.RunnerUp = runnerUp
 
 	if m.Similarity < threshold {
-		return QAMatch{}, false, nil
+		// The entry is dropped and the numbers are kept: a caller must
+		// not be able to serve this, and a grader must be able to see
+		// how close it came.
+		return QAMatch{
+			Similarity: m.Similarity,
+			RunnerUp:   runnerUp,
+			MissReason: QAMissThreshold,
+		}, false, nil
 	}
 	// Close enough to two entries is not a match. Measured on
 	// production, two unrelated questions sharing the word "experience"
@@ -228,7 +264,11 @@ func (r *Repo) MatchQA(ctx context.Context, embedding []float32, threshold float
 	// clearly this one" are different questions and both have to be
 	// answered before an owner-signed answer is served.
 	if runnerUp > 0 && m.Similarity-runnerUp < QAMatchMargin {
-		return QAMatch{}, false, nil
+		return QAMatch{
+			Similarity: m.Similarity,
+			RunnerUp:   runnerUp,
+			MissReason: QAMissMargin,
+		}, false, nil
 	}
 	if err := json.Unmarshal(sources, &m.Entry.Sources); err != nil {
 		return QAMatch{}, false, fmt.Errorf("decode qa sources: %w", err)

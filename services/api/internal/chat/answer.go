@@ -214,10 +214,16 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		// a question answered slowly beats a question not answered.
 		s.log().Warn("qa bank lookup failed", slog.String("error", qaErr.Error()))
 	}
+	// Recorded whether or not it matched. A miss carries how close it
+	// came and which gate refused it, which is the only evidence that
+	// says what to do about it: a threshold miss names the phrasing to
+	// add, a margin miss names two entries to pull apart.
 	in.QA = users.ChatQALookup{
 		Matched:        hit,
 		Threshold:      s.qaThreshold(),
 		BestSimilarity: match.Similarity,
+		RunnerUp:       match.RunnerUp,
+		MissReason:     match.MissReason,
 	}
 	if hit {
 		in.QA.EntryID = match.Entry.ID

@@ -118,6 +118,15 @@ type ChatQALookup struct {
 	// BestSimilarity is the nearest phrasing whether or not it cleared
 	// the threshold. The whole point of recording a miss.
 	BestSimilarity float64 `json:"best_similarity"`
+	// RunnerUp is the best similarity from a different entry, which is
+	// what the margin rule is measured against.
+	RunnerUp float64 `json:"runner_up,omitempty"`
+	// MissReason is which gate refused a miss: threshold, margin or
+	// empty. Without it a near miss cannot be acted on, because a
+	// threshold miss wants a new phrasing and a margin miss wants two
+	// entries pulled apart, and the two look identical in the score
+	// alone.
+	MissReason string `json:"miss_reason,omitempty"`
 }
 
 // ChatTimings is where the reader's wait went.
