@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { AdminQueries } from "@/components/ask/admin-queries";
 import { Thread } from "@/components/ask/thread";
 import { getSessionUser } from "@/lib/session-user";
 
@@ -39,10 +40,19 @@ export default async function AskPage() {
         </p>
       </header>
 
+      {/* Admin only, and it renders nothing for anyone else: the RPC
+          refuses a member and the component stays empty. Above the
+          thread because a live number is a different kind of thing
+          from a conversation, and burying one in a scrollback is how
+          it gets missed. */}
+      <div className="mt-8">
+        <AdminQueries />
+      </div>
+
       {/* A fixed height rather than a growing page, so the composer
           stays where it was put and the reader is not chasing it down
           the screen after every answer. */}
-      <div className="mt-8 h-[min(70vh,44rem)]">
+      <div className="h-[min(70vh,44rem)]">
         <Thread roomy />
       </div>
     </div>

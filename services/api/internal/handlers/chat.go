@@ -542,3 +542,68 @@ func parseID(s string) (int64, error) {
 	}
 	return id, nil
 }
+
+// requireChatAdmin resolves an admin session or fails the RPC.
+//
+// Separate from requireMember because these two RPCs read the database
+// and a member must not. The proto declares AUTH_LEVEL_ADMIN and
+// enforcement lives here until the auth interceptor lands, same as
+// everywhere else on this service.
+func (h *Chat) requireChatAdmin(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
+	me, err := h.requireMember(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if me.Role != users.RoleAdmin {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
+	}
+	return me, nil
+}
+
+// ListAdminQueries returns the dropdown contents.
+func (h *Chat) ListAdminQueries(
+	ctx context.Context, req *connect.Request[careerv1.ListAdminQueriesRequest],
+) (*connect.Response[careerv1.ListAdminQueriesResponse], error) {
+	if _, err := h.requireChatAdmin(ctx, req); err != nil {
+		return nil, err
+	}
+	list := users.ListAdminQueries()
+	out := &careerv1.ListAdminQueriesResponse{Queries: make([]*careerv1.AdminQuery, 0, len(list))}
+	for _, q := range list {
+		out.Queries = append(out.Queries, &careerv1.AdminQuery{
+			Id: q.ID, Label: q.Label, Detail: q.Detail,
+		})
+	}
+	return connect.NewResponse(out), nil
+}
+
+// RunAdminQuery runs one named query.
+//
+// No model is involved. The admin picked the query and the database
+// answers it, so the number is exact rather than something generated,
+// and it arrives in milliseconds rather than the twenty to thirty
+// seconds an answer takes on this hardware.
+func (h *Chat) RunAdminQuery(
+	ctx context.Context, req *connect.Request[careerv1.RunAdminQueryRequest],
+) (*connect.Response[careerv1.RunAdminQueryResponse], error) {
+	me, err := h.requireChatAdmin(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	q, value, err := h.users.RunAdminQuery(ctx, strings.TrimSpace(req.Msg.GetId()))
+	if errors.Is(err, users.ErrNoSuchAdminQuery) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such query"))
+	}
+	if err != nil {
+		h.log.Error("RunAdminQuery failed",
+			slog.String("query", req.Msg.GetId()), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("the query did not run"))
+	}
+	h.log.Info("admin query run",
+		slog.Int64("admin", me.ID), slog.String("query", q.ID))
+	return connect.NewResponse(&careerv1.RunAdminQueryResponse{
+		Query:  &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
+		Result: value,
+		RanAt:  timestamppb.Now(),
+	}), nil
+}

@@ -724,6 +724,42 @@ marker injected through retrieved content.
 try to make people do" is a question about the assistant that nothing
 else in the row answers.
 
+### Admin database queries, chosen from a list
+
+Roger asked for the assistant to be able to query the database, then
+for the admin to choose the query from a dropdown. The second
+instruction is what makes it both safe and fast.
+
+- **The model never writes SQL.** Every statement is fixed in
+  `users/admin_queries.go` and takes no argument from anywhere. There
+  is no string being built, so there is nothing to inject into.
+- **The model never chooses.** A person picks from the list, which
+  removes the classification step. That step would have cost a second
+  model call, about ten seconds on this box, and would have been the
+  least reliable part of the feature.
+- **No model is involved at all.** The admin picks, a fixed statement
+  runs, and the number comes back exact in milliseconds. Asking a
+  language model for a count would take twenty to thirty seconds and
+  could get it wrong.
+- **Admin only**, enforced at the RPC, and the component renders
+  nothing for anyone else.
+
+**Counts, never rows.** Nothing selects a name, an address or a message
+body. Results are rendered into a surface and may be quoted into a
+prompt, prompts are written to `decision_log`, and that is exported as
+training data, so anything selected here would end up in a file whose
+purpose is to be handed to a trainer.
+
+Nine queries today: members, JD submissions, Ask Roger usage, how
+answers were produced, the Q&A bank, the corpus, meetings, model usage
+over seven days, and the review queue. Adding one is an edit in that
+file and nowhere else.
+
+A test runs every query against a database with the full migration
+history, which caught two written against a schema that had moved: a
+`user_status` enum with no `pending` value, and a `meetings` table that
+is called `meeting_bookings`.
+
 ## 7. Waiting on the owner
 
 1. **Should Whiskey House / MDEMG material inform the assistant?**

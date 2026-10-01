@@ -22,6 +22,42 @@ RATING_UNSPECIFIED: Rating
 RATING_UP: Rating
 RATING_DOWN: Rating
 
+class AdminQuery(_message.Message):
+    __slots__ = ("id", "label", "detail")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    DETAIL_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    label: str
+    detail: str
+    def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., detail: _Optional[str] = ...) -> None: ...
+
+class ListAdminQueriesRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListAdminQueriesResponse(_message.Message):
+    __slots__ = ("queries",)
+    QUERIES_FIELD_NUMBER: _ClassVar[int]
+    queries: _containers.RepeatedCompositeFieldContainer[AdminQuery]
+    def __init__(self, queries: _Optional[_Iterable[_Union[AdminQuery, _Mapping]]] = ...) -> None: ...
+
+class RunAdminQueryRequest(_message.Message):
+    __slots__ = ("id",)
+    ID_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    def __init__(self, id: _Optional[str] = ...) -> None: ...
+
+class RunAdminQueryResponse(_message.Message):
+    __slots__ = ("query", "result", "ran_at")
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    RAN_AT_FIELD_NUMBER: _ClassVar[int]
+    query: AdminQuery
+    result: str
+    ran_at: _timestamp_pb2.Timestamp
+    def __init__(self, query: _Optional[_Union[AdminQuery, _Mapping]] = ..., result: _Optional[str] = ..., ran_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
 class Conversation(_message.Message):
     __slots__ = ("id", "title", "started_at", "last_message_at", "message_count", "persona_version", "context_content_id")
     ID_FIELD_NUMBER: _ClassVar[int]

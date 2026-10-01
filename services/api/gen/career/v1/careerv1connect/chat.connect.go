@@ -65,6 +65,12 @@ const (
 	ChatServiceGetSuggestionsProcedure = "/career.v1.ChatService/GetSuggestions"
 	// ChatServiceGetQuotaProcedure is the fully-qualified name of the ChatService's GetQuota RPC.
 	ChatServiceGetQuotaProcedure = "/career.v1.ChatService/GetQuota"
+	// ChatServiceListAdminQueriesProcedure is the fully-qualified name of the ChatService's
+	// ListAdminQueries RPC.
+	ChatServiceListAdminQueriesProcedure = "/career.v1.ChatService/ListAdminQueries"
+	// ChatServiceRunAdminQueryProcedure is the fully-qualified name of the ChatService's RunAdminQuery
+	// RPC.
+	ChatServiceRunAdminQueryProcedure = "/career.v1.ChatService/RunAdminQuery"
 )
 
 // ChatServiceClient is a client for the career.v1.ChatService service.
@@ -98,6 +104,16 @@ type ChatServiceClient interface {
 	// Returns the member's remaining allowance and the global budget mode so
 	// the panel can show limits before they are hit.
 	GetQuota(context.Context, *connect.Request[v1.GetQuotaRequest]) (*connect.Response[v1.GetQuotaResponse], error)
+	// Lists the database queries an admin may run from the assistant, for
+	// the dropdown. Names and descriptions only; the SQL never leaves the
+	// server.
+	ListAdminQueries(context.Context, *connect.Request[v1.ListAdminQueriesRequest]) (*connect.Response[v1.ListAdminQueriesResponse], error)
+	// Runs one named query and returns its result.
+	//
+	// The id selects a fixed statement and is never interpolated into
+	// one, so there is nothing to inject into and an unknown id is simply
+	// refused. Results are counts, never rows about a person.
+	RunAdminQuery(context.Context, *connect.Request[v1.RunAdminQueryRequest]) (*connect.Response[v1.RunAdminQueryResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the career.v1.ChatService service. By default, it
@@ -165,6 +181,18 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("GetQuota")),
 			connect.WithClientOptions(opts...),
 		),
+		listAdminQueries: connect.NewClient[v1.ListAdminQueriesRequest, v1.ListAdminQueriesResponse](
+			httpClient,
+			baseURL+ChatServiceListAdminQueriesProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListAdminQueries")),
+			connect.WithClientOptions(opts...),
+		),
+		runAdminQuery: connect.NewClient[v1.RunAdminQueryRequest, v1.RunAdminQueryResponse](
+			httpClient,
+			baseURL+ChatServiceRunAdminQueryProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("RunAdminQuery")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -179,6 +207,8 @@ type chatServiceClient struct {
 	escalate           *connect.Client[v1.EscalateRequest, v1.EscalateResponse]
 	getSuggestions     *connect.Client[v1.GetSuggestionsRequest, v1.GetSuggestionsResponse]
 	getQuota           *connect.Client[v1.GetQuotaRequest, v1.GetQuotaResponse]
+	listAdminQueries   *connect.Client[v1.ListAdminQueriesRequest, v1.ListAdminQueriesResponse]
+	runAdminQuery      *connect.Client[v1.RunAdminQueryRequest, v1.RunAdminQueryResponse]
 }
 
 // CreateConversation calls career.v1.ChatService.CreateConversation.
@@ -226,6 +256,16 @@ func (c *chatServiceClient) GetQuota(ctx context.Context, req *connect.Request[v
 	return c.getQuota.CallUnary(ctx, req)
 }
 
+// ListAdminQueries calls career.v1.ChatService.ListAdminQueries.
+func (c *chatServiceClient) ListAdminQueries(ctx context.Context, req *connect.Request[v1.ListAdminQueriesRequest]) (*connect.Response[v1.ListAdminQueriesResponse], error) {
+	return c.listAdminQueries.CallUnary(ctx, req)
+}
+
+// RunAdminQuery calls career.v1.ChatService.RunAdminQuery.
+func (c *chatServiceClient) RunAdminQuery(ctx context.Context, req *connect.Request[v1.RunAdminQueryRequest]) (*connect.Response[v1.RunAdminQueryResponse], error) {
+	return c.runAdminQuery.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the career.v1.ChatService service.
 type ChatServiceHandler interface {
 	// Starts a conversation. The first assistant message is the AI disclosure
@@ -257,6 +297,16 @@ type ChatServiceHandler interface {
 	// Returns the member's remaining allowance and the global budget mode so
 	// the panel can show limits before they are hit.
 	GetQuota(context.Context, *connect.Request[v1.GetQuotaRequest]) (*connect.Response[v1.GetQuotaResponse], error)
+	// Lists the database queries an admin may run from the assistant, for
+	// the dropdown. Names and descriptions only; the SQL never leaves the
+	// server.
+	ListAdminQueries(context.Context, *connect.Request[v1.ListAdminQueriesRequest]) (*connect.Response[v1.ListAdminQueriesResponse], error)
+	// Runs one named query and returns its result.
+	//
+	// The id selects a fixed statement and is never interpolated into
+	// one, so there is nothing to inject into and an unknown id is simply
+	// refused. Results are counts, never rows about a person.
+	RunAdminQuery(context.Context, *connect.Request[v1.RunAdminQueryRequest]) (*connect.Response[v1.RunAdminQueryResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -320,6 +370,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("GetQuota")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceListAdminQueriesHandler := connect.NewUnaryHandler(
+		ChatServiceListAdminQueriesProcedure,
+		svc.ListAdminQueries,
+		connect.WithSchema(chatServiceMethods.ByName("ListAdminQueries")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceRunAdminQueryHandler := connect.NewUnaryHandler(
+		ChatServiceRunAdminQueryProcedure,
+		svc.RunAdminQuery,
+		connect.WithSchema(chatServiceMethods.ByName("RunAdminQuery")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceCreateConversationProcedure:
@@ -340,6 +402,10 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetSuggestionsHandler.ServeHTTP(w, r)
 		case ChatServiceGetQuotaProcedure:
 			chatServiceGetQuotaHandler.ServeHTTP(w, r)
+		case ChatServiceListAdminQueriesProcedure:
+			chatServiceListAdminQueriesHandler.ServeHTTP(w, r)
+		case ChatServiceRunAdminQueryProcedure:
+			chatServiceRunAdminQueryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -383,4 +449,12 @@ func (UnimplementedChatServiceHandler) GetSuggestions(context.Context, *connect.
 
 func (UnimplementedChatServiceHandler) GetQuota(context.Context, *connect.Request[v1.GetQuotaRequest]) (*connect.Response[v1.GetQuotaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.ChatService.GetQuota is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListAdminQueries(context.Context, *connect.Request[v1.ListAdminQueriesRequest]) (*connect.Response[v1.ListAdminQueriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.ChatService.ListAdminQueries is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) RunAdminQuery(context.Context, *connect.Request[v1.RunAdminQueryRequest]) (*connect.Response[v1.RunAdminQueryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.ChatService.RunAdminQuery is not implemented"))
 }
