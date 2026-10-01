@@ -373,9 +373,23 @@ including `first_token_ms`, and the `human` block with verdict, note,
    and changes nothing. There is now a test that fails with "feature
    not supported" if `Unwrap` is removed.
 
-   **Forty-five seconds is still too slow**, separately from the
-   timeout. That was a cold call with no warm prefix cache; it should
-   settle lower. Worth measuring before tuning `Show` down from 3.
+   **Forty-five seconds was model thrash, and it is fixed.** Both of
+   Roger's questions took almost exactly the same time, 44.9 s and
+   45.0 s, which ruled out the cold-cache explanation. The cause was
+   `OLLAMA_MAX_LOADED_MODELS=1`, carried over from the CPX31 when the
+   model was qwen3:8b. The chat pipeline embeds the question and then
+   generates, so one slot meant every question evicted the 5 GB
+   language model to load a 376 MB embedder and then reloaded it.
+
+   Measured on the box after moving to two slots: both models resident
+   at **4.71 GiB of the 7 GiB cap**, embed 0.3 s, generate 4.7 s, a
+   second embed 0.3 s instead of a multi-gigabyte reload, no OOM. The
+   headroom exists because the model is 4b, not the 8b the old number
+   was sized for.
+
+   Still to confirm under load: the test ran at a 4096 context while
+   the app uses 8192, which grows the KV cache. Expect roughly 5.6 GiB
+   resident, about 1.4 GiB of headroom.
 
 1. **`QAMatchThreshold` is back to 0.85, and the mechanism changed.**
    The 0.72 above was measured off one question family and it was
