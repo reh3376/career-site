@@ -25,7 +25,7 @@ import type { Message as Message$1 } from "@bufbuild/protobuf";
  * Describes the file career/v1/chat.proto.
  */
 export const file_career_v1_chat: GenFile = /*@__PURE__*/
-  fileDesc("ChRjYXJlZXIvdjEvY2hhdC5wcm90bxIJY2FyZWVyLnYxIjcKCkFkbWluUXVlcnkSCgoCaWQYASABKAkSDQoFbGFiZWwYAiABKAkSDgoGZGV0YWlsGAMgASgJIhkKF0xpc3RBZG1pblF1ZXJpZXNSZXF1ZXN0IkIKGExpc3RBZG1pblF1ZXJpZXNSZXNwb25zZRImCgdxdWVyaWVzGAEgAygLMhUuY2FyZWVyLnYxLkFkbWluUXVlcnkiLQoUUnVuQWRtaW5RdWVyeVJlcXVlc3QSFQoCaWQYASABKAlCCbpIBnIEEAEYQCJ5ChVSdW5BZG1pblF1ZXJ5UmVzcG9uc2USJAoFcXVlcnkYASABKAsyFS5jYXJlZXIudjEuQWRtaW5RdWVyeRIOCgZyZXN1bHQYAiABKAkSKgoGcmFuX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLaAQoMQ29udmVyc2F0aW9uEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEi4KCnN0YXJ0ZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKD2xhc3RfbWVzc2FnZV9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFQoNbWVzc2FnZV9jb3VudBgFIAEoBRIXCg9wZXJzb25hX3ZlcnNpb24YBiABKAkSGgoSY29udGV4dF9jb250ZW50X2lkGAcgASgJImwKCENpdGF0aW9uEhAKCGNodW5rX2lkGAEgASgJEhIKCmNvbnRlbnRfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSDAoEcGF0aBgEIAEoCRIPCgdoZWFkaW5nGAUgASgJEgwKBHJhbmsYBiABKAUiLQoOUHJvcG9zZWRBY3Rpb24SDgoGYWN0aW9uGAEgASgJEgsKA2FyZxgCIAEoCSJcCgxNZXNzYWdlRmxhZ3MSFAoMb3V0X29mX3Njb3BlGAEgASgIEhIKCm5vX3N1cHBvcnQYAiABKAgSEAoIZGVncmFkZWQYAyABKAgSEAoIcWFfbWF0Y2gYBCABKAgipAMKB01lc3NhZ2USCgoCaWQYASABKAkSFwoPY29udmVyc2F0aW9uX2lkGAIgASgJEiUKBHJvbGUYAyABKA4yFy5jYXJlZXIudjEuTWVzc2FnZS5Sb2xlEgwKBHRleHQYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoJY2l0YXRpb25zGAYgAygLMhMuY2FyZWVyLnYxLkNpdGF0aW9uEiEKBnJhdGluZxgHIAEoDjIRLmNhcmVlci52MS5SYXRpbmcSJgoFZmxhZ3MYCCABKAsyFy5jYXJlZXIudjEuTWVzc2FnZUZsYWdzEhcKD3BlcnNvbmFfdmVyc2lvbhgJIAEoCRIyCg9wcm9wb3NlZF9hY3Rpb24YCiABKAsyGS5jYXJlZXIudjEuUHJvcG9zZWRBY3Rpb24iTwoEUm9sZRIUChBST0xFX1VOU1BFQ0lGSUVEEAASDQoJUk9MRV9VU0VSEAESEgoOUk9MRV9BU1NJU1RBTlQQAhIOCgpST0xFX09XTkVSEAMiQQoZQ3JlYXRlQ29udmVyc2F0aW9uUmVxdWVzdBIkChJjb250ZXh0X2NvbnRlbnRfaWQYASABKAlCCLpIBXIDGIABInMKGkNyZWF0ZUNvbnZlcnNhdGlvblJlc3BvbnNlEi0KDGNvbnZlcnNhdGlvbhgBIAEoCzIXLmNhcmVlci52MS5Db252ZXJzYXRpb24SJgoKZGlzY2xvc3VyZRgCIAEoCzISLmNhcmVlci52MS5NZXNzYWdlIkAKGExpc3RDb252ZXJzYXRpb25zUmVxdWVzdBIkCgRwYWdlGAEgASgLMhYuY2FyZWVyLnYxLlBhZ2VSZXF1ZXN0InIKGUxpc3RDb252ZXJzYXRpb25zUmVzcG9uc2USLgoNY29udmVyc2F0aW9ucxgBIAMoCzIXLmNhcmVlci52MS5Db252ZXJzYXRpb24SJQoEcGFnZRgCIAEoCzIXLmNhcmVlci52MS5QYWdlUmVzcG9uc2UiPAoWR2V0Q29udmVyc2F0aW9uUmVxdWVzdBIiCg9jb252ZXJzYXRpb25faWQYASABKAlCCbpIBnIEEAEYQCJuChdHZXRDb252ZXJzYXRpb25SZXNwb25zZRItCgxjb252ZXJzYXRpb24YASABKAsyFy5jYXJlZXIudjEuQ29udmVyc2F0aW9uEiQKCG1lc3NhZ2VzGAIgAygLMhIuY2FyZWVyLnYxLk1lc3NhZ2UieAoSU2VuZE1lc3NhZ2VSZXF1ZXN0EiIKD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIJukgGcgQQARhAEhgKBHRleHQYAiABKAlCCrpIB3IFEAEYoB8SJAoSY29udGV4dF9jb250ZW50X2lkGAMgASgJQgi6SAVyAxiAASJwCgVVc2FnZRIUCgxpbnB1dF90b2tlbnMYASABKAUSFQoNb3V0cHV0X3Rva2VucxgCIAEoBRIXCg9yZW1haW5pbmdfdG9kYXkYAyABKAUSIQoZcmVtYWluaW5nX2luX2NvbnZlcnNhdGlvbhgEIAEoBSL1AwoTU2VuZE1lc3NhZ2VSZXNwb25zZRI1CgVzdGFydBgBIAEoCzIkLmNhcmVlci52MS5TZW5kTWVzc2FnZVJlc3BvbnNlLlN0YXJ0SAASNQoFZGVsdGEYAiABKAsyJC5jYXJlZXIudjEuU2VuZE1lc3NhZ2VSZXNwb25zZS5EZWx0YUgAEj0KCWNpdGF0aW9ucxgDIAEoCzIoLmNhcmVlci52MS5TZW5kTWVzc2FnZVJlc3BvbnNlLkNpdGF0aW9uc0gAEiEKBXVzYWdlGAQgASgLMhAuY2FyZWVyLnYxLlVzYWdlSAASMwoEZG9uZRgFIAEoCzIjLmNhcmVlci52MS5TZW5kTWVzc2FnZVJlc3BvbnNlLkRvbmVIABpXCgVTdGFydBIXCg91c2VyX21lc3NhZ2VfaWQYASABKAkSHAoUYXNzaXN0YW50X21lc3NhZ2VfaWQYAiABKAkSFwoPcGVyc29uYV92ZXJzaW9uGAMgASgJGhUKBURlbHRhEgwKBHRleHQYASABKAkaMwoJQ2l0YXRpb25zEiYKCWNpdGF0aW9ucxgBIAMoCzITLmNhcmVlci52MS5DaXRhdGlvbhorCgREb25lEiMKB21lc3NhZ2UYASABKAsyEi5jYXJlZXIudjEuTWVzc2FnZUIHCgVldmVudCI/ChlEZWxldGVDb252ZXJzYXRpb25SZXF1ZXN0EiIKD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIJukgGcgQQARhAIhwKGkRlbGV0ZUNvbnZlcnNhdGlvblJlc3BvbnNlInsKElJhdGVNZXNzYWdlUmVxdWVzdBIdCgptZXNzYWdlX2lkGAEgASgJQgm6SAZyBBABGEASKwoGcmF0aW5nGAIgASgOMhEuY2FyZWVyLnYxLlJhdGluZ0IIukgFggECEAESGQoHY29tbWVudBgDIAEoCUIIukgFcgMY6AciFQoTUmF0ZU1lc3NhZ2VSZXNwb25zZSJuCg9Fc2NhbGF0ZVJlcXVlc3QSIgoPY29udmVyc2F0aW9uX2lkGAEgASgJQgm6SAZyBBABGEASGgoIcXVlc3Rpb24YAiABKAlCCLpIBXIDGKAfEhsKCm1lc3NhZ2VfaWQYAyABKAlCB7pIBHICGEAimgIKCkVzY2FsYXRpb24SCgoCaWQYASABKAkSFwoPY29udmVyc2F0aW9uX2lkGAIgASgJEiwKBnN0YXR1cxgDIAEoDjIcLmNhcmVlci52MS5Fc2NhbGF0aW9uLlN0YXR1cxIuCgpjcmVhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpyZXBsaWVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJZCgZTdGF0dXMSFgoSU1RBVFVTX1VOU1BFQ0lGSUVEEAASDwoLU1RBVFVTX09QRU4QARITCg9TVEFUVVNfQU5TV0VSRUQQAhIRCg1TVEFUVVNfQ0xPU0VEEAMiPQoQRXNjYWxhdGVSZXNwb25zZRIpCgplc2NhbGF0aW9uGAEgASgLMhUuY2FyZWVyLnYxLkVzY2FsYXRpb24iTQoVR2V0U3VnZ2VzdGlvbnNSZXF1ZXN0EhYKBHBhdGgYASABKAlCCLpIBXIDGIACEhwKCmNvbnRlbnRfaWQYAiABKAlCCLpIBXIDGIABIisKFkdldFN1Z2dlc3Rpb25zUmVzcG9uc2USEQoJcXVlc3Rpb25zGAEgAygJIhEKD0dldFF1b3RhUmVxdWVzdCKKAgoQR2V0UXVvdGFSZXNwb25zZRITCgtkYWlseV9saW1pdBgBIAEoBRISCgp1c2VkX3RvZGF5GAIgASgFEhoKEmNvbnZlcnNhdGlvbl9saW1pdBgDIAEoBRI7CgtidWRnZXRfbW9kZRgEIAEoDjImLmNhcmVlci52MS5HZXRRdW90YVJlc3BvbnNlLkJ1ZGdldE1vZGUidAoKQnVkZ2V0TW9kZRIbChdCVURHRVRfTU9ERV9VTlNQRUNJRklFRBAAEhYKEkJVREdFVF9NT0RFX05PUk1BTBABEhcKE0JVREdFVF9NT0RFX1FBX09OTFkQAhIYChRCVURHRVRfTU9ERV9ERUdSQURFRBADKkAKBlJhdGluZxIWChJSQVRJTkdfVU5TUEVDSUZJRUQQABINCglSQVRJTkdfVVAQARIPCgtSQVRJTkdfRE9XThACMosICgtDaGF0U2VydmljZRJrChJDcmVhdGVDb252ZXJzYXRpb24SJC5jYXJlZXIudjEuQ3JlYXRlQ29udmVyc2F0aW9uUmVxdWVzdBolLmNhcmVlci52MS5DcmVhdGVDb252ZXJzYXRpb25SZXNwb25zZSIIgLUYApC1GBQSZAoRTGlzdENvbnZlcnNhdGlvbnMSIy5jYXJlZXIudjEuTGlzdENvbnZlcnNhdGlvbnNSZXF1ZXN0GiQuY2FyZWVyLnYxLkxpc3RDb252ZXJzYXRpb25zUmVzcG9uc2UiBIC1GAISXgoPR2V0Q29udmVyc2F0aW9uEiEuY2FyZWVyLnYxLkdldENvbnZlcnNhdGlvblJlcXVlc3QaIi5jYXJlZXIudjEuR2V0Q29udmVyc2F0aW9uUmVzcG9uc2UiBIC1GAISWAoLU2VuZE1lc3NhZ2USHS5jYXJlZXIudjEuU2VuZE1lc3NhZ2VSZXF1ZXN0Gh4uY2FyZWVyLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UiCIC1GAKQtRgUMAESZwoSRGVsZXRlQ29udmVyc2F0aW9uEiQuY2FyZWVyLnYxLkRlbGV0ZUNvbnZlcnNhdGlvblJlcXVlc3QaJS5jYXJlZXIudjEuRGVsZXRlQ29udmVyc2F0aW9uUmVzcG9uc2UiBIC1GAISUgoLUmF0ZU1lc3NhZ2USHS5jYXJlZXIudjEuUmF0ZU1lc3NhZ2VSZXF1ZXN0Gh4uY2FyZWVyLnYxLlJhdGVNZXNzYWdlUmVzcG9uc2UiBIC1GAISTQoIRXNjYWxhdGUSGi5jYXJlZXIudjEuRXNjYWxhdGVSZXF1ZXN0GhsuY2FyZWVyLnYxLkVzY2FsYXRlUmVzcG9uc2UiCIC1GAKQtRgFElsKDkdldFN1Z2dlc3Rpb25zEiAuY2FyZWVyLnYxLkdldFN1Z2dlc3Rpb25zUmVxdWVzdBohLmNhcmVlci52MS5HZXRTdWdnZXN0aW9uc1Jlc3BvbnNlIgSAtRgCEkkKCEdldFF1b3RhEhouY2FyZWVyLnYxLkdldFF1b3RhUmVxdWVzdBobLmNhcmVlci52MS5HZXRRdW90YVJlc3BvbnNlIgSAtRgCEmEKEExpc3RBZG1pblF1ZXJpZXMSIi5jYXJlZXIudjEuTGlzdEFkbWluUXVlcmllc1JlcXVlc3QaIy5jYXJlZXIudjEuTGlzdEFkbWluUXVlcmllc1Jlc3BvbnNlIgSAtRgDElgKDVJ1bkFkbWluUXVlcnkSHy5jYXJlZXIudjEuUnVuQWRtaW5RdWVyeVJlcXVlc3QaIC5jYXJlZXIudjEuUnVuQWRtaW5RdWVyeVJlc3BvbnNlIgSAtRgDQqMBCg1jb20uY2FyZWVyLnYxQglDaGF0UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_common, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChRjYXJlZXIvdjEvY2hhdC5wcm90bxIJY2FyZWVyLnYxIjcKCkFkbWluUXVlcnkSCgoCaWQYASABKAkSDQoFbGFiZWwYAiABKAkSDgoGZGV0YWlsGAMgASgJIhkKF0xpc3RBZG1pblF1ZXJpZXNSZXF1ZXN0IkIKGExpc3RBZG1pblF1ZXJpZXNSZXNwb25zZRImCgdxdWVyaWVzGAEgAygLMhUuY2FyZWVyLnYxLkFkbWluUXVlcnkiLQoUUnVuQWRtaW5RdWVyeVJlcXVlc3QSFQoCaWQYASABKAlCCbpIBnIEEAEYQCIeCg1BZG1pblF1ZXJ5Um93Eg0KBWNlbGxzGAEgAygJIqIBChVSdW5BZG1pblF1ZXJ5UmVzcG9uc2USJAoFcXVlcnkYASABKAsyFS5jYXJlZXIudjEuQWRtaW5RdWVyeRIPCgdjb2x1bW5zGAIgAygJEiYKBHJvd3MYAyADKAsyGC5jYXJlZXIudjEuQWRtaW5RdWVyeVJvdxIqCgZyYW5fYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wItoBCgxDb252ZXJzYXRpb24SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSLgoKc3RhcnRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMwoPbGFzdF9tZXNzYWdlX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIVCg1tZXNzYWdlX2NvdW50GAUgASgFEhcKD3BlcnNvbmFfdmVyc2lvbhgGIAEoCRIaChJjb250ZXh0X2NvbnRlbnRfaWQYByABKAkibAoIQ2l0YXRpb24SEAoIY2h1bmtfaWQYASABKAkSEgoKY29udGVudF9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRIMCgRwYXRoGAQgASgJEg8KB2hlYWRpbmcYBSABKAkSDAoEcmFuaxgGIAEoBSItCg5Qcm9wb3NlZEFjdGlvbhIOCgZhY3Rpb24YASABKAkSCwoDYXJnGAIgASgJIlwKDE1lc3NhZ2VGbGFncxIUCgxvdXRfb2Zfc2NvcGUYASABKAgSEgoKbm9fc3VwcG9ydBgCIAEoCBIQCghkZWdyYWRlZBgDIAEoCBIQCghxYV9tYXRjaBgEIAEoCCKkAwoHTWVzc2FnZRIKCgJpZBgBIAEoCRIXCg9jb252ZXJzYXRpb25faWQYAiABKAkSJQoEcm9sZRgDIAEoDjIXLmNhcmVlci52MS5NZXNzYWdlLlJvbGUSDAoEdGV4dBgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBImCgljaXRhdGlvbnMYBiADKAsyEy5jYXJlZXIudjEuQ2l0YXRpb24SIQoGcmF0aW5nGAcgASgOMhEuY2FyZWVyLnYxLlJhdGluZxImCgVmbGFncxgIIAEoCzIXLmNhcmVlci52MS5NZXNzYWdlRmxhZ3MSFwoPcGVyc29uYV92ZXJzaW9uGAkgASgJEjIKD3Byb3Bvc2VkX2FjdGlvbhgKIAEoCzIZLmNhcmVlci52MS5Qcm9wb3NlZEFjdGlvbiJPCgRSb2xlEhQKEFJPTEVfVU5TUEVDSUZJRUQQABINCglST0xFX1VTRVIQARISCg5ST0xFX0FTU0lTVEFOVBACEg4KClJPTEVfT1dORVIQAyJBChlDcmVhdGVDb252ZXJzYXRpb25SZXF1ZXN0EiQKEmNvbnRleHRfY29udGVudF9pZBgBIAEoCUIIukgFcgMYgAEicwoaQ3JlYXRlQ29udmVyc2F0aW9uUmVzcG9uc2USLQoMY29udmVyc2F0aW9uGAEgASgLMhcuY2FyZWVyLnYxLkNvbnZlcnNhdGlvbhImCgpkaXNjbG9zdXJlGAIgASgLMhIuY2FyZWVyLnYxLk1lc3NhZ2UiQAoYTGlzdENvbnZlcnNhdGlvbnNSZXF1ZXN0EiQKBHBhZ2UYASABKAsyFi5jYXJlZXIudjEuUGFnZVJlcXVlc3QicgoZTGlzdENvbnZlcnNhdGlvbnNSZXNwb25zZRIuCg1jb252ZXJzYXRpb25zGAEgAygLMhcuY2FyZWVyLnYxLkNvbnZlcnNhdGlvbhIlCgRwYWdlGAIgASgLMhcuY2FyZWVyLnYxLlBhZ2VSZXNwb25zZSI8ChZHZXRDb252ZXJzYXRpb25SZXF1ZXN0EiIKD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIJukgGcgQQARhAIm4KF0dldENvbnZlcnNhdGlvblJlc3BvbnNlEi0KDGNvbnZlcnNhdGlvbhgBIAEoCzIXLmNhcmVlci52MS5Db252ZXJzYXRpb24SJAoIbWVzc2FnZXMYAiADKAsyEi5jYXJlZXIudjEuTWVzc2FnZSJ4ChJTZW5kTWVzc2FnZVJlcXVlc3QSIgoPY29udmVyc2F0aW9uX2lkGAEgASgJQgm6SAZyBBABGEASGAoEdGV4dBgCIAEoCUIKukgHcgUQARigHxIkChJjb250ZXh0X2NvbnRlbnRfaWQYAyABKAlCCLpIBXIDGIABInAKBVVzYWdlEhQKDGlucHV0X3Rva2VucxgBIAEoBRIVCg1vdXRwdXRfdG9rZW5zGAIgASgFEhcKD3JlbWFpbmluZ190b2RheRgDIAEoBRIhChlyZW1haW5pbmdfaW5fY29udmVyc2F0aW9uGAQgASgFIvUDChNTZW5kTWVzc2FnZVJlc3BvbnNlEjUKBXN0YXJ0GAEgASgLMiQuY2FyZWVyLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UuU3RhcnRIABI1CgVkZWx0YRgCIAEoCzIkLmNhcmVlci52MS5TZW5kTWVzc2FnZVJlc3BvbnNlLkRlbHRhSAASPQoJY2l0YXRpb25zGAMgASgLMiguY2FyZWVyLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UuQ2l0YXRpb25zSAASIQoFdXNhZ2UYBCABKAsyEC5jYXJlZXIudjEuVXNhZ2VIABIzCgRkb25lGAUgASgLMiMuY2FyZWVyLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2UuRG9uZUgAGlcKBVN0YXJ0EhcKD3VzZXJfbWVzc2FnZV9pZBgBIAEoCRIcChRhc3Npc3RhbnRfbWVzc2FnZV9pZBgCIAEoCRIXCg9wZXJzb25hX3ZlcnNpb24YAyABKAkaFQoFRGVsdGESDAoEdGV4dBgBIAEoCRozCglDaXRhdGlvbnMSJgoJY2l0YXRpb25zGAEgAygLMhMuY2FyZWVyLnYxLkNpdGF0aW9uGisKBERvbmUSIwoHbWVzc2FnZRgBIAEoCzISLmNhcmVlci52MS5NZXNzYWdlQgcKBWV2ZW50Ij8KGURlbGV0ZUNvbnZlcnNhdGlvblJlcXVlc3QSIgoPY29udmVyc2F0aW9uX2lkGAEgASgJQgm6SAZyBBABGEAiHAoaRGVsZXRlQ29udmVyc2F0aW9uUmVzcG9uc2UiewoSUmF0ZU1lc3NhZ2VSZXF1ZXN0Eh0KCm1lc3NhZ2VfaWQYASABKAlCCbpIBnIEEAEYQBIrCgZyYXRpbmcYAiABKA4yES5jYXJlZXIudjEuUmF0aW5nQgi6SAWCAQIQARIZCgdjb21tZW50GAMgASgJQgi6SAVyAxjoByIVChNSYXRlTWVzc2FnZVJlc3BvbnNlIm4KD0VzY2FsYXRlUmVxdWVzdBIiCg9jb252ZXJzYXRpb25faWQYASABKAlCCbpIBnIEEAEYQBIaCghxdWVzdGlvbhgCIAEoCUIIukgFcgMYoB8SGwoKbWVzc2FnZV9pZBgDIAEoCUIHukgEcgIYQCKaAgoKRXNjYWxhdGlvbhIKCgJpZBgBIAEoCRIXCg9jb252ZXJzYXRpb25faWQYAiABKAkSLAoGc3RhdHVzGAMgASgOMhwuY2FyZWVyLnYxLkVzY2FsYXRpb24uU3RhdHVzEi4KCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnJlcGxpZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIlkKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIPCgtTVEFUVVNfT1BFThABEhMKD1NUQVRVU19BTlNXRVJFRBACEhEKDVNUQVRVU19DTE9TRUQQAyI9ChBFc2NhbGF0ZVJlc3BvbnNlEikKCmVzY2FsYXRpb24YASABKAsyFS5jYXJlZXIudjEuRXNjYWxhdGlvbiJNChVHZXRTdWdnZXN0aW9uc1JlcXVlc3QSFgoEcGF0aBgBIAEoCUIIukgFcgMYgAISHAoKY29udGVudF9pZBgCIAEoCUIIukgFcgMYgAEiKwoWR2V0U3VnZ2VzdGlvbnNSZXNwb25zZRIRCglxdWVzdGlvbnMYASADKAkiEQoPR2V0UXVvdGFSZXF1ZXN0IooCChBHZXRRdW90YVJlc3BvbnNlEhMKC2RhaWx5X2xpbWl0GAEgASgFEhIKCnVzZWRfdG9kYXkYAiABKAUSGgoSY29udmVyc2F0aW9uX2xpbWl0GAMgASgFEjsKC2J1ZGdldF9tb2RlGAQgASgOMiYuY2FyZWVyLnYxLkdldFF1b3RhUmVzcG9uc2UuQnVkZ2V0TW9kZSJ0CgpCdWRnZXRNb2RlEhsKF0JVREdFVF9NT0RFX1VOU1BFQ0lGSUVEEAASFgoSQlVER0VUX01PREVfTk9STUFMEAESFwoTQlVER0VUX01PREVfUUFfT05MWRACEhgKFEJVREdFVF9NT0RFX0RFR1JBREVEEAMqQAoGUmF0aW5nEhYKElJBVElOR19VTlNQRUNJRklFRBAAEg0KCVJBVElOR19VUBABEg8KC1JBVElOR19ET1dOEAIyiwgKC0NoYXRTZXJ2aWNlEmsKEkNyZWF0ZUNvbnZlcnNhdGlvbhIkLmNhcmVlci52MS5DcmVhdGVDb252ZXJzYXRpb25SZXF1ZXN0GiUuY2FyZWVyLnYxLkNyZWF0ZUNvbnZlcnNhdGlvblJlc3BvbnNlIgiAtRgCkLUYFBJkChFMaXN0Q29udmVyc2F0aW9ucxIjLmNhcmVlci52MS5MaXN0Q29udmVyc2F0aW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuTGlzdENvbnZlcnNhdGlvbnNSZXNwb25zZSIEgLUYAhJeCg9HZXRDb252ZXJzYXRpb24SIS5jYXJlZXIudjEuR2V0Q29udmVyc2F0aW9uUmVxdWVzdBoiLmNhcmVlci52MS5HZXRDb252ZXJzYXRpb25SZXNwb25zZSIEgLUYAhJYCgtTZW5kTWVzc2FnZRIdLmNhcmVlci52MS5TZW5kTWVzc2FnZVJlcXVlc3QaHi5jYXJlZXIudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIIgLUYApC1GBQwARJnChJEZWxldGVDb252ZXJzYXRpb24SJC5jYXJlZXIudjEuRGVsZXRlQ29udmVyc2F0aW9uUmVxdWVzdBolLmNhcmVlci52MS5EZWxldGVDb252ZXJzYXRpb25SZXNwb25zZSIEgLUYAhJSCgtSYXRlTWVzc2FnZRIdLmNhcmVlci52MS5SYXRlTWVzc2FnZVJlcXVlc3QaHi5jYXJlZXIudjEuUmF0ZU1lc3NhZ2VSZXNwb25zZSIEgLUYAhJNCghFc2NhbGF0ZRIaLmNhcmVlci52MS5Fc2NhbGF0ZVJlcXVlc3QaGy5jYXJlZXIudjEuRXNjYWxhdGVSZXNwb25zZSIIgLUYApC1GAUSWwoOR2V0U3VnZ2VzdGlvbnMSIC5jYXJlZXIudjEuR2V0U3VnZ2VzdGlvbnNSZXF1ZXN0GiEuY2FyZWVyLnYxLkdldFN1Z2dlc3Rpb25zUmVzcG9uc2UiBIC1GAISSQoIR2V0UXVvdGESGi5jYXJlZXIudjEuR2V0UXVvdGFSZXF1ZXN0GhsuY2FyZWVyLnYxLkdldFF1b3RhUmVzcG9uc2UiBIC1GAISYQoQTGlzdEFkbWluUXVlcmllcxIiLmNhcmVlci52MS5MaXN0QWRtaW5RdWVyaWVzUmVxdWVzdBojLmNhcmVlci52MS5MaXN0QWRtaW5RdWVyaWVzUmVzcG9uc2UiBIC1GAMSWAoNUnVuQWRtaW5RdWVyeRIfLmNhcmVlci52MS5SdW5BZG1pblF1ZXJ5UmVxdWVzdBogLmNhcmVlci52MS5SdW5BZG1pblF1ZXJ5UmVzcG9uc2UiBIC1GANCowEKDWNvbS5jYXJlZXIudjFCCUNoYXRQcm90b1ABWkJnaXRodWIuY29tL3JlaDMzNzYvY2FyZWVyLXNpdGUvc2VydmljZXMvYXBpL2dlbi9jYXJlZXIvdjE7Y2FyZWVydjGiAgNDWFiqAglDYXJlZXIuVjHKAglDYXJlZXJcVjHiAhVDYXJlZXJcVjFcR1BCTWV0YWRhdGHqAgpDYXJlZXI6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_career_v1_common, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * One query offered in the admin dropdown.
@@ -120,6 +120,29 @@ export const RunAdminQueryRequestSchema: GenMessage<RunAdminQueryRequest> = /*@_
   messageDesc(file_career_v1_chat, 3);
 
 /**
+ * One row of a query result.
+ *
+ * @generated from message career.v1.AdminQueryRow
+ */
+export type AdminQueryRow = Message$1<"career.v1.AdminQueryRow"> & {
+  /**
+   * Cells, in the same order as the response's columns. A NULL is an
+   * empty string, because a gap reads better in a column of counts than
+   * the word "null", which invites being read as a value.
+   *
+   * @generated from field: repeated string cells = 1;
+   */
+  cells: string[];
+};
+
+/**
+ * Describes the message career.v1.AdminQueryRow.
+ * Use `create(AdminQueryRowSchema)` to create a new message.
+ */
+export const AdminQueryRowSchema: GenMessage<AdminQueryRow> = /*@__PURE__*/
+  messageDesc(file_career_v1_chat, 4);
+
+/**
  * What the query returned.
  *
  * @generated from message career.v1.RunAdminQueryResponse
@@ -133,16 +156,25 @@ export type RunAdminQueryResponse = Message$1<"career.v1.RunAdminQueryResponse">
   query?: AdminQuery | undefined;
 
   /**
-   * The single-row result, already formatted for reading.
+   * Column headers, taken from the statement itself so a query and its
+   * header cannot drift apart.
    *
-   * @generated from field: string result = 2;
+   * @generated from field: repeated string columns = 2;
    */
-  result: string;
+  columns: string[];
+
+  /**
+   * Rows, capped server side. Every query here aggregates, so a long
+   * result means a GROUP BY went wider than expected.
+   *
+   * @generated from field: repeated career.v1.AdminQueryRow rows = 3;
+   */
+  rows: AdminQueryRow[];
 
   /**
    * When it ran.
    *
-   * @generated from field: google.protobuf.Timestamp ran_at = 3;
+   * @generated from field: google.protobuf.Timestamp ran_at = 4;
    */
   ranAt?: Timestamp | undefined;
 };
@@ -152,7 +184,7 @@ export type RunAdminQueryResponse = Message$1<"career.v1.RunAdminQueryResponse">
  * Use `create(RunAdminQueryResponseSchema)` to create a new message.
  */
 export const RunAdminQueryResponseSchema: GenMessage<RunAdminQueryResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 4);
+  messageDesc(file_career_v1_chat, 5);
 
 /**
  * A conversation header.
@@ -215,7 +247,7 @@ export type Conversation = Message$1<"career.v1.Conversation"> & {
  * Use `create(ConversationSchema)` to create a new message.
  */
 export const ConversationSchema: GenMessage<Conversation> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 5);
+  messageDesc(file_career_v1_chat, 6);
 
 /**
  * A source cited by an assistant message.
@@ -271,7 +303,7 @@ export type Citation = Message$1<"career.v1.Citation"> & {
  * Use `create(CitationSchema)` to create a new message.
  */
 export const CitationSchema: GenMessage<Citation> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 6);
+  messageDesc(file_career_v1_chat, 7);
 
 /**
  * An action the assistant proposed, after the server validated it
@@ -309,7 +341,7 @@ export type ProposedAction = Message$1<"career.v1.ProposedAction"> & {
  * Use `create(ProposedActionSchema)` to create a new message.
  */
 export const ProposedActionSchema: GenMessage<ProposedAction> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 7);
+  messageDesc(file_career_v1_chat, 8);
 
 /**
  * Assistant-side flags on a message.
@@ -352,7 +384,7 @@ export type MessageFlags = Message$1<"career.v1.MessageFlags"> & {
  * Use `create(MessageFlagsSchema)` to create a new message.
  */
 export const MessageFlagsSchema: GenMessage<MessageFlags> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 8);
+  messageDesc(file_career_v1_chat, 9);
 
 /**
  * A message in a conversation.
@@ -437,7 +469,7 @@ export type Message = Message$1<"career.v1.Message"> & {
  * Use `create(MessageSchema)` to create a new message.
  */
 export const MessageSchema: GenMessage<Message> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 9);
+  messageDesc(file_career_v1_chat, 10);
 
 /**
  * Message author.
@@ -478,7 +510,7 @@ export enum Message_Role {
  * Describes the enum career.v1.Message.Role.
  */
 export const Message_RoleSchema: GenEnum<Message_Role> = /*@__PURE__*/
-  enumDesc(file_career_v1_chat, 9, 0);
+  enumDesc(file_career_v1_chat, 10, 0);
 
 /**
  * New-conversation request.
@@ -500,7 +532,7 @@ export type CreateConversationRequest = Message$1<"career.v1.CreateConversationR
  * Use `create(CreateConversationRequestSchema)` to create a new message.
  */
 export const CreateConversationRequestSchema: GenMessage<CreateConversationRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 10);
+  messageDesc(file_career_v1_chat, 11);
 
 /**
  * New conversation with its disclosure message.
@@ -528,7 +560,7 @@ export type CreateConversationResponse = Message$1<"career.v1.CreateConversation
  * Use `create(CreateConversationResponseSchema)` to create a new message.
  */
 export const CreateConversationResponseSchema: GenMessage<CreateConversationResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 11);
+  messageDesc(file_career_v1_chat, 12);
 
 /**
  * Conversation list request.
@@ -549,7 +581,7 @@ export type ListConversationsRequest = Message$1<"career.v1.ListConversationsReq
  * Use `create(ListConversationsRequestSchema)` to create a new message.
  */
 export const ListConversationsRequestSchema: GenMessage<ListConversationsRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 12);
+  messageDesc(file_career_v1_chat, 13);
 
 /**
  * Conversation list.
@@ -577,7 +609,7 @@ export type ListConversationsResponse = Message$1<"career.v1.ListConversationsRe
  * Use `create(ListConversationsResponseSchema)` to create a new message.
  */
 export const ListConversationsResponseSchema: GenMessage<ListConversationsResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 13);
+  messageDesc(file_career_v1_chat, 14);
 
 /**
  * Conversation detail request.
@@ -598,7 +630,7 @@ export type GetConversationRequest = Message$1<"career.v1.GetConversationRequest
  * Use `create(GetConversationRequestSchema)` to create a new message.
  */
 export const GetConversationRequestSchema: GenMessage<GetConversationRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 14);
+  messageDesc(file_career_v1_chat, 15);
 
 /**
  * Conversation with messages.
@@ -626,7 +658,7 @@ export type GetConversationResponse = Message$1<"career.v1.GetConversationRespon
  * Use `create(GetConversationResponseSchema)` to create a new message.
  */
 export const GetConversationResponseSchema: GenMessage<GetConversationResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 15);
+  messageDesc(file_career_v1_chat, 16);
 
 /**
  * A member message.
@@ -661,7 +693,7 @@ export type SendMessageRequest = Message$1<"career.v1.SendMessageRequest"> & {
  * Use `create(SendMessageRequestSchema)` to create a new message.
  */
 export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 16);
+  messageDesc(file_career_v1_chat, 17);
 
 /**
  * Token usage and remaining allowance, sent once per reply.
@@ -703,7 +735,7 @@ export type Usage = Message$1<"career.v1.Usage"> & {
  * Use `create(UsageSchema)` to create a new message.
  */
 export const UsageSchema: GenMessage<Usage> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 17);
+  messageDesc(file_career_v1_chat, 18);
 
 /**
  * One event in the reply stream.
@@ -765,7 +797,7 @@ export type SendMessageResponse = Message$1<"career.v1.SendMessageResponse"> & {
  * Use `create(SendMessageResponseSchema)` to create a new message.
  */
 export const SendMessageResponseSchema: GenMessage<SendMessageResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 18);
+  messageDesc(file_career_v1_chat, 19);
 
 /**
  * Stream start.
@@ -800,7 +832,7 @@ export type SendMessageResponse_Start = Message$1<"career.v1.SendMessageResponse
  * Use `create(SendMessageResponse_StartSchema)` to create a new message.
  */
 export const SendMessageResponse_StartSchema: GenMessage<SendMessageResponse_Start> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 18, 0);
+  messageDesc(file_career_v1_chat, 19, 0);
 
 /**
  * Text fragment.
@@ -821,7 +853,7 @@ export type SendMessageResponse_Delta = Message$1<"career.v1.SendMessageResponse
  * Use `create(SendMessageResponse_DeltaSchema)` to create a new message.
  */
 export const SendMessageResponse_DeltaSchema: GenMessage<SendMessageResponse_Delta> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 18, 1);
+  messageDesc(file_career_v1_chat, 19, 1);
 
 /**
  * Citation list.
@@ -842,7 +874,7 @@ export type SendMessageResponse_Citations = Message$1<"career.v1.SendMessageResp
  * Use `create(SendMessageResponse_CitationsSchema)` to create a new message.
  */
 export const SendMessageResponse_CitationsSchema: GenMessage<SendMessageResponse_Citations> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 18, 2);
+  messageDesc(file_career_v1_chat, 19, 2);
 
 /**
  * Stream end.
@@ -863,7 +895,7 @@ export type SendMessageResponse_Done = Message$1<"career.v1.SendMessageResponse.
  * Use `create(SendMessageResponse_DoneSchema)` to create a new message.
  */
 export const SendMessageResponse_DoneSchema: GenMessage<SendMessageResponse_Done> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 18, 3);
+  messageDesc(file_career_v1_chat, 19, 3);
 
 /**
  * Delete request.
@@ -884,7 +916,7 @@ export type DeleteConversationRequest = Message$1<"career.v1.DeleteConversationR
  * Use `create(DeleteConversationRequestSchema)` to create a new message.
  */
 export const DeleteConversationRequestSchema: GenMessage<DeleteConversationRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 19);
+  messageDesc(file_career_v1_chat, 20);
 
 /**
  * Empty.
@@ -899,7 +931,7 @@ export type DeleteConversationResponse = Message$1<"career.v1.DeleteConversation
  * Use `create(DeleteConversationResponseSchema)` to create a new message.
  */
 export const DeleteConversationResponseSchema: GenMessage<DeleteConversationResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 20);
+  messageDesc(file_career_v1_chat, 21);
 
 /**
  * Rating request.
@@ -934,7 +966,7 @@ export type RateMessageRequest = Message$1<"career.v1.RateMessageRequest"> & {
  * Use `create(RateMessageRequestSchema)` to create a new message.
  */
 export const RateMessageRequestSchema: GenMessage<RateMessageRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 21);
+  messageDesc(file_career_v1_chat, 22);
 
 /**
  * Empty.
@@ -949,7 +981,7 @@ export type RateMessageResponse = Message$1<"career.v1.RateMessageResponse"> & {
  * Use `create(RateMessageResponseSchema)` to create a new message.
  */
 export const RateMessageResponseSchema: GenMessage<RateMessageResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 22);
+  messageDesc(file_career_v1_chat, 23);
 
 /**
  * Escalation request.
@@ -984,7 +1016,7 @@ export type EscalateRequest = Message$1<"career.v1.EscalateRequest"> & {
  * Use `create(EscalateRequestSchema)` to create a new message.
  */
 export const EscalateRequestSchema: GenMessage<EscalateRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 23);
+  messageDesc(file_career_v1_chat, 24);
 
 /**
  * An escalation record.
@@ -1033,7 +1065,7 @@ export type Escalation = Message$1<"career.v1.Escalation"> & {
  * Use `create(EscalationSchema)` to create a new message.
  */
 export const EscalationSchema: GenMessage<Escalation> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 24);
+  messageDesc(file_career_v1_chat, 25);
 
 /**
  * Escalation lifecycle.
@@ -1074,7 +1106,7 @@ export enum Escalation_Status {
  * Describes the enum career.v1.Escalation.Status.
  */
 export const Escalation_StatusSchema: GenEnum<Escalation_Status> = /*@__PURE__*/
-  enumDesc(file_career_v1_chat, 24, 0);
+  enumDesc(file_career_v1_chat, 25, 0);
 
 /**
  * Escalation result.
@@ -1095,7 +1127,7 @@ export type EscalateResponse = Message$1<"career.v1.EscalateResponse"> & {
  * Use `create(EscalateResponseSchema)` to create a new message.
  */
 export const EscalateResponseSchema: GenMessage<EscalateResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 25);
+  messageDesc(file_career_v1_chat, 26);
 
 /**
  * Suggestions request.
@@ -1123,7 +1155,7 @@ export type GetSuggestionsRequest = Message$1<"career.v1.GetSuggestionsRequest">
  * Use `create(GetSuggestionsRequestSchema)` to create a new message.
  */
 export const GetSuggestionsRequestSchema: GenMessage<GetSuggestionsRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 26);
+  messageDesc(file_career_v1_chat, 27);
 
 /**
  * Suggested questions.
@@ -1144,7 +1176,7 @@ export type GetSuggestionsResponse = Message$1<"career.v1.GetSuggestionsResponse
  * Use `create(GetSuggestionsResponseSchema)` to create a new message.
  */
 export const GetSuggestionsResponseSchema: GenMessage<GetSuggestionsResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 27);
+  messageDesc(file_career_v1_chat, 28);
 
 /**
  * Empty.
@@ -1159,7 +1191,7 @@ export type GetQuotaRequest = Message$1<"career.v1.GetQuotaRequest"> & {
  * Use `create(GetQuotaRequestSchema)` to create a new message.
  */
 export const GetQuotaRequestSchema: GenMessage<GetQuotaRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 28);
+  messageDesc(file_career_v1_chat, 29);
 
 /**
  * Allowance and budget mode.
@@ -1201,7 +1233,7 @@ export type GetQuotaResponse = Message$1<"career.v1.GetQuotaResponse"> & {
  * Use `create(GetQuotaResponseSchema)` to create a new message.
  */
 export const GetQuotaResponseSchema: GenMessage<GetQuotaResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_chat, 29);
+  messageDesc(file_career_v1_chat, 30);
 
 /**
  * Global assistant budget state.
@@ -1242,7 +1274,7 @@ export enum GetQuotaResponse_BudgetMode {
  * Describes the enum career.v1.GetQuotaResponse.BudgetMode.
  */
 export const GetQuotaResponse_BudgetModeSchema: GenEnum<GetQuotaResponse_BudgetMode> = /*@__PURE__*/
-  enumDesc(file_career_v1_chat, 29, 0);
+  enumDesc(file_career_v1_chat, 30, 0);
 
 /**
  * Thumbs up or down.

@@ -83,6 +83,9 @@ type Service struct {
 	Consider int
 	// QAThreshold overrides users.QAMatchThreshold. Zero uses it.
 	QAThreshold float64
+	// Facts supplies the career facts sheet that opens every prompt.
+	// Nil answers without it, which is worse but not broken.
+	Facts *Facts
 	// NumCtx is the context window the sidecar is configured with. The
 	// API does not set it per call, but a decision row that cannot say
 	// how much context the model had cannot be compared with one from a
@@ -274,7 +277,10 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	}
 
 	// 6. The model.
-	userTurn, offered := prompts.RenderAskUser(question, req.History, shown)
+	// The facts sheet first, byte-identical, so the prefix stays
+	// cacheable. See internal/chat/warm.go for why that matters.
+	userTurn, offered := prompts.RenderAskUser(
+		s.Facts.Text(ctx), question, req.History, shown)
 	markCitationOffers(in.Retrieved, offered)
 
 	callStart := s.now()

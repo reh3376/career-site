@@ -111,14 +111,26 @@ message RunAdminQueryRequest {
     max_len: 64
   }];
 }
+// One row of a query result.
+message AdminQueryRow {
+  // Cells, in the same order as the response's columns. A NULL is an
+  // empty string, because a gap reads better in a column of counts than
+  // the word "null", which invites being read as a value.
+  repeated string cells = 1;
+}
+
 // What the query returned.
 message RunAdminQueryResponse {
   // The query that ran, echoed so the surface can label the result.
   AdminQuery query = 1;
-  // The single-row result, already formatted for reading.
-  string result = 2;
+  // Column headers, taken from the statement itself so a query and its
+  // header cannot drift apart.
+  repeated string columns = 2;
+  // Rows, capped server side. Every query here aggregates, so a long
+  // result means a GROUP BY went wider than expected.
+  repeated AdminQueryRow rows = 3;
   // When it ran.
-  google.protobuf.Timestamp ran_at = 3;
+  google.protobuf.Timestamp ran_at = 4;
 }
 
 // A conversation header.

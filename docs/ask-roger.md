@@ -756,10 +756,20 @@ prompt, prompts are written to `decision_log`, and that is exported as
 training data, so anything selected here would end up in a file whose
 purpose is to be handed to a trainer.
 
-Nine queries today: members, JD submissions, Ask Roger usage, how
-answers were produced, the Q&A bank, the corpus, meetings, model usage
-over seven days, and the review queue. Adding one is an edit in that
-file and nowhere else.
+**Rows and columns, not sentences.** The first version returned one
+concatenated line per query, "5 total, 4 active, 0 awaiting approval".
+It worked, and it was the wrong shape: Roger asked for a table, and he
+was right, because a count per line is read by scanning a column while
+a sentence has to be parsed by eye every time. Each query now returns
+whatever columns it naturally has and the surface draws a table.
+Column headers come from the statement itself, so a query and its
+header cannot drift apart.
+
+Ten queries: members, JD submissions by day, Ask Roger usage, how
+answers were produced (with average seconds and output tokens), the
+Q&A bank, the corpus by visibility, the corpus by document kind,
+meetings, model usage over seven days, and the review queue. Adding
+one is an edit in that file and nowhere else.
 
 A test runs every query against a database with the full migration
 history, which caught two written against a schema that had moved: a

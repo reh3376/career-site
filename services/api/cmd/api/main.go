@@ -192,6 +192,7 @@ func main() {
 	// precondition: a sidecar that can name a real model.
 	var chatService *chat.Service
 	var qaEmbedder *chat.QAEmbedder
+	var warmer *chat.Warmer
 	if sc != nil {
 		// The Q&A bank's embedding job depends on the *embedding*
 		// provider, not the generation one, so it is wired here rather
@@ -258,13 +259,21 @@ func main() {
 			// cannot name a model cannot ground an answer either, and an
 			// assistant that answers from model knowledge alone is the
 			// one thing FR-CHAT-03 forbids.
+			// One Facts for both the answer path and the warmer, so the
+			// bytes they produce cannot drift. If they did, the warm
+			// call would cache a prefix no real request matches and
+			// every answer would quietly pay the full prompt
+			// evaluation again.
+			facts := &chat.Facts{Source: userRepo, Log: log}
 			chatService = &chat.Service{
 				Embed:  ingest.SidecarEmbed{Client: sc},
 				Model:  gateway,
 				Store:  userRepo,
 				Log:    log,
 				NumCtx: cfg.LLMNumCtx,
+				Facts:  facts,
 			}
+			warmer = &chat.Warmer{Model: gateway, Facts: facts, Log: log}
 			assessor = jd.NewAssessor(log, userRepo, ingest.SidecarEmbed{Client: sc}, gateway, cfg.LLMMonthlyCallCap, cfg.LLMNumCtx)
 			writer = jd.NewResumeWriter(log, userRepo, gateway, cfg.LLMMonthlyCallCap,
 				llm.SidecarRenderer{Client: sc}, cfg.ResumePDFOwnerPassword, cfg.LLMNumCtx)
@@ -436,6 +445,23 @@ func main() {
 		// thing waiting on it is an entry the owner just wrote or
 		// re-worded, and an entry that cannot be matched for an hour
 		// looks like the bank is broken.
+		// Keeps the persona prompt and the career facts sheet in
+		// Ollama's KV cache. Measured on the box: that prefix costs
+		// 82.5 s to evaluate cold and 0.8 s warm, so this is the
+		// difference between an eight second answer and a ninety
+		// second one. A tick that finds the cache intact costs half a
+		// second, so the loop is nearly free; it pays the full price
+		// only after something evicted it, which on this box means a
+		// JD evaluation was running.
+		//
+		// Four minutes rather than five so a tick always lands inside
+		// Ollama's keep_alive window with room to spare.
+		scheduler.Job{Name: "prompt-warm", Interval: 4 * time.Minute, Run: func(ctx context.Context) error {
+			if warmer == nil {
+				return nil
+			}
+			return warmer.Run(ctx)
+		}},
 		scheduler.Job{Name: "qa-embed", Interval: 5 * time.Minute, Run: func(ctx context.Context) error {
 			if qaEmbedder == nil {
 				return nil

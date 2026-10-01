@@ -590,7 +590,7 @@ func (h *Chat) RunAdminQuery(
 	if err != nil {
 		return nil, err
 	}
-	q, value, err := h.users.RunAdminQuery(ctx, strings.TrimSpace(req.Msg.GetId()))
+	q, res, err := h.users.RunAdminQuery(ctx, strings.TrimSpace(req.Msg.GetId()))
 	if errors.Is(err, users.ErrNoSuchAdminQuery) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such query"))
 	}
@@ -601,9 +601,13 @@ func (h *Chat) RunAdminQuery(
 	}
 	h.log.Info("admin query run",
 		slog.Int64("admin", me.ID), slog.String("query", q.ID))
-	return connect.NewResponse(&careerv1.RunAdminQueryResponse{
-		Query:  &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
-		Result: value,
-		RanAt:  timestamppb.Now(),
-	}), nil
+	out := &careerv1.RunAdminQueryResponse{
+		Query:   &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
+		Columns: res.Columns,
+		RanAt:   timestamppb.Now(),
+	}
+	for _, row := range res.Rows {
+		out.Rows = append(out.Rows, &careerv1.AdminQueryRow{Cells: row})
+	}
+	return connect.NewResponse(out), nil
 }
