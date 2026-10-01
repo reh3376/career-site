@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CoreActionsOt } from "./core-actions";
+
 import { setUiModeAction } from "@/app/actions/ui-mode";
 import { GithubReposOt } from "@/components/github-repos";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -203,7 +205,7 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             <dt className="text-ink-3">JD.REVIEW</dt>
             <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
             <dt className="text-ink-3">ASK.ROGER</dt>
-            <dd className="m-0 text-right text-ink-3">PLANNED</dd>
+            <dd className="m-0 text-right text-success">ONLINE · MEMBERS</dd>
           </dl>
         </section>
 
@@ -236,6 +238,13 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             </ul>
           </div>
         </section>
+
+        {signedIn ? (
+          <section aria-label="Core functions" className="md:col-span-12">
+            <PanelHeader tag="CF-1" title="CORE FUNCTIONS" />
+            <CoreActionsOt />
+          </section>
+        ) : null}
 
         {!signedIn ? (
           <section aria-label="Access" className="md:col-span-12">
@@ -380,9 +389,12 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
           <span>
             JD.REVIEW <span className="text-ink">ONLINE</span>
           </span>
+          <span>
+            ASK.ROGER <span className="text-ink">ONLINE</span>
+          </span>
           <span className="ml-auto flex items-center gap-2">
-            <span className="pilot text-success" aria-hidden="true" />
-            <span className="text-success">SYSTEM · NOMINAL</span>
+            <span className="pilot text-signal" aria-hidden="true" />
+            <span className="text-signal">SYSTEM · BETA</span>
           </span>
         </div>
       </div>

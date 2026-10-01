@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CoreActions } from "./core-actions";
+
 import { GithubReposIt } from "@/components/github-repos";
 import {
   ACCESS_CAVEAT,
@@ -57,8 +59,14 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
         aria-labelledby="hero-heading"
         className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:px-10 sm:pb-24 sm:pt-28"
       >
+        {/* Was "coming soon · late 2026", which stopped being true: the
+            reviewer, the scheduler and the assistant all run. Beta is
+            the honest word, because some of it is rough rather than
+            unbuilt, and a visitor who hits a rough edge should have been
+            told rather than surprised. */}
         <p className="font-mono text-[11px] tracking-[0.14em] text-signal">
-          coming soon <span className="text-ink-4">·</span> late 2026
+          in beta <span className="text-ink-4">·</span> the core functions
+          work, some are rough
         </p>
         <h1
           id="hero-heading"
@@ -83,62 +91,48 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
 
         {/* A signed-in member was being offered "Request access" and
             "Already a member? Sign in", neither of which applies to
-            them, and was given no route to the two things their account
-            is actually for. Booking only appears here, because the
-            calendar writes to Roger's own and is members-only; an
-            anonymous visitor learns it exists from the copy below and
-            from "with an account" further down the page. */}
-        <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
-          {signedIn ? (
-            <>
-              <Link
-                href="/jd-upload"
-                className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
-              >
-                Have a posting reviewed →
-              </Link>
-              {/* Reviewing a posting and booking a meeting are peers:
-                  they are the two things an account is for. One filled
-                  and one as underlined text implied a ranking between
-                  them that does not exist, so both carry a background
-                  and the weight difference is fill against outline.
-                  Reaching out is not a peer, so it moved out of this
-                  row and into the line below rather than becoming a
-                  third button that would flatten all three. */}
-              <Link
-                href="/meetings"
-                className="inline-flex items-center rounded-md border border-line bg-paper-2 px-6 py-3 text-sm font-medium text-ink no-underline transition-colors hover:border-accent hover:text-accent"
-              >
-                Book a meeting →
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/register"
-                className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
-              >
-                Considering me for a role? Request access →
-              </Link>
-              <Link
-                href="/contact"
-                className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-              >
-                Or reach out directly
-              </Link>
-              <Link
-                href="/login"
-                className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
-              >
-                Already a member? Sign in
-              </Link>
-            </>
-          )}
-        </div>
+            them, and was given no route to the things their account is
+            actually for.
+
+            The three core actions live in CoreActions, each with a
+            "What is this?" that opens an explanation. Roger's review of
+            the live page asked for all three changes: a label that says
+            what the thing is, a way to find out how it works, and Ask
+            Roger in the hero rather than only as a corner button.
+
+            All three are members-only, so an anonymous visitor sees the
+            access route instead and learns these exist from the copy
+            below. */}
         {signedIn ? (
-          <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
-            Paste a posting and it is read requirement by requirement, with a
-            two-page résumé written for it when the fit is strong. Or{" "}
+          <CoreActions />
+        ) : (
+          <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <Link
+              href="/register"
+              className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+            >
+              Considering me for a role? Request access →
+            </Link>
+            <Link
+              href="/contact"
+              className="text-sm text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              Or reach out directly
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm text-ink-3 no-underline transition-colors hover:text-accent"
+            >
+              Already a member? Sign in
+            </Link>
+          </div>
+        )}
+        {signedIn ? (
+          /* The sentence that used to sit here explained the reviewer,
+             which is now what its own "What is this?" says. Kept short
+             so it adds the one route the three buttons do not cover. */
+          <p className="mt-4 max-w-xl text-xs leading-relaxed text-ink-3">
+            Or{" "}
             <Link
               href="/contact"
               className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"

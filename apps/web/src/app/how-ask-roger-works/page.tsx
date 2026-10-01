@@ -8,7 +8,7 @@ import { getSessionCookie } from "@/lib/session";
 export const metadata: Metadata = {
   title: "How Ask Roger works",
   description:
-    "Which model reviews a job description, why it is not trained on Roger's career, what your posting is read against, and the four ways the reviewer is made better.",
+    "How the assistant answers a question and the reviewer scores a posting: which model, why it is not trained on Roger's career, what each one is allowed to read, and how both are made better.",
 };
 export const dynamic = "force-dynamic";
 
@@ -30,33 +30,119 @@ export default async function HowAskRogerWorksPage() {
       >
         How Ask Roger works.
       </h1>
-      <p className="mt-6 inline-flex items-center gap-2 border border-signal bg-signal-soft/40 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
-        <span className="pilot text-signal" aria-hidden="true" />
-        status: not yet live
+      <p className="mt-6 inline-flex items-center gap-2 border border-success bg-success-soft/40 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-success">
+        <span className="pilot text-success" aria-hidden="true" />
+        status: live
         <span className="text-ink-4">·</span>
-        <span className="text-ink-2">available Q4 2026</span>
+        <span className="text-ink-2">members only</span>
       </p>
       <div className="mt-10 space-y-6 text-base leading-relaxed text-ink-2">
         <p>
-          Ask Roger, the conversational assistant, is not built yet. When
-          it launches (late 2026) this page will describe, plainly, how it
-          works: which model, which corpus, how it retrieves and cites,
-          what it refuses to answer, how it&rsquo;s evaluated, and how you
-          can hand a conversation to Roger directly.
+          Ask Roger answers questions about Roger in his own voice, from
+          his own records, and shows you where each answer came from. It
+          runs at{" "}
+          <Link
+            href="/ask"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            /ask
+          </Link>{" "}
+          and from the button in the corner of every page.
         </p>
-        <p className="text-sm text-ink-3">
-          Short version of the plan: Ask Roger will be a first-person
-          conversational assistant grounded in Roger&rsquo;s own writing,
-          projects, and r&eacute;sum&eacute;. It will cite its sources,
-          admit what it doesn&rsquo;t know, and never speak about
-          compensation, references, current-employer confidential matters,
-          or personal life.
+        <p>
+          It is the same machinery as the JD reviewer below, pointed at a
+          different job, and the two sections of this page share most of
+          their answer. One model, open weights, on Roger&rsquo;s own
+          server. Nothing is sent to a hosted API, and the model has never
+          been trained on his career: it is handed the relevant passages
+          at the moment of the question.
         </p>
       </div>
 
       <section className="mt-14 border-t border-line pt-10">
+        <h2
+          className="font-display text-2xl leading-snug text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          What happens when you ask.
+        </h2>
+        <ol className="mt-6 ml-4 list-decimal space-y-3 text-sm leading-relaxed text-ink-2">
+          <li>
+            <span className="text-ink">A question Roger has answered.</span>{" "}
+            Your question is compared against a bank of questions Roger
+            wrote the answers to himself. A close enough match, and far
+            enough ahead of the next candidate, returns his words
+            immediately. No model runs, and the answer is his rather than
+            a reconstruction of his.
+          </li>
+          <li>
+            <span className="text-ink">Otherwise, retrieval.</span> The
+            question is turned into a vector and the nearest passages in
+            the career corpus are pulled out, alongside a short sheet of
+            career facts that every question gets: tenure, titles, dates,
+            credentials. Those are the things retrieval is worst at and
+            questions most often turn on.
+          </li>
+          <li>
+            <span className="text-ink">Then the answer.</span> The model is
+            given the facts, the passages and the conversation so far, and
+            asked to answer briefly in the first person. It streams back a
+            sentence at a time.
+          </li>
+          <li>
+            <span className="text-ink">Sources.</span> Published passages
+            that fed the answer are listed under it and link to the piece
+            they came from, so you can read the thing itself rather than
+            the summary of it.
+          </li>
+        </ol>
+        <div className="mt-6 space-y-4 text-base leading-relaxed text-ink-2">
+          <p>
+            <span className="text-ink">
+              It will tell you when it does not know.
+            </span>{" "}
+            Asked something the records do not cover, it says so instead of
+            producing something plausible. It will not discuss
+            compensation, references, anything confidential to an employer,
+            or Roger&rsquo;s personal life, and points you at him directly
+            for those.
+          </p>
+          <p>
+            <span className="text-ink">
+              It reads more than the reviewer does.
+            </span>{" "}
+            A posting submitted to the reviewer cannot reach the private
+            half of the corpus. A question here can: it is Roger&rsquo;s
+            own record answering about Roger. Private material may inform
+            an answer and can never be quoted at length, named, or listed
+            as a source, which is enforced where the sources are built
+            rather than by instructing the model. Anything he does not want
+            speaking for him at all is excluded from the assistant outright.
+          </p>
+          <p>
+            <span className="text-ink">It is slow, and that is real.</span>{" "}
+            An answer takes a few tens of seconds. The whole thing runs on
+            one small server with no graphics card, shared with the
+            reviewer, and the honest reason it is not faster is that it is
+            not worth renting a bigger machine to shave off twenty seconds.
+            Questions from the bank return instantly; a question asked while
+            a JD review is running will be slower still, because the review
+            has the machine.
+          </p>
+          <p className="text-sm text-ink-3">
+            Conversations are kept so Roger can read what was asked and
+            grade the answers, which is how the assistant is corrected. The
+            mechanism is the one described under &ldquo;How it gets
+            better&rdquo; below, and it works the same way here: when an
+            answer is wrong, the usual fix is that no document says the
+            thing plainly, and the document gets written.
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-14 border-t border-line pt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
-          live today
+          the other half
         </p>
         <h2
           className="font-display mt-3 text-2xl leading-snug text-ink"
@@ -72,8 +158,8 @@ export default async function HowAskRogerWorksPage() {
           >
             /jd-upload
           </Link>{" "}
-          is the part of the system that already runs. It draws on the
-          same career corpus Ask Roger will use, and it works like this.
+          reads a posting rather than a question, and draws on the same
+          career corpus. It works like this.
         </p>
         <ol className="mt-6 ml-4 list-decimal space-y-3 text-sm leading-relaxed text-ink-2">
           <li>
