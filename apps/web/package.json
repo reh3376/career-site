@@ -9,7 +9,9 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.15.0",
@@ -32,7 +34,8 @@
     "eslint": "^9.15.0",
     "eslint-config-next": "^16.3.6",
     "sharp": "^0.35.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": ">=22"

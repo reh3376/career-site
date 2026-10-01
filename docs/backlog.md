@@ -1102,32 +1102,27 @@ Still open:
   citations, guardrails, on the same gateway and decision log as the JD
   reviewer.
 
-  **Settled 2026-09-24: it does not run on the current web server.**
-  The CPX31 is already strained by the reviewer. Ollama holds 5.2 GB
-  of the box's 7, there is one inference lane, a JD review occupies it
-  for close to an hour, and an eight-posting evaluation took six and a
-  quarter. A chat sharing that box is a form with a queue, not a chat.
+  **Shipped on the box, 2026-10-01. The 2026-09-24 decision was
+  reversed by the hardware and by the design.**
 
-  **Where it does run is open.** Running it on the owner's own machine
-  was raised the same day as one possibility, and explicitly as a
-  suggestion rather than a decision. The viable option gets
-  investigated when the phase is actually started. Nothing should be
-  built against any particular topology before then.
+  That entry said Ask Roger could not run on the web server: the CPX31
+  was strained by the reviewer, Ollama held 5.2 GB of 7, and a chat
+  sharing one inference lane with an hour-long JD review would be a
+  form with a queue. Two things changed. The box is a CPX41 (8 vCPU,
+  15.2 GB) since 2026-09-25, and the pipeline was built to avoid the
+  model wherever it honestly can: a Q&A bank of the owner's own answers
+  returns in about 0.1 s with no model call at all, and the prompt
+  prefix is kept in Ollama's KV cache by a one-minute warmer, which
+  took a cold 82.5 s prompt evaluation down to 0.8 s.
 
-  What is worth settling early, because it follows from inference being
-  somewhere other than the web server rather than from any particular
-  choice of where:
+  What is left of the original concern is real and is now measured
+  rather than predicted: a model-path answer averages 39.4 s, and chat
+  does go slow while a JD review holds the cache slot. The warmer
+  stands aside for a run rather than fighting it.
 
-  - **Hours of operation.** A machine that is not a server is not
-    expected to be up at 3 a.m. The site would have to know when Ask
-    Roger is meant to be available and say so.
-  - **A heartbeat** between the web server and wherever the model
-    runs, so availability is observed rather than assumed. Inside the
-    stated hours with no heartbeat is an outage worth seeing; outside
-    them it is expected.
-  - **A "not currently available" banner** driven by the heartbeat,
-    not by a schedule alone. A visitor should never be given an input
-    box that will fail.
+  The hours-of-operation, heartbeat and availability-banner items below
+  were consequences of inference living somewhere other than the web
+  server. It does not, so they do not apply.
   - A transport, if the model ends up off the box. A machine behind
     residential Starlink CGNAT takes no inbound connection; the backup
     design hit that and answered it by having the Mac pull, and an

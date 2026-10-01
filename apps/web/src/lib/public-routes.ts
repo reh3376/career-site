@@ -52,6 +52,45 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+// Member pages that actually exist.
+//
+// The gate used to be "public, or else sign in", which meant any path
+// at all redirected to the login page. A stale or mistyped link, say
+// /timeline or /projects or /downloads, none of which have ever
+// existed, sent a visitor to sign in, took their password, and then
+// showed them a 404. The sign-in was real work demanded for a page
+// that was never there.
+//
+// So the redirect is now limited to routes that exist. Anything else
+// falls through and Next renders not-found, signed in or not.
+//
+// This list is the member half of the route table; adding a gated page
+// means adding it here, and forgetting to shows up immediately as a
+// 404 rather than as a silent leak, which is the safe direction for a
+// mistake to fall.
+export const MEMBER_PATHS = [
+  "/home",
+  "/ask",
+  "/jd-upload",
+  "/meetings",
+  "/settings",
+  "/version",
+] as const;
+
+// Gated prefixes: the admin console and the id-bearing member pages.
+const MEMBER_PREFIXES = ["/admin", "/jd-upload/"] as const;
+
+export function isMemberPath(pathname: string): boolean {
+  // Public wins. The one-click Accept/Decline link lives under
+  // /admin/decision and is opened from an email with no session, so it
+  // is public while everything else under /admin is not. The proxy
+  // happens to test public first, but relying on call order would make
+  // this a bug waiting for someone to reorder two lines.
+  if (isPublicPath(pathname)) return false;
+  if ((MEMBER_PATHS as readonly string[]).includes(pathname)) return true;
+  return MEMBER_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
 // Pages worth a crawler's time. The auth flows are public but pointless
 // to index, so they are omitted here even though isPublicPath allows
 // them.

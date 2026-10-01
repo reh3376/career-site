@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AskPanel } from "@/components/ask/ask-panel";
 import { SiteHeader } from "@/components/site-header";
 import { getUiMode } from "@/lib/ui-mode";
+import { OG_IMAGE, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
 import { getSessionUser } from "@/lib/session-user";
 
 import "./globals.css";
@@ -51,13 +52,38 @@ const jetbrainsMono = localFont({
   display: "swap",
 });
 
+const DEFAULT_TITLE =
+  "Roger Henley · Industrial automation, plant operations, applied AI";
+const DEFAULT_DESCRIPTION =
+  "Thirty years running regulated 24/7 industrial systems. Last eleven in distilled-spirits startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.";
+
+// This URL mostly reaches people as a link: in a résumé header, a
+// LinkedIn post, a recruiter's email. Without these tags it rendered as
+// bare text in every one of those places, with no title, no description
+// and no image, which is the worst possible first impression for a page
+// whose whole job is a first impression.
+//
+// metadataBase is what lets the relative image path above resolve to an
+// absolute URL, which every card scraper requires.
 export const metadata: Metadata = {
-  title: {
-    default: "Roger Henley · Industrial automation, plant operations, applied AI",
-    template: "%s · Roger Henley",
+  metadataBase: new URL(SITE_ORIGIN),
+  title: { default: DEFAULT_TITLE, template: "%s · Roger Henley" },
+  description: DEFAULT_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: SITE_ORIGIN,
+    images: [OG_IMAGE],
   },
-  description:
-    "Thirty years running regulated 24/7 industrial systems. Last eleven in distilled-spirits startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.",
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [OG_IMAGE.url],
+  },
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

@@ -42,14 +42,25 @@ func NewAdminDecision(
 	from, ownerAddr, webBase string,
 ) *AdminDecision {
 	return &AdminDecision{
-		log:              log,
-		users:            repo,
-		email:            mailer,
-		secret:           secret,
-		from:             from,
-		ownerAddr:        ownerAddr,
-		webBase:          webBase,
-		AcceptDefaultTTL: users.GrantTTL7d,
+		log:       log,
+		users:     repo,
+		email:     mailer,
+		secret:    secret,
+		from:      from,
+		ownerAddr: ownerAddr,
+		webBase:   webBase,
+		// 30 days, not 7.
+		//
+		// This is the window a one-click Accept grants, and seven days
+		// was shorter than the thing it gates. Hiring loops run three to
+		// six weeks, so a hiring manager who requested access in week
+		// one was locked out before the panel interview, by the site
+		// that was supposed to be making the case for him.
+		//
+		// The cost of being wrong is asymmetric: too long means someone
+		// keeps reading the writing, too short means a live opportunity
+		// hits a sign-in wall at exactly the wrong moment.
+		AcceptDefaultTTL: users.GrantTTL30d,
 	}
 }
 
