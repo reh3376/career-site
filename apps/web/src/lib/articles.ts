@@ -23,6 +23,11 @@ const PUBLIC_ARTICLES: readonly ArticleSpec[] = [
     order: 20,
   },
   {
+    slug: "better-business-decisions-part-3",
+    file: "better-business-decisions-part-3.md",
+    order: 30,
+  },
+  {
     slug: "better-business-decisions-part-4",
     file: "better-business-decisions-part-4.md",
     order: 40,

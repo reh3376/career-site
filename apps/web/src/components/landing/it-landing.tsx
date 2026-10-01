@@ -126,7 +126,7 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
               &middot;
             </span>
             Built the greenfield Whiskey House distillery, a 24/7 plant
-            running on the MES, WMS, historian and OT/SCADA I created
+            running on the MES, WMS, historian and OT/SCADA created
             in-house.
           </li>
           <li className="flex gap-3">
@@ -143,13 +143,6 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             </span>
             Cut natural-gas use by more than 40%. EPA / ENERGY STAR Project
             of the Year and the Griffen Environmental Award, both 2021.
-          </li>
-          <li className="flex gap-3">
-            <span aria-hidden="true" className="text-accent">
-              &middot;
-            </span>
-            Led ISO 9001 quality and ISO 27001 information-security
-            programs directly.
           </li>
         </ul>
 
