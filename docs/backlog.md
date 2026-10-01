@@ -87,6 +87,39 @@ of a file it produced (`protoc-gen-go v1.36.12`, the Python runtime
 line, and so on), pin each as `remote: buf.build/<plugin>:<version>`,
 regenerate, and confirm the tree is unchanged before committing.
 
+## Landing page: the three core actions
+
+Roger's review of `/` on 2026-10-01, from the live page.
+
+The two hero buttons are **well positioned**; the problems are labels,
+explanation and a missing third.
+
+- **Rename "Have a posting reviewed" to "JD review".** Roger's call,
+  and his reasoning is that the current label does not tell a visitor
+  what the thing is or how to use it. One note worth weighing when it
+  is done: "JD review" is shorter but more jargon, and the supporting
+  sentence under the buttons already explains the mechanic, so the
+  label and that sentence should be written together rather than
+  separately.
+
+- **Add a "?" about link under each core action.** Clicking it opens a
+  popup or modal explaining what the button does and how it works. One
+  per action, so three once Ask Roger joins them. The content for the
+  JD reviewer and the scheduler can be drawn from
+  `apps/web/content/other/career-site-guide.md`, which already
+  describes both for the assistant and should not be allowed to drift
+  from whatever these modals say.
+
+- **Put "Ask Roger" in the hero alongside the other two.** The
+  persistent bottom-right launcher stays as it is, across every page;
+  this is an additional entry point in the prime real estate, because
+  the assistant is a core function and currently the only way to
+  discover it is to notice a small button in a corner.
+
+Three buttons in a row needs a look at phone width: the hero currently
+holds two comfortably and a third will wrap, so the layout decision is
+part of the work rather than an afterthought.
+
 ## 1b. Direction, settled 2026-09-22
 
 A go-to-market plan (`docs/personal/review/GTM.md`, gitignored) proposes
