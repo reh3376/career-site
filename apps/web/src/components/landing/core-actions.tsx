@@ -67,7 +67,24 @@ const ACTIONS: Action[] = [
   },
 ];
 
-export function CoreActions() {
+// Where a button goes depends on who is pressing it.
+//
+// All three destinations are members-only. The first build showed the
+// buttons to members only, which meant a hiring manager arriving cold
+// saw none of the three things the site is for and learned Ask Roger
+// existed from body copy further down. Roger's call: show everyone the
+// three, and send a signed-out visitor through the login page to the
+// thing they asked for rather than hiding it from them.
+//
+// `next` is what /ask and the other gated pages already redirect with,
+// so a signed-out click lands on the destination after signing in
+// instead of dumping the visitor on the home page.
+function hrefFor(action: Action, signedIn: boolean): string {
+  if (signedIn) return action.href;
+  return `/login?next=${encodeURIComponent(action.href)}`;
+}
+
+export function CoreActions({ signedIn = false }: { signedIn?: boolean }) {
   const [open, setOpen] = useState<ActionKey | null>(null);
   const action = ACTIONS.find((a) => a.key === open) ?? null;
 
@@ -80,7 +97,7 @@ export function CoreActions() {
         {ACTIONS.map((a) => (
           <div key={a.key} className="flex flex-col items-start gap-2">
             <Link
-              href={a.href}
+              href={hrefFor(a, signedIn)}
               className={
                 a.primary
                   ? "inline-flex w-full items-center justify-center rounded-md bg-accent px-5 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
@@ -102,7 +119,11 @@ export function CoreActions() {
       </div>
 
       {action ? (
-        <AboutPanel action={action} onClose={() => setOpen(null)} />
+        <AboutPanel
+          action={action}
+          signedIn={signedIn}
+          onClose={() => setOpen(null)}
+        />
       ) : null}
     </>
   );
@@ -110,9 +131,11 @@ export function CoreActions() {
 
 function AboutPanel({
   action,
+  signedIn,
   onClose,
 }: {
   action: Action;
+  signedIn: boolean;
   onClose: () => void;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -175,10 +198,10 @@ function AboutPanel({
         </div>
 
         <Link
-          href={action.href}
+          href={hrefFor(action, signedIn)}
           className="mt-5 inline-flex items-center rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white no-underline transition-colors hover:bg-accent-hover"
         >
-          {action.label}
+          {signedIn ? action.label : `Sign in for ${action.label.toLowerCase()}`}
         </Link>
       </div>
     </div>
@@ -196,7 +219,7 @@ function AboutPanel({
 // idiom of this mode: a row per function, its state, and a way to read
 // what it does. The explanations are the same text, from the same
 // array, so the two modes cannot describe the site differently.
-export function CoreActionsOt() {
+export function CoreActionsOt({ signedIn = false }: { signedIn?: boolean }) {
   const [open, setOpen] = useState<ActionKey | null>(null);
   const action = ACTIONS.find((a) => a.key === open) ?? null;
 
@@ -206,13 +229,19 @@ export function CoreActionsOt() {
         {ACTIONS.map((a) => (
           <div key={a.key} className="bg-paper-2 p-4">
             <Link
-              href={a.href}
+              href={hrefFor(a, signedIn)}
               className="font-mono text-[13px] tracking-[0.08em] text-accent uppercase no-underline hover:underline"
             >
               {a.label}
             </Link>
+            {/* Signed out the row still reads ONLINE, because it is: the
+                gate is the account, not the service. The qualifier says
+                which. */}
             <p className="mt-1 font-mono text-[10px] tracking-[0.14em] text-success uppercase">
               online
+              {signedIn ? null : (
+                <span className="text-ink-3"> · members</span>
+              )}
             </p>
             <button
               type="button"
@@ -227,7 +256,11 @@ export function CoreActionsOt() {
       </div>
 
       {action ? (
-        <AboutPanel action={action} onClose={() => setOpen(null)} />
+        <AboutPanel
+          action={action}
+          signedIn={signedIn}
+          onClose={() => setOpen(null)}
+        />
       ) : null}
     </>
   );
