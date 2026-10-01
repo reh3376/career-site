@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CoreActionsOt } from "./core-actions";
+import { PodcastsOt } from "./podcasts";
 
 import { setUiModeAction } from "@/app/actions/ui-mode";
 import { GithubReposOt } from "@/components/github-repos";
@@ -249,6 +250,13 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
         <section aria-label="Core functions" className="md:col-span-12">
           <PanelHeader tag="CF-1" title="CORE FUNCTIONS" />
           <CoreActionsOt signedIn={signedIn} />
+        </section>
+
+        {/* Podcast appearances. Public, no account needed, and the same
+            two episodes the editorial mode lists, from the same array. */}
+        <section aria-label="Podcast appearances" className="md:col-span-12">
+          <PanelHeader tag="PC-1" title="GUEST APPEARANCES" />
+          <PodcastsOt />
         </section>
 
         {!signedIn ? (

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CoreActions } from "./core-actions";
+import { Podcasts } from "./podcasts";
 import { RecentWritingStrip } from "./recent-writing";
 
 import { GithubReposIt } from "@/components/github-repos";
@@ -386,6 +387,11 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           linked both pages all along; this is the editorial mode
           catching up. */}
       <RecentWritingStrip />
+
+      {/* Appearances sit after the writing because they are the same
+          kind of claim made by someone else: a third party chose to put
+          him on their show. No embed, see podcasts.tsx. */}
+      <Podcasts />
 
       {/* -----------------------------------------------------------------
        * IMAGE BAND, Roger speaking at UK podium (paired with a note
