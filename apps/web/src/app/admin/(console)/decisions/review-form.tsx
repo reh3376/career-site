@@ -33,11 +33,8 @@ const DIMENSION_VALUES = ["yes", "partial", "no", "n/a"];
 // guess is worse than no rubric: the marks still count toward the rates
 // the acceptance criteria are stated in.
 const DIMENSION_HELP: Record<string, string> = {
-  grounded: "everything said is in the passages",
-  citations: "the sources cited are the right ones",
-  voice: "sounds like Roger wrote it",
-  scope: "answered the right question, refused the right things",
-  length: "short enough for someone waiting",
+  grounded: "everything it said is in the passages it was shown",
+  voice: "sounds like you wrote it",
 };
 
 // One review form per decision: the owner's verdict in the vocabulary
