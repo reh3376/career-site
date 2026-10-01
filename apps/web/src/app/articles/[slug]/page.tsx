@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { AccessNote } from "@/components/access-note";
+import { OG_IMAGE, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
 import { getArticle, listArticles } from "@/lib/articles";
 
 // Statically prerender each known slug at build time. Combined with
@@ -25,9 +26,29 @@ export async function generateMetadata({
   const { slug } = await params;
   const a = await getArticle(slug);
   if (!a) return { title: "Article not found" };
+  // The articles are the most shareable thing on the site, so they get
+  // their own card rather than inheriting the site-wide one: a reader
+  // pasting Part 4 into Slack should see Part 4's title, not the
+  // landing page's.
+  const url = `${SITE_ORIGIN}/articles/${slug}`;
   return {
     title: a.title,
     description: a.subtitle,
+    alternates: { canonical: `/articles/${slug}` },
+    openGraph: {
+      type: "article",
+      siteName: SITE_NAME,
+      title: a.title,
+      description: a.subtitle,
+      url,
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: a.title,
+      description: a.subtitle,
+      images: [OG_IMAGE.url],
+    },
   };
 }
 

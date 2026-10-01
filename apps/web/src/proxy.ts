@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isPublicPath } from "@/lib/public-routes";
+import { isMemberPath, isPublicPath } from "@/lib/public-routes";
 import { SESSION_COOKIE } from "@/lib/session";
 
 // The access policy itself lives in lib/public-routes.ts, shared with
@@ -37,6 +37,12 @@ function withAnonId(request: NextRequest, res: NextResponse): NextResponse {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (isPublicPath(pathname)) return withAnonId(request, NextResponse.next());
+  // A path that is neither public nor a member page does not exist, so
+  // it gets a 404 rather than a sign-in wall followed by a 404. See
+  // MEMBER_PATHS for why this is a list and not a catch-all.
+  if (!isMemberPath(pathname)) {
+    return withAnonId(request, NextResponse.next());
+  }
   if (request.cookies.get(SESSION_COOKIE)?.value) {
     // Member pages are never indexed, whatever a crawler holds.
     const res = NextResponse.next();

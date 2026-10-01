@@ -183,7 +183,7 @@ A site that acts like a well-briefed representative of the owner: it learns what
 
 | Role | Can do |
 |---|---|
-| Anonymous | **Shipped:** landing page (`/`, IT editorial mode or OT HMI mode chosen by a cookie), `/contact`, `/register`, `/login`, `/privacy`, `/terms`, the verify and password-reset flows, the one-click approval link, and the LinkedIn and GitHub links. Everything else redirects to sign-in (`apps/web/src/proxy.ts`, `PUBLIC_PATHS`). The AI-disclosure page (`/how-ask-roger-works`) is currently behind the gate, not public as FR-PUB-03 specifies. |
+| Anonymous | **Shipped:** landing page (`/`, IT editorial mode or OT HMI mode chosen by a cookie), `/contact`, `/register`, `/login`, `/privacy`, `/terms`, the verify and password-reset flows, the one-click approval link, and the LinkedIn and GitHub links. Also public: `/articles` and every article, the public half of `/gallery`, and the AI-disclosure page `/how-ask-roger-works` (public since 2026-09-24). A path that is neither public nor a member page returns 404 rather than redirecting to sign-in; the rest redirect (`apps/web/src/proxy.ts`, `PUBLIC_PATHS` and `MEMBER_PATHS`). |
 | Member (approved) | Everything Anonymous can do, plus: **shipped:** `/home`, the JD reviewer (`/jd-upload`, §5.11), `/articles`, `/gallery`, `/settings`; **planned:** personalization, history, saved items, Ask Roger chat, downloads, own-data export and deletion. |
 | Member (unverified or pending approval) | Only the verification screen, resend-verification, and sign-out. |
 | Admin | Everything Member can do, plus the admin console (§5.7). Admin sessions require MFA. |
@@ -256,7 +256,7 @@ A site that acts like a well-briefed representative of the owner: it learns what
 |---|---|---|---|
 | FR-PUB-01 | The site shall have a public landing page showing name, headline, one photo, three to five headline accomplishments, and a single sign-in/register call to action. | Should (recommended; pending **D-01**) | Renders without a session; no gated content bodies are included in the HTML. |
 | FR-PUB-02 | All content sections, the JD reviewer, and the assistant shall require a verified member session. | Must (**Shipped**) | Requesting any gated route without a session redirects to sign-in and preserves the intended destination (`?next=`). Implemented as the `PUBLIC_PATHS` allow-list in `apps/web/src/proxy.ts` (Next.js 16 `proxy`, not `middleware`); the API enforces authorization on every data call. Public today: `/`, `/contact`, `/register`, `/register/check-email`, `/login`, `/verify`, `/forgot-password`, `/reset-password`, `/privacy`, `/terms`, `/admin/decision`. `deploy/live-check.sh` follows the same policy and submits its test JD as the admin member from the server. |
-| FR-PUB-03 | Legal pages (privacy policy, terms of use, AI disclosure / "How Ask Roger works") shall be public. | Must (partially shipped) | Reachable from the landing page footer and the registration form. `/privacy` and `/terms` are public; `/how-ask-roger-works` exists but is not in `PUBLIC_PATHS`, so it is members-only today. |
+| FR-PUB-03 | Legal pages (privacy policy, terms of use, AI disclosure / "How Ask Roger works") shall be public. | Must (shipped) | Reachable from the landing page footer and the registration form. `/privacy`, `/terms` and `/how-ask-roger-works` are all in `PUBLIC_PATHS`; the disclosure page became public on 2026-09-24. |
 | FR-PUB-04 | The landing page shall be search-indexable; gated pages shall carry `noindex` and shall not appear in the sitemap. | Should | `robots.txt` and meta tags verified in e2e tests. |
 | FR-PUB-05 | The site shall render acceptably with JavaScript disabled for the landing and legal pages. | Could | Progressive enhancement; not required for gated app pages. |
 
@@ -624,7 +624,7 @@ Routes marked **shipped** exist under `apps/web/src/app` as of 2026-09-22; the r
 |---|---|---|---|
 | `/` | Public | shipped | Landing page (FR-PUB-01) in IT editorial or OT HMI mode (cookie); the OT mode has an operator note panel with request access / contact / sign in, nav pills, and a working IT/OT switch |
 | `/privacy`, `/terms` | Public | shipped | Legal pages |
-| `/how-ask-roger-works` | Member today (spec: Public) | shipped | "How Ask Roger works / how this site was built" (FR-PUB-03) |
+| `/how-ask-roger-works` | Public | shipped | "How Ask Roger works / how this site was built" (FR-PUB-03) |
 | `/register`, `/register/check-email`, `/login`, `/verify`, `/forgot-password`, `/reset-password` | Public | shipped | Identity flows. `/auth/callback/:provider` (OIDC) is planned |
 | `/admin/decision` | Public (token) | shipped | One-click approve / decline landing for the FR-AUTH-15 email links |
 | `/contact` | Public | shipped | Contact form (FR-CNT-22); public for anonymous visitors, with member context when signed in |

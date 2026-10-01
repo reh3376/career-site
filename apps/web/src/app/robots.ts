@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_ORIGIN } from "@/lib/site";
 
 import { CRAWLER_DISALLOW, INDEXABLE_PATHS } from "@/lib/public-routes";
 
@@ -15,6 +16,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [...CRAWLER_DISALLOW],
       },
     ],
-    sitemap: "https://rogerhenley.dev/sitemap.xml",
+    sitemap: `${SITE_ORIGIN}/sitemap.xml`,
   };
 }

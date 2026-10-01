@@ -310,6 +310,12 @@ jobs:
         working-directory: apps/web
         run: pnpm lint
 
+      # The access policy is the one piece of front-end logic where a
+      # mistake serves a member page to anyone, or 404s a real page.
+      - name: test
+        working-directory: apps/web
+        run: pnpm test
+
       # Before the build, because the build cannot catch this: Tailwind
       # drops an unrecognised utility silently and compiles happily.
       - name: design tokens resolve

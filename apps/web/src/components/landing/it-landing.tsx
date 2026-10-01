@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CoreActions } from "./core-actions";
+import { RecentWritingStrip } from "./recent-writing";
 
 import { GithubReposIt } from "@/components/github-repos";
 import {
@@ -59,14 +60,20 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
         aria-labelledby="hero-heading"
         className="mx-auto max-w-5xl px-6 pb-16 pt-20 sm:px-10 sm:pb-24 sm:pt-28"
       >
-        {/* Was "coming soon · late 2026", which stopped being true: the
-            reviewer, the scheduler and the assistant all run. Beta is
-            the honest word, because some of it is rough rather than
-            unbuilt, and a visitor who hits a rough edge should have been
-            told rather than surprised. */}
+        {/* This line used to say "coming soon", then "in beta · the core
+            functions work, some are rough". Both were honest and both
+            spent the most valuable line on the page on the site rather
+            than on the person. The beta warning still exists, once, in
+            the header, where it follows the visitor onto every page; a
+            hiring manager's first impression should not be "some are
+            rough".
+
+            What belongs here instead is the thing a visitor cannot get
+            without registering: the level Roger works at. */}
         <p className="font-mono text-[11px] tracking-[0.14em] text-signal">
-          in beta <span className="text-ink-4">·</span> the core functions
-          work, some are rough
+          VP Engineering &amp; Technology, Whiskey House
+          <span className="text-ink-4"> · </span>
+          Director of Engineering, Bardstown Bourbon
         </p>
         <h1
           id="hero-heading"
@@ -81,13 +88,70 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             applied&nbsp;AI.
           </span>
         </h1>
+        {/* "Thirty years running regulated, 24-hour manufacturing" was
+            not defensible: the facts sheet dates regulated manufacturing
+            to Joy Global in 2006, about twenty years, and the thirty
+            covers power, mining, telecom, automation and applied AI. The
+            site's own meta description already used wording that holds,
+            so the page now agrees with it.
+
+            The closing sentence said what this site is. A visitor can
+            see that. It says what Roger wants instead, because the copy
+            read as a consultancy soliciting engagements and he is
+            looking for a role. */}
         <p className="mt-10 max-w-2xl text-lg leading-relaxed text-ink-2">
-          Thirty years running regulated, 24-hour manufacturing. The last eight
-          in bourbon, commissioning distillery startups from concrete pour
-          to steady-state, in the kind of shifts you don&rsquo;t brag about. This
-          site is the working version of that practice: what I do, the projects
-          behind it, and how to reach me.
+          Thirty years running regulated 24/7 industrial systems, the last
+          eleven in distilled spirits, commissioning distilleries from
+          concrete pour to steady-state in the kind of shifts you
+          don&rsquo;t brag about.{" "}
+          <span className="text-ink">
+            I am looking for a senior engineering or technology leadership
+            role, including Principal and Senior Principal positions. Open
+            to relocation for the right role and team.
+          </span>
         </p>
+
+        {/* What a hiring manager cannot otherwise reach without
+            registering and waiting for approval.
+
+            Every line here is carried by the career corpus this site
+            answers from, which is the same standard the JD reviewer is
+            held to, with one exception: the natural-gas figure is from
+            the master résumé and is not in the corpus. Roger confirmed
+            it directly. If the reviewer should be able to evidence it
+            too, it needs adding to the career facts sheet. */}
+        <ul className="mt-8 max-w-2xl space-y-2 text-[15px] leading-relaxed text-ink-2">
+          <li className="flex gap-3">
+            <span aria-hidden="true" className="text-accent">
+              &middot;
+            </span>
+            Built the greenfield Whiskey House distillery, a 24/7 plant
+            running on the MES, WMS, historian and OT/SCADA I created
+            in-house.
+          </li>
+          <li className="flex gap-3">
+            <span aria-hidden="true" className="text-accent">
+              &middot;
+            </span>
+            Delivered a 200% capacity expansion at Bardstown Bourbon during
+            a live-plant controls migration. Ignition Discovery Award,
+            ICC 2019.
+          </li>
+          <li className="flex gap-3">
+            <span aria-hidden="true" className="text-accent">
+              &middot;
+            </span>
+            Cut natural-gas use by more than 40%. EPA / ENERGY STAR Project
+            of the Year and the Griffen Environmental Award, both 2021.
+          </li>
+          <li className="flex gap-3">
+            <span aria-hidden="true" className="text-accent">
+              &middot;
+            </span>
+            Led ISO 9001 quality and ISO 27001 information-security
+            programs directly.
+          </li>
+        </ul>
 
         {/* A signed-in member was being offered "Request access" and
             "Already a member? Sign in", neither of which applies to
@@ -123,7 +187,7 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             >
               sign in
             </Link>
-            . Not looking to hire?{" "}
+            . Hiring, and would rather just talk?{" "}
             <Link
               href="/contact"
               className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
@@ -149,7 +213,21 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-3">
-            The writing and the work photos are open; read them first. An
+            The{" "}
+            <Link
+              href="/articles"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              writing
+            </Link>{" "}
+            and the{" "}
+            <Link
+              href="/gallery"
+              className="underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+            >
+              work photos
+            </Link>{" "}
+            are open; read them first. An
             account is for the reviewer: paste a posting and it reads it
             requirement by requirement against thirty years of manufacturing
             and applied-AI records, then writes a two-page résumé for that
@@ -199,10 +277,11 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
                 className="font-display block text-6xl leading-none text-ink sm:text-7xl"
                 style={{ fontVariationSettings: '"opsz" 144' }}
               >
-                8<span className="text-ink-4">yr</span>
+                11<span className="text-ink-4">yr</span>
               </span>
               <span className="mt-3 block max-w-[22ch] text-sm leading-relaxed text-ink-2">
-                Whiskey House of Kentucky and its predecessors. Concrete pour to steady-state.
+                Sazerac, Bardstown Bourbon Company, then Whiskey House of
+                Kentucky. Concrete pour to steady-state.
               </span>
             </dd>
           </div>
@@ -283,11 +362,11 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
             style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
           >
-            Five areas, usually mixed together on one engagement.
+            Five areas, usually mixed together in one role.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-ink-2">
-            Naming them separately makes it easier for you to decide whether we
-            should talk. Every real project pulls from at least three.
+            Naming them separately makes it easier to see where I would fit
+            on your team. Every real project pulls from at least three.
           </p>
         </div>
 
@@ -307,6 +386,13 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           ))}
         </ul>
       </section>
+
+      {/* The strip was built and then imported nowhere, so the newest
+          articles were reachable only through the hamburger menu while
+          the hero told a visitor to read them first. The OT landing has
+          linked both pages all along; this is the editorial mode
+          catching up. */}
+      <RecentWritingStrip />
 
       {/* -----------------------------------------------------------------
        * IMAGE BAND, Roger speaking at UK podium (paired with a note
@@ -390,9 +476,16 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           </h2>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-paper/80">
             Coal draglines, telecom central offices, high-voltage substations,
-            SCADA rooms, and, for the last eight, distillery
-            fermentation floors. The photograph is one of a long list. More
-            ship with the gallery in a later phase.
+            SCADA rooms, and, for the last eleven, distillery
+            fermentation floors. The photograph is one of a long list; the
+            rest are in the{" "}
+            <Link
+              href="/gallery"
+              className="underline decoration-paper/40 decoration-1 underline-offset-4 transition-colors hover:decoration-paper"
+            >
+              gallery
+            </Link>
+            .
           </p>
         </div>
       </section>

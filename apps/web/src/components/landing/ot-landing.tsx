@@ -65,7 +65,7 @@ const PRACTICE_TAGS = [
 
 const EVENT_LOG = [
   { ts: "2026-09-19", src: "SITE.WEB", msg: "career-site.OT surface online" },
-  { ts: "2026-09-15", src: "PRACTICE", msg: "8 yrs distillery startups → steady-state" },
+  { ts: "2026-09-15", src: "PRACTICE", msg: "11 yrs distillery startups → steady-state" },
   { ts: "2020-06-01", src: "PRACTICE", msg: "distillery commissioning cycle 4/n" },
   { ts: "2018-04-01", src: "PRACTICE", msg: "distillery commissioning cycle 1/n" },
   { ts: "1996-01-01", src: "PRACTICE", msg: "career start · regulated 24/7 systems" },
@@ -128,9 +128,10 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
                 id="op-note-heading"
                 className="font-mono text-[15px] leading-snug text-ink sm:text-[17px]"
               >
-                Roger Henley. Thirty years of regulated, 24-hour manufacturing; the
-                last eight commissioning distilleries from concrete pour to
-                steady-state. Controls, plant systems, industrial data, applied AI.
+                Roger Henley. Thirty years running regulated 24/7 industrial
+                systems; the last eleven commissioning distilleries from
+                concrete pour to steady-state. Controls, plant systems,
+                industrial data, applied AI.
               </h1>
               <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-2">
                 Hiring managers: request access, then upload a job description.
@@ -174,9 +175,9 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             />
             <KpiTile
               tag="YEARS.DISTILLERY"
-              value="8"
+              value="11"
               unit="yr"
-              subtitle="Whiskey House of Kentucky + predecessors · concrete → steady-state"
+              subtitle="Sazerac · Bardstown Bourbon Co. · Whiskey House of Kentucky"
             />
             <KpiTile
               tag="SHIFT.PATTERN"
@@ -197,7 +198,7 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             <dt className="text-ink-3">CAREER</dt>
             <dd className="m-0 text-right tabular text-ink">30 yr</dd>
             <dt className="text-ink-3">DISTILLERY</dt>
-            <dd className="m-0 text-right tabular text-ink">8 yr</dd>
+            <dd className="m-0 text-right tabular text-ink">11 yr</dd>
             <dt className="text-ink-3">SHIFT</dt>
             <dd className="m-0 text-right tabular text-ink">24/7</dd>
             <dt className="text-ink-3">AVAILABILITY</dt>
@@ -385,7 +386,7 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
             CAREER <span className="text-ink">30 yr</span>
           </span>
           <span>
-            DISTILLERY <span className="text-ink">8 yr</span>
+            DISTILLERY <span className="text-ink">11 yr</span>
           </span>
           <span>
             SHIFT <span className="text-ink">24/7</span>

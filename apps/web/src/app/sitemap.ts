@@ -2,8 +2,10 @@ import type { MetadataRoute } from "next";
 
 import { listArticles } from "@/lib/articles";
 import { INDEXABLE_PATHS } from "@/lib/public-routes";
+import { SITE_ORIGIN } from "@/lib/site";
 
-const BASE = "https://rogerhenley.dev";
+// One origin for the whole app; see lib/site.
+const BASE = SITE_ORIGIN;
 
 // Invites crawlers to the public surface: the landing page, the writing,
 // the gallery, and the ways in. Member pages are absent here, disallowed
