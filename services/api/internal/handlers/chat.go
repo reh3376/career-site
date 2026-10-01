@@ -605,9 +605,30 @@ func (h *Chat) RunAdminQuery(
 		Query:   &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
 		Columns: res.Columns,
 		RanAt:   timestamppb.Now(),
+		// The deprecated single-line form, still filled in so a client
+		// built against the old contract shows something rather than
+		// nothing.
+		Result: summariseRows(res),
 	}
 	for _, row := range res.Rows {
 		out.Rows = append(out.Rows, &careerv1.AdminQueryRow{Cells: row})
 	}
 	return connect.NewResponse(out), nil
+}
+
+// summariseRows renders a table as one line, for the deprecated
+// `result` field.
+//
+// One row becomes its cells joined, which is what that field used to
+// carry. Several become a count, because a sentence listing ten rows is
+// less readable than the table it is standing in for.
+func summariseRows(res users.AdminQueryResult) string {
+	switch len(res.Rows) {
+	case 0:
+		return "no rows"
+	case 1:
+		return strings.Join(res.Rows[0], ", ")
+	default:
+		return fmt.Sprintf("%d rows", len(res.Rows))
+	}
 }

@@ -121,16 +121,20 @@ message AdminQueryRow {
 
 // What the query returned.
 message RunAdminQueryResponse {
-  // 2 was `string result`, a single formatted sentence, replaced by the
-  // columns and rows below when the result became a table. Reserved
-  // rather than reused: a field number carries a type on the wire, and
-  // handing number 2 to a repeated string would make an older client
-  // misparse a newer response rather than ignore it.
-  reserved 2;
-  reserved "result";
-
   // The query that ran, echoed so the surface can label the result.
   AdminQuery query = 1;
+  // A one-line summary of the table below.
+  //
+  // Deprecated. This was the whole result before it became rows and
+  // columns, and it is kept because the breaking-change rules here are
+  // FILE, the strictest set, which forbids removing a field even when
+  // its number is reserved. That is the right default: a client built
+  // against the old contract keeps working rather than silently
+  // reading nothing.
+  //
+  // Still populated rather than emptied, for the same reason. One row
+  // becomes its cells joined; several become a count.
+  string result = 2 [deprecated = true];
   // When it ran.
   google.protobuf.Timestamp ran_at = 3;
   // Column headers, taken from the statement itself so a query and its

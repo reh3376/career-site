@@ -502,6 +502,20 @@ type RunAdminQueryResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The query that ran, echoed so the surface can label the result.
 	Query *AdminQuery `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// A one-line summary of the table below.
+	//
+	// Deprecated. This was the whole result before it became rows and
+	// columns, and it is kept because the breaking-change rules here are
+	// FILE, the strictest set, which forbids removing a field even when
+	// its number is reserved. That is the right default: a client built
+	// against the old contract keeps working rather than silently
+	// reading nothing.
+	//
+	// Still populated rather than emptied, for the same reason. One row
+	// becomes its cells joined; several become a count.
+	//
+	// Deprecated: Marked as deprecated in career/v1/chat.proto.
+	Result string `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
 	// When it ran.
 	RanAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=ran_at,json=ranAt,proto3" json:"ran_at,omitempty"`
 	// Column headers, taken from the statement itself so a query and its
@@ -549,6 +563,14 @@ func (x *RunAdminQueryResponse) GetQuery() *AdminQuery {
 		return x.Query
 	}
 	return nil
+}
+
+// Deprecated: Marked as deprecated in career/v1/chat.proto.
+func (x *RunAdminQueryResponse) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
 }
 
 func (x *RunAdminQueryResponse) GetRanAt() *timestamppb.Timestamp {
@@ -2415,12 +2437,13 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\x14RunAdminQueryRequest\x12\x19\n" +
 	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x02id\"%\n" +
 	"\rAdminQueryRow\x12\x14\n" +
-	"\x05cells\x18\x01 \x03(\tR\x05cells\"\xcd\x01\n" +
+	"\x05cells\x18\x01 \x03(\tR\x05cells\"\xdb\x01\n" +
 	"\x15RunAdminQueryResponse\x12+\n" +
-	"\x05query\x18\x01 \x01(\v2\x15.career.v1.AdminQueryR\x05query\x121\n" +
+	"\x05query\x18\x01 \x01(\v2\x15.career.v1.AdminQueryR\x05query\x12\x1a\n" +
+	"\x06result\x18\x02 \x01(\tB\x02\x18\x01R\x06result\x121\n" +
 	"\x06ran_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05ranAt\x12\x18\n" +
 	"\acolumns\x18\x04 \x03(\tR\acolumns\x12,\n" +
-	"\x04rows\x18\x05 \x03(\v2\x18.career.v1.AdminQueryRowR\x04rowsJ\x04\b\x02\x10\x03R\x06result\"\xaf\x02\n" +
+	"\x04rows\x18\x05 \x03(\v2\x18.career.v1.AdminQueryRowR\x04rows\"\xaf\x02\n" +
 	"\fConversation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x129\n" +
