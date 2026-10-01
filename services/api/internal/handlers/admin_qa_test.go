@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -103,5 +104,38 @@ func TestTheConsequentialFlagsAreCarriedThrough(t *testing.T) {
 	}
 	if !got.CoversRestricted || !got.Enabled {
 		t.Errorf("flags lost: covers_restricted=%v enabled=%v", got.CoversRestricted, got.Enabled)
+	}
+}
+
+// Every public content directory must be reachable by the reindex.
+//
+// The public reindex walks publicCorpusSubdirs rather than the
+// directory listing, so a folder that is not named there is never read.
+// The site guide was added under content/other, reindexed, and silently
+// ignored: the job reported "kinds article" and ingested nothing, and
+// the assistant still could not answer questions about the site.
+//
+// This walks the committed content tree and fails on any directory that
+// has no entry, so the next one is caught before it is deployed.
+func TestEveryPublicContentDirectoryIsReindexable(t *testing.T) {
+	const root = "../../../../apps/web/content"
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Skipf("content tree not present: %v", err)
+	}
+	mapped := map[string]bool{}
+	for _, dir := range publicCorpusSubdirs {
+		mapped[dir] = true
+	}
+	for _, e := range entries {
+		if !e.IsDir() || mapped[e.Name()] {
+			continue
+		}
+		// photos holds images, which the walker does not read.
+		if e.Name() == "photos" {
+			continue
+		}
+		t.Errorf("apps/web/content/%s has no entry in publicCorpusSubdirs, "+
+			"so the public reindex will never read it", e.Name())
 	}
 }
