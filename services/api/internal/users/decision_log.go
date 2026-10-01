@@ -250,10 +250,29 @@ func (r *Repo) ReviewDecision(ctx context.Context, id, reviewerID int64, rev Dec
 // computed from an overall verdict, so they have to be marked
 // separately or the acceptance criteria cannot be measured at all.
 //
-// Every dimension takes the same three answers, deliberately. A rubric
-// whose scales differ per row is a rubric nobody fills in.
+// Every dimension takes the same answers, deliberately. A rubric whose
+// scales differ per row is a rubric nobody fills in.
+//
+// Two, not five, and the cut was made by watching the first real
+// grading. Roger wrote a six-hundred-character correction and left
+// every radio blank, which is the right instinct: the correction is
+// the valuable artefact and twenty radios after writing it is a toll.
+//
+// Three of the original five were asking a human for something already
+// in the row:
+//
+//   - citations: markers_dropped against markers_written, counted at
+//     answer time. FR-CHAT-04's 95 % is a query, not a judgement.
+//   - length: completion_tokens, recorded per answer.
+//   - scope: the verdict already carries it. "rejected_correctly"
+//     says the refusal was right and "wrong" says it was not.
+//
+// What is left genuinely needs a person. Whether an answer is grounded
+// in what it was shown cannot be computed from the answer, and whether
+// it sounds like Roger is the entire point of a persona adapter and the
+// one thing no counter will ever measure.
 var ReviewDimensions = map[string][]string{
-	"chat_answer": {"grounded", "citations", "voice", "scope", "length"},
+	"chat_answer": {"grounded", "voice"},
 }
 
 // ReviewDimensionValues is what a dimension may be marked. Same three

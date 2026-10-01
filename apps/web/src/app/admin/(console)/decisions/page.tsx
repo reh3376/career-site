@@ -178,8 +178,13 @@ const CHAT_PATH_LABEL: Record<string, string> = {
 
 // The rubric, mirroring users.ReviewDimensions. A kind with no entry
 // here is graded by its verdict alone.
+//
+// Two, not five. Citations, length and scope were all asking a human
+// for something the row already holds: dropped markers are counted at
+// answer time, completion tokens are recorded, and the verdict carries
+// scope. What is left is what only a person can say.
 const DIMENSIONS: Record<string, string[]> = {
-  chat_answer: ["grounded", "citations", "voice", "scope", "length"],
+  chat_answer: ["grounded", "voice"],
 };
 
 // The owner's vocabulary. The first values mirror the model's, so

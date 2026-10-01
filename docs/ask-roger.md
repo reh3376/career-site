@@ -266,10 +266,24 @@ learn.
 `ReviewDimensions["chat_answer"]` adds per-rubric marks, each `yes`,
 `partial`, `no` or `n/a`:
 
-    grounded    citations    voice    scope    length
+    grounded    voice
 
-Grounding at 90 % and citation validity at 95 % are stated acceptance
-criteria and neither can be computed from one overall verdict.
+**Two, not five, and the cut came from watching the first real
+grading.** Roger wrote a 608-character correction and left every radio
+blank. That is the right instinct: the correction is the valuable
+artefact and twenty radios after writing it is a toll.
+
+Three of the original five were asking a person for something the row
+already holds. `citations` is `markers_dropped` against
+`markers_written`, counted at answer time, so FR-CHAT-04's 95 % is a
+query rather than a judgement. `length` is `completion_tokens`.
+`scope` is carried by the verdict, where `rejected_correctly` says a
+refusal was right.
+
+What remains needs a person. Whether an answer is grounded in what it
+was shown cannot be computed from the answer, and whether it sounds
+like Roger is the whole point of a persona adapter and the one thing no
+counter will ever measure.
 
 ### The column that makes it training data
 
