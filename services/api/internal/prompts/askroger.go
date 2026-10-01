@@ -160,8 +160,33 @@ const AskHistoryRunes = 400
 // numbered, so a private passage has no marker the model could write
 // and rule 5 has nothing to fail at. The caller maps markers back
 // through this slice and drops any number outside it.
-func RenderAskUser(question string, history []AskTurn, evidence []users.CorpusHit) (string, []users.CorpusHit) {
+func RenderAskUser(facts string, question string, history []AskTurn, evidence []users.CorpusHit) (string, []users.CorpusHit) {
 	var b strings.Builder
+
+	// The career facts sheet, first and whole, on every call.
+	//
+	// Two reasons, and the second is why it is affordable.
+	//
+	// Retrieval is unreliable for exactly the facts people ask about:
+	// tenure, titles, dates, degrees, credentials. The JD reviewer
+	// learned this and puts the same sheet on every judge call. Chat
+	// took the top three chunks by similarity, so two chunks of facts
+	// competed with 251 of documentation, and "does he have capital
+	// project experience" came back empty from a corpus that answers it
+	// in a sentence.
+	//
+	// It is 1,342 tokens, which doubles the prompt, and at 29 tokens a
+	// second that is 46 seconds nobody would wait for. But it sits here
+	// at the front, byte for byte identical on every call, which makes
+	// it a prefix Ollama can reuse. Measured on the box: the same
+	// prefix evaluated cold took 82.5 s and, once warmed, 0.8 s, with a
+	// different question behind it both times. internal/chat/warm.go
+	// keeps it warm.
+	//
+	// So this has to stay first, and it has to stay identical. Anything
+	// that varies per call goes after it or the prefix is broken and
+	// every answer pays the full 82 seconds.
+	b.WriteString(AskPrefix(facts))
 
 	if n := len(history); n > 0 {
 		if n > AskHistoryTurns {
@@ -213,4 +238,22 @@ func RenderAskUser(question string, history []AskTurn, evidence []users.CorpusHi
 // safeChunk caps a passage and stops it closing its own tag.
 func safeChunk(text string) string {
 	return strings.ReplaceAll(CapRunes(text, AskChunkRunes), "</passage>", "< /passage>")
+}
+
+// AskPrefix is the part of the user turn that never varies: the career
+// facts block and nothing else.
+//
+// The warm-up call sends exactly this, so what it caches is a true
+// prefix of every real request. If the two ever disagree by a byte the
+// cache misses and the warming silently stops working, which is why
+// they are built by the same code rather than written out twice.
+func AskPrefix(facts string) string {
+	if facts == "" {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("<career_facts>\n")
+	b.WriteString(facts)
+	b.WriteString("\n</career_facts>\n\n")
+	return b.String()
 }

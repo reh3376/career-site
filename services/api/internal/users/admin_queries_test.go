@@ -19,15 +19,24 @@ func TestEveryAdminQueryRuns(t *testing.T) {
 	}
 	for _, q := range list {
 		t.Run(q.ID, func(t *testing.T) {
-			got, value, err := r.RunAdminQuery(ctx, q.ID)
+			got, res, err := r.RunAdminQuery(ctx, q.ID)
 			if err != nil {
 				t.Fatalf("%s: %v", q.ID, err)
 			}
 			if got.Label == "" || q.Detail == "" {
 				t.Errorf("%s has no label or no detail; the dropdown needs both", q.ID)
 			}
-			if value == "" {
-				t.Errorf("%s returned nothing", q.ID)
+			// Columns come from the statement, so an empty header means
+			// the query returned nothing a table could be drawn from.
+			if len(res.Columns) < 2 {
+				t.Errorf("%s returned %d columns; a table needs at least two",
+					q.ID, len(res.Columns))
+			}
+			for i, row := range res.Rows {
+				if len(row) != len(res.Columns) {
+					t.Errorf("%s row %d has %d cells against %d columns",
+						q.ID, i, len(row), len(res.Columns))
+				}
 			}
 		})
 	}

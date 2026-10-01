@@ -590,7 +590,7 @@ func (h *Chat) RunAdminQuery(
 	if err != nil {
 		return nil, err
 	}
-	q, value, err := h.users.RunAdminQuery(ctx, strings.TrimSpace(req.Msg.GetId()))
+	q, res, err := h.users.RunAdminQuery(ctx, strings.TrimSpace(req.Msg.GetId()))
 	if errors.Is(err, users.ErrNoSuchAdminQuery) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such query"))
 	}
@@ -601,9 +601,34 @@ func (h *Chat) RunAdminQuery(
 	}
 	h.log.Info("admin query run",
 		slog.Int64("admin", me.ID), slog.String("query", q.ID))
-	return connect.NewResponse(&careerv1.RunAdminQueryResponse{
-		Query:  &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
-		Result: value,
-		RanAt:  timestamppb.Now(),
-	}), nil
+	out := &careerv1.RunAdminQueryResponse{
+		Query:   &careerv1.AdminQuery{Id: q.ID, Label: q.Label, Detail: q.Detail},
+		Columns: res.Columns,
+		RanAt:   timestamppb.Now(),
+		// The deprecated single-line form, still filled in so a client
+		// built against the old contract shows something rather than
+		// nothing.
+		Result: summariseRows(res),
+	}
+	for _, row := range res.Rows {
+		out.Rows = append(out.Rows, &careerv1.AdminQueryRow{Cells: row})
+	}
+	return connect.NewResponse(out), nil
+}
+
+// summariseRows renders a table as one line, for the deprecated
+// `result` field.
+//
+// One row becomes its cells joined, which is what that field used to
+// carry. Several become a count, because a sentence listing ten rows is
+// less readable than the table it is standing in for.
+func summariseRows(res users.AdminQueryResult) string {
+	switch len(res.Rows) {
+	case 0:
+		return "no rows"
+	case 1:
+		return strings.Join(res.Rows[0], ", ")
+	default:
+		return fmt.Sprintf("%d rows", len(res.Rows))
+	}
 }

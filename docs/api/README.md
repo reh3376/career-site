@@ -1928,8 +1928,10 @@ refused. Results are counts, never rows about a person.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
-| `result` | `string` | string |  | The single-row result, already formatted for reading. |
+| `result` | `string` | string |  | A one-line summary of the table below. Deprecated. This was the whole result before it became rows and columns, and it is kept because the breaking-change rules here are FILE, the strictest set, which forbids removing a field even when its number is reserved. That is the right default: a client built against the old contract keeps working rather than silently reading nothing. Still populated rather than emptied, for the same reason. One row becomes its cells joined; several become a count. |
 | `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
+| `columns` | `string`[] | array of string |  | Column headers, taken from the statement itself so a query and its header cannot drift apart. |
+| `rows` | [`AdminQueryRow`](#adminqueryrow)[] | array of object |  | Rows, capped server side. Every query here aggregates, so a long result means a GROUP BY went wider than expected. |
 
 <details><summary>Example request body</summary>
 
@@ -5338,6 +5340,14 @@ Run one named query.
 |---|---|---|---|---|
 | `id` | `string` | string | `string: min_len: 1 max_len: 64` | Id from ListAdminQueries. Anything else is refused. |
 
+### AdminQueryRow
+
+One row of a query result.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `cells` | `string`[] | array of string |  | Cells, in the same order as the response's columns. A NULL is an empty string, because a gap reads better in a column of counts than the word "null", which invites being read as a value. |
+
 ### RunAdminQueryResponse
 
 What the query returned.
@@ -5345,8 +5355,10 @@ What the query returned.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `query` | [`AdminQuery`](#adminquery) | object |  | The query that ran, echoed so the surface can label the result. |
-| `result` | `string` | string |  | The single-row result, already formatted for reading. |
+| `result` | `string` | string |  | A one-line summary of the table below. Deprecated. This was the whole result before it became rows and columns, and it is kept because the breaking-change rules here are FILE, the strictest set, which forbids removing a field even when its number is reserved. That is the right default: a client built against the old contract keeps working rather than silently reading nothing. Still populated rather than emptied, for the same reason. One row becomes its cells joined; several become a count. |
 | `ranAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it ran. |
+| `columns` | `string`[] | array of string |  | Column headers, taken from the statement itself so a query and its header cannot drift apart. |
+| `rows` | [`AdminQueryRow`](#adminqueryrow)[] | array of object |  | Rows, capped server side. Every query here aggregates, so a long result means a GROUP BY went wider than expected. |
 
 ### Conversation
 

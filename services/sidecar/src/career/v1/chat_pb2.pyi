@@ -48,15 +48,25 @@ class RunAdminQueryRequest(_message.Message):
     id: str
     def __init__(self, id: _Optional[str] = ...) -> None: ...
 
+class AdminQueryRow(_message.Message):
+    __slots__ = ("cells",)
+    CELLS_FIELD_NUMBER: _ClassVar[int]
+    cells: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class RunAdminQueryResponse(_message.Message):
-    __slots__ = ("query", "result", "ran_at")
+    __slots__ = ("query", "result", "ran_at", "columns", "rows")
     QUERY_FIELD_NUMBER: _ClassVar[int]
     RESULT_FIELD_NUMBER: _ClassVar[int]
     RAN_AT_FIELD_NUMBER: _ClassVar[int]
+    COLUMNS_FIELD_NUMBER: _ClassVar[int]
+    ROWS_FIELD_NUMBER: _ClassVar[int]
     query: AdminQuery
     result: str
     ran_at: _timestamp_pb2.Timestamp
-    def __init__(self, query: _Optional[_Union[AdminQuery, _Mapping]] = ..., result: _Optional[str] = ..., ran_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    columns: _containers.RepeatedScalarFieldContainer[str]
+    rows: _containers.RepeatedCompositeFieldContainer[AdminQueryRow]
+    def __init__(self, query: _Optional[_Union[AdminQuery, _Mapping]] = ..., result: _Optional[str] = ..., ran_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[AdminQueryRow, _Mapping]]] = ...) -> None: ...
 
 class Conversation(_message.Message):
     __slots__ = ("id", "title", "started_at", "last_message_at", "message_count", "persona_version", "context_content_id")

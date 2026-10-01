@@ -5,7 +5,13 @@ import { useEffect, useState } from "react";
 import { chatClient } from "@/lib/chat-client";
 
 type Query = { id: string; label: string; detail: string };
-type Result = { label: string; detail: string; value: string; at: string };
+type Result = {
+  label: string;
+  detail: string;
+  columns: string[];
+  rows: string[][];
+  at: string;
+};
 
 // The admin's database dropdown.
 //
@@ -66,7 +72,8 @@ export function AdminQueries() {
       setResult({
         label: res.query?.label ?? id,
         detail: res.query?.detail ?? "",
-        value: res.result,
+        columns: res.columns ?? [],
+        rows: (res.rows ?? []).map((r) => r.cells ?? []),
         at: new Date().toLocaleTimeString(),
       });
     } catch (e) {
@@ -118,9 +125,51 @@ export function AdminQueries() {
       ) : null}
 
       {result ? (
-        <div className="mt-3 border-l-2 border-accent pl-3">
-          <p className="text-sm text-ink">{result.value}</p>
-          <p className="mt-1 font-mono text-[11px] text-ink-3">
+        <div className="mt-3">
+          {result.rows.length === 0 ? (
+            <p className="text-sm text-ink-2">
+              No rows. That is an answer: there is nothing of this kind yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-line">
+                    {result.columns.map((c, i) => (
+                      <th
+                        key={c}
+                        scope="col"
+                        className={`py-1.5 pr-4 font-mono text-[11px] font-normal tracking-[0.1em] text-ink-3 uppercase ${
+                          i === 0 ? "text-left" : "text-right"
+                        }`}
+                      >
+                        {c.replace(/_/g, " ")}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.rows.map((row, ri) => (
+                    <tr key={ri} className="border-b border-line last:border-0">
+                      {row.map((cell, ci) => (
+                        <td
+                          key={ci}
+                          className={`py-1.5 pr-4 ${
+                            ci === 0
+                              ? "text-left text-ink"
+                              : "text-right font-mono tabular-nums text-ink"
+                          }`}
+                        >
+                          {cell === "" ? "·" : cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-2 font-mono text-[11px] text-ink-3">
             {result.label} · {result.at}
           </p>
           {result.detail ? (
