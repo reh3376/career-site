@@ -128,3 +128,11 @@ func validateIntent(name, arg string) *Intent {
 	}
 	return nil
 }
+
+// intentName is the action's name for the decision row, or empty.
+func intentName(in *Intent) string {
+	if in == nil {
+		return ""
+	}
+	return in.Action
+}

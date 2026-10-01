@@ -7,6 +7,8 @@ import remarkGfm from "remark-gfm";
 
 import { chatClient } from "@/lib/chat-client";
 
+import { ProposedActionCard, type Action } from "./proposed-action";
+
 export type Citation = {
   chunkId?: string;
   title?: string;
@@ -26,6 +28,8 @@ export type ChatMessage = {
     degraded?: boolean;
     qaMatch?: boolean;
   };
+  /** An action the assistant offered; the member confirms it by clicking. */
+  proposedAction?: Action | null;
   /** Local-only: the disclosure, which is never stored and never rated. */
   ephemeral?: boolean;
 };
@@ -64,6 +68,7 @@ export function Message({ message }: { message: ChatMessage }) {
       </div>
 
       <Flags flags={message.flags} />
+      <ProposedActionCard action={message.proposedAction} />
       <Citations citations={message.citations} />
       {message.id && !message.ephemeral && !isOwner ? (
         <Rating messageId={message.id} />

@@ -129,6 +129,11 @@ type Answer struct {
 	Degraded   bool
 	QAMatch    bool
 
+	// Intent is an action the assistant proposed, already validated
+	// against the allowlist (D-25). The surface renders it as something
+	// the member presses; nothing here acts on it.
+	Intent *Intent
+
 	// FirstTokenMs and TotalMs are what the reader actually waited.
 	// Until streaming lands FirstTokenMs is the whole model call, and
 	// is recorded that way rather than left at zero, because a zero
@@ -188,8 +193,10 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		// retrieval, so there is nothing to ground an answer in and the
 		// honest reply is the no-support one rather than an ungrounded
 		// guess.
-		return s.finish(ctx, req, in, started, users.ChatPathError,
-			noSupportText, nil, "", "", "", nil, 0, 0, 0, errString(err, "embedding unavailable"))
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathError, Text: noSupportText,
+			Err: errString(err, "embedding unavailable"),
+		})
 	}
 	embedding := vecs[0]
 
@@ -214,8 +221,10 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		in.QA.Phrasing = match.Phrasing
 		out := users.ChatDecisionOutput{Text: match.Entry.Answer, QAMatch: true}
 		out.Citations = qaCitations(match.Entry.Sources)
-		return s.finish(ctx, req, in, started, users.ChatPathQABank,
-			match.Entry.Answer, out.Citations, "", "", "", &out, 0, 0, 0, "")
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathQABank, Text: match.Entry.Answer,
+			Cites: out.Citations, Out: &out,
+		})
 	}
 
 	// 3. Restricted topics (FR-CHAT-06). Compensation, references,
@@ -231,8 +240,9 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	if topic := restrictedTopic(question); topic != "" {
 		text := restrictedReply(topic)
 		out := users.ChatDecisionOutput{Text: text, OutOfScope: true}
-		return s.finish(ctx, req, in, started, users.ChatPathOutOfScope,
-			text, nil, "", "", "", &out, 0, 0, 0, "")
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathOutOfScope, Text: text, Out: &out,
+		})
 	}
 
 	// 4. Retrieval. Gated on chatbot_include and on visibility in the
@@ -241,8 +251,10 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	hits, err := s.Store.SearchCorpusForChat(ctx, embedding, s.consider())
 	in.Timings.RetrieveMs = s.since(retStart)
 	if err != nil {
-		return s.finish(ctx, req, in, started, users.ChatPathError,
-			noSupportText, nil, "", "", "", nil, 0, 0, 0, fmt.Sprintf("retrieval failed: %v", err))
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathError, Text: noSupportText,
+			Err: fmt.Sprintf("retrieval failed: %v", err),
+		})
 	}
 
 	shown := hits
@@ -256,8 +268,9 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	// decision does not need a model to make it.
 	if len(shown) == 0 {
 		out := users.ChatDecisionOutput{Text: noSupportText, NoSupport: true}
-		return s.finish(ctx, req, in, started, users.ChatPathNoSupport,
-			noSupportText, nil, "", "", "", &out, 0, 0, 0, "")
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathNoSupport, Text: noSupportText, Out: &out,
+		})
 	}
 
 	// 6. The model.
@@ -305,15 +318,22 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		// back to except saying so and offering a way through.
 		text := degradedText
 		out := users.ChatDecisionOutput{Text: text, Degraded: true}
-		return s.finish(ctx, req, in, started, users.ChatPathDegraded,
-			text, nil, "", prompts.AskRogerPersona.System+"\n\n"+userTurn, "", &out,
-			0, 0, callMs, errString(err, "the model returned nothing"))
+		return s.finish(ctx, req, in, started, outcome{
+			Path: users.ChatPathDegraded, Text: text, Out: &out,
+			PromptText:   prompts.AskRogerPersona.System + "\n\n" + userTurn,
+			FirstTokenMs: callMs,
+			Err:          errString(err, "the model returned nothing"),
+		})
 	}
 
-	text, cites, written, dropped := validateCitations(resp.Text, offered)
+	// The proposed action comes out before citations, so a marker on its
+	// own line cannot be mistaken for prose by the citation pass.
+	withoutIntent, intent := ExtractIntent(resp.Text)
+	text, cites, written, dropped := validateCitations(withoutIntent, offered)
 	out := users.ChatDecisionOutput{
 		Text:           text,
 		Citations:      cites,
+		ProposedAction: intentName(intent),
 		MarkersOffered: len(offered),
 		MarkersWritten: written,
 		MarkersDropped: dropped,
@@ -332,9 +352,16 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 	if in.Timings.FirstTokenMs == 0 {
 		in.Timings.FirstTokenMs = callMs
 	}
-	return s.finish(ctx, req, in, started, users.ChatPathModel,
-		text, cites, resp.Model, prompts.AskRogerPersona.System+"\n\n"+userTurn, resp.Text,
-		&out, resp.PromptTokens, resp.CompletionTokens, in.Timings.FirstTokenMs, "")
+	return s.finish(ctx, req, in, started, outcome{
+		Path: users.ChatPathModel, Text: text, Cites: cites, Out: &out,
+		Model:            resp.Model,
+		PromptText:       prompts.AskRogerPersona.System + "\n\n" + userTurn,
+		ResponseText:     resp.Text,
+		PromptTokens:     resp.PromptTokens,
+		CompletionTokens: resp.CompletionTokens,
+		FirstTokenMs:     in.Timings.FirstTokenMs,
+		Intent:           intent,
+	})
 }
 
 // finish persists the answer, logs the decision, and returns it.
@@ -344,27 +371,51 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 // never called a model are logged too: "did the bank fire when it
 // should not have" is one of the most valuable labels the owner can
 // give, and it cannot be asked about a row that was never written.
+// outcome is everything finish needs about one answer.
+//
+// A struct because the parameter list reached sixteen positional
+// arguments, most of them empty on most paths, and the next field would
+// have made a call site unreadable. Named fields also stop the four
+// strings in the middle (model, prompt, response, error) being passed
+// in the wrong order, which positional arguments of the same type
+// invite.
+type outcome struct {
+	Path  string
+	Text  string
+	Cites []users.ChatCitation
+	// Model is empty for the paths that never called one; finish
+	// records "code" in that case.
+	Model            string
+	PromptText       string
+	ResponseText     string
+	Out              *users.ChatDecisionOutput
+	PromptTokens     int32
+	CompletionTokens int32
+	FirstTokenMs     int64
+	Err              string
+	// Intent is a validated action the assistant proposed (D-25).
+	Intent *Intent
+}
+
 func (s *Service) finish(
-	ctx context.Context, req Request, in users.ChatDecisionInput, started time.Time,
-	path, text string, cites []users.ChatCitation,
-	model, promptText, responseText string,
-	out *users.ChatDecisionOutput,
-	promptTokens, completionTokens int32, firstTokenMs int64, callErr string,
+	ctx context.Context, req Request, in users.ChatDecisionInput,
+	started time.Time, o outcome,
 ) (Answer, error) {
-	in.Path = path
-	if firstTokenMs > 0 {
-		in.Timings.FirstTokenMs = firstTokenMs
+	in.Path = o.Path
+	if o.FirstTokenMs > 0 {
+		in.Timings.FirstTokenMs = o.FirstTokenMs
 	}
 	in.Timings.TotalMs = s.since(started)
 
 	ans := Answer{
-		Text:         text,
-		Citations:    cites,
-		Path:         path,
-		OutOfScope:   path == users.ChatPathOutOfScope,
-		NoSupport:    path == users.ChatPathNoSupport || path == users.ChatPathError,
-		Degraded:     path == users.ChatPathDegraded,
-		QAMatch:      path == users.ChatPathQABank,
+		Text:         o.Text,
+		Citations:    o.Cites,
+		Intent:       o.Intent,
+		Path:         o.Path,
+		OutOfScope:   o.Path == users.ChatPathOutOfScope,
+		NoSupport:    o.Path == users.ChatPathNoSupport || o.Path == users.ChatPathError,
+		Degraded:     o.Path == users.ChatPathDegraded,
+		QAMatch:      o.Path == users.ChatPathQABank,
 		FirstTokenMs: in.Timings.FirstTokenMs,
 		TotalMs:      in.Timings.TotalMs,
 	}
@@ -372,13 +423,13 @@ func (s *Service) finish(
 	id, err := s.Store.AppendMessage(ctx, users.ChatMessage{
 		ConversationID: req.ConversationID,
 		Role:           "assistant",
-		Text:           text,
+		Text:           o.Text,
 		OutOfScope:     ans.OutOfScope,
 		NoSupport:      ans.NoSupport,
 		Degraded:       ans.Degraded,
 		QAMatch:        ans.QAMatch,
 		PersonaVersion: in.PersonaFingerprint,
-		Citations:      cites,
+		Citations:      o.Cites,
 	})
 	if err != nil {
 		// The member gets nothing if this fails, so it is the one error
@@ -387,18 +438,18 @@ func (s *Service) finish(
 	}
 	ans.MessageID = id
 
-	if out == nil {
-		out = &users.ChatDecisionOutput{Text: text, Citations: cites}
+	if o.Out == nil {
+		o.Out = &users.ChatDecisionOutput{Text: o.Text, Citations: o.Cites}
 	}
-	out.OutOfScope, out.NoSupport = ans.OutOfScope, ans.NoSupport
-	out.Degraded, out.QAMatch = ans.Degraded, ans.QAMatch
+	o.Out.OutOfScope, o.Out.NoSupport = ans.OutOfScope, ans.NoSupport
+	o.Out.Degraded, o.Out.QAMatch = ans.Degraded, ans.QAMatch
 
 	// Best-effort, and last. The answer is already persisted and about
 	// to be shown; losing the training record is bad, and failing the
 	// member's question to protect it would be worse.
-	d, derr := users.NewChatDecision(id, model, promptText, responseText,
-		in, *out, promptTokens, completionTokens,
-		prompts.AskRogerPersona.Version, s.NumCtx, callErr)
+	d, derr := users.NewChatDecision(id, o.Model, o.PromptText, o.ResponseText,
+		in, *o.Out, o.PromptTokens, o.CompletionTokens,
+		prompts.AskRogerPersona.Version, s.NumCtx, o.Err)
 	if derr != nil {
 		s.log().Warn("chat decision not encoded", slog.String("error", derr.Error()))
 		return ans, nil

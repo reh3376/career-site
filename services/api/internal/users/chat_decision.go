@@ -157,6 +157,13 @@ type ChatDecisionOutput struct {
 	// something specific and detectable, and detecting it should not
 	// depend on the owner noticing.
 	MarkersDropped int `json:"markers_dropped"`
+	// ProposedAction is the action the assistant offered the member,
+	// after validation against the D-25 allowlist, or empty. Recorded
+	// because "what does it try to make people do" is a question about
+	// the assistant that nothing else in the row answers, and because a
+	// grader needs to see that an answer ended in a button before
+	// judging whether it should have.
+	ProposedAction string `json:"proposed_action,omitempty"`
 	// Flags mirror the four columns on chat_messages.
 	OutOfScope bool `json:"out_of_scope"`
 	NoSupport  bool `json:"no_support"`

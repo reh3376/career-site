@@ -5271,6 +5271,21 @@ A source cited by an assistant message.
 | `heading` | `string` | string |  | Heading within the item, when known. |
 | `rank` | `int32` | number |  | Rank within the answer's citations (1-based). |
 
+### ProposedAction
+
+An action the assistant proposed, after the server validated it
+against the allowlist (FR-CHAT-13 as amended by D-25).
+
+The assistant never performs the action. This renders a control the
+member presses, and the press is what acts, so there is no path from
+a prompt injection to an action taken. An action outside the
+allowlist never reaches this message: the server drops it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `action` | `string` | string |  | One of: open_scheduler, open_contact_form, open_contributor_request. Clients must ignore anything else rather than guess, so a later server can add one without breaking them. |
+| `arg` | `string` | string |  | The single validated argument, or empty. A contact-form category for open_contact_form, a repository name for open_contributor_request, and never set for open_scheduler. |
+
 ### MessageFlags
 
 Assistant-side flags on a message.
@@ -5297,6 +5312,7 @@ A message in a conversation.
 | `rating` | [`Rating`](#rating) | string (enum name) |  | The member's rating, if any (assistant messages only). |
 | `flags` | [`MessageFlags`](#messageflags) | object |  | Flags (assistant messages only). |
 | `personaVersion` | `string` | string |  | Persona version used (assistant messages only). |
+| `proposedAction` | [`ProposedAction`](#proposedaction) | object |  | An action the assistant offered, which the member confirms or ignores; unset when it offered none. |
 
 ### CreateConversationRequest
 
