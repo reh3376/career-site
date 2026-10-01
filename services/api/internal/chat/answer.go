@@ -36,7 +36,6 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
-	"github.com/reh3376/career-site/services/api/internal/runid"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -153,11 +152,20 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		return Answer{}, ErrNoQuestion
 	}
 
-	// One id for this answer, carried on the context so the decision
-	// row and the usage ledger row are written with the same value and
-	// can be joined. The JD pipeline uses it per run; here the unit is
-	// one answer, which is the thing anyone would ask a question about.
-	ctx = runid.With(ctx, runid.New())
+	// No run id is minted here, and that is deliberate rather than an
+	// omission.
+	//
+	// run_id on both decision_log and llm_usage is a foreign key to
+	// jd_runs. A chat answer is not a JD run, so an id minted here
+	// matches no row and the insert fails the constraint. That is not
+	// hypothetical: it shipped, and because both writes are
+	// best-effort it failed silently, so two of Roger's answers were
+	// served with no decision row and no usage row at all. The column
+	// is nullable for exactly this case.
+	//
+	// The two rows are joined through the message instead:
+	// decision_log.ref_id is the message id, llm_usage.ref_id is its
+	// conversation, and chat_messages carries both.
 
 	in := users.ChatDecisionInput{
 		Question:           question,
@@ -286,7 +294,8 @@ func (s *Service) Answer(ctx context.Context, req Request) (Answer, error) {
 		usage.Error = err.Error()
 	}
 	if uerr := s.Store.RecordLLMUsage(ctx, usage); uerr != nil {
-		s.log().Warn("chat usage not recorded", slog.String("error", uerr.Error()))
+		s.log().Error("chat usage NOT recorded, the budget cap is blind",
+			slog.String("error", uerr.Error()))
 	}
 
 	if err != nil || resp == nil || strings.TrimSpace(resp.Text) == "" {
@@ -394,7 +403,11 @@ func (s *Service) finish(
 		return ans, nil
 	}
 	if derr := s.Store.InsertDecisions(ctx, []users.Decision{d}); derr != nil {
-		s.log().Warn("chat decision not logged",
+		// Error, not warning. This row is the training data, and losing
+		// it silently is the failure that prompted the instrumentation
+		// work in the first place. The answer still goes to the member;
+		// the operator gets told loudly that it was not recorded.
+		s.log().Error("chat decision NOT logged, training data lost",
 			slog.Int64("message_id", id), slog.String("error", derr.Error()))
 	}
 	return ans, nil

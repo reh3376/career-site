@@ -358,6 +358,28 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 6. Known issues and things that are not right yet
 
+0a. **Two answers were served with no training record, and the cause
+   was the instrumentation work itself.** Messages 10 and 12 on
+   production have no `decision_log` row and no `llm_usage` row.
+
+   `run_id` on both tables is a foreign key to `jd_runs`. The fix that
+   added a run id to chat answers, so the two rows could be joined,
+   minted an id that matches no `jd_runs` row, so both inserts failed
+   the constraint. Both writes are best-effort by design, so it
+   surfaced as a log line nobody was reading.
+
+   Chat no longer mints one; the column is nullable for exactly this
+   case, and the two rows are joined through the message instead
+   (`decision_log.ref_id` is the message, `llm_usage.ref_id` is its
+   conversation, `chat_messages` carries both). Both failures now log
+   at ERROR rather than WARN, because a lost training row is the thing
+   this instrumentation exists to prevent.
+
+   A unit test could not have caught it: the bug is a database
+   constraint and a fake store has none. There is now an integration
+   test against a real Postgres that inserts both rows, and
+   reintroducing the run id makes it fail with the production error.
+
 0. **The first real question on production failed, and why.** Roger
    asked one on 2026-09-30 and got "network error". The handler had
    worked: it logged status 200 after **44.9 seconds**. Go's
