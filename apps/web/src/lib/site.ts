@@ -16,8 +16,11 @@ export const SITE_NAME = "Roger Henley";
 // anyone else's face there.
 export const OG_IMAGE = {
   url: "/images/bubble-tray.jpeg",
-  width: 1200,
-  height: 900,
+  // The file's real dimensions, read from the JPEG rather than assumed.
+  // Scrapers treat these as the truth and some reject a card whose
+  // image does not match what it claimed.
+  width: 1800,
+  height: 1350,
   alt: "A distillation column bubble tray on a working plant floor",
 };
 
