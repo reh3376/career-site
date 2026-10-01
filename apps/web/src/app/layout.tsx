@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     template: "%s · Roger Henley",
   },
   description:
-    "Thirty years running regulated 24/7 industrial systems. Last eight in bourbon distillery startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.",
+    "Thirty years running regulated 24/7 industrial systems. Last eleven in distilled-spirits startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
