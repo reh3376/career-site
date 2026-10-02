@@ -435,6 +435,25 @@ including `first_token_ms`, and the `human` block with verdict, note,
    The source files keep their notes. Provenance for Roger is the point
    of them; they just stop being corpus content.
 
+   **The first fix was incomplete, and the deploy proved it.** After
+   stripping comments and reindexing, the chunks were clean and the
+   document was still called `<!-- Scrubbed copy for corpus ingestion.
+   The original,`. `Walk` derives the title itself, from
+   front-matter-stripped but still-commented text, and hands it to
+   `IngestText` as a non-empty `Title`, which wins over the body. So
+   the body path was fixed and the title path was not. The walker now
+   passes only a declared front-matter title and lets `IngestText`
+   derive the fallback from the text it has already stripped, which
+   makes one function responsible for turning content into a title
+   instead of two. Both were unit-tested in isolation before, and
+   testing them in isolation is exactly what let the first fix look
+   finished.
+
+   One comment is still in the corpus, `<!-- markdownlint-disable
+   MD060 -->` in `speaker_notes/LnL-01-MDEMG/05-gMEM-api-list.md`. It
+   is a lint directive rather than anything private, and it clears on
+   that kind's next reindex, when its content hash changes.
+
 0b. **The assistant could not see the career record at all.** Roger
    noticed every answer came from the same published article. It was
    worse than that: *every chunk of every answer* did.

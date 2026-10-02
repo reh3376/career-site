@@ -104,3 +104,41 @@ func TestCommentOnlyDocumentIsEmpty(t *testing.T) {
 		t.Errorf("want empty so IngestText returns ErrEmpty, got %q", got)
 	}
 }
+
+// The regression this pins: the comment fix alone was not enough.
+//
+// Walk derived the title itself, from front-matter-stripped but
+// still-commented text, and passed it to IngestText as a non-empty
+// Title. A non-empty Title wins over the body, so after the first fix
+// the chunks were clean and the document was still called
+// "<!-- Scrubbed copy for corpus ingestion. The original,". The title
+// now comes from whatever IngestText sees, which is comment-free.
+//
+// Asserted against the two functions in the order the walker and
+// IngestText call them, because a unit test of either one alone is
+// what let the first fix look complete.
+func TestDeclaredTitleWinsButDerivedTitleIsCommentFree(t *testing.T) {
+	const scrubbed = "<!-- Scrubbed copy for corpus ingestion. The original,\n" +
+		"reh-interview-prep-general.md, is unchanged. -->\n\n" +
+		"# General Interview Prep — Roger E. Henley II\n\nBody.\n"
+
+	t.Run("no declared title: derived from the stripped body", func(t *testing.T) {
+		meta, body := parseFrontMatter(scrubbed)
+		if meta["title"] != "" {
+			t.Fatalf("expected no declared title, got %q", meta["title"])
+		}
+		// What IngestText does with it.
+		got := firstNonEmptyLine(stripHTMLComments(body))
+		want := "General Interview Prep — Roger E. Henley II"
+		if got != want {
+			t.Errorf("title = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("declared title still wins", func(t *testing.T) {
+		meta, _ := parseFrontMatter("---\ntitle: Declared\n---\n<!-- note -->\n# Derived\n")
+		if meta["title"] != "Declared" {
+			t.Errorf("declared title = %q, want %q", meta["title"], "Declared")
+		}
+	})
+}
