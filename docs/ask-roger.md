@@ -3,7 +3,7 @@
 The state of Phase 4, written to be read cold. What exists, what does
 not, what is known to be wrong, and what is waiting on a decision.
 
-**Last updated 2026-10-01.** **Production is `0ca151e2c502`**, database
+**Last updated 2026-10-02.** **Production is `f13edf9fc83a`**, database
 at migration 48. Figures below were read from the production database on
 that date, not estimated.
 
@@ -470,6 +470,30 @@ including `first_token_ms`, and the `human` block with verdict, note,
    boolean. Three attempts, three real and distinct defects, all in the
    same few lines: content into chunks, content into a title, and
    deciding whether anything changed at all.
+
+   **Closed and verified on production 2026-10-02**, on `f13edf9fc83a`:
+
+       corpus          38 docs, 324 chunks, 324 embedded
+       comment chunks  0
+       comment titles  0
+       interview_prep  "Amazon Loop — In-Room Tool (v23, STAR Edition)"  16
+                       "General Interview Prep — Roger E. Henley II"     15
+
+   The second reindex of `interview_prep` reported 2 ingested and 0
+   skipped, which is the short-circuit fix working: the body had not
+   changed and the title had, so it no longer skipped. The first chunk
+   of the general document now begins at its heading. `speaker_notes`
+   was reindexed as well to clear the `markdownlint-disable` directive;
+   its HTTP call timed out client-side while 63 chunks re-embedded and
+   the server finished the work regardless, which the counts above
+   confirm.
+
+   What to take from it, since three rounds on one bug is the useful
+   part: every fix was correct, every one was incomplete, and each
+   defect lived in the seam between two separately-correct functions
+   that both had passing tests. Unit tests never caught any of the
+   three. Reading the production database after each deploy caught all
+   of them.
 
 0b. **The assistant could not see the career record at all.** Roger
    noticed every answer came from the same published article. It was

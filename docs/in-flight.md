@@ -6,7 +6,7 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-10-02. Production is `0ca151e2c502`, database at
+Last updated 2026-10-02. Production is `f13edf9fc83a`, database at
 migration 48.
 
 ---
