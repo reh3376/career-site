@@ -3,9 +3,9 @@
 The state of Phase 4, written to be read cold. What exists, what does
 not, what is known to be wrong, and what is waiting on a decision.
 
-**Last updated 2026-09-30.** Branch `claude_dev01`, head `d16f429`, PR #217.
-**Deployed to production on 2026-09-30 as `7ca0e52c43bf`**, database at
-migration 48.
+**Last updated 2026-10-01.** **Production is `0ca151e2c502`**, database
+at migration 48. Figures below were read from the production database on
+that date, not estimated.
 
 Specification lives in [`FSD.md`](FSD.md) §5.5 (FR-CHAT-01..21). This
 document is the state of the build against it and the reasoning that is
@@ -36,15 +36,17 @@ landed in the same commit as the persona and not after it.
 | Conversation store | **Live** | migration `00045`, `users/chat.go` |
 | Retrieval, public and private | **Live** | `users/chat_retrieval.go`, `00046` |
 | Persona prompt | **Live, v3** (`v3`) | `prompts/askroger.go` |
-| Q&A bank + admin surface | **Live**, 2 entries approved | `00047`, `/admin/qa` |
+| Q&A bank + admin surface | **Live**, 13 entries approved, 64 phrasings, all embedded | `00047`, `/admin/qa` |
 | Phrasing embedding job | **Live**, every 5 min | `chat/qaembed.go` |
 | Decision capture and grading | **Live** | `00048`, `users/chat_decision.go` |
 | Answer pipeline | **Live** | `internal/chat/answer.go` |
 | `/ask` page and side panel | **Live**, used by the owner | `app/ask/`, `components/ask/` |
 | Site guide in the corpus | **Live**, top hit for site questions | `content/other/career-site-guide.md` |
 | Action intents (D-25) | **Live**, never yet seen to fire | `chat/intent.go` |
+| Bank near-miss recording | **Live** | `users/qa.go`, `chat/answer.go` |
+| Chat and meeting events | **Live**, all 9 verified firing on prod | `events/events.go` |
 | Admin database queries | **Live**, dropdown on `/ask` | `users/admin_queries.go` |
-| Admin grading console | **Live**, no row graded yet | `/admin/decisions` |
+| Admin grading console | **Live**, 51 of 1,743 rows graded | `/admin/decisions` |
 | Streaming transport | Stream is real, **one delta** | `handlers/chat.go` |
 | Escalation, quotas | **Refused, not stubbed** | `Escalate`, `GetQuota` |
 | Golden set (FR-CHAT-15) | **Not built** | — |
@@ -52,10 +54,25 @@ landed in the same commit as the persona and not after it.
 Migrations 00045 to 00048 are applied in production; the database is at
 48.
 
-**Everything above is deployed and in use.** What remains unproven is
-not the plumbing but the behaviour: no action intent has been observed
-firing, no decision row has been graded, and the Q&A bank has two
-approved entries against a corpus of 36 documents.
+**Everything above is deployed and in use.** The plumbing is no longer
+the open question, and most of what was unproven on 2026-09-30 has since
+been exercised against production: 15 chat answers recorded, 51 decision
+rows graded, the Q&A bank at 13 approved entries against a corpus of 38
+documents, and every one of the nine chat and meeting events confirmed
+firing with correct props.
+
+Two things are still unproven, and both are behaviour rather than code.
+**No action intent has been observed firing**, so D-25's confirm step
+has never been exercised by a real answer. And the bank's **margin rule
+has only been tested by measurement**, not by a live paraphrase: a
+question matching its entry's exact wording proves the entry exists, not
+that a differently-worded question reaches it.
+
+What the numbers say about the design holding: a bank answer returns in
+about 0.1 s against a 39.4 s mean on the model path, of which only 6.3 s
+is generation. The rest is prompt evaluation on the per-question
+evidence, which is why the Q&A bank matters more than any model change
+available on this hardware.
 
 Prompt fingerprints at this head:
 
@@ -816,16 +833,12 @@ is called `meeting_bookings`.
    `chatbot_include = false`. `chatbot_include` defaults to **true**
    (migration 00046 explains why against the requirement's allow-list
    phrasing), so today the answer is "yes" by default.
-2. **Deploy migrations 00045 to 00048?** They are additive and safe:
-   three new tables, one new column on `corpus_documents`, three on
-   `decision_log`. Nothing reads them yet.
-3. **Seed the Q&A bank** at `/admin/qa`, now that there is somewhere to
-   put entries. The bank is the fast path and it is empty. The
-   FSD (§ corpus inventory) names the interview-prep material as the
-   strongest seed, after removing employer-specific and compensation
-   content. Entries need his words, not generated ones: that is the
-   property that makes the bank usable for restricted topics.
-4. **FR-CHAT-11 and FR-CHAT-16**, per §3 and §6.2.
+2. **FR-CHAT-11 and FR-CHAT-16**, per §3 and §6.2.
+
+Two items that stood here on 2026-09-30 are closed. *Deploy migrations
+00045 to 00048* is done, production and local dev are both at 48. *Seed
+the Q&A bank* is done: 13 entries, all approved by the owner in his own
+words, 64 phrasings, all embedded.
 
 ---
 
@@ -836,31 +849,43 @@ exists work better, and the requirements still unimplemented.
 
 **Making it work better, highest value first.**
 
-1. **Seed the Q&A bank.** Two approved entries. It is the only path
-   that answers instantly, and it is nearly empty, so almost every
-   question takes the twenty to thirty second route. Nothing else on
-   this list changes the experience as much.
-2. **Grade some answers.** No decision row has been graded. The
-   console, the rubric and the correction box all exist and have never
-   been used, so the training set is still zero rows.
-3. **Split the site guide.** Two chunks for the whole site means a
+1. **Grade more answers.** 51 of 1,743 decision rows are graded, which
+   is 2.9%. The console, the rubric and the correction box all work and
+   have been used; the limit now is volume, and only the owner can
+   supply it. Of the 51, none carries a corrected answer, so the set can
+   be counted but not yet learned from.
+2. **Add the phrasings the data is already naming.** `chat.answered`
+   records `miss_reason` and `best_similarity` on every model-path
+   answer, so "which phrasing to add next" is one ordered query rather
+   than a hunt. This was proved the hard way: a real question missed by
+   0.0134 because a member typed `ci-cap` for `hi-cap`, and finding it
+   took a manual embedding comparison because the near-miss score was
+   being recorded as zero.
+3. **Split the site guide.** Three chunks for the whole site means a
    question about the scheduler and one about JD upload compete for the
    same passage. One document per feature would sharpen retrieval more
    than any tuning.
-4. **Put the career facts sheet in every prompt**, the way the JD
-   reviewer does. It is 2 chunks against the UxTS guide's 50, so career
-   questions currently compete with documentation, and as a stable
-   prefix it would also be cached and therefore nearly free.
+
+Two entries that stood here are done. *Seed the Q&A bank* is item 1
+above, now closed. *Put the career facts sheet in every prompt* shipped,
+and with the one-minute warmer holding it in Ollama's KV cache a cold
+82.5 s prompt evaluation became 0.8 s; the ticks sit at about 0.2 s.
 
 **Still unimplemented.**
 
-5. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
+4. Real streaming: a sidecar streaming RPC behind `chat.Generator`.
    Would not make an answer faster, but would make the wait legible.
-6. Quotas and budget cap (FR-CHAT-12), and `GetQuota`. `llm_usage` now
-   has chat rows, so the cap finally has something to read.
-7. Escalation (FR-CHAT-10).
-8. The golden set (FR-CHAT-15), which then settles the Q&A threshold
+   FR-CHAT-11's 2 s first token is not reachable on this hardware and
+   the FSD now says so rather than leaving it open.
+5. Quotas and budget cap (FR-CHAT-12), and `GetQuota`. `llm_usage` has
+   chat rows, so the cap has something to read.
+6. Escalation (FR-CHAT-10). FR-ADM-04, replying to escalations from the
+   console, waits on this and nothing else.
+7. The golden set (FR-CHAT-15), which then settles the Q&A threshold
    properly rather than from one question family.
+8. Member answer rating (FR-CHAT-14). Worth noting it is a dependency,
+   not a nicety: FR-ADM-03's review queue is specified as
+   negative-feedback driven and cannot be until this exists.
 
 ---
 

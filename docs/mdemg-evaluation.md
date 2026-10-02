@@ -197,6 +197,16 @@ Ahead of all of that, on the measured evidence: **the web app has no
 tests at all.** 117 files, 36 pages, zero. That is the largest real
 risk this investigation found, and no memory graph addresses it.
 
+> **Note added 2026-10-02.** This is an investigation dated 2026-09-29
+> and is kept as written rather than edited, but the sentence above is
+> the one claim in it that has moved. The web app now has a test file
+> and a `pnpm test` step in CI, covering the access policy in
+> `lib/public-routes.ts`, which is the surface where a mistake serves a
+> member page to anyone or 404s a real one. The recommendation stands:
+> one test file against 147 source files means this is still the largest
+> real risk, and it is still not a memory graph that fixes it.
+> `docs/backlog.md` §4c tracks the next three targets.
+
 **For the guardrail, a bounded experiment is justified, but not
 today.** The integration is genuinely cheap and well contained: hooks
 live in `.claude/`, blocking is off by default, it fails open, and the

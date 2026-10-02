@@ -160,9 +160,23 @@ timeline uses. Consequences worth knowing:
       FROM jd_runs r, jsonb_each_text(r.phase_ms) p
      WHERE r.run_id = $1 ORDER BY p.value::bigint DESC;
 
-Later kinds (`resume_item`, `chat_answer`) are planned to use the same
-table and the same review flow; nothing here is JD-specific except the
-input shape. Neither is written yet.
+`chat_answer` now uses the same table and the same review flow, which is
+the claim this paragraph used to make in the future tense. Its input
+shape carries the question, every retrieved chunk including the ones
+dropped below the cut, the Q&A bank lookup whether or not it matched,
+and per-stage timings. 15 rows at the time of writing, against 1,728 JD
+rows.
+
+The bank lookup is worth calling out, because it is the one field that
+was recorded and useless. `best_similarity` was always 0 on a miss until
+2026-10-01: both miss paths in `MatchQA` returned a zero-valued struct,
+so the score was computed, used for the comparison, and discarded at the
+moment it became evidence. It now carries the score, the runner-up and
+which gate refused it, because a threshold miss wants a new phrasing and
+a margin miss wants two entries pulled apart, and those look identical
+in the score alone.
+
+`resume_item` is still planned and not written.
 
 ## Review
 

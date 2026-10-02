@@ -10,10 +10,10 @@ for review").
 
 | Step | Page | What happens | What they are told |
 |---|---|---|---|
-| 1 | `/` (IT or OT landing) | "Request access" is the primary action; contact, sign in, LinkedIn and GitHub are the only other public routes | Who Roger is, what the JD review does |
+| 1 | `/` (IT or OT landing) | All three core actions are shown and gated on click, so a visitor sees what access buys before being asked for it. The public surface is wider than it was: articles, gallery, `/how-ask-roger-works`, contact, the legal pages, podcast appearances and the "why this site exists" section. `lib/public-routes.ts` is the authoritative list | Who Roger is, what the JD review does, and which model does it |
 | 2 | `/register` | Access request; the owner gets an approval email with one-click accept / decline | "We'll email you" |
 | 3 | email | `user_approved` mail with a sign-in link | Access granted |
-| 4 | `/login` → `/home` | Member home; "Upload a JD" card | Two live surfaces |
+| 4 | `/login` → `/home` | Member home; "JD review" card alongside Ask Roger and booking a meeting | The site is in beta, and what each surface does |
 | 5 | `/jd-upload` | Paste the posting; optional role, employer, contact email, application link; the gate quoted on the page is the live "strong" fit band read from the api (`JdService.GetJdReviewConfig`; 0.70 on prod), not an env var | What the score means, what happens above the gate |
 | 6 | submit | Row stored; pipeline queued (one at a time on the box) | A modal opens with a 0 to 100% progress bar and the current stage ("judging requirement 4 of 12"); keep it open or close it, the email comes either way |
 | 7 | waiting | Result panel polls for up to an hour (every 5 s for the first 3 minutes, then every 20 s); the pipeline writes `progress_pct` / `progress_stage` as it goes | Progress bar and stage; "15 to 30 minutes" |
@@ -70,9 +70,31 @@ setting on first read. Defaults seeded from the calibration: very
 strong 0.85, strong 0.70 (the gate), possible 0.55, weak 0.35, very
 weak below.
 
+## Since 2026-09-22
+
+The path above still describes what a submitter goes through. Four
+things around it have changed, none of which alter the steps:
+
+- **A stranded run no longer stays stranded.** A posting sat in
+  `generating` from 25 September until it was noticed on 30 September,
+  because a restart mid-generation left the row claiming to be working.
+  Startup now closes any run left in a non-terminal status
+  (`FailStrandedRuns`), so the submitter gets a failure email instead of
+  silence. The failed run's `decision_log` rows are kept: they are
+  training data, and tidying them away would cost labels.
+- **The landing shows all three core actions to signed-out visitors**,
+  gated on click rather than hidden, so step 1 now tells a hiring
+  manager what the review does before asking them to register.
+- **The site is labelled beta.** "coming soon · late 2026" is gone and
+  the status line reads `system · beta`.
+- **Ask Roger is live**, which gives a submitter a second reason to have
+  an account and a way to ask about a verdict they disagree with.
+
 ## Still to look at
 
-- Phone-width layout of the result panel and the verdict table.
+- Phone-width layout of the result panel and the verdict table. Not yet
+  reviewed on a real device; no UI work here counts as finished until it
+  has been.
 - A résumé takes about 13 minutes to write on the box; a shorter
   target length would cut that (owner's call, see the tuning log).
 - The register → approve → sign-in leg was not re-walked in this pass;

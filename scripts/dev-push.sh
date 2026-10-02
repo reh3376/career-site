@@ -89,12 +89,13 @@ fi
 
 # ─── Web (TypeScript) ─────────────────────────────────────────────────────
 if [ "$SKIP_WEB" = false ]; then
-  log "web (typescript): install + typecheck + lint + audit + build"
+  log "web (typescript): install + typecheck + lint + test + audit + build"
   (
     cd apps/web
     pnpm install --frozen-lockfile >/dev/null
     pnpm typecheck
     pnpm lint
+    pnpm test
     pnpm audit --prod --audit-level=high || echo "  (audit failed; not a hard block locally — CI enforces)"
     pnpm build
   )

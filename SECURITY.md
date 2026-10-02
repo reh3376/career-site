@@ -52,6 +52,7 @@ CI runs on every PR:
 - **pnpm audit --prod --audit-level=high** against the web app
 - **gitleaks** on the full history
 - **CodeQL** SAST across Go, TypeScript, and Python
+- **trivy** against the filesystem and the Compose/Docker configuration
 
 ## Credit
 
