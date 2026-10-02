@@ -137,11 +137,16 @@ The URL will mostly reach people as a link in a résumé header, a LinkedIn post
 - **Dependency.** Do Phase 1 first, so the people it sends see the improved landing.
 - **Effort.** Small per résumé.
 
-### 2.3 Consider a direct contact path
+### 2.3 Consider a direct contact path — DECLINED 2026-10-01
 
 - **Evidence.** No public page has a `mailto:` or `tel:` link. Contact is form-only (`/contact`), and the form emails you.
 - **Action.** Your choice. Many hiring managers prefer an address they can paste into their own email. If spam is the concern, an obfuscated address or a dedicated alias works.
 - **Effort.** Trivial.
+- **Decision, 2026-10-01: no public mailto or tel.** Roger's call. The
+  contact form and the scheduler already give a hiring manager two ways
+  to reach him, and a published address on an indexed page is scraped
+  within days. Leaving this open invited it to be re-raised; it is
+  closed.
 
 ---
 
@@ -171,18 +176,24 @@ The URL will mostly reach people as a link in a résumé header, a LinkedIn post
 - **Action.** Add one line to the controls, automation and OT résumés (Reynolds, Fortna, AAK, Fuji Seal, Vantage, NTT and similar). It's direct evidence for the IT/OT CI/CD claim those résumés already make.
 - **Effort.** Small.
 
-### 3.5 Reconcile the MDEMG database claim
+### 3.5 Reconcile the MDEMG database claim — DONE 2026-10-01, the résumés were wrong
 
 - **Evidence.** The public `mdemg` README describes Neo4j 5.x throughout (badge, description, prerequisites, `mdemg db start`) and never mentions TypeDB. The Anduril and Cognite résumés say "MDEMG: … Go + TypeDB (previously used Neo4j)." The site's landing links the repo.
 - **Action.** Update the README if the migration has happened, or change the résumé line to match the README. A technical interviewer will open the repo.
 - **Effort.** Small.
 
-### 3.6 Decide deliberately whether the spirits-decline work belongs here
+### 3.6 Decide deliberately whether the spirits-decline work belongs here — DECIDED 2026-10-01
 
 - **Evidence.** "The Same Path, a Faster Clock" (Sept 2026 LinkedIn essay) and the "This Time Is Different" thesis are not on the site. Backlog §6c already excludes the Rev2 document for authorship reasons.
 - **Consideration.** It's strong independent analysis, and you're presenting it at the Beam Institute conference. It's also a public forecast of structural decline in the industry where several of your active applications sit (Heaven Hill, Diageo, and earlier Sazerac and Brown-Forman). This is a positioning call only you can make. It's listed so the decision is made on purpose rather than by default.
 
 ---
+
+- **Decision, 2026-10-01: it does not belong on this site.** Roger's
+  call. The analysis is a public forecast of structural decline in the
+  industry several of his live applications sit in, and the site's job
+  is to move a hiring manager from "who is this" to "let's talk". The
+  work can stand on its own elsewhere; it does not need to stand here.
 
 ## Phase 4: Funnel friction for approved visitors
 
