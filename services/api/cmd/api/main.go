@@ -435,12 +435,22 @@ func main() {
 	// tests can drive them quickly.
 	expiry := handlers.NewExpiryJobs(log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail)
 	autoDecline := handlers.NewAutoDeclineJobs(log, userRepo, decisionHandler, cfg.PendingApprovalTTL)
+	calendarExpiry := handlers.NewCalendarExpiryJob(
+		log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL)
 	expiry.SetEvents(eventWriter)
 	autoDecline.SetEvents(eventWriter)
 	sched := scheduler.New(log,
 		scheduler.Job{Name: "expiry-warn", Interval: cfg.ExpirySchedulerInterval, Run: expiry.WarnJob},
 		scheduler.Job{Name: "expiry-cut", Interval: cfg.ExpirySchedulerInterval, Run: expiry.ExpireJob},
 		scheduler.Job{Name: "auto-decline", Interval: cfg.ExpirySchedulerInterval, Run: autoDecline.Run},
+		// Reconnect reminder for the Google credential. Six hours, not
+		// weekly: a fixed weekly nudge drifts out of phase with a
+		// seven-day token, so it lands early one week and late the
+		// next. This checks the connection's real age and sends once,
+		// about two days out. The marker is a row in app_settings keyed
+		// on the connection's updated_at, so a reconnect re-arms it and
+		// a restart does not resend.
+		scheduler.Job{Name: "calendar-expiry-warn", Interval: 6 * time.Hour, Run: calendarExpiry.Run},
 		// Identity retention on the event stream: blank user, session,
 		// anon id and address hash on rows older than the window.
 		// Fills in Q&A phrasing vectors. Five minutes because the only
