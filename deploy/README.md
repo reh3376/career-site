@@ -104,7 +104,7 @@ Fill in every blank in `.env.prod` per the template comments. Specifically:
 - `LINKEDIN_URL`, `GITHUB_URL`: outbound links, read at request time; empty hides the link
 - `IMAGE_TAG`: the 12-char git SHA of a `main` build whose three images exist on GHCR; never `latest`
 - The model settings for the box (these are what prod runs today):
-  `SIDECAR_EMBED_PROVIDER=ollama`, `SIDECAR_LLM_PROVIDER=ollama`, `OLLAMA_LLM_URL=http://ollama:11434`, `OLLAMA_LLM_MODEL=qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192`, `SIDECAR_LLM_TIMEOUT_SECONDS=3000`, `JD_PIPELINE_TIMEOUT_SECONDS=3600`, `JD_MATCH_THRESHOLD=0.70`, `OLLAMA_MEM_LIMIT=7g`, `OLLAMA_MAX_LOADED_MODELS=1`, `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`. The example file still carries the pre-cutover defaults for a few of these (timeouts, memory cap); the values above are the ones the box runs. See "Embeddings and the LLM" below.
+  `SIDECAR_EMBED_PROVIDER=ollama`, `SIDECAR_LLM_PROVIDER=ollama`, `OLLAMA_LLM_URL=http://ollama:11434`, `OLLAMA_LLM_MODEL=qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192`, `SIDECAR_LLM_TIMEOUT_SECONDS=3000`, `JD_PIPELINE_TIMEOUT_SECONDS=3600`, `JD_MATCH_THRESHOLD=0.70`, `OLLAMA_MEM_LIMIT=7g`, `OLLAMA_MAX_LOADED_MODELS=2`, `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`. The example file still carries the pre-cutover defaults for a few of these (timeouts, memory cap); the values above are the ones the box runs. See "Embeddings and the LLM" below.
 
 ### 7. First boot (I run)
 
@@ -215,7 +215,7 @@ roughly 8.9 GB now free is **reserved for Ask Roger** (owner,
 limit to give the JD pipeline a bigger model or a longer context; the
 headroom is already spoken for. The
 levers that make the 4b fit next to the embedder are
-`OLLAMA_MAX_LOADED_MODELS=1` (one resident model; the embedder reloads in
+`OLLAMA_MAX_LOADED_MODELS=2` (raised from 1 on 2026-10-01; two resident models, so a chat question no longer evicts the embedder it just used. Previously the embedder reloaded in
 seconds when needed), `OLLAMA_FLASH_ATTENTION=1` and
 `OLLAMA_KV_CACHE_TYPE=q8_0`, with `SIDECAR_LLM_NUM_CTX=8192`. The first
 attempt with both models resident and a full-precision KV cache OOM-killed

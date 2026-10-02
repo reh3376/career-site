@@ -878,20 +878,24 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4c. Test and analysis gaps (opened 2026-09-30)
 
-Measured on 2026-09-30, not estimated. `apps/web` is 117 hand-written
-files and 36 pages.
+Re-measured on 2026-10-01. `apps/web` is 147 hand-written files and 41
+pages, Go is 47 test files against 144 source files, the sidecar is 5
+against 9.
 
-- **The web app has no tests at all.** Not a low number: zero. No test
-  script in `apps/web/package.json`, no testing dependency, no test
-  file. Go is 25 test files against 113 source files and the sidecar is
-  5 against 9, so this is the one area with nothing. It also covers the
-  whole admin console, where a mistake is only visible to Roger and
-  only after it has happened. Start with the surfaces where a silent
-  break is expensive rather than chasing coverage: the booking flow's
-  slot arithmetic and the clearance rule, the JD upload form's states,
-  and the admin scheduler's save-whole-or-refuse behaviour. Vitest plus
-  Testing Library matches the stack; Playwright only if a real
-  end-to-end case earns it.
+- **The web app has one test file.** Opened as "no tests at all, not a
+  low number: zero", which was true on 2026-09-30 and is not now:
+  `pnpm test` runs vitest in CI and `lib/public-routes.test.ts` covers
+  the access policy. That was the right first target, because the same
+  table drives the proxy, `robots.ts` and `sitemap.ts`, so a mistake
+  either serves a members-only page to anyone or 404s a real one.
+
+  The rest of the entry stands, and the three named surfaces are still
+  unwritten: the booking flow's slot arithmetic and the clearance rule,
+  the JD upload form's states, and the admin scheduler's
+  save-whole-or-refuse behaviour. The admin console in general is where
+  a mistake is visible only to Roger and only after it has happened.
+  Vitest is in place; Playwright only if a real end-to-end case earns
+  it.
 
 - **CI runs `go vet` and nothing else for Go.** No `golangci-lint`, no
   `staticcheck`, no `gocyclo`. `go vet` catches a narrow, well-chosen
@@ -902,7 +906,7 @@ files and 36 pages.
   where unused code and accidental complexity will accumulate first.
 
 - **No TypeScript equivalent either.** `knip` or `ts-prune` would find
-  dead exports across a 117-file app that has grown fast. Low value
+  dead exports across a 147-file app that has grown fast. Low value
   individually, but this is the cheapest way to stop the generated-code
   and hand-written surfaces drifting apart.
 

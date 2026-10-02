@@ -1,6 +1,10 @@
 // Package scheduler runs recurring background jobs in the API process.
-// Phase 1 owns the whitelist/expiry pair; later phases add GitHub sync,
-// digests, backups, and retention.
+// Seven are registered in cmd/api/main.go: the expiry warn/cut pair,
+// auto-decline, the calendar token expiry warning, the prompt cache
+// warmer, the Q&A bank embedder, and event anonymisation. In-process
+// rather than cron so a job ships and rolls back with the binary; the
+// cost is that every job runs on each replica, which is fine while
+// there is one.
 package scheduler
 
 import (
