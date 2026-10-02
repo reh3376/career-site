@@ -17,7 +17,7 @@ Open an issue using one of the templates: **Bug report**, **Feature request**, o
 
 ### 2. Ask to be added as a repo collaborator
 
-Email `rogerhenley345@gmail.com` with subject `[career-site] contributor request` and your GitHub username, or use the contact form at **https://rogerhenley.dev/contact**. If Roger approves, you're added as a collaborator on the specific repo(s) you asked about. (A "Request contributor access" form inside the site is still on the roadmap and has not shipped.)
+Use the contact form at **https://rogerhenley.dev/contact?category=contributor_access**, which preselects the "Contributor access on a GitHub repo" topic. Include your GitHub username and which repo you're asking about. If Roger approves, you're added as a collaborator on the specific repo(s) you asked about.
 
 ### 3. Send a pull request
 
@@ -31,7 +31,7 @@ Email `rogerhenley345@gmail.com` with subject `[career-site] contributor request
 4. Push. For `feat/*`, `fix/*` and `claude_dev*` branches a draft PR opens automatically against `main` (see `.github/workflows/auto-pr.yml`); don't race it with a manual `gh pr create`.
 5. Flip the PR to Ready-for-review when it's done. The owner reviews and merges.
 
-`main` is protected by the `protect-main` ruleset: a PR is required, the checks **api (go)**, **web (typescript)**, **sidecar (python)**, **proto (lint, breaking, drift)** and **gitleaks** must pass, and force-pushes and branch deletion are blocked. A red check is fixed in the PR, not skipped or excepted.
+`main` is protected by the `protect-main` ruleset: a PR is required, the checks **api (go)**, **web (typescript)**, **sidecar (python)**, **proto (lint, breaking, drift)** and **gitleaks (secret scan)** must pass, and force-pushes and branch deletion are blocked. A red check is fixed in the PR, not skipped or excepted.
 
 Merge policy: **Squash and merge** — `main` stays a linear history of shipped features. Your commits on the branch can be as messy as you like; the squash keeps the record clean.
 
