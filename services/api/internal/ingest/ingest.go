@@ -144,14 +144,26 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 	newHash := users.HashCorpusContent(body)
 
 	// Content-hash short-circuit: if a document with this
-	// (source_kind, source_path) already exists AND its content_hash
-	// equals what we're about to store, nothing has changed —
-	// re-ingest is a no-op. Callers pay the SELECT but nothing else.
-	// A visibility change on unchanged text still needs the upsert
-	// (it's a metadata write, no re-chunk), so the short-circuit also
-	// requires visibility to match.
+	// (source_kind, source_path) already exists AND nothing the upsert
+	// would write has changed, re-ingest is a no-op. Callers pay the
+	// SELECT but nothing else.
+	//
+	// "Nothing has changed" has to mean every column, not just the
+	// text. The hash covers the body, so a change to any of the
+	// metadata the upsert writes on unchanged text is a metadata write
+	// with no re-chunk, and skipping it strands the old value.
+	// Visibility was already handled for that reason. Title was not,
+	// and it cost a third round trip on one bug: comments were
+	// stripped, the body hash was therefore already correct, and the
+	// reindex meant to fix the stale title skipped the document
+	// because the body had not moved.
+	//
+	// Title, visibility and meta are every column the upsert writes
+	// that is not the lookup key or the hash itself. MIME is not
+	// compared because this path never sets one; if it ever does, it
+	// belongs in this condition on the same day.
 	if existing, err := i.users.GetCorpusDocumentByPath(ctx, in.SourceKind, in.SourcePath); err == nil {
-		if existing != nil && bytes.Equal(existing.ContentHash, newHash) && existing.Visibility == in.Visibility {
+		if unchanged(existing, title, in.Visibility, in.Meta, newHash) {
 			res.DocumentID = existing.ID
 			res.Skipped = true
 			res.CompletedAt = time.Now().UTC()
@@ -240,6 +252,20 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 		slog.String("embedder", res.EmbedderModel),
 	)
 	return res, nil
+}
+
+// unchanged reports whether re-ingesting would write nothing: the body
+// hash matches and so does every other column the upsert sets.
+//
+// Named and separate so it can be tested without a database, and so
+// the list of compared columns is somewhere a reader can check against
+// UpsertCorpusDocument rather than inside a longer condition.
+func unchanged(existing *users.CorpusDocument, title, visibility string, meta, hash []byte) bool {
+	return existing != nil &&
+		bytes.Equal(existing.ContentHash, hash) &&
+		existing.Visibility == visibility &&
+		existing.Title == title &&
+		bytes.Equal(existing.Meta, meta)
 }
 
 // stripHTMLComments removes `<!-- ... -->` spans, including ones
