@@ -13,7 +13,7 @@ is the source of truth for the LLM rollout.
 | Layer | Local (owner's Mac) | Production (CPX41, 8 vCPU / 15.2 GB, since 2026-09-25) |
 |---|---|---|
 | Embeddings | Ollama on the host, `nomic-embed-text`, sidecar at `host.docker.internal:11434` | `ollama` container, `SIDECAR_EMBED_PROVIDER=ollama`, corpus fully on `ollama:nomic-embed-text#p1` (Phase A done 2026-09-21) |
-| LLM gateway | Ollama on the host, `qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192` | **live since 2026-09-22**: the box's `ollama`, `qwen3:4b-q8_0`, 8k context, `OLLAMA_MAX_LOADED_MODELS=1`, flash attention, q8 KV cache, `OLLAMA_MEM_LIMIT=7g` |
+| LLM gateway | Ollama on the host, `qwen3:4b-q8_0`, `SIDECAR_LLM_NUM_CTX=8192` | **live since 2026-09-22**: the box's `ollama`, `qwen3:4b-q8_0`, 8k context, `OLLAMA_MAX_LOADED_MODELS=2` (raised from 1 on 2026-10-01 so the chat and embedding models can both stay resident), `OLLAMA_NUM_PARALLEL=1`, `OLLAMA_KEEP_ALIVE=30m`, flash attention, q8 KV cache, `OLLAMA_MEM_LIMIT=7g` |
 | Corpus | public mount + `./.corpus-private` staged by `make stage-corpus` | public mount + `/opt/career-site-private/corpus` synced by `make sync-corpus`; includes the career facts sheet (`profile`) |
 | JD scoring | requirements v2 → per-requirement retrieval + facts sheet → one judge call per requirement → score formula v2 in code | same code; the gate is the "strong" fit band edited on `/admin/jd` (0.70 on prod; `JD_MATCH_THRESHOLD` only seeds it on first read); one pipeline at a time; 15 to 30 minutes per JD on the CPU |
 | Résumé | JSON with source ids, code-side verification, markdown render, Typst PDF locked with `RESUME_PDF_OWNER_PASSWORD` | same; `RESUME_PDF_OWNER_PASSWORD` is set on prod; the résumé call is ~13 minutes of generation on the box |
@@ -197,8 +197,40 @@ value is never committed.
 | C | fit bands editable on `/admin/jd` (`app_settings`, migration 00022); "strong" is the gate | shipped (PR 89) |
 | C | submitter progress (`progress_pct` / `progress_stage`, migration 00021), reopenable reviews, `jd_result` email by category with the PDF attached | shipped (PRs 87, 89) |
 | D | Typst + pypdf render in sidecar, PDF on the row, token-gated download route | shipped (PR 4, with PR 3b) |
-| later | Ask Roger chat on the same gateway (streaming `Generate`, `chat_usage` kind) | not built (Phase 4 PR 5) |
+| later | Ask Roger chat on the same gateway | **shipped 2026-09-30**, live since. Not streaming: the sidecar gateway is single-shot, so the transport sends one delta. `llm_usage` carries chat rows |
 | later | adapter Modelfile + publish step in `deploy/` | not started; waits on reviewed decision-log labels |
+
+## 5a. The one cache slot, and what it means operationally
+
+`OLLAMA_NUM_PARALLEL=1`, so there is **one KV cache slot** on the box.
+This is the single most important operational fact about the LLM path
+and it is not obvious from any config value on its own.
+
+Every chat prompt opens with the same persona prompt and career facts
+sheet, about two thousand tokens. Prompt evaluation runs at roughly 29
+tokens a second here, so evaluating that prefix costs over a minute, and
+it costs it **once**: llama.cpp reuses the longest matching prefix.
+Measured on production:
+
+    cold                        2435 tokens   prompt_eval  82.5 s
+    after a warm-up call        2435 tokens   prompt_eval   0.8 s
+    next question, still warm   2434 tokens   prompt_eval   0.7 s
+
+A one-minute `prompt-warm` job sends that prefix with `num_predict 1` to
+keep it resident. Steady-state ticks sit at about 0.2 s, so the loop is
+nearly free and pays the full price only when something evicted the
+cache.
+
+**What evicts it.** A JD evaluation uses a different system prompt and
+takes the slot, so chat goes cold while a run is in progress and warms
+again afterwards. The warmer stands aside for a run rather than fighting
+it: warming through one would evaluate two thousand tokens, be evicted
+by the run's next call, and repeat, spending minutes of CPU on a cache
+nothing will read and taking it from the run that is working.
+
+**Editing the career facts sheet evicts it too**, by changing the
+prefix. That is expected and self-healing: the next tick pays once, in
+about a second, then returns to 0.2 s.
 
 ## 6. Rollback
 

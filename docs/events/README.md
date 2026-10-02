@@ -74,10 +74,29 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `jd.result_viewed` | yes | `submission_id`, `via` | a finished result rendered; `via` is `submit` or `reopen` |
 | `jd.pdf_downloaded` | | `submission_id` | the résumé PDF served |
 | `jd.poll_abandoned` | yes | `submission_id`, `waited_ms` | reserved; not yet emitted |
+| `jd.quota_blocked` | | `submitted`, `limit` | a member turned away at the daily cap |
+| `jd.outcome_recorded` | | `submission_id`, `status` | ground truth attached to a submission |
+| `jd.feedback_recorded` | | `submission_id`, `target`, `rating` | the member rated a verdict |
+| `chat.opened` | yes | `surface` | the assistant panel is opened |
+| `chat.asked` | | `conversation_id`, `chars`, `turn` | a question is accepted, **before** the answer. Deliberate: a question that is never answered still leaves a row, and that is the one most worth having |
+| `chat.answered` | | `conversation_id`, `path`, `total_ms`, `miss_reason`, `best_similarity` | an answer is produced. `path` is `qa_bank`, `model`, `degraded`, `out_of_scope`, `no_support` or `error`; the bank-miss fields travel with it so "which phrasings to add" is one ordered query |
+| `chat.abandoned` | yes | `waited_ms`, `had_answer` | the reader leaves while an answer is being written |
+| `chat.citation_click` | yes | `href`, `cta` | a source under an answer is followed |
+| `meeting.view` | yes | | `/meetings` renders |
+| `meeting.duration_picked` | yes | `minutes` | a length is chosen |
+| `meeting.slot_picked` | yes | `minutes`, `lead_days` | a slot is chosen |
+| `meeting.booked` | | `booking_id`, `minutes`, `mode`, `provider`, `lead_days` | a booking is written. `lead_days` is how far ahead they planned |
+| `meeting.cancelled` | | `booking_id`, `by`, `lead_days` | a booking is cancelled. `lead_days` here is how much notice was given, which is the half that says whether the slot was recoverable |
+| `meeting.abandoned` | yes | `step`, `elapsed_ms` | the booking page is left without booking |
 | `contact.submitted` | | `category`, `has_jd` | a contact message stored |
-| `admin.decision_reviewed` | | `decision_id`, `verdict` | a decision-log row graded |
+| `admin.decision_reviewed` | | `decision_id`, `kind`, `verdict`, `corrected`, `dimensions` | a decision-log row graded. `corrected` matters: a graded row that gained a corrected answer is worth something a graded row without one is not |
 | `admin.rescore` | | `submission_id` | a rescore queued |
 | `admin.fit_bands_changed` | | | the fit bands saved |
+| `admin.jd_limit_changed` | | `limit` | the daily JD cap changed |
+| `admin.qa_entry_created` | | `entry_id`, `enabled`, `covers_restricted` | a Q&A bank entry added |
+| `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
+| `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |
+| `admin.qa_entry_deleted` | | `entry_id` | an entry removed |
 | `activity.*` | | | backfill only, from the old `activity_events.kind` |
 
 ## Privacy rules
@@ -97,8 +116,9 @@ them.
 
 ## Reading it
 
-Until an admin surface exists, the read-only query console under
-`/admin/db` is the way in. Two starting points:
+`/admin/analytics` renders the standing views. For anything else the
+read-only query console under `/admin/db` takes SQL directly. Three
+starting points:
 
 ```sql
 -- Landing funnel for the last 30 days, by visitor.
@@ -125,6 +145,16 @@ FROM v;
 SELECT app_commit, props->>'fit' AS fit, count(*)
 FROM events WHERE name = 'jd.finished'
 GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- Which Q&A phrasings to add next, ranked by how nearly they already
+-- worked. A threshold miss wants a new phrasing; a margin miss wants
+-- two entries pulled apart, which is why miss_reason is recorded.
+SELECT props->>'miss_reason' AS why,
+       round((props->>'best_similarity')::numeric, 4) AS best,
+       count(*)
+FROM events
+WHERE name = 'chat.answered' AND props->>'path' = 'model'
+GROUP BY 1, 2 ORDER BY 2 DESC;
 ```
 
 ## Rate limits and abuse
