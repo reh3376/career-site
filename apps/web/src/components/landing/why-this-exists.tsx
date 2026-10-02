@@ -41,13 +41,13 @@ export function WhyThisExists() {
         <div className="mt-8 grid gap-8 md:grid-cols-2">
           <div className="space-y-5 text-base leading-relaxed text-ink-2">
             <p>
-              Thirty years across power, mining, telecom, industrial
-              automation and applied AI does not compress into a document
-              somebody scans for six keywords. The terms that matter are
-              usually equivalent rather than identical. A historian is a
-              time-series database. A control narrative is a
-              specification. Model predictive control is applied
-              optimisation under constraints.
+              Thirty years across oil and gas, power, mining, telecom,
+              manufacturing, industrial automation and applied AI does not
+              compress into a document somebody scans for twelve keywords.
+              The terms that matter are usually equivalent rather than
+              identical. A historian is a time-series database. A control
+              narrative is a specification. Model predictive control is
+              applied ML, optimisation under constraints.
             </p>
             <p>
               Someone who does not recognise the equivalence screens the
@@ -105,11 +105,12 @@ export function WhyThisExistsOt() {
   return (
     <div className="border border-line-strong bg-paper-2 p-5">
       <p className="font-mono text-[13px] leading-relaxed text-ink">
-        Thirty years across power, mining, telecom, automation and applied
-        AI does not compress into a document scanned for six keywords. The
-        terms that matter are equivalent, not identical: historian equals
-        time-series database, control narrative equals specification, MPC
-        equals constrained optimisation. Miss the equivalence and the
+        Thirty years across oil and gas, power, mining, telecom,
+        manufacturing, automation and applied AI does not compress into a
+        document scanned for twelve keywords. The terms that matter are
+        equivalent, not identical: historian equals time-series database,
+        control narrative equals specification, MPC equals applied ML,
+        optimisation under constraints. Miss the equivalence and the
         candidate is screened out before anyone speaks.
       </p>
       <p className="mt-3 font-mono text-[13px] leading-relaxed text-ink-2">
