@@ -117,7 +117,10 @@ var ErrEmpty = errors.New("ingest: body is empty")
 func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResult, error) {
 	res := &IngestResult{StartedAt: time.Now().UTC(), ChunkerName: i.chunker.Name()}
 
-	body := strings.TrimSpace(in.Body)
+	// Comments come out first, so the title, the content hash and the
+	// chunks are all taken from the same comment-free text. See
+	// stripHTMLComments for why.
+	body := stripHTMLComments(strings.TrimSpace(in.Body))
 	if body == "" {
 		return nil, ErrEmpty
 	}
@@ -237,6 +240,82 @@ func (i *Ingester) IngestText(ctx context.Context, in IngestInput) (*IngestResul
 		slog.String("embedder", res.EmbedderModel),
 	)
 	return res, nil
+}
+
+// stripHTMLComments removes `<!-- ... -->` spans, including ones
+// spanning several lines, leaving anything inside a fenced code block
+// alone.
+//
+// This exists because of a real leak. The corpus convention for
+// private material is a scrubbed copy carrying a comment that records
+// what was taken out, for example "three passages were removed here:
+// the ownership structure, a vendor named in an internal procurement
+// disagreement, and a statement that a former employer's customers
+// lost trust". Nothing stripped comments, so that note was chunked,
+// embedded and retrievable, and because it was the first line it also
+// became the document's title and would have appeared as a citation
+// label. A note describing what was hidden is worse than the passage
+// it replaced: it leaks the substance in summary and advertises that
+// something is missing.
+//
+// Comments are author metadata, never content for the model, so they
+// are removed before the title is derived, before the content hash is
+// taken, and before chunking. Code fences are respected because a
+// README explaining HTML or templating legitimately shows `<!--` as
+// an example, and READMEs are ingested.
+//
+// An unterminated comment strips to the end of the document. That can
+// empty it, which returns ErrEmpty and fails the ingest loudly. A
+// loud failure on a malformed document is the right trade against
+// silently publishing whatever followed the `<!--`.
+func stripHTMLComments(text string) string {
+	var out strings.Builder
+	out.Grow(len(text))
+	inFence, inComment := false, false
+
+	for line := range strings.SplitSeq(text, "\n") {
+		rest := line
+		if inComment {
+			_, after, found := strings.Cut(rest, "-->")
+			if !found {
+				continue // whole line is inside the comment
+			}
+			inComment, rest = false, after
+		}
+
+		// A fence marker only counts outside a comment, which the
+		// branch above has already settled for this line.
+		trimmed := strings.TrimSpace(rest)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			inFence = !inFence
+			out.WriteString(line)
+			out.WriteString("\n")
+			continue
+		}
+		if inFence {
+			out.WriteString(line)
+			out.WriteString("\n")
+			continue
+		}
+
+		for {
+			before, after, found := strings.Cut(rest, "<!--")
+			if !found {
+				out.WriteString(rest)
+				break
+			}
+			out.WriteString(before)
+			_, tail, closed := strings.Cut(after, "-->")
+			if !closed {
+				inComment = true
+				break
+			}
+			rest = tail
+		}
+		out.WriteString("\n")
+	}
+
+	return strings.TrimSpace(out.String())
 }
 
 // firstNonEmptyLine returns the first non-blank line of text, with

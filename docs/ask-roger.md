@@ -395,6 +395,46 @@ including `first_token_ms`, and the `human` block with verdict, note,
 
 ## 6. Known issues and things that are not right yet
 
+0c. **The note explaining what had been scrubbed was itself in the
+   corpus.** Found 2026-10-02 while checking whether the Amazon STAR
+   interview prep was ingested. It was, and so was its sibling, and the
+   sibling arrived with this as its first chunk and its title:
+
+       <!-- Scrubbed copy for corpus ingestion. ... Three passages were
+       removed here: the ownership structure, a vendor and department
+       named in an internal procurement disagreement, and a statement
+       that a former employer's customers lost trust. -->
+
+   The convention is sound: a private document gets a scrubbed copy for
+   ingestion, carrying a comment that records what came out so the
+   edit is auditable. Nothing stripped the comment, so the note went
+   into the chunks and the embeddings.
+
+   **What was and was not exposed**, because the difference matters and
+   the first telling of this overstated it. The document is
+   `corpus_only`, so `Citable()` kept it out of every citation list and
+   out of the decision record's titles, and the garbage title never
+   reached a member's screen. It is an admin-surface defect there, not a
+   member-facing one. What did happen is that the note's text was
+   retrievable and reached the model's context like any other private
+   passage, so an answer could be informed by, or paraphrase, a summary
+   of the three things the scrub existed to remove. A note describing
+   what was hidden leaks the substance in miniature and advertises that
+   something is missing, which is a worse artefact than the passage it
+   replaced.
+
+   Fixed in `ingest.stripHTMLComments`, which removes comment spans
+   before the title is derived, before the content hash is taken and
+   before chunking, so all three agree on one comment-free text. Code
+   fences are respected, because an ingested README showing `<!--` as
+   an example is legitimate content. An unterminated comment strips to
+   the end of the document, which can empty it and fail the ingest
+   loudly; that is the right trade against publishing whatever followed
+   the `<!--`. Thirteen tests cover it, including the real document.
+
+   The source files keep their notes. Provenance for Roger is the point
+   of them; they just stop being corpus content.
+
 0b. **The assistant could not see the career record at all.** Roger
    noticed every answer came from the same published article. It was
    worse than that: *every chunk of every answer* did.
