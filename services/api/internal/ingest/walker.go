@@ -86,10 +86,13 @@ func (i *Ingester) WalkDirectory(ctx context.Context, opts WalkOptions) (*WalkRe
 			return nil
 		}
 		meta, stripped := parseFrontMatter(string(body))
+		// Only the declared title. The fallback that reads the first
+		// line is IngestText's job, because by then HTML comments have
+		// been stripped and this has not. Deriving it here produced a
+		// document titled "<!-- Scrubbed copy for corpus ingestion. The
+		// original," which survived the comment fix precisely because a
+		// non-empty Title arriving from here wins over the body.
 		title := meta["title"]
-		if title == "" {
-			title = firstNonEmptyLine(stripped)
-		}
 		rel, relErr := filepath.Rel(opts.Root, path)
 		if relErr != nil {
 			rel = path
