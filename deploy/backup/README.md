@@ -24,9 +24,11 @@ inbound address, so a push would need the Mac reachable, which it is
 not. A laptop that is asleep or off simply misses a day and catches up
 on the next wake, which is why the server keeps its own copies too.
 
-The database is about 13 MB, so a compressed dump is a few megabytes
-and the whole retention above costs well under a gigabyte. There was no
-reason to trade retention for space.
+The database is about 48 MB and a compressed dump is about 7.8 MB, so
+the whole retention above costs well under a gigabyte. There was no
+reason to trade retention for space. It was 13 MB when this was written
+in September; embeddings and the event stream are what grew it, and both
+keep growing, so the number is worth re-reading rather than trusting.
 
 ## What is in a dump, and how to treat it
 
@@ -54,6 +56,15 @@ Not backed up, on purpose: the private corpus under
 the Mac and which is re-synced with `make sync-corpus`; MinIO, which
 holds 104 KB and nothing that matters yet; the Ollama models, which are
 a re-pull.
+
+One caveat on "a re-pull", which affects the rebuild path below.
+`quay.io/minio/minio` is **no longer anonymously pullable** (a verified
+policy change, not a blip; pinning a tag does not help). The running
+container on the server predates that change and is fine, but a rebuild
+from nothing cannot fetch it. Nothing in the current stack reads object
+storage, so the honest answer is to bring the box up without MinIO and
+treat it as a decision to make rather than a step to repeat. See
+`docs/backlog.md`.
 
 ## Install
 
@@ -143,7 +154,14 @@ deploy/live-check.sh https://rogerhenley.dev
    ```
 5. `$CS up -d`, then `deploy/live-check.sh`.
 6. Re-sync the private corpus from the Mac with `make sync-corpus`, and
-   re-pull the Ollama models, which the sidecar does on first use.
+   re-pull the Ollama models, which the sidecar does on first use. Be
+   ready for MinIO to fail to pull, per the caveat above; bring the rest
+   of the stack up without it.
+
+Expect the first Ask Roger answer after a rebuild to be slow. The model
+loads cold and the KV cache prefix is empty, which measured 82.5 s
+against 0.8 s warm. That is the model loading, not the restore failing.
+The `prompt-warm` job rebuilds the prefix within a minute.
 
 Point the DNS last, once the live check passes.
 
