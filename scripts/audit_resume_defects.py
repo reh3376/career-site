@@ -81,16 +81,51 @@ JUDGMENT: dict[str, str] = {
     "editing note in summary": r"Will include standard summary",
     "second-person leftover": r"\byour business\b",
     "sentence ends mid-phrase": r"open-source contribution\s*$",
-    # Not a defect, a disagreement: the site states thirty years. Listed
-    # so the inconsistency is visible, not so it is automatically
-    # "fixed".
-    "conflicting years claim": r"\b25\+\s*years\b",
+    # Resolved 2026-10-02: the career-span figure is thirty years
+    # everywhere, matching the site. The pattern that used to live here,
+    # r"\b25\+\s*years\b", flagged fifty files and could not stay,
+    # because it could not tell two different claims apart. See
+    # career_span_figure() below.
 }
 
 # Deliberately not checked: the phone number. It is a defect on a
 # résumé published to an indexed page and entirely correct on one sent
 # to an employer, so whether it belongs is a property of the
 # destination, not of the file.
+
+# "25+ years" is two different claims wearing the same words, which is
+# why a bare regex was the wrong tool for it.
+#
+# "25+ years inside regulated manufacturing" is the career span. It runs
+# 1996 to 2026, so thirty is the number, and the landing page says
+# thirty. Those were swept on 2026-10-02.
+#
+# "Python (25+ years)" is how long he has written one language. Thirty
+# would date it to 1996, which is a separate factual claim about a
+# separate thing, and not one this script gets to make on his behalf.
+# Twenty-one of these are deliberate and must not be flagged.
+#
+# So the sense is decided by what sits immediately before the figure. A
+# language or toolchain word means it is the skill claim; anything else
+# means it is the career.
+_LANG_SENSE = re.compile(r"(python|pascal|\bc\b|jython|language|toolchain|yrs)", re.I)
+_SPAN_FIGURE = re.compile(
+    r"(?:more than\s+|\\?>\s*)?(?:25\s*\+?|twenty-five)\s*(?:years|yrs)", re.I
+)
+
+
+def career_span_figure(text: str) -> list[str]:
+    """Career-span claims still reading 25 rather than 30.
+
+    Skips the language-duration sense, which is a different claim.
+    """
+    out: list[str] = []
+    for m in _SPAN_FIGURE.finditer(text):
+        if _LANG_SENSE.search(text[max(0, m.start() - 45) : m.start()]):
+            continue
+        out.append(m.group(0).strip())
+    return out
+
 
 def duplicate_job_entries(text: str) -> list[str]:
     """Job headings that appear more than once verbatim.
@@ -115,11 +150,15 @@ def scan(path: Path) -> dict:
     dupes = duplicate_job_entries(text)
     if dupes:
         judg.append("duplicate job entry")
+    spans = career_span_figure(text)
+    if spans:
+        judg.append("conflicting years claim")
     return {
         "file": path.name,
         "mechanical": mech,
         "judgment": judg,
         "duplicates": dupes,
+        "span_figures": spans,
         "clean": not mech and not judg,
     }
 
