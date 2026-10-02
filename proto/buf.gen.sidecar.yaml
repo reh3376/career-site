@@ -11,15 +11,20 @@ managed:
   disable:
     - file_option: go_package
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  # Pinned for the same reason as buf.gen.yaml: an unpinned remote
+  # plugin makes `make gen` non-reproducible, and on 2026-09-30 an
+  # upstream release failed check-gen on main with no code change.
+  # Versions derived from the committed output, each confirmed by
+  # regenerating to zero drift.
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: services/api/gen
     opt: paths=source_relative
-  - remote: buf.build/grpc/go
+  - remote: buf.build/grpc/go:v1.6.2
     out: services/api/gen
     opt: paths=source_relative
-  - remote: buf.build/protocolbuffers/python
+  - remote: buf.build/protocolbuffers/python:v36.2
     out: services/sidecar/src
-  - remote: buf.build/protocolbuffers/pyi
+  - remote: buf.build/protocolbuffers/pyi:v36.2
     out: services/sidecar/src
-  - remote: buf.build/grpc/python
+  - remote: buf.build/grpc/python:v1.84.0
     out: services/sidecar/src

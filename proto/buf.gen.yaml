@@ -13,10 +13,10 @@ managed:
     - file_option: go_package   # set explicitly in each .proto
 plugins:
   # Go: message types + Connect handlers/clients (services/api).
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: services/api/gen
     opt: paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - remote: buf.build/connectrpc/go:v1.21.0
     out: services/api/gen
     opt: paths=source_relative
   # TypeScript: message types + service descriptors for connect-es (apps/web).
@@ -31,10 +31,29 @@ plugins:
   # failed check-gen on main. No code had changed. The images job is
   # gated on that job, so nothing was published and the deploy stopped.
   #
-  # Bump this deliberately and commit the regenerated output with it.
-  # The other four plugins here carry the same latent hazard and are
-  # tracked in docs/backlog.md; they are left alone rather than pinned
-  # to a guessed version, because a wrong pin breaks generation outright.
+  # Bump any of these deliberately and commit the regenerated output
+  # with it.
+  #
+  # Every plugin in both templates is now pinned. The versions were not
+  # guessed, which the earlier note was right to warn against: they were
+  # read out of the committed output and then confirmed by regenerating
+  # and requiring zero drift.
+  #
+  #   protocolbuffers/go   stamped "protoc-gen-go v1.36.12" in every .pb.go
+  #   connectrpc/go        connectrpc.com/connect v1.21.0 in services/api/go.mod
+  #   protocolbuffers/*    the _pb2.py header says runtime 7.36.2, and the
+  #                        plugin numbering drops the major: v36.2. Checked
+  #                        by pinning v33.2 first, which rewrote 16 files to
+  #                        runtime 6.33.2 and proved the mapping.
+  #   grpc/go              stamped "protoc-gen-go-grpc v1.6.2"
+  #   grpc/python          no version stamp in its output, so pinned to the
+  #                        grpcio the sidecar runs (1.84.0) and verified by
+  #                        drift like the rest.
+  #
+  # The BSR cannot answer this for you: `buf registry plugin info` refuses
+  # protoc plugins outright, and the registry API needs a login. The
+  # committed output is the better authority anyway, because it is what
+  # CI compares against.
   - remote: buf.build/bufbuild/es:v2.16.0
     out: apps/web/src/gen
     opt:
@@ -44,9 +63,9 @@ plugins:
   # Python: message types (+ stubs) for evaluation tooling in the sidecar.
   # include_imports also emits buf/validate/validate_pb2.py so the sidecar
   # and scripts/gen_api_docs.py can read validation rules from descriptors.
-  - remote: buf.build/protocolbuffers/python
+  - remote: buf.build/protocolbuffers/python:v36.2
     out: services/sidecar/src
     include_imports: true
-  - remote: buf.build/protocolbuffers/pyi
+  - remote: buf.build/protocolbuffers/pyi:v36.2
     out: services/sidecar/src
     include_imports: true
