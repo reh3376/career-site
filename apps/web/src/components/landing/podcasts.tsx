@@ -16,6 +16,12 @@
 //
 // The links are external, so the site's event beacon records a
 // link.external click on each without any handler here.
+//
+// The show's logo is served from this origin, cropped from the tile the
+// show uses, rather than hot-linked. Same reasoning as the embed: the
+// page loads nothing from anywhere else.
+
+import Image from "next/image";
 
 type Episode = {
   title: string;
@@ -61,16 +67,33 @@ export function Podcasts() {
       className="scroll-mt-20 border-t border-line bg-canvas"
     >
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-10 sm:py-24">
-        <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
-          on other people&rsquo;s shows
-        </p>
-        <h2
-          id="podcasts-heading"
-          className="font-display mt-3 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
-          style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
-        >
-          {SHOW}.
-        </h2>
+        <div className="flex items-start gap-5 sm:gap-6">
+          {/* The show's own cover art, cropped from the tile the show
+              uses. alt is empty on purpose: the only thing the image
+              says is the show's name, and the heading beside it
+              already says that, so announcing it twice is noise for a
+              screen reader rather than information. */}
+          <Image
+            src="/images/two-guys-and-a-plc.webp"
+            alt=""
+            width={256}
+            height={256}
+            sizes="80px"
+            className="size-16 shrink-0 rounded-md border border-line sm:size-20"
+          />
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+              on other people&rsquo;s shows
+            </p>
+            <h2
+              id="podcasts-heading"
+              className="font-display mt-3 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
+              style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
+            >
+              {SHOW}.
+            </h2>
+          </div>
+        </div>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink-2">
           Two conversations about controls, plant systems and where applied
           AI actually earns its place on a production floor.
@@ -112,6 +135,11 @@ export function Podcasts() {
 
 // The same two episodes as an HMI panel. Same data, same order, so the
 // modes cannot drift.
+//
+// No logo here, deliberately. OT mode renders this page as a plant
+// overview screen, and a real HMI does not carry a vendor's brand art
+// on a status tile. The show's name is already the first line of each
+// panel, which is the information the logo would be carrying.
 export function PodcastsOt() {
   return (
     <div className="grid gap-px border border-line-strong bg-line-strong sm:grid-cols-2">
