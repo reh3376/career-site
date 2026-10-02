@@ -346,7 +346,7 @@ to argue against. The reasoning is on roadmap item 1.5.
 | FR-CNT-13 | **Downloads.** The site shall offer résumé/CV PDF variants, versioned, with downloads recorded to the member's history. | Must | **Not built, and declined 2026-10-01.** See roadmap 1.5: a generic public résumé invites the keyword screening the site exists to argue against. The JD reviewer's tailored résumé is the intended path. |
 | FR-CNT-14 | Résumé variants should be generated from structured content (`content/resumes/*.yaml` + role data) by a build script so that site and PDFs never diverge. | Should | **Not built** as described. The JD reviewer does generate a résumé per posting from structured records, which is the stronger form of this. |
 | FR-CNT-15 | **Contact.** The site shall present contact options chosen by the owner (contact form, scheduling link, LinkedIn, email) and an availability statement (open to roles, location/remote preferences). | Must (**Shipped**) | `/contact` plus the scheduler. The hero now carries an explicit availability line naming Principal and Senior Principal roles. |
-| FR-CNT-16 | **Content model.** All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time. | Must (**Shipped**) | All content under `apps/web/content/` as Markdown with front matter. |
+| FR-CNT-16 | **Content model.** All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time. | Must (**Partial**) | Marked Shipped until 2026-10-02, which overstated it: the storage half is done, the validation half is not. All content is Markdown with front matter under `apps/web/content/`, but nothing validates that front matter at build time. `packages/schema/` was deleted on 2026-10-02 (§7.2) because it was unused and disagreed with the content; frontmatter is typed in TypeScript where it is read, which catches a missing field at compile time but does not enforce a schema across the content set. |
 | FR-CNT-17 | Each content item shall carry: `id`, `slug`, `type`, `title`, `summary`, dates, `tracks` (weights), `tags`, `visibility` (`landing` or `member`), `chatbot_include`, `assets`, and `related` links. | Must (partially **Shipped**) | **Partially shipped.** Articles carry title, subtitle, date, series, part and tags. No `id` or `type` field. |
 | FR-CNT-18 | A "What's new" feed shall list items added or materially updated in the last 90 days. | Should | **Not built.** No what's-new feed. |
 | FR-CNT-19 | External links shall open in a new tab with `rel="noopener"`, and CI shall check link health on content changes. | Should (partially **Shipped**) | **Partially shipped.** External links carry `rel="noopener noreferrer"` and `target="_blank"`. No CI link checker. |
@@ -682,9 +682,15 @@ Routes marked **shipped** exist under `apps/web/src/app` as of 2026-09-22; the r
 
 ### 7.2 Content types and frontmatter
 
-All content lives under `content/`. The schema is defined once as JSON Schema in `packages/schema/` (authored as Pydantic models in the sidecar and exported), consumed by the Go API when it loads the catalog and by generated TypeScript types on the web side, and enforced in CI.
+All content lives under `content/`. The schema was to be defined once as JSON Schema in `packages/schema/` (authored as Pydantic models in the sidecar and exported), consumed by the Go API when it loads the catalog and by generated TypeScript types on the web side, and enforced in CI.
 
-**Status (2026-09-22).** The content model below is specification. What exists: the public corpus under `apps/web/content` (`articles/`, `photos/`), mounted into the API as `/corpus`, and the private corpus mounted as `/corpus-private` (see §7.4). Each top-level subdirectory of a mount is a `source_kind` (for example `profile` for the career facts sheet). `packages/schema/` and `content/` as drawn here do not exist yet.
+**Status (2026-10-02).** The content model below is specification and has not been implemented. What exists: the public corpus under `apps/web/content` (`articles/`, `photos/`, `other/`), mounted into the API as `/corpus`, and the private corpus mounted as `/corpus-private` (see §7.4). Each top-level subdirectory of a mount is a `source_kind` (for example `profile` for the career facts sheet). `content/` as drawn here does not exist.
+
+`packages/schema/` **was deleted on 2026-10-02** (owner's decision) rather than left as a stub. It held one schema file that nothing imported: no validator, no `career-cli content validate`, no `content-validate.yml`, no fixtures. It also required six frontmatter fields (`id`, `slug`, `type`, `summary`, `visibility`, `chatbot_include`) that no committed article carries, so not a single content file would have validated against it. An unused schema that contradicts the content it nominally describes is worse than no schema, because the next reader assumes it is enforced.
+
+What shipped instead is simpler and is the thing to read: articles are markdown under `apps/web/content/articles/`, published through an explicit allow-list in `apps/web/src/lib/articles.ts`, with frontmatter typed in TypeScript at the point of use. Two of the schema's ideas did survive, as database columns rather than frontmatter: `visibility` and `chatbot_include` are live on the corpus tables.
+
+If the content model below is ever built, the natural trigger is the admin content CMS (`docs/backlog.md` item 11) that replaces the allow-list with a database. Validation stops being optional at that point, and the schema should be re-authored against the frontmatter that exists rather than restored from git history.
 
 Common fields (every type):
 
@@ -1059,7 +1065,6 @@ career-site/
 │       ├── src/career_sidecar/
 │       ├── src/career/ · src/buf/  # generated Python types, gRPC stubs, and buf.validate descriptors (committed)
 │       └── tests/
-├── packages/schema/              # planned: content JSON Schema (exported from sidecar Pydantic models) → TS types
 ├── content/                      # planned: roles, projects, presentations, skills, credentials, resumes, qa, tracks.yaml, site.yaml (articles and photos live in apps/web/content today)
 ├── docker-compose.yml · docker-compose.prod.yml   # dev stack and the production overlay (caddy, web, api, sidecar, ollama, postgres, mailpit, minio)
 ├── deploy/
@@ -1116,7 +1121,6 @@ Workflows present in the repository on 2026-09-22: `auto-pr.yml`, `ci.yml`, `cod
 
 | Layer | What is tested | How |
 |---|---|---|
-| Schema | Every content type validates; invalid fixtures fail with precise errors | `pytest` in `packages/schema` |
 | API unit (Go) | Auth (hashing, tokens, sessions, rate limits, MFA), personalization scoring, citation validation, retention rules, scheduler | `go test -race`; PostgreSQL via `testcontainers-go`; sidecar replaced by an in-process fake |
 | API contracts (UATS) | Every unary RPC: status, JSONPath body assertions, error variants, auth-boundary variants; specs tagged with the FR IDs they verify | `make test-uats` against the Compose stack; `block` once active (§10.6) |
 | gRPC and streaming contracts (UDTS) | `SidecarService` RPCs and `ChatService.SendMessage` streaming; proto hash pinned per spec | Go contract tests under `tests/udts/`, wrapped by the UDTS runner; `block` |

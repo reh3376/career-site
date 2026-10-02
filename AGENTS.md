@@ -17,7 +17,6 @@ services/api/          Go ConnectRPC API (owns request path, member data, stream
 services/sidecar/      Python gRPC sidecar (embed, rerank, classify, batch jobs)
 apps/web/              Next.js frontend (App Router, RSC, connect-es)
 docs/                  FSD, ADRs, generated API reference, backlog, tuning log, UCTS specs
-packages/schema/       JSON Schema for a content model nothing reads yet (see its README)
 deploy/                Caddy, postgres init, and the production deploy runbook
 ```
 
