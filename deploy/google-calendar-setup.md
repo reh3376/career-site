@@ -279,10 +279,25 @@ https://myaccount.google.com/permissions and connect again.
 
 **Booking works, then stops about a week later.** This is the one real
 cost of staying in Testing: Google expires refresh tokens for
-unverified apps after **seven days**. The scheduler will say the
-credential was rejected. Press **Reconnect** and it works again for
-another week. To remove the limit, publish the consent screen and go
-through Google's verification.
+unverified apps after **seven days**. Press **Reconnect** and it works
+again for another week. To remove the limit, publish the consent screen
+and go through Google's verification.
+
+You should not find out this way any more. Since 2026-10-01 a scheduled
+job warns by email before the token lapses rather than after:
+
+- `calendar-expiry-warn` runs every six hours
+  (`services/api/internal/handlers/calendar_expiry.go`).
+- It counts seven days from when the credential was last written and
+  emails the owner once inside the final two days.
+- The marker is the `app_settings` key `calendar_expiry_warned_for`,
+  holding the connection's `updated_at`. Because the marker is the
+  timestamp rather than a boolean, pressing **Reconnect** re-arms the
+  warning automatically; there is nothing to reset by hand.
+
+The warning is advisory. It does not refresh anything, because only you
+can complete Google's consent screen. If it fires and you ignore it,
+booking breaks exactly as described above.
 
 **"The calendar is not reachable right now."** Google answered with an
 error rather than refusing the credential. Usually transient. The

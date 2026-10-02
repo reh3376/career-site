@@ -6,8 +6,8 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-10-01, 23:55 UTC. Production is `0ca151e2c502`,
-database at migration 48.
+Last updated 2026-10-02. Production is `0ca151e2c502`, database at
+migration 48.
 
 ---
 
@@ -55,9 +55,18 @@ rather than finished.
 - **Which Whiskey House systems incorporate an LLM at runtime**, as
   opposed to having been built with AI assistance. Only the on-prem SME
   chat agent is claimed today, deliberately.
-- **Whether the golden set should grow toward ten**, which needs real
-  postings.
-- **Scope for the nightly metrics export** to object storage.
+- **Scope for the nightly metrics export** to object storage. Note that
+  `minio` cannot currently be pulled, so this needs a storage decision
+  before it needs code.
+
+**Answered since:** the golden set reached ten on 2026-09-30, when
+`cornerstone` was added and labelled above the gate, so the question of
+whether it should grow toward ten is closed by having done it. The
+composition is now four chosen and six random, seven above the gate and
+three below. Run 15 scored 100 percent gate accuracy with no ordering
+violations and a margin of 0.179, up from 0.107 on run 12. The thin side
+is the negatives: three is not enough to claim the gate rejects
+correctly, and that is the next thing the set needs.
 
 ## 2. MDEMG, investigated and not adopted
 

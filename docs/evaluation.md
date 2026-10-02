@@ -26,10 +26,17 @@ this system's business. An unlabelled posting is excluded, because an
 evaluation compares against an expectation and a posting nobody has
 judged has none.
 
-Nine postings today, three chosen and six drawn at random from a
+Ten postings today, four chosen and six drawn at random from a
 job-board search and taken in the order results came back. The random
 ones matter more than the chosen ones: a set assembled to be passed
 tells you nothing.
+
+Of the ten, seven are labelled above the gate and three below. That
+imbalance is a known weakness rather than a design: three negatives is a
+thin basis for claiming the gate rejects correctly, and a set this
+small can read 100 percent while still being wrong about the next
+posting. Growing the negative side needs real postings the owner is
+willing to label, which is the constraint, not the intent.
 
 Managed on `/admin/evals`. Tables: `golden_postings` (migrations 00027,
 00030).
@@ -45,7 +52,7 @@ at a time. Not a copy of the pipeline, so a run cannot pass against
 something that is not serving members.
 
     about 30 to 50 minutes per posting on the CPX41
-    about 5 hours for nine
+    about 5 to 6 hours for ten
     one posting at a time; PipelineConcurrency = 1
 
 Per posting the pipeline makes roughly 16 model calls: one
