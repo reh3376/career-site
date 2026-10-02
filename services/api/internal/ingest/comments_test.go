@@ -3,6 +3,8 @@ package ingest
 import (
 	"strings"
 	"testing"
+
+	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
 // The leak these tests exist to prevent: a scrubbed corpus copy
@@ -141,4 +143,39 @@ func TestDeclaredTitleWinsButDerivedTitleIsCommentFree(t *testing.T) {
 			t.Errorf("declared title = %q, want %q", meta["title"], "Declared")
 		}
 	})
+}
+
+// The reindex short-circuit. It skipped the document whose title this
+// package had just learned to compute differently, because the body
+// had not moved, so the stale title survived two deploys and two
+// reindexes.
+func TestUnchangedComparesEveryColumnTheUpsertWrites(t *testing.T) {
+	hash := []byte{1, 2, 3}
+	meta := []byte(`{"a":1}`)
+	base := &users.CorpusDocument{
+		Title:       "General Interview Prep",
+		Visibility:  users.VisibilityCorpusOnly,
+		Meta:        meta,
+		ContentHash: hash,
+	}
+
+	if !unchanged(base, base.Title, base.Visibility, meta, hash) {
+		t.Error("identical document should skip")
+	}
+	// The real regression: same body, different title.
+	if unchanged(base, "<!-- Scrubbed copy for corpus ingestion. The original,", base.Visibility, meta, hash) {
+		t.Error("a title change on unchanged text must not skip")
+	}
+	if unchanged(base, base.Title, users.VisibilityPublic, meta, hash) {
+		t.Error("a visibility change on unchanged text must not skip")
+	}
+	if unchanged(base, base.Title, base.Visibility, []byte(`{"a":2}`), hash) {
+		t.Error("a meta change on unchanged text must not skip")
+	}
+	if unchanged(base, base.Title, base.Visibility, meta, []byte{9, 9, 9}) {
+		t.Error("a body change must not skip")
+	}
+	if unchanged(nil, base.Title, base.Visibility, meta, hash) {
+		t.Error("a document that does not exist yet must not skip")
+	}
 }

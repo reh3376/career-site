@@ -454,6 +454,23 @@ including `first_token_ms`, and the `human` block with verdict, note,
    is a lint directive rather than anything private, and it clears on
    that kind's next reindex, when its content hash changes.
 
+   **And a third round, for the same reason as the second.** With the
+   walker fixed and deployed, the reindex skipped both documents.
+   `IngestText` short-circuits on the content hash, the first reindex
+   had already stripped the comments, so the body had not moved and the
+   stale title survived. The existing comment on that short-circuit
+   shows the author had met this class before and solved it for
+   `visibility`: "a visibility change on unchanged text still needs the
+   upsert, so the short-circuit also requires visibility to match."
+   Title is the same category and was simply not in the list.
+
+   It compares every column the upsert writes now, extracted as
+   `unchanged()` so the list sits beside `UpsertCorpusDocument` where a
+   reader can check one against the other, rather than inside a longer
+   boolean. Three attempts, three real and distinct defects, all in the
+   same few lines: content into chunks, content into a title, and
+   deciding whether anything changed at all.
+
 0b. **The assistant could not see the career record at all.** Roger
    noticed every answer came from the same published article. It was
    worse than that: *every chunk of every answer* did.
