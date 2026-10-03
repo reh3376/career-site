@@ -89,7 +89,7 @@ Seven recurring jobs run inside this process rather than as cron entries, so the
 | `expiry-warn` | `EXPIRY_INTERVAL_SECONDS` | warns members whose access is about to lapse |
 | `expiry-cut` | `EXPIRY_INTERVAL_SECONDS` | revokes it when it does |
 | `auto-decline` | `EXPIRY_INTERVAL_SECONDS` | declines registrations the owner never acted on |
-| `calendar-expiry-warn` | 6h | warns the owner before the Google refresh token expires |
+| `calendar-health` | 6h | probes the Google credential, mails the owner when it is refused, and keeps it from ageing into Google's six-month inactivity expiry |
 | `prompt-warm` | 1m | keeps the LLM KV cache prefix warm |
 | `qa-embed` | 5m | embeds newly approved Q&A bank phrasings |
 | `events-anonymize` | 24h | drops event identity after `EVENT_IDENTITY_RETENTION_DAYS` |
