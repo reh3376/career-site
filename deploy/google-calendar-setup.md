@@ -287,21 +287,31 @@ tokens for projects whose publishing status is **Testing** after seven
 days. Press **Reconnect** and it works for another week. The real fix is
 to publish, which is the next section.
 
-You should not find out this way any more. Since 2026-10-01 a scheduled
-job warns by email before the token lapses rather than after:
+You should not find out this way. A scheduled job watches the
+credential and mails you when it stops working:
 
-- `calendar-expiry-warn` runs every six hours
-  (`services/api/internal/handlers/calendar_expiry.go`).
-- It counts seven days from when the credential was last written and
-  emails the owner once inside the final two days.
-- The marker is the `app_settings` key `calendar_expiry_warned_for`,
+- `calendar-health` runs every six hours
+  (`services/api/internal/handlers/calendar_health.go`).
+- Each run makes a real Google call. If it is refused, you get one email
+  carrying Google's own error text and a reconnect link.
+- The marker is the `app_settings` key `calendar_health_warned_for`,
   holding the connection's `updated_at`. Because the marker is the
-  timestamp rather than a boolean, pressing **Reconnect** re-arms the
-  warning automatically; there is nothing to reset by hand.
+  timestamp rather than a boolean, pressing **Reconnect** re-arms it
+  automatically; there is nothing to reset by hand. A recovery clears
+  it, so a second failure is reported rather than swallowed.
+
+It reports a break rather than predicting one, within six hours. The
+first version predicted instead, counting seven days from the
+connection, and that only worked while the project stayed in Testing;
+see "Making the warning stop being a lie" below for why it was changed.
+
+The probe is also a keep-alive. Google expires a refresh token unused
+for six months, and a credential exercised every six hours never gets
+near that, so the one remaining time-based expiry defends itself.
 
 The warning is advisory. It does not refresh anything, because only you
 can complete Google's consent screen. If it fires and you ignore it,
-booking breaks exactly as described above.
+booking stays broken exactly as described above.
 
 ---
 
@@ -337,17 +347,26 @@ because it comes from being unverified rather than from Testing.
 
 ### Making the warning stop being a lie
 
-`calendar-expiry-warn` hard-codes `tokenLife = 7 * 24h`. Once published
-that assumption is false, so it emails a reconnect warning about five
-days after each connection for no reason. One per connection rather than
-a flood, because the marker is keyed on `updated_at`, but still wrong.
+**Done on 2026-10-03, before publishing rather than after.**
 
-**Change it in the same PR as publishing**, or the first thing the new
-arrangement does is cry wolf. What remains true after publishing is that
-a token can still be revoked, can lapse after six months of inactivity,
-and can be rejected for reasons this application cannot predict, so the
-job is worth keeping; it should warn on an actual rejection rather than
-on a fixed seven-day clock.
+`calendar-expiry-warn` hard-coded `tokenLife = 7 * 24h` and warned two
+days out. Publishing removes that deadline without removing the
+arithmetic, so the job would have mailed a reconnect warning about five
+days after every connection, for an expiry that no longer happens. One
+per connection rather than a flood, because the marker is keyed on
+`updated_at`, but a warning that is sometimes wrong is one you learn to
+skip, and then it is worth less than no warning.
+
+It now probes instead of predicting. `calendar-health` calls the
+provider's `Healthy` on every run and reports what Google actually says.
+There is no token lifetime left in the code, so there is nothing to go
+stale when the publishing status changes: it is correct in Testing,
+after publishing, and if the credential is revoked by hand.
+
+The one place seven days survive is a hint in the email. If the
+connection happens to be six to nine days old when it fails, the message
+names the Testing cap as the likely cause and says publishing ends it.
+That is read off the connection's age, not off an assumed status.
 
 ### The logo
 

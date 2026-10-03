@@ -435,8 +435,13 @@ func main() {
 	// tests can drive them quickly.
 	expiry := handlers.NewExpiryJobs(log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail)
 	autoDecline := handlers.NewAutoDeclineJobs(log, userRepo, decisionHandler, cfg.PendingApprovalTTL)
-	calendarExpiry := handlers.NewCalendarExpiryJob(
-		log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL)
+	// The probe is the provider's own Healthy call, which goes through
+	// the wrapper that records connection health, so a run both tests
+	// the credential and keeps it from ageing into Google's six-month
+	// inactivity expiry.
+	calendarHealth := handlers.NewCalendarHealthJob(
+		log, userRepo, mailer, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
+		calProvider.Healthy)
 	expiry.SetEvents(eventWriter)
 	autoDecline.SetEvents(eventWriter)
 	sched := scheduler.New(log,
@@ -450,7 +455,7 @@ func main() {
 		// about two days out. The marker is a row in app_settings keyed
 		// on the connection's updated_at, so a reconnect re-arms it and
 		// a restart does not resend.
-		scheduler.Job{Name: "calendar-expiry-warn", Interval: 6 * time.Hour, Run: calendarExpiry.Run},
+		scheduler.Job{Name: "calendar-health", Interval: 6 * time.Hour, Run: calendarHealth.Run},
 		// Identity retention on the event stream: blank user, session,
 		// anon id and address hash on rows older than the window.
 		// Fills in Q&A phrasing vectors. Five minutes because the only
