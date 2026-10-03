@@ -61,10 +61,14 @@ Left menu → **APIs & Services** → **OAuth consent screen**.
    then **Save and continue**.
 8. Summary: **Back to dashboard**.
 
-Leave the publishing status as **Testing**. Publishing triggers
-Google's verification review, which is weeks of work for an application
-with exactly one user. See the seven-day note at the end of this
-document for the one cost of staying in Testing.
+**Publishing status: see "Publishing and the seven-day token" below.**
+
+This document used to say "leave it as Testing, publishing triggers
+Google's verification review, which is weeks of work". That is wrong
+and it cost a weekly reconnect for no reason. Publishing and submitting
+for verification are two separate actions: you can move to **In
+production** and simply never submit. Google's own help describes
+verification as a request the developer chooses to send.
 
 **Why User data and not Application data.** The distinction is whose
 data it is. User data belongs to a Google user and is reached by asking
@@ -224,10 +228,11 @@ absent from the compose file is invisible to the container, because
    credentials inside someone else's chrome is the shape of a phishing
    page.
 4. Choose the account whose calendar you want booked.
-5. **You will see "Google hasn't verified this app".** This is expected
-   and is the consequence of staying in Testing. Click **Advanced**,
-   then **Go to rogerhenley.dev scheduler (unsafe)**. It is your own
-   application; the warning means unreviewed, not unsafe.
+5. **You will see "Google hasn't verified this app".** Expected. It is
+   the consequence of being **unverified**, not of being in Testing, so
+   it stays after publishing until brand verification passes. Click
+   **Advanced**, then **Go to rogerhenley.dev scheduler (unsafe)**. It
+   is your own application; the warning means unreviewed, not unsafe.
 6. The consent screen lists what is being asked for. It should mention
    seeing and editing **events** on your calendars, and seeing when you
    are busy. It should **not** ask to read all your calendar data.
@@ -277,11 +282,10 @@ first authorisation unless asked to force consent, which this
 application does. If you see it anyway, revoke the app at
 https://myaccount.google.com/permissions and connect again.
 
-**Booking works, then stops about a week later.** This is the one real
-cost of staying in Testing: Google expires refresh tokens for
-unverified apps after **seven days**. Press **Reconnect** and it works
-again for another week. To remove the limit, publish the consent screen
-and go through Google's verification.
+**Booking works, then stops about a week later.** Google expires refresh
+tokens for projects whose publishing status is **Testing** after seven
+days. Press **Reconnect** and it works for another week. The real fix is
+to publish, which is the next section.
 
 You should not find out this way any more. Since 2026-10-01 a scheduled
 job warns by email before the token lapses rather than after:
@@ -298,6 +302,65 @@ job warns by email before the token lapses rather than after:
 The warning is advisory. It does not refresh anything, because only you
 can complete Google's consent screen. If it fires and you ignore it,
 booking breaks exactly as described above.
+
+---
+
+## Publishing and the seven-day token
+
+The seven-day expiry is a property of the **Testing** publishing status,
+not of being unverified. Google's OAuth documentation ties it to "a
+publishing status of 'Testing'". Leaving Testing removes it.
+
+**Publishing is not the same as submitting for verification.** This
+document asserted the opposite for weeks, which is why the reconnect was
+treated as unavoidable. They are two separate actions, and Google's help
+describes verification as a request the developer chooses to send. You
+can publish and never submit.
+
+### What changes, and what does not
+
+| | Testing | In production, unverified |
+|---|---|---|
+| Refresh token | expires every 7 days | no 7-day expiry |
+| "Google hasn't verified this app" | shown | **still shown** |
+| New-user cap | 100 test users | 100 new users |
+| Verification review | n/a | only if you submit one |
+
+The user cap is irrelevant at one user. The warning screen is unchanged,
+because it comes from being unverified rather than from Testing.
+
+### Doing it
+
+1. Google Auth Platform → **Audience** → **Publish app**, and confirm.
+2. Reconnect once on `/admin/scheduler`. The existing token keeps its
+   seven-day fate; a new one minted under the new status does not.
+
+### Making the warning stop being a lie
+
+`calendar-expiry-warn` hard-codes `tokenLife = 7 * 24h`. Once published
+that assumption is false, so it emails a reconnect warning about five
+days after each connection for no reason. One per connection rather than
+a flood, because the marker is keyed on `updated_at`, but still wrong.
+
+**Change it in the same PR as publishing**, or the first thing the new
+arrangement does is cry wolf. What remains true after publishing is that
+a token can still be revoked, can lapse after six months of inactivity,
+and can be rejected for reasons this application cannot predict, so the
+job is worth keeping; it should warn on an actual rejection rather than
+on a fixed seven-day clock.
+
+### The logo
+
+Publishing does not display an app name or logo on the consent screen.
+That needs **brand verification**, which is the lighter-weight process:
+automated and usually a few minutes, with a manual review of two to
+three business days only in some cases. Not the heavyweight security
+review that applies to restricted scopes.
+
+The logo to upload is `apps/web/public/images/oauth-logo.png`, 120 square
+as Google recommends. It is the same mark as the site's favicon, a step
+response settling onto setpoint, so the browser tab and the consent
+screen agree about who is asking.
 
 **"The calendar is not reachable right now."** Google answered with an
 error rather than refusing the credential. Usually transient. The
