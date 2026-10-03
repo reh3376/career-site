@@ -6,12 +6,19 @@ export const metadata: Metadata = {
     "What this site collects, why, how long it is kept, and how to ask for it to be removed.",
 };
 
-const UPDATED = "22 September 2026";
+const UPDATED = "2 October 2026";
 
 // Plain statements, one per paragraph, in the order a visitor meets
-// them: anonymous visit, contact, registration, JD review, then the
-// rules that apply to all of it. Kept in step with docs/events/README.md
-// and the retention job in the api; change both when either changes.
+// them: anonymous visit, contact, registration, JD review, meetings,
+// then the rules that apply to all of it. Kept in step with
+// docs/events/README.md and the retention job in the api; change both
+// when either changes.
+//
+// The meetings section was missing until 2026-10-02. The scheduler
+// shipped on 29 September and this page was last written on the 22nd,
+// so for a week the one place a member's details left this server for
+// a third party was the one flow the policy did not describe. If a
+// feature sends anything anywhere, it belongs here in the same PR.
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
@@ -85,6 +92,24 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Booking a meeting">
+          <p>
+            Booking stores your name, email address, the length you chose,
+            the time, and any note you add. The same details are written
+            into my Google Calendar as the event itself: your name in its
+            title, your note in its description, and your email address as
+            an attendee, which is how Google may send you an invitation.
+            Google receives what you put on the booking form, and the
+            calendar connection is to my own calendar rather than to
+            yours.
+          </p>
+          <p>
+            Cancelling removes the event from the calendar and marks the
+            booking cancelled here. Both of us are emailed when a meeting
+            is booked and when one is cancelled.
+          </p>
+        </Section>
+
         <Section title="Email">
           <p>
             Transactional email (verification, approval, review results) is sent
@@ -105,8 +130,9 @@ export default function PrivacyPage() {
               access expires.
             </li>
             <li>
-              Accounts, contact messages, and job description reviews are kept
-              until you ask for them to be removed.
+              Accounts, contact messages, job description reviews, and
+              meeting bookings are kept until you ask for them to be
+              removed. There is no job that expires them on a schedule.
             </li>
           </ul>
         </Section>
