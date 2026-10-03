@@ -15,13 +15,12 @@ in the sections below.
   api as `career_api` holding only the grants it needs, keep
   `career_admin_readonly` for `/admin/db`. One migration and one
   `.env.prod` change.
-- **Backups. DECIDED 2026-09-22: yes, build it.** Open detail: the
-  server cannot reach the Mac (Starlink CGNAT gives no inbound), so the
-  Mac has to pull. Plan unless Roger says otherwise: nightly `pg_dump`
-  on the server with seven days kept there, a launchd job on the Mac
-  pulling over ssh whenever it is awake, a restore rehearsal written
-  into `deploy/README.md`. Dumps include the résumé PDFs stored on
-  `jd_submissions`, so they are treated as secrets at rest.
+- **Backups. DONE, verified running 2026-10-02.** Nightly `pg_dump` on
+  a systemd timer with 14 daily / 8 weekly / 6 monthly kept, a launchd
+  job on the Mac pulling over ssh, and a weekly automated restore into
+  a scratch database that counts rows against live. Last verified run
+  matched on all six tables plus 36 résumé PDFs. Runbook in
+  `deploy/backup/README.md`. Nothing left here.
 - **Admin second factor. DECIDED 2026-09-22: yes, with the admin
   choosing email or SMS per sign-in.** Open detail: email codes cost
   nothing and reuse the existing provider; SMS needs a paid number and
@@ -65,27 +64,6 @@ vulnerability needs patching. Options are a registry credential in
 `.env.prod`, mirroring the image into ghcr next to ours, or replacing
 minio with something else. Object storage is only used for the private
 corpus, so the blast radius is small and the decision is not urgent.
-
-## Pin the remaining remote buf plugins
-
-`proto/buf.gen.yaml` uses four unpinned remote plugins:
-`protocolbuffers/go`, `connectrpc/go`, `protocolbuffers/python` and
-`protocolbuffers/pyi`. An unpinned remote plugin makes `make gen`
-non-reproducible: buf resolves the newest published version at
-generation time, so an upstream release changes the committed output
-with no code change, `check-gen` fails on main, and the `images` job
-that the deploy depends on is skipped.
-
-That is not hypothetical. It happened on 2026-09-30 with
-`bufbuild/es`, which was pinned to `v2.16.0` in response. The other
-four are the same hazard, unpinned only because pinning to a guessed
-version breaks generation outright and each needs its current version
-read off a successful run first.
-
-**How:** run `make gen`, read each generator's version from the header
-of a file it produced (`protoc-gen-go v1.36.12`, the Python runtime
-line, and so on), pin each as `remote: buf.build/<plugin>:<version>`,
-regenerate, and confirm the tree is unchanged before committing.
 
 ## 1b. Direction, settled 2026-09-22
 
