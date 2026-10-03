@@ -12,8 +12,8 @@ the dev compose file and never accepted by prod. See
 [`docker-compose.yml`](docker-compose.yml) for the base and
 [`docker-compose.prod.yml`](docker-compose.prod.yml) for the prod overlay.
 
-Last verified against the running stack: 2026-10-01, 20 checks green on
-`0ca151e2c502`. Text audited the same day: the route lists below had not
+Last verified against the running stack: 2026-10-02, 20 checks green on
+`f13edf9fc83a`. Text audited 2026-10-01: the route lists below had not
 been updated since Ask Roger and the scheduler shipped, and the ollama
 row still described a single resident model.
 
