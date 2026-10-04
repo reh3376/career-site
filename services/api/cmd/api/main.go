@@ -358,6 +358,10 @@ func main() {
 	if !calProvider.Configured() {
 		log.Warn("Google client credentials not set — booking stays switched off")
 	}
+	// The decision test. Public: its participants are recruited
+	// volunteers rather than members.
+	decisionTestHandler := handlers.NewDecisionTest(log, userRepo, authHandler)
+
 	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, calProvider, cfg.OwnerContactEmail)
 
 	// Ask Roger. A nil chatService leaves SendMessage refusing with
@@ -415,18 +419,19 @@ func main() {
 	}
 
 	srv := server.New(cfg, log, server.Deps{
-		Sidecar:  sc,
-		DB:       pool,
-		Auth:     authHandler,
-		Member:   memberHandler,
-		Contact:  contactHandler,
-		Decision: decisionHandler,
-		Admin:    adminHandler,
-		Activity: activityHandler,
-		Jd:       jdHandler,
-		Meetings: meetingsHandler,
-		Chat:     chatHandler,
-		Events:   eventsHandler,
+		Sidecar:      sc,
+		DB:           pool,
+		Auth:         authHandler,
+		Member:       memberHandler,
+		Contact:      contactHandler,
+		Decision:     decisionHandler,
+		Admin:        adminHandler,
+		Activity:     activityHandler,
+		Jd:           jdHandler,
+		Meetings:     meetingsHandler,
+		Chat:         chatHandler,
+		Events:       eventsHandler,
+		DecisionTest: decisionTestHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})
