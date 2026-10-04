@@ -113,14 +113,50 @@ A believable conclusion that does not follow. Different mechanism from
 the others, which is why it is here: these load the logic rather than
 the arithmetic, and they are short and robust.
 
+### The task has to be unmistakable, or the family measures nothing
+
+**The participant is judging whether the conclusion follows from the
+premises, not whether the statements are true.** If that is not
+completely clear, an answer of "no" to D4 is a misunderstood instruction
+rather than belief bias, and the two are indistinguishable once they are
+in the database. The whole family's validity rests on this.
+
+Three mechanisms, and the third is the one that is easy to miss.
+
+**1. Stated in the instructions, in these terms.** Assume both
+statements are true, even where they are obviously false in the real
+world, and answer only whether the conclusion must follow from them.
+
+**2. Identical question wording on every item**, so the task never
+appears to shift: *"Assuming both statements are true, does the
+conclusion follow?"* No item phrases it differently, because a variation
+reads as a different question.
+
+**3. A standing reminder on the item itself**, one short line above
+every syllogism: *Assume both statements are true.*
+
+The third is not hand-holding and it is worth being explicit about why.
+**This test deliberately degrades working memory, and instructions live
+in working memory.** A participant in block 4 is holding four digits and
+a +3 transformation; expecting them to also retain a framing rule given
+twelve minutes earlier is expecting the one thing the test is actively
+preventing. Without the reminder, instruction decay would grow across
+exactly the blocks where the load effect is being measured, and it would
+look identical to the effect. The reminder is a control for a confound
+the instrument creates in itself.
+
+Cost: about five words of reading after the first encounter, which is
+inside the 20-second budget.
+
 **D1.** All roses are flowers. Some flowers fade quickly. Therefore some
-roses fade quickly. Does the conclusion follow?
+roses fade quickly. Assuming both statements are true, does the
+conclusion follow?
 `No` · **lure `Yes`** · `Cannot tell`
 *True-sounding and invalid. The flowers that fade need not be roses.*
 
 **D2.** No experienced drivers are reckless. Some reckless people are
-young. Therefore some young people are not experienced drivers. Does the
-conclusion follow?
+young. Therefore some young people are not experienced drivers. Assuming both
+statements are true, does the conclusion follow?
 `Yes` · **lure `No`** · `Cannot tell`
 *Valid but awkward, so it feels wrong. Included deliberately: without it
 every "feels wrong" answer would be the correct one and the item set
@@ -239,35 +275,39 @@ answer "it does not follow" whenever a conclusion sounded true and score
 reading the argument.
 
 **D3.** All nurses are trained in first aid. Some people trained in
-first aid work in schools. Therefore some nurses work in schools. Does
-it follow?
+first aid work in schools. Therefore some nurses work in schools.
+Assuming both statements are true, does the conclusion follow?
 `No` · **lure `Yes`** · `Cannot tell`
 *Believable and invalid. The school workers need not be the nurses.*
 
-**D4.** All metals float. Gold is a metal. Therefore gold floats. Does
-it follow?
+**D4.** All metals float. Gold is a metal. Therefore gold floats. Assuming
+both statements are true, does the conclusion follow?
 `Yes` · **lure `No`** · `Cannot tell`
 *Valid, with a false premise and an absurd conclusion. Validity is about
 the argument, not the world, and this is the item most likely to be
 argued with.*
 
 **D5.** No birds are insects. All sparrows are birds. Therefore no
-sparrows are insects. Does it follow?
+sparrows are insects. Assuming both statements are true, does the
+conclusion follow?
 **`Yes`** · `No` · `Cannot tell`
 *Valid and believable. A control: feel and logic agree.*
 
 **D6.** All doctors have a degree. Some doctors work nights. Therefore
-some people who work nights have a degree. Does it follow?
+some people who work nights have a degree. Assuming both statements are
+true, does the conclusion follow?
 **`Yes`** · `No` · `Cannot tell`
 *Valid and believable, with enough clauses to need reading.*
 
 **D7.** All vegetables are grown in soil. Some things grown in soil are
-poisonous. Therefore all vegetables are poisonous. Does it follow?
+poisonous. Therefore all vegetables are poisonous. Assuming both statements are
+true, does the conclusion follow?
 **`No`** · `Yes` · `Cannot tell`
 *Invalid and absurd. A control in the other direction.*
 
 **D8.** Some teachers are novelists. All novelists are wealthy.
-Therefore all teachers are wealthy. Does it follow?
+Therefore all teachers are wealthy. Assuming both statements are true,
+does the conclusion follow?
 **`No`** · `Yes` · `Cannot tell`
 *Invalid: only "some teachers are wealthy" follows. The over-strong
 conclusion is the tell.*
@@ -281,16 +321,31 @@ gentle practice block would rehearse a different experience from the
 test and would leave a participant's first real trap arriving at
 question one, which is the worst place for it.
 
-Never scored, never in the dataset as results, and they use none of the
-thirty structures twice so nothing is burned.
+Never scored and never in the dataset as results. They reuse none of the
+thirty structures except P2, which repeats D4's deliberately, for the
+reason given there.
 
 **P1.** A coffee and a muffin cost $7.50 together. The coffee costs
 $6.50 more than the muffin. How much is the muffin?
 `$0.50` · **lure `$1.00`** · `$0.75` · `$1.50`
 
-**P2.** All cats are animals. Some animals are nocturnal. Therefore some
-cats are nocturnal. Does it follow?
-`No` · **lure `Yes`** · `Cannot tell`
+**P2.** All birds are made of glass. A sparrow is a bird. Therefore a
+sparrow is made of glass. Assuming both statements are true, does the
+conclusion follow?
+`Yes` · **lure `No`** · `Cannot tell`
+
+*Chosen deliberately to **teach** the framing rather than only state it.
+A participant who answers "no" here, because sparrows are obviously not
+made of glass, learns the distinction at zero cost, before anything is
+scored. Being told the rule in the instructions and meeting it once are
+different things, and only the second survives twelve minutes of load.*
+
+*This shares its structure with D4 on purpose, which is the one place
+the no-reused-structures rule is set aside. Belief bias is robust to
+people being told to ignore truth, which is the finding that makes it
+interesting, so rehearsing the rule does not flatten the effect. What it
+does is ensure D4 measures bias rather than confusion, and those two
+are indistinguishable once they are rows in a table.*
 
 **P3.** Which is the better chance: 2 winning tickets from 20, or 7 from
 100?
@@ -300,12 +355,18 @@ cats are nocturnal. Does it follow?
 
 # What I would want checked hardest
 
-**D4 (gold floats) is the one most likely to be argued with.** It is
-valid and its conclusion is false, which is exactly the point: validity
-is a property of the argument, not of the world. Some participants will
-answer "no" because gold does not float, and that is the measurement
-working rather than a bad item. But if you would rather not defend it in
-an email, it can be replaced.
+**D4 (gold floats) is approved and kept**, on the owner's condition that
+the task is unmistakable: the participant is judging whether the
+conclusion follows, not whether the statements are true. Three things
+now carry that, and all three are needed. It is stated in the
+instructions, every syllogism asks the identical question, and a one-
+line reminder sits above each one because this test degrades the working
+memory that instructions live in. P2 rehearses the distinction before
+anything is scored.
+
+With those in place, an answer of "no" to D4 is belief bias, which is
+the measurement. Without them it would have been a misunderstood
+instruction wearing the same shape.
 
 **B8 is deliberately easier** than B1 and B5, in the natural-frequency
 framing people handle better. That contrast is informative: if B8 is
