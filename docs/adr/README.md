@@ -14,3 +14,4 @@ The reasoning in a record is historical and is not rewritten. Where a later chan
 | [0027](0027-docs-discipline-and-public-repo-maturity.md) | Docs discipline and public-repo maturity | Accepted 2026-09-19 |
 | [0028](0028-frontend-design-system.md) | Frontend design system: blueprint editorial | Accepted 2026-09-19 |
 | [0029](0029-tenancy-seam.md) | A tenancy seam, not a tenancy layer | Accepted 2026-09-22 |
+| [0030](0030-relational-collection-graph-analysis.md) | Collect in Postgres, analyse in a graph later | Accepted 2026-10-04 |
