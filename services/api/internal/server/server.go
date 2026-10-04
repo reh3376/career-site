@@ -33,6 +33,7 @@ type Server struct {
 	meetings *handlers.Meetings
 	chat     *handlers.Chat
 	events   *handlers.Events
+	dtest    *handlers.DecisionTest
 	sidecar  *sidecar.Client
 	db       *db.Pool
 }
@@ -56,6 +57,10 @@ type Deps struct {
 	// unaffected except that the panel cannot open.
 	Chat   *handlers.Chat
 	Events *handlers.Events
+	// DecisionTest runs the fifteen-minute attention instrument.
+	// Public, because its participants are recruited volunteers rather
+	// than members. Nil leaves it unmounted.
+	DecisionTest *handlers.DecisionTest
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
 	Users *users.Repo
@@ -76,6 +81,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		meetings: deps.Meetings,
 		chat:     deps.Chat,
 		events:   deps.Events,
+		dtest:    deps.DecisionTest,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
 	}
@@ -143,6 +149,11 @@ func (s *Server) routes() http.Handler {
 	if s.activity != nil {
 		activityPath, activityHandler := careerv1connect.NewActivityServiceHandler(s.activity)
 		mount(activityPath, activityHandler)
+	}
+
+	if s.dtest != nil {
+		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest)
+		mount(dtPath, dtHandler)
 	}
 
 	if s.jd != nil {
