@@ -128,6 +128,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
 | [`AdminService`](#adminservice) | Owner console. | 71 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
+| [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -4645,6 +4646,207 @@ _No fields; send `{}`._
 
 </details>
 
+## DecisionTestService
+
+Runs one sitting of the decision test.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`StartSession`](#decisiontestservice-startsession) | `/api/career.v1.DecisionTestService/StartSession` | Public | 10 | `StartSessionRequest` → `StartSessionResponse` | Opens a session and returns the practice block. |
+| [`GetBlock`](#decisiontestservice-getblock) | `/api/career.v1.DecisionTestService/GetBlock` | Public | 60 | `GetBlockRequest` → `GetBlockResponse` | Returns the next block: the number to memorise and its six questions. |
+| [`SubmitAnswer`](#decisiontestservice-submitanswer) | `/api/career.v1.DecisionTestService/SubmitAnswer` | Public | 120 | `SubmitAnswerRequest` → `SubmitAnswerResponse` | Records one answer and grades it server-side. |
+| [`SubmitRecall`](#decisiontestservice-submitrecall) | `/api/career.v1.DecisionTestService/SubmitRecall` | Public | 30 | `SubmitRecallRequest` → `SubmitRecallResponse` | Records the digits returned at the end of a block, scored by failure type rather than pass or fail. |
+| [`FinishSession`](#decisiontestservice-finishsession) | `/api/career.v1.DecisionTestService/FinishSession` | Public | 10 | `FinishSessionRequest` → `FinishSessionResponse` | Closes the session. |
+
+### DecisionTestService.StartSession
+
+`POST /api/career.v1.DecisionTestService/StartSession` · **Auth:** Public · **Rate limit:** 10/min
+
+Opens a session and returns the practice block. Called when the
+participant presses start, which is also the gesture that unlocks
+audio in the browser.
+
+**Request** — [`StartSessionRequest`](#startsessionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `intake` | [`Intake`](#intake) | object |  | Demographics, every field optional. |
+| `conditions` | [`Conditions`](#conditions) | object |  | Device and setup, measured before the first question. |
+| `synthetic` | `bool` | boolean |  | True when an agent is driving the UI rather than a person, so the rows are excluded from analysis by filter. Separate from the instrument version because the most useful agent run is against the exact version production serves. |
+
+**Response** — [`StartSessionResponse`](#startsessionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string |  | Opaque handle for the rest of the run. Not a database id. |
+| `practice` | [`Block`](#block) | object |  | The practice block, which carries the tick so a participant hears it before anything is scored. |
+| `blockCount` | `int32` | number |  | How many scored blocks follow. |
+| `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "intake": {
+    "displayName": "string",
+    "ageRange": "string",
+    "education": "string",
+    "occupation": "string",
+    "email": "string",
+    "wantsResults": true
+  },
+  "conditions": {
+    "audioMode": "string",
+    "deviceClass": "string",
+    "tapCheckPassed": true,
+    "baselineRtMs": 0,
+    "baselineRtSdMs": 0
+  },
+  "synthetic": true
+}
+```
+
+</details>
+
+### DecisionTestService.GetBlock
+
+`POST /api/career.v1.DecisionTestService/GetBlock` · **Auth:** Public · **Rate limit:** 60/min
+
+Returns the next block: the number to memorise and its six
+questions. Blocks are served one at a time so the client never
+holds the whole test.
+
+**Request** — [`GetBlockRequest`](#getblockrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | One-based. Block five returns to block one's difficulty and is the fatigue control. |
+
+**Response** — [`GetBlockResponse`](#getblockresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `block` | [`Block`](#block) | object |  | The block. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "blockNo": 0
+}
+```
+
+</details>
+
+### DecisionTestService.SubmitAnswer
+
+`POST /api/career.v1.DecisionTestService/SubmitAnswer` · **Auth:** Public · **Rate limit:** 120/min
+
+Records one answer and grades it server-side. The response confirms
+receipt and says nothing about correctness.
+
+**Request** — [`SubmitAnswerRequest`](#submitanswerrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | Which block this answer belongs to. |
+| `positionOverall` | `int32` | number | `int32: gte: 1` | Position in the whole test, one-based. |
+| `chosenIndex` | `int32` | number | `int32: gte: -1` | Index into the question's options, or -1 when the question expired unanswered. Expiry is its own outcome rather than an error, because a timeout under load is a result. |
+| `latencyMs` | `int32` | number | `int32: gte: 0` | Milliseconds from the question appearing to the answer committed. |
+| `confidence` | `int32` | number | `int32: lte: 100 gte: 0` | The participant's own rating, 0 to 100, on every question. Error rate alone cannot answer a question about being wrong *and* sure. |
+
+**Response** — [`SubmitAnswerResponse`](#submitanswerresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `stored` | `bool` | boolean |  | True when the answer was stored. Never says whether it was right. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "blockNo": 0,
+  "positionOverall": 0,
+  "chosenIndex": 0,
+  "latencyMs": 0,
+  "confidence": 0
+}
+```
+
+</details>
+
+### DecisionTestService.SubmitRecall
+
+`POST /api/career.v1.DecisionTestService/SubmitRecall` · **Auth:** Public · **Rate limit:** 30/min
+
+Records the digits returned at the end of a block, scored by
+failure type rather than pass or fail.
+
+**Request** — [`SubmitRecallRequest`](#submitrecallrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | Which block is being closed. |
+| `digits` | `string` | string | `string: max_len: 16` | What the participant typed, empty when the step expired. |
+| `latencyMs` | `int32` | number | `int32: gte: 0` | Milliseconds spent on the recall step. |
+
+**Response** — [`SubmitRecallResponse`](#submitrecallresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `stored` | `bool` | boolean |  | True when the recall was stored. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "blockNo": 0,
+  "digits": "string",
+  "latencyMs": 0
+}
+```
+
+</details>
+
+### DecisionTestService.FinishSession
+
+`POST /api/career.v1.DecisionTestService/FinishSession` · **Auth:** Public · **Rate limit:** 10/min
+
+Closes the session. A session that is never finished stays
+abandoned, which is kept rather than deleted because where people
+stop measures the fifteen-minute burden.
+
+**Request** — [`FinishSessionRequest`](#finishsessionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `recallStrategy` | `string` | string | `string: max_len: 16` | Whether the participant converted the number at encoding or carried it and transformed at recall. Asked in the debrief because the two produce different loads during the questions, which turns an uncontrolled variable into a recorded one. |
+
+**Response** — [`FinishSessionResponse`](#finishsessionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `correct` | `int32` | number |  | How many of the thirty were answered correctly. The only figure a participant is ever shown, and never item by item. |
+| `total` | `int32` | number |  | How many were scored, so the figure reads as "N of M". |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "recallStrategy": "string"
+}
+```
+
+</details>
+
 ## SidecarService
 
 Embedding, reranking, classification, and batch jobs.
@@ -8307,6 +8509,158 @@ Search results.
 |---|---|---|---|---|
 | `hits` | [`SearchHit`](#searchhit)[] | array of object |  | Hits in descending score. |
 | `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+
+### Intake
+
+Optional demographics, collected after the effort warning and posted
+with the session rather than on keystroke, so somebody who reads the
+warning and leaves has given nothing.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `displayName` | `string` | string | `string: max_len: 120` | Free text, optional like every field here. |
+| `ageRange` | `string` | string | `string: max_len: 40` | Banded rather than a date of birth; the analysis never needs more. |
+| `education` | `string` | string | `string: max_len: 60` | One of the owner's nine options, stored as given. |
+| `occupation` | `string` | string | `string: max_len: 120` | Free text, because an occupation list is always wrong for somebody. |
+| `email` | `string` | string | `string: max_len: 200` | An identifier as well as a contact: it is how a repeat participant is recognised, which the privacy policy states in those terms. |
+| `wantsResults` | `bool` | boolean |  | Results are sent only to somebody who asked for them. |
+
+### Conditions
+
+What the participant's device and setup were, which splits the sample
+and therefore cannot be inferred later.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `audioMode` | `string` | string | `string: max_len: 16` | sound or visual. Visual replaces the tick with a heartbeat icon for a participant who cannot use audio. |
+| `deviceClass` | `string` | string | `string: max_len: 16` | desktop, tablet or phone. Phones are allowed and recorded rather than refused. |
+| `tapCheckPassed` | `bool` | boolean |  | Whether the tap-along check was passed. Observed rather than self-reported. |
+| `baselineRtMs` | `int32` | number | `int32: gte: 0` | Unloaded reaction time from the tap check, which turns latency from an absolute into a relative measure. |
+| `baselineRtSdMs` | `int32` | number | `int32: gte: 0` | Variability of those taps, a cheap read on baseline attention. |
+
+### StartSessionRequest
+
+Opens a session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `intake` | [`Intake`](#intake) | object |  | Demographics, every field optional. |
+| `conditions` | [`Conditions`](#conditions) | object |  | Device and setup, measured before the first question. |
+| `synthetic` | `bool` | boolean |  | True when an agent is driving the UI rather than a person, so the rows are excluded from analysis by filter. Separate from the instrument version because the most useful agent run is against the exact version production serves. |
+
+### StartSessionResponse
+
+The opened session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string |  | Opaque handle for the rest of the run. Not a database id. |
+| `practice` | [`Block`](#block) | object |  | The practice block, which carries the tick so a participant hears it before anything is scored. |
+| `blockCount` | `int32` | number |  | How many scored blocks follow. |
+| `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
+
+### GetBlockRequest
+
+Asks for a block by number.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | One-based. Block five returns to block one's difficulty and is the fatigue control. |
+
+### GetBlockResponse
+
+One block: a number to hold, and the questions to answer while
+holding it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `block` | [`Block`](#block) | object |  | The block. |
+
+### Block
+
+A number to memorise and the questions answered under it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `blockNo` | `int32` | number |  | One-based, or zero for the practice block. |
+| `load` | `string` | string |  | d3, d4, d4_plus1, d4_plus3 or d3_control. |
+| `digits` | `string` | string |  | The digits shown for two seconds. The expected response is derived server-side and never sent. |
+| `transform` | `string` | string |  | How the digits must be transformed before they are returned: none, plus1 or plus3. Shown to the participant as an instruction; the answer is still computed in the api. |
+| `questions` | [`Question`](#question)[] | array of object |  | The questions, in order. |
+
+### Question
+
+One question as the participant sees it. No correct answer, no lure
+marker, nothing that identifies which option is right.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `code` | `string` | string |  | Stable code, e.g. A1 or D4. Used to tie an answer to an item without exposing the bank. |
+| `version` | `int32` | number |  | Version of the item text, so a reworded item does not pool with its predecessor. |
+| `prompt` | `string` | string |  | The question text. |
+| `reminder` | `string` | string |  | A standing one-line framing, empty for most items. The syllogisms carry "Assume both statements are true" because this test degrades the working memory that instructions live in. |
+| `options` | `string`[] | array of string |  | Options in presentation order. Position is fixed for everyone because the test is standardized. |
+| `positionOverall` | `int32` | number |  | Position in the whole test, one-based, for the progress counter. |
+
+### SubmitAnswerRequest
+
+Records one answer.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | Which block this answer belongs to. |
+| `positionOverall` | `int32` | number | `int32: gte: 1` | Position in the whole test, one-based. |
+| `chosenIndex` | `int32` | number | `int32: gte: -1` | Index into the question's options, or -1 when the question expired unanswered. Expiry is its own outcome rather than an error, because a timeout under load is a result. |
+| `latencyMs` | `int32` | number | `int32: gte: 0` | Milliseconds from the question appearing to the answer committed. |
+| `confidence` | `int32` | number | `int32: lte: 100 gte: 0` | The participant's own rating, 0 to 100, on every question. Error rate alone cannot answer a question about being wrong *and* sure. |
+
+### SubmitAnswerResponse
+
+Acknowledgement. Deliberately carries no verdict.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `stored` | `bool` | boolean |  | True when the answer was stored. Never says whether it was right. |
+
+### SubmitRecallRequest
+
+Records the digits returned at the end of a block.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 1` | Which block is being closed. |
+| `digits` | `string` | string | `string: max_len: 16` | What the participant typed, empty when the step expired. |
+| `latencyMs` | `int32` | number | `int32: gte: 0` | Milliseconds spent on the recall step. |
+
+### SubmitRecallResponse
+
+Acknowledgement. A missed recall is a data point, not a failure, and
+the block's answers are kept either way.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `stored` | `bool` | boolean |  | True when the recall was stored. |
+
+### FinishSessionRequest
+
+Closes the session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From StartSessionResponse. |
+| `recallStrategy` | `string` | string | `string: max_len: 16` | Whether the participant converted the number at encoding or carried it and transformed at recall. Asked in the debrief because the two produce different loads during the questions, which turns an uncontrolled variable into a recorded one. |
+
+### FinishSessionResponse
+
+The closed session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `correct` | `int32` | number |  | How many of the thirty were answered correctly. The only figure a participant is ever shown, and never item by item. |
+| `total` | `int32` | number |  | How many were scored, so the figure reads as "N of M". |
 
 ### ListDownloadsRequest
 

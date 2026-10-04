@@ -1,0 +1,255 @@
+// The decision test (docs/fsd-decision-test.md). A fifteen-minute
+// instrument measuring what happens to a person's accuracy and to their
+// confidence as attention is loaded.
+//
+// Public, because anonymous reach is the point: participants are
+// recruited volunteers rather than members.
+//
+// THE ANSWER KEY NEVER CROSSES THIS BOUNDARY. A question carries its
+// prompt and its options and nothing else. Grading happens in the api,
+// the client posts a choice and receives an acknowledgement rather than
+// a verdict, and the running score is never sent. That is what makes
+// "no correctness feedback during the test" a property of the system
+// instead of a UI convention, and it matters because confidence is a
+// dependent variable: a participant who learns they were wrong stops
+// giving an uncontaminated rating.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/options.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Runs one sitting of the decision test.
+service DecisionTestService {
+  // Opens a session and returns the practice block. Called when the
+  // participant presses start, which is also the gesture that unlocks
+  // audio in the browser.
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 10;
+  }
+  // Returns the next block: the number to memorise and its six
+  // questions. Blocks are served one at a time so the client never
+  // holds the whole test.
+  rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 60;
+  }
+  // Records one answer and grades it server-side. The response confirms
+  // receipt and says nothing about correctness.
+  rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 120;
+  }
+  // Records the digits returned at the end of a block, scored by
+  // failure type rather than pass or fail.
+  rpc SubmitRecall(SubmitRecallRequest) returns (SubmitRecallResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 30;
+  }
+  // Closes the session. A session that is never finished stays
+  // abandoned, which is kept rather than deleted because where people
+  // stop measures the fifteen-minute burden.
+  rpc FinishSession(FinishSessionRequest) returns (FinishSessionResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
+    option (career.v1.rate_limit_per_minute) = 10;
+  }
+}
+
+// Optional demographics, collected after the effort warning and posted
+// with the session rather than on keystroke, so somebody who reads the
+// warning and leaves has given nothing.
+message Intake {
+  // Free text, optional like every field here.
+  string display_name = 1 [(buf.validate.field).string.max_len = 120];
+  // Banded rather than a date of birth; the analysis never needs more.
+  string age_range = 2 [(buf.validate.field).string.max_len = 40];
+  // One of the owner's nine options, stored as given.
+  string education = 3 [(buf.validate.field).string.max_len = 60];
+  // Free text, because an occupation list is always wrong for somebody.
+  string occupation = 4 [(buf.validate.field).string.max_len = 120];
+  // An identifier as well as a contact: it is how a repeat participant
+  // is recognised, which the privacy policy states in those terms.
+  string email = 5 [(buf.validate.field).string.max_len = 200];
+  // Results are sent only to somebody who asked for them.
+  bool wants_results = 6;
+}
+
+// What the participant's device and setup were, which splits the sample
+// and therefore cannot be inferred later.
+message Conditions {
+  // sound or visual. Visual replaces the tick with a heartbeat icon for
+  // a participant who cannot use audio.
+  string audio_mode = 1 [(buf.validate.field).string.max_len = 16];
+  // desktop, tablet or phone. Phones are allowed and recorded rather
+  // than refused.
+  string device_class = 2 [(buf.validate.field).string.max_len = 16];
+  // Whether the tap-along check was passed. Observed rather than
+  // self-reported.
+  bool tap_check_passed = 3;
+  // Unloaded reaction time from the tap check, which turns latency from
+  // an absolute into a relative measure.
+  int32 baseline_rt_ms = 4 [(buf.validate.field).int32.gte = 0];
+  // Variability of those taps, a cheap read on baseline attention.
+  int32 baseline_rt_sd_ms = 5 [(buf.validate.field).int32.gte = 0];
+}
+
+// Opens a session.
+message StartSessionRequest {
+  // Demographics, every field optional.
+  Intake intake = 1;
+  // Device and setup, measured before the first question.
+  Conditions conditions = 2;
+  // True when an agent is driving the UI rather than a person, so the
+  // rows are excluded from analysis by filter. Separate from the
+  // instrument version because the most useful agent run is against the
+  // exact version production serves.
+  bool synthetic = 3;
+}
+
+// The opened session.
+message StartSessionResponse {
+  // Opaque handle for the rest of the run. Not a database id.
+  string session_key = 1;
+  // The practice block, which carries the tick so a participant hears
+  // it before anything is scored.
+  Block practice = 2;
+  // How many scored blocks follow.
+  int32 block_count = 3;
+  // How many scored questions in total, for the progress counter.
+  int32 question_count = 4;
+}
+
+// Asks for a block by number.
+message GetBlockRequest {
+  // From StartSessionResponse.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // One-based. Block five returns to block one's difficulty and is the
+  // fatigue control.
+  int32 block_no = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 5
+  }];
+}
+
+// One block: a number to hold, and the questions to answer while
+// holding it.
+message GetBlockResponse {
+  // The block.
+  Block block = 1;
+}
+
+// A number to memorise and the questions answered under it.
+message Block {
+  // One-based, or zero for the practice block.
+  int32 block_no = 1;
+  // d3, d4, d4_plus1, d4_plus3 or d3_control.
+  string load = 2;
+  // The digits shown for two seconds. The expected response is derived
+  // server-side and never sent.
+  string digits = 3;
+  // How the digits must be transformed before they are returned: none,
+  // plus1 or plus3. Shown to the participant as an instruction; the
+  // answer is still computed in the api.
+  string transform = 4;
+  // The questions, in order.
+  repeated Question questions = 5;
+}
+
+// One question as the participant sees it. No correct answer, no lure
+// marker, nothing that identifies which option is right.
+message Question {
+  // Stable code, e.g. A1 or D4. Used to tie an answer to an item
+  // without exposing the bank.
+  string code = 1;
+  // Version of the item text, so a reworded item does not pool with its
+  // predecessor.
+  int32 version = 2;
+  // The question text.
+  string prompt = 3;
+  // A standing one-line framing, empty for most items. The syllogisms
+  // carry "Assume both statements are true" because this test degrades
+  // the working memory that instructions live in.
+  string reminder = 4;
+  // Options in presentation order. Position is fixed for everyone
+  // because the test is standardized.
+  repeated string options = 5;
+  // Position in the whole test, one-based, for the progress counter.
+  int32 position_overall = 6;
+}
+
+// Records one answer.
+message SubmitAnswerRequest {
+  // From StartSessionResponse.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // Which block this answer belongs to.
+  int32 block_no = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 5
+  }];
+  // Position in the whole test, one-based.
+  int32 position_overall = 3 [(buf.validate.field).int32.gte = 1];
+  // Index into the question's options, or -1 when the question expired
+  // unanswered. Expiry is its own outcome rather than an error, because
+  // a timeout under load is a result.
+  int32 chosen_index = 4 [(buf.validate.field).int32.gte = -1];
+  // Milliseconds from the question appearing to the answer committed.
+  int32 latency_ms = 5 [(buf.validate.field).int32.gte = 0];
+  // The participant's own rating, 0 to 100, on every question. Error
+  // rate alone cannot answer a question about being wrong *and* sure.
+  int32 confidence = 6 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 100
+  }];
+}
+
+// Acknowledgement. Deliberately carries no verdict.
+message SubmitAnswerResponse {
+  // True when the answer was stored. Never says whether it was right.
+  bool stored = 1;
+}
+
+// Records the digits returned at the end of a block.
+message SubmitRecallRequest {
+  // From StartSessionResponse.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // Which block is being closed.
+  int32 block_no = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 5
+  }];
+  // What the participant typed, empty when the step expired.
+  string digits = 3 [(buf.validate.field).string.max_len = 16];
+  // Milliseconds spent on the recall step.
+  int32 latency_ms = 4 [(buf.validate.field).int32.gte = 0];
+}
+
+// Acknowledgement. A missed recall is a data point, not a failure, and
+// the block's answers are kept either way.
+message SubmitRecallResponse {
+  // True when the recall was stored.
+  bool stored = 1;
+}
+
+// Closes the session.
+message FinishSessionRequest {
+  // From StartSessionResponse.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // Whether the participant converted the number at encoding or carried
+  // it and transformed at recall. Asked in the debrief because the two
+  // produce different loads during the questions, which turns an
+  // uncontrolled variable into a recorded one.
+  string recall_strategy = 2 [(buf.validate.field).string.max_len = 16];
+}
+
+// The closed session.
+message FinishSessionResponse {
+  // How many of the thirty were answered correctly. The only figure a
+  // participant is ever shown, and never item by item.
+  int32 correct = 1;
+  // How many were scored, so the figure reads as "N of M".
+  int32 total = 2;
+}
