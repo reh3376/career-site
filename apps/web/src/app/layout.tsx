@@ -3,12 +3,8 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { EventBeacon } from "@/components/event-beacon";
-import { SiteFooter } from "@/components/site-footer";
-import { AskPanel } from "@/components/ask/ask-panel";
-import { SiteHeader } from "@/components/site-header";
 import { getUiMode } from "@/lib/ui-mode";
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
-import { getSessionUser } from "@/lib/session-user";
 
 import "./globals.css";
 
@@ -86,6 +82,20 @@ export const metadata: Metadata = {
   },
 };
 
+// The document shell, and nothing else.
+//
+// Header, footer and the assistant panel moved to the (site) route
+// group on 2026-10-03. Next.js always renders this layout, so anything
+// drawn here appears on every page with no way for a route to opt out,
+// and the decision test needs a screen with no chrome at all: the Ask
+// Roger panel opening over a timed question would put members and
+// anonymous visitors in different experimental conditions. See
+// (site)/layout.tsx.
+//
+// What stays here is what genuinely belongs to every page: the fonts,
+// the mode attribute that has to be set before first paint, the global
+// stylesheet, and the event beacon, which records page views across
+// the whole site including screens without chrome.
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // The site ships two visual modes: `it` (default, editorial web) and
   // `ot` (HMI/SCADA feel). Rendering the cookie server-side sets the
@@ -94,14 +104,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // this attribute; pages that want mode-specific structure branch on
   // getUiMode() themselves.
   const mode = await getUiMode();
-  // Whether to offer the assistant at all. A failure here must not take
-  // the whole site down for a garnish, so it degrades to "no panel".
-  let member = false;
-  try {
-    member = Boolean(await getSessionUser());
-  } catch {
-    member = false;
-  }
   return (
     <html
       lang="en"
@@ -109,14 +111,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="flex min-h-screen flex-col bg-paper text-ink">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
-        {/* Mounted in the layout, not in each page, so the thread
-            survives navigation (FR-CHAT-01). Rendered only for a
-            signed-in member: an anonymous visitor cannot use the
-            assistant and should not be offered it. */}
-        {member ? <AskPanel /> : null}
+        {children}
         <EventBeacon />
       </body>
     </html>
