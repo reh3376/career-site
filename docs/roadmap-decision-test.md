@@ -111,6 +111,78 @@ lures replaced, and timing confirmed achievable. Pilot sessions stay in
 the database under their own `instrument_version`, excluded by flag and
 never deleted.
 
+## M5b. The live pass, and why automated tests cannot stand in for it
+
+**DECIDED by the owner: the test is not operational until it has been
+fully exercised through the UI on a deployed build.** Not a smoke check,
+not a component test, not a scripted run against the API. The whole
+thing, taken by people, in a browser, start to finish.
+
+This is a stronger bar than the site's usual rule that UI work is unfinished
+until it is deployed and looked at, and the reason is specific to this
+build: **most of what makes this instrument valid is unobservable to a
+test runner.**
+
+| What has to be true | Why only a person can confirm it |
+|---|---|
+| The tick is audible at one per second | No automated check hears anything. A muted device, a wrong sample rate or audible drift all pass a unit test |
+| The visual heartbeat is perceivable | Same, and it is the condition deaf participants run in |
+| 20.5 seconds is enough to read, decide and rate | It is a claim about human reading speed. The arithmetic says it fits; only a person says it does |
+| Two seconds is enough to memorise four digits | Same |
+| The load actually loads | A machine holding four digits is not loaded by it |
+| The instructions are understood | Particularly the syllogism framing. A participant who misreads it produces data indistinguishable from belief bias |
+
+A green test suite here would mean the code does what it was told. It
+would say nothing about whether the instrument measures what it claims
+to, which is the only question that matters before volunteers are asked
+for fifteen minutes each.
+
+### What a full pass covers
+
+Every path, not the happy one:
+
+- **Both signal modes.** Sound, and the visual heartbeat, taken end to
+  end separately. They are different conditions, not a setting.
+- **Desktop and phone.** Phones are allowed and the device class is
+  recorded; a four-digit entry on a touch keyboard eats into the same
+  20.5 seconds.
+- **All five blocks, in one sitting.** A fatigue control cannot be
+  validated by testing block 1. The run has to be long enough to be
+  tiring, which is the point.
+- **A question allowed to expire**, confirming it moves on cleanly and
+  lands as `expired` rather than as an error or a dropped row.
+- **An abandoned run**, confirming the partial session is kept and
+  marked rather than lost.
+- **A repeat**, confirming it is flagged and not blocked.
+- **The tap-check failing**, by muting the device deliberately, and the
+  retry and the switch to visual both working.
+- **No-email and with-email**, since they are different downstream
+  commitments.
+
+### And then the data is read, not assumed
+
+A run that felt right and wrote the wrong rows has failed. After each
+pass, from `v_dt_answers` alone:
+
+- the session carries the right provenance, conditions and baseline
+- thirty answers at the right grain, with latency and confidence on each
+- recalls scored by failure type, with untransformed distinguished from
+  wrong digits
+- the headline comparison computes, and block 5 is near block 1
+
+### Live passes do not pollute the dataset
+
+This is what the provenance in M1 was for. Test runs carry their own
+`instrument_version`, so they sit in the same tables as real data and
+are excluded by flag rather than by deletion. Nothing has to be cleaned
+up afterwards and nothing has to be run against a separate database to
+keep the real set honest.
+
+**Exit:** the owner has taken the full test on a deployed build, in both
+signal modes, and the resulting rows have been read back and are
+correct. Until that has happened the test is not operational, whatever
+CI says.
+
 ## M6. Analysis mechanisms
 
 Collection without analysis is a pile of rows. This is the half of the
@@ -159,6 +231,10 @@ M2 runs alongside M1, M3 and M4 and gates M5. M6 can start during M5,
 since the pilot is the first thing that needs reading. M7 is last and is
 the only irreversible step: once the post goes out, the instrument is
 whatever it is.
+
+**M5b gates M7 absolutely.** No volunteer is asked for fifteen minutes
+until the owner has taken the whole thing himself on a deployed build
+and the rows have been read back.
 
 ## What would make me stop and re-plan
 
