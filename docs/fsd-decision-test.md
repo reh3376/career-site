@@ -534,6 +534,30 @@ Graph analysis is expected, not precluded, and is the better tool once test resu
 - **An admin surface** to read sessions and spot problems early, because a collection fault found after forty participants has cost forty participants.
 - **The item bank, including the key, as data rather than code**, versioned, so an item can be corrected without a deploy and the correction is recorded.
 
+## 7c. Operational means live-tested through the UI
+
+**DECIDED by the owner: the test is not operational until it has been
+fully exercised through the UI on a deployed build.** Not a smoke check,
+not a component test, not a scripted run against the API.
+
+The reason is specific to this build rather than general caution. Almost
+everything that makes this instrument *valid* is invisible to a test
+runner: whether the tick is actually audible at one per second, whether
+the visual heartbeat is perceivable, whether twenty seconds is enough
+for a person to read and decide and rate, whether two seconds is enough
+to memorise four digits, whether holding those digits actually loads
+anybody, and whether the instructions are understood, particularly the
+syllogism framing where a misreading produces data indistinguishable
+from belief bias.
+
+A green suite would say the code does what it was told. It would say
+nothing about whether the instrument measures what it claims to, and
+that is the only question worth answering before volunteers are asked
+for fifteen minutes each.
+
+The protocol, the paths it has to cover and the rows to read back
+afterwards are in the roadmap under M5b.
+
 ## 8. Still to specify
 
 Not yet drafted, pending the decisions above:
@@ -562,6 +586,7 @@ Not yet drafted, pending the decisions above:
 | 24 | Claimed audio that is actually muted | **DECIDED: tap-along pre-test before the form, space bar in time with the tick or the heartbeat. Observed, not self-reported, and it yields a reaction-time baseline** |
 | 25 | Disclosing correct answers | **DECIDED: the key exists and is never shown. Overall score only, "N of 30 correct"** |
 | 27 | Where the answer key lives | **DECIDED: server only. Grading server-side, the client is sent items and options but never which is correct, and never the running score** |
+| 28 | What counts as operational | **DECIDED: a full live pass through the UI on a deployed build, both signal modes, rows read back afterwards. CI passing is not sufficient** |
 | 26 | Microphone verification of the tick | **REJECTED: headphones defeat it, echo cancellation suppresses it, and the permission costs more than the problem** |
 | 8b | Resuming an interrupted session | **DECIDED: no resume, warn before starting, keep partials as abandoned** |
 | 9 | What the emailed result contains | **DECIDED: score plus the confidence gap. Brier stored not sent; no percentile; no item identified** |
