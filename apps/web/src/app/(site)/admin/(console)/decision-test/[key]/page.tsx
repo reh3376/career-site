@@ -45,11 +45,17 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
   const { key } = await params;
   const cookie = await getSessionCookie();
   if (!cookie) notFound();
-  const res = (await callApi({
+  const resp = await callApi({
     path: "/api/career.v1.AdminService/GetDecisionTestRun",
     body: { sessionKey: key },
     cookie,
-  })) as { run?: Run; blocks?: Block[]; answers?: Answer[] } | null;
+  });
+  if (!resp.ok) notFound();
+  const res = (await resp.json()) as {
+    run?: Run;
+    blocks?: Block[];
+    answers?: Answer[];
+  };
   const run = res?.run;
   if (!run) notFound();
   const blocks = res?.blocks ?? [];

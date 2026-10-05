@@ -21,18 +21,26 @@ export default async function DecisionTestPage() {
   let s: Settings = {};
   let runs: Run[] = [];
   if (cookie) {
-    s =
-      ((await callApi({
-        path: "/api/career.v1.AdminService/GetDecisionTestSettings",
-        body: {},
-        cookie,
-      })) as Settings) ?? {};
-    const listed = (await callApi({
+    // callApi returns the fetch Response, not the parsed body. The first
+    // version of this page cast the Response straight to Settings, so
+    // every field read as undefined and rendered as 0, and the run list
+    // rendered as "no runs yet" while two real runs sat in the database.
+    // The `as` cast is what hid it: it silenced the exact type error
+    // that would have caught the mistake, at the one boundary where the
+    // checker had something useful to say.
+    const sr = await callApi({
+      path: "/api/career.v1.AdminService/GetDecisionTestSettings",
+      body: {},
+      cookie,
+    });
+    if (sr.ok) s = ((await sr.json()) as Settings) ?? {};
+
+    const rr = await callApi({
       path: "/api/career.v1.AdminService/ListDecisionTestRuns",
       body: { includeSynthetic: false },
       cookie,
-    })) as { runs?: Run[] } | null;
-    runs = listed?.runs ?? [];
+    });
+    if (rr.ok) runs = (((await rr.json()) as { runs?: Run[] }).runs ?? []);
   }
   const secs = (ms?: number) => Math.round((ms ?? 0) / 1000);
 

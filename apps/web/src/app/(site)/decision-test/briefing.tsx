@@ -212,6 +212,15 @@ export function Briefing() {
             that right now, please come back when you can. A distracted run
             is worse than no run, for you and for the data.
           </p>
+          <p className="rounded-md border border-accent bg-accent-soft/60 px-5 py-4 text-base text-accent">
+            <strong>
+              The number you are given at the start of each block is the
+              most important part of this test.
+            </strong>{" "}
+            Hold on to it while you answer the questions, and give it back
+            at the end of the block. The questions matter less than that
+            number does.
+          </p>
           <ul className="list-disc space-y-2 pl-5">
             <li>Fifteen minutes, timed. There is no pause.</li>
             <li>
@@ -466,6 +475,7 @@ export function Briefing() {
           </button>
           <p className="text-sm text-ink-3">
             The next screen begins immediately and the clock starts with it.
+            Remember: holding the number is the part that counts.
           </p>
         </section>
       ) : null}
