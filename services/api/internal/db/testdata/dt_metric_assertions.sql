@@ -26,13 +26,15 @@ BEGIN
     RAISE EXCEPTION 'v_dt_load_curve counts % sessions per load, expected 3: a synthetic run is being averaged into the result', n;
   END IF;
 
-  -- Per item, not per load: an item is served once per run, so four
-  -- sessions on any item means the agent is in there. Accuracy cannot
-  -- be used for this, since an easy item legitimately reaches 100%
-  -- across the three real runs.
+  -- Per item, not per load. An item is served once per run and
+  -- v_dt_items pools across item sets deliberately (it carries
+  -- item_set_versions as an array so mixing is visible), so every item
+  -- should show the four real runs and not the fifth synthetic one.
+  -- Accuracy cannot be used for this, since an easy item legitimately
+  -- reaches 100% across the real runs.
   SELECT max(sessions) INTO n FROM v_dt_items;
-  IF n <> 3 THEN
-    RAISE EXCEPTION 'v_dt_items counts % sessions on an item, expected 3: a synthetic run is in the item statistics', n;
+  IF n <> 4 THEN
+    RAISE EXCEPTION 'v_dt_items counts % sessions on an item, expected 4: a synthetic run is in the item statistics', n;
   END IF;
 
   SELECT count(*) INTO n FROM v_dt_calibration WHERE confidence_band >= 90;
@@ -44,21 +46,78 @@ END $$;
 -- +----------------------------------------------------------------+
 -- | The load curve goes the way the instrument claims.             |
 -- +----------------------------------------------------------------+
--- Accuracy down and the gap up as the ramp rises. If this ever fails it
--- is either the view or the composition, and on 2026-10-04 it was the
--- composition: migration 00051's comment said the families were
--- interleaved and its insert order did the opposite, which made
--- accuracy appear to RISE with load.
+-- Accuracy down and the gap up as the ramp rises, WITHIN one item set.
+-- If this ever fails it is either the view or the composition, and on
+-- 2026-10-04 it was the composition: migration 00051's comment said the
+-- families were interleaved and its insert order did the opposite,
+-- which made accuracy appear to RISE with load.
 DO $$
 DECLARE a1 numeric; a4 numeric; g1 numeric; g4 numeric;
 BEGIN
-  SELECT accuracy_pct, gap_pct INTO a1, g1 FROM v_dt_load_curve WHERE block_load = 'd3';
-  SELECT accuracy_pct, gap_pct INTO a4, g4 FROM v_dt_load_curve WHERE block_load = 'd4_plus3';
+  SELECT accuracy_pct, gap_pct INTO a1, g1 FROM v_dt_load_curve
+   WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-05';
+  SELECT accuracy_pct, gap_pct INTO a4, g4 FROM v_dt_load_curve
+   WHERE block_load = 'd4_plus3' AND item_set_version = 'items-2026-10-05';
   IF a4 >= a1 THEN
     RAISE EXCEPTION 'accuracy at the hardest load (%) is not below the easiest (%)', a4, a1;
   END IF;
   IF g4 <= g1 THEN
     RAISE EXCEPTION 'the confidence gap at the hardest load (%) is not above the easiest (%)', g4, g1;
+  END IF;
+END $$;
+
+-- +----------------------------------------------------------------+
+-- | The curves do not pool across instruments.                     |
+-- +----------------------------------------------------------------+
+-- The first real reading of v_dt_load_curve on production reported
+-- accuracy RISING to 100% at the hardest load. The view was right and
+-- the data was real: both runs had been taken on the family-blocked
+-- composition, where item family swamped load. The view grouped by
+-- block_load alone, so it averaged every run regardless of which items
+-- it saw or how long it had, which is exactly what instrument_version
+-- and item_set_version exist on dt_sessions to prevent.
+--
+-- The fixture now carries a run on an older item set with the ramp
+-- inverted. Pooling would drag the current set's numbers toward it, and
+-- the assertion above would start passing or failing for reasons
+-- nothing to do with the view being correct.
+DO $$
+DECLARE n int; sets int;
+BEGIN
+  SELECT count(DISTINCT item_set_version) INTO sets FROM v_dt_load_curve;
+  IF sets < 2 THEN
+    RAISE EXCEPTION 'v_dt_load_curve reports % item set(s): the fixture has two, so the view is pooling them', sets;
+  END IF;
+
+  -- The current set has three real runs; the older one has exactly one.
+  SELECT sessions INTO n FROM v_dt_load_curve
+   WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-04';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'the older item set reports % sessions at d3, expected 1', n;
+  END IF;
+  SELECT sessions INTO n FROM v_dt_load_curve
+   WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-05';
+  IF n <> 3 THEN
+    RAISE EXCEPTION 'the current item set reports % sessions at d3, expected 3', n;
+  END IF;
+
+  SELECT count(DISTINCT item_set_version) INTO sets FROM v_dt_calibration;
+  IF sets < 2 THEN
+    RAISE EXCEPTION 'v_dt_calibration reports % item set(s), so it is pooling instruments too', sets;
+  END IF;
+END $$;
+
+-- A row whose families column holds a single value is one where load
+-- and item family are confounded, and it cannot support a claim about
+-- load. The old item set's rows must say so on the row rather than in a
+-- note somebody reads after the number.
+DO $$
+DECLARE fams text;
+BEGIN
+  SELECT families INTO fams FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd4_plus3';
+  IF fams IS NULL OR position('+' in fams) = 0 THEN
+    RAISE EXCEPTION 'the current item set reports families "%" at the hardest load: one family per block means load is confounded with family', fams;
   END IF;
 END $$;
 
