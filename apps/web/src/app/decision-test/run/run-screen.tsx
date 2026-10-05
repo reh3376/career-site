@@ -24,21 +24,15 @@ import { createMetronome, type Signal } from "@/lib/metronome";
 // never told: grading happens in the api and the response carries no
 // verdict, so this screen could not leak it even by mistake.
 
-/** Hard limit per question, covering reading, deciding and rating. */
-const QUESTION_MS = 20_000;
-/**
- * How long the digits are shown before the questions begin.
- *
- * Five seconds, raised from two after the first live run. Two was the
- * original specification and it was wrong in practice: four digits plus
- * a transformation rule is not readable in two seconds, and a
- * participant who spends all of it on the digits has none left for the
- * instruction. The whole budget cost is fifteen seconds across five
- * blocks.
- */
-const MEMORISE_MS = 5_000;
-/** Limit on entering the number at the end of a block. */
-const RECALL_MS = 20_000;
+// The timings come from the server, not from here.
+//
+// They were constants until the owner had taken the test twice and moved
+// them both times, each move costing a build and a deploy to change one
+// number. They now live in app_settings, are editable at
+// /admin/decision-test, and are handed over with the session, so a run
+// cannot drift from the settings it started under. The fallbacks below
+// only matter if the handoff is somehow incomplete.
+const FALLBACK = { memoriseMs: 6_000, questionMs: 25_000, recallMs: 20_000 };
 
 /** Five levels, because a slider costs seconds this budget does not have. */
 const CONFIDENCE = [
@@ -66,11 +60,13 @@ type Block = {
 };
 type Phase = "memorise" | "question" | "confidence" | "recall" | "finishing";
 
+type Timings = { memoriseMs: number; questionMs: number; recallMs: number };
 type Handoff = {
   sessionKey: string;
   audioMode: string;
   practice: Block;
   questionCount: number;
+  timings?: Timings;
 };
 
 /**
@@ -99,6 +95,7 @@ export function RunScreen() {
   const sessionKey = handoff?.sessionKey ?? "";
   const audioMode = handoff?.audioMode ?? "sound";
   const questionCount = handoff?.questionCount ?? 30;
+  const timings = handoff?.timings ?? FALLBACK;
   const practice: Block = handoff?.practice ?? {
     blockNo: 0,
     load: "practice",
@@ -245,17 +242,17 @@ export function RunScreen() {
       const t = window.setTimeout(() => {
         setPhase("question");
         shownAt.current = performance.now();
-      }, MEMORISE_MS);
+      }, timings.memoriseMs);
       return () => window.clearTimeout(t);
     }
     if (phase === "question" || phase === "confidence") {
-      const left = QUESTION_MS - (performance.now() - shownAt.current);
+      const left = timings.questionMs - (performance.now() - shownAt.current);
       const t = window.setTimeout(() => void advance(-1, 0), Math.max(0, left));
       return () => window.clearTimeout(t);
     }
     if (phase === "recall") {
-      const t = window.setTimeout(() => void submitRecall(), RECALL_MS);
-      return () => window.clearTimeout(t);
+      const timer = window.setTimeout(() => void submitRecall(), timings.recallMs);
+      return () => window.clearTimeout(timer);
     }
     return;
     // eslint-disable-next-line react-hooks/exhaustive-deps

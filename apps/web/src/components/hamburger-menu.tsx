@@ -305,6 +305,10 @@ function buildGroups({
     // menu appears on rather than only from the landing itself.
     { kind: "link", label: "Podcasts", href: "/#podcasts" },
     { kind: "link", label: "How it works", href: "/how-ask-roger-works" },
+    // The supplement to the decision-quality series. A real route rather
+    // than an anchor, because it is a fifteen-minute commitment and
+    // deserves its own page rather than a jump down the landing.
+    { kind: "link", label: "The decision test", href: "/decision-test" },
     { kind: "link", label: "Contact", href: "/contact" },
   ];
   if (signedIn) {

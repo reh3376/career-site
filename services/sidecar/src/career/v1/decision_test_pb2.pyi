@@ -48,17 +48,29 @@ class StartSessionRequest(_message.Message):
     synthetic: bool
     def __init__(self, intake: _Optional[_Union[Intake, _Mapping]] = ..., conditions: _Optional[_Union[Conditions, _Mapping]] = ..., synthetic: _Optional[bool] = ...) -> None: ...
 
+class Timings(_message.Message):
+    __slots__ = ("memorise_ms", "question_ms", "recall_ms")
+    MEMORISE_MS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_MS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_MS_FIELD_NUMBER: _ClassVar[int]
+    memorise_ms: int
+    question_ms: int
+    recall_ms: int
+    def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ...) -> None: ...
+
 class StartSessionResponse(_message.Message):
-    __slots__ = ("session_key", "practice", "block_count", "question_count")
+    __slots__ = ("session_key", "practice", "block_count", "question_count", "timings")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
     PRACTICE_FIELD_NUMBER: _ClassVar[int]
     BLOCK_COUNT_FIELD_NUMBER: _ClassVar[int]
     QUESTION_COUNT_FIELD_NUMBER: _ClassVar[int]
+    TIMINGS_FIELD_NUMBER: _ClassVar[int]
     session_key: str
     practice: Block
     block_count: int
     question_count: int
-    def __init__(self, session_key: _Optional[str] = ..., practice: _Optional[_Union[Block, _Mapping]] = ..., block_count: _Optional[int] = ..., question_count: _Optional[int] = ...) -> None: ...
+    timings: Timings
+    def __init__(self, session_key: _Optional[str] = ..., practice: _Optional[_Union[Block, _Mapping]] = ..., block_count: _Optional[int] = ..., question_count: _Optional[int] = ..., timings: _Optional[_Union[Timings, _Mapping]] = ...) -> None: ...
 
 class GetBlockRequest(_message.Message):
     __slots__ = ("session_key", "block_no")

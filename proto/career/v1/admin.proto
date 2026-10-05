@@ -396,6 +396,18 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Reads the decision test's timings.
+  rpc GetDecisionTestSettings(GetDecisionTestSettingsRequest) returns (GetDecisionTestSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
+  // Sets the decision test's timings. The instrument version is derived
+  // from them, so a change here is recorded on every run taken after it
+  // and runs under different timings never pool into one dataset.
+  rpc SetDecisionTestSettings(SetDecisionTestSettingsRequest) returns (SetDecisionTestSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads the meeting-scheduler settings: the weekly windows a member
   // may book into, the lengths on offer, the clearance between
   // meetings, and the zone all of it is quoted in.
@@ -3050,4 +3062,42 @@ message PipelineCount {
   int32 count = 2;
   // The oldest one still at this status, for spotting something stuck.
   google.protobuf.Timestamp oldest = 3;
+}
+
+// Asks for the decision test's timings.
+message GetDecisionTestSettingsRequest {}
+
+// The decision test's timings, with the instrument version they produce.
+message GetDecisionTestSettingsResponse {
+  // How long the number to hold is shown, in milliseconds.
+  int32 memorise_ms = 1;
+  // Hard limit per question, covering reading, deciding and rating.
+  int32 question_ms = 2;
+  // Limit on entering the number at the end of a block.
+  int32 recall_ms = 3;
+  // Derived from the three above, and stored on every session taken
+  // under them. Shown so the owner can see that changing a timing
+  // changes the instrument.
+  string instrument_version = 4;
+  // How many sessions have already been recorded under this version.
+  // Changing a timing starts a new one, which is the cost of the change.
+  int32 sessions_on_this_version = 5;
+}
+
+// Changes the decision test's timings.
+message SetDecisionTestSettingsRequest {
+  // How long the number to hold is shown. Clamped to 1 to 30 seconds.
+  int32 memorise_ms = 1 [(buf.validate.field).int32.gte = 0];
+  // Hard limit per question. Clamped to 5 to 120 seconds, because a
+  // question nobody can answer in time is not a harder test, it is an
+  // unanswerable one.
+  int32 question_ms = 2 [(buf.validate.field).int32.gte = 0];
+  // Limit on entering the number. Clamped to 5 to 120 seconds.
+  int32 recall_ms = 3 [(buf.validate.field).int32.gte = 0];
+}
+
+// The timings after the change.
+message SetDecisionTestSettingsResponse {
+  // The instrument version now in force.
+  string instrument_version = 1;
 }

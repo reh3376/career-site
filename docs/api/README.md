@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 71 |
+| [`AdminService`](#adminservice) | Owner console. | 73 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2125,6 +2125,8 @@ Owner console.
 | [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
 | [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
+| [`GetDecisionTestSettings`](#adminservice-getdecisiontestsettings) | `/api/career.v1.AdminService/GetDecisionTestSettings` | Admin (fresh MFA) | default | `GetDecisionTestSettingsRequest` → `GetDecisionTestSettingsResponse` | Reads the decision test's timings. |
+| [`SetDecisionTestSettings`](#adminservice-setdecisiontestsettings) | `/api/career.v1.AdminService/SetDecisionTestSettings` | Admin (fresh MFA) | default | `SetDecisionTestSettingsRequest` → `SetDecisionTestSettingsResponse` | Sets the decision test's timings. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
@@ -3990,6 +3992,68 @@ existing scores are re-classified on read.
 
 </details>
 
+### AdminService.GetDecisionTestSettings
+
+`POST /api/career.v1.AdminService/GetDecisionTestSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads the decision test's timings.
+
+**Request** — [`GetDecisionTestSettingsRequest`](#getdecisiontestsettingsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetDecisionTestSettingsResponse`](#getdecisiontestsettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memoriseMs` | `int32` | number |  | How long the number to hold is shown, in milliseconds. |
+| `questionMs` | `int32` | number |  | Hard limit per question, covering reading, deciding and rating. |
+| `recallMs` | `int32` | number |  | Limit on entering the number at the end of a block. |
+| `instrumentVersion` | `string` | string |  | Derived from the three above, and stored on every session taken under them. Shown so the owner can see that changing a timing changes the instrument. |
+| `sessionsOnThisVersion` | `int32` | number |  | How many sessions have already been recorded under this version. Changing a timing starts a new one, which is the cost of the change. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.SetDecisionTestSettings
+
+`POST /api/career.v1.AdminService/SetDecisionTestSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Sets the decision test's timings. The instrument version is derived
+from them, so a change here is recorded on every run taken after it
+and runs under different timings never pool into one dataset.
+
+**Request** — [`SetDecisionTestSettingsRequest`](#setdecisiontestsettingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memoriseMs` | `int32` | number | `int32: gte: 0` | How long the number to hold is shown. Clamped to 1 to 30 seconds. |
+| `questionMs` | `int32` | number | `int32: gte: 0` | Hard limit per question. Clamped to 5 to 120 seconds, because a question nobody can answer in time is not a harder test, it is an unanswerable one. |
+| `recallMs` | `int32` | number | `int32: gte: 0` | Limit on entering the number. Clamped to 5 to 120 seconds. |
+
+**Response** — [`SetDecisionTestSettingsResponse`](#setdecisiontestsettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `instrumentVersion` | `string` | string |  | The instrument version now in force. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memoriseMs": 0,
+  "questionMs": 0,
+  "recallMs": 0
+}
+```
+
+</details>
+
 ### AdminService.GetSchedulerSettings
 
 `POST /api/career.v1.AdminService/GetSchedulerSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
@@ -4682,6 +4746,7 @@ audio in the browser.
 | `practice` | [`Block`](#block) | object |  | The practice block, which carries the tick so a participant hears it before anything is scored. |
 | `blockCount` | `int32` | number |  | How many scored blocks follow. |
 | `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
+| `timings` | [`Timings`](#timings) | object |  | The timings in force for this run. |
 
 <details><summary>Example request body</summary>
 
@@ -8013,6 +8078,42 @@ How many submissions sit at one pipeline status.
 | `count` | `int32` | number |  | How many. |
 | `oldest` | `Timestamp` | string (RFC 3339, UTC) |  | The oldest one still at this status, for spotting something stuck. |
 
+### GetDecisionTestSettingsRequest
+
+Asks for the decision test's timings.
+
+_No fields._
+
+### GetDecisionTestSettingsResponse
+
+The decision test's timings, with the instrument version they produce.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memoriseMs` | `int32` | number |  | How long the number to hold is shown, in milliseconds. |
+| `questionMs` | `int32` | number |  | Hard limit per question, covering reading, deciding and rating. |
+| `recallMs` | `int32` | number |  | Limit on entering the number at the end of a block. |
+| `instrumentVersion` | `string` | string |  | Derived from the three above, and stored on every session taken under them. Shown so the owner can see that changing a timing changes the instrument. |
+| `sessionsOnThisVersion` | `int32` | number |  | How many sessions have already been recorded under this version. Changing a timing starts a new one, which is the cost of the change. |
+
+### SetDecisionTestSettingsRequest
+
+Changes the decision test's timings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memoriseMs` | `int32` | number | `int32: gte: 0` | How long the number to hold is shown. Clamped to 1 to 30 seconds. |
+| `questionMs` | `int32` | number | `int32: gte: 0` | Hard limit per question. Clamped to 5 to 120 seconds, because a question nobody can answer in time is not a harder test, it is an unanswerable one. |
+| `recallMs` | `int32` | number | `int32: gte: 0` | Limit on entering the number. Clamped to 5 to 120 seconds. |
+
+### SetDecisionTestSettingsResponse
+
+The timings after the change.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `instrumentVersion` | `string` | string |  | The instrument version now in force. |
+
 ### RegisterRequest
 
 Registration form.
@@ -8548,6 +8649,22 @@ Opens a session.
 | `conditions` | [`Conditions`](#conditions) | object |  | Device and setup, measured before the first question. |
 | `synthetic` | `bool` | boolean |  | True when an agent is driving the UI rather than a person, so the rows are excluded from analysis by filter. Separate from the instrument version because the most useful agent run is against the exact version production serves. |
 
+### Timings
+
+The timings this run is bound by, served to the client rather than
+hard-coded in it.
+
+They live in app_settings and are editable from the admin console,
+because the first two live runs each moved them and each move cost a
+deploy. They are returned per session so a run cannot drift from the
+settings it started under.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memoriseMs` | `int32` | number |  | How long the number to hold is shown. |
+| `questionMs` | `int32` | number |  | Hard limit per question, covering reading, deciding and rating. |
+| `recallMs` | `int32` | number |  | Limit on entering the number at the end of a block. |
+
 ### StartSessionResponse
 
 The opened session.
@@ -8558,6 +8675,7 @@ The opened session.
 | `practice` | [`Block`](#block) | object |  | The practice block, which carries the tick so a participant hears it before anything is scored. |
 | `blockCount` | `int32` | number |  | How many scored blocks follow. |
 | `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
+| `timings` | [`Timings`](#timings) | object |  | The timings in force for this run. |
 
 ### GetBlockRequest
 

@@ -197,6 +197,12 @@ const (
 	// AdminServiceSetJdFitBandsProcedure is the fully-qualified name of the AdminService's
 	// SetJdFitBands RPC.
 	AdminServiceSetJdFitBandsProcedure = "/career.v1.AdminService/SetJdFitBands"
+	// AdminServiceGetDecisionTestSettingsProcedure is the fully-qualified name of the AdminService's
+	// GetDecisionTestSettings RPC.
+	AdminServiceGetDecisionTestSettingsProcedure = "/career.v1.AdminService/GetDecisionTestSettings"
+	// AdminServiceSetDecisionTestSettingsProcedure is the fully-qualified name of the AdminService's
+	// SetDecisionTestSettings RPC.
+	AdminServiceSetDecisionTestSettingsProcedure = "/career.v1.AdminService/SetDecisionTestSettings"
 	// AdminServiceGetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// GetSchedulerSettings RPC.
 	AdminServiceGetSchedulerSettingsProcedure = "/career.v1.AdminService/GetSchedulerSettings"
@@ -460,6 +466,12 @@ type AdminServiceClient interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads the decision test's timings.
+	GetDecisionTestSettings(context.Context, *connect.Request[v1.GetDecisionTestSettingsRequest]) (*connect.Response[v1.GetDecisionTestSettingsResponse], error)
+	// Sets the decision test's timings. The instrument version is derived
+	// from them, so a change here is recorded on every run taken after it
+	// and runs under different timings never pool into one dataset.
+	SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -859,6 +871,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 			connect.WithClientOptions(opts...),
 		),
+		getDecisionTestSettings: connect.NewClient[v1.GetDecisionTestSettingsRequest, v1.GetDecisionTestSettingsResponse](
+			httpClient,
+			baseURL+AdminServiceGetDecisionTestSettingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		setDecisionTestSettings: connect.NewClient[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse](
+			httpClient,
+			baseURL+AdminServiceSetDecisionTestSettingsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetDecisionTestSettings")),
+			connect.WithClientOptions(opts...),
+		),
 		getSchedulerSettings: connect.NewClient[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse](
 			httpClient,
 			baseURL+AdminServiceGetSchedulerSettingsProcedure,
@@ -966,77 +990,79 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	listMembers           *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	resendNotification    *connect.Client[v1.ResendNotificationRequest, v1.ResendNotificationResponse]
-	getMember             *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
-	addMemberNote         *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
-	setMemberStatus       *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
-	getReviewQueue        *connect.Client[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse]
-	resolveReviewItem     *connect.Client[v1.ResolveReviewItemRequest, v1.ResolveReviewItemResponse]
-	replyEscalation       *connect.Client[v1.ReplyEscalationRequest, v1.ReplyEscalationResponse]
-	getMemberConversation *connect.Client[v1.GetMemberConversationRequest, v1.GetMemberConversationResponse]
-	getCorpusStatus       *connect.Client[v1.GetCorpusStatusRequest, v1.GetCorpusStatusResponse]
-	testRetrieval         *connect.Client[v1.TestRetrievalRequest, v1.TestRetrievalResponse]
-	runJob                *connect.Client[v1.RunJobRequest, v1.RunJobResponse]
-	getJob                *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
-	getPersona            *connect.Client[v1.GetPersonaRequest, v1.GetPersonaResponse]
-	getAnalytics          *connect.Client[v1.GetAnalyticsRequest, v1.GetAnalyticsResponse]
-	getAudit              *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
-	listContactMessages   *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
-	resolveContactMessage *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
-	approveRegistration   *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
-	declineRegistration   *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
-	extendAccess          *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
-	listDbTables          *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
-	runDbQuery            *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
-	listAccessGrants      *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
-	upsertAccessGrant     *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
-	deleteAccessGrant     *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
-	listSavedQueries      *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
-	upsertSavedQuery      *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
-	deleteSavedQuery      *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
-	listMemberActivity    *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
-	ingestCorpusText      *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
-	listCorpusDocuments   *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
-	reindexCorpus         *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
-	sweepCorpusEmbeddings *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
-	listJdSubmissions     *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
-	getJdSubmission       *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
-	rescoreJd             *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
-	setJdOutcome          *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
-	recordJdFeedback      *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
-	listGoldenPostings    *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
-	upsertGoldenPosting   *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
-	setGoldenActive       *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
-	labelGoldenPosting    *connect.Client[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse]
-	listEvalRuns          *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
-	getEvalRun            *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
-	getMetrics            *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
-	getOpsStatus          *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
-	getJobDetail          *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
-	getGate               *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
-	listDecisionLog       *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
-	reviewDecision        *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
-	exportDecisionLog     *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
-	getJdFitBands         *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
-	setJdFitBands         *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
-	getSchedulerSettings  *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
-	setSchedulerSettings  *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
-	listQaEntries         *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
-	createQaEntry         *connect.Client[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse]
-	updateQaEntry         *connect.Client[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse]
-	setQaEntryEnabled     *connect.Client[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse]
-	deleteQaEntry         *connect.Client[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse]
-	addQaPhrasing         *connect.Client[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse]
-	deleteQaPhrasing      *connect.Client[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse]
-	getCalendarConnectURL *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
-	connectCalendar       *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
-	getCalendarStatus     *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
-	disconnectCalendar    *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
-	listMeetings          *connect.Client[v1.ListMeetingsRequest, v1.ListMeetingsResponse]
-	cancelMeetingAsAdmin  *connect.Client[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse]
-	getJdSubmissionLimit  *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
-	setJdSubmissionLimit  *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
+	listMembers             *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	resendNotification      *connect.Client[v1.ResendNotificationRequest, v1.ResendNotificationResponse]
+	getMember               *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
+	addMemberNote           *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
+	setMemberStatus         *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
+	getReviewQueue          *connect.Client[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse]
+	resolveReviewItem       *connect.Client[v1.ResolveReviewItemRequest, v1.ResolveReviewItemResponse]
+	replyEscalation         *connect.Client[v1.ReplyEscalationRequest, v1.ReplyEscalationResponse]
+	getMemberConversation   *connect.Client[v1.GetMemberConversationRequest, v1.GetMemberConversationResponse]
+	getCorpusStatus         *connect.Client[v1.GetCorpusStatusRequest, v1.GetCorpusStatusResponse]
+	testRetrieval           *connect.Client[v1.TestRetrievalRequest, v1.TestRetrievalResponse]
+	runJob                  *connect.Client[v1.RunJobRequest, v1.RunJobResponse]
+	getJob                  *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
+	getPersona              *connect.Client[v1.GetPersonaRequest, v1.GetPersonaResponse]
+	getAnalytics            *connect.Client[v1.GetAnalyticsRequest, v1.GetAnalyticsResponse]
+	getAudit                *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
+	listContactMessages     *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
+	resolveContactMessage   *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
+	approveRegistration     *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
+	declineRegistration     *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
+	extendAccess            *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
+	listDbTables            *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
+	runDbQuery              *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
+	listAccessGrants        *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
+	upsertAccessGrant       *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
+	deleteAccessGrant       *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
+	listSavedQueries        *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
+	upsertSavedQuery        *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
+	deleteSavedQuery        *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
+	listMemberActivity      *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
+	ingestCorpusText        *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
+	listCorpusDocuments     *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
+	reindexCorpus           *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
+	sweepCorpusEmbeddings   *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
+	listJdSubmissions       *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
+	getJdSubmission         *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
+	rescoreJd               *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
+	setJdOutcome            *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
+	recordJdFeedback        *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
+	listGoldenPostings      *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
+	upsertGoldenPosting     *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
+	setGoldenActive         *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
+	labelGoldenPosting      *connect.Client[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse]
+	listEvalRuns            *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
+	getEvalRun              *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
+	getMetrics              *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
+	getOpsStatus            *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
+	getJobDetail            *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
+	getGate                 *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
+	listDecisionLog         *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
+	reviewDecision          *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
+	exportDecisionLog       *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
+	getJdFitBands           *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
+	setJdFitBands           *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
+	getDecisionTestSettings *connect.Client[v1.GetDecisionTestSettingsRequest, v1.GetDecisionTestSettingsResponse]
+	setDecisionTestSettings *connect.Client[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse]
+	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
+	setSchedulerSettings    *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
+	listQaEntries           *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
+	createQaEntry           *connect.Client[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse]
+	updateQaEntry           *connect.Client[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse]
+	setQaEntryEnabled       *connect.Client[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse]
+	deleteQaEntry           *connect.Client[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse]
+	addQaPhrasing           *connect.Client[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse]
+	deleteQaPhrasing        *connect.Client[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse]
+	getCalendarConnectURL   *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
+	connectCalendar         *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
+	getCalendarStatus       *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
+	disconnectCalendar      *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
+	listMeetings            *connect.Client[v1.ListMeetingsRequest, v1.ListMeetingsResponse]
+	cancelMeetingAsAdmin    *connect.Client[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse]
+	getJdSubmissionLimit    *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
+	setJdSubmissionLimit    *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -1307,6 +1333,16 @@ func (c *adminServiceClient) GetJdFitBands(ctx context.Context, req *connect.Req
 // SetJdFitBands calls career.v1.AdminService.SetJdFitBands.
 func (c *adminServiceClient) SetJdFitBands(ctx context.Context, req *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
 	return c.setJdFitBands.CallUnary(ctx, req)
+}
+
+// GetDecisionTestSettings calls career.v1.AdminService.GetDecisionTestSettings.
+func (c *adminServiceClient) GetDecisionTestSettings(ctx context.Context, req *connect.Request[v1.GetDecisionTestSettingsRequest]) (*connect.Response[v1.GetDecisionTestSettingsResponse], error) {
+	return c.getDecisionTestSettings.CallUnary(ctx, req)
+}
+
+// SetDecisionTestSettings calls career.v1.AdminService.SetDecisionTestSettings.
+func (c *adminServiceClient) SetDecisionTestSettings(ctx context.Context, req *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error) {
+	return c.setDecisionTestSettings.CallUnary(ctx, req)
 }
 
 // GetSchedulerSettings calls career.v1.AdminService.GetSchedulerSettings.
@@ -1604,6 +1640,12 @@ type AdminServiceHandler interface {
 	// for 15 s). Takes effect for the next submission within seconds;
 	// existing scores are re-classified on read.
 	SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error)
+	// Reads the decision test's timings.
+	GetDecisionTestSettings(context.Context, *connect.Request[v1.GetDecisionTestSettingsRequest]) (*connect.Response[v1.GetDecisionTestSettingsResponse], error)
+	// Sets the decision test's timings. The instrument version is derived
+	// from them, so a change here is recorded on every run taken after it
+	// and runs under different timings never pool into one dataset.
+	SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -1999,6 +2041,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetJdFitBands")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetDecisionTestSettingsHandler := connect.NewUnaryHandler(
+		AdminServiceGetDecisionTestSettingsProcedure,
+		svc.GetDecisionTestSettings,
+		connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetDecisionTestSettingsHandler := connect.NewUnaryHandler(
+		AdminServiceSetDecisionTestSettingsProcedure,
+		svc.SetDecisionTestSettings,
+		connect.WithSchema(adminServiceMethods.ByName("SetDecisionTestSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetSchedulerSettingsHandler := connect.NewUnaryHandler(
 		AdminServiceGetSchedulerSettingsProcedure,
 		svc.GetSchedulerSettings,
@@ -2211,6 +2265,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetJdFitBandsHandler.ServeHTTP(w, r)
 		case AdminServiceSetJdFitBandsProcedure:
 			adminServiceSetJdFitBandsHandler.ServeHTTP(w, r)
+		case AdminServiceGetDecisionTestSettingsProcedure:
+			adminServiceGetDecisionTestSettingsHandler.ServeHTTP(w, r)
+		case AdminServiceSetDecisionTestSettingsProcedure:
+			adminServiceSetDecisionTestSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceGetSchedulerSettingsProcedure:
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
@@ -2468,6 +2526,14 @@ func (UnimplementedAdminServiceHandler) GetJdFitBands(context.Context, *connect.
 
 func (UnimplementedAdminServiceHandler) SetJdFitBands(context.Context, *connect.Request[v1.SetJdFitBandsRequest]) (*connect.Response[v1.SetJdFitBandsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetJdFitBands is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetDecisionTestSettings(context.Context, *connect.Request[v1.GetDecisionTestSettingsRequest]) (*connect.Response[v1.GetDecisionTestSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetDecisionTestSettings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetDecisionTestSettings is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {

@@ -138,6 +138,15 @@ export function Briefing() {
           sessionKey: res.sessionKey,
           audioMode,
           questionCount: res.questionCount,
+          // Served per session so a run cannot drift from the settings
+          // it started under, even if the owner edits them mid-run.
+          timings: res.timings
+            ? {
+                memoriseMs: res.timings.memoriseMs,
+                questionMs: res.timings.questionMs,
+                recallMs: res.timings.recallMs,
+              }
+            : undefined,
           practice: {
             blockNo: 0,
             load: "practice",

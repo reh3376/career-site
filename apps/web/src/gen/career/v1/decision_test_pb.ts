@@ -28,7 +28,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/decision_test.proto.
  */
 export const file_career_v1_decision_test: GenFile = /*@__PURE__*/
-  fileDesc("Ch1jYXJlZXIvdjEvZGVjaXNpb25fdGVzdC5wcm90bxIJY2FyZWVyLnYxIqwBCgZJbnRha2USHQoMZGlzcGxheV9uYW1lGAEgASgJQge6SARyAhh4EhoKCWFnZV9yYW5nZRgCIAEoCUIHukgEcgIYKBIaCgllZHVjYXRpb24YAyABKAlCB7pIBHICGDwSGwoKb2NjdXBhdGlvbhgEIAEoCUIHukgEcgIYeBIXCgVlbWFpbBgFIAEoCUIIukgFcgMYyAESFQoNd2FudHNfcmVzdWx0cxgGIAEoCCKnAQoKQ29uZGl0aW9ucxIbCgphdWRpb19tb2RlGAEgASgJQge6SARyAhgQEh0KDGRldmljZV9jbGFzcxgCIAEoCUIHukgEcgIYEBIYChB0YXBfY2hlY2tfcGFzc2VkGAMgASgIEh8KDmJhc2VsaW5lX3J0X21zGAQgASgFQge6SAQaAigAEiIKEWJhc2VsaW5lX3J0X3NkX21zGAUgASgFQge6SAQaAigAInYKE1N0YXJ0U2Vzc2lvblJlcXVlc3QSIQoGaW50YWtlGAEgASgLMhEuY2FyZWVyLnYxLkludGFrZRIpCgpjb25kaXRpb25zGAIgASgLMhUuY2FyZWVyLnYxLkNvbmRpdGlvbnMSEQoJc3ludGhldGljGAMgASgIInwKFFN0YXJ0U2Vzc2lvblJlc3BvbnNlEhMKC3Nlc3Npb25fa2V5GAEgASgJEiIKCHByYWN0aWNlGAIgASgLMhAuY2FyZWVyLnYxLkJsb2NrEhMKC2Jsb2NrX2NvdW50GAMgASgFEhYKDnF1ZXN0aW9uX2NvdW50GAQgASgFIkwKD0dldEJsb2NrUmVxdWVzdBIcCgtzZXNzaW9uX2tleRgBIAEoCUIHukgEcgIYQBIbCghibG9ja19ubxgCIAEoBUIJukgGGgQYBSgBIjMKEEdldEJsb2NrUmVzcG9uc2USHwoFYmxvY2sYASABKAsyEC5jYXJlZXIudjEuQmxvY2sicgoFQmxvY2sSEAoIYmxvY2tfbm8YASABKAUSDAoEbG9hZBgCIAEoCRIOCgZkaWdpdHMYAyABKAkSEQoJdHJhbnNmb3JtGAQgASgJEiYKCXF1ZXN0aW9ucxgFIAMoCzITLmNhcmVlci52MS5RdWVzdGlvbiJ2CghRdWVzdGlvbhIMCgRjb2RlGAEgASgJEg8KB3ZlcnNpb24YAiABKAUSDgoGcHJvbXB0GAMgASgJEhAKCHJlbWluZGVyGAQgASgJEg8KB29wdGlvbnMYBSADKAkSGAoQcG9zaXRpb25fb3ZlcmFsbBgGIAEoBSLXAQoTU3VibWl0QW5zd2VyUmVxdWVzdBIcCgtzZXNzaW9uX2tleRgBIAEoCUIHukgEcgIYQBIbCghibG9ja19ubxgCIAEoBUIJukgGGgQYBSgBEiEKEHBvc2l0aW9uX292ZXJhbGwYAyABKAVCB7pIBBoCKAESJgoMY2hvc2VuX2luZGV4GAQgASgFQhC6SA0aCyj///////////8BEhsKCmxhdGVuY3lfbXMYBSABKAVCB7pIBBoCKAASHQoKY29uZmlkZW5jZRgGIAEoBUIJukgGGgQYZCgAIiYKFFN1Ym1pdEFuc3dlclJlc3BvbnNlEg4KBnN0b3JlZBgBIAEoCCKGAQoTU3VibWl0UmVjYWxsUmVxdWVzdBIcCgtzZXNzaW9uX2tleRgBIAEoCUIHukgEcgIYQBIbCghibG9ja19ubxgCIAEoBUIJukgGGgQYBSgBEhcKBmRpZ2l0cxgDIAEoCUIHukgEcgIYEBIbCgpsYXRlbmN5X21zGAQgASgFQge6SAQaAigAIiYKFFN1Ym1pdFJlY2FsbFJlc3BvbnNlEg4KBnN0b3JlZBgBIAEoCCJWChRGaW5pc2hTZXNzaW9uUmVxdWVzdBIcCgtzZXNzaW9uX2tleRgBIAEoCUIHukgEcgIYQBIgCg9yZWNhbGxfc3RyYXRlZ3kYAiABKAlCB7pIBHICGBAiNwoVRmluaXNoU2Vzc2lvblJlc3BvbnNlEg8KB2NvcnJlY3QYASABKAUSDQoFdG90YWwYAiABKAUy0wMKE0RlY2lzaW9uVGVzdFNlcnZpY2USWQoMU3RhcnRTZXNzaW9uEh4uY2FyZWVyLnYxLlN0YXJ0U2Vzc2lvblJlcXVlc3QaHy5jYXJlZXIudjEuU3RhcnRTZXNzaW9uUmVzcG9uc2UiCIC1GAGQtRgKEk0KCEdldEJsb2NrEhouY2FyZWVyLnYxLkdldEJsb2NrUmVxdWVzdBobLmNhcmVlci52MS5HZXRCbG9ja1Jlc3BvbnNlIgiAtRgBkLUYPBJZCgxTdWJtaXRBbnN3ZXISHi5jYXJlZXIudjEuU3VibWl0QW5zd2VyUmVxdWVzdBofLmNhcmVlci52MS5TdWJtaXRBbnN3ZXJSZXNwb25zZSIIgLUYAZC1GHgSWQoMU3VibWl0UmVjYWxsEh4uY2FyZWVyLnYxLlN1Ym1pdFJlY2FsbFJlcXVlc3QaHy5jYXJlZXIudjEuU3VibWl0UmVjYWxsUmVzcG9uc2UiCIC1GAGQtRgeElwKDUZpbmlzaFNlc3Npb24SHy5jYXJlZXIudjEuRmluaXNoU2Vzc2lvblJlcXVlc3QaIC5jYXJlZXIudjEuRmluaXNoU2Vzc2lvblJlc3BvbnNlIgiAtRgBkLUYCkKrAQoNY29tLmNhcmVlci52MUIRRGVjaXNpb25UZXN0UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options]);
+  fileDesc("Ch1jYXJlZXIvdjEvZGVjaXNpb25fdGVzdC5wcm90bxIJY2FyZWVyLnYxIqwBCgZJbnRha2USHQoMZGlzcGxheV9uYW1lGAEgASgJQge6SARyAhh4EhoKCWFnZV9yYW5nZRgCIAEoCUIHukgEcgIYKBIaCgllZHVjYXRpb24YAyABKAlCB7pIBHICGDwSGwoKb2NjdXBhdGlvbhgEIAEoCUIHukgEcgIYeBIXCgVlbWFpbBgFIAEoCUIIukgFcgMYyAESFQoNd2FudHNfcmVzdWx0cxgGIAEoCCKnAQoKQ29uZGl0aW9ucxIbCgphdWRpb19tb2RlGAEgASgJQge6SARyAhgQEh0KDGRldmljZV9jbGFzcxgCIAEoCUIHukgEcgIYEBIYChB0YXBfY2hlY2tfcGFzc2VkGAMgASgIEh8KDmJhc2VsaW5lX3J0X21zGAQgASgFQge6SAQaAigAEiIKEWJhc2VsaW5lX3J0X3NkX21zGAUgASgFQge6SAQaAigAInYKE1N0YXJ0U2Vzc2lvblJlcXVlc3QSIQoGaW50YWtlGAEgASgLMhEuY2FyZWVyLnYxLkludGFrZRIpCgpjb25kaXRpb25zGAIgASgLMhUuY2FyZWVyLnYxLkNvbmRpdGlvbnMSEQoJc3ludGhldGljGAMgASgIIkYKB1RpbWluZ3MSEwoLbWVtb3Jpc2VfbXMYASABKAUSEwoLcXVlc3Rpb25fbXMYAiABKAUSEQoJcmVjYWxsX21zGAMgASgFIqEBChRTdGFydFNlc3Npb25SZXNwb25zZRITCgtzZXNzaW9uX2tleRgBIAEoCRIiCghwcmFjdGljZRgCIAEoCzIQLmNhcmVlci52MS5CbG9jaxITCgtibG9ja19jb3VudBgDIAEoBRIWCg5xdWVzdGlvbl9jb3VudBgEIAEoBRIjCgd0aW1pbmdzGAUgASgLMhIuY2FyZWVyLnYxLlRpbWluZ3MiTAoPR2V0QmxvY2tSZXF1ZXN0EhwKC3Nlc3Npb25fa2V5GAEgASgJQge6SARyAhhAEhsKCGJsb2NrX25vGAIgASgFQgm6SAYaBBgFKAEiMwoQR2V0QmxvY2tSZXNwb25zZRIfCgVibG9jaxgBIAEoCzIQLmNhcmVlci52MS5CbG9jayJyCgVCbG9jaxIQCghibG9ja19ubxgBIAEoBRIMCgRsb2FkGAIgASgJEg4KBmRpZ2l0cxgDIAEoCRIRCgl0cmFuc2Zvcm0YBCABKAkSJgoJcXVlc3Rpb25zGAUgAygLMhMuY2FyZWVyLnYxLlF1ZXN0aW9uInYKCFF1ZXN0aW9uEgwKBGNvZGUYASABKAkSDwoHdmVyc2lvbhgCIAEoBRIOCgZwcm9tcHQYAyABKAkSEAoIcmVtaW5kZXIYBCABKAkSDwoHb3B0aW9ucxgFIAMoCRIYChBwb3NpdGlvbl9vdmVyYWxsGAYgASgFItcBChNTdWJtaXRBbnN3ZXJSZXF1ZXN0EhwKC3Nlc3Npb25fa2V5GAEgASgJQge6SARyAhhAEhsKCGJsb2NrX25vGAIgASgFQgm6SAYaBBgFKAESIQoQcG9zaXRpb25fb3ZlcmFsbBgDIAEoBUIHukgEGgIoARImCgxjaG9zZW5faW5kZXgYBCABKAVCELpIDRoLKP///////////wESGwoKbGF0ZW5jeV9tcxgFIAEoBUIHukgEGgIoABIdCgpjb25maWRlbmNlGAYgASgFQgm6SAYaBBhkKAAiJgoUU3VibWl0QW5zd2VyUmVzcG9uc2USDgoGc3RvcmVkGAEgASgIIoYBChNTdWJtaXRSZWNhbGxSZXF1ZXN0EhwKC3Nlc3Npb25fa2V5GAEgASgJQge6SARyAhhAEhsKCGJsb2NrX25vGAIgASgFQgm6SAYaBBgFKAESFwoGZGlnaXRzGAMgASgJQge6SARyAhgQEhsKCmxhdGVuY3lfbXMYBCABKAVCB7pIBBoCKAAiJgoUU3VibWl0UmVjYWxsUmVzcG9uc2USDgoGc3RvcmVkGAEgASgIIlYKFEZpbmlzaFNlc3Npb25SZXF1ZXN0EhwKC3Nlc3Npb25fa2V5GAEgASgJQge6SARyAhhAEiAKD3JlY2FsbF9zdHJhdGVneRgCIAEoCUIHukgEcgIYECI3ChVGaW5pc2hTZXNzaW9uUmVzcG9uc2USDwoHY29ycmVjdBgBIAEoBRINCgV0b3RhbBgCIAEoBTLTAwoTRGVjaXNpb25UZXN0U2VydmljZRJZCgxTdGFydFNlc3Npb24SHi5jYXJlZXIudjEuU3RhcnRTZXNzaW9uUmVxdWVzdBofLmNhcmVlci52MS5TdGFydFNlc3Npb25SZXNwb25zZSIIgLUYAZC1GAoSTQoIR2V0QmxvY2sSGi5jYXJlZXIudjEuR2V0QmxvY2tSZXF1ZXN0GhsuY2FyZWVyLnYxLkdldEJsb2NrUmVzcG9uc2UiCIC1GAGQtRg8ElkKDFN1Ym1pdEFuc3dlchIeLmNhcmVlci52MS5TdWJtaXRBbnN3ZXJSZXF1ZXN0Gh8uY2FyZWVyLnYxLlN1Ym1pdEFuc3dlclJlc3BvbnNlIgiAtRgBkLUYeBJZCgxTdWJtaXRSZWNhbGwSHi5jYXJlZXIudjEuU3VibWl0UmVjYWxsUmVxdWVzdBofLmNhcmVlci52MS5TdWJtaXRSZWNhbGxSZXNwb25zZSIIgLUYAZC1GB4SXAoNRmluaXNoU2Vzc2lvbhIfLmNhcmVlci52MS5GaW5pc2hTZXNzaW9uUmVxdWVzdBogLmNhcmVlci52MS5GaW5pc2hTZXNzaW9uUmVzcG9uc2UiCIC1GAGQtRgKQqsBCg1jb20uY2FyZWVyLnYxQhFEZWNpc2lvblRlc3RQcm90b1ABWkJnaXRodWIuY29tL3JlaDMzNzYvY2FyZWVyLXNpdGUvc2VydmljZXMvYXBpL2dlbi9jYXJlZXIvdjE7Y2FyZWVydjGiAgNDWFiqAglDYXJlZXIuVjHKAglDYXJlZXJcVjHiAhVDYXJlZXJcVjFcR1BCTWV0YWRhdGHqAgpDYXJlZXI6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_career_v1_options]);
 
 /**
  * Optional demographics, collected after the effort warning and posted
@@ -182,6 +182,47 @@ export const StartSessionRequestSchema: GenMessage<StartSessionRequest> = /*@__P
   messageDesc(file_career_v1_decision_test, 2);
 
 /**
+ * The timings this run is bound by, served to the client rather than
+ * hard-coded in it.
+ *
+ * They live in app_settings and are editable from the admin console,
+ * because the first two live runs each moved them and each move cost a
+ * deploy. They are returned per session so a run cannot drift from the
+ * settings it started under.
+ *
+ * @generated from message career.v1.Timings
+ */
+export type Timings = Message<"career.v1.Timings"> & {
+  /**
+   * How long the number to hold is shown.
+   *
+   * @generated from field: int32 memorise_ms = 1;
+   */
+  memoriseMs: number;
+
+  /**
+   * Hard limit per question, covering reading, deciding and rating.
+   *
+   * @generated from field: int32 question_ms = 2;
+   */
+  questionMs: number;
+
+  /**
+   * Limit on entering the number at the end of a block.
+   *
+   * @generated from field: int32 recall_ms = 3;
+   */
+  recallMs: number;
+};
+
+/**
+ * Describes the message career.v1.Timings.
+ * Use `create(TimingsSchema)` to create a new message.
+ */
+export const TimingsSchema: GenMessage<Timings> = /*@__PURE__*/
+  messageDesc(file_career_v1_decision_test, 3);
+
+/**
  * The opened session.
  *
  * @generated from message career.v1.StartSessionResponse
@@ -215,6 +256,13 @@ export type StartSessionResponse = Message<"career.v1.StartSessionResponse"> & {
    * @generated from field: int32 question_count = 4;
    */
   questionCount: number;
+
+  /**
+   * The timings in force for this run.
+   *
+   * @generated from field: career.v1.Timings timings = 5;
+   */
+  timings?: Timings | undefined;
 };
 
 /**
@@ -222,7 +270,7 @@ export type StartSessionResponse = Message<"career.v1.StartSessionResponse"> & {
  * Use `create(StartSessionResponseSchema)` to create a new message.
  */
 export const StartSessionResponseSchema: GenMessage<StartSessionResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 3);
+  messageDesc(file_career_v1_decision_test, 4);
 
 /**
  * Asks for a block by number.
@@ -251,7 +299,7 @@ export type GetBlockRequest = Message<"career.v1.GetBlockRequest"> & {
  * Use `create(GetBlockRequestSchema)` to create a new message.
  */
 export const GetBlockRequestSchema: GenMessage<GetBlockRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 4);
+  messageDesc(file_career_v1_decision_test, 5);
 
 /**
  * One block: a number to hold, and the questions to answer while
@@ -273,7 +321,7 @@ export type GetBlockResponse = Message<"career.v1.GetBlockResponse"> & {
  * Use `create(GetBlockResponseSchema)` to create a new message.
  */
 export const GetBlockResponseSchema: GenMessage<GetBlockResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 5);
+  messageDesc(file_career_v1_decision_test, 6);
 
 /**
  * A number to memorise and the questions answered under it.
@@ -325,7 +373,7 @@ export type Block = Message<"career.v1.Block"> & {
  * Use `create(BlockSchema)` to create a new message.
  */
 export const BlockSchema: GenMessage<Block> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 6);
+  messageDesc(file_career_v1_decision_test, 7);
 
 /**
  * One question as the participant sees it. No correct answer, no lure
@@ -387,7 +435,7 @@ export type Question = Message<"career.v1.Question"> & {
  * Use `create(QuestionSchema)` to create a new message.
  */
 export const QuestionSchema: GenMessage<Question> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 7);
+  messageDesc(file_career_v1_decision_test, 8);
 
 /**
  * Records one answer.
@@ -446,7 +494,7 @@ export type SubmitAnswerRequest = Message<"career.v1.SubmitAnswerRequest"> & {
  * Use `create(SubmitAnswerRequestSchema)` to create a new message.
  */
 export const SubmitAnswerRequestSchema: GenMessage<SubmitAnswerRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 8);
+  messageDesc(file_career_v1_decision_test, 9);
 
 /**
  * Acknowledgement. Deliberately carries no verdict.
@@ -467,7 +515,7 @@ export type SubmitAnswerResponse = Message<"career.v1.SubmitAnswerResponse"> & {
  * Use `create(SubmitAnswerResponseSchema)` to create a new message.
  */
 export const SubmitAnswerResponseSchema: GenMessage<SubmitAnswerResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 9);
+  messageDesc(file_career_v1_decision_test, 10);
 
 /**
  * Records the digits returned at the end of a block.
@@ -509,7 +557,7 @@ export type SubmitRecallRequest = Message<"career.v1.SubmitRecallRequest"> & {
  * Use `create(SubmitRecallRequestSchema)` to create a new message.
  */
 export const SubmitRecallRequestSchema: GenMessage<SubmitRecallRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 10);
+  messageDesc(file_career_v1_decision_test, 11);
 
 /**
  * Acknowledgement. A missed recall is a data point, not a failure, and
@@ -531,7 +579,7 @@ export type SubmitRecallResponse = Message<"career.v1.SubmitRecallResponse"> & {
  * Use `create(SubmitRecallResponseSchema)` to create a new message.
  */
 export const SubmitRecallResponseSchema: GenMessage<SubmitRecallResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 11);
+  messageDesc(file_career_v1_decision_test, 12);
 
 /**
  * Closes the session.
@@ -562,7 +610,7 @@ export type FinishSessionRequest = Message<"career.v1.FinishSessionRequest"> & {
  * Use `create(FinishSessionRequestSchema)` to create a new message.
  */
 export const FinishSessionRequestSchema: GenMessage<FinishSessionRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 12);
+  messageDesc(file_career_v1_decision_test, 13);
 
 /**
  * The closed session.
@@ -591,7 +639,7 @@ export type FinishSessionResponse = Message<"career.v1.FinishSessionResponse"> &
  * Use `create(FinishSessionResponseSchema)` to create a new message.
  */
 export const FinishSessionResponseSchema: GenMessage<FinishSessionResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_decision_test, 13);
+  messageDesc(file_career_v1_decision_test, 14);
 
 /**
  * Runs one sitting of the decision test.

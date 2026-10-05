@@ -42,7 +42,12 @@ func NewDecisionTest(log *slog.Logger, repo *users.Repo, auth *Auth) *DecisionTe
 // whenever the bank changes, so a reworded item does not silently pool
 // with its predecessor.
 const (
-	itemSetVersion = "items-2026-10-04"
+	// Bumped on 2026-10-05 with migration 00052: three base-rate items
+	// retired, one conjunction and two syllogisms added, and the
+	// presentation order interleaved so every block carries the same
+	// family mix. A run before that is a different instrument and must
+	// not pool with one after it.
+	itemSetVersion = "items-2026-10-05"
 	keyVersion     = "key-1"
 )
 
@@ -93,8 +98,13 @@ func (h *DecisionTest) StartSession(
 	}
 	visitorKey := cookieValue(req.Header().Get("Cookie"), AnonCookieName)
 
+	// Timings are owner-editable (/admin/decision-test), and the
+	// instrument version is derived from them, so a run always records
+	// the timings it was taken under.
+	timings := h.users.DTGetSettings(ctx)
+
 	sess, err := h.users.StartDecisionTest(ctx, intake, cond, m.GetSynthetic(),
-		visitorKey, userID, itemSetVersion, keyVersion)
+		visitorKey, userID, timings.InstrumentVersion(), itemSetVersion, keyVersion)
 	if err != nil {
 		h.log.Error("decision test: start", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start the test"))
@@ -119,6 +129,11 @@ func (h *DecisionTest) StartSession(
 		Practice:      practice,
 		BlockCount:    users.DTBlockCount,
 		QuestionCount: users.DTQuestionCount,
+		Timings: &v1.Timings{
+			MemoriseMs: int32(timings.MemoriseMs),
+			QuestionMs: int32(timings.QuestionMs),
+			RecallMs:   int32(timings.RecallMs),
+		},
 	}), nil
 }
 

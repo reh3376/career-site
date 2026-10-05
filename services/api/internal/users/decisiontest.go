@@ -84,10 +84,11 @@ const (
 	DTQuestionCount     = DTBlockCount * DTQuestionsPerBlock
 )
 
-// DTInstrumentVersion identifies the block structure, counts and phase
-// limits. Stored on every session so a later change does not silently
-// pool two different tests into one dataset.
-const DTInstrumentVersion = "v1"
+// The instrument version is no longer a constant. It is derived from the
+// owner-editable timings (DTSettings.InstrumentVersion), because a
+// question answered in 20 seconds and the same question answered in 25
+// are not the same measurement, and a version that has to be remembered
+// separately is a version that will eventually be forgotten.
 
 // StartDecisionTest opens a session and returns it.
 //
@@ -97,7 +98,7 @@ const DTInstrumentVersion = "v1"
 func (r *Repo) StartDecisionTest(
 	ctx context.Context,
 	in DTIntake, cond DTConditions, synthetic bool, visitorKey string, userID *int64,
-	itemSetVersion, keyVersion string,
+	instrumentVersion, itemSetVersion, keyVersion string,
 ) (*DTSession, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -136,7 +137,7 @@ func (r *Repo) StartDecisionTest(
 		   is_repeat, repeat_matched_by, visitor_key, is_synthetic)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING id, public_id::text`,
-		participantID, DTInstrumentVersion, itemSetVersion, keyVersion,
+		participantID, instrumentVersion, itemSetVersion, keyVersion,
 		cond.AudioMode, cond.DeviceClass, cond.TapCheckPassed,
 		nullableInt(cond.BaselineRTMs), nullableInt(cond.BaselineRTSDMs),
 		isRepeat, matchedBy, visitorKey, synthetic,
@@ -426,7 +427,7 @@ func (r *Repo) DTPracticeItems(ctx context.Context) ([]DTItem, error) {
 func (r *Repo) dtItems(ctx context.Context, kind string) ([]DTItem, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, code, version, family, kind, prompt, reminder, options, correct_index, lure_index
-		  FROM dt_items WHERE kind=$1 AND active ORDER BY id`, kind)
+		  FROM dt_items WHERE kind=$1 AND active ORDER BY position, id`, kind)
 	if err != nil {
 		return nil, fmt.Errorf("decision test: items: %w", err)
 	}

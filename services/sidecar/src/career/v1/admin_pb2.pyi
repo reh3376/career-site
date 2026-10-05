@@ -2221,3 +2221,37 @@ class PipelineCount(_message.Message):
     count: int
     oldest: _timestamp_pb2.Timestamp
     def __init__(self, status: _Optional[str] = ..., count: _Optional[int] = ..., oldest: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetDecisionTestSettingsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetDecisionTestSettingsResponse(_message.Message):
+    __slots__ = ("memorise_ms", "question_ms", "recall_ms", "instrument_version", "sessions_on_this_version")
+    MEMORISE_MS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_MS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_MS_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_ON_THIS_VERSION_FIELD_NUMBER: _ClassVar[int]
+    memorise_ms: int
+    question_ms: int
+    recall_ms: int
+    instrument_version: str
+    sessions_on_this_version: int
+    def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ..., instrument_version: _Optional[str] = ..., sessions_on_this_version: _Optional[int] = ...) -> None: ...
+
+class SetDecisionTestSettingsRequest(_message.Message):
+    __slots__ = ("memorise_ms", "question_ms", "recall_ms")
+    MEMORISE_MS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_MS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_MS_FIELD_NUMBER: _ClassVar[int]
+    memorise_ms: int
+    question_ms: int
+    recall_ms: int
+    def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ...) -> None: ...
+
+class SetDecisionTestSettingsResponse(_message.Message):
+    __slots__ = ("instrument_version",)
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    instrument_version: str
+    def __init__(self, instrument_version: _Optional[str] = ...) -> None: ...

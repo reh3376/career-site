@@ -110,6 +110,22 @@ message StartSessionRequest {
   bool synthetic = 3;
 }
 
+// The timings this run is bound by, served to the client rather than
+// hard-coded in it.
+//
+// They live in app_settings and are editable from the admin console,
+// because the first two live runs each moved them and each move cost a
+// deploy. They are returned per session so a run cannot drift from the
+// settings it started under.
+message Timings {
+  // How long the number to hold is shown.
+  int32 memorise_ms = 1;
+  // Hard limit per question, covering reading, deciding and rating.
+  int32 question_ms = 2;
+  // Limit on entering the number at the end of a block.
+  int32 recall_ms = 3;
+}
+
 // The opened session.
 message StartSessionResponse {
   // Opaque handle for the rest of the run. Not a database id.
@@ -121,6 +137,8 @@ message StartSessionResponse {
   int32 block_count = 3;
   // How many scored questions in total, for the progress counter.
   int32 question_count = 4;
+  // The timings in force for this run.
+  Timings timings = 5;
 }
 
 // Asks for a block by number.
