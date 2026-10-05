@@ -43,21 +43,40 @@ type DTExport struct {
 
 // DTExportCSV renders v_dt_answers as RFC 4180 CSV.
 //
-// Synthetic runs are excluded unless asked for. An agent run is useful
-// for checking the instrument and ruinous averaged into a claim about
-// people, so it is a decision the caller has to make rather than
-// something that rides along.
-func (r *Repo) DTExportCSV(ctx context.Context, includeSynthetic bool) (DTExport, error) {
+// Two exclusions, both off by default and both requiring the caller to
+// ask, because each one quietly changes what a conclusion rests on.
+//
+// Synthetic runs: an agent run is useful for checking the instrument
+// and ruinous averaged into a claim about people.
+//
+// Runs and blocks the owner marked `do_not_use`: curation that does not
+// reach the export is decoration, because the export is the thing that
+// actually leaves for analysis. A run marked unusable that still ships
+// is worse than no curation at all, since the mark creates a belief the
+// data has been cleaned.
+//
+// The default path filters on `usable`, which is the view's single
+// definition of the word. The relaxed paths name the one conjunct they
+// are dropping rather than rebuilding the definition in Go, so there is
+// still only one place that decides what usable means.
+func (r *Repo) DTExportCSV(ctx context.Context, includeSynthetic, includeExcluded bool) (DTExport, error) {
 	var out DTExport
+
+	var where string
+	switch {
+	case !includeSynthetic && !includeExcluded:
+		where = ` WHERE usable`
+	case includeSynthetic && !includeExcluded:
+		where = ` WHERE session_review_status <> 'do_not_use' AND block_review_status <> 'do_not_use'`
+	case !includeSynthetic && includeExcluded:
+		where = ` WHERE NOT is_synthetic`
+	}
 
 	// pgx gives the column names back on the result, in the view's own
 	// order, which is what makes this export follow the view rather
 	// than a copy of it.
-	q := `SELECT * FROM v_dt_answers`
-	if !includeSynthetic {
-		q += ` WHERE NOT is_synthetic`
-	}
-	q += ` ORDER BY started_at, session_key, position_overall`
+	q := `SELECT * FROM v_dt_answers` + where +
+		` ORDER BY started_at, session_key, position_overall`
 
 	rows, err := r.pool.Query(ctx, q)
 	if err != nil {

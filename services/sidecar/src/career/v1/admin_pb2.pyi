@@ -2257,19 +2257,23 @@ class SetDecisionTestSettingsResponse(_message.Message):
     def __init__(self, instrument_version: _Optional[str] = ...) -> None: ...
 
 class ListDecisionTestRunsRequest(_message.Message):
-    __slots__ = ("include_synthetic",)
+    __slots__ = ("include_synthetic", "review_status")
     INCLUDE_SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_STATUS_FIELD_NUMBER: _ClassVar[int]
     include_synthetic: bool
-    def __init__(self, include_synthetic: _Optional[bool] = ...) -> None: ...
+    review_status: str
+    def __init__(self, include_synthetic: _Optional[bool] = ..., review_status: _Optional[str] = ...) -> None: ...
 
 class ListDecisionTestRunsResponse(_message.Message):
-    __slots__ = ("runs",)
+    __slots__ = ("counts", "runs")
+    COUNTS_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
+    counts: DecisionTestReviewCounts
     runs: _containers.RepeatedCompositeFieldContainer[DecisionTestRun]
-    def __init__(self, runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
+    def __init__(self, counts: _Optional[_Union[DecisionTestReviewCounts, _Mapping]] = ..., runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
 
 class DecisionTestRun(_message.Message):
-    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at")
+    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -2291,6 +2295,14 @@ class DecisionTestRun(_message.Message):
     MEAN_CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
     DURATION_S_FIELD_NUMBER: _ClassVar[int]
     STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_STATUS_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_REASON_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_NOTE_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_AT_FIELD_NUMBER: _ClassVar[int]
+    BLOCKS_EXCLUDED_FIELD_NUMBER: _ClassVar[int]
+    RECALL_STRATEGY_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_RT_SD_MS_FIELD_NUMBER: _ClassVar[int]
+    REPEAT_MATCHED_BY_FIELD_NUMBER: _ClassVar[int]
     session_key: str
     status: str
     display_name: str
@@ -2312,7 +2324,15 @@ class DecisionTestRun(_message.Message):
     mean_confidence: int
     duration_s: int
     started_at: str
-    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ...) -> None: ...
+    review_status: str
+    review_reason: str
+    review_note: str
+    reviewed_at: str
+    blocks_excluded: int
+    recall_strategy: str
+    baseline_rt_sd_ms: int
+    repeat_matched_by: str
+    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ..., review_status: _Optional[str] = ..., review_reason: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[str] = ..., blocks_excluded: _Optional[int] = ..., recall_strategy: _Optional[str] = ..., baseline_rt_sd_ms: _Optional[int] = ..., repeat_matched_by: _Optional[str] = ...) -> None: ...
 
 class GetDecisionTestRunRequest(_message.Message):
     __slots__ = ("session_key",)
@@ -2331,10 +2351,32 @@ class GetDecisionTestRunResponse(_message.Message):
     def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ...) -> None: ...
 
 class ExportDecisionTestDataRequest(_message.Message):
-    __slots__ = ("include_synthetic",)
+    __slots__ = ("include_synthetic", "include_excluded")
     INCLUDE_SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_EXCLUDED_FIELD_NUMBER: _ClassVar[int]
     include_synthetic: bool
-    def __init__(self, include_synthetic: _Optional[bool] = ...) -> None: ...
+    include_excluded: bool
+    def __init__(self, include_synthetic: _Optional[bool] = ..., include_excluded: _Optional[bool] = ...) -> None: ...
+
+class ReviewDecisionTestRunRequest(_message.Message):
+    __slots__ = ("session_key", "block_no", "status", "reason", "note")
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    block_no: int
+    status: str
+    reason: str
+    note: str
+    def __init__(self, session_key: _Optional[str] = ..., block_no: _Optional[int] = ..., status: _Optional[str] = ..., reason: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class ReviewDecisionTestRunResponse(_message.Message):
+    __slots__ = ("run",)
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    run: DecisionTestRun
+    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ...) -> None: ...
 
 class ExportDecisionTestDataResponse(_message.Message):
     __slots__ = ("csv", "filename", "rows", "sessions")
@@ -2347,6 +2389,22 @@ class ExportDecisionTestDataResponse(_message.Message):
     rows: int
     sessions: int
     def __init__(self, csv: _Optional[str] = ..., filename: _Optional[str] = ..., rows: _Optional[int] = ..., sessions: _Optional[int] = ...) -> None: ...
+
+class DecisionTestReviewCounts(_message.Message):
+    __slots__ = ("total", "unreviewed", "good", "incomplete", "hold", "do_not_use")
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    UNREVIEWED_FIELD_NUMBER: _ClassVar[int]
+    GOOD_FIELD_NUMBER: _ClassVar[int]
+    INCOMPLETE_FIELD_NUMBER: _ClassVar[int]
+    HOLD_FIELD_NUMBER: _ClassVar[int]
+    DO_NOT_USE_FIELD_NUMBER: _ClassVar[int]
+    total: int
+    unreviewed: int
+    good: int
+    incomplete: int
+    hold: int
+    do_not_use: int
+    def __init__(self, total: _Optional[int] = ..., unreviewed: _Optional[int] = ..., good: _Optional[int] = ..., incomplete: _Optional[int] = ..., hold: _Optional[int] = ..., do_not_use: _Optional[int] = ...) -> None: ...
 
 class DecisionTestBlock(_message.Message):
     __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome", "memory_failure_pct")

@@ -85,7 +85,7 @@ func (a *Admin) ListDecisionTestRuns(
 	if _, err := requireAdmin(a, ctx, req); err != nil {
 		return nil, err
 	}
-	runs, err := a.users.DTListRuns(ctx, req.Msg.GetIncludeSynthetic())
+	runs, err := a.users.DTListRuns(ctx, req.Msg.GetIncludeSynthetic(), req.Msg.GetReviewStatus())
 	if err != nil {
 		a.log.Error("decision test: list runs", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not read the runs"))
@@ -94,7 +94,21 @@ func (a *Admin) ListDecisionTestRuns(
 	for _, r := range runs {
 		out = append(out, toProtoRun(r))
 	}
-	return connect.NewResponse(&v1.ListDecisionTestRunsResponse{Runs: out}), nil
+	// Counted across every real run rather than the filtered page, so
+	// "14 left to review" stays true while looking at one status.
+	counts, err := a.users.DTReviewSummary(ctx)
+	if err != nil {
+		a.log.Error("decision test: review summary", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not read the runs"))
+	}
+	return connect.NewResponse(&v1.ListDecisionTestRunsResponse{
+		Runs: out,
+		Counts: &v1.DecisionTestReviewCounts{
+			Total: int32(counts.Total), Unreviewed: int32(counts.Unreviewed),
+			Good: int32(counts.Good), Incomplete: int32(counts.Incomplete),
+			Hold: int32(counts.Hold), DoNotUse: int32(counts.DoNotUse),
+		},
+	}), nil
 }
 
 // GetDecisionTestRun returns one run in full.
@@ -153,18 +167,72 @@ func (a *Admin) ExportDecisionTestData(
 	if a.users == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("not configured"))
 	}
-	out, err := a.users.DTExportCSV(ctx, req.Msg.GetIncludeSynthetic())
+	out, err := a.users.DTExportCSV(ctx, req.Msg.GetIncludeSynthetic(), req.Msg.GetIncludeExcluded())
 	if err != nil {
 		a.log.Error("decision test: export", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not build the export"))
 	}
 	a.log.Info("decision test exported",
 		slog.Int("rows", out.Rows), slog.Int("sessions", out.Sessions),
-		slog.Bool("include_synthetic", req.Msg.GetIncludeSynthetic()))
+		slog.Bool("include_synthetic", req.Msg.GetIncludeSynthetic()),
+		slog.Bool("include_excluded", req.Msg.GetIncludeExcluded()))
 	return connect.NewResponse(&v1.ExportDecisionTestDataResponse{
 		Csv: out.CSV, Filename: out.Filename,
 		Rows: int32(out.Rows), Sessions: int32(out.Sessions),
 	}), nil
+}
+
+// ReviewDecisionTestRun records the owner's curation judgement.
+//
+// Session or block, decided by block_no. The judgement is written to
+// the row every query filters on and appended to a history, in one
+// transaction, so there is never a verdict without a record of how it
+// got there.
+func (a *Admin) ReviewDecisionTestRun(
+	ctx context.Context, req *connect.Request[v1.ReviewDecisionTestRunRequest],
+) (*connect.Response[v1.ReviewDecisionTestRunResponse], error) {
+	admin, err := requireAdmin(a, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	key := req.Msg.GetSessionKey()
+	rev := users.DTReview{
+		BlockNo: int(req.Msg.GetBlockNo()),
+		Status:  req.Msg.GetStatus(),
+		Reason:  req.Msg.GetReason(),
+		Note:    req.Msg.GetNote(),
+	}
+
+	switch {
+	case rev.BlockNo == 0:
+		err = a.users.DTReviewSession(ctx, key, rev, &admin.ID)
+	case rev.Status == "":
+		// A block has no stored unreviewed state: no row means nobody
+		// has judged it. So clearing one is a delete, and the clearing
+		// itself is recorded, because an exclusion that quietly
+		// disappears is the thing somebody would most want explained.
+		err = a.users.DTClearBlockReview(ctx, key, rev.BlockNo, &admin.ID)
+	default:
+		err = a.users.DTReviewBlock(ctx, key, rev, &admin.ID)
+	}
+	if err != nil {
+		// A rejected vocabulary is the caller's mistake, not a server
+		// fault, and saying which word was refused is the whole value
+		// of refusing it.
+		a.log.Warn("decision test: review", slog.String("session", key),
+			slog.Int("block", rev.BlockNo), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	a.log.Info("decision test reviewed",
+		slog.String("session", key), slog.Int("block", rev.BlockNo),
+		slog.String("status", rev.Status), slog.String("reason", rev.Reason))
+
+	run, _, _, err := a.users.DTGetRun(ctx, key)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("saved, but could not read the run back"))
+	}
+	return connect.NewResponse(&v1.ReviewDecisionTestRunResponse{Run: toProtoRun(*run)}), nil
 }
 
 // toProtoRun copies a run onto the wire.
@@ -183,6 +251,20 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		InstrumentVersion: r.InstrumentVersion, ItemSetVersion: r.ItemSetVersion,
 		Correct: int32(r.Correct), Answered: int32(r.Answered), Expired: int32(r.Expired),
 		MeanConfidence: int32(r.MeanConfidence), DurationS: int32(r.DurationS),
-		StartedAt: r.StartedAt.UTC().Format(time.RFC3339),
+		StartedAt:    r.StartedAt.UTC().Format(time.RFC3339),
+		ReviewStatus: r.ReviewStatus, ReviewReason: r.ReviewReason,
+		ReviewNote: r.ReviewNote, ReviewedAt: rfc3339OrEmpty(r.ReviewedAt),
+		BlocksExcluded: int32(r.BlocksExcluded),
+		RecallStrategy: r.RecallStrategy, BaselineRtSdMs: int32(r.BaselineRTSDMs),
+		RepeatMatchedBy: r.RepeatMatchedBy,
 	}
+}
+
+// rfc3339OrEmpty renders a nullable timestamp. Empty rather than the
+// zero time, so "never reviewed" does not read as 1 January year one.
+func rfc3339OrEmpty(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
 }

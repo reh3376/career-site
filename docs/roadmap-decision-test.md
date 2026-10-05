@@ -366,30 +366,36 @@ the question somebody will ask about a published finding.
 count, the filters used, and a fingerprint over the session keys, so a
 later curation change is visible as a difference rather than invisible.
 
-### Open, and genuinely the owner's call
+### Answered by the owner, 2026-10-05
 
-1. **Does `incomplete` count in the aggregates?** A run that stopped at
-   block three still produced eighteen real answers, and at the answer
-   grain an answer given is an answer given. But its session-level
-   figures (the gap, the fatigue control) are computed from blocks that
-   never happened. My proposal: include `incomplete` in the per-answer
-   views, exclude it from the session-level ones, and say so on both.
-   The alternative is one simple rule that throws away usable answers.
+1. **`incomplete` does not exclude anything.** "Incomplete tests are not
+   automatically blocked. When I review them I will make that
+   determination." So the status describes the run and a single
+   value decides its fate: **only `do_not_use` excludes.** An
+   incomplete run he judges usable stays marked `incomplete` and counts;
+   one he judges unusable becomes `do_not_use`. This replaces my
+   proposal to split `incomplete` between the per-answer and
+   session-level views, which would have been two rules where one does.
 
-2. **Block-level exclusion: now or later?** A phone ringing during block
-   three spoils that block and not the other four. Marking the whole run
-   `do_not_use` discards twenty-four good answers. Doing it now costs a
-   second status column and a second place for the views to filter;
-   doing it later costs a migration and a re-review of anything already
-   marked. I lean to later, because nobody has yet needed it and
-   `review_note` can carry "block 3 interrupted" in the meantime.
+2. **Block-level exclusion, now.** "The individual tests need to have a
+   block exclusion setting so that if I decide it should not be present
+   I can mark the block as 'do not use'." A phone ringing during block
+   three spoils that block and not the other four, and marking the whole
+   run would discard twenty-four good answers. Same vocabulary as the
+   session so there is one definition of the words, and again only
+   `do_not_use` excludes.
 
-3. **Is a fourth status worth it?** Something like `hold` for "something
-   is odd and I have not decided". Without it, an uncertain run is
-   either left unreviewed, which is indistinguishable from not looked
-   at, or marked with a certainty the reviewer does not have.
+3. **A fourth status: yes.** `hold`, for "something is odd and I have
+   not decided". Without it an uncertain run is either left unreviewed,
+   which is indistinguishable from not looked at, or marked with a
+   certainty the reviewer does not have.
 
-4. **Who can review?** Admin only is assumed. Nothing else exists today.
+4. **Admin only.** Confirmed.
+
+**The vocabulary, settled:** `good`, `incomplete`, `hold`,
+`do_not_use`, and the empty string for not yet reviewed. It applies to a
+session and to a block. Exactly one value excludes, which is what makes
+"is this row usable" answerable in one place rather than per consumer.
 
 **Sprint plan:** [`sprint-decision-test-curation.md`](sprint-decision-test-curation.md).
 This document is milestones and exit criteria, per its own second

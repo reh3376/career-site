@@ -36,6 +36,24 @@ type DTRun struct {
 	MeanConfidence    int
 	DurationS         int
 	StartedAt         time.Time
+
+	// Curation (M9). ReviewStatus empty means nobody has looked at it,
+	// which is a state rather than a verdict.
+	ReviewStatus   string
+	ReviewReason   string
+	ReviewNote     string
+	ReviewedAt     *time.Time
+	BlocksExcluded int
+
+	// Conditions a reviewer needs in order to judge a run, which were
+	// recorded from the first session and shown nowhere until M9.
+	// RecallStrategy is the sharpest of them: §3.1 records whether the
+	// participant converted the number at encoding or carried it and
+	// transformed at recall precisely to turn an uncontrolled variable
+	// into a recorded one, and it was invisible.
+	RecallStrategy  string
+	BaselineRTSDMs  int
+	RepeatMatchedBy string
 }
 
 // DTBlockSummary is one block of a run, with its recall.
@@ -73,7 +91,7 @@ type DTAnswerRow struct {
 // Synthetic runs are excluded unless asked for. They are agent-driven
 // and are not data; keeping them out by default means the list reads as
 // what it claims to be.
-func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool) ([]DTRun, error) {
+func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStatus string) ([]DTRun, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT s.public_id::text, s.status,
 		       coalesce(p.display_name,''), coalesce(p.age_range,''),
@@ -88,12 +106,21 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool) ([]DTRun, 
 		       coalesce((SELECT round(avg(confidence)) FROM dt_answers a
 		                  WHERE a.session_id=s.id AND confidence IS NOT NULL),0),
 		       coalesce(round(extract(epoch FROM (s.finished_at - s.started_at))),0),
-		       s.started_at
+		       s.started_at,
+		       s.review_status, s.review_reason, s.review_note, s.reviewed_at,
+		       (SELECT count(*) FROM dt_block_reviews br
+		         WHERE br.session_id = s.id AND br.status = 'do_not_use'),
+		       s.recall_strategy, coalesce(s.baseline_rt_sd_ms,0), s.repeat_matched_by
 		  FROM dt_sessions s
 		  LEFT JOIN dt_participants p ON p.id = s.participant_id
 		 WHERE ($1 OR NOT s.is_synthetic)
+		   -- "unreviewed" rather than an empty string, so asking for the
+		   -- queue is explicit and an empty filter still means "all".
+		   AND ($2 = ''
+		        OR ($2 = 'unreviewed' AND s.review_status = '')
+		        OR s.review_status = $2)
 		 ORDER BY s.id DESC
-		 LIMIT 200`, includeSynthetic)
+		 LIMIT 200`, includeSynthetic, reviewStatus)
 	if err != nil {
 		return nil, fmt.Errorf("decision test: list runs: %w", err)
 	}
@@ -106,7 +133,10 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool) ([]DTRun, 
 			&v.Education, &v.Occupation, &v.GaveEmail, &v.AudioMode, &v.DeviceClass,
 			&v.TapCheckPassed, &v.BaselineRTMs, &v.IsRepeat, &v.IsSynthetic,
 			&v.InstrumentVersion, &v.ItemSetVersion, &v.Correct, &v.Answered,
-			&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt); err != nil {
+			&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt,
+			&v.ReviewStatus, &v.ReviewReason, &v.ReviewNote, &v.ReviewedAt,
+			&v.BlocksExcluded, &v.RecallStrategy, &v.BaselineRTSDMs,
+			&v.RepeatMatchedBy); err != nil {
 			return nil, fmt.Errorf("decision test: scan run: %w", err)
 		}
 		out = append(out, v)
@@ -116,7 +146,7 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool) ([]DTRun, 
 
 // DTGetRun returns one run with its blocks and answers.
 func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSummary, []DTAnswerRow, error) {
-	runs, err := r.DTListRuns(ctx, true)
+	runs, err := r.DTListRuns(ctx, true, "")
 	if err != nil {
 		return nil, nil, nil, err
 	}

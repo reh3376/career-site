@@ -1105,6 +1105,53 @@ reason for this one is worth saying: a review is close to an hour of
 work on one machine.
 Still open:
 
+- **An auth interceptor, so the proto's AUTH_LEVEL_* becomes
+  enforcement rather than documentation. Opened 2026-10-05 after it
+  cost a live data exposure.**
+
+  `ExportDecisionTestData` shipped without `requireAdmin` and the whole
+  decision test dataset was downloadable with no session for about five
+  hours. Every one of the 66 methods on `*Admin` declares
+  `AUTH_LEVEL_ADMIN` in the proto, and the comment on the type says
+  plainly that enforcement lives in the handler because the interceptor
+  has not landed. So the declaration is decorative, 66 handlers each
+  have to remember, and one forgot.
+
+  Verified while writing this: `internal/server/server.go` mounts every
+  service with `careerv1connect.New*ServiceHandler(h)` and **no
+  interceptor options at all**. There is nothing to extend; this is a
+  new file plus one option on each mount.
+
+  **The shape.** A unary and a streaming interceptor that take
+  `req.Spec().Procedure`, resolve the method descriptor through
+  `protoregistry.GlobalFiles`, read the `career.v1.auth` extension and
+  enforce it: public passes, member requires a session, admin requires
+  a session and the admin role. The resolved user goes into the context
+  so a handler reads it rather than looking it up again.
+
+  **The property that matters is failing closed on an undeclared
+  level.** A method with no `auth` option, or `AUTH_LEVEL_UNSPECIFIED`,
+  must be refused rather than allowed. That is what makes a new RPC
+  safe the day somebody adds it, instead of open until somebody
+  notices. It is also the one design choice here that is easy to get
+  backwards.
+
+  **Keep the handler calls.** `requireAdmin` also returns the user that
+  handlers use, and two layers is the right number for authorization.
+  Removing 66 call sites would be risk for no benefit, and
+  `TestEveryAdminMethodGatesOnAdmin` stays as the net under the net.
+
+  **A descriptor test is the stronger half.** Walk every method in
+  every service and assert it declares an auth level. That is static
+  and complete, unlike parsing Go source, and it guarantees the
+  interceptor can always decide. It would not have caught this
+  incident, because the option *was* declared, which is the point: the
+  two checks cover different halves and neither covers both.
+
+  `mfa_fresh` cannot be enforced until TOTP exists (§12 says it is
+  declared and checked as role-only). The interceptor should record
+  that it is ignored in one place rather than leaving it implied in 66.
+
 - Pin third-party GitHub Actions by commit SHA.
 - CodeQL `security-extended` on a daily schedule; Trivy on the images.
 - `GITHUB_TOKEN` least privilege per workflow.

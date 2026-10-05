@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 76 |
+| [`AdminService`](#adminservice) | Owner console. | 77 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2130,6 +2130,7 @@ Owner console.
 | [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
 | [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
 | [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin (fresh MFA) | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
+| [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin (fresh MFA) | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
@@ -4068,18 +4069,21 @@ Lists decision test runs, newest first.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than taken by a person. Excluded by default, because they are not data. |
+| `reviewStatus` | `string` | string | `string: max_len: 24` | Only runs with this review status. Empty returns everything; "unreviewed" returns the queue, which is the common case when the point of opening the page is to work through it. |
 
 **Response** — [`ListDecisionTestRunsResponse`](#listdecisiontestrunsresponse)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
+| `counts` | [`DecisionTestReviewCounts`](#decisiontestreviewcounts) | object |  | The queue, counted across every real run regardless of the filter, so the page can say how much is left without a second call. |
 | `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
 
 <details><summary>Example request body</summary>
 
 ```json
 {
-  "includeSynthetic": true
+  "includeSynthetic": true,
+  "reviewStatus": "string"
 }
 ```
 
@@ -4136,6 +4140,7 @@ somebody reconstruct the answer key.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than a person. Off by default: a synthetic run is useful for checking the instrument and ruinous if it is averaged into a claim about people, so including it has to be asked for. |
+| `includeExcluded` | `bool` | boolean |  | Include runs and blocks the owner marked do_not_use. Off by default, because curation that does not reach the export is decoration: the export is the thing that leaves for analysis, and shipping a run marked unusable is worse than not curating at all, since the mark creates a belief the data has been cleaned. |
 
 **Response** — [`ExportDecisionTestDataResponse`](#exportdecisiontestdataresponse)
 
@@ -4150,7 +4155,52 @@ somebody reconstruct the answer key.
 
 ```json
 {
-  "includeSynthetic": true
+  "includeSynthetic": true,
+  "includeExcluded": true
+}
+```
+
+</details>
+
+### AdminService.ReviewDecisionTestRun
+
+`POST /api/career.v1.AdminService/ReviewDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Records the owner's judgement about a run, or about one block of
+one, and returns the run as it now reads.
+
+Curation is what turns collection into a dataset. Only
+`do_not_use` excludes anything; the other statuses describe a run
+without changing what the analysis sees, because whether an
+interrupted run is usable is a judgement made per run rather than
+a rule. Nothing is ever deleted: an excluded run keeps every row
+it produced.
+
+**Request** — [`ReviewDecisionTestRunRequest`](#reviewdecisiontestrunrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 0` | 0 judges the whole run; 1 to 5 judges one block, so a single spoiled block does not cost the other four. |
+| `status` | `string` | string | `string: max_len: 24` | good, incomplete, hold or do_not_use. Empty clears a run's review back to unreviewed, and for a block removes the judgement altogether, since a block has no stored unreviewed state. |
+| `reason` | `string` | string | `string: max_len: 32` | instrument_fault, participant_reported, duplicate or other, and only alongside do_not_use. The first two are the split that earns this field: one is a bug to go and repair, the other is nothing to fix and simply costs a data point. |
+| `note` | `string` | string | `string: max_len: 2000` | Free text, for what the participant said or what was observed. |
+
+**Response** — [`ReviewDecisionTestRunResponse`](#reviewdecisiontestrunresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The updated summary, so the caller does not have to refetch to render the new state. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "blockNo": 0,
+  "status": "string",
+  "reason": "string",
+  "note": "string"
 }
 ```
 
@@ -8223,6 +8273,7 @@ Asks for the list of runs.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than taken by a person. Excluded by default, because they are not data. |
+| `reviewStatus` | `string` | string | `string: max_len: 24` | Only runs with this review status. Empty returns everything; "unreviewed" returns the queue, which is the common case when the point of opening the page is to work through it. |
 
 ### ListDecisionTestRunsResponse
 
@@ -8230,6 +8281,7 @@ Runs, newest first.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
+| `counts` | [`DecisionTestReviewCounts`](#decisiontestreviewcounts) | object |  | The queue, counted across every real run regardless of the filter, so the page can say how much is left without a second call. |
 | `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
 
 ### DecisionTestRun
@@ -8259,6 +8311,14 @@ One run, summarised for a list.
 | `meanConfidence` | `int32` | number |  | Mean confidence across the run, 0 to 100. |
 | `durationS` | `int32` | number |  | Seconds from start to finish, zero while still running. |
 | `startedAt` | `string` | string |  | When it started, RFC3339. |
+| `reviewStatus` | `string` | string |  | Curation (M9). Empty status means nobody has looked at it yet, which is a state rather than a verdict. |
+| `reviewReason` | `string` | string |  | Why it was excluded. Only set alongside do_not_use. |
+| `reviewNote` | `string` | string |  | The reviewer's note. |
+| `reviewedAt` | `string` | string |  | When it was reviewed, RFC3339, empty if it has not been. |
+| `blocksExcluded` | `int32` | number |  | How many of its blocks are individually excluded. Non-zero on a run whose own status is not do_not_use is the case this exists for: a spoiled block inside an otherwise good run. |
+| `recallStrategy` | `string` | string |  | What the participant said about holding the number: encode or defer. Asked in the debrief, because the two produce different loads during the questions and an uncontrolled variable becomes a recorded one. |
+| `baselineRtSdMs` | `int32` | number |  | Variability of the tap-check presses, a cheap read on baseline attention. Sits beside baseline_rt_ms, which the list already had: a slow participant is only interesting against their own unloaded speed, and a jittery one against their own steadiness. |
+| `repeatMatchedBy` | `string` | string |  | How a repeat was recognised: account, email or cookie. Descending reliability, and worth knowing which: a cookie match is defeated by a private window, so it is weaker evidence than an account. |
 
 ### GetDecisionTestRunRequest
 
@@ -8285,6 +8345,27 @@ Asks for the dataset as CSV.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than a person. Off by default: a synthetic run is useful for checking the instrument and ruinous if it is averaged into a claim about people, so including it has to be asked for. |
+| `includeExcluded` | `bool` | boolean |  | Include runs and blocks the owner marked do_not_use. Off by default, because curation that does not reach the export is decoration: the export is the thing that leaves for analysis, and shipping a run marked unusable is worse than not curating at all, since the mark creates a belief the data has been cleaned. |
+
+### ReviewDecisionTestRunRequest
+
+Records a curation judgement.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run. |
+| `blockNo` | `int32` | number | `int32: lte: 5 gte: 0` | 0 judges the whole run; 1 to 5 judges one block, so a single spoiled block does not cost the other four. |
+| `status` | `string` | string | `string: max_len: 24` | good, incomplete, hold or do_not_use. Empty clears a run's review back to unreviewed, and for a block removes the judgement altogether, since a block has no stored unreviewed state. |
+| `reason` | `string` | string | `string: max_len: 32` | instrument_fault, participant_reported, duplicate or other, and only alongside do_not_use. The first two are the split that earns this field: one is a bug to go and repair, the other is nothing to fix and simply costs a data point. |
+| `note` | `string` | string | `string: max_len: 2000` | Free text, for what the participant said or what was observed. |
+
+### ReviewDecisionTestRunResponse
+
+The run as it now reads.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The updated summary, so the caller does not have to refetch to render the new state. |
 
 ### ExportDecisionTestDataResponse
 
@@ -8296,6 +8377,19 @@ The dataset.
 | `filename` | `string` | string |  | Suggested filename, carrying the date so two exports do not overwrite each other in a downloads folder. |
 | `rows` | `int32` | number |  | Rows in the body, not counting the header. |
 | `sessions` | `int32` | number |  | Runs those rows came from. |
+
+### DecisionTestReviewCounts
+
+How many real runs sit in each curation state.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `total` | `int32` | number |  | Every real run. Synthetic runs are excluded throughout: they await nobody's judgement and counting them would invent work. |
+| `unreviewed` | `int32` | number |  | Nobody has looked at it yet. |
+| `good` | `int32` | number |  | Judged usable. |
+| `incomplete` | `int32` | number |  | Did not finish, and not thereby excluded: whether an interrupted run is usable is judged per run. |
+| `hold` | `int32` | number |  | Something is odd and the reviewer has not decided. |
+| `doNotUse` | `int32` | number |  | Excluded from every view that makes a claim about people, and from the export by default. Never deleted. |
 
 ### DecisionTestBlock
 
