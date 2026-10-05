@@ -58,7 +58,7 @@ type Block = {
   transform: string;
   questions: Question[];
 };
-type Phase = "memorise" | "question" | "confidence" | "recall" | "finishing";
+type Phase = "memorise" | "question" | "confidence" | "recall" | "debrief" | "finishing";
 
 type Timings = { memoriseMs: number; questionMs: number; recallMs: number };
 type Handoff = {
@@ -150,14 +150,21 @@ export function RunScreen() {
   const nextBlock = useCallback(
     async (n: number) => {
       if (n > 5) {
-        setPhase("finishing");
+        // The run is closed BEFORE the debrief question, not after.
+        //
+        // Thirty answered questions are already stored by this point,
+        // and if the participant closes the tab on the debrief the
+        // session would otherwise sit at `running` for ever: a complete
+        // run labelled as abandoned, which is worse than a complete run
+        // with an unknown strategy. finishSession is an update of status
+        // and strategy, so answering calls it again and fills in the
+        // answer.
+        setPhase("debrief");
         try {
           await decisionTestClient.finishSession({ sessionKey, recallStrategy: "" });
         } catch {
           /* the session stays abandoned, which is kept rather than lost */
         }
-        sessionStorage.removeItem("dt");
-        router.replace("/decision-test/thanks");
         return;
       }
       const res = await decisionTestClient.getBlock({ sessionKey, blockNo: n });
@@ -182,7 +189,9 @@ export function RunScreen() {
       setRecall("");
       setPhase("memorise");
     },
-    [router, sessionKey],
+    // No router here any more: the redirect moved to answerDebrief when
+    // the debrief step was added between the last recall and finishing.
+    [sessionKey],
   );
 
   const advance = useCallback(
@@ -257,6 +266,38 @@ export function RunScreen() {
     return;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, qi, blockNo]);
+
+  // The debrief question (FSD 3.1).
+  //
+  // A participant told to recall each digit plus one can do it two ways,
+  // and they load the questions differently: convert at encoding and you
+  // carry an ordinary four-digit number, which is block 2's load; hold
+  // the raw digits and convert at the end and you carry a pending
+  // operation through every question, which is not. Nobody is told which
+  // to use and people pick differently, so without asking, blocks 3 and
+  // 4 contain a mixture of two conditions with no way to separate them.
+  //
+  // Asking turns an uncontrolled variable into a recorded one. It is
+  // also what makes "blocks 3 and 4 look like block 2" diagnosable
+  // rather than merely disappointing, which the roadmap lists as one of
+  // three reasons to stop and re-plan.
+  //
+  // Asked here rather than in the email, because an email reaches only
+  // the participants who left an address and this has to be answerable
+  // by everyone.
+  const answerDebrief = useCallback(
+    async (strategy: string) => {
+      setPhase("finishing");
+      try {
+        await decisionTestClient.finishSession({ sessionKey, recallStrategy: strategy });
+      } catch {
+        /* the run is already closed; only the strategy is lost */
+      }
+      sessionStorage.removeItem("dt");
+      router.replace("/decision-test/thanks");
+    },
+    [router, sessionKey],
+  );
 
   // The transformation, and an example of it applied to this block's
   // own digits.
@@ -412,6 +453,64 @@ export function RunScreen() {
                 className="mt-8 rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase"
               >
                 Continue
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "debrief" ? (
+          <div className="mx-auto max-w-lg">
+            <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+              last one, and it is about method rather than memory
+            </p>
+            <h2 className="font-display mt-3 text-2xl leading-tight text-ink">
+              On the blocks where you had to add to each digit, what did
+              you do?
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-ink-2">
+              There is no right answer and it does not affect your score.
+              Both approaches are sensible and people split roughly evenly,
+              which is exactly why it is worth knowing which you used.
+            </p>
+            <div className="mt-8 space-y-3">
+              <button
+                type="button"
+                onClick={() => void answerDebrief("encode")}
+                className="w-full rounded-md border border-line bg-canvas px-5 py-4 text-left text-base text-ink transition-colors hover:border-accent"
+              >
+                I did the addition straight away
+                <span className="mt-1 block text-sm text-ink-3">
+                  Worked out the new number during the few seconds it was
+                  shown, then held that.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void answerDebrief("defer")}
+                className="w-full rounded-md border border-line bg-canvas px-5 py-4 text-left text-base text-ink transition-colors hover:border-accent"
+              >
+                I held the original and added at the end
+                <span className="mt-1 block text-sm text-ink-3">
+                  Remembered the digits as shown and did the arithmetic
+                  when it came time to type them.
+                </span>
+              </button>
+              {/* A third option, because forcing one of two manufactures
+                  a label. Somebody who switched between blocks, or who
+                  cannot remember, is giving a different answer from
+                  somebody who did one consistently, and a wrong label is
+                  worse than a missing one: the analysis counts it. Same
+                  reasoning as insufficient_evidence in the decision
+                  log. */}
+              <button
+                type="button"
+                onClick={() => void answerDebrief("unsure")}
+                className="w-full rounded-md border border-line bg-canvas px-5 py-4 text-left text-base text-ink transition-colors hover:border-accent"
+              >
+                A bit of both, or I do not remember
+                <span className="mt-1 block text-sm text-ink-3">
+                  Also a real answer. Switching between blocks is common.
+                </span>
               </button>
             </div>
           </div>

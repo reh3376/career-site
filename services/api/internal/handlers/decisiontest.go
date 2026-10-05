@@ -288,9 +288,15 @@ func (h *DecisionTest) FinishSession(
 	if err != nil {
 		return nil, err
 	}
+	// "unsure" is a third answer rather than a missing one. Somebody who
+	// switched strategies between blocks, or cannot remember, is telling
+	// us something different from somebody who did one consistently, and
+	// forcing them into encode or defer would manufacture a label the
+	// analysis then counts. Empty stays reserved for "never asked",
+	// which is what every run before this question existed carries.
 	strategy := ""
 	switch req.Msg.GetRecallStrategy() {
-	case "encode", "defer":
+	case "encode", "defer", "unsure":
 		strategy = req.Msg.GetRecallStrategy()
 	}
 	correct, total, err := h.users.DTFinish(ctx, sess.ID, strategy)
