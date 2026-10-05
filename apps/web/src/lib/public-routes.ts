@@ -43,9 +43,18 @@ export const PUBLIC_PATHS = [
   // link before then invites a stranger into a fifteen-minute test that
   // has not been validated, and each volunteer can only be asked once.
   // Both pages are noindex while collection is open.
+  //
+  // /decision-test/about is public for a different reason, and the
+  // distinction matters: the debrief is owed to every participant, and
+  // most of them are anonymous. Gating it behind an account, or behind
+  // having given an address, would land hardest on the people who helped
+  // without wanting anything back. It is noindex and absent from
+  // INDEXABLE_PATHS so it is not discoverable before somebody takes the
+  // test, which is a different thing from not being reachable by one.
   "/decision-test",
   "/decision-test/run",
   "/decision-test/thanks",
+  "/decision-test/about",
   "/admin/decision",
 ] as const;
 

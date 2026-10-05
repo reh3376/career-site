@@ -27,6 +27,7 @@ that close that gap; see "Generative kinds" below and
 | `jd_requirement_verdict` | requirement judged | requirement (id, text, category, weight) and the evidence as rendered to the model: the career facts sheet chunks (`source_kind = profile`, first, whole) then the retrieved chunks (chunk id, kind, access, title, similarity, capped text) | `verdict` (validated), `evidence_ids` (validated against what was offered), `rationale`, `raw_verdict` and `raw_evidence_ids` (before validation) |
 | `jd_gate` | submission scored | match score, retrieval score, threshold (the live "strong" fit band), requirement count, weight total, verdict counts, whether the assessor ran | `outcome` (`above_threshold` or `below_threshold`) |
 | `jd_call_failed` | model call that produced no usable verdict | the prompt exactly as sent (system + user) | the whole raw response, untruncated, with `error` saying why it was unusable |
+| `jd_posting_check` | submission screened before anything else runs | the pasted text as the gatekeeper saw it | `posting` or `not_posting`. The gatekeeper fails open by design, so a row here records a judgement that may not have stopped anything |
 | `chat_answer` | answer the assistant gave | question, persona fingerprint, history turns, corpus scope, **the whole retrieval set** (similarity, citable, shown, marker offered), **the Q&A bank lookup whether or not it matched**, per-stage timings | the answer text, surviving citations, markers offered / written / dropped, the four flags (`out_of_scope`, `no_support`, `degraded`, `qa_match`), finish reason |
 
 The `chat_answer` shapes are pinned in Go
@@ -164,8 +165,9 @@ timeline uses. Consequences worth knowing:
 the claim this paragraph used to make in the future tense. Its input
 shape carries the question, every retrieved chunk including the ones
 dropped below the cut, the Q&A bank lookup whether or not it matched,
-and per-stage timings. 15 rows at the time of writing, against 1,728 JD
-rows.
+and per-stage timings. 16 rows on 2026-10-05, against 1,744 JD rows
+(1,509 requirement verdicts, 119 gates, 115 posting checks and 1 failed
+call), of which 51 have been reviewed.
 
 The bank lookup is worth calling out, because it is the one field that
 was recorded and useless. `best_similarity` was always 0 on a miss until
@@ -208,13 +210,21 @@ adapter needs to learn.
 **Dimensions** (`ReviewDimensions["chat_answer"]`), each marked `yes`,
 `partial`, `no` or `n/a`:
 
-    grounded    citations    voice    scope    length
+    grounded    voice
 
-Grounding at 90 % (FR-CHAT-03) and citation validity at 95 %
-(FR-CHAT-04) are stated acceptance criteria, and neither can be
-computed from a single overall verdict. Unknown dimension keys and
-values are **refused**, not dropped: a grade nobody can interpret still
-lands in a rate.
+Two, not five. This section listed `citations`, `scope` and `length`
+alongside them until 2026-10-05 and justified the set by citing
+grounding at 90 % (FR-CHAT-03) and citation validity at 95 %
+(FR-CHAT-04) as acceptance criteria neither of which a single overall
+verdict can compute. The grounding half of that argument holds and is
+why `grounded` exists. The citation half describes a dimension that was
+never added, so **citation validity is still not gradeable here**, and
+FR-CHAT-04 has no instrument behind it. Adding the three is cheap
+(`ReviewDimensions` plus the admin form); claiming them while they do
+not exist is what made this worth finding.
+
+Unknown dimension keys and values are **refused**, not dropped: a grade
+nobody can interpret still lands in a rate.
 
 **`human_answer` is the training target.** It is the wording the owner
 would have given, and it is deliberately a separate column from

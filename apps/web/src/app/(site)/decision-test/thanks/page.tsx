@@ -10,9 +10,16 @@ export const metadata: Metadata = {
 //
 // No score here and no per-question answers anywhere, ever. The item set
 // is standardized, so an answer key that escapes contaminates the
-// instrument permanently and only has to escape once. Somebody who asked
-// for their results gets them by email; the explanation of what the test
-// was doing reaches everyone, once collection closes.
+// instrument permanently and only has to escape once.
+//
+// The explanation reaches everyone from here, now, whether or not they
+// left an address. Until 2026-10-05 this page said it would go up "once
+// collection closes" and linked only to the landing page, which meant a
+// participant who gave nothing finished fifteen minutes of deliberate
+// effort, was led into confident error by design, and was told nothing.
+// That is the gotcha outcome the ethics section exists to prevent, and
+// it fell hardest on the most generous participants. The personal
+// numbers still need an address; the explanation never did.
 export default function ThanksPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-24 sm:px-10 sm:py-32">
@@ -32,23 +39,31 @@ export default function ThanksPage() {
         </p>
         <p>
           <strong className="text-ink">
-            No answers are published while the test is open.
+            What was being measured, and why the wrong answers feel so
+            right, is explained now.
           </strong>{" "}
-          Everyone sees the same thirty questions, so one leaked answer
-          would spoil it for everyone after you. The explanation of what
-          was being measured, and why the wrong answers feel so right,
-          goes up once collection closes.
+          You do not need to have left an address to read it, and it
+          reveals no answers: everyone sees the same thirty questions,
+          so one leaked answer would spoil it for everyone after you.
+          The questions themselves are published once collection closes.
         </p>
         <p>
-          If you left an address, your own results come by email. If you
-          did not, that is genuinely fine: the measurement does not need
-          your name to work.
+          If you left an address, your own numbers come by email. If you
+          did not, that is genuinely fine. The measurement does not need
+          your name to work, and the explanation above was never the
+          part that depended on it.
         </p>
       </div>
-      <div className="mt-12">
+      <div className="mt-12 flex flex-wrap gap-4">
+        <Link
+          href="/decision-test/about"
+          className="rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase no-underline"
+        >
+          What this was measuring
+        </Link>
         <Link
           href="/"
-          className="rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase no-underline"
+          className="rounded-md border border-line px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-ink-2 uppercase no-underline"
         >
           Back to the site
         </Link>

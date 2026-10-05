@@ -47,7 +47,11 @@ From the owner's design notes (see `project_llm_design_principles` memory):
 ## 3. Sizing: the CPX41 is the ceiling
 
 **Constraint (owner, 2026-09-21): no further server spend.** The CPX41
-(4 vCPU / 7.7 GB) is the box; the design has to fit it. Two levers make
+(8 vCPU / 15.2 GB, verified on the box 2026-10-05) is the box; the
+design has to fit it. This paragraph read "4 vCPU / 7.7 GB" until
+2026-10-05, which is the CPX31 it replaced on 2026-09-25: the heading
+named the new box and the sizing argument underneath it was still about
+the old one. Two levers make
 that work, and both are in place:
 
 1. **Context budgeting.** `SIDECAR_LLM_NUM_CTX` (sidecar) and `LLM_NUM_CTX`
@@ -72,7 +76,7 @@ that work, and both are in place:
 
 | Workload | Model | Where | Memory | Notes |
 |---|---|---|---|---|
-| Embeddings | `nomic-embed-text` | CPX41 `ollama` | ~0.6 GB loaded | done (Phase A); unloads while the LLM runs (`OLLAMA_MAX_LOADED_MODELS=1`) |
+| Embeddings | `nomic-embed-text` | CPX41 `ollama` | ~0.6 GB loaded | done (Phase A); stays resident alongside the chat model since `OLLAMA_MAX_LOADED_MODELS` went to 2 on 2026-10-01. It used to unload whenever the LLM ran, which is what the warmer existed to work around |
 | Assess + résumé | `qwen3:4b-q8_0` at 8k ctx | CPX41 `ollama` | ~5.5 GB peak | live; judge calls ~100 to 135 s each, résumé ~13 min |
 
 ### Historical sizing note (superseded; kept for the record)

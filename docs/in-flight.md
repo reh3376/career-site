@@ -6,8 +6,8 @@ Not a backlog. `docs/backlog.md` holds work that is understood and not
 started; this holds work that is underway, where stopping halfway loses
 something. Delete an entry when it lands.
 
-Last updated 2026-10-02. Production is `f13edf9fc83a`, database at
-migration 48.
+Last updated 2026-10-05. Production is `78812b3d3995`, database at
+migration 55.
 
 ---
 
@@ -40,12 +40,54 @@ rather than finished.
 - *Seed the Q&A bank.* Done: 13 entries, all approved by the owner, all
   phrasings embedded. A bank answer returns in about 0.1 s against a
   39.4 s mean on the model path.
-- *Deploy migrations 00045 to 00048?* Deployed. Production and local dev
-  are both at 48.
+- *Deploy migrations 00045 to 00048?* Deployed. Production reached 48
+  on 2026-10-02 and is at 55 as of 2026-10-05.
 - *The local dev database has drifted and is stuck at 31.* No longer
-  true; local is at 48 and matches the migration history.
+  true, though local now trails production again at 48: the decision
+  test's migrations were replayed into scratch databases rather than
+  into dev.
 
 ---
+
+## 0. The decision test, in flight since 2026-10-02
+
+The one thing actually underway, and it was absent from this file for
+three days while being the only work happening. Design in
+[`fsd-decision-test.md`](fsd-decision-test.md), delivery in
+[`roadmap-decision-test.md`](roadmap-decision-test.md), requirements in
+[`FSD.md`](FSD.md) §5.14.
+
+**Shipped and deployed:** the instrument (five blocks, thirty items,
+the fatigue control), the three participant screens plus the debrief,
+the admin surface with owner-editable timings, the results email, seven
+metric views, the CSV export, the privacy section, and the product
+events. Migrations 00049 to 00055.
+
+**Where it actually stands.** Two real runs exist and **neither can
+speak to load**: both were taken on item set `items-2026-10-04`, when
+the blocks were family-blocked, so block 1 was six arithmetic items and
+block 4 was conjunctions and syllogisms. Item family swamped load
+entirely. Migration 00052 interleaved the families; the next real run
+will be the first valid one, and `v_dt_load_curve` keeps the two sets
+apart rather than averaging them.
+
+**Waiting on volunteers, not on code.** Two were asked on 2026-10-05.
+The one thing that cannot be rushed: a volunteer can be asked once, so
+anything wrong at the moment they sit down costs a data point that
+cannot be recovered.
+
+**Still open:**
+
+- The tap-check thresholds are provisional, to be set from pilot data
+  (FR-DT-20). The design document's 150 ms standard-deviation figure is
+  unreachable and would never have refused anyone; it is 80 ms today.
+- Console pages for the load curve, the calibration curve and the
+  per-person threshold. `/admin/db` reads all seven views and
+  `docs/metrics.md` carries the queries, so this is convenience rather
+  than capability.
+- The graph projection, deferred by
+  [ADR 0030](adr/0030-relational-collection-graph-analysis.md) until
+  there is data worth exploring.
 
 ## 1. Still open, and genuinely waiting on the owner
 
