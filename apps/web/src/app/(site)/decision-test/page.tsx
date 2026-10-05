@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { Briefing } from "./briefing";
@@ -12,6 +13,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Suspense because the briefing reads ?synthetic=1 with
+// useSearchParams, which opts a page out of static prerendering unless
+// the reader sits behind a boundary. There is nothing worth falling
+// back to: the briefing is the page, and it renders in the same tick.
 export default function DecisionTestPage() {
-  return <Briefing />;
+  return (
+    <Suspense>
+      <Briefing />
+    </Suspense>
+  );
 }
