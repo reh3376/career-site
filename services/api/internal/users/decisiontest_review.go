@@ -114,7 +114,15 @@ func (r *Repo) DTReviewSession(ctx context.Context, sessionKey string, rev DTRev
 		`UPDATE dt_sessions
 		    SET review_status=$2, review_reason=$3, review_note=$4,
 		        reviewed_at = CASE WHEN $2 = '' THEN NULL ELSE now() END,
-		        reviewed_by = CASE WHEN $2 = '' THEN NULL ELSE $5 END
+		        -- $5 is cast explicitly. Postgres infers a parameter's
+		        -- type from the context it appears in, and inside a CASE
+		        -- whose other branch is an untyped NULL there is nothing
+		        -- to infer from but the sibling comparison against a
+		        -- text literal, so it decided $5 was text and refused
+		        -- the assignment to a bigint column:
+		        --   column "reviewed_by" is of type bigint but
+		        --   expression is of type text (SQLSTATE 42804)
+		        reviewed_by = CASE WHEN $2 = '' THEN NULL ELSE $5::bigint END
 		  WHERE public_id::text = $1
 		  RETURNING id`,
 		sessionKey, rev.Status, rev.Reason, rev.Note, reviewerID,
