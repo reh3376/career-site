@@ -196,12 +196,52 @@ jobs:
   api:
     name: api (go)
     runs-on: ubuntu-latest
+    # A database, so the Go that talks to one is actually executed.
+    #
+    # Two production faults on 2026-10-05 came from SQL that compiled,
+    # vetted, formatted and shipped: a dt_sessions INSERT with sixteen
+    # columns against fifteen values, which made StartSession return 500
+    # and stopped anybody beginning the test for about two hours; and a
+    # review UPDATE assigning a parameter Postgres inferred as text to a
+    # bigint column, which made the curation Save button do nothing. Go
+    # cannot see inside a string literal, gofmt has no opinion about SQL,
+    # the migrations job replays the schema but runs no Go, and the web
+    # tests never reach the api. There was no layer where either was
+    # catchable.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: career
+          POSTGRES_PASSWORD: career
+          POSTGRES_DB: career
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U career"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: services/api/go.sum
+
+      # The same replay the migrations job does, because the Go tests
+      # need the schema they were written against, including the seeded
+      # item bank the decision test reads.
+      - name: apply every migration in order
+        env:
+          PGPASSWORD: career
+        run: |
+          set -euo pipefail
+          for f in $(ls services/api/internal/db/migrations/*.sql | sort); do
+            sed -n '/-- +goose Up/,/-- +goose Down/p' "$f" \
+              | grep -v '^-- +goose' \
+              | psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q
+          done
 
       - name: gofmt
         working-directory: services/api
@@ -213,8 +253,14 @@ jobs:
         working-directory: services/api
         run: go vet ./...
 
+      # TEST_DATABASE_URL is set unconditionally. The tests skip without
+      # it so a laptop with no Postgres still runs `go test ./...`, and
+      # that convenience would quietly become the same hole again if CI
+      # were allowed to skip too.
       - name: go test
         working-directory: services/api
+        env:
+          TEST_DATABASE_URL: postgres://career:career@localhost:5432/career?sslmode=disable
         run: go test -race -count=1 ./...
 
       - name: go build
