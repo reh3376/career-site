@@ -2012,12 +2012,43 @@ PR 172, sixty merges after the previous sync.
 - The sitemap was four admin routes behind: analytics, evals, gate and
   ops are now listed, and the §5.7 status line says twelve surfaces
   rather than nine.
-- `docs/decision-log.md`, `docs/cutover-local-to-prod.md` and
+- ~~`docs/decision-log.md`, `docs/cutover-local-to-prod.md` and
   `docs/jd-submitter-workflow.md` have not been re-read against the
-  code. Nothing in them is known to be wrong; they are simply not yet
-  verified, which is a different claim from being current.
-  `docs/events/README.md` came off this list on 2026-10-05 when the
-  decision test's three events were added to it.
+  code.~~ **All four read through 2026-10-05**, `events/README.md`
+  having been updated the same day with the decision test's events.
+  "Not known to be wrong" turned out to be doing real work: five
+  errors, and the one that matters is not a number.
+
+  **`decision-log.md` claimed an instrument that does not exist.** It
+  listed five review dimensions for `chat_answer` (`grounded`,
+  `citations`, `voice`, `scope`, `length`) and justified them by citing
+  FR-CHAT-03 grounding at 90 % and FR-CHAT-04 citation validity at
+  95 %. `ReviewDimensions["chat_answer"]` holds two: `grounded` and
+  `voice`. So citation validity has no instrument behind it at all, and
+  the document asserted the measurement while the acceptance criterion
+  sat unmeasurable. **Adding `citations`, `scope` and `length` is a
+  one-line map change plus the admin form, and FR-CHAT-04 is ungradeable
+  until it happens.** That is now the open item; the document no longer
+  claims otherwise.
+
+  It was also missing a whole kind, `jd_posting_check`, which has 115
+  rows on production, and its row counts were stale (15 chat answers
+  against 1,728 JD rows; actually 16 against 1,744).
+
+  **`cutover-local-to-prod.md` named the right box and sized the wrong
+  one.** The heading says CPX41 and the sizing paragraph underneath
+  said "4 vCPU / 7.7 GB", which is the CPX31 replaced on 2026-09-25.
+  Verified 8 vCPU and 15 GB on the box. Its capacity table also still
+  said embeddings unload whenever the LLM runs
+  (`OLLAMA_MAX_LOADED_MODELS=1`), which stopped being true when that
+  went to 2 on 2026-10-01.
+
+  **`jd-submitter-workflow.md` was the healthiest of the three.** The
+  polling cadence, the one-hour budget, `FailStrandedRuns` and the
+  fit-band defaults all matched the code exactly. One gap: production's
+  `possible` and `weak` bands have been edited to 0.6 and 0.4 against
+  documented defaults of 0.55 and 0.35, so a reader comparing a live
+  score against the page would misread two bands out of four.
 
 - **Docs sweep, 2026-10-05.** The 2026-10-02 sweep predated the
   decision test by a day, and the whole subsystem was missing from

@@ -66,9 +66,16 @@ The bands are the owner's numbers, edited on `/admin/jd` (stored in
 `app_settings` as `jd_fit_bands`, cached 15 s in the api so a change is
 in force within seconds; existing scores are re-classified on read).
 "Strong" is also the résumé gate. `JD_MATCH_THRESHOLD` only seeds the
-setting on first read. Defaults seeded from the calibration: very
+setting on first read. Defaults in code (`internal/jd/fit.go`): very
 strong 0.85, strong 0.70 (the gate), possible 0.55, weak 0.35, very
 weak below.
+
+**Production has since been edited away from two of those**, read from
+`app_settings` on 2026-10-05: very strong 0.85 and the gate 0.70 as
+documented, but possible is **0.6** and weak is **0.4**. That is the
+setting doing its job rather than a defect, and it is recorded here
+because a reader comparing a live score against this page would
+otherwise misread two bands out of four.
 
 ## Since 2026-09-22
 
@@ -89,6 +96,23 @@ things around it have changed, none of which alter the steps:
   the status line reads `system · beta`.
 - **Ask Roger is live**, which gives a submitter a second reason to have
   an account and a way to ask about a verdict they disagree with.
+
+## Verified 2026-10-05
+
+Re-read against the code, having sat unverified since 2026-09-22. The
+path still describes what a submitter goes through, and four specific
+claims were checked rather than assumed:
+
+- The polling cadence, "every 5 s for the first 3 minutes, then every
+  20 s", and the one-hour budget are exactly what `jd-upload/result.tsx`
+  does (`elapsed < 3 * 60 * 1000 ? 5000 : 20000`, `elapsed < 60 * 60 *
+  1000`).
+- `FailStrandedRuns` exists and is covered by a test for every
+  non-terminal state.
+- The fit-band defaults match `internal/jd/fit.go`; production has
+  moved two of them, now noted above.
+- The gate is still read live through `GetJdReviewConfig`, which refuses
+  an unauthenticated caller, so the members-only framing holds.
 
 ## Still to look at
 
