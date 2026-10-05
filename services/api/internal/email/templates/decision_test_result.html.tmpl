@@ -1,0 +1,32 @@
+<p>{{if .Name}}{{.Name}}, thank you{{else}}Thank you{{end}} for the fifteen minutes.</p>
+
+<p>You answered <strong>{{.Correct}} of {{.Total}}</strong> correctly.{{if .Expired}} {{.Expired}} question{{if ne .Expired 1}}s{{end}} ran out of time, which counts as neither right nor wrong.{{end}}</p>
+
+<p>That number is not the interesting part. This is:</p>
+
+<table cellpadding="6" style="border-collapse:collapse;font-family:monospace">
+  <tr><td>early blocks</td><td align="right"><strong>{{.EarlyAccuracy}}%</strong> correct</td><td align="right">{{.EarlyConfidence}}% confident</td></tr>
+  <tr><td>hardest block</td><td align="right"><strong>{{.HardAccuracy}}%</strong> correct</td><td align="right">{{.HardConfidence}}% confident</td></tr>
+</table>
+
+<p>Your accuracy moved <strong>{{.AccuracyDrop}} points</strong>. Your confidence moved <strong>{{.ConfidenceDrop}} points</strong>.</p>
+
+{{if gt .Gap 10}}
+<p>That difference is the whole point of the test. Under load your judgement got worse and your sense of how it was going barely noticed. That is not a flaw in you; it is what load does to everyone, which is why it is worth knowing about rather than being embarrassed by.</p>
+{{else if lt .Gap -5}}
+<p>Your confidence fell further than your accuracy did, which is the less common pattern. You registered the difficulty and adjusted for it.</p>
+{{else}}
+<p>Your confidence tracked your accuracy closely, which is better calibration than most people manage under load.</p>
+{{end}}
+
+{{if .FatigueHeld}}
+<p>The last block returned to the difficulty of the first, twelve minutes later, and you scored about the same ({{.Block1Accuracy}}% then {{.Block5Accuracy}}%). So what happened in between was the load rather than tiredness.</p>
+{{else}}
+<p>The last block repeated the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Some of what happened in between may have been fatigue as much as load.</p>
+{{end}}
+
+<p>One thing deliberately missing: which questions you got wrong, and what the right answers were. Everybody sees the same thirty questions, so one answer getting out spoils it for everybody after you. When collection closes, the full explanation of what was being measured and why the wrong answers feel so right goes up publicly, and you will not need this email to read it.</p>
+
+<p>An n of one proves nothing about you. It demonstrates an effect, on you, which is a different and more useful thing.</p>
+
+<p><a href="{{.SiteURL}}">{{.SiteURL}}</a></p>
