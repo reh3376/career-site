@@ -455,6 +455,13 @@ func (h *DecisionTest) sendResult(sessionID int64) {
 
 	if err := h.email.Send(ctx, email.Message{
 		To: addr, From: h.from,
+		// Kind is what makes the delivery log answerable. Without it
+		// the row lands as "unknown", and the question a participant
+		// will eventually ask ("did my results ever go out?") has no
+		// query. Found on the first real send, 2026-10-05, where the
+		// email arrived and the audit row said nothing about what it
+		// was.
+		Kind:     "decision_test_result",
 		Subject:  "Your results from the decision test",
 		TextBody: text, HTMLBody: html,
 	}); err != nil {
