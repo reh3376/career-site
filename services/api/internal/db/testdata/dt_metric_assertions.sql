@@ -457,4 +457,61 @@ BEGIN
   END IF;
 END $$;
 
+-- +----------------------------------------------------------------+
+-- | is_repeat and attempt_no must not contradict each other.       |
+-- +----------------------------------------------------------------+
+-- Found in production data. The owner's own session read is_repeat
+-- TRUE and attempt_no 1: he sat the test anonymously, then signed in
+-- and sat it again, so his account had seen no prior sitting and his
+-- browser had seen one. Two derivations of the same fact disagreed,
+-- and whichever a reader happened to use decided what they concluded.
+--
+-- The fix is that both are now a union over the three observations, so
+-- they agree by construction: attempt_no > 1 exactly when some source
+-- saw a prior sitting. This asserts that identity directly, on the
+-- function rather than on fixture rows, so it holds for every input
+-- rather than the handful the fixture happens to contain.
+DO $$
+DECLARE bad int;
+BEGIN
+  SELECT count(*) INTO bad
+    FROM (VALUES
+      (0,0,1), (2,NULL,0), (NULL,1,1), (NULL,NULL,2), (0,0,0),
+      (NULL,NULL,NULL), (NULL,0,NULL), (5,0,0), (0,NULL,7)
+    ) AS t(acct, eml, cky)
+   -- Only where a sequence could be derived at all. With no identity
+   -- attempt_no is NULL, and NULL is neither "> 1" nor "not > 1", so
+   -- including it compares an unknown against a false and reports a
+   -- contradiction that is not one. The NULL case is asserted on its
+   -- own further down, which is where it belongs.
+   WHERE dt_attempt_no(acct, eml, cky) IS NOT NULL
+     AND (dt_attempt_no(acct, eml, cky) > 1)
+         IS DISTINCT FROM
+         (coalesce(greatest(acct, eml, cky), 0) > 0);
+  IF bad > 0 THEN
+    RAISE EXCEPTION '% input(s) where attempt_no disagrees with "any source saw a prior sitting"', bad;
+  END IF;
+
+  -- The specific case that was wrong in production: account saw none,
+  -- cookie saw one. The union says second sitting; the most reliable
+  -- single source says first; and the row must say they differ so
+  -- nobody reads the lower number as settled.
+  IF dt_attempt_no(0, 0, 1) <> 2 THEN
+    RAISE EXCEPTION 'account 0 / cookie 1 derived attempt %, expected 2: a prior sitting the cookie saw is still a prior sitting',
+      dt_attempt_no(0, 0, 1);
+  END IF;
+  IF dt_attempt_strongest(0, 0, 1) <> 1 THEN
+    RAISE EXCEPTION 'the strongest-source reading changed; it should still report 1 so the disagreement is visible';
+  END IF;
+  IF dt_attempt_source(0, 0, 1) <> 'cookie' THEN
+    RAISE EXCEPTION 'attempt_source said %, expected cookie: a number resting on a cookie must say so', dt_attempt_source(0,0,1);
+  END IF;
+
+  -- No identity at all stays unknown rather than becoming a first
+  -- sitting, because silence is not evidence.
+  IF dt_attempt_no(NULL, NULL, NULL) IS NOT NULL THEN
+    RAISE EXCEPTION 'a run with no identity derived an attempt number from nothing';
+  END IF;
+END $$;
+
 SELECT 'decision test metric views: all assertions hold' AS result;
