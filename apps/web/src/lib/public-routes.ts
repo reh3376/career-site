@@ -35,6 +35,17 @@ export const PUBLIC_PATHS = [
   "/reset-password",
   "/privacy",
   "/terms",
+  // The decision test. Public because its participants are recruited
+  // volunteers rather than members, and because a member and an
+  // anonymous visitor must be in the same condition. Reachable by URL
+  // and deliberately not linked from anywhere until the owner has taken
+  // it end to end on a deployed build (roadmap M5b): a discoverable
+  // link before then invites a stranger into a fifteen-minute test that
+  // has not been validated, and each volunteer can only be asked once.
+  // Both pages are noindex while collection is open.
+  "/decision-test",
+  "/decision-test/run",
+  "/decision-test/thanks",
   "/admin/decision",
 ] as const;
 
