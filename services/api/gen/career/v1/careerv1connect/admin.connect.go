@@ -209,6 +209,9 @@ const (
 	// AdminServiceGetDecisionTestRunProcedure is the fully-qualified name of the AdminService's
 	// GetDecisionTestRun RPC.
 	AdminServiceGetDecisionTestRunProcedure = "/career.v1.AdminService/GetDecisionTestRun"
+	// AdminServiceExportDecisionTestDataProcedure is the fully-qualified name of the AdminService's
+	// ExportDecisionTestData RPC.
+	AdminServiceExportDecisionTestDataProcedure = "/career.v1.AdminService/ExportDecisionTestData"
 	// AdminServiceGetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// GetSchedulerSettings RPC.
 	AdminServiceGetSchedulerSettingsProcedure = "/career.v1.AdminService/GetSchedulerSettings"
@@ -482,6 +485,18 @@ type AdminServiceClient interface {
 	ListDecisionTestRuns(context.Context, *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error)
 	// One run in full: every answer, every recall, and the block summary.
 	GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error)
+	// The curated dataset as CSV, one row per question presented.
+	//
+	// The dataset is the deliverable (FSD §7b), and a deliverable that
+	// can only be read through this console is not one. This is the
+	// handoff to whatever does the actual analysis.
+	//
+	// Served from v_dt_answers, so the export and the console cannot
+	// disagree about what a number means, and so the things that view
+	// deliberately omits stay omitted: no name, no email address, and no
+	// chosen_index, because the raw index across enough runs would let
+	// somebody reconstruct the answer key.
+	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -905,6 +920,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestRun")),
 			connect.WithClientOptions(opts...),
 		),
+		exportDecisionTestData: connect.NewClient[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse](
+			httpClient,
+			baseURL+AdminServiceExportDecisionTestDataProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
+			connect.WithClientOptions(opts...),
+		),
 		getSchedulerSettings: connect.NewClient[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse](
 			httpClient,
 			baseURL+AdminServiceGetSchedulerSettingsProcedure,
@@ -1070,6 +1091,7 @@ type adminServiceClient struct {
 	setDecisionTestSettings *connect.Client[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse]
 	listDecisionTestRuns    *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
 	getDecisionTestRun      *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
+	exportDecisionTestData  *connect.Client[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse]
 	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
 	setSchedulerSettings    *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
 	listQaEntries           *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
@@ -1379,6 +1401,11 @@ func (c *adminServiceClient) GetDecisionTestRun(ctx context.Context, req *connec
 	return c.getDecisionTestRun.CallUnary(ctx, req)
 }
 
+// ExportDecisionTestData calls career.v1.AdminService.ExportDecisionTestData.
+func (c *adminServiceClient) ExportDecisionTestData(ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
+	return c.exportDecisionTestData.CallUnary(ctx, req)
+}
+
 // GetSchedulerSettings calls career.v1.AdminService.GetSchedulerSettings.
 func (c *adminServiceClient) GetSchedulerSettings(ctx context.Context, req *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {
 	return c.getSchedulerSettings.CallUnary(ctx, req)
@@ -1684,6 +1711,18 @@ type AdminServiceHandler interface {
 	ListDecisionTestRuns(context.Context, *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error)
 	// One run in full: every answer, every recall, and the block summary.
 	GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error)
+	// The curated dataset as CSV, one row per question presented.
+	//
+	// The dataset is the deliverable (FSD §7b), and a deliverable that
+	// can only be read through this console is not one. This is the
+	// handoff to whatever does the actual analysis.
+	//
+	// Served from v_dt_answers, so the export and the console cannot
+	// disagree about what a number means, and so the things that view
+	// deliberately omits stay omitted: no name, no email address, and no
+	// chosen_index, because the raw index across enough runs would let
+	// somebody reconstruct the answer key.
+	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -2103,6 +2142,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceExportDecisionTestDataHandler := connect.NewUnaryHandler(
+		AdminServiceExportDecisionTestDataProcedure,
+		svc.ExportDecisionTestData,
+		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetSchedulerSettingsHandler := connect.NewUnaryHandler(
 		AdminServiceGetSchedulerSettingsProcedure,
 		svc.GetSchedulerSettings,
@@ -2323,6 +2368,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceListDecisionTestRunsHandler.ServeHTTP(w, r)
 		case AdminServiceGetDecisionTestRunProcedure:
 			adminServiceGetDecisionTestRunHandler.ServeHTTP(w, r)
+		case AdminServiceExportDecisionTestDataProcedure:
+			adminServiceExportDecisionTestDataHandler.ServeHTTP(w, r)
 		case AdminServiceGetSchedulerSettingsProcedure:
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
@@ -2596,6 +2643,10 @@ func (UnimplementedAdminServiceHandler) ListDecisionTestRuns(context.Context, *c
 
 func (UnimplementedAdminServiceHandler) GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetDecisionTestRun is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionTestData is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {

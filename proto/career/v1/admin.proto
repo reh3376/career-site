@@ -418,6 +418,21 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // The curated dataset as CSV, one row per question presented.
+  //
+  // The dataset is the deliverable (FSD §7b), and a deliverable that
+  // can only be read through this console is not one. This is the
+  // handoff to whatever does the actual analysis.
+  //
+  // Served from v_dt_answers, so the export and the console cannot
+  // disagree about what a number means, and so the things that view
+  // deliberately omits stay omitted: no name, no email address, and no
+  // chosen_index, because the raw index across enough runs would let
+  // somebody reconstruct the answer key.
+  rpc ExportDecisionTestData(ExportDecisionTestDataRequest) returns (ExportDecisionTestDataResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads the meeting-scheduler settings: the weekly windows a member
   // may book into, the lengths on offer, the clearance between
   // meetings, and the zone all of it is quoted in.
@@ -3187,6 +3202,30 @@ message GetDecisionTestRunResponse {
   repeated DecisionTestBlock blocks = 2;
   // Every answer, in presentation order.
   repeated DecisionTestAnswer answers = 3;
+}
+
+// Asks for the dataset as CSV.
+message ExportDecisionTestDataRequest {
+  // Include runs driven by an agent rather than a person. Off by
+  // default: a synthetic run is useful for checking the instrument and
+  // ruinous if it is averaged into a claim about people, so including
+  // it has to be asked for.
+  bool include_synthetic = 1;
+}
+
+// The dataset.
+message ExportDecisionTestDataResponse {
+  // The whole file, RFC 4180, header row first. Thirty rows per
+  // completed run, so this stays small enough to hand over in one
+  // response for as long as the volunteer count is realistic.
+  string csv = 1;
+  // Suggested filename, carrying the date so two exports do not
+  // overwrite each other in a downloads folder.
+  string filename = 2;
+  // Rows in the body, not counting the header.
+  int32 rows = 3;
+  // Runs those rows came from.
+  int32 sessions = 4;
 }
 
 // One block of a run.

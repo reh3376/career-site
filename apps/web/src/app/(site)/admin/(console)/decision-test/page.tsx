@@ -4,6 +4,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import { setDecisionTestTimingsAction } from "./actions";
+import { ExportPanel } from "./export";
 import { RunTable, type Run } from "./runs";
 
 export const metadata: Metadata = { title: "Admin · Decision test" };
@@ -59,6 +60,20 @@ export default async function DecisionTestPage() {
       </p>
 
       <RunTable runs={runs} />
+
+      <h2 className="font-display mt-20 text-2xl text-ink">The dataset</h2>
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-2">
+        One row per question presented, which is the grain everything
+        else is counted from. Served from the same view the console and
+        the metric views read, so an export and a page can never
+        disagree about what a number means.
+      </p>
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-2">
+        It carries no name, no email address and no chosen option. The
+        option index across enough runs would let somebody rebuild the
+        answer key, and the key only has to escape once.
+      </p>
+      <ExportPanel />
 
       <h2 className="font-display mt-20 text-2xl text-ink">Timings</h2>
       <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-2">

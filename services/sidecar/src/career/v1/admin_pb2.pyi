@@ -2330,6 +2330,24 @@ class GetDecisionTestRunResponse(_message.Message):
     answers: _containers.RepeatedCompositeFieldContainer[DecisionTestAnswer]
     def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ...) -> None: ...
 
+class ExportDecisionTestDataRequest(_message.Message):
+    __slots__ = ("include_synthetic",)
+    INCLUDE_SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    include_synthetic: bool
+    def __init__(self, include_synthetic: _Optional[bool] = ...) -> None: ...
+
+class ExportDecisionTestDataResponse(_message.Message):
+    __slots__ = ("csv", "filename", "rows", "sessions")
+    CSV_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    ROWS_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    csv: str
+    filename: str
+    rows: int
+    sessions: int
+    def __init__(self, csv: _Optional[str] = ..., filename: _Optional[str] = ..., rows: _Optional[int] = ..., sessions: _Optional[int] = ...) -> None: ...
+
 class DecisionTestBlock(_message.Message):
     __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome", "memory_failure_pct")
     BLOCK_NO_FIELD_NUMBER: _ClassVar[int]

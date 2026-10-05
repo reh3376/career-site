@@ -196,6 +196,35 @@ a collection fault early.
 and recall failure by type each come from one view with one definition.
 A fault is visible after one bad session, not forty.
 
+**Views done, 2026-10-05** (migration 00054, `docs/metrics.md`). Seven
+of them: the flat grain, per block, per run, the load curve, the
+calibration curve, the per-person threshold and item quality. The two
+judgement calls, what counts as confident and how the loads order, are
+functions rather than repeated expressions.
+
+Checked in CI against a four-run fixture rather than only on an empty
+database, which is what caught the one real bug: the per-person
+threshold took its minimum over all five blocks, so a participant who
+held through the ramp and then came apart on the fatigue control was
+reported as having a threshold at the *easiest* load. It parsed, it
+replayed, and it would have read as a strong result. The fixture carries
+a calibrated participant as a negative control and a synthetic run every
+aggregate must exclude.
+
+**Export done, 2026-10-05.** `ExportDecisionTestData` renders
+`v_dt_answers` as CSV from the admin console, with agent-driven runs
+excluded unless asked for. The column list is read off the view at query
+time rather than written out in Go: a hand-kept list is a second
+definition of the dataset, and the first column added to one and not the
+other ships an export narrower than the console while both still look
+right.
+
+**Still open in M6:** surfacing the load curve, the calibration curve
+and the per-person threshold as console pages. The query console at
+`/admin/db` reads all seven views today and `docs/metrics.md` carries
+the queries, so the analysis is possible now and what is left is
+convenience rather than capability.
+
 ## M7. Privacy, and opening to volunteers
 
 **The privacy policy ships in the same PR as collection, not after it.**

@@ -47,6 +47,57 @@ means a stage was reworded and no longer matches the mapping in
 `services/api/internal/jd/phases.go`: treat `other` as a bug in the
 mapping rather than as a phase.
 
+## The decision test
+
+Defined in migration `00054_decision_test_metrics.sql`. Same rule: the
+numbers exist once, in SQL, and the console renders what it is given.
+
+The grain is `dt_answers`, one row per question presented. Everything
+below counts from it and nothing is stored.
+
+| View | The question it answers |
+| --- | --- |
+| `v_dt_answers` | The flat view, one row per question, with the session and participant context on it. This is also the CSV export. It carries no name, no email address and no `chosen_index`: `is_lure` says which kind of wrong an answer was, which is the measurement, while the raw index across enough runs would let somebody reconstruct the answer key from an export. |
+| `v_dt_blocks` | One row per run per block: accuracy, confidence, the gap between them, expiry rate, and that block's recall. |
+| `v_dt_sessions` | One row per run, including the early-against-hardest comparison the result email makes and the block 5 against block 1 fatigue control. |
+| `v_dt_load_curve` | **The result.** Accuracy and confidence by load level, pooled across participants. Excludes synthetic runs outright rather than flagging them, because this view makes a claim about people. |
+| `v_dt_calibration` | Confidence bands of ten against the accuracy actually achieved in each, split by load. The standard reliability curve. `overclaim_pct` is positive where a band is more sure than right. |
+| `v_dt_threshold` | **The per-person answer.** The lowest load on the ramp at which this participant took the intended wrong answer while still reporting high confidence. |
+| `v_dt_items` | Per item: accuracy, how often the lure pulled, the gap. A `lure_pct` near zero is an item measuring nothing. |
+
+Two definitions had to be made rather than found, and both live in a
+function so that changing one is a single line:
+
+- **`dt_confident_threshold()` returns 70.** The research question is
+  about being wrong *and* sure, so a number for "sure" is unavoidable.
+  The FSD states the measure and deliberately leaves the cut open; this
+  is a calibration to revisit once there are enough runs to see the
+  distribution, and it is revisited **there**, not in a query.
+- **`dt_load_rank(load)`** orders the loads, because `d4_plus1` sorts
+  after `d4` for a reason rather than by accident of the alphabet.
+  `d3_control` ranks **1**, the same as `d3`, because it is `d3`: block
+  5 returns to block 1's difficulty and is the fatigue control.
+
+### Two traps in these views
+
+**The control block must not enter the per-person threshold.** Block 5
+ranks as the easiest load, so a minimum taken over all five blocks
+reports a participant who held through the ramp and then came apart at
+the end as having a threshold at the *easiest* load. That is the
+time-on-task confound the control exists to separate, readmitted through
+a `min()`, and it is worst for precisely the participants the control is
+there to find. `v_dt_threshold` takes `block_no < 5` and reports
+`lured_in_control` beside it; a threshold with that flag set is a weaker
+claim about load and should be read as one.
+
+**An empty database proves a view parses and nothing else.** These views
+are checked in CI against `testdata/dt_fixture.sql`, four runs with
+deliberately different shapes, by `testdata/dt_metric_assertions.sql`.
+The fixture includes a calibrated participant as a negative control and
+a synthetic run that every aggregate must exclude. Both files exist
+because the threshold bug above passed review, passed the replay, and
+would have read as a strong result.
+
 ## What is not here
 
 These views cover the reviewer. **Ask Roger has no views at all.** Its
@@ -127,6 +178,21 @@ SELECT id, note, gate_pct, order_violations, margin, model, corpus_fingerprint
 -- where does time actually go?
 SELECT status, count(*), round(avg(minutes), 1) AS avg_min, round(avg(queued_minutes), 1) AS avg_queued
   FROM v_jd_runs GROUP BY status;
+
+-- does the decision test work? accuracy should fall as the rank rises
+-- while confidence does not, so gap_pct grows.
+SELECT block_load, load_rank, sessions, accuracy_pct, mean_confidence, gap_pct, confidently_lured_pct
+  FROM v_dt_load_curve ORDER BY load_rank, block_load;
+
+-- the per-person answer, with the control beside it. lured_in_control
+-- true means read the threshold as a weaker claim about load.
+SELECT session_key, accuracy_pct, gap_pct, lured_at_load, lured_in_control, fatigue_delta_pct
+  FROM v_dt_threshold WHERE NOT is_synthetic ORDER BY lured_at_rank NULLS LAST;
+
+-- is any item measuring nothing? a lure that never pulls is an item
+-- everybody either knows or guesses.
+SELECT item_code, item_family, answers, accuracy_pct, lure_pct, gap_pct
+  FROM v_dt_items WHERE lure_pct < 10 ORDER BY lure_pct;
 ```
 
 ## Adding one

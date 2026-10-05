@@ -133,6 +133,31 @@ func (a *Admin) GetDecisionTestRun(
 	}), nil
 }
 
+// ExportDecisionTestData hands over the curated dataset as CSV.
+//
+// Thin on purpose. Everything that decides what the dataset contains is
+// in v_dt_answers and in users.DTExportCSV, so there is no place here
+// where a column could be added, filtered or renamed on its way out.
+func (a *Admin) ExportDecisionTestData(
+	ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest],
+) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
+	if a.users == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("not configured"))
+	}
+	out, err := a.users.DTExportCSV(ctx, req.Msg.GetIncludeSynthetic())
+	if err != nil {
+		a.log.Error("decision test: export", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not build the export"))
+	}
+	a.log.Info("decision test exported",
+		slog.Int("rows", out.Rows), slog.Int("sessions", out.Sessions),
+		slog.Bool("include_synthetic", req.Msg.GetIncludeSynthetic()))
+	return connect.NewResponse(&v1.ExportDecisionTestDataResponse{
+		Csv: out.CSV, Filename: out.Filename,
+		Rows: int32(out.Rows), Sessions: int32(out.Sessions),
+	}), nil
+}
+
 // toProtoRun copies a run onto the wire.
 //
 // gave_email rather than the address itself: the admin list needs to
