@@ -95,14 +95,42 @@ Probes are not optional and are not decoration. Without them the headline measur
 
 | Block | Memorise | Hold across | Recall as |
 |---|---|---|---|
-| 1 | 3 digits, 2 seconds | X questions | as shown |
-| 2 | 4 digits, 2 seconds | Y questions | as shown |
-| 3 | 4 digits, 2 seconds | Z questions | **each digit +1** (1234 to 2345) |
-| 4 | 4 digits, 2 seconds | ? questions | **each digit +3** (1234 to 4567) |
+| 1 | 3 digits, 5 seconds | 6 questions | as shown |
+| 2 | 4 digits, 5 seconds | 6 questions | as shown |
+| 3 | 4 digits, 5 seconds | 6 questions | **each digit +1** (1234 to 2345) |
+| 4 | 4 digits, 5 seconds | 6 questions | **each digit +3** (1234 to 4567) |
 
 The escalation is well formed, and blocks 3 and 4 are the strongest part of it. Blocks 1 and 2 raise **storage**, which is the cheaper kind of working-memory demand and saturates quickly. Blocks 3 and 4 add **transformation**, which recruits executive processing rather than storage, and is a far steeper step than a fifth or sixth digit would have been.
 
 **DECIDED: six questions per block, five blocks, thirty questions total.** X = Y = Z = 6, and block 5 (§3.3) carries six as well.
+
+### 3.0 Two corrections from the first live run (2026-10-05)
+
+The owner took the test end to end on a deployed build and returned two
+findings. Both are the sort M5 exists to catch, and neither would have
+shown up in any test that did not involve a person.
+
+**Two seconds was not enough, and it is now five.** Four digits plus a
+rule is not readable in two seconds, and a participant who spends all of
+it on the digits has none left for anything else. The cost is fifteen
+seconds across five blocks, which the budget absorbs.
+
+**The transformation was never registered, and the instruction had been
+on screen the whole time.** That is the useful part. It rendered as a
+small grey line reading "give it back exactly as shown" for the practice
+block, block 1 and block 2. Three blocks taught the participant that the
+line never changes, so when it finally did, it was invisible.
+Habituation, not absence, and it produced exactly the signature the
+recall grader is built to detect: `untransformed` in block 3, where the
+raw number came back unchanged.
+
+A rule that only appears on the screen has not been communicated. So a
+transforming block now states it as the loudest element on the page, in
+the accent colour rather than as body text, repeats it at the recall
+step, and **shows the rule worked out on that block's own digits**, so a
+participant sees the answer applied rather than a rule to apply later.
+The wrap is stated with it, since 9 plus 3 being 2 is the part that
+surprises.
 
 ### 3.1 The strategy problem, and how it is handled
 

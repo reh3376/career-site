@@ -26,8 +26,17 @@ import { createMetronome, type Signal } from "@/lib/metronome";
 
 /** Hard limit per question, covering reading, deciding and rating. */
 const QUESTION_MS = 20_000;
-/** How long the digits are shown before the questions begin. */
-const MEMORISE_MS = 2_000;
+/**
+ * How long the digits are shown before the questions begin.
+ *
+ * Five seconds, raised from two after the first live run. Two was the
+ * original specification and it was wrong in practice: four digits plus
+ * a transformation rule is not readable in two seconds, and a
+ * participant who spends all of it on the digits has none left for the
+ * instruction. The whole budget cost is fifteen seconds across five
+ * blocks.
+ */
+const MEMORISE_MS = 5_000;
 /** Limit on entering the number at the end of a block. */
 const RECALL_MS = 20_000;
 
@@ -252,11 +261,29 @@ export function RunScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, qi, blockNo]);
 
-  const instruction = useMemo(() => {
-    if (block.transform === "plus1") return "Add 1 to each digit when you give it back.";
-    if (block.transform === "plus3") return "Add 3 to each digit when you give it back.";
-    return "Give it back exactly as shown.";
-  }, [block.transform]);
+  // The transformation, and an example of it applied to this block's
+  // own digits.
+  //
+  // The first live run returned the raw number in both transformation
+  // blocks, having never registered that a rule had appeared. The
+  // instruction was on screen the whole time, which is the point: it
+  // read as a small grey line saying "give it back exactly as shown"
+  // for practice, block 1 and block 2, so by block 3 it had taught the
+  // participant that it never changes. Habituation, not absence.
+  //
+  // So a block that transforms now says so as the loudest thing on the
+  // screen, and shows the answer worked out on the very digits in front
+  // of them. A rule stated in the abstract is a rule to be applied
+  // later; a rule shown applied is one that has already been understood.
+  const transform = useMemo(() => {
+    const add = block.transform === "plus1" ? 1 : block.transform === "plus3" ? 3 : 0;
+    if (!add) return null;
+    const example = block.digits
+      .split("")
+      .map((d) => String((Number(d) + add) % 10))
+      .join("");
+    return { add, example };
+  }, [block.transform, block.digits]);
 
   if (!handoff) return null;
 
@@ -283,13 +310,30 @@ export function RunScreen() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 pb-24 sm:px-10">
         {phase === "memorise" ? (
           <div className="text-center">
-            <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
-              Hold this number
-            </p>
+            {transform ? (
+              <p className="mx-auto max-w-md rounded-md border border-accent bg-accent-soft/60 px-5 py-3 text-base font-semibold text-accent">
+                Add {transform.add} to every digit before you give it back.
+              </p>
+            ) : (
+              <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+                Hold this number
+              </p>
+            )}
             <p className="font-display mt-6 text-7xl tracking-[0.2em] text-ink tabular-nums">
               {block.digits}
             </p>
-            <p className="mt-6 text-sm text-ink-2">{instruction}</p>
+            {transform ? (
+              <p className="mt-6 text-base text-ink-2">
+                So you will type{" "}
+                <span className="font-display tracking-[0.1em] text-ink tabular-nums">
+                  {transform.example}
+                </span>
+                . Digits wrap, so 9 plus {transform.add} is{" "}
+                {(9 + transform.add) % 10}.
+              </p>
+            ) : (
+              <p className="mt-6 text-sm text-ink-2">Give it back exactly as shown.</p>
+            )}
           </div>
         ) : null}
 
@@ -347,7 +391,13 @@ export function RunScreen() {
             <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
               The number
             </p>
-            <p className="mt-4 text-base text-ink-2">{instruction}</p>
+            {transform ? (
+              <p className="mx-auto mt-4 max-w-md rounded-md border border-accent bg-accent-soft/60 px-5 py-3 text-base font-semibold text-accent">
+                Add {transform.add} to every digit.
+              </p>
+            ) : (
+              <p className="mt-4 text-base text-ink-2">Exactly as it was shown.</p>
+            )}
             <input
               autoFocus
               inputMode="numeric"
