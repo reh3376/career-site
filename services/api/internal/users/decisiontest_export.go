@@ -140,6 +140,15 @@ func csvValue(v any) string {
 		// RFC 3339 in UTC. Local offsets in a dataset are a day lost to
 		// timezone archaeology later.
 		return t.UTC().Format(time.RFC3339)
+	case [16]byte:
+		// A uuid. pgx's codec decodes uuid to [16]byte, not to a string,
+		// and SELECT * means session_key and participant_key arrive that
+		// way. Without this case fmt.Sprint renders them as
+		// "[207 88 141 ...]" and the dataset's two join keys are
+		// unusable, while the row and session counts stay correct
+		// because a byte array still stringifies consistently. Nothing
+		// about the export would have looked wrong.
+		return fmt.Sprintf("%x-%x-%x-%x-%x", t[0:4], t[4:6], t[6:8], t[8:10], t[10:16])
 	case []byte:
 		return string(t)
 	default:

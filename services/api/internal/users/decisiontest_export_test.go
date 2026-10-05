@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // How a cell is rendered decides what the analysis reads, and a wrong
@@ -97,6 +99,51 @@ func TestFreeTextCannotBreakTheColumns(t *testing.T) {
 		if recs[1][i] != want {
 			t.Errorf("column %d round-tripped as %q, want %q", i, recs[1][i], want)
 		}
+	}
+}
+
+// session_key and participant_key are what every row of the dataset
+// joins on, and SELECT * over the view delivers them as Postgres uuids.
+// pgx decodes a uuid to [16]byte rather than to a string, so without an
+// explicit case they render as "[207 88 141 ...]": both join keys
+// unusable, while the row count and the session count stay correct
+// because a byte array stringifies consistently. Nothing about the
+// export would have looked wrong, which is why this is pinned.
+func TestUUIDsRenderAsUUIDs(t *testing.T) {
+	// The byte form of cf588df7-3ded-45d6-a141-e35ac0c648b7.
+	raw := [16]byte{
+		0xcf, 0x58, 0x8d, 0xf7, 0x3d, 0xed, 0x45, 0xd6,
+		0xa1, 0x41, 0xe3, 0x5a, 0xc0, 0xc6, 0x48, 0xb7,
+	}
+	const want = "cf588df7-3ded-45d6-a141-e35ac0c648b7"
+	if got := csvValue(raw); got != want {
+		t.Errorf("csvValue(uuid bytes) = %q, want %q", got, want)
+	}
+}
+
+// pgx decodes a uuid to [16]byte via its codec, not to a string. If
+// that ever changes the case above becomes dead and the live decode
+// starts falling through to fmt.Sprint again, so assert the shape this
+// code is written against rather than trusting it.
+func TestPgxStillDecodesUUIDToAByteArray(t *testing.T) {
+	m := pgtype.NewMap()
+	ti, ok := m.TypeForOID(pgtype.UUIDOID)
+	if !ok {
+		t.Fatal("pgx has no uuid type registered")
+	}
+	raw := []byte{
+		0xcf, 0x58, 0x8d, 0xf7, 0x3d, 0xed, 0x45, 0xd6,
+		0xa1, 0x41, 0xe3, 0x5a, 0xc0, 0xc6, 0x48, 0xb7,
+	}
+	v, err := ti.Codec.DecodeValue(m, pgtype.UUIDOID, pgtype.BinaryFormatCode, raw)
+	if err != nil {
+		t.Fatalf("decode a uuid: %v", err)
+	}
+	if _, isArray := v.([16]byte); !isArray {
+		t.Fatalf("pgx decoded a uuid to %T, not [16]byte: csvValue needs a case for it", v)
+	}
+	if got := csvValue(v); got != "cf588df7-3ded-45d6-a141-e35ac0c648b7" {
+		t.Errorf("a uuid straight from the codec rendered as %q", got)
 	}
 }
 
