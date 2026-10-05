@@ -1,6 +1,9 @@
 package users
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // The result email tells a participant something about themselves, once,
 // with no way to correct it afterwards. The arithmetic behind the
@@ -24,14 +27,19 @@ func TestResultArithmetic(t *testing.T) {
 	}
 }
 
-// Three different things can happen to a person, and the email says a
-// different true thing about each. Getting the branch wrong would tell
-// somebody their calibration was good when it collapsed.
+// Four different things can happen to a person, and the email says a
+// different true thing about each. Getting the reading wrong would tell
+// somebody their calibration was good when it collapsed, or hand them a
+// flattering explanation of a decline that never happened.
+//
+// This now asserts DTResult.Reading rather than re-deriving the
+// thresholds, which is the point: the decision lives in one place and
+// the template prints it.
 func TestWhichSentenceTheEmailPicks(t *testing.T) {
 	tests := []struct {
 		name string
 		r    DTResult
-		want string // "effect" | "overcorrected" | "calibrated"
+		want string // "effect" | "overcorrected" | "calibrated" | "no_decline"
 	}{
 		{
 			name: "the effect: accuracy falls, confidence does not",
@@ -49,27 +57,82 @@ func TestWhichSentenceTheEmailPicks(t *testing.T) {
 			want: "overcorrected",
 		},
 		{
-			name: "no decline at all is not the effect",
+			name: "nothing moved: there is no decline to explain",
 			r:    DTResult{EarlyAccuracy: 70, EarlyConfidence: 70, HardAccuracy: 70, HardConfidence: 70},
-			want: "calibrated",
+			want: "no_decline",
+		},
+		{
+			// The owner's own test send on 2026-10-05. Accuracy ROSE 16
+			// points and confidence slipped 3, giving a gap of -19,
+			// which the old template read as "overcorrected" and told
+			// him he had registered the difficulty and adjusted for it.
+			// Nothing had got harder for him. no_decline has to outrank
+			// the gap, because every other reading presupposes a fall.
+			name: "accuracy rose: must not be read as overcorrection",
+			r:    DTResult{EarlyAccuracy: 17, EarlyConfidence: 81, HardAccuracy: 33, HardConfidence: 78},
+			want: "no_decline",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Same thresholds the template branches on.
-			var got string
-			switch g := tc.r.Gap(); {
-			case g > 10:
-				got = "effect"
-			case g < -5:
-				got = "overcorrected"
-			default:
-				got = "calibrated"
-			}
-			if got != tc.want {
-				t.Errorf("gap %d picked %q, want %q", tc.r.Gap(), got, tc.want)
+			if got := tc.r.Reading(); got != tc.want {
+				t.Errorf("Reading() = %q, want %q (accuracy drop %d, gap %d)",
+					got, tc.want, tc.r.AccuracyDrop(), tc.r.Gap())
 			}
 		})
+	}
+}
+
+// A participant reads these two sentences as the summary of their own
+// fifteen minutes. "Your accuracy moved -16 points" went out to the
+// owner on the first real send: a minus sign doing the work a verb
+// should do, and pointing the wrong way.
+func TestMovementReadsAsEnglish(t *testing.T) {
+	tests := []struct {
+		name string
+		r    DTResult
+		acc  string
+		conf string
+	}{
+		{
+			name: "a fall says fell",
+			r:    DTResult{EarlyAccuracy: 83, EarlyConfidence: 79, HardAccuracy: 50, HardConfidence: 76},
+			acc:  "Your accuracy fell 33 points",
+			conf: "Your confidence fell 3 points",
+		},
+		{
+			name: "a rise says rose, with no minus sign",
+			r:    DTResult{EarlyAccuracy: 17, EarlyConfidence: 81, HardAccuracy: 33, HardConfidence: 78},
+			acc:  "Your accuracy rose 16 points",
+			conf: "Your confidence fell 3 points",
+		},
+		{
+			name: "no movement says so rather than printing a zero",
+			r:    DTResult{EarlyAccuracy: 70, EarlyConfidence: 70, HardAccuracy: 70, HardConfidence: 70},
+			acc:  "Your accuracy did not move",
+			conf: "Your confidence did not move",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.r.AccuracyPhrase(); got != tc.acc {
+				t.Errorf("AccuracyPhrase() = %q, want %q", got, tc.acc)
+			}
+			if got := tc.r.ConfidencePhrase(); got != tc.conf {
+				t.Errorf("ConfidencePhrase() = %q, want %q", got, tc.conf)
+			}
+		})
+	}
+	// No phrase may contain a minus sign: the direction is the verb.
+	for _, r := range []DTResult{
+		{EarlyAccuracy: 10, HardAccuracy: 90, EarlyConfidence: 10, HardConfidence: 90},
+		{EarlyAccuracy: 90, HardAccuracy: 10, EarlyConfidence: 90, HardConfidence: 10},
+	} {
+		for _, p := range []string{r.AccuracyPhrase(), r.ConfidencePhrase()} {
+			if strings.Contains(p, "-") {
+				t.Errorf("phrase carries a minus sign: %q", p)
+			}
+		}
 	}
 }
 

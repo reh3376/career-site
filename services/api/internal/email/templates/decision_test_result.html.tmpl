@@ -9,20 +9,22 @@
   <tr><td>hardest block</td><td align="right"><strong>{{.HardAccuracy}}%</strong> correct</td><td align="right">{{.HardConfidence}}% confident</td></tr>
 </table>
 
-<p>Your accuracy moved <strong>{{.AccuracyDrop}} points</strong>. Your confidence moved <strong>{{.ConfidenceDrop}} points</strong>.</p>
+<p><strong>{{.AccuracyPhrase}}</strong>. <strong>{{.ConfidencePhrase}}</strong>.</p>
 
-{{if gt .Gap 10}}
+{{if eq .Reading "effect"}}
 <p>That difference is the whole point of the test. Under load your judgement got worse and your sense of how it was going barely noticed. That is not a flaw in you; it is what load does to everyone, which is why it is worth knowing about rather than being embarrassed by.</p>
-{{else if lt .Gap -5}}
+{{else if eq .Reading "overcorrected"}}
 <p>Your confidence fell further than your accuracy did, which is the less common pattern. You registered the difficulty and adjusted for it.</p>
+{{else if eq .Reading "no_decline"}}
+<p>So your accuracy did not fall as the load rose, and there is no decline here for the load to explain. That happens, and it is worth saying plainly rather than dressing up: thirty questions in one sitting is a short, noisy measurement, and the effect this test looks for is one that shows up across people rather than reliably inside any single run. Yours does not show it.</p>
 {{else}}
 <p>Your confidence tracked your accuracy closely, which is better calibration than most people manage under load.</p>
 {{end}}
 
 {{if .FatigueHeld}}
-<p>The last block returned to the difficulty of the first, twelve minutes later, and you scored about the same ({{.Block1Accuracy}}% then {{.Block5Accuracy}}%). So what happened in between was the load rather than tiredness.</p>
+<p>The last block returned to the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Holding up at the end is what makes the middle of the test readable as load rather than as tiredness.</p>
 {{else}}
-<p>The last block repeated the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Some of what happened in between may have been fatigue as much as load.</p>
+<p>The last block repeated the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Falling away at the end means some of what happened in between may have been fatigue as much as load.</p>
 {{end}}
 
 <p>One thing deliberately missing: which questions you got wrong, and what the right answers were. Everybody sees the same thirty questions, so one answer getting out spoils it for everybody after you. When collection closes, the full explanation of what was being measured and why the wrong answers feel so right goes up publicly, and you will not need this email to read it.</p>

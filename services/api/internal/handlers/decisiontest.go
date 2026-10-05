@@ -433,20 +433,24 @@ func (h *DecisionTest) sendResult(sessionID int64) {
 		return
 	}
 
+	// The template is handed finished words and a named reading, not
+	// signed numbers to branch on. Which true thing a run supports is a
+	// decision about the research, and it belongs in DTResult where it
+	// is unit-tested, not in a sign comparison inside an email body.
 	text, html, err := email.DecisionTestResultTemplate.Render(struct {
 		*users.DTResult
-		AccuracyDrop   int
-		ConfidenceDrop int
-		Gap            int
-		FatigueHeld    bool
-		SiteURL        string
+		AccuracyPhrase   string
+		ConfidencePhrase string
+		Reading          string
+		FatigueHeld      bool
+		SiteURL          string
 	}{
-		DTResult:       res,
-		AccuracyDrop:   res.AccuracyDrop(),
-		ConfidenceDrop: res.ConfidenceDrop(),
-		Gap:            res.Gap(),
-		FatigueHeld:    res.FatigueHeld(),
-		SiteURL:        h.siteURL,
+		DTResult:         res,
+		AccuracyPhrase:   res.AccuracyPhrase(),
+		ConfidencePhrase: res.ConfidencePhrase(),
+		Reading:          res.Reading(),
+		FatigueHeld:      res.FatigueHeld(),
+		SiteURL:          h.siteURL,
 	})
 	if err != nil {
 		h.log.Error("decision test: result email, render", slog.String("error", err.Error()))
