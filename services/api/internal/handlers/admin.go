@@ -398,6 +398,15 @@ func stringify(v any) string {
 	switch t := v.(type) {
 	case string:
 		return t
+	case [16]byte:
+		// A uuid. pgx decodes uuid to [16]byte, and because that is an
+		// array rather than a slice it misses the []byte case below and
+		// used to fall through to %v, printing
+		// "[207 88 141 247 61 237 ...]". Any query here that selects a
+		// public_id or a session_key hits it, and docs/metrics.md now
+		// sends people to this console to read the decision test views,
+		// where both join keys are uuids.
+		return fmt.Sprintf("%x-%x-%x-%x-%x", t[0:4], t[4:6], t[6:8], t[8:10], t[10:16])
 	case []byte:
 		return fmt.Sprintf("\\x%x", t)
 	case time.Time:
