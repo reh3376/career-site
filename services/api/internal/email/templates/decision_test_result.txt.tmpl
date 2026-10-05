@@ -1,0 +1,24 @@
+{{if .Name}}{{.Name}}, thank you{{else}}Thank you{{end}} for the fifteen minutes.
+
+You answered {{.Correct}} of {{.Total}} correctly.{{if .Expired}} {{.Expired}} question{{if ne .Expired 1}}s{{end}} ran out of time, which counts as neither right nor wrong.{{end}}
+
+That number is not the interesting part. This is:
+
+  early blocks     {{.EarlyAccuracy}}% correct   {{.EarlyConfidence}}% confident
+  hardest block    {{.HardAccuracy}}% correct   {{.HardConfidence}}% confident
+
+Your accuracy moved {{.AccuracyDrop}} points. Your confidence moved {{.ConfidenceDrop}} points.
+{{if gt .Gap 10}}
+That difference is the whole point of the test. Under load your judgement got worse and your sense of how it was going barely noticed. That is not a flaw in you; it is what load does to everyone, which is why it is worth knowing about rather than being embarrassed by.
+{{else if lt .Gap -5}}
+Your confidence fell further than your accuracy did, which is the less common pattern. You registered the difficulty and adjusted for it.
+{{else}}
+Your confidence tracked your accuracy closely, which is better calibration than most people manage under load.
+{{end}}
+{{if .FatigueHeld}}The last block returned to the difficulty of the first, twelve minutes later, and you scored about the same ({{.Block1Accuracy}}% then {{.Block5Accuracy}}%). So what happened in between was the load rather than tiredness.{{else}}The last block repeated the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Some of what happened in between may have been fatigue as much as load.{{end}}
+
+One thing deliberately missing: which questions you got wrong, and what the right answers were. Everybody sees the same thirty questions, so one answer getting out spoils it for everybody after you. When collection closes, the full explanation of what was being measured and why the wrong answers feel so right goes up publicly, and you will not need this email to read it.
+
+An n of one proves nothing about you. It demonstrates an effect, on you, which is a different and more useful thing.
+
+{{.SiteURL}}

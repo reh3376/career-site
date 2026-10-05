@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -30,12 +32,25 @@ type DecisionTest struct {
 	log   *slog.Logger
 	users *users.Repo
 	auth  *Auth
+
+	// Results go out to participants who asked for them. Nil leaves the
+	// test working and the emails unsent, which is the right failure:
+	// somebody mid-run must not be stopped because a mailer is down.
+	email   email.Provider
+	from    string
+	siteURL string
 }
 
 // NewDecisionTest wires the handler. auth may be nil: the test is
 // public and a signed-in member is simply recognised when present.
 func NewDecisionTest(log *slog.Logger, repo *users.Repo, auth *Auth) *DecisionTest {
 	return &DecisionTest{log: log, users: repo, auth: auth}
+}
+
+// SetMailer wires result emails. Optional: without it the test runs and
+// nobody is written to.
+func (h *DecisionTest) SetMailer(p email.Provider, from, siteURL string) {
+	h.email, h.from, h.siteURL = p, from, siteURL
 }
 
 // itemSetVersion identifies which items, in which order. Bumped
@@ -246,6 +261,12 @@ func (h *DecisionTest) FinishSession(
 	}
 	h.log.Info("decision test finished",
 		slog.String("session", sess.PublicID), slog.Int("correct", correct), slog.Int("total", total))
+
+	// Sent after the response, not before it. A participant who has just
+	// given fifteen minutes should see the thank-you immediately; an
+	// email provider having a slow afternoon is not their problem, and
+	// a failed send must not turn a completed run into an error.
+	go h.sendResult(sess.ID)
 	return connect.NewResponse(&v1.FinishSessionResponse{
 		Correct: int32(correct), Total: int32(total),
 	}), nil
@@ -328,4 +349,76 @@ func toProtoQuestions(items []users.DTItem, firstPosition int) []*v1.Question {
 		})
 	}
 	return out
+}
+
+// sendResult mails one participant their figures, if they asked.
+//
+// Detached from the request, with its own context: the caller's is
+// cancelled the moment the response is written.
+func (h *DecisionTest) sendResult(sessionID int64) {
+	if h.email == nil || h.from == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	wants, addr, err := h.users.DTWantsResults(ctx, sessionID)
+	if err != nil {
+		h.log.Warn("decision test: result email, wants check",
+			slog.Int64("session_id", sessionID), slog.String("error", err.Error()))
+		return
+	}
+	// Nothing is sent to somebody who did not ask. That is the
+	// commitment the intake form makes and the privacy policy states,
+	// and it is enforced here rather than trusted to the form.
+	if !wants {
+		return
+	}
+
+	res, err := h.users.DTResultFor(ctx, sessionID)
+	if err != nil {
+		h.log.Error("decision test: result email, figures",
+			slog.Int64("session_id", sessionID), slog.String("error", err.Error()))
+		return
+	}
+
+	text, html, err := email.DecisionTestResultTemplate.Render(struct {
+		*users.DTResult
+		AccuracyDrop   int
+		ConfidenceDrop int
+		Gap            int
+		FatigueHeld    bool
+		SiteURL        string
+	}{
+		DTResult:       res,
+		AccuracyDrop:   res.AccuracyDrop(),
+		ConfidenceDrop: res.ConfidenceDrop(),
+		Gap:            res.Gap(),
+		FatigueHeld:    res.FatigueHeld(),
+		SiteURL:        h.siteURL,
+	})
+	if err != nil {
+		h.log.Error("decision test: result email, render", slog.String("error", err.Error()))
+		return
+	}
+
+	if err := h.email.Send(ctx, email.Message{
+		To: addr, From: h.from,
+		Subject:  "Your results from the decision test",
+		TextBody: text, HTMLBody: html,
+	}); err != nil {
+		h.log.Error("decision test: result email, send",
+			slog.String("to_domain", emailDomain(addr)), slog.String("error", err.Error()))
+		return
+	}
+	h.log.Info("decision test result sent", slog.Int64("session_id", sessionID))
+}
+
+// emailDomain returns just the domain, for logs. The address itself is
+// participant data and does not belong in a log line.
+func emailDomain(addr string) string {
+	if i := strings.LastIndex(addr, "@"); i >= 0 {
+		return addr[i+1:]
+	}
+	return "unknown"
 }

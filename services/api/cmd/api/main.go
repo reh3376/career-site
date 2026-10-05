@@ -361,6 +361,10 @@ func main() {
 	// The decision test. Public: its participants are recruited
 	// volunteers rather than members.
 	decisionTestHandler := handlers.NewDecisionTest(log, userRepo, authHandler)
+	// Result emails to participants who asked for them. The audited
+	// mailer, so a send lands in notification_deliveries like every
+	// other transactional message.
+	decisionTestHandler.SetMailer(mailer, cfg.MailFrom, cfg.WebBaseURL)
 
 	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, calProvider, cfg.OwnerContactEmail)
 

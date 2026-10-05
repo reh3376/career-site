@@ -65,6 +65,21 @@ export function Briefing() {
   const taps = useRef<number[]>([]);
   const startedAt = useRef(0);
 
+  // A phone has no space bar, so the tap check was impossible on one:
+  // the instruction said "press the space bar" and there was nothing to
+  // press. Found by the owner.
+  //
+  // The fix is a tap target rather than forcing the software keyboard
+  // up. A keyboard covers much of a phone screen, including where the
+  // visual beat lives for anyone in visual mode, and it appears and
+  // disappears with a layout shift in the middle of a timing
+  // measurement. Tapping a large target is also the native gesture on a
+  // phone, where pressing a space bar is a desktop idiom in disguise.
+  //
+  // Both inputs are live on every device and the wording names both,
+  // which is simpler than detecting the device and cannot be wrong
+  // about it. A tablet with a keyboard can use either.
+
   useEffect(() => () => signal.current?.stop(), []);
 
   // The tap check. Pressing in time with the signal is observed
@@ -98,6 +113,14 @@ export function Briefing() {
     }, 11_000);
   }, [audioMode]);
 
+  // One path for both inputs, so a tap and a key press are timed
+  // identically and the scoring cannot differ by device.
+  const recordTap = useCallback(() => {
+    if (!tapRunning) return;
+    const elapsed = (performance.now() - startedAt.current) / 1000;
+    taps.current.push((ticks.current[0] ?? 0) + elapsed);
+  }, [tapRunning]);
+
   // Taps are recorded on the same clock the ticks were scheduled on, so
   // the offsets compare like with like.
   useEffect(() => {
@@ -105,12 +128,11 @@ export function Briefing() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
       e.preventDefault();
-      const elapsed = (performance.now() - startedAt.current) / 1000;
-      taps.current.push((ticks.current[0] ?? 0) + elapsed);
+      recordTap();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tapRunning]);
+  }, [tapRunning, recordTap]);
 
   const start = useCallback(async () => {
     setStarting(true);
@@ -262,26 +284,37 @@ export function Briefing() {
         <section className="mt-10 space-y-5 text-base leading-relaxed text-ink-2">
           <p>
             A quick check that the signal is actually reaching you, and a
-            reading of your unloaded reaction time.{" "}
+            reading of your unloaded timing.{" "}
             <strong className="text-ink">
-              Press the space bar in time with each{" "}
+              Tap the pad, or press the space bar, in time with each{" "}
               {audioMode === "sound" ? "tick" : "beat"}
             </strong>{" "}
             for about ten seconds.
           </p>
 
           {tapRunning ? (
-            <div className="flex items-center gap-4 py-8">
+            <button
+              type="button"
+              // onPointerDown rather than onClick: a click fires after
+              // the gesture completes, which adds the press duration to
+              // every offset and would make a slow finger look like a
+              // late tap.
+              onPointerDown={(e) => {
+                e.preventDefault();
+                recordTap();
+              }}
+              className="flex w-full touch-manipulation select-none flex-col items-center gap-4 rounded-md border border-line bg-canvas py-16 active:border-accent"
+            >
               <span
                 aria-hidden
-                className={`size-6 rounded-full transition-opacity duration-100 ${
+                className={`size-10 rounded-full transition-opacity duration-100 ${
                   beat ? "bg-accent opacity-100" : "bg-ink-4 opacity-25"
                 }`}
               />
               <span className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
-                tap along, space bar
+                tap here, or space bar
               </span>
-            </div>
+            </button>
           ) : null}
 
           {!tapRunning && tap && !tap.passed ? (

@@ -52,6 +52,7 @@ var (
 	JdResultTemplate            = mustLoad("jd_result")
 	MeetingBookedTemplate       = mustLoad("meeting_booked")
 	MeetingConfirmedTemplate    = mustLoad("meeting_confirmed")
+	DecisionTestResultTemplate  = mustLoad("decision_test_result")
 )
 
 // Render returns the rendered text and (optional) HTML bodies for the
