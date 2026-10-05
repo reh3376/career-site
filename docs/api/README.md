@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 73 |
+| [`AdminService`](#adminservice) | Owner console. | 75 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2127,6 +2127,8 @@ Owner console.
 | [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
 | [`GetDecisionTestSettings`](#adminservice-getdecisiontestsettings) | `/api/career.v1.AdminService/GetDecisionTestSettings` | Admin (fresh MFA) | default | `GetDecisionTestSettingsRequest` → `GetDecisionTestSettingsResponse` | Reads the decision test's timings. |
 | [`SetDecisionTestSettings`](#adminservice-setdecisiontestsettings) | `/api/career.v1.AdminService/SetDecisionTestSettings` | Admin (fresh MFA) | default | `SetDecisionTestSettingsRequest` → `SetDecisionTestSettingsResponse` | Sets the decision test's timings. |
+| [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
+| [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
@@ -4049,6 +4051,64 @@ and runs under different timings never pool into one dataset.
   "memoriseMs": 0,
   "questionMs": 0,
   "recallMs": 0
+}
+```
+
+</details>
+
+### AdminService.ListDecisionTestRuns
+
+`POST /api/career.v1.AdminService/ListDecisionTestRuns` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Lists decision test runs, newest first.
+
+**Request** — [`ListDecisionTestRunsRequest`](#listdecisiontestrunsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than taken by a person. Excluded by default, because they are not data. |
+
+**Response** — [`ListDecisionTestRunsResponse`](#listdecisiontestrunsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "includeSynthetic": true
+}
+```
+
+</details>
+
+### AdminService.GetDecisionTestRun
+
+`POST /api/career.v1.AdminService/GetDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+One run in full: every answer, every recall, and the block summary.
+
+**Request** — [`GetDecisionTestRunRequest`](#getdecisiontestrunrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From the list. |
+
+**Response** — [`GetDecisionTestRunResponse`](#getdecisiontestrunresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The run's summary. |
+| `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
+| `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string"
 }
 ```
 
@@ -8113,6 +8173,101 @@ The timings after the change.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `instrumentVersion` | `string` | string |  | The instrument version now in force. |
+
+### ListDecisionTestRunsRequest
+
+Asks for the list of runs.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than taken by a person. Excluded by default, because they are not data. |
+
+### ListDecisionTestRunsResponse
+
+Runs, newest first.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
+
+### DecisionTestRun
+
+One run, summarised for a list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string |  | Opaque handle, used to open the run. |
+| `status` | `string` | string |  | running, completed or abandoned. Abandoned runs are kept, because where people stop measures the fifteen-minute burden. |
+| `displayName` | `string` | string |  | Who, where they gave a name. Empty is the normal case. |
+| `ageRange` | `string` | string |  | Banded age, education and occupation, each empty where not given. |
+| `education` | `string` | string |  | Highest level of education completed. |
+| `occupation` | `string` | string |  | Free-text occupation. |
+| `gaveEmail` | `bool` | boolean |  | Whether an address was left, rather than the address itself. |
+| `audioMode` | `string` | string |  | sound or visual. |
+| `deviceClass` | `string` | string |  | desktop, tablet or phone. |
+| `tapCheckPassed` | `bool` | boolean |  | Whether the tap-along check was passed. |
+| `baselineRtMs` | `int32` | number |  | Unloaded synchronisation offset from the tap check, in ms. |
+| `isRepeat` | `bool` | boolean |  | A second or later run by the same person, flagged not blocked. |
+| `isSynthetic` | `bool` | boolean |  | Driven by an agent rather than taken by a person. |
+| `instrumentVersion` | `string` | string |  | The timings and item set this run was taken under. Runs on different versions are different instruments and must not be pooled. |
+| `itemSetVersion` | `string` | string |  | Which items, in which order. |
+| `correct` | `int32` | number |  | Questions answered correctly, of those scored. |
+| `answered` | `int32` | number |  | Questions presented. |
+| `expired` | `int32` | number |  | Questions that ran out of time, which is its own outcome. |
+| `meanConfidence` | `int32` | number |  | Mean confidence across the run, 0 to 100. |
+| `durationS` | `int32` | number |  | Seconds from start to finish, zero while still running. |
+| `startedAt` | `string` | string |  | When it started, RFC3339. |
+
+### GetDecisionTestRunRequest
+
+Asks for one run in full.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | From the list. |
+
+### GetDecisionTestRunResponse
+
+One run in full.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The run's summary. |
+| `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
+| `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
+
+### DecisionTestBlock
+
+One block of a run.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `blockNo` | `int32` | number |  | 1 to 5. |
+| `load` | `string` | string |  | d3, d4, d4_plus1, d4_plus3 or d3_control. |
+| `correct` | `int32` | number |  | Correct answers in this block. |
+| `total` | `int32` | number |  | Questions in this block. |
+| `lure` | `int32` | number |  | Intuitive wrong answers chosen. |
+| `expired` | `int32` | number |  | Questions that ran out of time. |
+| `meanConfidence` | `int32` | number |  | Mean confidence in this block, 0 to 100. |
+| `meanLatencyMs` | `int32` | number |  | Mean time to answer, in milliseconds. |
+| `presentedDigits` | `string` | string |  | The number that was shown. |
+| `expectedDigits` | `string` | string |  | What a correct response was, after any transformation. |
+| `responseDigits` | `string` | string |  | What came back. |
+| `recallOutcome` | `string` | string |  | exact, untransformed, wrong_digits, partial or expired. untransformed means the number survived and the operation did not. |
+
+### DecisionTestAnswer
+
+One answer.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `position` | `int32` | number |  | Position in the whole test, 1-based. |
+| `blockNo` | `int32` | number |  | Which block it belonged to. |
+| `itemCode` | `string` | string |  | Stable item code, e.g. A1 or D4. |
+| `itemFamily` | `string` | string |  | arithmetic, base_rate, conjunction or syllogism. |
+| `outcome` | `string` | string |  | correct, lure, other or expired. |
+| `confidence` | `int32` | number |  | The participant's own rating, 0 to 100. |
+| `latencyMs` | `int32` | number |  | Time to answer, in milliseconds. |
 
 ### RegisterRequest
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -75,4 +76,78 @@ func (a *Admin) SetDecisionTestSettings(
 	return connect.NewResponse(&v1.SetDecisionTestSettingsResponse{
 		InstrumentVersion: saved.InstrumentVersion(),
 	}), nil
+}
+
+// ListDecisionTestRuns returns runs, newest first.
+func (a *Admin) ListDecisionTestRuns(
+	ctx context.Context, req *connect.Request[v1.ListDecisionTestRunsRequest],
+) (*connect.Response[v1.ListDecisionTestRunsResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	runs, err := a.users.DTListRuns(ctx, req.Msg.GetIncludeSynthetic())
+	if err != nil {
+		a.log.Error("decision test: list runs", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not read the runs"))
+	}
+	out := make([]*v1.DecisionTestRun, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, toProtoRun(r))
+	}
+	return connect.NewResponse(&v1.ListDecisionTestRunsResponse{Runs: out}), nil
+}
+
+// GetDecisionTestRun returns one run in full.
+func (a *Admin) GetDecisionTestRun(
+	ctx context.Context, req *connect.Request[v1.GetDecisionTestRunRequest],
+) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	run, blocks, answers, err := a.users.DTGetRun(ctx, req.Msg.GetSessionKey())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
+	}
+	pb := make([]*v1.DecisionTestBlock, 0, len(blocks))
+	for _, b := range blocks {
+		pb = append(pb, &v1.DecisionTestBlock{
+			BlockNo: int32(b.BlockNo), Load: b.Load,
+			Correct: int32(b.Correct), Total: int32(b.Total),
+			Lure: int32(b.Lure), Expired: int32(b.Expired),
+			MeanConfidence: int32(b.MeanConfidence), MeanLatencyMs: int32(b.MeanLatencyMs),
+			PresentedDigits: b.PresentedDigits, ExpectedDigits: b.ExpectedDigits,
+			ResponseDigits: b.ResponseDigits, RecallOutcome: b.RecallOutcome,
+		})
+	}
+	pa := make([]*v1.DecisionTestAnswer, 0, len(answers))
+	for _, x := range answers {
+		pa = append(pa, &v1.DecisionTestAnswer{
+			Position: int32(x.Position), BlockNo: int32(x.BlockNo),
+			ItemCode: x.ItemCode, ItemFamily: x.ItemFamily, Outcome: x.Outcome,
+			Confidence: int32(x.Confidence), LatencyMs: int32(x.LatencyMs),
+		})
+	}
+	return connect.NewResponse(&v1.GetDecisionTestRunResponse{
+		Run: toProtoRun(*run), Blocks: pb, Answers: pa,
+	}), nil
+}
+
+// toProtoRun copies a run onto the wire.
+//
+// gave_email rather than the address itself: the admin list needs to
+// know whether results can be sent, not what the address is, and a
+// mailing list is not what this surface is for.
+func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
+	return &v1.DecisionTestRun{
+		SessionKey: r.SessionKey, Status: r.Status,
+		DisplayName: r.DisplayName, AgeRange: r.AgeRange,
+		Education: r.Education, Occupation: r.Occupation, GaveEmail: r.GaveEmail,
+		AudioMode: r.AudioMode, DeviceClass: r.DeviceClass,
+		TapCheckPassed: r.TapCheckPassed, BaselineRtMs: int32(r.BaselineRTMs),
+		IsRepeat: r.IsRepeat, IsSynthetic: r.IsSynthetic,
+		InstrumentVersion: r.InstrumentVersion, ItemSetVersion: r.ItemSetVersion,
+		Correct: int32(r.Correct), Answered: int32(r.Answered), Expired: int32(r.Expired),
+		MeanConfidence: int32(r.MeanConfidence), DurationS: int32(r.DurationS),
+		StartedAt: r.StartedAt.UTC().Format(time.RFC3339),
+	}
 }

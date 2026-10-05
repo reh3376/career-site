@@ -4,6 +4,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import { setDecisionTestTimingsAction } from "./actions";
+import { RunTable, type Run } from "./runs";
 
 export const metadata: Metadata = { title: "Admin · Decision test" };
 
@@ -15,9 +16,10 @@ type Settings = {
   sessionsOnThisVersion?: number;
 };
 
-export default async function DecisionTestSettingsPage() {
+export default async function DecisionTestPage() {
   const cookie = await getSessionCookie();
   let s: Settings = {};
+  let runs: Run[] = [];
   if (cookie) {
     s =
       ((await callApi({
@@ -25,6 +27,12 @@ export default async function DecisionTestSettingsPage() {
         body: {},
         cookie,
       })) as Settings) ?? {};
+    const listed = (await callApi({
+      path: "/api/career.v1.AdminService/ListDecisionTestRuns",
+      body: { includeSynthetic: false },
+      cookie,
+    })) as { runs?: Run[] } | null;
+    runs = listed?.runs ?? [];
   }
   const secs = (ms?: number) => Math.round((ms ?? 0) / 1000);
 
@@ -37,12 +45,21 @@ export default async function DecisionTestSettingsPage() {
         Decision test.
       </h1>
       <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
+        Every run, and the timings they were taken under. Agent-driven
+        runs are excluded: they prove the pipeline works and are not
+        data.
+      </p>
+
+      <RunTable runs={runs} />
+
+      <h2 className="font-display mt-20 text-2xl text-ink">Timings</h2>
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-2">
         How long a participant gets for each phase. These were constants
         until the first two live runs each moved them, and changing a
         number should not need a deploy.
       </p>
 
-      <form action={setDecisionTestTimingsAction} className="mt-12 max-w-md space-y-6">
+      <form action={setDecisionTestTimingsAction} className="mt-8 max-w-md space-y-6">
         <Field
           name="memorise_s"
           label="Seconds to memorise the number"

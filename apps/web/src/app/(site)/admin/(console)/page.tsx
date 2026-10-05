@@ -113,7 +113,7 @@ const GROUPS: { heading: string; note: string; surfaces: Surface[] }[] = [
       {
         href: "/admin/decision-test",
         title: "Decision test",
-        body: "How long a participant gets for each phase. The instrument version is derived from these, so a change here starts a new one.",
+        body: "Every run, block by block and answer by answer, with the accuracy-against-confidence gap. Also where the phase timings are set.",
       },
       {
         href: "/admin/db",

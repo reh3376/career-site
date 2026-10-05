@@ -203,6 +203,12 @@ const (
 	// AdminServiceSetDecisionTestSettingsProcedure is the fully-qualified name of the AdminService's
 	// SetDecisionTestSettings RPC.
 	AdminServiceSetDecisionTestSettingsProcedure = "/career.v1.AdminService/SetDecisionTestSettings"
+	// AdminServiceListDecisionTestRunsProcedure is the fully-qualified name of the AdminService's
+	// ListDecisionTestRuns RPC.
+	AdminServiceListDecisionTestRunsProcedure = "/career.v1.AdminService/ListDecisionTestRuns"
+	// AdminServiceGetDecisionTestRunProcedure is the fully-qualified name of the AdminService's
+	// GetDecisionTestRun RPC.
+	AdminServiceGetDecisionTestRunProcedure = "/career.v1.AdminService/GetDecisionTestRun"
 	// AdminServiceGetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// GetSchedulerSettings RPC.
 	AdminServiceGetSchedulerSettingsProcedure = "/career.v1.AdminService/GetSchedulerSettings"
@@ -472,6 +478,10 @@ type AdminServiceClient interface {
 	// from them, so a change here is recorded on every run taken after it
 	// and runs under different timings never pool into one dataset.
 	SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error)
+	// Lists decision test runs, newest first.
+	ListDecisionTestRuns(context.Context, *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error)
+	// One run in full: every answer, every recall, and the block summary.
+	GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -883,6 +893,18 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("SetDecisionTestSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		listDecisionTestRuns: connect.NewClient[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse](
+			httpClient,
+			baseURL+AdminServiceListDecisionTestRunsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListDecisionTestRuns")),
+			connect.WithClientOptions(opts...),
+		),
+		getDecisionTestRun: connect.NewClient[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse](
+			httpClient,
+			baseURL+AdminServiceGetDecisionTestRunProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestRun")),
+			connect.WithClientOptions(opts...),
+		),
 		getSchedulerSettings: connect.NewClient[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse](
 			httpClient,
 			baseURL+AdminServiceGetSchedulerSettingsProcedure,
@@ -1046,6 +1068,8 @@ type adminServiceClient struct {
 	setJdFitBands           *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
 	getDecisionTestSettings *connect.Client[v1.GetDecisionTestSettingsRequest, v1.GetDecisionTestSettingsResponse]
 	setDecisionTestSettings *connect.Client[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse]
+	listDecisionTestRuns    *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
+	getDecisionTestRun      *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
 	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
 	setSchedulerSettings    *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
 	listQaEntries           *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
@@ -1343,6 +1367,16 @@ func (c *adminServiceClient) GetDecisionTestSettings(ctx context.Context, req *c
 // SetDecisionTestSettings calls career.v1.AdminService.SetDecisionTestSettings.
 func (c *adminServiceClient) SetDecisionTestSettings(ctx context.Context, req *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error) {
 	return c.setDecisionTestSettings.CallUnary(ctx, req)
+}
+
+// ListDecisionTestRuns calls career.v1.AdminService.ListDecisionTestRuns.
+func (c *adminServiceClient) ListDecisionTestRuns(ctx context.Context, req *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error) {
+	return c.listDecisionTestRuns.CallUnary(ctx, req)
+}
+
+// GetDecisionTestRun calls career.v1.AdminService.GetDecisionTestRun.
+func (c *adminServiceClient) GetDecisionTestRun(ctx context.Context, req *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
+	return c.getDecisionTestRun.CallUnary(ctx, req)
 }
 
 // GetSchedulerSettings calls career.v1.AdminService.GetSchedulerSettings.
@@ -1646,6 +1680,10 @@ type AdminServiceHandler interface {
 	// from them, so a change here is recorded on every run taken after it
 	// and runs under different timings never pool into one dataset.
 	SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error)
+	// Lists decision test runs, newest first.
+	ListDecisionTestRuns(context.Context, *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error)
+	// One run in full: every answer, every recall, and the block summary.
+	GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -2053,6 +2091,18 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("SetDecisionTestSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceListDecisionTestRunsHandler := connect.NewUnaryHandler(
+		AdminServiceListDecisionTestRunsProcedure,
+		svc.ListDecisionTestRuns,
+		connect.WithSchema(adminServiceMethods.ByName("ListDecisionTestRuns")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceGetDecisionTestRunHandler := connect.NewUnaryHandler(
+		AdminServiceGetDecisionTestRunProcedure,
+		svc.GetDecisionTestRun,
+		connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetSchedulerSettingsHandler := connect.NewUnaryHandler(
 		AdminServiceGetSchedulerSettingsProcedure,
 		svc.GetSchedulerSettings,
@@ -2269,6 +2319,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetDecisionTestSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetDecisionTestSettingsProcedure:
 			adminServiceSetDecisionTestSettingsHandler.ServeHTTP(w, r)
+		case AdminServiceListDecisionTestRunsProcedure:
+			adminServiceListDecisionTestRunsHandler.ServeHTTP(w, r)
+		case AdminServiceGetDecisionTestRunProcedure:
+			adminServiceGetDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceGetSchedulerSettingsProcedure:
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
@@ -2534,6 +2588,14 @@ func (UnimplementedAdminServiceHandler) GetDecisionTestSettings(context.Context,
 
 func (UnimplementedAdminServiceHandler) SetDecisionTestSettings(context.Context, *connect.Request[v1.SetDecisionTestSettingsRequest]) (*connect.Response[v1.SetDecisionTestSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetDecisionTestSettings is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListDecisionTestRuns(context.Context, *connect.Request[v1.ListDecisionTestRunsRequest]) (*connect.Response[v1.ListDecisionTestRunsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListDecisionTestRuns is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetDecisionTestRun(context.Context, *connect.Request[v1.GetDecisionTestRunRequest]) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetDecisionTestRun is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {
