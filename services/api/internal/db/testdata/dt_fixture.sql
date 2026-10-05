@@ -38,11 +38,12 @@ VALUES (101, 'Alice', '35 to 44', 'Bachelor''s Degree', 'Engineer', 'alice@examp
 INSERT INTO dt_sessions (id, participant_id, instrument_version, item_set_version, key_version,
                          status, audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
                          is_repeat, repeat_matched_by, visitor_key, is_synthetic, recall_strategy,
+                         prior_by_account, prior_by_email, prior_by_cookie,
                          started_at, finished_at)
-VALUES (201, 101, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 300, 40, false, '', 'va', false, 'encode', now() - interval '2 hours', now() - interval '105 minutes'),
-       (202, 102, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 280, 35, false, '', 'vb', false, 'defer',  now() - interval '3 hours', now() - interval '165 minutes'),
-       (203, 103, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'visual', 'phone',   true, 420, 90, false, '', 'vc', false, 'encode', now() - interval '4 hours', now() - interval '225 minutes'),
-       (204, 104, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 100, 5,  false, '', 'vd', true,  'encode', now() - interval '5 hours', now() - interval '290 minutes');
+VALUES (201, 101, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 300, 40, false, '', 'va', false, 'encode', NULL, 0, 0, now() - interval '2 hours', now() - interval '105 minutes'),
+       (202, 102, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 280, 35, false, '', 'vb', false, 'defer',  NULL, NULL, 0, now() - interval '3 hours', now() - interval '165 minutes'),
+       (203, 103, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'visual', 'phone',   true, 420, 90, false, '', 'vc', false, 'encode', NULL, 0, 0, now() - interval '4 hours', now() - interval '225 minutes'),
+       (204, 104, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound',  'desktop', true, 100, 5,  false, '', 'vd', true,  'encode', NULL, NULL, 0, now() - interval '5 hours', now() - interval '290 minutes');
 
 -- Answers: six per block, five blocks, four runs.
 --
@@ -159,9 +160,11 @@ VALUES (105, 'Dev', '55 to 64', 'Associate Degree', 'Technician', '', '', false)
 INSERT INTO dt_sessions (id, participant_id, instrument_version, item_set_version, key_version,
                          status, audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
                          is_repeat, repeat_matched_by, visitor_key, is_synthetic, recall_strategy,
+                         prior_by_account, prior_by_email, prior_by_cookie,
                          started_at, finished_at)
 VALUES (205, 105, 'v1', 'items-2026-10-04', 'key-1', 'completed', 'sound', 'desktop', true, 310, 45,
-        false, '', 've', false, 'encode', now() - interval '8 hours', now() - interval '470 minutes');
+        false, '', 've', false, 'encode', NULL, NULL, 0,
+        now() - interval '8 hours', now() - interval '470 minutes');
 
 INSERT INTO dt_answers (session_id, item_id, item_code, item_version, block_no, block_load,
                         position_in_block, position_overall, outcome, chosen_index,
@@ -198,3 +201,62 @@ VALUES
   (205, 3, 'd4_plus1',   '6194', '7205', '7205', 'exact', 4, 4, 8200),
   (205, 4, 'd4_plus3',   '2748', '5071', '5071', 'exact', 4, 4, 9900),
   (205, 5, 'd3_control', '913',  '913',  '913',  'exact', 3, 3, 3900);
+
+-- Repeat attempts, for the attempt-numbering assertions.
+--
+-- Alice sits the test twice more. The second is matched by email, the
+-- third by cookie with no email given, which is the weaker link and has
+-- to say so. The shapes do not matter here; the sequencing does.
+INSERT INTO dt_participants (id, display_name, age_range, education, occupation, email, email_key, wants_results)
+VALUES (106, 'Alice', '35 to 44', 'Bachelor''s Degree', 'Engineer', 'alice@example.test', 'alice@example.test', false),
+       (107, '',      '',         '',                   '',         '', '', false);
+
+INSERT INTO dt_sessions (id, participant_id, instrument_version, item_set_version, key_version,
+                         status, audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
+                         is_repeat, repeat_matched_by, visitor_key, is_synthetic, recall_strategy,
+                         prior_by_account, prior_by_email, prior_by_cookie,
+                         started_at, finished_at)
+VALUES
+  -- Alice's second sitting. Her email saw the first, and so did the
+  -- browser. The two agree, which is the easy case.
+  (206, 106, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound', 'desktop', true, 300, 40,
+   true, 'email', 'va', false, 'encode', NULL, 1, 1, now() - interval '90 minutes', now() - interval '75 minutes'),
+  -- Her third, taken without giving an address. Only the browser can
+  -- place it, and it reports two priors. attempt_no derives to 3 from
+  -- the cookie because no stronger source exists, and attempt_source
+  -- says 'cookie' so nobody mistakes that for an exact sequence.
+  (207, 107, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed', 'sound', 'desktop', true, 300, 40,
+   true, 'cookie', 'va', false, 'encode', NULL, NULL, 2, now() - interval '60 minutes', now() - interval '45 minutes');
+
+INSERT INTO dt_answers (session_id, item_id, item_code, item_version, block_no, block_load,
+                        position_in_block, position_overall, outcome, chosen_index,
+                        latency_ms, confidence)
+SELECT t.session_id, i.id, i.code, i.version, t.block_no,
+  CASE t.block_no WHEN 1 THEN 'd3' WHEN 2 THEN 'd4' WHEN 3 THEN 'd4_plus1'
+                  WHEN 4 THEN 'd4_plus3' ELSE 'd3_control' END,
+  pos, (t.block_no - 1) * 6 + pos,
+  CASE WHEN pos <= t.n_correct THEN 'correct' ELSE 'other' END,
+  0, 9000, t.confidence
+FROM (
+  VALUES
+    -- A practice effect: both repeats do better than the first sitting.
+    (206, 1, 6, 70), (206, 2, 5, 70), (206, 3, 4, 70), (206, 4, 3, 70), (206, 5, 6, 70),
+    (207, 1, 6, 68), (207, 2, 6, 68), (207, 3, 5, 68), (207, 4, 4, 68), (207, 5, 6, 68)
+) AS t(session_id, block_no, n_correct, confidence)
+CROSS JOIN generate_series(1, 6) AS pos
+JOIN LATERAL (
+  SELECT id, code, version FROM dt_items
+   WHERE kind = 'scored' AND position = (t.block_no - 1) * 6 + pos
+   LIMIT 1
+) AS i ON true;
+
+INSERT INTO dt_recalls (session_id, block_no, block_load, presented_digits, expected_digits,
+                        response_digits, outcome, digits_correct, digits_held, latency_ms)
+SELECT t.session_id, t.block_no,
+       CASE t.block_no WHEN 1 THEN 'd3' WHEN 2 THEN 'd4' WHEN 3 THEN 'd4_plus1'
+                       WHEN 4 THEN 'd4_plus3' ELSE 'd3_control' END,
+       t.d, t.d, t.d, 'exact', length(t.d), length(t.d), 4000
+FROM (VALUES
+  (206,1,'111'),(206,2,'1111'),(206,3,'1111'),(206,4,'1111'),(206,5,'111'),
+  (207,1,'222'),(207,2,'2222'),(207,3,'2222'),(207,4,'2222'),(207,5,'222')
+) AS t(session_id, block_no, d);

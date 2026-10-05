@@ -14717,8 +14717,13 @@ type DecisionTestBlock struct {
 	// total loss. Negative where the recall expired and nothing was
 	// attempted, which is not a memory failure of any size.
 	MemoryFailurePct int32 `protobuf:"varint,13,opt,name=memory_failure_pct,json=memoryFailurePct,proto3" json:"memory_failure_pct,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Curation for this block alone, so one spoiled block costs six
+	// answers rather than thirty. Empty means nobody has judged it.
+	ReviewStatus string `protobuf:"bytes,14,opt,name=review_status,json=reviewStatus,proto3" json:"review_status,omitempty"`
+	// The note attached to this block's judgement.
+	ReviewNote    string `protobuf:"bytes,15,opt,name=review_note,json=reviewNote,proto3" json:"review_note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DecisionTestBlock) Reset() {
@@ -14840,6 +14845,20 @@ func (x *DecisionTestBlock) GetMemoryFailurePct() int32 {
 		return x.MemoryFailurePct
 	}
 	return 0
+}
+
+func (x *DecisionTestBlock) GetReviewStatus() string {
+	if x != nil {
+		return x.ReviewStatus
+	}
+	return ""
+}
+
+func (x *DecisionTestBlock) GetReviewNote() string {
+	if x != nil {
+		return x.ReviewNote
+	}
+	return ""
 }
 
 // One answer.
@@ -16083,7 +16102,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"incomplete\x12\x12\n" +
 	"\x04hold\x18\x05 \x01(\x05R\x04hold\x12\x1c\n" +
 	"\n" +
-	"do_not_use\x18\x06 \x01(\x05R\bdoNotUse\"\xc3\x03\n" +
+	"do_not_use\x18\x06 \x01(\x05R\bdoNotUse\"\x89\x04\n" +
 	"\x11DecisionTestBlock\x12\x19\n" +
 	"\bblock_no\x18\x01 \x01(\x05R\ablockNo\x12\x12\n" +
 	"\x04load\x18\x02 \x01(\tR\x04load\x12\x18\n" +
@@ -16098,7 +16117,10 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	" \x01(\tR\x0eexpectedDigits\x12'\n" +
 	"\x0fresponse_digits\x18\v \x01(\tR\x0eresponseDigits\x12%\n" +
 	"\x0erecall_outcome\x18\f \x01(\tR\rrecallOutcome\x12,\n" +
-	"\x12memory_failure_pct\x18\r \x01(\x05R\x10memoryFailurePct\"\xe2\x01\n" +
+	"\x12memory_failure_pct\x18\r \x01(\x05R\x10memoryFailurePct\x12#\n" +
+	"\rreview_status\x18\x0e \x01(\tR\freviewStatus\x12\x1f\n" +
+	"\vreview_note\x18\x0f \x01(\tR\n" +
+	"reviewNote\"\xe2\x01\n" +
 	"\x12DecisionTestAnswer\x12\x1a\n" +
 	"\bposition\x18\x01 \x01(\x05R\bposition\x12\x19\n" +
 	"\bblock_no\x18\x02 \x01(\x05R\ablockNo\x12\x1b\n" +

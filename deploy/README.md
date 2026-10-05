@@ -140,6 +140,43 @@ Register a fresh account from a mailbox that isn't in the whitelist. You should:
 
 If any of those bounce or hit spam, Resend's dashboard flags why (usually a missing DNS record).
 
+## Waiting for CI before a deploy
+
+    deploy/ci-wait.sh               # newest ci run on the current branch
+    deploy/ci-wait.sh main          # ... on a branch
+    deploy/ci-wait.sh main 1234567  # ... a specific run
+
+`rollout.sh` deploys an image tag, and that tag only exists once CI's
+`images` job has pushed it. So the question "has CI finished" is a
+precondition of every deploy, and the obvious way to ask it is wrong:
+
+    until [ "$(gh run view "$R" --json status -q .status)" = completed ]; do sleep 30; done
+
+On 2026-10-05 GitHub had an incident assigning hosted runners. A job sat
+in `queued` for fifteen minutes having run no steps, so the run never
+reached `completed` and a loop of that shape span indefinitely. The
+symptom reads exactly like a hung test suite, and an hour went into
+looking for a fault in this repository before anyone checked
+githubstatus.com.
+
+`ci-wait.sh` bounds the wait (25 minutes by default, `CI_WAIT_TIMEOUT`
+to change it) and, on giving up, names the jobs still waiting and says
+that a `queued` job cannot be caused by anything in the repository. Exit
+codes separate the cases a caller needs to tell apart: `0` success, `1`
+finished and not successful, `2` timed out with work still queued, `3`
+no run found for the branch tip.
+
+It also refuses to wait on a run whose head sha is not the branch tip.
+`gh run list` served a stale page while this was being written and
+returned a successful run from eighteen hours earlier; without the
+check, a wait would have reported success for a commit CI had never
+seen, which is a gate failing in the direction of proceeding.
+
+**A `cancelled` run is not a test failure.** It means either a newer
+commit superseded it, which is the concurrency group working as
+intended, or a job was never given a runner. Check the head sha against
+the tip before investigating anything else.
+
 ## Updating
 
 `main` is protected (ruleset `protect-main`): changes land only through a PR with the api, web, sidecar, proto and gitleaks checks green; the auto-pr workflow opens the draft from `claude_dev*`, `feat/*` and `fix/*` branches and the owner merges. Every merge to `main` then builds and pushes images to `ghcr.io/reh3376/career-site-{api,sidecar,web}:{sha,latest}`. Before bumping, confirm the tag exists for **all three** images; prod compose has `build: !reset`, so a missing tag fails the `up` loudly instead of building on the box. To roll out a specific SHA:

@@ -141,20 +141,27 @@ func (r *Repo) StartDecisionTest(
 	// private window defeats it) so it would only inconvenience honest
 	// participants, and a second run by somebody who knows the trick is
 	// a different measurement rather than a spoiled one.
-	isRepeat, matchedBy := r.dtDetectRepeat(ctx, userID, in.Email, visitorKey)
+	byAccount, byEmail, byCookie := r.dtPriorSittings(ctx, userID, in.Email, visitorKey, synthetic)
+	isRepeat, source := dtAnyPrior(byAccount, byEmail, byCookie)
+	matchedBy := ""
+	if isRepeat {
+		matchedBy = source
+	}
 
 	s := &DTSession{Status: "running", Synthetic: synthetic, IsRepeat: isRepeat}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO dt_sessions
 		  (participant_id, instrument_version, item_set_version, key_version,
 		   audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
-		   is_repeat, repeat_matched_by, visitor_key, is_synthetic)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		   is_repeat, repeat_matched_by, visitor_key, is_synthetic,
+		   prior_by_account, prior_by_email, prior_by_cookie)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING id, public_id::text`,
 		participantID, instrumentVersion, itemSetVersion, keyVersion,
 		cond.AudioMode, cond.DeviceClass, cond.TapCheckPassed,
 		nullableInt(cond.BaselineRTMs), nullableInt(cond.BaselineRTSDMs),
 		isRepeat, matchedBy, visitorKey, synthetic,
+		byAccount, byEmail, byCookie,
 	).Scan(&s.ID, &s.PublicID)
 	if err != nil {
 		return nil, fmt.Errorf("decision test: session: %w", err)
@@ -193,32 +200,95 @@ func nullableInt(v int) *int {
 	return &v
 }
 
-// dtDetectRepeat looks for a previous session by this person, in
-// descending order of reliability: account, then email, then the
-// first-party anonymous cookie.
-func (r *Repo) dtDetectRepeat(ctx context.Context, userID *int64, email, visitorKey string) (bool, string) {
-	check := func(q string, arg any) bool {
+// dtPriorSittings asks each identity how many sittings it has already
+// seen, and returns all three answers.
+//
+// It does not combine them. The owner's rule, 2026-10-05: "we dont get
+// to cherry pick data sets in that manner". An earlier version returned
+// a single number taken from whichever source reported the most, which
+// collapsed three observations into one at write time, discarded the
+// components, and biased the figure upward whenever the sources
+// disagreed. The combination now lives in v_dt_answers, where it is one
+// line and the components are still there beside it.
+//
+// nil means there is no such link to ask, which is a different fact
+// from zero. Zero is an identity reporting no prior sitting, which is
+// positive evidence of a first attempt; nil is silence.
+//
+// These counts are point-in-time and are stored for that reason. The
+// same queries run next month would include sittings that had not
+// happened when this one started.
+func (r *Repo) dtPriorSittings(
+	ctx context.Context, userID *int64, email, visitorKey string, synthetic bool,
+) (byAccount, byEmail, byCookie *int) {
+	// Synthetic and real runs are counted separately. An agent run must
+	// not bump a real participant's count, and a real run must not
+	// inherit one from an agent that happened to share a browser. The
+	// detection this replaces did not separate them: a latent fault
+	// that had not fired only because no synthetic run shared a
+	// visitor_key with a real one.
+	count := func(q string, arg any) *int {
 		var n int
-		if err := r.pool.QueryRow(ctx, q, arg).Scan(&n); err != nil {
-			return false
+		if err := r.pool.QueryRow(ctx, q, arg, synthetic).Scan(&n); err != nil {
+			// A failed count is not zero. Returning nil says "could not
+			// ask", which is the truth and is already the value that
+			// means the sequence is unknown from this source.
+			return nil
 		}
-		return n > 0
+		return &n
 	}
-	if userID != nil && check(
-		`SELECT count(*) FROM dt_sessions s JOIN dt_participants p ON p.id = s.participant_id
-		  WHERE p.user_id = $1`, *userID) {
-		return true, "account"
+
+	if userID != nil {
+		byAccount = count(
+			`SELECT count(*) FROM dt_sessions s JOIN dt_participants p ON p.id = s.participant_id
+			  WHERE p.user_id = $1 AND s.is_synthetic = $2`, *userID)
 	}
-	if k := strings.ToLower(strings.TrimSpace(email)); k != "" && check(
-		`SELECT count(*) FROM dt_sessions s JOIN dt_participants p ON p.id = s.participant_id
-		  WHERE p.email_key = $1`, k) {
-		return true, "email"
+	if k := strings.ToLower(strings.TrimSpace(email)); k != "" {
+		byEmail = count(
+			`SELECT count(*) FROM dt_sessions s JOIN dt_participants p ON p.id = s.participant_id
+			  WHERE p.email_key = $1 AND s.is_synthetic = $2`, k)
 	}
-	if visitorKey != "" && check(
-		`SELECT count(*) FROM dt_sessions WHERE visitor_key = $1`, visitorKey) {
-		return true, "cookie"
+	if visitorKey != "" {
+		byCookie = count(
+			`SELECT count(*) FROM dt_sessions WHERE visitor_key = $1 AND is_synthetic = $2`,
+			visitorKey)
 	}
-	return false, ""
+	return byAccount, byEmail, byCookie
+}
+
+// dtAnyPrior answers "has this person been here before" from the three
+// counts, and names the most reliable source that saw a prior sitting.
+//
+// This is an OR across the sources, not a selection among them, and the
+// distinction matters. Picking one number and discarding the rest is
+// what the owner rejected. Asking whether ANY identity saw a prior
+// sitting discards nothing: it is the complete answer to a yes-or-no
+// question, and all three counts remain stored beside it.
+//
+// It follows that is_repeat can be true while the view's derived
+// attempt_no reads 1, when the account reports no prior sitting and the
+// cookie reports one. That is not an inconsistency to paper over. It is
+// the signal that somebody sat the test anonymously and later signed
+// up, which is exactly the case a single number would have hidden, and
+// a reader who sees the two disagree should go and look at the three
+// counts.
+func dtAnyPrior(byAccount, byEmail, byCookie *int) (bool, string) {
+	any := false
+	source := ""
+	// Reliability order, so the name attached to a repeat is the best
+	// evidence for it rather than whichever source was checked last.
+	for _, c := range []struct {
+		n    *int
+		name string
+	}{{byAccount, "account"}, {byEmail, "email"}, {byCookie, "cookie"}} {
+		if c.n != nil && *c.n > 0 {
+			any = true
+			if source == "" {
+				source = c.name
+			}
+		}
+	}
+	return any, source
 }
 
 // DTSessionByKey resolves the opaque handle a client holds.

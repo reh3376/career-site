@@ -122,6 +122,15 @@ func (a *Admin) GetDecisionTestRun(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
 	}
+	// Per-block judgements, keyed by block. A missing entry is a block
+	// nobody has looked at, which is why this is a map rather than a
+	// field defaulted on the summary: absent and "judged fine" are
+	// different states and the surface has to show which.
+	reviews, err := a.users.DTBlockReviews(ctx, req.Msg.GetSessionKey())
+	if err != nil {
+		a.log.Warn("decision test: block reviews", slog.String("error", err.Error()))
+		reviews = nil
+	}
 	pb := make([]*v1.DecisionTestBlock, 0, len(blocks))
 	for _, b := range blocks {
 		pb = append(pb, &v1.DecisionTestBlock{
@@ -132,6 +141,8 @@ func (a *Admin) GetDecisionTestRun(
 			PresentedDigits: b.PresentedDigits, ExpectedDigits: b.ExpectedDigits,
 			ResponseDigits: b.ResponseDigits, RecallOutcome: b.RecallOutcome,
 			MemoryFailurePct: int32(b.MemoryFailure * 100),
+			ReviewStatus:     reviews[b.BlockNo].Status,
+			ReviewNote:       reviews[b.BlockNo].Note,
 		})
 	}
 	pa := make([]*v1.DecisionTestAnswer, 0, len(answers))

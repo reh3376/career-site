@@ -15,7 +15,15 @@ changes S1. They are listed there rather than repeated here.
 
 ---
 
-**S1. The data layer and the vocabulary.** Migration: review columns on
+**S1. The data layer and the vocabulary. DONE 2026-10-05.**
+Migrations 00056 and 00057. Also absorbed the attempt-sequence
+requirement the owner added mid-sprint, which changed shape once: the
+first version stored a single attempt number chosen from whichever
+identity reported the most priors, and he rejected it. The three counts
+are now stored as point-in-time observations and the sequence is derived
+in the view.
+
+**S1 as planned.** Migration: review columns on
 `dt_sessions` (`review_status`, `review_reason`, `review_note`,
 `reviewed_at`, `reviewed_by`) with a CHECK on the vocabulary, plus
 `dt_session_reviews` for the history. Rebuild `v_dt_answers` to carry
@@ -25,7 +33,16 @@ changes S1. They are listed there rather than repeated here.
 drop a `do_not_use` run; the fixture and assertions cover both, so a
 view that forgets the filter fails the build.
 
-**S2. The review surface.** Proto: `ReviewDecisionTestRun`, review
+**S2. The review surface. DONE 2026-10-05.**
+`ReviewDecisionTestRun`, the curation panel on the run page, the
+per-block exclude control inside the block table, status tags on the
+list and a filter chip row carrying the counts. Server components and
+plain forms: a review is one decision submitted once, so there is no
+interactive state worth a client bundle, and the form works before
+JavaScript loads. Awaiting the live pass, which is the only test that
+counts for UI here.
+
+**S2 as planned.** Proto: `ReviewDecisionTestRun`, review
 fields on `DecisionTestRun`, a status filter on the list. Web: the
 status control, the reason, the note and a save on the detail page;
 status tags and an unreviewed-first filter on the list with a count.

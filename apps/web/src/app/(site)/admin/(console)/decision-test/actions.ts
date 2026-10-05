@@ -57,3 +57,37 @@ export async function exportDecisionTestAction(
     sessions: body.sessions ?? 0,
   };
 }
+
+// Curation. One action for both levels, because the RPC is one call and
+// the difference is a block number.
+//
+// revalidatePath on both the detail page and the list: the list carries
+// the status tags and the unreviewed count, and a review that did not
+// change the queue would read as not having saved.
+export async function reviewDecisionTestRunAction(formData: FormData): Promise<void> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  const key = String(formData.get("session_key") ?? "");
+  if (!key) return;
+
+  const blockNo = Number(formData.get("block_no") ?? 0);
+  const status = String(formData.get("status") ?? "");
+  // A reason only means anything against an exclusion. Sending one with
+  // "good" is refused by the api, so it is dropped here rather than
+  // turned into an error the reviewer has to read.
+  const reason = status === "do_not_use" ? String(formData.get("reason") ?? "") : "";
+
+  await callApi({
+    path: "/api/career.v1.AdminService/ReviewDecisionTestRun",
+    body: {
+      sessionKey: key,
+      blockNo,
+      status,
+      reason,
+      note: String(formData.get("note") ?? ""),
+    },
+    cookie,
+  });
+  revalidatePath(`/admin/decision-test/${key}`);
+  revalidatePath("/admin/decision-test");
+}

@@ -18,25 +18,49 @@
 -- accuracy, lowers the gap and shrinks the Brier score: it moves every
 -- headline number in the direction that looks like the instrument
 -- working. A caveat in a comment would not be enough.
+-- Asserted as a property, not as a total. These checks used to hardcode
+-- "3 sessions", and adding two repeat runs to the fixture broke all
+-- three of them at once while the views were perfectly correct. An
+-- assertion that has to be edited every time the fixture grows will
+-- eventually be edited to whatever makes it pass.
 DO $$
-DECLARE n int;
+DECLARE n int; expected int;
 BEGIN
-  SELECT max(sessions) INTO n FROM v_dt_load_curve;
-  IF n <> 3 THEN
-    RAISE EXCEPTION 'v_dt_load_curve counts % sessions per load, expected 3: a synthetic run is being averaged into the result', n;
+  -- Nothing synthetic is ever usable. One row would be enough to
+  -- flatter every headline figure, so the property is absolute rather
+  -- than counted.
+  SELECT count(*) INTO n FROM v_dt_answers WHERE is_synthetic AND usable;
+  IF n > 0 THEN
+    RAISE EXCEPTION '% synthetic answers are marked usable: a synthetic run will reach the aggregates', n;
   END IF;
 
-  -- Per item, not per load. An item is served once per run and
-  -- v_dt_items pools across item sets deliberately (it carries
-  -- item_set_versions as an array so mixing is visible), so every item
-  -- should show the four real runs and not the fifth synthetic one.
-  -- Accuracy cannot be used for this, since an easy item legitimately
-  -- reaches 100% across the real runs.
+  -- And the curve's own session count matches what the base tables say
+  -- it should be, computed independently rather than written down.
+  SELECT count(DISTINCT s.id) INTO expected
+    FROM dt_sessions s
+    JOIN dt_answers a ON a.session_id = s.id AND a.block_load = 'd3'
+   WHERE NOT s.is_synthetic
+     AND s.review_status <> 'do_not_use'
+     AND s.item_set_version = 'items-2026-10-05'
+     AND NOT EXISTS (SELECT 1 FROM dt_block_reviews br
+                      WHERE br.session_id = s.id AND br.block_no = a.block_no
+                        AND br.status = 'do_not_use');
+  SELECT sessions INTO n FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
+  IF n <> expected THEN
+    RAISE EXCEPTION 'v_dt_load_curve reports % sessions at d3, the base tables say %', n, expected;
+  END IF;
+
+  -- Per item, every usable session should appear exactly once, so the
+  -- maximum equals the number of usable sessions rather than a literal.
+  SELECT count(DISTINCT session_key) INTO expected FROM v_dt_answers WHERE usable;
   SELECT max(sessions) INTO n FROM v_dt_items;
-  IF n <> 4 THEN
-    RAISE EXCEPTION 'v_dt_items counts % sessions on an item, expected 4: a synthetic run is in the item statistics', n;
+  IF n <> expected THEN
+    RAISE EXCEPTION 'v_dt_items counts % sessions on an item, but % sessions are usable', n, expected;
   END IF;
 
+  -- A value property rather than a count: only the synthetic run rates
+  -- itself above 90, so a 90+ band means it got in.
   SELECT count(*) INTO n FROM v_dt_calibration WHERE confidence_band >= 90;
   IF n > 0 THEN
     RAISE EXCEPTION 'v_dt_calibration has a 90+ confidence band, which only the synthetic run produces';
@@ -89,16 +113,22 @@ BEGIN
     RAISE EXCEPTION 'v_dt_load_curve reports % item set(s): the fixture has two, so the view is pooling them', sets;
   END IF;
 
-  -- The current set has three real runs; the older one has exactly one.
-  SELECT sessions INTO n FROM v_dt_load_curve
-   WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-04';
-  IF n <> 1 THEN
-    RAISE EXCEPTION 'the older item set reports % sessions at d3, expected 1', n;
+  -- Each set reports only its own runs. Pooling would make both rows
+  -- report the total, so comparing each against its own base count
+  -- catches it without either number being written down.
+  FOR sets IN SELECT 1 LOOP END LOOP;  -- no-op, keeps the DECLARE used
+  IF (SELECT sessions FROM v_dt_load_curve
+       WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-04')
+     + (SELECT sessions FROM v_dt_load_curve
+         WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-05')
+     <> (SELECT count(DISTINCT session_key) FROM v_dt_answers
+          WHERE block_load = 'd3' AND usable) THEN
+    RAISE EXCEPTION 'the two item sets do not partition the usable sessions at d3: they are pooling or dropping runs';
   END IF;
-  SELECT sessions INTO n FROM v_dt_load_curve
-   WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-05';
-  IF n <> 3 THEN
-    RAISE EXCEPTION 'the current item set reports % sessions at d3, expected 3', n;
+  IF (SELECT sessions FROM v_dt_load_curve
+       WHERE block_load = 'd3' AND item_set_version = 'items-2026-10-04')
+     = (SELECT count(DISTINCT session_key) FROM v_dt_answers WHERE block_load = 'd3' AND usable) THEN
+    RAISE EXCEPTION 'the older item set reports every usable session at d3, so the view is pooling the two sets';
   END IF;
 
   SELECT count(DISTINCT item_set_version) INTO sets FROM v_dt_calibration;
@@ -266,8 +296,8 @@ DECLARE before_sessions int; after_sessions int; after_block int; answers_kept i
 BEGIN
   SELECT sessions INTO before_sessions FROM v_dt_load_curve
    WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
-  IF before_sessions <> 3 THEN
-    RAISE EXCEPTION 'expected 3 usable sessions before curation, found %', before_sessions;
+  IF before_sessions < 3 THEN
+    RAISE EXCEPTION 'only % usable sessions at d3 before curation: too few to test exclusion against', before_sessions;
   END IF;
 
   -- Exclude a whole run, and one block of a different run.
@@ -279,8 +309,9 @@ BEGIN
   -- The excluded run is gone from every load.
   SELECT sessions INTO after_sessions FROM v_dt_load_curve
    WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
-  IF after_sessions <> 2 THEN
-    RAISE EXCEPTION 'a run marked do_not_use still feeds the load curve: % sessions at d3, expected 2', after_sessions;
+  IF after_sessions <> before_sessions - 1 THEN
+    RAISE EXCEPTION 'a run marked do_not_use still feeds the load curve: % sessions at d3, expected % after excluding one',
+      after_sessions, before_sessions - 1;
   END IF;
 
   -- The excluded BLOCK costs only its own load. d4_plus1 is block 3,
@@ -289,13 +320,18 @@ BEGIN
   -- the whole run with it the other loads would read 1.
   SELECT sessions INTO after_block FROM v_dt_load_curve
    WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd4_plus1';
-  IF after_block <> 1 THEN
-    RAISE EXCEPTION 'block-level exclusion is wrong: % sessions at d4_plus1, expected 1', after_block;
-  END IF;
   SELECT sessions INTO after_sessions FROM v_dt_load_curve
    WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd4_plus3';
-  IF after_sessions <> 2 THEN
-    RAISE EXCEPTION 'excluding one block removed the whole run: % sessions at d4_plus3, expected 2', after_sessions;
+  -- d4_plus1 is block 3, so it loses one more than its neighbours. If
+  -- block exclusion were ignored the two would be equal; if it took the
+  -- whole run with it, d4_plus3 would have dropped too.
+  IF after_block <> after_sessions - 1 THEN
+    RAISE EXCEPTION 'block-level exclusion is wrong: % sessions at d4_plus1 against % at d4_plus3, expected exactly one fewer',
+      after_block, after_sessions;
+  END IF;
+  IF after_sessions <> before_sessions - 1 THEN
+    RAISE EXCEPTION 'excluding one block removed the whole run: % sessions at d4_plus3, expected %',
+      after_sessions, before_sessions - 1;
   END IF;
 
   -- Nothing was deleted. Exclusion is a filter, and the measurements
@@ -333,6 +369,92 @@ BEGIN
   EXCEPTION WHEN check_violation THEN
     NULL;
   END;
+END $$;
+
+-- +----------------------------------------------------------------+
+-- | The attempt sequence is derived, and says what it rests on.    |
+-- +----------------------------------------------------------------+
+-- Three identities can each report a different number of prior
+-- sittings. All three are stored; the sequence is derived from the most
+-- RELIABLE source that has anything to say, in an order fixed in
+-- advance, never from whichever source reports the largest figure.
+-- Selecting on the value would bias the number upward whenever the
+-- sources disagree, and that bias tracks how much identity a
+-- participant handed over.
+DO $$
+DECLARE n int; src text;
+BEGIN
+  -- Second sitting: email and cookie agree, and the stronger source is
+  -- the one named.
+  SELECT attempt_no, attempt_source INTO n, src FROM v_dt_sessions
+   WHERE session_key = (SELECT public_id FROM dt_sessions WHERE id = 206);
+  IF n <> 2 OR src <> 'email' THEN
+    RAISE EXCEPTION 'a second sitting derived attempt % from %, expected 2 from email', n, src;
+  END IF;
+
+  -- Third sitting with no address: only the cookie can place it, so the
+  -- sequence comes from the weaker source and must say so, because a
+  -- cookie-derived 3 is not the same claim as an account-derived 3.
+  SELECT attempt_no, attempt_source INTO n, src FROM v_dt_sessions
+   WHERE session_key = (SELECT public_id FROM dt_sessions WHERE id = 207);
+  IF n <> 3 OR src <> 'cookie' THEN
+    RAISE EXCEPTION 'a third sitting derived attempt % from %, expected 3 from cookie', n, src;
+  END IF;
+END $$;
+
+-- An unknown sequence stays unknown. With no identity link at all there
+-- is nothing to place the sitting in an order, and defaulting it to 1
+-- would manufacture evidence of a first attempt out of silence. NULL
+-- and 0 are different facts throughout: 0 is an identity reporting no
+-- prior sitting, NULL is no identity to ask.
+DO $$
+DECLARE unknown_n int;
+BEGIN
+  INSERT INTO dt_participants (id, display_name) VALUES (199, 'No identity');
+  INSERT INTO dt_sessions (id, participant_id, instrument_version, item_set_version, key_version,
+                           status, visitor_key, is_synthetic,
+                           prior_by_account, prior_by_email, prior_by_cookie)
+  VALUES (299, 199, 'v2-m6000-q25000-r20000', 'items-2026-10-05', 'key-1', 'completed',
+          '', false, NULL, NULL, NULL);
+  INSERT INTO dt_answers (session_id, item_id, item_code, item_version, block_no, block_load,
+                          position_in_block, position_overall, outcome, chosen_index, latency_ms, confidence)
+  SELECT 299, id, code, version, 1, 'd3', 1, 1, 'correct', 0, 9000, 70
+    FROM dt_items WHERE kind = 'scored' AND position = 1 LIMIT 1;
+
+  SELECT attempt_no INTO unknown_n FROM v_dt_sessions
+   WHERE session_key = (SELECT public_id FROM dt_sessions WHERE id = 299);
+  IF unknown_n IS NOT NULL THEN
+    RAISE EXCEPTION 'a run with no identity link derived attempt %, expected NULL: silence is not evidence of a first sitting', unknown_n;
+  END IF;
+
+  -- And it is counted as its own thing in the curves rather than
+  -- vanishing between "first" and "repeat".
+  IF NOT EXISTS (SELECT 1 FROM v_dt_load_curve
+                  WHERE item_set_version = 'items-2026-10-05'
+                    AND sessions_attempt_unknown > 0) THEN
+    RAISE EXCEPTION 'a run with an unknown sequence is not counted in sessions_attempt_unknown';
+  END IF;
+
+  DELETE FROM dt_answers WHERE session_id = 299;
+  DELETE FROM dt_sessions WHERE id = 299;
+  DELETE FROM dt_participants WHERE id = 199;
+END $$;
+
+-- Repeats are reported, not removed. The owner decides whether to cut
+-- to first attempts when he reviews, so the view's duty is to make the
+-- composition impossible to miss.
+DO $$
+DECLARE first_n int; repeat_n int;
+BEGIN
+  SELECT sessions_first_attempt, sessions_repeat INTO first_n, repeat_n
+    FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
+  IF repeat_n < 2 THEN
+    RAISE EXCEPTION 'the load curve reports % repeats at d3, expected at least 2: repeats are being filtered out rather than counted', repeat_n;
+  END IF;
+  IF first_n < 1 THEN
+    RAISE EXCEPTION 'the load curve reports % first attempts at d3, expected at least 1', first_n;
+  END IF;
 END $$;
 
 SELECT 'decision test metric views: all assertions hold' AS result;
