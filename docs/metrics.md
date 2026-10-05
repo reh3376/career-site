@@ -60,8 +60,8 @@ below counts from it and nothing is stored.
 | `v_dt_answers` | The flat view, one row per question, with the session and participant context on it. This is also the CSV export. It carries no name, no email address and no `chosen_index`: `is_lure` says which kind of wrong an answer was, which is the measurement, while the raw index across enough runs would let somebody reconstruct the answer key from an export. |
 | `v_dt_blocks` | One row per run per block: accuracy, confidence, the gap between them, expiry rate, and that block's recall. |
 | `v_dt_sessions` | One row per run, including the early-against-hardest comparison the result email makes and the block 5 against block 1 fatigue control. |
-| `v_dt_load_curve` | **The result.** Accuracy and confidence by load level, pooled across participants. Excludes synthetic runs outright rather than flagging them, because this view makes a claim about people. |
-| `v_dt_calibration` | Confidence bands of ten against the accuracy actually achieved in each, split by load. The standard reliability curve. `overclaim_pct` is positive where a band is more sure than right. |
+| `v_dt_load_curve` | **The result.** Accuracy and confidence by load level, **grouped by `item_set_version` and `instrument_version`** so runs taken under different items or different timings never pool into one claim. Excludes synthetic runs outright rather than flagging them, because this view makes a claim about people. |
+| `v_dt_calibration` | Confidence bands of ten against the accuracy actually achieved in each, split by load and by instrument. The standard reliability curve. `overclaim_pct` is positive where a band is more sure than right. |
 | `v_dt_threshold` | **The per-person answer.** The lowest load on the ramp at which this participant took the intended wrong answer while still reporting high confidence. |
 | `v_dt_items` | Per item: accuracy, how often the lure pulled, the gap. A `lure_pct` near zero is an item measuring nothing. |
 
@@ -78,7 +78,27 @@ function so that changing one is a single line:
   `d3_control` ranks **1**, the same as `d3`, because it is `d3`: block
   5 returns to block 1's difficulty and is the fatigue control.
 
-### Two traps in these views
+### Three traps in these views
+
+**The curves must not pool across instruments.** `v_dt_load_curve` and
+`v_dt_calibration` group by `item_set_version` and
+`instrument_version`, which fragments the output on purpose. Many rows
+with a handful of sessions each is the view saying the instrument is
+still moving and there is nothing to read yet; one pooled row averaging
+four instruments is worse, because it looks like a result. There is
+deliberately no second pooled view: two definitions of the headline
+number is how a dashboard starts disagreeing with itself, and the
+pooled one would be the one people quoted.
+
+This was found by reading the first real output on production, which
+reported accuracy *rising* to 100% at the hardest load. The view was
+right and the data was real: both runs predated migration 00052, when
+blocks were family-blocked, so block 1 was six arithmetic items and
+block 4 was conjunctions and syllogisms. Item family swamped load
+entirely. `families` is now a column on the curve, because a row whose
+families value holds a single family cannot support a claim about load
+at all, and that belongs next to the number rather than in a note read
+afterwards.
 
 **The control block must not enter the per-person threshold.** Block 5
 ranks as the easiest load, so a minimum taken over all five blocks
@@ -180,9 +200,12 @@ SELECT status, count(*), round(avg(minutes), 1) AS avg_min, round(avg(queued_min
   FROM v_jd_runs GROUP BY status;
 
 -- does the decision test work? accuracy should fall as the rank rises
--- while confidence does not, so gap_pct grows.
-SELECT block_load, load_rank, sessions, accuracy_pct, mean_confidence, gap_pct, confidently_lured_pct
-  FROM v_dt_load_curve ORDER BY load_rank, block_load;
+-- while confidence does not, so gap_pct grows. Read ONE item set at a
+-- time: rows from different sets are different instruments, and a
+-- families column with a single family cannot speak about load.
+SELECT item_set_version, block_load, load_rank, sessions,
+       accuracy_pct, mean_confidence, gap_pct, confidently_lured_pct, families
+  FROM v_dt_load_curve ORDER BY item_set_version, load_rank, block_load;
 
 -- the per-person answer, with the control beside it. lured_in_control
 -- true means read the threshold as a weaker claim about load.

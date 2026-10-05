@@ -137,3 +137,64 @@ VALUES
   (204, 3, 'd4_plus1',   '3333', '4444', '4444', 'exact',          4, 4,   900),
   (204, 4, 'd4_plus3',   '5555', '8888', '8888', 'exact',          4, 4,   900),
   (204, 5, 'd3_control', '666',  '666',  '666',  'exact',          3, 3,   800);
+
+-- One more run, on a DIFFERENT item set, to keep the curves from
+-- pooling across instruments again.
+--
+-- This is the shape that produced the first real reading of
+-- v_dt_load_curve on production: accuracy RISING to 100% at the hardest
+-- load, because the two runs in the database were taken on the
+-- family-blocked composition where item family swamped load. The view
+-- was correct and the claim it made was worthless, because it grouped
+-- by block_load alone and averaged every run regardless of which items
+-- it saw.
+--
+-- So: a run with the ramp inverted, tagged as an older item set. If the
+-- curves ever stop grouping by version, this run's 100% at d4_plus3
+-- will drag the current item set's figures and the assertions below
+-- will catch it.
+INSERT INTO dt_participants (id, display_name, age_range, education, occupation, email, email_key, wants_results)
+VALUES (105, 'Dev', '55 to 64', 'Associate Degree', 'Technician', '', '', false);
+
+INSERT INTO dt_sessions (id, participant_id, instrument_version, item_set_version, key_version,
+                         status, audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
+                         is_repeat, repeat_matched_by, visitor_key, is_synthetic, recall_strategy,
+                         started_at, finished_at)
+VALUES (205, 105, 'v1', 'items-2026-10-04', 'key-1', 'completed', 'sound', 'desktop', true, 310, 45,
+        false, '', 've', false, 'encode', now() - interval '8 hours', now() - interval '470 minutes');
+
+INSERT INTO dt_answers (session_id, item_id, item_code, item_version, block_no, block_load,
+                        position_in_block, position_overall, outcome, chosen_index,
+                        latency_ms, confidence)
+SELECT
+  t.session_id, i.id, i.code, i.version, t.block_no,
+  CASE t.block_no WHEN 1 THEN 'd3' WHEN 2 THEN 'd4' WHEN 3 THEN 'd4_plus1'
+                  WHEN 4 THEN 'd4_plus3' ELSE 'd3_control' END,
+  pos, (t.block_no - 1) * 6 + pos,
+  CASE WHEN pos <= t.n_correct THEN 'correct' ELSE 'other' END,
+  0, t.latency, t.confidence
+FROM (
+  VALUES
+    -- The ramp backwards: the old composition made the hardest block
+    -- the easiest items.
+    (205, 1, 2, 88, 9000),
+    (205, 2, 3, 88, 9000),
+    (205, 3, 2, 88, 9000),
+    (205, 4, 6, 88, 9000),
+    (205, 5, 6, 88, 9000)
+) AS t(session_id, block_no, n_correct, confidence, latency)
+CROSS JOIN generate_series(1, 6) AS pos
+JOIN LATERAL (
+  SELECT id, code, version FROM dt_items
+   WHERE kind = 'scored' AND position = (t.block_no - 1) * 6 + pos
+   LIMIT 1
+) AS i ON true;
+
+INSERT INTO dt_recalls (session_id, block_no, block_load, presented_digits, expected_digits,
+                        response_digits, outcome, digits_correct, digits_held, latency_ms)
+VALUES
+  (205, 1, 'd3',         '271',  '271',  '271',  'exact', 3, 3, 4100),
+  (205, 2, 'd4',         '8305', '8305', '8305', 'exact', 4, 4, 5400),
+  (205, 3, 'd4_plus1',   '6194', '7205', '7205', 'exact', 4, 4, 8200),
+  (205, 4, 'd4_plus3',   '2748', '5071', '5071', 'exact', 4, 4, 9900),
+  (205, 5, 'd3_control', '913',  '913',  '913',  'exact', 3, 3, 3900);
