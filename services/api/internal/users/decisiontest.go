@@ -155,7 +155,7 @@ func (r *Repo) StartDecisionTest(
 		   audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
 		   is_repeat, repeat_matched_by, visitor_key, is_synthetic,
 		   prior_by_account, prior_by_email, prior_by_cookie)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		RETURNING id, public_id::text`,
 		participantID, instrumentVersion, itemSetVersion, keyVersion,
 		cond.AudioMode, cond.DeviceClass, cond.TapCheckPassed,
