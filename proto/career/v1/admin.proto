@@ -433,6 +433,19 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Records the owner's judgement about a run, or about one block of
+  // one, and returns the run as it now reads.
+  //
+  // Curation is what turns collection into a dataset. Only
+  // `do_not_use` excludes anything; the other statuses describe a run
+  // without changing what the analysis sees, because whether an
+  // interrupted run is usable is a judgement made per run rather than
+  // a rule. Nothing is ever deleted: an excluded run keeps every row
+  // it produced.
+  rpc ReviewDecisionTestRun(ReviewDecisionTestRunRequest) returns (ReviewDecisionTestRunResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Reads the meeting-scheduler settings: the weekly windows a member
   // may book into, the lengths on offer, the clearance between
   // meetings, and the zone all of it is quoted in.
@@ -3132,10 +3145,17 @@ message ListDecisionTestRunsRequest {
   // Include runs driven by an agent rather than taken by a person.
   // Excluded by default, because they are not data.
   bool include_synthetic = 1;
+  // Only runs with this review status. Empty returns everything;
+  // "unreviewed" returns the queue, which is the common case when the
+  // point of opening the page is to work through it.
+  string review_status = 2 [(buf.validate.field).string.max_len = 24];
 }
 
 // Runs, newest first.
 message ListDecisionTestRunsResponse {
+  // The queue, counted across every real run regardless of the filter,
+  // so the page can say how much is left without a second call.
+  DecisionTestReviewCounts counts = 2;
   // The runs.
   repeated DecisionTestRun runs = 1;
 }
@@ -3186,6 +3206,33 @@ message DecisionTestRun {
   int32 duration_s = 20;
   // When it started, RFC3339.
   string started_at = 21;
+  // Curation (M9). Empty status means nobody has looked at it yet,
+  // which is a state rather than a verdict.
+  string review_status = 22;
+  // Why it was excluded. Only set alongside do_not_use.
+  string review_reason = 23;
+  // The reviewer's note.
+  string review_note = 24;
+  // When it was reviewed, RFC3339, empty if it has not been.
+  string reviewed_at = 25;
+  // How many of its blocks are individually excluded. Non-zero on a run
+  // whose own status is not do_not_use is the case this exists for: a
+  // spoiled block inside an otherwise good run.
+  int32 blocks_excluded = 26;
+  // What the participant said about holding the number: encode or
+  // defer. Asked in the debrief, because the two produce different
+  // loads during the questions and an uncontrolled variable becomes a
+  // recorded one.
+  string recall_strategy = 27;
+  // Variability of the tap-check presses, a cheap read on baseline
+  // attention. Sits beside baseline_rt_ms, which the list already had:
+  // a slow participant is only interesting against their own unloaded
+  // speed, and a jittery one against their own steadiness.
+  int32 baseline_rt_sd_ms = 28;
+  // How a repeat was recognised: account, email or cookie. Descending
+  // reliability, and worth knowing which: a cookie match is defeated by
+  // a private window, so it is weaker evidence than an account.
+  string repeat_matched_by = 29;
 }
 
 // Asks for one run in full.
@@ -3211,6 +3258,42 @@ message ExportDecisionTestDataRequest {
   // ruinous if it is averaged into a claim about people, so including
   // it has to be asked for.
   bool include_synthetic = 1;
+  // Include runs and blocks the owner marked do_not_use. Off by
+  // default, because curation that does not reach the export is
+  // decoration: the export is the thing that leaves for analysis, and
+  // shipping a run marked unusable is worse than not curating at all,
+  // since the mark creates a belief the data has been cleaned.
+  bool include_excluded = 2;
+}
+
+// Records a curation judgement.
+message ReviewDecisionTestRunRequest {
+  // Which run.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // 0 judges the whole run; 1 to 5 judges one block, so a single
+  // spoiled block does not cost the other four.
+  int32 block_no = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 5
+  }];
+  // good, incomplete, hold or do_not_use. Empty clears a run's review
+  // back to unreviewed, and for a block removes the judgement
+  // altogether, since a block has no stored unreviewed state.
+  string status = 3 [(buf.validate.field).string.max_len = 24];
+  // instrument_fault, participant_reported, duplicate or other, and
+  // only alongside do_not_use. The first two are the split that earns
+  // this field: one is a bug to go and repair, the other is nothing to
+  // fix and simply costs a data point.
+  string reason = 4 [(buf.validate.field).string.max_len = 32];
+  // Free text, for what the participant said or what was observed.
+  string note = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// The run as it now reads.
+message ReviewDecisionTestRunResponse {
+  // The updated summary, so the caller does not have to refetch to
+  // render the new state.
+  DecisionTestRun run = 1;
 }
 
 // The dataset.
@@ -3226,6 +3309,25 @@ message ExportDecisionTestDataResponse {
   int32 rows = 3;
   // Runs those rows came from.
   int32 sessions = 4;
+}
+
+// How many real runs sit in each curation state.
+message DecisionTestReviewCounts {
+  // Every real run. Synthetic runs are excluded throughout: they await
+  // nobody's judgement and counting them would invent work.
+  int32 total = 1;
+  // Nobody has looked at it yet.
+  int32 unreviewed = 2;
+  // Judged usable.
+  int32 good = 3;
+  // Did not finish, and not thereby excluded: whether an interrupted
+  // run is usable is judged per run.
+  int32 incomplete = 4;
+  // Something is odd and the reviewer has not decided.
+  int32 hold = 5;
+  // Excluded from every view that makes a claim about people, and from
+  // the export by default. Never deleted.
+  int32 do_not_use = 6;
 }
 
 // One block of a run.

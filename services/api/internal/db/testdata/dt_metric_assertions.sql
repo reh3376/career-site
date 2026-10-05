@@ -254,4 +254,85 @@ BEGIN
   END IF;
 END $$;
 
+-- +----------------------------------------------------------------+
+-- | Curation reaches the numbers.                                  |
+-- +----------------------------------------------------------------+
+-- A mark that does not exclude is worse than no mark, because it
+-- creates the belief that the data has been cleaned. These assertions
+-- apply the marks, check the effect and then revert, so the rest of
+-- this file does not depend on the order it is read in.
+DO $$
+DECLARE before_sessions int; after_sessions int; after_block int; answers_kept int;
+BEGIN
+  SELECT sessions INTO before_sessions FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
+  IF before_sessions <> 3 THEN
+    RAISE EXCEPTION 'expected 3 usable sessions before curation, found %', before_sessions;
+  END IF;
+
+  -- Exclude a whole run, and one block of a different run.
+  UPDATE dt_sessions SET review_status = 'do_not_use', review_reason = 'participant_reported'
+   WHERE id = 201;
+  INSERT INTO dt_block_reviews (session_id, block_no, status, reason)
+  VALUES (202, 3, 'do_not_use', 'instrument_fault');
+
+  -- The excluded run is gone from every load.
+  SELECT sessions INTO after_sessions FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd3';
+  IF after_sessions <> 2 THEN
+    RAISE EXCEPTION 'a run marked do_not_use still feeds the load curve: % sessions at d3, expected 2', after_sessions;
+  END IF;
+
+  -- The excluded BLOCK costs only its own load. d4_plus1 is block 3,
+  -- so it loses one more session than the others; if block exclusion
+  -- were ignored it would read 2 like everything else, and if it took
+  -- the whole run with it the other loads would read 1.
+  SELECT sessions INTO after_block FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd4_plus1';
+  IF after_block <> 1 THEN
+    RAISE EXCEPTION 'block-level exclusion is wrong: % sessions at d4_plus1, expected 1', after_block;
+  END IF;
+  SELECT sessions INTO after_sessions FROM v_dt_load_curve
+   WHERE item_set_version = 'items-2026-10-05' AND block_load = 'd4_plus3';
+  IF after_sessions <> 2 THEN
+    RAISE EXCEPTION 'excluding one block removed the whole run: % sessions at d4_plus3, expected 2', after_sessions;
+  END IF;
+
+  -- Nothing was deleted. Exclusion is a filter, and the measurements
+  -- survive it: "nothing is ever deleted" has held since 00049 and
+  -- curation must not become the exception.
+  SELECT count(*) INTO answers_kept FROM dt_answers WHERE session_id = 201;
+  IF answers_kept <> 30 THEN
+    RAISE EXCEPTION 'an excluded run lost rows: % answers remain for session 201, expected 30', answers_kept;
+  END IF;
+
+  -- The review surfaces still show it, labelled rather than hidden,
+  -- because a reviewer has to be able to find what they excluded.
+  IF NOT EXISTS (SELECT 1 FROM v_dt_sessions
+                  WHERE session_review_status = 'do_not_use') THEN
+    RAISE EXCEPTION 'v_dt_sessions hides an excluded run, so it cannot be un-excluded';
+  END IF;
+
+  DELETE FROM dt_block_reviews WHERE session_id = 202 AND block_no = 3;
+  UPDATE dt_sessions SET review_status = '', review_reason = '' WHERE id = 201;
+END $$;
+
+-- The vocabulary is enforced by the table, not only by Go. A status
+-- nobody can interpret still lands in a count.
+DO $$
+BEGIN
+  BEGIN
+    UPDATE dt_sessions SET review_status = 'probably_fine' WHERE id = 201;
+    RAISE EXCEPTION 'the review_status CHECK accepted a word outside the vocabulary';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+  BEGIN
+    UPDATE dt_sessions SET review_reason = 'because' WHERE id = 201;
+    RAISE EXCEPTION 'the review_reason CHECK accepted a word outside the vocabulary';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+END $$;
+
 SELECT 'decision test metric views: all assertions hold' AS result;
