@@ -14239,8 +14239,15 @@ type DecisionTestBlock struct {
 	// exact, untransformed, wrong_digits, partial or expired.
 	// untransformed means the number survived and the operation did not.
 	RecallOutcome string `protobuf:"bytes,12,opt,name=recall_outcome,json=recallOutcome,proto3" json:"recall_outcome,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// How much of the number was lost, 0 to 100. Zero is a number held
+	// intact, 100 one lost entirely. Scored against whichever of the
+	// presented or expected number the response is closer to, so an
+	// untransformed answer reads as perfect retention rather than as
+	// total loss. Negative where the recall expired and nothing was
+	// attempted, which is not a memory failure of any size.
+	MemoryFailurePct int32 `protobuf:"varint,13,opt,name=memory_failure_pct,json=memoryFailurePct,proto3" json:"memory_failure_pct,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *DecisionTestBlock) Reset() {
@@ -14355,6 +14362,13 @@ func (x *DecisionTestBlock) GetRecallOutcome() string {
 		return x.RecallOutcome
 	}
 	return ""
+}
+
+func (x *DecisionTestBlock) GetMemoryFailurePct() int32 {
+	if x != nil {
+		return x.MemoryFailurePct
+	}
+	return 0
 }
 
 // One answer.
@@ -15557,7 +15571,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1aGetDecisionTestRunResponse\x12,\n" +
 	"\x03run\x18\x01 \x01(\v2\x1a.career.v1.DecisionTestRunR\x03run\x124\n" +
 	"\x06blocks\x18\x02 \x03(\v2\x1c.career.v1.DecisionTestBlockR\x06blocks\x127\n" +
-	"\aanswers\x18\x03 \x03(\v2\x1d.career.v1.DecisionTestAnswerR\aanswers\"\x95\x03\n" +
+	"\aanswers\x18\x03 \x03(\v2\x1d.career.v1.DecisionTestAnswerR\aanswers\"\xc3\x03\n" +
 	"\x11DecisionTestBlock\x12\x19\n" +
 	"\bblock_no\x18\x01 \x01(\x05R\ablockNo\x12\x12\n" +
 	"\x04load\x18\x02 \x01(\tR\x04load\x12\x18\n" +
@@ -15571,7 +15585,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x0fexpected_digits\x18\n" +
 	" \x01(\tR\x0eexpectedDigits\x12'\n" +
 	"\x0fresponse_digits\x18\v \x01(\tR\x0eresponseDigits\x12%\n" +
-	"\x0erecall_outcome\x18\f \x01(\tR\rrecallOutcome\"\xe2\x01\n" +
+	"\x0erecall_outcome\x18\f \x01(\tR\rrecallOutcome\x12,\n" +
+	"\x12memory_failure_pct\x18\r \x01(\x05R\x10memoryFailurePct\"\xe2\x01\n" +
 	"\x12DecisionTestAnswer\x12\x1a\n" +
 	"\bposition\x18\x01 \x01(\x05R\bposition\x12\x19\n" +
 	"\bblock_no\x18\x02 \x01(\x05R\ablockNo\x12\x1b\n" +

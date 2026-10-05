@@ -2331,7 +2331,7 @@ class GetDecisionTestRunResponse(_message.Message):
     def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ...) -> None: ...
 
 class DecisionTestBlock(_message.Message):
-    __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome")
+    __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome", "memory_failure_pct")
     BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
     LOAD_FIELD_NUMBER: _ClassVar[int]
     CORRECT_FIELD_NUMBER: _ClassVar[int]
@@ -2344,6 +2344,7 @@ class DecisionTestBlock(_message.Message):
     EXPECTED_DIGITS_FIELD_NUMBER: _ClassVar[int]
     RESPONSE_DIGITS_FIELD_NUMBER: _ClassVar[int]
     RECALL_OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    MEMORY_FAILURE_PCT_FIELD_NUMBER: _ClassVar[int]
     block_no: int
     load: str
     correct: int
@@ -2356,7 +2357,8 @@ class DecisionTestBlock(_message.Message):
     expected_digits: str
     response_digits: str
     recall_outcome: str
-    def __init__(self, block_no: _Optional[int] = ..., load: _Optional[str] = ..., correct: _Optional[int] = ..., total: _Optional[int] = ..., lure: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., mean_latency_ms: _Optional[int] = ..., presented_digits: _Optional[str] = ..., expected_digits: _Optional[str] = ..., response_digits: _Optional[str] = ..., recall_outcome: _Optional[str] = ...) -> None: ...
+    memory_failure_pct: int
+    def __init__(self, block_no: _Optional[int] = ..., load: _Optional[str] = ..., correct: _Optional[int] = ..., total: _Optional[int] = ..., lure: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., mean_latency_ms: _Optional[int] = ..., presented_digits: _Optional[str] = ..., expected_digits: _Optional[str] = ..., response_digits: _Optional[str] = ..., recall_outcome: _Optional[str] = ..., memory_failure_pct: _Optional[int] = ...) -> None: ...
 
 class DecisionTestAnswer(_message.Message):
     __slots__ = ("position", "block_no", "item_code", "item_family", "outcome", "confidence", "latency_ms")
