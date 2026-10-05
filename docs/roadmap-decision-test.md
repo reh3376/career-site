@@ -211,10 +211,19 @@ replayed, and it would have read as a strong result. The fixture carries
 a calibrated participant as a negative control and a synthetic run every
 aggregate must exclude.
 
-**Still open in M6:** the CSV export over the flat view, and surfacing
-the load curve and threshold in the console. The query console at
-`/admin/db` reads all seven today, so the analysis is possible now and
-the remaining work is convenience rather than capability.
+**Export done, 2026-10-05.** `ExportDecisionTestData` renders
+`v_dt_answers` as CSV from the admin console, with agent-driven runs
+excluded unless asked for. The column list is read off the view at query
+time rather than written out in Go: a hand-kept list is a second
+definition of the dataset, and the first column added to one and not the
+other ships an export narrower than the console while both still look
+right.
+
+**Still open in M6:** surfacing the load curve, the calibration curve
+and the per-person threshold as console pages. The query console at
+`/admin/db` reads all seven views today and `docs/metrics.md` carries
+the queries, so the analysis is possible now and what is left is
+convenience rather than capability.
 
 ## M7. Privacy, and opening to volunteers
 

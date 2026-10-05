@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 75 |
+| [`AdminService`](#adminservice) | Owner console. | 76 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2129,6 +2129,7 @@ Owner console.
 | [`SetDecisionTestSettings`](#adminservice-setdecisiontestsettings) | `/api/career.v1.AdminService/SetDecisionTestSettings` | Admin (fresh MFA) | default | `SetDecisionTestSettingsRequest` → `SetDecisionTestSettingsResponse` | Sets the decision test's timings. |
 | [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
 | [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
+| [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin (fresh MFA) | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
@@ -4109,6 +4110,47 @@ One run in full: every answer, every recall, and the block summary.
 ```json
 {
   "sessionKey": "string"
+}
+```
+
+</details>
+
+### AdminService.ExportDecisionTestData
+
+`POST /api/career.v1.AdminService/ExportDecisionTestData` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+The curated dataset as CSV, one row per question presented.
+
+The dataset is the deliverable (FSD §7b), and a deliverable that
+can only be read through this console is not one. This is the
+handoff to whatever does the actual analysis.
+
+Served from v_dt_answers, so the export and the console cannot
+disagree about what a number means, and so the things that view
+deliberately omits stay omitted: no name, no email address, and no
+chosen_index, because the raw index across enough runs would let
+somebody reconstruct the answer key.
+
+**Request** — [`ExportDecisionTestDataRequest`](#exportdecisiontestdatarequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than a person. Off by default: a synthetic run is useful for checking the instrument and ruinous if it is averaged into a claim about people, so including it has to be asked for. |
+
+**Response** — [`ExportDecisionTestDataResponse`](#exportdecisiontestdataresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `csv` | `string` | string |  | The whole file, RFC 4180, header row first. Thirty rows per completed run, so this stays small enough to hand over in one response for as long as the volunteer count is realistic. |
+| `filename` | `string` | string |  | Suggested filename, carrying the date so two exports do not overwrite each other in a downloads folder. |
+| `rows` | `int32` | number |  | Rows in the body, not counting the header. |
+| `sessions` | `int32` | number |  | Runs those rows came from. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "includeSynthetic": true
 }
 ```
 
@@ -8235,6 +8277,25 @@ One run in full.
 | `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The run's summary. |
 | `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
+
+### ExportDecisionTestDataRequest
+
+Asks for the dataset as CSV.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `includeSynthetic` | `bool` | boolean |  | Include runs driven by an agent rather than a person. Off by default: a synthetic run is useful for checking the instrument and ruinous if it is averaged into a claim about people, so including it has to be asked for. |
+
+### ExportDecisionTestDataResponse
+
+The dataset.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `csv` | `string` | string |  | The whole file, RFC 4180, header row first. Thirty rows per completed run, so this stays small enough to hand over in one response for as long as the volunteer count is realistic. |
+| `filename` | `string` | string |  | Suggested filename, carrying the date so two exports do not overwrite each other in a downloads folder. |
+| `rows` | `int32` | number |  | Rows in the body, not counting the header. |
+| `sessions` | `int32` | number |  | Runs those rows came from. |
 
 ### DecisionTestBlock
 
