@@ -141,6 +141,15 @@ func (a *Admin) GetDecisionTestRun(
 func (a *Admin) ExportDecisionTestData(
 	ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest],
 ) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
+	// This call was shipped without it on 2026-10-05 and the entire
+	// dataset was downloadable by anyone, with no session, for about
+	// five hours. The proto declares AUTH_LEVEL_ADMIN and that is not
+	// enforcement: the comment on the Admin type says so in as many
+	// words, because the auth interceptor has not landed and every
+	// method here gates itself.
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
 	if a.users == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("not configured"))
 	}
