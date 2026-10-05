@@ -64,6 +64,56 @@ func (r DTResult) Gap() int { return r.AccuracyDrop() - r.ConfidenceDrop() }
 // When it does, a decline in between is load rather than tiredness.
 func (r DTResult) FatigueHeld() bool { return r.Block5Accuracy >= r.Block1Accuracy-15 }
 
+// How the movements are described in words.
+//
+// These are here rather than in the template because the sign of a
+// number is a judgement about what happened, not formatting. The first
+// real send, to the owner on 2026-10-05, printed "Your accuracy moved
+// -16 points", which is both ugly and the wrong way round: his accuracy
+// had risen. A template branching on a minus sign is a presentation
+// layer deciding what the research found.
+func (r DTResult) AccuracyPhrase() string   { return movement("Your accuracy", r.AccuracyDrop()) }
+func (r DTResult) ConfidencePhrase() string { return movement("Your confidence", r.ConfidenceDrop()) }
+
+func movement(subject string, drop int) string {
+	switch {
+	case drop > 0:
+		return fmt.Sprintf("%s fell %d points", subject, drop)
+	case drop < 0:
+		return fmt.Sprintf("%s rose %d points", subject, -drop)
+	default:
+		return subject + " did not move"
+	}
+}
+
+// Reading names which true thing this run supports, and the email
+// prints exactly one of them.
+//
+// no_decline comes first and outranks the gap. Every one of the other
+// three readings presupposes that accuracy fell and then explains how
+// confidence responded to that fall. When accuracy did not fall there
+// is nothing to explain, and the gap arithmetic still produces a number:
+// the owner's test run rose 16 points while his confidence slipped 3,
+// giving a gap of -19, which sent him the "overcorrected" paragraph
+// telling him he had "registered the difficulty and adjusted for it".
+// He had not. Nothing had got harder for him.
+//
+// Telling a volunteer a flattering story the data does not support is
+// worse than telling them their run shows nothing, because they cannot
+// check it and they have no reason to doubt it.
+func (r DTResult) Reading() string {
+	switch {
+	case r.AccuracyDrop() <= 0:
+		return "no_decline"
+	case r.Gap() > 10:
+		return "effect"
+	case r.Gap() < -5:
+		return "overcorrected"
+	default:
+		return "calibrated"
+	}
+}
+
 // DTResultFor computes one participant's figures, for a completed run.
 //
 // Reads v_dt_answers, the projection boundary (ADR 0030), so these
