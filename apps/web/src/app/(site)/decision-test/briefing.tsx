@@ -344,7 +344,14 @@ export function Briefing() {
               which inflated both the offset and the jitter that decides
               pass or fail. It was hardest on people doing nothing
               wrong. */}
-          {tapPhase === "idle" ? (
+          {/* Rendered in every phase, dimmed once running.
+              Conditionally removing it collapsed roughly 155px of text
+              and slid the pad up the screen at the exact moment the
+              lead-in began, which is the layout shift the always-present
+              pad was supposed to prevent. Found by driving the page in a
+              browser and comparing the pad's position between phases;
+              reading the markup would not have shown it. */}
+          <div className={tapPhase === "idle" ? "" : "opacity-40"} aria-hidden={tapPhase !== "idle"}>
             <>
               <p>
                 <strong className="text-ink">
@@ -367,21 +374,38 @@ export function Briefing() {
                 when the measured part begins.
               </p>
             </>
-          ) : null}
+          </div>
 
-          {tapPhase === "lead" ? (
-            <p className="rounded-md border border-line bg-paper-2 px-5 py-4 text-base text-ink-2">
-              <strong className="text-ink">Find the rhythm.</strong> Not
-              measured yet. Tap along until the screen says otherwise.
-            </p>
-          ) : null}
-
-          {tapPhase === "measuring" ? (
-            <p className="rounded-md border border-accent bg-accent-soft/40 px-5 py-4 text-base text-ink-2">
-              <strong className="text-ink">Measuring now.</strong> Keep
-              tapping in time for about ten seconds.
-            </p>
-          ) : null}
+          {/* One slot, always occupying the same height, so the phase
+              message cannot push the pad down when it appears. The pad
+              is the thing a participant is aiming at, and it must not
+              move once the clock is running. */}
+          <p
+            className={`rounded-md border px-5 py-4 text-base ${
+              tapPhase === "measuring"
+                ? "border-accent bg-accent-soft/40 text-ink-2"
+                : tapPhase === "lead"
+                  ? "border-line bg-paper-2 text-ink-2"
+                  : "border-transparent text-transparent select-none"
+            }`}
+            aria-live="polite"
+          >
+            {tapPhase === "measuring" ? (
+              <>
+                <strong className="text-ink">Measuring now.</strong> Keep
+                tapping in time for about ten seconds.
+              </>
+            ) : tapPhase === "lead" ? (
+              <>
+                <strong className="text-ink">Find the rhythm.</strong> Not
+                measured yet. Tap along until the screen says otherwise.
+              </>
+            ) : (
+              // Invisible placeholder of the same shape, so the slot has
+              // height before the check starts.
+              <>Measuring now. Keep tapping in time for about ten seconds.</>
+            )}
+          </p>
 
           {/* The pad is always rendered, inert when idle. Conditional
               rendering moved the layout at the exact moment the clock
