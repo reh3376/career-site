@@ -46,6 +46,10 @@ export function Briefing() {
   const [audioMode, setAudioMode] = useState<"sound" | "visual">("sound");
   const [tap, setTap] = useState<{ passed: boolean; rt: number; sd: number } | null>(null);
   const [tapRunning, setTapRunning] = useState(false);
+  // idle, then an unmeasured lead-in, then the scored window. The
+  // participant is told which they are in, because "tap along" and
+  // "you are being measured now" are different instructions.
+  const [tapPhase, setTapPhase] = useState<"idle" | "lead" | "measuring">("idle");
   const [beat, setBeat] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -63,6 +67,7 @@ export function Briefing() {
   const signal = useRef<Signal | null>(null);
   const ticks = useRef<number[]>([]);
   const taps = useRef<number[]>([]);
+  const measureFrom = useRef(0);
   const startedAt = useRef(0);
 
   // A phone has no space bar, so the tap check was impossible on one:
@@ -87,11 +92,33 @@ export function Briefing() {
   // cannot be tapped along to. It also yields an unloaded reaction time
   // and its variability, which turn latency in the test from an absolute
   // into a measure relative to this participant's own speed.
+  // Three seconds of unmeasured lead-in before the window opens.
+  //
+  // The owner found this by taking it: the check used to start the
+  // ticks, start the clock and render the tap pad in the same instant,
+  // so a participant met the target for the first time with the
+  // measurement already running. Their first few taps are orientation
+  // rather than tracking, and orientation lands wide, which inflates
+  // both the mean offset and the standard deviation that decides
+  // pass or fail. The check was therefore hardest on people doing
+  // nothing wrong, and the baseline reaction time it produced, which
+  // every latency in the test is read against, was measured during
+  // the one part of the run the participant was not yet ready for.
+  //
+  // So: the ticks start, three of them pass unscored while the screen
+  // says to find the rhythm, and only then does the scored window
+  // open. Ticks and taps before that point are discarded rather than
+  // weighted, because a tap during orientation is not a worse
+  // measurement, it is not a measurement.
+  const LEAD_IN_MS = 3_000;
+  const MEASURE_MS = 10_000;
+
   const runTap = useCallback(async () => {
     setTap(null);
     ticks.current = [];
     taps.current = [];
     setTapRunning(true);
+    setTapPhase("lead");
     const m = createMetronome(audioMode === "sound");
     signal.current = m;
     m.onTick((t) => {
@@ -103,23 +130,40 @@ export function Briefing() {
     // browsers require before any audio will play.
     await m.start();
     startedAt.current = performance.now();
+
+    window.setTimeout(() => {
+      // The window opens. Everything collected during the lead-in is
+      // dropped, so the score describes tracking only.
+      measureFrom.current = performance.now();
+      ticks.current = ticks.current.filter(
+        (t) => t >= (ticks.current[0] ?? 0) + LEAD_IN_MS / 1000,
+      );
+      taps.current = [];
+      setTapPhase("measuring");
+    }, LEAD_IN_MS);
+
     window.setTimeout(() => {
       m.stop();
       signal.current = null;
       setTapRunning(false);
+      setTapPhase("idle");
       const r = scoreTapCheck(ticks.current, taps.current);
       setTap({ passed: r.passed, rt: r.meanOffsetMs, sd: r.sdMs });
       setAttempts((n) => n + 1);
-    }, 11_000);
+    }, LEAD_IN_MS + MEASURE_MS + 1_000);
   }, [audioMode]);
 
   // One path for both inputs, so a tap and a key press are timed
   // identically and the scoring cannot differ by device.
   const recordTap = useCallback(() => {
     if (!tapRunning) return;
+    // A tap during the lead-in is deliberately not recorded. It is the
+    // participant finding the beat, which is the thing the lead-in
+    // exists to let them do without it counting against them.
+    if (tapPhase !== "measuring") return;
     const elapsed = (performance.now() - startedAt.current) / 1000;
     taps.current.push((ticks.current[0] ?? 0) + elapsed);
-  }, [tapRunning]);
+  }, [tapRunning, tapPhase]);
 
   // Taps are recorded on the same clock the ticks were scheduled on, so
   // the offsets compare like with like.
@@ -291,42 +335,89 @@ export function Briefing() {
 
       {step === "tap" ? (
         <section className="mt-10 space-y-5 text-base leading-relaxed text-ink-2">
-          <p>
-            A quick check that the signal is actually reaching you, and a
-            reading of your unloaded timing.{" "}
-            <strong className="text-ink">
-              Tap the pad, or press the space bar, in time with each{" "}
-              {audioMode === "sound" ? "tick" : "beat"}
-            </strong>{" "}
-            for about ten seconds.
-          </p>
-
-          {tapRunning ? (
-            <button
-              type="button"
-              // onPointerDown rather than onClick: a click fires after
-              // the gesture completes, which adds the press duration to
-              // every offset and would make a slow finger look like a
-              // late tap.
-              onPointerDown={(e) => {
-                e.preventDefault();
-                recordTap();
-              }}
-              className="flex w-full touch-manipulation select-none flex-col items-center gap-4 rounded-md border border-line bg-canvas py-16 active:border-accent"
-            >
-              <span
-                aria-hidden
-                className={`size-10 rounded-full transition-opacity duration-100 ${
-                  beat ? "bg-accent opacity-100" : "bg-ink-4 opacity-25"
-                }`}
-              />
-              <span className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
-                tap here, or space bar
-              </span>
-            </button>
+          {/* The explanation comes first and nothing is running while it
+              is read. The check used to start the ticks, start the clock
+              and render the tap pad in the same instant, so a
+              participant met the target for the first time with the
+              measurement already under way. Their first taps were
+              orientation rather than tracking, and that lands wide,
+              which inflated both the offset and the jitter that decides
+              pass or fail. It was hardest on people doing nothing
+              wrong. */}
+          {tapPhase === "idle" ? (
+            <>
+              <p>
+                <strong className="text-ink">
+                  Next, a ten second check, and nothing has started yet.
+                </strong>{" "}
+                It confirms the{" "}
+                {audioMode === "sound" ? "sound is actually reaching you" : "beat is visible to you"},
+                which a yes-or-no question cannot: a muted laptop cannot
+                be tapped along to. It also reads your unloaded timing,
+                which is what the rest of the test gets measured against,
+                so a naturally fast or slow person is compared with
+                themselves rather than with anyone else.
+              </p>
+              <p>
+                When you start, you will{" "}
+                {audioMode === "sound" ? "hear a tick" : "see the dot flash"}{" "}
+                once a second. Tap the pad below, or press the space bar,
+                in time with it. You get a few seconds to find the rhythm
+                before anything is measured, and the screen will tell you
+                when the measured part begins.
+              </p>
+            </>
           ) : null}
 
-          {!tapRunning && tap && !tap.passed ? (
+          {tapPhase === "lead" ? (
+            <p className="rounded-md border border-line bg-paper-2 px-5 py-4 text-base text-ink-2">
+              <strong className="text-ink">Find the rhythm.</strong> Not
+              measured yet. Tap along until the screen says otherwise.
+            </p>
+          ) : null}
+
+          {tapPhase === "measuring" ? (
+            <p className="rounded-md border border-accent bg-accent-soft/40 px-5 py-4 text-base text-ink-2">
+              <strong className="text-ink">Measuring now.</strong> Keep
+              tapping in time for about ten seconds.
+            </p>
+          ) : null}
+
+          {/* The pad is always rendered, inert when idle. Conditional
+              rendering moved the layout at the exact moment the clock
+              started, which is the worst possible moment to move it. */}
+          <button
+            type="button"
+            disabled={tapPhase !== "measuring" && tapPhase !== "lead"}
+            // onPointerDown rather than onClick: a click fires after the
+            // gesture completes, which adds the press duration to every
+            // offset and would make a slow finger look like a late tap.
+            onPointerDown={(e) => {
+              e.preventDefault();
+              recordTap();
+            }}
+            className={`flex w-full touch-manipulation select-none flex-col items-center gap-4 rounded-md border py-16 ${
+              tapPhase === "measuring"
+                ? "border-accent bg-canvas active:border-accent"
+                : tapPhase === "lead"
+                  ? "border-line bg-canvas active:border-accent"
+                  : "border-line bg-paper-2 opacity-60"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`size-10 rounded-full transition-opacity duration-100 ${
+                beat ? "bg-accent opacity-100" : "bg-ink-4 opacity-25"
+              }`}
+            />
+            <span className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+              {tapPhase === "idle"
+                ? "this is the pad, not started"
+                : "tap here, or space bar"}
+            </span>
+          </button>
+
+          {tapPhase === "idle" && tap && !tap.passed ? (
             <p className="rounded-md border border-line bg-paper-2 px-5 py-4 text-sm text-ink-2">
               That did not look like tracking.{" "}
               {audioMode === "sound"
@@ -342,7 +433,7 @@ export function Briefing() {
             </p>
           ) : null}
 
-          {!tapRunning && tap?.passed ? (
+          {tapPhase === "idle" && tap?.passed ? (
             <p className="rounded-md border border-line bg-paper-2 px-5 py-4 text-sm text-ink-2">
               Good. Your unloaded reaction time is about {tap.rt} ms, which
               is what the rest of the test will be read against.
@@ -350,16 +441,16 @@ export function Briefing() {
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            {!tapRunning ? (
+            {tapPhase === "idle" ? (
               <button
                 type="button"
                 onClick={() => void runTap()}
-                className="rounded-md border border-line bg-canvas px-6 py-3 text-sm text-ink transition-colors hover:border-accent hover:text-accent"
+                className="rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase"
               >
                 {tap ? "Try again" : "Start the check"}
               </button>
             ) : null}
-            {attempts >= 2 && audioMode === "sound" && !tapRunning ? (
+            {attempts >= 2 && audioMode === "sound" && tapPhase === "idle" ? (
               <button
                 type="button"
                 onClick={() => {
@@ -372,11 +463,11 @@ export function Briefing() {
                 Use the on-screen beat
               </button>
             ) : null}
-            {tap?.passed ? (
+            {tap?.passed && tapPhase === "idle" ? (
               <button
                 type="button"
                 onClick={() => setStep("form")}
-                className="rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase"
+                className="rounded-md border border-line bg-canvas px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-ink uppercase transition-colors hover:border-accent hover:text-accent"
               >
                 Continue
               </button>
