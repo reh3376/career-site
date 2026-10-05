@@ -111,6 +111,11 @@ const GROUPS: { heading: string; note: string; surfaces: Surface[] }[] = [
         body: "Availability, booked meetings, and the Google Calendar connection with its last error and last success.",
       },
       {
+        href: "/admin/decision-test",
+        title: "Decision test",
+        body: "Every run, block by block and answer by answer, with the accuracy-against-confidence gap. Also where the phase timings are set.",
+      },
+      {
         href: "/admin/db",
         title: "Query console",
         body: "Read-only SQL against the metric views. For the question that does not have a tile.",
@@ -129,7 +134,7 @@ export default function AdminOverviewPage() {
         Overview.
       </h1>
       <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
-        Fourteen surfaces, all of them live. Anything partial carries a
+        Fifteen surfaces, all of them live. Anything partial carries a
         label; nothing here does.
       </p>
 

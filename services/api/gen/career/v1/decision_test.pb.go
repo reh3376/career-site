@@ -286,6 +286,76 @@ func (x *StartSessionRequest) GetSynthetic() bool {
 	return false
 }
 
+// The timings this run is bound by, served to the client rather than
+// hard-coded in it.
+//
+// They live in app_settings and are editable from the admin console,
+// because the first two live runs each moved them and each move cost a
+// deploy. They are returned per session so a run cannot drift from the
+// settings it started under.
+type Timings struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// How long the number to hold is shown.
+	MemoriseMs int32 `protobuf:"varint,1,opt,name=memorise_ms,json=memoriseMs,proto3" json:"memorise_ms,omitempty"`
+	// Hard limit per question, covering reading, deciding and rating.
+	QuestionMs int32 `protobuf:"varint,2,opt,name=question_ms,json=questionMs,proto3" json:"question_ms,omitempty"`
+	// Limit on entering the number at the end of a block.
+	RecallMs      int32 `protobuf:"varint,3,opt,name=recall_ms,json=recallMs,proto3" json:"recall_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Timings) Reset() {
+	*x = Timings{}
+	mi := &file_career_v1_decision_test_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Timings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Timings) ProtoMessage() {}
+
+func (x *Timings) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_decision_test_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Timings.ProtoReflect.Descriptor instead.
+func (*Timings) Descriptor() ([]byte, []int) {
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Timings) GetMemoriseMs() int32 {
+	if x != nil {
+		return x.MemoriseMs
+	}
+	return 0
+}
+
+func (x *Timings) GetQuestionMs() int32 {
+	if x != nil {
+		return x.QuestionMs
+	}
+	return 0
+}
+
+func (x *Timings) GetRecallMs() int32 {
+	if x != nil {
+		return x.RecallMs
+	}
+	return 0
+}
+
 // The opened session.
 type StartSessionResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -298,13 +368,15 @@ type StartSessionResponse struct {
 	BlockCount int32 `protobuf:"varint,3,opt,name=block_count,json=blockCount,proto3" json:"block_count,omitempty"`
 	// How many scored questions in total, for the progress counter.
 	QuestionCount int32 `protobuf:"varint,4,opt,name=question_count,json=questionCount,proto3" json:"question_count,omitempty"`
+	// The timings in force for this run.
+	Timings       *Timings `protobuf:"bytes,5,opt,name=timings,proto3" json:"timings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StartSessionResponse) Reset() {
 	*x = StartSessionResponse{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[3]
+	mi := &file_career_v1_decision_test_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -316,7 +388,7 @@ func (x *StartSessionResponse) String() string {
 func (*StartSessionResponse) ProtoMessage() {}
 
 func (x *StartSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[3]
+	mi := &file_career_v1_decision_test_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +401,7 @@ func (x *StartSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSessionResponse.ProtoReflect.Descriptor instead.
 func (*StartSessionResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{3}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *StartSessionResponse) GetSessionKey() string {
@@ -360,6 +432,13 @@ func (x *StartSessionResponse) GetQuestionCount() int32 {
 	return 0
 }
 
+func (x *StartSessionResponse) GetTimings() *Timings {
+	if x != nil {
+		return x.Timings
+	}
+	return nil
+}
+
 // Asks for a block by number.
 type GetBlockRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -374,7 +453,7 @@ type GetBlockRequest struct {
 
 func (x *GetBlockRequest) Reset() {
 	*x = GetBlockRequest{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[4]
+	mi := &file_career_v1_decision_test_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -386,7 +465,7 @@ func (x *GetBlockRequest) String() string {
 func (*GetBlockRequest) ProtoMessage() {}
 
 func (x *GetBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[4]
+	mi := &file_career_v1_decision_test_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -399,7 +478,7 @@ func (x *GetBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBlockRequest.ProtoReflect.Descriptor instead.
 func (*GetBlockRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{4}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetBlockRequest) GetSessionKey() string {
@@ -428,7 +507,7 @@ type GetBlockResponse struct {
 
 func (x *GetBlockResponse) Reset() {
 	*x = GetBlockResponse{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[5]
+	mi := &file_career_v1_decision_test_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -440,7 +519,7 @@ func (x *GetBlockResponse) String() string {
 func (*GetBlockResponse) ProtoMessage() {}
 
 func (x *GetBlockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[5]
+	mi := &file_career_v1_decision_test_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -453,7 +532,7 @@ func (x *GetBlockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBlockResponse.ProtoReflect.Descriptor instead.
 func (*GetBlockResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{5}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetBlockResponse) GetBlock() *Block {
@@ -485,7 +564,7 @@ type Block struct {
 
 func (x *Block) Reset() {
 	*x = Block{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[6]
+	mi := &file_career_v1_decision_test_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -497,7 +576,7 @@ func (x *Block) String() string {
 func (*Block) ProtoMessage() {}
 
 func (x *Block) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[6]
+	mi := &file_career_v1_decision_test_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -510,7 +589,7 @@ func (x *Block) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Block.ProtoReflect.Descriptor instead.
 func (*Block) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{6}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Block) GetBlockNo() int32 {
@@ -575,7 +654,7 @@ type Question struct {
 
 func (x *Question) Reset() {
 	*x = Question{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[7]
+	mi := &file_career_v1_decision_test_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -587,7 +666,7 @@ func (x *Question) String() string {
 func (*Question) ProtoMessage() {}
 
 func (x *Question) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[7]
+	mi := &file_career_v1_decision_test_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +679,7 @@ func (x *Question) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Question.ProtoReflect.Descriptor instead.
 func (*Question) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{7}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Question) GetCode() string {
@@ -669,7 +748,7 @@ type SubmitAnswerRequest struct {
 
 func (x *SubmitAnswerRequest) Reset() {
 	*x = SubmitAnswerRequest{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[8]
+	mi := &file_career_v1_decision_test_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -681,7 +760,7 @@ func (x *SubmitAnswerRequest) String() string {
 func (*SubmitAnswerRequest) ProtoMessage() {}
 
 func (x *SubmitAnswerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[8]
+	mi := &file_career_v1_decision_test_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +773,7 @@ func (x *SubmitAnswerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitAnswerRequest.ProtoReflect.Descriptor instead.
 func (*SubmitAnswerRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{8}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SubmitAnswerRequest) GetSessionKey() string {
@@ -750,7 +829,7 @@ type SubmitAnswerResponse struct {
 
 func (x *SubmitAnswerResponse) Reset() {
 	*x = SubmitAnswerResponse{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[9]
+	mi := &file_career_v1_decision_test_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -762,7 +841,7 @@ func (x *SubmitAnswerResponse) String() string {
 func (*SubmitAnswerResponse) ProtoMessage() {}
 
 func (x *SubmitAnswerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[9]
+	mi := &file_career_v1_decision_test_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -775,7 +854,7 @@ func (x *SubmitAnswerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitAnswerResponse.ProtoReflect.Descriptor instead.
 func (*SubmitAnswerResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{9}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SubmitAnswerResponse) GetStored() bool {
@@ -802,7 +881,7 @@ type SubmitRecallRequest struct {
 
 func (x *SubmitRecallRequest) Reset() {
 	*x = SubmitRecallRequest{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[10]
+	mi := &file_career_v1_decision_test_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -814,7 +893,7 @@ func (x *SubmitRecallRequest) String() string {
 func (*SubmitRecallRequest) ProtoMessage() {}
 
 func (x *SubmitRecallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[10]
+	mi := &file_career_v1_decision_test_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -827,7 +906,7 @@ func (x *SubmitRecallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRecallRequest.ProtoReflect.Descriptor instead.
 func (*SubmitRecallRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{10}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SubmitRecallRequest) GetSessionKey() string {
@@ -870,7 +949,7 @@ type SubmitRecallResponse struct {
 
 func (x *SubmitRecallResponse) Reset() {
 	*x = SubmitRecallResponse{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[11]
+	mi := &file_career_v1_decision_test_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -882,7 +961,7 @@ func (x *SubmitRecallResponse) String() string {
 func (*SubmitRecallResponse) ProtoMessage() {}
 
 func (x *SubmitRecallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[11]
+	mi := &file_career_v1_decision_test_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -895,7 +974,7 @@ func (x *SubmitRecallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRecallResponse.ProtoReflect.Descriptor instead.
 func (*SubmitRecallResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{11}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SubmitRecallResponse) GetStored() bool {
@@ -921,7 +1000,7 @@ type FinishSessionRequest struct {
 
 func (x *FinishSessionRequest) Reset() {
 	*x = FinishSessionRequest{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[12]
+	mi := &file_career_v1_decision_test_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -933,7 +1012,7 @@ func (x *FinishSessionRequest) String() string {
 func (*FinishSessionRequest) ProtoMessage() {}
 
 func (x *FinishSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[12]
+	mi := &file_career_v1_decision_test_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -946,7 +1025,7 @@ func (x *FinishSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishSessionRequest.ProtoReflect.Descriptor instead.
 func (*FinishSessionRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{12}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *FinishSessionRequest) GetSessionKey() string {
@@ -977,7 +1056,7 @@ type FinishSessionResponse struct {
 
 func (x *FinishSessionResponse) Reset() {
 	*x = FinishSessionResponse{}
-	mi := &file_career_v1_decision_test_proto_msgTypes[13]
+	mi := &file_career_v1_decision_test_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -989,7 +1068,7 @@ func (x *FinishSessionResponse) String() string {
 func (*FinishSessionResponse) ProtoMessage() {}
 
 func (x *FinishSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_decision_test_proto_msgTypes[13]
+	mi := &file_career_v1_decision_test_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1002,7 +1081,7 @@ func (x *FinishSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishSessionResponse.ProtoReflect.Descriptor instead.
 func (*FinishSessionResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{13}
+	return file_career_v1_decision_test_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *FinishSessionResponse) GetCorrect() int32 {
@@ -1046,14 +1125,21 @@ const file_career_v1_decision_test_proto_rawDesc = "" +
 	"\n" +
 	"conditions\x18\x02 \x01(\v2\x15.career.v1.ConditionsR\n" +
 	"conditions\x12\x1c\n" +
-	"\tsynthetic\x18\x03 \x01(\bR\tsynthetic\"\xad\x01\n" +
+	"\tsynthetic\x18\x03 \x01(\bR\tsynthetic\"h\n" +
+	"\aTimings\x12\x1f\n" +
+	"\vmemorise_ms\x18\x01 \x01(\x05R\n" +
+	"memoriseMs\x12\x1f\n" +
+	"\vquestion_ms\x18\x02 \x01(\x05R\n" +
+	"questionMs\x12\x1b\n" +
+	"\trecall_ms\x18\x03 \x01(\x05R\brecallMs\"\xdb\x01\n" +
 	"\x14StartSessionResponse\x12\x1f\n" +
 	"\vsession_key\x18\x01 \x01(\tR\n" +
 	"sessionKey\x12,\n" +
 	"\bpractice\x18\x02 \x01(\v2\x10.career.v1.BlockR\bpractice\x12\x1f\n" +
 	"\vblock_count\x18\x03 \x01(\x05R\n" +
 	"blockCount\x12%\n" +
-	"\x0equestion_count\x18\x04 \x01(\x05R\rquestionCount\"a\n" +
+	"\x0equestion_count\x18\x04 \x01(\x05R\rquestionCount\x12,\n" +
+	"\atimings\x18\x05 \x01(\v2\x12.career.v1.TimingsR\atimings\"a\n" +
 	"\x0fGetBlockRequest\x12(\n" +
 	"\vsession_key\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18@R\n" +
 	"sessionKey\x12$\n" +
@@ -1125,44 +1211,46 @@ func file_career_v1_decision_test_proto_rawDescGZIP() []byte {
 	return file_career_v1_decision_test_proto_rawDescData
 }
 
-var file_career_v1_decision_test_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_career_v1_decision_test_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_career_v1_decision_test_proto_goTypes = []any{
 	(*Intake)(nil),                // 0: career.v1.Intake
 	(*Conditions)(nil),            // 1: career.v1.Conditions
 	(*StartSessionRequest)(nil),   // 2: career.v1.StartSessionRequest
-	(*StartSessionResponse)(nil),  // 3: career.v1.StartSessionResponse
-	(*GetBlockRequest)(nil),       // 4: career.v1.GetBlockRequest
-	(*GetBlockResponse)(nil),      // 5: career.v1.GetBlockResponse
-	(*Block)(nil),                 // 6: career.v1.Block
-	(*Question)(nil),              // 7: career.v1.Question
-	(*SubmitAnswerRequest)(nil),   // 8: career.v1.SubmitAnswerRequest
-	(*SubmitAnswerResponse)(nil),  // 9: career.v1.SubmitAnswerResponse
-	(*SubmitRecallRequest)(nil),   // 10: career.v1.SubmitRecallRequest
-	(*SubmitRecallResponse)(nil),  // 11: career.v1.SubmitRecallResponse
-	(*FinishSessionRequest)(nil),  // 12: career.v1.FinishSessionRequest
-	(*FinishSessionResponse)(nil), // 13: career.v1.FinishSessionResponse
+	(*Timings)(nil),               // 3: career.v1.Timings
+	(*StartSessionResponse)(nil),  // 4: career.v1.StartSessionResponse
+	(*GetBlockRequest)(nil),       // 5: career.v1.GetBlockRequest
+	(*GetBlockResponse)(nil),      // 6: career.v1.GetBlockResponse
+	(*Block)(nil),                 // 7: career.v1.Block
+	(*Question)(nil),              // 8: career.v1.Question
+	(*SubmitAnswerRequest)(nil),   // 9: career.v1.SubmitAnswerRequest
+	(*SubmitAnswerResponse)(nil),  // 10: career.v1.SubmitAnswerResponse
+	(*SubmitRecallRequest)(nil),   // 11: career.v1.SubmitRecallRequest
+	(*SubmitRecallResponse)(nil),  // 12: career.v1.SubmitRecallResponse
+	(*FinishSessionRequest)(nil),  // 13: career.v1.FinishSessionRequest
+	(*FinishSessionResponse)(nil), // 14: career.v1.FinishSessionResponse
 }
 var file_career_v1_decision_test_proto_depIdxs = []int32{
 	0,  // 0: career.v1.StartSessionRequest.intake:type_name -> career.v1.Intake
 	1,  // 1: career.v1.StartSessionRequest.conditions:type_name -> career.v1.Conditions
-	6,  // 2: career.v1.StartSessionResponse.practice:type_name -> career.v1.Block
-	6,  // 3: career.v1.GetBlockResponse.block:type_name -> career.v1.Block
-	7,  // 4: career.v1.Block.questions:type_name -> career.v1.Question
-	2,  // 5: career.v1.DecisionTestService.StartSession:input_type -> career.v1.StartSessionRequest
-	4,  // 6: career.v1.DecisionTestService.GetBlock:input_type -> career.v1.GetBlockRequest
-	8,  // 7: career.v1.DecisionTestService.SubmitAnswer:input_type -> career.v1.SubmitAnswerRequest
-	10, // 8: career.v1.DecisionTestService.SubmitRecall:input_type -> career.v1.SubmitRecallRequest
-	12, // 9: career.v1.DecisionTestService.FinishSession:input_type -> career.v1.FinishSessionRequest
-	3,  // 10: career.v1.DecisionTestService.StartSession:output_type -> career.v1.StartSessionResponse
-	5,  // 11: career.v1.DecisionTestService.GetBlock:output_type -> career.v1.GetBlockResponse
-	9,  // 12: career.v1.DecisionTestService.SubmitAnswer:output_type -> career.v1.SubmitAnswerResponse
-	11, // 13: career.v1.DecisionTestService.SubmitRecall:output_type -> career.v1.SubmitRecallResponse
-	13, // 14: career.v1.DecisionTestService.FinishSession:output_type -> career.v1.FinishSessionResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	7,  // 2: career.v1.StartSessionResponse.practice:type_name -> career.v1.Block
+	3,  // 3: career.v1.StartSessionResponse.timings:type_name -> career.v1.Timings
+	7,  // 4: career.v1.GetBlockResponse.block:type_name -> career.v1.Block
+	8,  // 5: career.v1.Block.questions:type_name -> career.v1.Question
+	2,  // 6: career.v1.DecisionTestService.StartSession:input_type -> career.v1.StartSessionRequest
+	5,  // 7: career.v1.DecisionTestService.GetBlock:input_type -> career.v1.GetBlockRequest
+	9,  // 8: career.v1.DecisionTestService.SubmitAnswer:input_type -> career.v1.SubmitAnswerRequest
+	11, // 9: career.v1.DecisionTestService.SubmitRecall:input_type -> career.v1.SubmitRecallRequest
+	13, // 10: career.v1.DecisionTestService.FinishSession:input_type -> career.v1.FinishSessionRequest
+	4,  // 11: career.v1.DecisionTestService.StartSession:output_type -> career.v1.StartSessionResponse
+	6,  // 12: career.v1.DecisionTestService.GetBlock:output_type -> career.v1.GetBlockResponse
+	10, // 13: career.v1.DecisionTestService.SubmitAnswer:output_type -> career.v1.SubmitAnswerResponse
+	12, // 14: career.v1.DecisionTestService.SubmitRecall:output_type -> career.v1.SubmitRecallResponse
+	14, // 15: career.v1.DecisionTestService.FinishSession:output_type -> career.v1.FinishSessionResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_decision_test_proto_init() }
@@ -1177,7 +1265,7 @@ func file_career_v1_decision_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_decision_test_proto_rawDesc), len(file_career_v1_decision_test_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

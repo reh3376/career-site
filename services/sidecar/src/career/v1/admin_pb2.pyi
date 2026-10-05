@@ -2221,3 +2221,157 @@ class PipelineCount(_message.Message):
     count: int
     oldest: _timestamp_pb2.Timestamp
     def __init__(self, status: _Optional[str] = ..., count: _Optional[int] = ..., oldest: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetDecisionTestSettingsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetDecisionTestSettingsResponse(_message.Message):
+    __slots__ = ("memorise_ms", "question_ms", "recall_ms", "instrument_version", "sessions_on_this_version")
+    MEMORISE_MS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_MS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_MS_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_ON_THIS_VERSION_FIELD_NUMBER: _ClassVar[int]
+    memorise_ms: int
+    question_ms: int
+    recall_ms: int
+    instrument_version: str
+    sessions_on_this_version: int
+    def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ..., instrument_version: _Optional[str] = ..., sessions_on_this_version: _Optional[int] = ...) -> None: ...
+
+class SetDecisionTestSettingsRequest(_message.Message):
+    __slots__ = ("memorise_ms", "question_ms", "recall_ms")
+    MEMORISE_MS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_MS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_MS_FIELD_NUMBER: _ClassVar[int]
+    memorise_ms: int
+    question_ms: int
+    recall_ms: int
+    def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ...) -> None: ...
+
+class SetDecisionTestSettingsResponse(_message.Message):
+    __slots__ = ("instrument_version",)
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    instrument_version: str
+    def __init__(self, instrument_version: _Optional[str] = ...) -> None: ...
+
+class ListDecisionTestRunsRequest(_message.Message):
+    __slots__ = ("include_synthetic",)
+    INCLUDE_SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    include_synthetic: bool
+    def __init__(self, include_synthetic: _Optional[bool] = ...) -> None: ...
+
+class ListDecisionTestRunsResponse(_message.Message):
+    __slots__ = ("runs",)
+    RUNS_FIELD_NUMBER: _ClassVar[int]
+    runs: _containers.RepeatedCompositeFieldContainer[DecisionTestRun]
+    def __init__(self, runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
+
+class DecisionTestRun(_message.Message):
+    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at")
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
+    AGE_RANGE_FIELD_NUMBER: _ClassVar[int]
+    EDUCATION_FIELD_NUMBER: _ClassVar[int]
+    OCCUPATION_FIELD_NUMBER: _ClassVar[int]
+    GAVE_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    AUDIO_MODE_FIELD_NUMBER: _ClassVar[int]
+    DEVICE_CLASS_FIELD_NUMBER: _ClassVar[int]
+    TAP_CHECK_PASSED_FIELD_NUMBER: _ClassVar[int]
+    BASELINE_RT_MS_FIELD_NUMBER: _ClassVar[int]
+    IS_REPEAT_FIELD_NUMBER: _ClassVar[int]
+    IS_SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    ITEM_SET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CORRECT_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_FIELD_NUMBER: _ClassVar[int]
+    EXPIRED_FIELD_NUMBER: _ClassVar[int]
+    MEAN_CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    DURATION_S_FIELD_NUMBER: _ClassVar[int]
+    STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    status: str
+    display_name: str
+    age_range: str
+    education: str
+    occupation: str
+    gave_email: bool
+    audio_mode: str
+    device_class: str
+    tap_check_passed: bool
+    baseline_rt_ms: int
+    is_repeat: bool
+    is_synthetic: bool
+    instrument_version: str
+    item_set_version: str
+    correct: int
+    answered: int
+    expired: int
+    mean_confidence: int
+    duration_s: int
+    started_at: str
+    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ...) -> None: ...
+
+class GetDecisionTestRunRequest(_message.Message):
+    __slots__ = ("session_key",)
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    def __init__(self, session_key: _Optional[str] = ...) -> None: ...
+
+class GetDecisionTestRunResponse(_message.Message):
+    __slots__ = ("run", "blocks", "answers")
+    RUN_FIELD_NUMBER: _ClassVar[int]
+    BLOCKS_FIELD_NUMBER: _ClassVar[int]
+    ANSWERS_FIELD_NUMBER: _ClassVar[int]
+    run: DecisionTestRun
+    blocks: _containers.RepeatedCompositeFieldContainer[DecisionTestBlock]
+    answers: _containers.RepeatedCompositeFieldContainer[DecisionTestAnswer]
+    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ...) -> None: ...
+
+class DecisionTestBlock(_message.Message):
+    __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome")
+    BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
+    LOAD_FIELD_NUMBER: _ClassVar[int]
+    CORRECT_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    LURE_FIELD_NUMBER: _ClassVar[int]
+    EXPIRED_FIELD_NUMBER: _ClassVar[int]
+    MEAN_CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    MEAN_LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
+    PRESENTED_DIGITS_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_DIGITS_FIELD_NUMBER: _ClassVar[int]
+    RESPONSE_DIGITS_FIELD_NUMBER: _ClassVar[int]
+    RECALL_OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    block_no: int
+    load: str
+    correct: int
+    total: int
+    lure: int
+    expired: int
+    mean_confidence: int
+    mean_latency_ms: int
+    presented_digits: str
+    expected_digits: str
+    response_digits: str
+    recall_outcome: str
+    def __init__(self, block_no: _Optional[int] = ..., load: _Optional[str] = ..., correct: _Optional[int] = ..., total: _Optional[int] = ..., lure: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., mean_latency_ms: _Optional[int] = ..., presented_digits: _Optional[str] = ..., expected_digits: _Optional[str] = ..., response_digits: _Optional[str] = ..., recall_outcome: _Optional[str] = ...) -> None: ...
+
+class DecisionTestAnswer(_message.Message):
+    __slots__ = ("position", "block_no", "item_code", "item_family", "outcome", "confidence", "latency_ms")
+    POSITION_FIELD_NUMBER: _ClassVar[int]
+    BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
+    ITEM_CODE_FIELD_NUMBER: _ClassVar[int]
+    ITEM_FAMILY_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
+    position: int
+    block_no: int
+    item_code: str
+    item_family: str
+    outcome: str
+    confidence: int
+    latency_ms: int
+    def __init__(self, position: _Optional[int] = ..., block_no: _Optional[int] = ..., item_code: _Optional[str] = ..., item_family: _Optional[str] = ..., outcome: _Optional[str] = ..., confidence: _Optional[int] = ..., latency_ms: _Optional[int] = ...) -> None: ...

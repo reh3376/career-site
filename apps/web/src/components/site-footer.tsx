@@ -54,6 +54,14 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/decision-test"
+                  className="text-ink-2 no-underline hover:text-accent"
+                >
+                  The decision test
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="text-ink-2 no-underline hover:text-accent">
                   Contact
                 </Link>
