@@ -12,6 +12,7 @@ import (
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/email"
+	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -33,6 +34,8 @@ type DecisionTest struct {
 	users *users.Repo
 	auth  *Auth
 
+	events *events.Writer // product event stream; nil is silent
+
 	// Results go out to participants who asked for them. Nil leaves the
 	// test working and the emails unsent, which is the right failure:
 	// somebody mid-run must not be stopped because a mailer is down.
@@ -52,6 +55,10 @@ func NewDecisionTest(log *slog.Logger, repo *users.Repo, auth *Auth) *DecisionTe
 func (h *DecisionTest) SetMailer(p email.Provider, from, siteURL string) {
 	h.email, h.from, h.siteURL = p, from, siteURL
 }
+
+// SetEvents wires the product event stream. Optional, like every other
+// handler's: a run must not fail because analytics is down.
+func (h *DecisionTest) SetEvents(w *events.Writer) { h.events = w }
 
 // itemSetVersion identifies which items, in which order. Bumped
 // whenever the bank changes, so a reworded item does not silently pool
@@ -138,6 +145,18 @@ func (h *DecisionTest) StartSession(
 		slog.String("session", sess.PublicID),
 		slog.Bool("synthetic", sess.Synthetic),
 		slog.String("audio_mode", cond.AudioMode))
+
+	var eventUser int64
+	if userID != nil {
+		eventUser = *userID
+	}
+	h.events.Emit(ctx, requestEvent(req, "dtest.started", eventUser, map[string]any{
+		"device_class":     cond.DeviceClass,
+		"audio_mode":       cond.AudioMode,
+		"tap_check_passed": cond.TapCheckPassed,
+		"is_repeat":        sess.IsRepeat,
+		"synthetic":        sess.Synthetic,
+	}))
 
 	return connect.NewResponse(&v1.StartSessionResponse{
 		SessionKey:    sess.PublicID,
@@ -231,10 +250,30 @@ func (h *DecisionTest) SubmitRecall(
 	if err != nil {
 		return nil, err
 	}
-	if err := h.users.DTSaveRecall(ctx, sess.ID, int(req.Msg.GetBlockNo()),
-		strings.TrimSpace(req.Msg.GetDigits()), int(req.Msg.GetLatencyMs())); err != nil {
+	blockNo := int(req.Msg.GetBlockNo())
+	outcome, held, err := h.users.DTSaveRecall(ctx, sess.ID, blockNo,
+		strings.TrimSpace(req.Msg.GetDigits()), int(req.Msg.GetLatencyMs()))
+	if err != nil {
 		h.log.Error("decision test: save recall", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not record the recall"))
+	}
+
+	// The recall closes the block, so this is where one block's worth of
+	// progress is recorded. It is the only trace an abandoned run leaves
+	// of how far it got: dt_sessions would say nothing but "running".
+	// A tally failure is logged and dropped rather than returned, because
+	// an event is not worth failing a recall over.
+	if correct, expired, err := h.users.DTBlockTally(ctx, sess.ID, blockNo); err != nil {
+		h.log.Warn("decision test: block tally", slog.String("error", err.Error()))
+	} else {
+		h.events.Emit(ctx, requestEvent(req, "dtest.block_finished", 0, map[string]any{
+			"block_no":       blockNo,
+			"load":           users.DTBlockLoad(blockNo),
+			"correct":        correct,
+			"expired":        expired,
+			"recall_outcome": outcome,
+			"digits_held":    held,
+		}))
 	}
 	return connect.NewResponse(&v1.SubmitRecallResponse{Stored: true}), nil
 }
@@ -261,6 +300,18 @@ func (h *DecisionTest) FinishSession(
 	}
 	h.log.Info("decision test finished",
 		slog.String("session", sess.PublicID), slog.Int("correct", correct), slog.Int("total", total))
+
+	if fin, err := h.users.DTSessionSummary(ctx, sess.ID); err != nil {
+		h.log.Warn("decision test: summary for the event", slog.String("error", err.Error()))
+	} else {
+		h.events.Emit(ctx, requestEvent(req, "dtest.finished", 0, map[string]any{
+			"correct":       correct,
+			"answered":      total,
+			"expired":       fin.Expired,
+			"duration_s":    fin.DurationS,
+			"wants_results": fin.WantsResults,
+		}))
+	}
 
 	// Sent after the response, not before it. A participant who has just
 	// given fifteen minutes should see the thank-you immediately; an

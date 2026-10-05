@@ -394,6 +394,7 @@ func main() {
 	adminHandler.SetEvents(eventWriter)
 	chatHandler.SetEvents(eventWriter)
 	meetingsHandler.SetEvents(eventWriter)
+	decisionTestHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)

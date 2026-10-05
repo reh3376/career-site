@@ -24,6 +24,16 @@ import (
 // has two explanations and no way to choose between them.
 var dtBlockLoads = []string{"d3", "d4", "d4_plus1", "d4_plus3", "d3_control"}
 
+// DTBlockLoad names a block's load for callers outside this package.
+// Out of range returns "", which reads as missing rather than as a load
+// the block did not have.
+func DTBlockLoad(blockNo int) string {
+	if blockNo < 1 || blockNo > len(dtBlockLoads) {
+		return ""
+	}
+	return dtBlockLoads[blockNo-1]
+}
+
 // dtTransform is the operation applied to each digit before the number
 // is returned. The transformation blocks are the steepest step in the
 // ramp because they move the task from storage to storage plus
@@ -72,6 +82,10 @@ type DTSession struct {
 	PublicID  string
 	Status    string
 	Synthetic bool
+	// Set on the run that opens a session, so the event stream can carry
+	// it. Not read back by session(): the stored column is the record,
+	// this is for the one emit at the start.
+	IsRepeat bool
 }
 
 // DTBlockCount and DTQuestionsPerBlock are the instrument's shape.
@@ -129,7 +143,7 @@ func (r *Repo) StartDecisionTest(
 	// a different measurement rather than a spoiled one.
 	isRepeat, matchedBy := r.dtDetectRepeat(ctx, userID, in.Email, visitorKey)
 
-	s := &DTSession{Status: "running", Synthetic: synthetic}
+	s := &DTSession{Status: "running", Synthetic: synthetic, IsRepeat: isRepeat}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO dt_sessions
 		  (participant_id, instrument_version, item_set_version, key_version,
@@ -342,24 +356,71 @@ func DTGradeRecall(presented, expected, response string) (outcome string, digits
 	}
 }
 
-// DTSaveRecall stores the graded recall.
-func (r *Repo) DTSaveRecall(ctx context.Context, sessionID int64, blockNo int, response string, latencyMs int) error {
+// DTSaveRecall stores the graded recall and returns what it graded, so
+// the caller can put the block in the event stream. The grade still goes
+// nowhere near the participant: the handler's response is "stored".
+func (r *Repo) DTSaveRecall(
+	ctx context.Context, sessionID int64, blockNo int, response string, latencyMs int,
+) (outcome string, digitsHeld int, err error) {
 	var presented, expected string
 	if err := r.pool.QueryRow(ctx,
 		`SELECT presented_digits, expected_digits FROM dt_recalls WHERE session_id=$1 AND block_no=$2`,
 		sessionID, blockNo).Scan(&presented, &expected); err != nil {
-		return fmt.Errorf("decision test: recall lookup: %w", err)
+		return "", 0, fmt.Errorf("decision test: recall lookup: %w", err)
 	}
 	outcome, correct, held := DTGradeRecall(presented, expected, response)
-	_, err := r.pool.Exec(ctx, `
+	if _, err := r.pool.Exec(ctx, `
 		UPDATE dt_recalls
 		   SET response_digits=$3, outcome=$4, digits_correct=$5, latency_ms=$6, digits_held=$7
 		 WHERE session_id=$1 AND block_no=$2`,
-		sessionID, blockNo, response, outcome, correct, nullableInt(latencyMs), held)
-	if err != nil {
-		return fmt.Errorf("decision test: save recall: %w", err)
+		sessionID, blockNo, response, outcome, correct, nullableInt(latencyMs), held,
+	); err != nil {
+		return "", 0, fmt.Errorf("decision test: save recall: %w", err)
 	}
-	return nil
+	return outcome, held, nil
+}
+
+// DTSessionFinish is what the finish event needs beyond the two figures
+// the participant is shown.
+type DTSessionFinish struct {
+	Expired      int
+	DurationS    int
+	WantsResults bool
+}
+
+// DTSessionSummary reads the session-level figures for the finish event.
+// Counted from the answer rows and the timestamps rather than stored,
+// for the same reason as DTBlockTally.
+func (r *Repo) DTSessionSummary(ctx context.Context, sessionID int64) (DTSessionFinish, error) {
+	var out DTSessionFinish
+	err := r.pool.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM dt_answers WHERE session_id=s.id AND outcome='expired'),
+		       coalesce(extract(epoch FROM (coalesce(s.finished_at, now()) - s.started_at))::int, 0),
+		       coalesce(p.wants_results, false)
+		  FROM dt_sessions s
+		  LEFT JOIN dt_participants p ON p.id = s.participant_id
+		 WHERE s.id = $1`,
+		sessionID).Scan(&out.Expired, &out.DurationS, &out.WantsResults)
+	if err != nil {
+		return out, fmt.Errorf("decision test: session summary: %w", err)
+	}
+	return out, nil
+}
+
+// DTBlockTally counts how a block went, for the event stream. Derived
+// from the answer rows rather than tracked alongside them, per
+// docs/metrics.md: the grain is one row per question and everything else
+// is counted from it.
+func (r *Repo) DTBlockTally(ctx context.Context, sessionID int64, blockNo int) (correct, expired int, err error) {
+	err = r.pool.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE outcome='correct'),
+		       count(*) FILTER (WHERE outcome='expired')
+		  FROM dt_answers WHERE session_id=$1 AND block_no=$2`,
+		sessionID, blockNo).Scan(&correct, &expired)
+	if err != nil {
+		return 0, 0, fmt.Errorf("decision test: block tally: %w", err)
+	}
+	return correct, expired, nil
 }
 
 // DTSaveAnswer grades one answer and stores it.

@@ -101,6 +101,28 @@ var Registry = map[string]struct {
 	"meeting.abandoned":       {Browser: true, Props: []string{"step", "elapsed_ms"}},
 	// Contact
 	"contact.submitted": {Props: []string{"category", "has_jd"}},
+	// The decision test.
+	//
+	// The funnel is a measurement here, not just operational curiosity.
+	// The instrument asks fifteen effortful minutes of a volunteer and
+	// the briefing warns them about it, so how many read that warning
+	// and leave, and where the ones who start give out, are findings
+	// about the burden rather than analytics. page.view on the briefing
+	// gives the top of it; these give the rest.
+	//
+	// block_finished exists because an unfinished run tells us nothing
+	// in dt_sessions beyond status='running'. With one event per block
+	// the point somebody stopped is in the stream, which is the only
+	// place it will ever be.
+	//
+	// No prop here can expose the key: an event stream is server-side
+	// and no participant reads one, but correct counts are per block
+	// rather than per item in any case.
+	"dtest.started": {Props: []string{"device_class", "audio_mode", "tap_check_passed", "is_repeat", "synthetic"}},
+	"dtest.block_finished": {Props: []string{
+		"block_no", "load", "correct", "expired", "recall_outcome", "digits_held",
+	}},
+	"dtest.finished": {Props: []string{"correct", "answered", "expired", "duration_s", "wants_results"}},
 	// Admin
 	//
 	// decision_reviewed carries more than the verdict because the

@@ -6,19 +6,30 @@ export const metadata: Metadata = {
     "What this site collects, why, how long it is kept, and how to ask for it to be removed.",
 };
 
-const UPDATED = "2 October 2026";
+const UPDATED = "5 October 2026";
 
 // Plain statements, one per paragraph, in the order a visitor meets
 // them: anonymous visit, contact, registration, JD review, meetings,
-// then the rules that apply to all of it. Kept in step with
-// docs/events/README.md and the retention job in the api; change both
-// when either changes.
+// the decision test, then the rules that apply to all of it. Kept in
+// step with docs/events/README.md and the retention job in the api;
+// change both when either changes.
 //
 // The meetings section was missing until 2026-10-02. The scheduler
 // shipped on 29 September and this page was last written on the 22nd,
 // so for a week the one place a member's details left this server for
 // a third party was the one flow the policy did not describe. If a
 // feature sends anything anywhere, it belongs here in the same PR.
+//
+// The decision test went live on 2026-10-04 and this section followed
+// it by a day, which is the same mistake in a smaller size. Two things
+// about it are genuinely unlike the rest of the site and are therefore
+// stated rather than left to the general paragraphs: the measurements
+// have no expiry, because a research dataset that expires in pieces
+// cannot be analysed, and "delete my data" clears the identity while
+// the anonymous rows stay. That is what dt_participants.anonymized_at
+// actually does, so it is what the page says. A policy that promises a
+// deletion the schema does not perform is worse than one that admits
+// the asymmetry.
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
@@ -110,6 +121,47 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="The decision test">
+          <p>
+            The decision test is a research instrument, open to anyone,
+            and the data it produces is the point of it. Taking it
+            stores every answer you give: which option you chose, how
+            long you took, and the confidence you rated yourself at. It
+            also stores the number you were asked to hold at the start
+            of each block and the number you typed back at the end, so
+            that a missed number can be told apart from a number held
+            but not transformed.
+          </p>
+          <p>
+            Alongside that it records the conditions the run happened
+            under, because they change what the measurements mean: a
+            coarse device class, whether you used sound or the visual
+            tick, whether you passed the tap-along check, and your
+            reaction time and its variability from that check. A run
+            that is started and not finished is kept and marked
+            unfinished, because where people stop is itself a
+            measurement.
+          </p>
+          <p>
+            The details asked for before the test are all optional and
+            you can take it without giving any of them: a name, an age
+            band, an education level, an occupation, and an email
+            address. The email address is an identifier as well as a
+            contact. It is how a second run by the same person is
+            recognised as a repeat, and it is the only way results can
+            be sent to you. Results go only to someone who asked for
+            them. Your answers are graded on this server and are not
+            sent to any outside service, and no language model is
+            involved in the test.
+          </p>
+          <p>
+            You are never told which individual questions you got right
+            or wrong, during the test or afterwards. That is not
+            secrecy for its own sake: an answer key that gets out ruins
+            the instrument permanently for everyone who takes it later.
+          </p>
+        </Section>
+
         <Section title="Email">
           <p>
             Transactional email (verification, approval, review results) is sent
@@ -134,6 +186,14 @@ export default function PrivacyPage() {
               meeting bookings are kept until you ask for them to be
               removed. There is no job that expires them on a schedule.
             </li>
+            <li>
+              Decision test measurements are kept indefinitely, because
+              they are a research dataset and a dataset that expires in
+              pieces cannot be analysed. The identity attached to a run
+              (name, email, age band, education, occupation) is cleared
+              whenever you ask, which leaves the measurements in place
+              with no person attached to them.
+            </li>
           </ul>
         </Section>
 
@@ -144,6 +204,14 @@ export default function PrivacyPage() {
             its sessions and detaches its reviews and event records from it; say
             so if you want the reviews themselves removed too. Blocking cookies
             in your browser stops the visitor id; the site still works.
+          </p>
+          <p>
+            For the decision test, deletion means your identity is
+            cleared and the anonymous measurements stay. Say so if you
+            want the run itself removed and it will be, though be aware
+            that is the one request here that cannot be undone and
+            cannot be repeated, since the test only works once on the
+            same person.
           </p>
           <p className="text-sm text-ink-3">
             <a
