@@ -97,6 +97,9 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
 | `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |
 | `admin.qa_entry_deleted` | | `entry_id` | an entry removed |
+| `dtest.started` | | `device_class`, `audio_mode`, `tap_check_passed`, `is_repeat`, `synthetic` | a decision test run opened. The conditions are here as well as on the session row because they split the sample, and a funnel that cannot be split by them cannot say whether phones drop out more |
+| `dtest.block_finished` | | `block_no`, `load`, `correct`, `expired`, `recall_outcome`, `digits_held` | one block closed, emitted when its number is handed back. The only trace an abandoned run leaves of how far it got: `dt_sessions.status` stays `running` and says nothing more |
+| `dtest.finished` | | `correct`, `answered`, `expired`, `duration_s`, `wants_results` | a run completed. `duration_s` against the fifteen-minute design target is the burden measurement |
 | `activity.*` | | | backfill only, from the old `activity_events.kind` |
 
 ## Privacy rules
