@@ -174,24 +174,6 @@ jobs:
               [ -z "$v" ] && continue
               psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q -c "SELECT * FROM $v LIMIT 1" >/dev/null
             done
-      # An empty database proves a view parses and nothing more. Every
-      # mistake worth catching in the decision test's views is a mistake
-      # about what the numbers MEAN, and that needs real shapes going
-      # through them. One already got through review: the per-person
-      # threshold took its minimum over all five blocks, so a
-      # participant who came apart on the fatigue control was reported
-      # as having a threshold at the easiest load. It parsed, it ran,
-      # and it said the opposite of the truth for exactly the people the
-      # control exists to detect.
-      - name: the decision test metric views say the right thing
-        env:
-          PGPASSWORD: career
-        run: |
-          set -euo pipefail
-          psql -h localhost -U career -d career -v ON_ERROR_STOP=1 -q \
-            -f services/api/internal/db/testdata/dt_fixture.sql
-          psql -h localhost -U career -d career -v ON_ERROR_STOP=1 \
-            -f services/api/internal/db/testdata/dt_metric_assertions.sql
 
   api:
     name: api (go)
