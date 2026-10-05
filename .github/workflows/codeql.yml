@@ -17,25 +17,20 @@ name: codeql
 # workflow instead of on that one.
 on:
   push:
-    # main only, plus the weekly schedule below. Narrowed 2026-10-05.
+    # A denylist, not an allowlist. The allowlist was four prefixes and
+    # anything outside them got no CI at all, silently: no run, no
+    # failing check, nothing to notice. Dependabot fell outside it for
+    # weeks (see below), and on 2026-09-29 two branches pushed during
+    # ordinary work fell outside it too, one named docs/ and one named
+    # without a prefix. Each time the branch looked fine because a
+    # workflow that never starts reports nothing.
     #
-    # Actions minutes are free on a public repository, so this is not
-    # about cost. It is about CONCURRENT DEMAND. Every push used to fire
-    # ci (9 jobs), security (5) and codeql (3) in the same second, and
-    # 17 jobs competing for runners is fine until runners are scarce.
-    # During GitHub's outage that day, 16 jobs were requested at once,
-    # 11 were served within 90 seconds and the other 5 starved until
-    # GitHub cancelled them at exactly 15 minutes. Two of the five were
-    # codeql and auto-pr, neither of which gates a merge, and they were
-    # competing against the two required checks that did.
-    #
-    # None of codeql's three analyses is a required status check, so
-    # nothing here blocks a pull request. The cost of narrowing it is
-    # that a vulnerability class is caught at merge rather than at push,
-    # which on a single-developer branch is hours rather than days.
-    branches:
-      - main
-      - "dependabot/**"
+    # This repository is public, so Actions minutes are free and there
+    # is no reason to ration runs. Inverting it means a new prefix
+    # works the day someone invents it, and the failure mode becomes a
+    # wasted run rather than an untested merge.
+    branches-ignore:
+      - "backup/**"
   schedule:
     - cron: "23 6 * * 1" # 06:23 UTC every Monday
 
