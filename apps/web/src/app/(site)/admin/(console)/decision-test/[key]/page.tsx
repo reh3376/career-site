@@ -6,6 +6,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import type { Run } from "../runs";
+import { BlockReview, SessionReview } from "../review";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
 
@@ -23,6 +24,8 @@ type Block = {
   responseDigits?: string;
   recallOutcome?: string;
   memoryFailurePct?: number;
+  reviewStatus?: string;
+  reviewNote?: string;
 };
 type Answer = {
   position: number;
@@ -105,6 +108,34 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           .join("  ·  ")}
       </p>
 
+      {/* The conditions this run happened under. Recorded on every
+          session since the first one and shown nowhere until now, which
+          made a reviewer guess at exactly the things that decide whether
+          a run is sound. recall_strategy is the sharpest of them: it is
+          the debrief answer about whether the participant converted the
+          number at encoding or carried it and transformed at recall, and
+          the two produce different loads during the questions. */}
+      <p className="mt-2 font-mono text-[11px] tracking-[0.1em] text-ink-3">
+        {[
+          run.tapCheckPassed === false ? "tap check FAILED" : "tap check passed",
+          run.baselineRtMs ? `baseline ${run.baselineRtMs}ms` : null,
+          run.baselineRtSdMs ? `sd ${run.baselineRtSdMs}ms` : null,
+          run.recallStrategy ? `held the number: ${run.recallStrategy}` : "strategy not given",
+          run.isRepeat ? `repeat, matched by ${run.repeatMatchedBy || "unknown"}` : null,
+        ]
+          .filter(Boolean)
+          .join("  ·  ")}
+      </p>
+
+      <SessionReview
+        sessionKey={key}
+        status={run.reviewStatus}
+        reason={run.reviewReason}
+        note={run.reviewNote}
+        reviewedAt={run.reviewedAt}
+        blocksExcluded={run.blocksExcluded}
+      />
+
       {/* The headline. Accuracy against confidence is the whole research
           question: being wrong is ordinary, being wrong and sure is the
           finding. */}
@@ -161,12 +192,16 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
               <th className="py-3 pr-4">Mean time</th>
               <th className="py-3 pr-4">Number</th>
               <th className="py-3 pr-4">Recall</th>
-              <th className="py-3">Memory lost</th>
+              <th className="py-3 pr-4">Memory lost</th>
+              <th className="py-3">Use</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {blocks.map((b) => (
-              <tr key={b.blockNo}>
+              <tr
+                key={b.blockNo}
+                className={b.reviewStatus === "do_not_use" ? "opacity-50" : undefined}
+              >
                 <td className="py-3 pr-4 text-ink">{LOAD_LABEL[b.load] ?? b.load}</td>
                 <td className="py-3 pr-4 tabular-nums text-ink">
                   {b.correct ?? 0}/{b.total ?? 0}
@@ -194,10 +229,21 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                     whichever of the two numbers the answer is closer to,
                     so an untransformed answer reads as 0% lost: the
                     number was held, only the operation failed. */}
-                <td className="py-3 tabular-nums text-ink-2">
+                <td className="py-3 pr-4 tabular-nums text-ink-2">
                   {(b.memoryFailurePct ?? -1) < 0
                     ? "not scored"
                     : `${b.memoryFailurePct}%`}
+                </td>
+                {/* Per block, so a phone ringing during block three
+                    costs six answers rather than thirty. The run's own
+                    status is separate and above. */}
+                <td className="py-3">
+                  <BlockReview
+                    sessionKey={key}
+                    blockNo={b.blockNo}
+                    status={b.reviewStatus}
+                    note={b.reviewNote}
+                  />
                 </td>
               </tr>
             ))}

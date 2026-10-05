@@ -3364,6 +3364,11 @@ message DecisionTestBlock {
   // total loss. Negative where the recall expired and nothing was
   // attempted, which is not a memory failure of any size.
   int32 memory_failure_pct = 13;
+  // Curation for this block alone, so one spoiled block costs six
+  // answers rather than thirty. Empty means nobody has judged it.
+  string review_status = 14;
+  // The note attached to this block's judgement.
+  string review_note = 15;
 }
 
 // One answer.

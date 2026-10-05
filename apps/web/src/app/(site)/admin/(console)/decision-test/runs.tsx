@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { statusLabel } from "./review";
+
 // The run list.
 //
 // Shows whether an address was left rather than the address itself. The
@@ -26,6 +28,26 @@ export type Run = {
   meanConfidence?: number;
   durationS?: number;
   startedAt?: string;
+  baselineRtMs?: number;
+  baselineRtSdMs?: number;
+  repeatMatchedBy?: string;
+  recallStrategy?: string;
+  // Curation (M9). An empty reviewStatus means nobody has looked at
+  // this run, which is a state rather than a verdict.
+  reviewStatus?: string;
+  reviewReason?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
+  blocksExcluded?: number;
+};
+
+export type ReviewCounts = {
+  total?: number;
+  unreviewed?: number;
+  good?: number;
+  incomplete?: number;
+  hold?: number;
+  doNotUse?: number;
 };
 
 export function RunTable({ runs }: { runs: Run[] }) {
@@ -45,7 +67,9 @@ export function RunTable({ runs }: { runs: Run[] }) {
         <li key={r.sessionKey}>
           <Link
             href={`/admin/decision-test/${r.sessionKey}`}
-            className="group grid gap-2 py-5 no-underline sm:grid-cols-[1fr_auto] sm:gap-8"
+            className={`group grid gap-2 py-5 no-underline sm:grid-cols-[1fr_auto] sm:gap-8 ${
+              r.reviewStatus === "do_not_use" ? "opacity-50" : ""
+            }`}
           >
             <div className="min-w-0">
               <p className="text-base text-ink transition-colors group-hover:text-accent">
@@ -53,6 +77,8 @@ export function RunTable({ runs }: { runs: Run[] }) {
                 {r.isRepeat ? <Tag>repeat</Tag> : null}
                 {r.isSynthetic ? <Tag>agent</Tag> : null}
                 {r.status !== "completed" ? <Tag>{r.status}</Tag> : null}
+                {r.reviewStatus ? <Tag>{statusLabel(r.reviewStatus)}</Tag> : null}
+                {r.blocksExcluded ? <Tag>{r.blocksExcluded} block excluded</Tag> : null}
                 {r.audioMode === "visual" ? <Tag>visual</Tag> : null}
                 {r.tapCheckPassed === false ? <Tag>tap failed</Tag> : null}
               </p>

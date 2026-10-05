@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { callApi } from "@/lib/api-fetch";
@@ -5,7 +6,7 @@ import { getSessionCookie } from "@/lib/session";
 
 import { setDecisionTestTimingsAction } from "./actions";
 import { ExportPanel } from "./export";
-import { RunTable, type Run } from "./runs";
+import { RunTable, type Run, type ReviewCounts } from "./runs";
 
 export const metadata: Metadata = { title: "Admin · Decision test" };
 
@@ -17,10 +18,16 @@ type Settings = {
   sessionsOnThisVersion?: number;
 };
 
-export default async function DecisionTestPage() {
+export default async function DecisionTestPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ review?: string }>;
+}) {
+  const { review } = await searchParams;
   const cookie = await getSessionCookie();
   let s: Settings = {};
   let runs: Run[] = [];
+  let counts: ReviewCounts = {};
   if (cookie) {
     // callApi returns the fetch Response, not the parsed body. The first
     // version of this page cast the Response straight to Settings, so
@@ -38,10 +45,17 @@ export default async function DecisionTestPage() {
 
     const rr = await callApi({
       path: "/api/career.v1.AdminService/ListDecisionTestRuns",
-      body: { includeSynthetic: false },
+      // The filter goes to the api rather than being applied here, so
+      // the 200-row cap bites on the filtered set: filtering a truncated
+      // page would quietly hide runs from the queue.
+      body: { includeSynthetic: false, reviewStatus: review ?? "" },
       cookie,
     });
-    if (rr.ok) runs = (((await rr.json()) as { runs?: Run[] }).runs ?? []);
+    if (rr.ok) {
+      const body = (await rr.json()) as { runs?: Run[]; counts?: ReviewCounts };
+      runs = body.runs ?? [];
+      counts = body.counts ?? {};
+    }
   }
   const secs = (ms?: number) => Math.round((ms ?? 0) / 1000);
 
@@ -58,6 +72,45 @@ export default async function DecisionTestPage() {
         runs are excluded: they prove the pipeline works and are not
         data.
       </p>
+
+      {/* The queue. Reviewing is work, so what is left to look at
+          belongs at the top rather than being something to count by
+          eye. The totals are across every real run, not the filtered
+          page, so switching filters does not change what "14 left"
+          means. */}
+      <nav className="mt-10 flex flex-wrap gap-2">
+        <Chip href="/admin/decision-test" active={!review} label="All" n={counts.total} />
+        <Chip
+          href="/admin/decision-test?review=unreviewed"
+          active={review === "unreviewed"}
+          label="Unreviewed"
+          n={counts.unreviewed}
+        />
+        <Chip
+          href="/admin/decision-test?review=good"
+          active={review === "good"}
+          label="Good"
+          n={counts.good}
+        />
+        <Chip
+          href="/admin/decision-test?review=incomplete"
+          active={review === "incomplete"}
+          label="Incomplete"
+          n={counts.incomplete}
+        />
+        <Chip
+          href="/admin/decision-test?review=hold"
+          active={review === "hold"}
+          label="Hold"
+          n={counts.hold}
+        />
+        <Chip
+          href="/admin/decision-test?review=do_not_use"
+          active={review === "do_not_use"}
+          label="Do not use"
+          n={counts.doNotUse}
+        />
+      </nav>
 
       <RunTable runs={runs} />
 
@@ -138,6 +191,31 @@ export default async function DecisionTestPage() {
         </p>
       </section>
     </>
+  );
+}
+
+// A filter with its count. The count is what makes it a queue rather
+// than a set of tabs.
+function Chip({
+  href,
+  active,
+  label,
+  n,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  n?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-md px-4 py-2 font-mono text-[11px] tracking-[0.12em] uppercase no-underline ${
+        active ? "bg-accent text-canvas" : "border border-line text-ink-2 hover:text-accent"
+      }`}
+    >
+      {label} {n ?? 0}
+    </Link>
   );
 }
 
