@@ -64,7 +64,7 @@ func TestGradeRecallSeparatesStorageFailureFromExecutiveFailure(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotOutcome, gotCorrect := DTGradeRecall(tc.presented, tc.expected, tc.response)
+			gotOutcome, gotCorrect, _ := DTGradeRecall(tc.presented, tc.expected, tc.response)
 			if gotOutcome != tc.wantOutcome {
 				t.Errorf("outcome = %q, want %q", gotOutcome, tc.wantOutcome)
 			}
@@ -133,5 +133,77 @@ func TestRandomDigitsAreDigitsAndVary(t *testing.T) {
 	// generator is not generating.
 	if len(seen) < 2 {
 		t.Error("forty draws produced one value; the numbers are not varying between sessions")
+	}
+}
+
+// Memory severity, the owner's measure: an incorrect number is a memory
+// failure and what can be scored is how bad it was. Miss one digit of
+// four and a quarter of the number was lost; miss all four and it is a
+// complete loss.
+//
+// The case that decides the design is the untransformed one. Scored
+// against the expected number alone it reads as total memory failure
+// when the number was in fact held perfectly, which is backwards and
+// would bury the storage-held-executive-failed signal entirely.
+func TestDigitsHeldMeasuresRetentionNotCorrectness(t *testing.T) {
+	tests := []struct {
+		name                      string
+		presented, expected, resp string
+		wantHeld                  int
+		wantSeverity              float64 // 1 - held/len
+	}{
+		{
+			name:      "held and transformed: nothing lost",
+			presented: "5359", expected: "6460", resp: "6460",
+			wantHeld: 4, wantSeverity: 0,
+		},
+		{
+			// The owner's run 3 block 3. Memory was perfect; only the
+			// operation failed. Against the expected number this scores
+			// zero digits and would read as 1.0.
+			name:      "held but not transformed: still nothing lost",
+			presented: "3777", expected: "4888", resp: "3777",
+			wantHeld: 4, wantSeverity: 0,
+		},
+		{
+			name:      "one digit off on a no-transform block",
+			presented: "929", expected: "929", resp: "927",
+			wantHeld: 2, wantSeverity: 1.0 / 3.0,
+		},
+		{
+			name:      "mostly lost under a transformation",
+			presented: "7462", expected: "0795", resp: "0649",
+			wantHeld: 1, wantSeverity: 0.75,
+		},
+		{
+			name:      "lost entirely",
+			presented: "1234", expected: "1234", resp: "8888",
+			wantHeld: 0, wantSeverity: 1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, held := DTGradeRecall(tc.presented, tc.expected, tc.resp)
+			if held != tc.wantHeld {
+				t.Errorf("digitsHeld = %d, want %d", held, tc.wantHeld)
+			}
+			sev := 1 - float64(held)/float64(len(tc.presented))
+			if diff := sev - tc.wantSeverity; diff > 0.01 || diff < -0.01 {
+				t.Errorf("severity = %.2f, want %.2f", sev, tc.wantSeverity)
+			}
+		})
+	}
+}
+
+// An expired recall is not a memory failure of any size: nothing was
+// attempted. Scoring it 1.0 would put "ran out of time" and "forgot
+// completely" in the same bucket, and the view returns null instead.
+func TestExpiredRecallHoldsNothingAndIsNotScored(t *testing.T) {
+	outcome, _, held := DTGradeRecall("1234", "4567", "")
+	if outcome != "expired" {
+		t.Errorf("outcome = %q, want expired", outcome)
+	}
+	if held != 0 {
+		t.Errorf("digitsHeld = %d on an expired recall, want 0", held)
 	}
 }

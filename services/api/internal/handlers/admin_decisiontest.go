@@ -117,6 +117,7 @@ func (a *Admin) GetDecisionTestRun(
 			MeanConfidence: int32(b.MeanConfidence), MeanLatencyMs: int32(b.MeanLatencyMs),
 			PresentedDigits: b.PresentedDigits, ExpectedDigits: b.ExpectedDigits,
 			ResponseDigits: b.ResponseDigits, RecallOutcome: b.RecallOutcome,
+			MemoryFailurePct: int32(b.MemoryFailure * 100),
 		})
 	}
 	pa := make([]*v1.DecisionTestAnswer, 0, len(answers))

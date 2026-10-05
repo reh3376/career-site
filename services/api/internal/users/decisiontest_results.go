@@ -52,6 +52,9 @@ type DTBlockSummary struct {
 	ExpectedDigits  string
 	ResponseDigits  string
 	RecallOutcome   string
+	// 0.0 is a number held intact, 1.0 one lost entirely. Negative means
+	// not scored, which is an expired recall: nothing was attempted.
+	MemoryFailure float64
 }
 
 // DTAnswerRow is one answer.
@@ -140,7 +143,8 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(max(rc.presented_digits),''),
 		       coalesce(max(rc.expected_digits),''),
 		       coalesce(max(rc.response_digits),''),
-		       coalesce(max(rc.outcome),'')
+		       coalesce(max(rc.outcome),''),
+		       coalesce(max(v.memory_failure), -1)
 		  FROM v_dt_answers v
 		  JOIN dt_sessions s  ON s.public_id::text = v.session_key::text
 		  LEFT JOIN dt_recalls rc ON rc.session_id = s.id AND rc.block_no = v.block_no
@@ -156,7 +160,8 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		var b DTBlockSummary
 		if err := brows.Scan(&b.BlockNo, &b.Load, &b.Correct, &b.Total, &b.Lure,
 			&b.Expired, &b.MeanConfidence, &b.MeanLatencyMs,
-			&b.PresentedDigits, &b.ExpectedDigits, &b.ResponseDigits, &b.RecallOutcome); err != nil {
+			&b.PresentedDigits, &b.ExpectedDigits, &b.ResponseDigits, &b.RecallOutcome,
+			&b.MemoryFailure); err != nil {
 			return nil, nil, nil, fmt.Errorf("decision test: scan block: %w", err)
 		}
 		blocks = append(blocks, b)

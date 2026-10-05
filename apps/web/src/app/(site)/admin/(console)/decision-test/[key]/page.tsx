@@ -22,6 +22,7 @@ type Block = {
   expectedDigits?: string;
   responseDigits?: string;
   recallOutcome?: string;
+  memoryFailurePct?: number;
 };
 type Answer = {
   position: number;
@@ -159,7 +160,8 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
               <th className="py-3 pr-4">Confidence</th>
               <th className="py-3 pr-4">Mean time</th>
               <th className="py-3 pr-4">Number</th>
-              <th className="py-3">Recall</th>
+              <th className="py-3 pr-4">Recall</th>
+              <th className="py-3">Memory lost</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -182,8 +184,20 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                     : ""}
                   {b.responseDigits ? `, gave ${b.responseDigits}` : ""}
                 </td>
-                <td className="py-3">
+                <td className="py-3 pr-4">
                   <RecallTag outcome={b.recallOutcome} />
+                </td>
+                {/* Severity rather than cause. A typo, a transposition
+                    and a genuine lapse are indistinguishable at the
+                    moment somebody types four digits, so what is scored
+                    is how much of the number survived. Measured against
+                    whichever of the two numbers the answer is closer to,
+                    so an untransformed answer reads as 0% lost: the
+                    number was held, only the operation failed. */}
+                <td className="py-3 tabular-nums text-ink-2">
+                  {(b.memoryFailurePct ?? -1) < 0
+                    ? "not scored"
+                    : `${b.memoryFailurePct}%`}
                 </td>
               </tr>
             ))}

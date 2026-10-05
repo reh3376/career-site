@@ -297,25 +297,48 @@ func DTExpectedDigits(digits, load string) string {
 // the operation did not, which is storage holding while the executive
 // fails, and that is the mechanism this whole test exists to measure.
 // Scoring recall pass/fail would erase it.
-func DTGradeRecall(presented, expected, response string) (outcome string, digitsCorrect int) {
+func DTGradeRecall(presented, expected, response string) (outcome string, digitsCorrect, digitsHeld int) {
 	response = strings.TrimSpace(response)
 	if response == "" {
-		return "expired", 0
+		return "expired", 0, 0
 	}
 	for i := 0; i < len(expected) && i < len(response); i++ {
 		if expected[i] == response[i] {
 			digitsCorrect++
 		}
 	}
+
+	// Retention, as distinct from correctness.
+	//
+	// Scored against whichever of the two numbers the response is closer
+	// to, because either one proves the number survived: giving back the
+	// raw digits shows it was held, giving back the transformed digits
+	// shows it was held and operated on. Only matching neither means
+	// memory actually failed.
+	//
+	// Measuring against the expected number alone would score a
+	// perfectly-held but untransformed answer as total memory loss,
+	// which is the exact opposite of what happened and would bury the
+	// sharpest signal the instrument produces.
+	var vsPresented int
+	for i := 0; i < len(presented) && i < len(response); i++ {
+		if presented[i] == response[i] {
+			vsPresented++
+		}
+	}
+	digitsHeld = digitsCorrect
+	if vsPresented > digitsHeld {
+		digitsHeld = vsPresented
+	}
 	switch {
 	case response == expected:
-		return "exact", digitsCorrect
+		return "exact", digitsCorrect, digitsHeld
 	case response == presented && presented != expected:
-		return "untransformed", digitsCorrect
+		return "untransformed", digitsCorrect, digitsHeld
 	case digitsCorrect > 0:
-		return "partial", digitsCorrect
+		return "partial", digitsCorrect, digitsHeld
 	default:
-		return "wrong_digits", 0
+		return "wrong_digits", 0, digitsHeld
 	}
 }
 
@@ -327,12 +350,12 @@ func (r *Repo) DTSaveRecall(ctx context.Context, sessionID int64, blockNo int, r
 		sessionID, blockNo).Scan(&presented, &expected); err != nil {
 		return fmt.Errorf("decision test: recall lookup: %w", err)
 	}
-	outcome, correct := DTGradeRecall(presented, expected, response)
+	outcome, correct, held := DTGradeRecall(presented, expected, response)
 	_, err := r.pool.Exec(ctx, `
 		UPDATE dt_recalls
-		   SET response_digits=$3, outcome=$4, digits_correct=$5, latency_ms=$6
+		   SET response_digits=$3, outcome=$4, digits_correct=$5, latency_ms=$6, digits_held=$7
 		 WHERE session_id=$1 AND block_no=$2`,
-		sessionID, blockNo, response, outcome, correct, nullableInt(latencyMs))
+		sessionID, blockNo, response, outcome, correct, nullableInt(latencyMs), held)
 	if err != nil {
 		return fmt.Errorf("decision test: save recall: %w", err)
 	}

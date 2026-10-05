@@ -8254,6 +8254,7 @@ One block of a run.
 | `expectedDigits` | `string` | string |  | What a correct response was, after any transformation. |
 | `responseDigits` | `string` | string |  | What came back. |
 | `recallOutcome` | `string` | string |  | exact, untransformed, wrong_digits, partial or expired. untransformed means the number survived and the operation did not. |
+| `memoryFailurePct` | `int32` | number |  | How much of the number was lost, 0 to 100. Zero is a number held intact, 100 one lost entirely. Scored against whichever of the presented or expected number the response is closer to, so an untransformed answer reads as perfect retention rather than as total loss. Negative where the recall expired and nothing was attempted, which is not a memory failure of any size. |
 
 ### DecisionTestAnswer
 
