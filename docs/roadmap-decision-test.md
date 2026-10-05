@@ -265,6 +265,144 @@ whatever it is.
 until the owner has taken the whole thing himself on a deployed build
 and the rows have been read back.
 
+## M9. Curation and review (opened 2026-10-05)
+
+**Asked for by the owner:** review all the data associated with each
+test, add notes, mark a run `good` / `incomplete` / `do not use`, and
+whatever else is needed to administer the data properly so that the
+curated dataset from each test is fit to feed improvement algorithms.
+
+The reason this is a milestone rather than a form: **the dataset is the
+deliverable (§7b), and a dataset nobody has vouched for is collected,
+not curated.** Thirty answers from somebody who was interrupted at
+question twelve are indistinguishable in SQL from thirty answers given
+under the conditions the instrument assumes. Only the owner knows which
+is which, because the participants tell him and not the database.
+
+### What exists already
+
+`/admin/decision-test` lists every real run newest first, including
+unfinished ones, with score, confidence, expiries, duration, device,
+education and the instrument version. Each row opens a detail page with
+the accuracy-against-confidence figures, the fatigue control, a
+per-block table (correct, lure, expired, confidence, mean time, the
+number shown, the recall outcome, memory lost) and every answer with
+its outcome, confidence and latency.
+
+All of it is read-only. There is nowhere to record a judgement.
+
+### The gaps, specifically
+
+**1. No judgement can be recorded at all.** No status, no note, no
+reviewer, no date. The only lever is `is_synthetic`, which means
+something else entirely and would be a lie.
+
+**2. Curation would not reach the numbers.** `v_dt_load_curve`,
+`v_dt_calibration` and `v_dt_items` make claims about people. A run
+marked unusable that still feeds them is worse than no curation,
+because the mark creates a false belief that the data has been cleaned.
+The CSV export has the same problem and is the thing that actually
+leaves for analysis.
+
+**3. Fields that exist are not shown.** `recall_strategy` is the
+debrief answer about whether the participant converted the number at
+encoding or carried it and transformed at recall. §3.1 records it
+precisely to turn an uncontrolled variable into a recorded one, and it
+appears nowhere in the UI. Also absent: `age_range`, the tap-check
+result, `baseline_rt_ms` and its standard deviation, and
+`repeat_matched_by`. A reviewer deciding whether a run is sound cannot
+see the conditions it ran under.
+
+**4. Nothing records what an export contained.** If an analysis is run
+today and a run is marked `do_not_use` next week, the analysis is no
+longer reproducible and nothing says so. This project has already
+learned this lesson twice on the reviewer side: the corpus fingerprint
+captured identity but not content (closed by migration 00040), and an
+evaluation that could not say what it was configured with cost an hour
+the next time two scores disagreed. Retroactive curation without a
+record is the same failure in a new place.
+
+### Decisions
+
+**DECIDED: curation is per session, not per answer.** That is the ask,
+and a run is the unit a participant can report on. Block-level
+exclusion is the thing most likely to be wanted next, and it is
+deliberately not built: see the open question below.
+
+**DECIDED: an unreviewed run counts as usable.** The alternative makes
+the dataset empty until the owner has worked through a queue, and he
+reviews asynchronously. The honest form of that trade is that **every
+aggregate reports its own review composition**, so a figure computed
+mostly from unreviewed runs says so on the same row. The precedent is
+`/admin/analytics`: a criterion with no data says so rather than
+showing a zero that reads like a failure.
+
+**DECIDED: `do_not_use` is excluded from the three claim-making views
+and from the export by default**, with an explicit opt-in on the export
+exactly as `include_synthetic` works. Excluded, never deleted.
+
+**DECIDED: an exclusion carries a reason.** `do_not_use` alone cannot
+answer "how much data are we losing, and to what". The distinction that
+matters is between *the instrument failed* and *this run was invalid*,
+because they point at opposite fixes: the first is a bug to go and
+repair, the second is nothing to fix and simply costs a data point.
+Proposed values, adjustable: `instrument_fault`, `participant_reported`,
+`duplicate`, `other`. The same split the decision log already makes
+between disagreement and ungradeable.
+
+**DECIDED: the vocabulary lives in Go and an unknown value is refused,
+not stored.** Same rule as `ReviewVocabulary`, for the same reason: a
+status nobody can interpret still lands in a count.
+
+**DECIDED: review decisions are appended, not only overwritten.** The
+current verdict sits on the session row so every query can filter on it
+cheaply, and each change also appends to a history table. "Nothing is
+ever deleted" has applied to the measurements since migration 00049;
+there is no reason the judgements about them should be the one mutable
+thing. It also answers "why is this excluded, and since when", which is
+the question somebody will ask about a published finding.
+
+**DECIDED: an export records what it contained.** Row count, session
+count, the filters used, and a fingerprint over the session keys, so a
+later curation change is visible as a difference rather than invisible.
+
+### Open, and genuinely the owner's call
+
+1. **Does `incomplete` count in the aggregates?** A run that stopped at
+   block three still produced eighteen real answers, and at the answer
+   grain an answer given is an answer given. But its session-level
+   figures (the gap, the fatigue control) are computed from blocks that
+   never happened. My proposal: include `incomplete` in the per-answer
+   views, exclude it from the session-level ones, and say so on both.
+   The alternative is one simple rule that throws away usable answers.
+
+2. **Block-level exclusion: now or later?** A phone ringing during block
+   three spoils that block and not the other four. Marking the whole run
+   `do_not_use` discards twenty-four good answers. Doing it now costs a
+   second status column and a second place for the views to filter;
+   doing it later costs a migration and a re-review of anything already
+   marked. I lean to later, because nobody has yet needed it and
+   `review_note` can carry "block 3 interrupted" in the meantime.
+
+3. **Is a fourth status worth it?** Something like `hold` for "something
+   is odd and I have not decided". Without it, an uncertain run is
+   either left unreviewed, which is indistinguishable from not looked
+   at, or marked with a certainty the reviewer does not have.
+
+4. **Who can review?** Admin only is assumed. Nothing else exists today.
+
+**Sprint plan:** [`sprint-decision-test-curation.md`](sprint-decision-test-curation.md).
+This document is milestones and exit criteria, per its own second
+paragraph; the task breakdown lives there.
+
+### What would make me stop and re-plan
+
+- **The owner wants per-block curation after all.** S1 changes shape and
+  is better done once than migrated twice.
+- **Review turns out to be the bottleneck rather than volunteers.** If
+  reviewing a run takes longer than taking one, the surface is wrong and
+  the answer is fewer fields, not more.
+
 ## What would make me stop and re-plan
 
 - **Pilot shows the lures do not pull.** Back to M2, and the question is
