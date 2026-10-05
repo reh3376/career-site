@@ -12,10 +12,11 @@ the dev compose file and never accepted by prod. See
 [`docker-compose.yml`](docker-compose.yml) for the base and
 [`docker-compose.prod.yml`](docker-compose.prod.yml) for the prod overlay.
 
-Last verified against the running stack: 2026-10-02, 20 checks green on
-`f13edf9fc83a`. Text audited 2026-10-01: the route lists below had not
-been updated since Ask Roger and the scheduler shipped, and the ollama
-row still described a single resident model.
+Last verified against the running stack: 2026-10-05, 20 checks green on
+`78812b3d3995`. Text audited the same day: the migration table ended at
+`00036` and the version line still said 22, so nineteen migrations were
+undocumented, among them every table behind Ask Roger's conversations,
+the Q&A bank, the meeting scheduler and the whole decision test.
 
 ---
 
@@ -113,7 +114,7 @@ Every prod variable, with comments, is in [`.env.prod.example`](.env.prod.exampl
 
 ## Database schema
 
-Migrations live in [`services/api/internal/db/migrations/`](services/api/internal/db/migrations/) and run automatically on api boot via goose. Current version: **22**.
+Migrations live in [`services/api/internal/db/migrations/`](services/api/internal/db/migrations/) and run automatically on api boot via goose. Current version: **55**.
 
 | # | File | Purpose |
 |---|---|---|
@@ -153,6 +154,25 @@ Migrations live in [`services/api/internal/db/migrations/`](services/api/interna
 | 00034 | `agreement_counts_evals.sql` | corrects the agreement counts across evaluation runs |
 | 00035 | `expiry_warning_sent.sql` | `users.expiry_warning_sent_at`, which stopped the access-expiry reminder re-sending on every API restart |
 | 00036 | `run_retrieval_scope.sql` | `jd_runs.retrieval_scope`, so every run records which corpus scope it actually read |
+| 00037 | `eval_run_documents.sql` | what the corpus held when an evaluation started: document id, title, kind, visibility and chunk count, captured before anything is scored |
+| 00038 | `gate_rows_survive_no_data.sql` | a gate criterion with no data says so rather than vanishing from `v_gate` |
+| 00039 | `decision_log_failures.sql` | keeps the model's output when a call fails, not only when it succeeds |
+| 00040 | `eval_manifest_content_hash.sql` | `content_hash` per document on the manifest, so an edit that preserves the chunk count is no longer invisible |
+| 00041 | `meeting_bookings.sql` | meetings members have booked, with an exclusion constraint so two members cannot hold the same slot |
+| 00042 | `jd_run_phases.sql` | `jd_runs.phase_ms`: where the time went inside a run, as distinct from how long it took |
+| 00043 | `calendar_connection.sql` | one row holding the Google credential the booking flow needs, and nothing about what is on the calendar |
+| 00044 | `meeting_contact.sql` | how a meeting actually happens (mode, location, contact), which a time on a calendar does not record |
+| 00045 | `chat_conversations.sql` | Ask Roger's conversation store (FR-CHAT-08) |
+| 00046 | `corpus_chatbot_include.sql` | whether the assistant may draw on a document at all; a different axis from visibility and deliberately not merged with it |
+| 00047 | `qa_bank.sql` | the Q&A bank: the owner's own answers served verbatim, with phrasings |
+| 00048 | `decision_log_training_targets.sql` | turns a graded decision into a usable training example |
+| 00049 | `decision_test.sql` | the decision test (§5.14): `dt_items` with the answer key, `dt_participants` kept apart from the measurements, `dt_sessions`, `dt_answers` (the grain), `dt_recalls`, `v_dt_answers` |
+| 00050 | `decision_test_synthetic.sql` | `is_synthetic`, marking a run no human took; kept separate from `instrument_version` on purpose |
+| 00051 | `decision_test_items.sql` | thirty scored items and three practice ones, as data rather than code, with rotated option positions |
+| 00052 | `decision_test_composition.sql` | `position`, and the block composition interleaved so every block carries the same family mix. Before this, families were blocked and load was confounded with item family |
+| 00053 | `decision_test_memory_failure.sql` | `digits_held`: recall severity scored against what was retained rather than against what was correct |
+| 00054 | `decision_test_metrics.sql` | the seven decision-test metric views (`docs/metrics.md`), plus `dt_confident_threshold()` and `dt_load_rank()` |
+| 00055 | `decision_test_curve_by_version.sql` | the load and calibration curves grouped by item set and instrument version, so runs under different items or timings never pool into one claim |
 
 Roles: `career` (app owner, full DML), `career_admin_readonly` (SELECT-only; bounds the `/admin/db` blast radius).
 

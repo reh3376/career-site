@@ -1,8 +1,18 @@
 # Backlog
 
-Open work, reviewed 2026-09-22 after the event stream (data layer D1)
-landed. Shipped items are dropped from this file; their history is in
-`docs/llm-tuning-log.md`, `docs/decision-log.md` and the PR list.
+Open work. Reviewed 2026-09-22 after the event stream (data layer D1)
+landed, and again on 2026-10-05, when four entries turned out to
+describe a system that no longer exists: the meeting scheduler was
+listed as never built (it shipped 2026-09-29 and was serving real slots
+when checked), the Google seven-day token expiry (the consent screen
+moved to Production), and "26 of 297 chunks still carry `****`" (0 of
+324 on production). Shipped items are dropped from this file; their
+history is in `docs/llm-tuning-log.md`, `docs/decision-log.md` and the
+PR list.
+
+**A backlog that is wrong is worse than no backlog**, for the same
+reason the admin overview was: it is read once, found to be false, and
+then never trusted again. Each sweep now says what it checked.
 Items are grouped, and ordered within a group by how much they unblock.
 Nothing here names a member or carries a credential.
 
@@ -569,14 +579,19 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 - **Phone-width check of the progress modal and result page** on a
   real device.
 
-- **Meeting scheduler (`FR-CNT-23`, `FR-ADM-13`, decision `D-22`).**
-  Specified as a Must in the FSD and never carried into this backlog,
-  which is why it has sat untouched: a public page showing the owner's
-  real availability from Google Calendar with busy slots hidden, a
-  visitor picks an open slot without needing an account, and the event
-  lands on his calendar with both parties invited. The admin surface
-  configures the windows, so the hours below are initial values rather
-  than anything compiled in.
+- **Meeting scheduler (`FR-CNT-23`, `FR-ADM-13`, decision `D-22`).
+  SHIPPED 2026-09-29.** Booking, cancellation, the calendar write and
+  both notification emails were exercised end to end on production, and
+  `GetAvailability` was confirmed returning real slots on 2026-10-05.
+  `MeetingService` plus `/meetings` and `/admin/scheduler`; migrations
+  00041, 00043 and 00044.
+
+  Everything below is the design as decided, kept because it records
+  *why* the shipped thing has the shape it does, and because this entry
+  described the scheduler as "never carried into this backlog, which is
+  why it has sat untouched" for six days after it went live. Members
+  only rather than public is the one decision that changed the design
+  rather than a setting.
 
   **Availability, from the owner 2026-09-24:** Tuesday, Wednesday and
   Thursday only, 09:00 to 12:00 and 14:00 to 16:00. Three days, two
@@ -661,14 +676,15 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   also means nothing records which MinIO is actually running. Pin to a
   digest, the way the other images are.
 
-- **Google refresh tokens expire after seven days while the consent
-  screen stays in Testing.** Connected 2026-09-30, so booking stops
-  around 2026-10-06 and the scheduler will report that Google rejected
-  the stored credential. Reconnect at `/admin/scheduler` fixes it in a
-  click. Two ways out if the weekly reconnect grates: publish the
-  consent screen and go through Google's verification, or accept it and
-  add a reminder. Recorded because a booking flow that stops a week
-  after it starts working looks like a bug and is not one.
+- ~~**Google refresh tokens expire after seven days while the consent
+  screen stays in Testing.**~~ **Closed 2026-10-05.** The owner moved
+  the project from Testing to Production, which removes the seven-day
+  ceiling on refresh tokens. Verified the same day: `GetAvailability`
+  returned real slots, so the stored credential still refreshes. Kept
+  as a line rather than deleted because a booking flow that stops a
+  week after it starts working looks like a bug and is not one, and the
+  next person to connect a Google project should know which setting
+  decides it.
 
 
 - **The evaluation run order is invisible in the UI.** `/admin/evals`
@@ -887,6 +903,54 @@ against 9.
   dead exports across a 147-file app that has grown fast. Low value
   individually, but this is the cheapest way to stop the generated-code
   and hand-written surfaces drifting apart.
+
+## 4d. Decision test (opened 2026-10-05)
+
+Shipped and deployed: the instrument, the participant screens, the
+debrief, the admin surface, the results email, seven metric views, the
+CSV export, the privacy section and the product events (migrations
+00049 to 00055). Requirements are [`FSD.md`](FSD.md) §5.14; design is
+[`fsd-decision-test.md`](fsd-decision-test.md); delivery is
+[`roadmap-decision-test.md`](roadmap-decision-test.md). What is left:
+
+- **The tap-check thresholds are provisional** (FR-DT-20). The design
+  document's starting figures were ten ticks, presses within 300 ms, at
+  least seven of ten, and an offset standard deviation under 150 ms.
+  The last of those is unreachable: the maximum standard deviation
+  inside a 300 ms window *is* 150 ms, so the cut could never have
+  refused anyone. It is 80 ms today, chosen against measured
+  references (real tracking about 8 ms, uniform random about 96 ms),
+  and it is still a guess until there are enough runs to see where the
+  distribution sits. Set it from data, in
+  `DTSettings`/`scoreTapCheck`, not in a document.
+
+- **Two real runs exist and neither can speak to load.** Both were
+  taken on item set `items-2026-10-04`, when the blocks were
+  family-blocked: block 1 was six arithmetic items and block 4 was
+  conjunctions and syllogisms, so item family swamped load entirely and
+  accuracy *rose* to 100% at the hardest block. Migration 00052
+  interleaved the families and `v_dt_load_curve` keeps the two item
+  sets apart, so nothing is corrupted, but the usable sample is zero
+  until the next run completes. Not a work item; a statement of where
+  the data actually stands.
+
+- **Console pages for the load curve, the calibration curve and the
+  per-person threshold.** `/admin/db` reads all seven views today and
+  `docs/metrics.md` carries the queries, so this is convenience rather
+  than capability. Worth doing before there are enough runs that
+  reading them by hand becomes the bottleneck.
+
+- **The graph projection**, deferred by
+  [ADR 0030](adr/0030-relational-collection-graph-analysis.md) until
+  there is data worth exploring and the cross-surface questions are
+  real. The projection boundary is specified, so this is an export
+  rather than a redesign.
+
+- **Volunteers are the scarce resource, not engineering time.** Each
+  one can be asked once. Anything wrong at the moment somebody sits
+  down costs a data point that cannot be recovered, which is why the
+  live pass gates everything and why a synthetic run precedes each
+  change that touches the participant path.
 
 ## 5. Hardening (public repo)
 
@@ -1575,10 +1639,10 @@ under.
   than evidence of what Roger has done, and retrieval does not
   distinguish the two: a requirement asking for distillation knowledge
   would match it and the judge would read it as his experience.
-- **26 of 297 chunks still carry `****`**, the split-bold-run artifact
-  from the conversions that predate UCTS. One of them, chunk 62, was
-  cited as evidence in run 10. UCTS prevents new instances; it does not
-  clean what was already ingested.
+- ~~**26 of 297 chunks still carry `****`**, the split-bold-run
+  artifact from the conversions that predate UCTS.~~ **Closed, verified
+  2026-10-05: 0 of 324 chunks match.** The re-ingestions since cleared
+  them. UCTS prevents new instances; the old ones are gone too.
 
 0.1786.
 
@@ -1948,11 +2012,35 @@ PR 172, sixty merges after the previous sync.
 - The sitemap was four admin routes behind: analytics, evals, gate and
   ops are now listed, and the §5.7 status line says twelve surfaces
   rather than nine.
-- `docs/decision-log.md`, `docs/events/README.md`,
-  `docs/cutover-local-to-prod.md` and `docs/jd-submitter-workflow.md`
-  were last touched 2026-09-22 and have not been re-read against the
+- `docs/decision-log.md`, `docs/cutover-local-to-prod.md` and
+  `docs/jd-submitter-workflow.md` have not been re-read against the
   code. Nothing in them is known to be wrong; they are simply not yet
   verified, which is a different claim from being current.
+  `docs/events/README.md` came off this list on 2026-10-05 when the
+  decision test's three events were added to it.
+
+- **Docs sweep, 2026-10-05.** The 2026-10-02 sweep predated the
+  decision test by a day, and the whole subsystem was missing from
+  every hand-maintained document while being the only work happening.
+  Corrected: `FSD.md` to 0.4.1 with a new §5.14 (FR-DT-01..20), the
+  three services absent from §8.5 (`DecisionTestService`,
+  `MeetingService`, `EventService`, two of which had shipped weeks
+  earlier), the method count from "90 across 11 services" to 138 across
+  14 counted from the descriptors, the admin surface count from twelve
+  to fifteen in two places, and the four decision-test routes in §7.1.
+  `SERVICES.md` gained migrations 00037 to 00055, nineteen of them, and
+  its version line moved from 22 to 55. `in-flight.md` was three days
+  and seven migrations behind. `README.md` had no mention of the test
+  at all.
+
+  **What this says about the method rather than the content.** Every
+  one of those was a hand-maintained copy of something the code already
+  knows. The generated reference, `docs/api/README.md`, was correct
+  throughout, because `make docs-api` regenerates it and CI fails on
+  drift. The hand-written tables are now marked as summaries that will
+  lag, which is honest, but the real answer is to generate more of
+  them: a migration table, a service table and a route table are all
+  derivable, and a derived table cannot be six weeks stale.
 - A convention for keeping a Dockerfile's base image and the workflow
   `env:` that tests it in step. Bumping python to 3.14 and go to 1.27
   left CI checking 3.12 and 1.26 until someone noticed by hand.
