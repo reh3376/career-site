@@ -38,6 +38,15 @@ func dtTestRepo(t *testing.T) (*Repo, context.Context) {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
+		// Skipping locally is a convenience. Skipping in CI would
+		// silently disable the only guard that catches SQL faults, and
+		// `go test` without -v prints nothing for a skip, so the hole
+		// would look exactly like a pass. That is the same shape as
+		// every fault this file exists for, so CI fails instead.
+		if os.Getenv("CI") != "" {
+			t.Fatal("TEST_DATABASE_URL is unset in CI: the database-backed tests " +
+				"would skip silently, which is indistinguishable from passing")
+		}
 		t.Skip("TEST_DATABASE_URL not set; skipping the database-backed path")
 	}
 	ctx := context.Background()
