@@ -363,7 +363,17 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                     correct by chance, so the outcome column cannot show
                     it. */}
                 <td className="py-2 pr-4 font-mono text-[11px] tabular-nums text-ink-2">
-                  {(a.chosenIndex ?? -1) < 0 ? "," : a.chosenIndex}
+                  {/* Absent means zero, not missing.
+                      chosen_index is a plain int32 and proto3 implicit
+                      presence drops a zero from the JSON, so the single
+                      commonest answer, option one, arrived as undefined
+                      and rendered blank. The contract cannot change
+                      (additive-only), and it does not need to: an
+                      expired answer is already identifiable from the
+                      outcome, so undefined can safely mean 0 here. */}
+                  {a.outcome === "expired" || (a.chosenIndex ?? 0) < 0
+                    ? ","
+                    : (a.chosenIndex ?? 0)}
                   {a.isLure ? (
                     <span className="ml-2 tracking-[0.1em] text-ink-3 uppercase">lure</span>
                   ) : null}
@@ -375,14 +385,19 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                   {a.outcome === "expired"
                     ? ""
                     : `${Math.round((a.latencyMs ?? 0) / 100) / 10}s`}
-                  {/* Against this participant's own unloaded speed, so
-                      a naturally slow person is compared with themselves
-                      rather than with anyone else. */}
-                  {a.latencyVsBaseline ? (
-                    <span className="block font-mono text-[10px] text-ink-3">
-                      {a.latencyVsBaseline.toFixed(1)}x base
-                    </span>
-                  ) : null}
+                  {/* latency_vs_baseline is deliberately NOT shown.
+                      It is latency_ms / baseline_rt_ms, and
+                      baseline_rt_ms is the tap check's synchronisation
+                      OFFSET, around 90ms, not a reaction time. A
+                      fifteen-second reasoning latency over a 90ms offset
+                      reads as "174x base", which a reviewer would
+                      naturally take to mean 174 times slower than this
+                      participant's normal speed. It means nothing of the
+                      kind. The field stays in the view and the export,
+                      because that is the one definition and changing it
+                      is the owner's call, but a number nobody can
+                      interpret does not belong on the page where runs
+                      are judged. */}
                 </td>
                 <td className="py-2 tabular-nums text-ink-2">
                   {(a.brier ?? -1) < 0 ? "," : a.brier?.toFixed(2)}
