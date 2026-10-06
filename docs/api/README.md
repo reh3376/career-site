@@ -8319,6 +8319,13 @@ One run, summarised for a list.
 | `recallStrategy` | `string` | string |  | What the participant said about holding the number: encode or defer. Asked in the debrief, because the two produce different loads during the questions and an uncontrolled variable becomes a recorded one. |
 | `baselineRtSdMs` | `int32` | number |  | Variability of the tap-check presses, a cheap read on baseline attention. Sits beside baseline_rt_ms, which the list already had: a slow participant is only interesting against their own unloaded speed, and a jittery one against their own steadiness. |
 | `repeatMatchedBy` | `string` | string |  | How a repeat was recognised: account, email or cookie. Descending reliability, and worth knowing which: a cookie match is defeated by a private window, so it is weaker evidence than an account. |
+| `attemptNo` | `int32` | number |  | Which sitting this was for this participant, 1 for a first run. Zero means no identity could place the run at all, which is a different statement from "first" and must not be read as one. |
+| `attemptNoStrongest` | `int32` | number |  | The same number read from the single most reliable identity that had an answer, rather than from the union of all three. Published beside attempt_no so a reader can see both; they differ when the identities saw different histories. |
+| `attemptSource` | `string` | string |  | Which identity produced attempt_no: account, email, cookie, or none. A sequence resting on a cookie is weaker evidence than one resting on an account, and the reviewer decides what that is worth. |
+| `attemptSourcesDisagree` | `bool` | boolean |  | The two readings disagree, so the sequence needs a human rather than a default. |
+| `priorByAccount` | `int32` | number |  | What each identity could see when the run started, as recorded. Negative means no such link existed; zero means the link existed and saw no prior sittings. The distinction is the whole reason three numbers are kept rather than one. |
+| `priorByEmail` | `int32` | number |  | Prior sittings visible by email address at the moment this started. |
+| `priorByCookie` | `int32` | number |  | Prior sittings visible by visitor cookie at the moment this started. |
 
 ### GetDecisionTestRunRequest
 

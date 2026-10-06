@@ -49,12 +49,41 @@ status tags and an unreviewed-first filter on the list with a count.
 *Exit:* the owner can review a run end to end on a deployed build,
 which is the only test that counts for UI here.
 
-**S3. The whole record on one page.** Surface `recall_strategy`,
-`age_range`, the tap-check result, `baseline_rt_ms` and its standard
-deviation, and `repeat_matched_by`. Add the fields missing from `DTRun`
-to the query rather than inventing new ones.
+**S3. The whole record on one page. DONE 2026-10-06.**
+Most of the list was already carried by S2's work: `recall_strategy`,
+the tap-check result, `baseline_rt_ms` and its standard deviation and
+`repeat_matched_by` were on the detail page. Three things were not.
+
+`age_range` was collected on every run and rendered nowhere, on either
+the list or the detail page.
+
+**The attempt sequence was absent entirely** from `DTRun`, the proto and
+the console, although S1 built the rule for it. That is the gap that
+mattered: the owner's requirement was that a first run be labelled as a
+first run and every later one labelled as what it is, and a reviewer had
+to open `/admin/db` to find out which sitting they were looking at. The
+console now reads `dt_attempt_no`, `dt_attempt_strongest` and
+`dt_attempt_source` rather than reimplementing them, shows the three
+point-in-time observations the number was computed from, and flags when
+the two readings disagree. A run no identity could place reads
+"sequence unknown", never "first": those are different statements and
+collapsing them would invent a fact about a person.
+
+**And a latent bug in the same surface.** `DTGetRun` listed up to 200
+runs and scanned them in Go for a matching key, so the 201st run would
+have made every older run's detail page report that a run which exists
+does not exist, silently. The archive is never pruned, so that was a
+matter of time rather than chance. The projection is now shared between
+the list and the single-run read, with the cap only on the list. The
+test inserts 201 rows and fails on the old code.
+
+**S3 as planned.** Surface `recall_strategy`, `age_range`, the
+tap-check result, `baseline_rt_ms` and its standard deviation, and
+`repeat_matched_by`. Add the fields missing from `DTRun` to the query
+rather than inventing new ones.
 *Exit:* nothing a reviewer needs in order to judge a run requires
-`/admin/db`.
+`/admin/db`. **Met, pending the live pass**, which is the only test that
+counts for UI here.
 
 **S4. Curation reaches the handoff.** Export excludes `do_not_use` by
 default with an opt-in; export records what it contained; aggregates
@@ -66,6 +95,7 @@ unreviewed.
 **Order.** S1 gates everything. S2 is what the owner asked for and is
 the point of the milestone. S3 and S4 are independent of each other and
 either can follow. S4 before the first finding is quoted anywhere.
+S1, S2 and S3 are done; S4 is the remainder of M9.
 
 
 ---

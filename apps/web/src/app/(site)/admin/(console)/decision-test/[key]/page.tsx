@@ -6,6 +6,7 @@ import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
 
 import type { Run } from "../runs";
+import { attemptEvidence, attemptLabel } from "../runs";
 import { BlockReview, SessionReview } from "../review";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
@@ -96,6 +97,7 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
         {[
           run.startedAt?.slice(0, 16).replace("T", " "),
           run.status,
+          run.ageRange,
           run.education,
           run.occupation,
           run.deviceClass,
@@ -122,6 +124,24 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           run.baselineRtSdMs ? `sd ${run.baselineRtSdMs}ms` : null,
           run.recallStrategy ? `held the number: ${run.recallStrategy}` : "strategy not given",
           run.isRepeat ? `repeat, matched by ${run.repeatMatchedBy || "unknown"}` : null,
+        ]
+          .filter(Boolean)
+          .join("  ·  ")}
+      </p>
+
+      {/* Which sitting this was, and what that claim rests on.
+          The owner's requirement was that a first run be labelled as
+          one and every later run as what it is. The number is derived
+          from three point-in-time observations rather than decided when
+          the run started, so the observations are shown beside it: a
+          sequence resting on a cookie is weaker evidence than one
+          resting on an account, and that is the reviewer's call to
+          make, not the schema's. */}
+      <p className="mt-2 font-mono text-[11px] tracking-[0.1em] text-ink-3">
+        {[
+          attemptLabel(run),
+          attemptEvidence(run),
+          priorsRead(run),
         ]
           .filter(Boolean)
           .join("  ·  ")}
@@ -317,4 +337,27 @@ function RecallTag({ outcome }: { outcome?: string }) {
       {outcome.replace("_", " ")}
     </span>
   );
+}
+
+/**
+ * The three observations, spelled out.
+ *
+ * -1 is the wire's way of saying there was no such link at all, which
+ * is not the same as a link that existed and saw nothing. Writing "no
+ * account" rather than "account: 0" keeps that distinction legible,
+ * because it is the distinction the whole three-column design exists
+ * to preserve.
+ */
+function priorsRead(run: Run): string | null {
+  const read = (label: string, v?: number) =>
+    v === undefined || v < 0 ? `no ${label}` : `${label} saw ${v}`;
+  const parts = [
+    read("account", run.priorByAccount),
+    read("email", run.priorByEmail),
+    read("cookie", run.priorByCookie),
+  ];
+  // Nothing to say when no identity existed at all; the label already
+  // reads "sequence unknown" and repeating it three ways is noise.
+  if (parts.every((p) => p.startsWith("no "))) return null;
+  return parts.join(", ");
 }

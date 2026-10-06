@@ -54,6 +54,37 @@ type DTRun struct {
 	RecallStrategy  string
 	BaselineRTSDMs  int
 	RepeatMatchedBy string
+
+	// Where this sitting falls in the participant's sequence.
+	//
+	// The owner's requirement, in his words: a first run must be labelled
+	// as a first run and every later one labelled as what it is. That is
+	// not decidable at write time, so it is not decided there. Each
+	// session stores what each identity could see at the moment it
+	// started, and the sequence is computed from those by
+	// `dt_attempt_no` and friends (migration 00058), which are the single
+	// definition. Go reads the functions; it does not reimplement them.
+	//
+	// Pointers because NULL is a real and different answer. No identity
+	// could place the run at all is not the same statement as this is a
+	// first sitting, and flattening the first into the second would
+	// manufacture a fact about a person.
+	AttemptNo          *int
+	AttemptNoStrongest *int
+	// account, email, cookie, or none. A number resting on a cookie is
+	// weaker evidence than one resting on an account, and the reviewer
+	// is the person who should decide what that is worth.
+	AttemptSource string
+	// The union and the strongest-source reading disagree. Worth
+	// surfacing rather than hiding: it means the identities saw
+	// different histories, which is exactly when the number needs a human.
+	AttemptSourcesDisagree bool
+	// The three raw observations, so a reviewer can see what the number
+	// was computed from. NULL means no such link existed; 0 means the
+	// link existed and saw no prior sittings.
+	PriorByAccount *int
+	PriorByEmail   *int
+	PriorByCookie  *int
 }
 
 // DTBlockSummary is one block of a run, with its recall.
@@ -86,13 +117,17 @@ type DTAnswerRow struct {
 	LatencyMs  int
 }
 
-// DTListRuns returns runs newest first.
+// dtRunSelect is the one projection of a run, shared by the list and by
+// the single-run read.
 //
-// Synthetic runs are excluded unless asked for. They are agent-driven
-// and are not data; keeping them out by default means the list reads as
-// what it claims to be.
-func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStatus string) ([]DTRun, error) {
-	rows, err := r.pool.Query(ctx, `
+// Shared deliberately. DTGetRun used to call DTListRuns and scan the
+// result in Go for a matching key, which worked only because the list is
+// capped at 200: run 201 would have made every older run's detail page
+// report "no run" for data that was sitting in the table. Nothing would
+// have failed, the page would simply have said the run did not exist.
+// One projection, two predicates, and the cap applies only to the list
+// where it belongs.
+const dtRunSelect = `
 		SELECT s.public_id::text, s.status,
 		       coalesce(p.display_name,''), coalesce(p.age_range,''),
 		       coalesce(p.education,''), coalesce(p.occupation,''),
@@ -110,9 +145,46 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStat
 		       s.review_status, s.review_reason, s.review_note, s.reviewed_at,
 		       (SELECT count(*) FROM dt_block_reviews br
 		         WHERE br.session_id = s.id AND br.status = 'do_not_use'),
-		       s.recall_strategy, coalesce(s.baseline_rt_sd_ms,0), s.repeat_matched_by
+		       s.recall_strategy, coalesce(s.baseline_rt_sd_ms,0), s.repeat_matched_by,
+		       -- The attempt sequence, from the functions that define it
+		       -- (migration 00058). Not recomputed here: the views call
+		       -- the same functions, so the console and the analysis
+		       -- cannot disagree about which sitting this was.
+		       dt_attempt_no(s.prior_by_account, s.prior_by_email, s.prior_by_cookie),
+		       dt_attempt_strongest(s.prior_by_account, s.prior_by_email, s.prior_by_cookie),
+		       dt_attempt_source(s.prior_by_account, s.prior_by_email, s.prior_by_cookie),
+		       dt_attempt_no(s.prior_by_account, s.prior_by_email, s.prior_by_cookie)
+		         IS DISTINCT FROM
+		       dt_attempt_strongest(s.prior_by_account, s.prior_by_email, s.prior_by_cookie),
+		       s.prior_by_account, s.prior_by_email, s.prior_by_cookie
 		  FROM dt_sessions s
-		  LEFT JOIN dt_participants p ON p.id = s.participant_id
+		  LEFT JOIN dt_participants p ON p.id = s.participant_id`
+
+// dtScanRun reads one row of dtRunSelect. One scanner for both callers,
+// so a column added to the projection cannot be read by one and missed
+// by the other.
+func dtScanRun(rows interface{ Scan(...any) error }) (DTRun, error) {
+	var v DTRun
+	err := rows.Scan(&v.SessionKey, &v.Status, &v.DisplayName, &v.AgeRange,
+		&v.Education, &v.Occupation, &v.GaveEmail, &v.AudioMode, &v.DeviceClass,
+		&v.TapCheckPassed, &v.BaselineRTMs, &v.IsRepeat, &v.IsSynthetic,
+		&v.InstrumentVersion, &v.ItemSetVersion, &v.Correct, &v.Answered,
+		&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt,
+		&v.ReviewStatus, &v.ReviewReason, &v.ReviewNote, &v.ReviewedAt,
+		&v.BlocksExcluded, &v.RecallStrategy, &v.BaselineRTSDMs,
+		&v.RepeatMatchedBy, &v.AttemptNo, &v.AttemptNoStrongest,
+		&v.AttemptSource, &v.AttemptSourcesDisagree,
+		&v.PriorByAccount, &v.PriorByEmail, &v.PriorByCookie)
+	return v, err
+}
+
+// DTListRuns returns runs newest first.
+//
+// Synthetic runs are excluded unless asked for. They are agent-driven
+// and are not data; keeping them out by default means the list reads as
+// what it claims to be.
+func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStatus string) ([]DTRun, error) {
+	rows, err := r.pool.Query(ctx, dtRunSelect+`
 		 WHERE ($1 OR NOT s.is_synthetic)
 		   -- "unreviewed" rather than an empty string, so asking for the
 		   -- queue is explicit and an empty filter still means "all".
@@ -128,15 +200,8 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStat
 
 	var out []DTRun
 	for rows.Next() {
-		var v DTRun
-		if err := rows.Scan(&v.SessionKey, &v.Status, &v.DisplayName, &v.AgeRange,
-			&v.Education, &v.Occupation, &v.GaveEmail, &v.AudioMode, &v.DeviceClass,
-			&v.TapCheckPassed, &v.BaselineRTMs, &v.IsRepeat, &v.IsSynthetic,
-			&v.InstrumentVersion, &v.ItemSetVersion, &v.Correct, &v.Answered,
-			&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt,
-			&v.ReviewStatus, &v.ReviewReason, &v.ReviewNote, &v.ReviewedAt,
-			&v.BlocksExcluded, &v.RecallStrategy, &v.BaselineRTSDMs,
-			&v.RepeatMatchedBy); err != nil {
+		v, err := dtScanRun(rows)
+		if err != nil {
 			return nil, fmt.Errorf("decision test: scan run: %w", err)
 		}
 		out = append(out, v)
@@ -146,20 +211,17 @@ func (r *Repo) DTListRuns(ctx context.Context, includeSynthetic bool, reviewStat
 
 // DTGetRun returns one run with its blocks and answers.
 func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSummary, []DTAnswerRow, error) {
-	runs, err := r.DTListRuns(ctx, true, "")
+	// By key, in SQL. This used to list up to 200 runs and scan them in
+	// Go for a match, which meant the 201st run would have made every
+	// older run's page report that it did not exist. The table is the
+	// archive and nothing is ever deleted from it, so that was a matter
+	// of time rather than of chance.
+	v, err := dtScanRun(r.pool.QueryRow(ctx, dtRunSelect+`
+		 WHERE s.public_id::text = $1`, key))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("decision test: no run %q: %w", key, err)
 	}
-	var run *DTRun
-	for i := range runs {
-		if runs[i].SessionKey == key {
-			run = &runs[i]
-			break
-		}
-	}
-	if run == nil {
-		return nil, nil, nil, fmt.Errorf("decision test: no run %q", key)
-	}
+	run := &v
 
 	// Blocks, from the view, with the recall joined on.
 	brows, err := r.pool.Query(ctx, `
