@@ -67,6 +67,11 @@ type Handoff = {
   practice: Block;
   questionCount: number;
   timings?: Timings;
+  // Set by ?synthetic=1 on the briefing. Carried through the handoff so
+  // the run screen can keep saying so, rather than the warning
+  // disappearing at the navigation and leaving somebody fifteen minutes
+  // into a run they think counts.
+  synthetic?: boolean;
 };
 
 /**
@@ -333,6 +338,16 @@ export function RunScreen() {
             ? `${question.positionOverall} of ${questionCount}`
             : "practice"}
         </span>
+        {/* A label in the chrome rather than a banner in the page. The
+            run screen is a timed instrument and the participant is
+            reading the middle of it under load, so the warning goes
+            where it cannot move a prompt or an option by a pixel. It
+            stays on screen for the whole run. */}
+        {handoff.synthetic ? (
+          <span className="font-mono text-[11px] tracking-[0.14em] text-signal uppercase">
+            synthetic, not counted
+          </span>
+        ) : null}
         {/* The visual beat, for a participant who cannot use sound. It
             runs on the same clock as the tick rather than its own. */}
         {audioMode === "visual" ? (

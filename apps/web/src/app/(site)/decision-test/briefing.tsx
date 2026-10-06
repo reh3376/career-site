@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { decisionTestClient } from "@/lib/decision-test-client";
@@ -50,6 +50,29 @@ export function Briefing() {
   // participant is told which they are in, because "tap along" and
   // "you are being measured now" are different instructions.
   const [tapPhase, setTapPhase] = useState<"idle" | "lead" | "measuring">("idle");
+
+  // ?synthetic=1 marks the run as a test rather than data.
+  //
+  // Asked for by the owner so agents can exercise the whole UI. Two
+  // things make it safe to have on a public page.
+  //
+  // It is announced on every step, so a participant who arrived on this
+  // URL by accident is told their run will not count rather than
+  // finding out never. And it only ever EXCLUDES: a synthetic session
+  // is filtered out of every view that makes a claim about people, so
+  // the worst a misuse can do is discard one run, never corrupt the
+  // set.
+  //
+  // useSearchParams rather than reading window.location in an effect.
+  // The effect version lints as react-hooks/set-state-in-effect, and
+  // the rule is right: the flag is known at render, so deriving it in
+  // an effect means the first paint is always wrong and then corrects
+  // itself. For a warning about whether this run counts, the frame that
+  // says the wrong thing is the one frame that matters. The cost is a
+  // Suspense boundary in page.tsx, which is one line.
+  const params = useSearchParams();
+  const flag = params.get("synthetic");
+  const synthetic = flag === "1" || flag === "true";
   const [beat, setBeat] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -195,7 +218,7 @@ export function Briefing() {
           baselineRtMs: tap?.rt ?? 0,
           baselineRtSdMs: tap?.sd ?? 0,
         },
-        synthetic: false,
+        synthetic,
       });
       const p = res.practice;
       sessionStorage.setItem(
@@ -204,6 +227,10 @@ export function Briefing() {
           sessionKey: res.sessionKey,
           audioMode,
           questionCount: res.questionCount,
+          // Carried over so the run screen can keep saying it. The
+          // warning has to survive the navigation: the briefing is a
+          // minute, the run is fifteen.
+          synthetic,
           // Served per session so a run cannot drift from the settings
           // it started under, even if the owner edits them mid-run.
           timings: res.timings
@@ -234,7 +261,7 @@ export function Briefing() {
       setError("The test could not be started. Try again in a moment.");
       setStarting(false);
     }
-  }, [audioMode, form, router, tap]);
+  }, [audioMode, form, router, synthetic, tap]);
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
@@ -247,6 +274,24 @@ export function Briefing() {
       >
         Fifteen minutes, and real effort.
       </h1>
+
+      {/* Said once, at the top, on every step. The flag is in a public
+          URL, so somebody can reach it who did not mean to, and the one
+          thing they must not do is spend fifteen minutes on a run that
+          was never going to count. */}
+      {synthetic ? (
+        <p
+          role="status"
+          className="mt-8 rounded-md border border-signal bg-paper-2 px-5 py-4 text-sm text-ink-2"
+        >
+          <strong className="text-ink">This is a test run, not a real one.</strong>{" "}
+          It is marked synthetic and excluded from every result, so nothing
+          you do here is counted or reported. If you meant to take the test
+          for real, start from{" "}
+          <Link href="/decision-test">the plain link</Link> with no flag on
+          the end.
+        </p>
+      ) : null}
 
       {step === "warning" ? (
         <section className="mt-10 space-y-5 text-base leading-relaxed text-ink-2">
@@ -487,13 +532,22 @@ export function Briefing() {
                 Use the on-screen beat
               </button>
             ) : null}
-            {tap?.passed && tapPhase === "idle" ? (
+            {/* A synthetic run may continue without passing.
+                Tapping in rhythm is a human motor skill: an agent
+                driving the page cannot produce it, and Continue only
+                ever appeared once the check passed, so no agent could
+                reach the rest of the test at all. That is a large part
+                of why the debrief question shipped unrendered.
+                tapCheckPassed is still recorded truthfully from
+                whatever the check actually found, so the row says the
+                check was not passed rather than pretending it was. */}
+            {tapPhase === "idle" && (tap?.passed || synthetic) ? (
               <button
                 type="button"
                 onClick={() => setStep("form")}
                 className="rounded-md border border-line bg-canvas px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-ink uppercase transition-colors hover:border-accent hover:text-accent"
               >
-                Continue
+                {tap?.passed ? "Continue" : "Continue without passing"}
               </button>
             ) : null}
           </div>
