@@ -302,15 +302,19 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		AttemptNoStrongest:     int32(derefOr(r.AttemptNoStrongest, 0)),
 		AttemptSource:          r.AttemptSource,
 		AttemptSourcesDisagree: r.AttemptSourcesDisagree,
-		// The three prior counts are nullable on the wire, because here
-		// 0 is a real and different answer: the link existed and saw no
-		// earlier sittings. A sentinel was tried and does not work, as
-		// proto3 implicit presence drops a zero from the JSON and makes
-		// it indistinguishable from absent, which is the one distinction
-		// these columns exist for.
-		PriorByAccount: int32Ptr(r.PriorByAccount),
-		PriorByEmail:   int32Ptr(r.PriorByEmail),
-		PriorByCookie:  int32Ptr(r.PriorByCookie),
+		// The deprecated scalars, still populated so nothing that reads
+		// them regresses, and still lossy: a zero vanishes from the JSON
+		// under implicit presence and reads as "no such link".
+		PriorByAccount: int32(derefOr(r.PriorByAccount, 0)),
+		PriorByEmail:   int32(derefOr(r.PriorByEmail, 0)),
+		PriorByCookie:  int32(derefOr(r.PriorByCookie, 0)),
+		// The replacement, where each field has explicit presence and a
+		// zero therefore survives. This is what the console reads.
+		PriorSittings: &v1.DecisionTestPriorSittings{
+			ByAccount: int32Ptr(r.PriorByAccount),
+			ByEmail:   int32Ptr(r.PriorByEmail),
+			ByCookie:  int32Ptr(r.PriorByCookie),
+		},
 		KeyVersion:     r.KeyVersion,
 		WantsResults:   r.WantsResults,
 		FinishedAt:     rfc3339OrEmpty(r.FinishedAt),

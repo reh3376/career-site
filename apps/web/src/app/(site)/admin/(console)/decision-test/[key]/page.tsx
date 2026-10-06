@@ -514,20 +514,26 @@ function RecallTag({ outcome }: { outcome?: string }) {
  * "account saw 0" keeps that distinction legible, because it is the
  * distinction the whole three-column design exists to preserve.
  *
- * The fields are `optional` in the contract for the same reason. They
- * were plain int32 first, and proto3 implicit presence dropped every
- * zero from the JSON, so a real "saw nothing" arrived as undefined and
- * this function confidently reported "no account" for an account that
- * existed. Found by reading the deployed page against the database
- * rather than by any test.
+ * Read from `priorSittings`, whose fields are `optional`, for exactly
+ * that reason. The flat prior_by_* fields were plain int32 and proto3
+ * implicit presence dropped every zero from the JSON, so a real "saw
+ * nothing" arrived as undefined and this function confidently reported
+ * "no account" for an account that existed. Found by reading the
+ * deployed page against the database, not by any test.
+ *
+ * The flat fields could not simply be changed: career.v1 is
+ * additive-only and buf breaking refuses a cardinality change on a
+ * published field, so they are deprecated and this message replaces
+ * them.
  */
 function priorsRead(run: Run): string | null {
   const read = (label: string, v?: number) =>
     v === undefined || v === null ? `no ${label}` : `${label} saw ${v}`;
+  const p = run.priorSittings;
   const parts = [
-    read("account", run.priorByAccount),
-    read("email", run.priorByEmail),
-    read("cookie", run.priorByCookie),
+    read("account", p?.byAccount),
+    read("email", p?.byEmail),
+    read("cookie", p?.byCookie),
   ];
   // Nothing to say when no identity existed at all; the label already
   // reads "sequence unknown" and repeating it three ways is noise.

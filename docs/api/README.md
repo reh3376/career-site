@@ -8324,13 +8324,33 @@ One run, summarised for a list.
 | `attemptNoStrongest` | `int32` | number |  | The same number read from the single most reliable identity that had an answer, rather than from the union of all three. Published beside attempt_no so a reader can see both; they differ when the identities saw different histories. |
 | `attemptSource` | `string` | string |  | Which identity produced attempt_no: account, email, cookie, or none. A sequence resting on a cookie is weaker evidence than one resting on an account, and the reviewer decides what that is worth. |
 | `attemptSourcesDisagree` | `bool` | boolean |  | The two readings disagree, so the sequence needs a human rather than a default. |
-| `priorByAccount` | `int32` | number |  | _(oneof `_prior_by_account`)_ What each identity could see when the run started, as recorded. `optional`, and that is load-bearing rather than stylistic. Under proto3 implicit presence a scalar equal to its default is omitted from the JSON entirely, so a link that existed and saw zero prior sittings arrived indistinguishable from a link that never existed. That is precisely the distinction these three columns exist to preserve, and it was being destroyed on the wire. Explicit presence transmits the zero. Absent means there was no such link. Zero means there was one and it saw nothing. |
-| `priorByEmail` | `int32` | number |  | _(oneof `_prior_by_email`)_ Prior sittings visible by email address at the moment this started. |
-| `priorByCookie` | `int32` | number |  | _(oneof `_prior_by_cookie`)_ Prior sittings visible by visitor cookie at the moment this started. |
+| `priorByAccount` | `int32` | number |  | Deprecated: use prior_sittings, which can express a zero. These three shipped as plain int32 and cannot carry the one distinction they exist for. Under proto3 implicit presence a scalar equal to its default is omitted from the JSON entirely, so a link that existed and saw zero prior sittings arrives indistinguishable from a link that never existed at all. They are kept and still populated, because career.v1 is additive-only and a published field is not edited in place. A reader that uses them gets the lossy answer, which is why the replacement sits beside them rather than quietly reusing a number. |
+| `priorByEmail` | `int32` | number |  | Deprecated: use prior_sittings. |
+| `priorByCookie` | `int32` | number |  | Deprecated: use prior_sittings. |
 | `keyVersion` | `string` | string |  | Which answer key graded this run. Part of the provenance triple with instrument_version and item_set_version. |
 | `wantsResults` | `bool` | boolean |  | Whether the participant asked for their results. |
 | `finishedAt` | `string` | string |  | When it ended, RFC3339, empty while still running. |
 | `reviewedByName` | `string` | string |  | Who signed the current verdict. A curated dataset whose exclusions cannot be attributed has anonymous decisions in it. |
+| `priorSittings` | [`DecisionTestPriorSittings`](#decisiontestpriorsittings) | object |  | What each identity could see when the run started, as recorded. A message rather than three scalars, because a message has natural presence: each field can distinguish "this link existed and saw nothing" from "there was no such link", which is the entire reason three observations are stored instead of one derived number. |
+
+### DecisionTestPriorSittings
+
+Prior sittings each identity could see at the moment a run started.
+
+Point-in-time observations, not a conclusion. The sitting number is
+derived from them in SQL (dt_attempt_no and friends), so the sequence
+can be recomputed under a different rule later without the raw
+observations having been thrown away.
+
+Every field is `optional`: absent means there was no such link, and
+zero means there was one and it saw no earlier sittings. Collapsing
+those two would manufacture a fact about a person.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `byAccount` | `int32` | number |  | _(oneof `_by_account`)_ Prior sittings visible by account at the moment this run started. |
+| `byEmail` | `int32` | number |  | _(oneof `_by_email`)_ Prior sittings visible by email address at the moment this started. |
+| `byCookie` | `int32` | number |  | _(oneof `_by_cookie`)_ Prior sittings visible by visitor cookie at the moment this started. |
 
 ### GetDecisionTestRunRequest
 

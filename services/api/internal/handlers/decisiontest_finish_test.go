@@ -123,21 +123,25 @@ func TestAZeroPriorCountSurvivesTheWire(t *testing.T) {
 		// Email and cookie left nil: no such link.
 	})
 
-	if run.PriorByAccount == nil {
-		t.Fatal("prior_by_account is nil for an account that saw zero prior " +
+	ps := run.GetPriorSittings()
+	if ps == nil {
+		t.Fatal("prior_sittings is absent entirely")
+	}
+	if ps.ByAccount == nil {
+		t.Fatal("by_account is nil for an account that saw zero prior " +
 			"sittings: the field needs explicit presence, or the zero is " +
 			"dropped and reads as 'no account'")
 	}
-	if got := *run.PriorByAccount; got != 0 {
-		t.Errorf("prior_by_account = %d, want 0", got)
+	if got := *ps.ByAccount; got != 0 {
+		t.Errorf("by_account = %d, want 0", got)
 	}
 	// And the genuinely absent ones must stay absent, or the fix would
 	// have invented links that were never there.
-	if run.PriorByEmail != nil {
-		t.Errorf("prior_by_email = %d, want absent", *run.PriorByEmail)
+	if ps.ByEmail != nil {
+		t.Errorf("by_email = %d, want absent", *ps.ByEmail)
 	}
-	if run.PriorByCookie != nil {
-		t.Errorf("prior_by_cookie = %d, want absent", *run.PriorByCookie)
+	if ps.ByCookie != nil {
+		t.Errorf("by_cookie = %d, want absent", *ps.ByCookie)
 	}
 
 	// The JSON is where it actually broke, so check the JSON.
@@ -149,11 +153,23 @@ func TestAZeroPriorCountSurvivesTheWire(t *testing.T) {
 	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if _, ok := m["priorByAccount"]; !ok {
-		t.Error("priorByAccount is missing from the JSON although it is zero: " +
+	nested, ok := m["priorSittings"].(map[string]any)
+	if !ok {
+		t.Fatal("priorSittings is missing from the JSON")
+	}
+	if _, ok := nested["byAccount"]; !ok {
+		t.Error("byAccount is missing from the JSON although it is zero: " +
 			"the browser cannot tell that from an account that never existed")
 	}
-	if _, ok := m["priorByEmail"]; ok {
-		t.Error("priorByEmail is present in the JSON although there was no such link")
+	if _, ok := nested["byEmail"]; ok {
+		t.Error("byEmail is present in the JSON although there was no such link")
+	}
+
+	// And the deprecated scalar demonstrates the problem it was replaced
+	// for, so the reason the new message exists stays checkable rather
+	// than being only a comment.
+	if _, ok := m["priorByAccount"]; ok {
+		t.Error("priorByAccount serialised a zero, so the deprecated field is " +
+			"no longer lossy and this test's premise has changed")
 	}
 }

@@ -53,10 +53,17 @@ export type Run = {
   attemptSourcesDisagree?: boolean;
   // What each identity could see when the run started. Absent means
   // there was no such link; 0 means there was one and it saw nothing.
-  // The contract marks these optional so the zero survives the wire.
-  priorByAccount?: number;
-  priorByEmail?: number;
-  priorByCookie?: number;
+  //
+  // A nested message rather than three scalars: the flat
+  // prior_by_* fields are plain int32 and a zero vanishes from the
+  // JSON under proto3 implicit presence, which destroys exactly that
+  // distinction. They are deprecated in the contract and still sent;
+  // this is the one to read.
+  priorSittings?: {
+    byAccount?: number;
+    byEmail?: number;
+    byCookie?: number;
+  };
 };
 
 /**

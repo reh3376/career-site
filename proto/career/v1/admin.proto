@@ -3249,23 +3249,23 @@ message DecisionTestRun {
   // The two readings disagree, so the sequence needs a human rather
   // than a default.
   bool attempt_sources_disagree = 33;
-  // What each identity could see when the run started, as recorded.
+  // Deprecated: use prior_sittings, which can express a zero.
   //
-  // `optional`, and that is load-bearing rather than stylistic. Under
-  // proto3 implicit presence a scalar equal to its default is omitted
-  // from the JSON entirely, so a link that existed and saw zero prior
-  // sittings arrived indistinguishable from a link that never existed.
-  // That is precisely the distinction these three columns exist to
-  // preserve, and it was being destroyed on the wire. Explicit presence
-  // transmits the zero.
+  // These three shipped as plain int32 and cannot carry the one
+  // distinction they exist for. Under proto3 implicit presence a scalar
+  // equal to its default is omitted from the JSON entirely, so a link
+  // that existed and saw zero prior sittings arrives indistinguishable
+  // from a link that never existed at all.
   //
-  // Absent means there was no such link. Zero means there was one and
-  // it saw nothing.
-  optional int32 prior_by_account = 34;
-  // Prior sittings visible by email address at the moment this started.
-  optional int32 prior_by_email = 35;
-  // Prior sittings visible by visitor cookie at the moment this started.
-  optional int32 prior_by_cookie = 36;
+  // They are kept and still populated, because career.v1 is
+  // additive-only and a published field is not edited in place. A
+  // reader that uses them gets the lossy answer, which is why the
+  // replacement sits beside them rather than quietly reusing a number.
+  int32 prior_by_account = 34 [deprecated = true];
+  // Deprecated: use prior_sittings.
+  int32 prior_by_email = 35 [deprecated = true];
+  // Deprecated: use prior_sittings.
+  int32 prior_by_cookie = 36 [deprecated = true];
   // Which answer key graded this run. Part of the provenance triple
   // with instrument_version and item_set_version.
   string key_version = 37;
@@ -3276,6 +3276,32 @@ message DecisionTestRun {
   // Who signed the current verdict. A curated dataset whose exclusions
   // cannot be attributed has anonymous decisions in it.
   string reviewed_by_name = 40;
+  // What each identity could see when the run started, as recorded.
+  //
+  // A message rather than three scalars, because a message has natural
+  // presence: each field can distinguish "this link existed and saw
+  // nothing" from "there was no such link", which is the entire reason
+  // three observations are stored instead of one derived number.
+  DecisionTestPriorSittings prior_sittings = 41;
+}
+
+// Prior sittings each identity could see at the moment a run started.
+//
+// Point-in-time observations, not a conclusion. The sitting number is
+// derived from them in SQL (dt_attempt_no and friends), so the sequence
+// can be recomputed under a different rule later without the raw
+// observations having been thrown away.
+//
+// Every field is `optional`: absent means there was no such link, and
+// zero means there was one and it saw no earlier sittings. Collapsing
+// those two would manufacture a fact about a person.
+message DecisionTestPriorSittings {
+  // Prior sittings visible by account at the moment this run started.
+  optional int32 by_account = 1;
+  // Prior sittings visible by email address at the moment this started.
+  optional int32 by_email = 2;
+  // Prior sittings visible by visitor cookie at the moment this started.
+  optional int32 by_cookie = 3;
 }
 
 // Asks for one run in full.

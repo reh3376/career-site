@@ -30,6 +30,15 @@ lint-proto: ## Lint the Protobuf contracts (STANDARD + COMMENTS rules)
 	cd proto && $(BUF) dep update && $(BUF) lint
 
 breaking: ## Check the contracts for breaking changes against main
+	# Refresh main first. CI does this explicitly before the check, and
+	# a laptop does not: `git fetch origin` updates origin/main and
+	# leaves the local main branch wherever it was. So this passed
+	# locally against a main eleven commits stale, which did not yet
+	# contain the fields being changed, and failed in CI, which is the
+	# only run that was actually comparing against what had shipped.
+	# A check that compares against the wrong baseline is worse than no
+	# check: it reports success.
+	git fetch -q origin main:main 2>/dev/null || git fetch -q origin main
 	$(BUF) breaking proto --against '.git#branch=main,subdir=proto'
 
 gen: ## Regenerate Go, TypeScript, and Python code from proto/

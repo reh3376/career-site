@@ -2273,7 +2273,7 @@ class ListDecisionTestRunsResponse(_message.Message):
     def __init__(self, counts: _Optional[_Union[DecisionTestReviewCounts, _Mapping]] = ..., runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
 
 class DecisionTestRun(_message.Message):
-    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by", "attempt_no", "attempt_no_strongest", "attempt_source", "attempt_sources_disagree", "prior_by_account", "prior_by_email", "prior_by_cookie", "key_version", "wants_results", "finished_at", "reviewed_by_name")
+    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by", "attempt_no", "attempt_no_strongest", "attempt_source", "attempt_sources_disagree", "prior_by_account", "prior_by_email", "prior_by_cookie", "key_version", "wants_results", "finished_at", "reviewed_by_name", "prior_sittings")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -2314,6 +2314,7 @@ class DecisionTestRun(_message.Message):
     WANTS_RESULTS_FIELD_NUMBER: _ClassVar[int]
     FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
     REVIEWED_BY_NAME_FIELD_NUMBER: _ClassVar[int]
+    PRIOR_SITTINGS_FIELD_NUMBER: _ClassVar[int]
     session_key: str
     status: str
     display_name: str
@@ -2354,7 +2355,18 @@ class DecisionTestRun(_message.Message):
     wants_results: bool
     finished_at: str
     reviewed_by_name: str
-    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ..., review_status: _Optional[str] = ..., review_reason: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[str] = ..., blocks_excluded: _Optional[int] = ..., recall_strategy: _Optional[str] = ..., baseline_rt_sd_ms: _Optional[int] = ..., repeat_matched_by: _Optional[str] = ..., attempt_no: _Optional[int] = ..., attempt_no_strongest: _Optional[int] = ..., attempt_source: _Optional[str] = ..., attempt_sources_disagree: _Optional[bool] = ..., prior_by_account: _Optional[int] = ..., prior_by_email: _Optional[int] = ..., prior_by_cookie: _Optional[int] = ..., key_version: _Optional[str] = ..., wants_results: _Optional[bool] = ..., finished_at: _Optional[str] = ..., reviewed_by_name: _Optional[str] = ...) -> None: ...
+    prior_sittings: DecisionTestPriorSittings
+    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ..., review_status: _Optional[str] = ..., review_reason: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[str] = ..., blocks_excluded: _Optional[int] = ..., recall_strategy: _Optional[str] = ..., baseline_rt_sd_ms: _Optional[int] = ..., repeat_matched_by: _Optional[str] = ..., attempt_no: _Optional[int] = ..., attempt_no_strongest: _Optional[int] = ..., attempt_source: _Optional[str] = ..., attempt_sources_disagree: _Optional[bool] = ..., prior_by_account: _Optional[int] = ..., prior_by_email: _Optional[int] = ..., prior_by_cookie: _Optional[int] = ..., key_version: _Optional[str] = ..., wants_results: _Optional[bool] = ..., finished_at: _Optional[str] = ..., reviewed_by_name: _Optional[str] = ..., prior_sittings: _Optional[_Union[DecisionTestPriorSittings, _Mapping]] = ...) -> None: ...
+
+class DecisionTestPriorSittings(_message.Message):
+    __slots__ = ("by_account", "by_email", "by_cookie")
+    BY_ACCOUNT_FIELD_NUMBER: _ClassVar[int]
+    BY_EMAIL_FIELD_NUMBER: _ClassVar[int]
+    BY_COOKIE_FIELD_NUMBER: _ClassVar[int]
+    by_account: int
+    by_email: int
+    by_cookie: int
+    def __init__(self, by_account: _Optional[int] = ..., by_email: _Optional[int] = ..., by_cookie: _Optional[int] = ...) -> None: ...
 
 class GetDecisionTestRunRequest(_message.Message):
     __slots__ = ("session_key",)
