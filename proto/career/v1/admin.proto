@@ -3249,15 +3249,59 @@ message DecisionTestRun {
   // The two readings disagree, so the sequence needs a human rather
   // than a default.
   bool attempt_sources_disagree = 33;
+  // Deprecated: use prior_sittings, which can express a zero.
+  //
+  // These three shipped as plain int32 and cannot carry the one
+  // distinction they exist for. Under proto3 implicit presence a scalar
+  // equal to its default is omitted from the JSON entirely, so a link
+  // that existed and saw zero prior sittings arrives indistinguishable
+  // from a link that never existed at all.
+  //
+  // They are kept and still populated, because career.v1 is
+  // additive-only and a published field is not edited in place. A
+  // reader that uses them gets the lossy answer, which is why the
+  // replacement sits beside them rather than quietly reusing a number.
+  int32 prior_by_account = 34 [deprecated = true];
+  // Deprecated: use prior_sittings.
+  int32 prior_by_email = 35 [deprecated = true];
+  // Deprecated: use prior_sittings.
+  int32 prior_by_cookie = 36 [deprecated = true];
+  // Which answer key graded this run. Part of the provenance triple
+  // with instrument_version and item_set_version.
+  string key_version = 37;
+  // Whether the participant asked for their results.
+  bool wants_results = 38;
+  // When it ended, RFC3339, empty while still running.
+  string finished_at = 39;
+  // Who signed the current verdict. A curated dataset whose exclusions
+  // cannot be attributed has anonymous decisions in it.
+  string reviewed_by_name = 40;
   // What each identity could see when the run started, as recorded.
-  // Negative means no such link existed; zero means the link existed
-  // and saw no prior sittings. The distinction is the whole reason
-  // three numbers are kept rather than one.
-  int32 prior_by_account = 34;
+  //
+  // A message rather than three scalars, because a message has natural
+  // presence: each field can distinguish "this link existed and saw
+  // nothing" from "there was no such link", which is the entire reason
+  // three observations are stored instead of one derived number.
+  DecisionTestPriorSittings prior_sittings = 41;
+}
+
+// Prior sittings each identity could see at the moment a run started.
+//
+// Point-in-time observations, not a conclusion. The sitting number is
+// derived from them in SQL (dt_attempt_no and friends), so the sequence
+// can be recomputed under a different rule later without the raw
+// observations having been thrown away.
+//
+// Every field is `optional`: absent means there was no such link, and
+// zero means there was one and it saw no earlier sittings. Collapsing
+// those two would manufacture a fact about a person.
+message DecisionTestPriorSittings {
+  // Prior sittings visible by account at the moment this run started.
+  optional int32 by_account = 1;
   // Prior sittings visible by email address at the moment this started.
-  int32 prior_by_email = 35;
+  optional int32 by_email = 2;
   // Prior sittings visible by visitor cookie at the moment this started.
-  int32 prior_by_cookie = 36;
+  optional int32 by_cookie = 3;
 }
 
 // Asks for one run in full.
@@ -3274,6 +3318,8 @@ message GetDecisionTestRunResponse {
   repeated DecisionTestBlock blocks = 2;
   // Every answer, in presentation order.
   repeated DecisionTestAnswer answers = 3;
+  // Every judgement ever recorded for this run, oldest first.
+  repeated DecisionTestReviewEvent review_history = 4;
 }
 
 // Asks for the dataset as CSV.
@@ -3394,6 +3440,17 @@ message DecisionTestBlock {
   string review_status = 14;
   // The note attached to this block's judgement.
   string review_note = 15;
+  // Digit positions matching the expected number, after any
+  // transformation the block required.
+  int32 digits_correct = 16;
+  // Digit positions that survived, scored against whichever of the
+  // presented or the expected number the response is closer to. This is
+  // what memory_failure_pct is derived from, and why an untransformed
+  // answer reads as full retention: the number was held and only the
+  // operation failed. Not the length of the number.
+  int32 digits_held = 17;
+  // How long the participant took to give the number back, in ms.
+  int32 recall_latency_ms = 18;
 }
 
 // One answer.
@@ -3412,4 +3469,58 @@ message DecisionTestAnswer {
   int32 confidence = 6;
   // Time to answer, in milliseconds.
   int32 latency_ms = 7;
+  // The question as it was put.
+  string prompt = 8;
+  // The option the participant chose, as text. Empty on an expiry,
+  // where nothing was chosen at all.
+  string chosen_text = 9;
+  // The option that was correct, as text.
+  //
+  // Admin-only and deliberately so. This is never served to a
+  // participant and never leaves in the CSV export, whose view carries
+  // no chosen_index and no prompt precisely so the answer key cannot be
+  // reconstructed from it (FR-DT-16). The owner built the instrument
+  // and cannot judge whether a run is usable without seeing what was
+  // actually picked.
+  string correct_text = 10;
+  // Zero-based index of the chosen option, -1 where it expired.
+  int32 chosen_index = 11;
+  // Position within its own block, 1-based.
+  int32 position_in_block = 12;
+  // Which revision of the item was served.
+  int32 item_version = 13;
+  // The intuitive wrong answer was taken.
+  bool is_lure = 14;
+  // Wrong, and reported at or above the confident threshold. This is
+  // the research question in one field.
+  bool confidently_wrong = 15;
+  // Took the lure and was confident about it.
+  bool confidently_lured = 16;
+  // Time to answer against this participant's own unloaded baseline,
+  // as a ratio. 1.0 is baseline speed.
+  double latency_vs_baseline = 17;
+  // Brier score for this answer, 0 is perfect calibration and 1 is
+  // maximally wrong. Negative where it could not be scored.
+  double brier = 18;
+}
+
+// One entry in a run's curation history.
+//
+// Every judgement is appended, including a clearing, so an exclusion
+// can always be explained. Written since migration 00056 and readable
+// only through the SQL console until now.
+message DecisionTestReviewEvent {
+  // 0 for a verdict on the whole run, 1 to 5 for one block.
+  int32 block_no = 1;
+  // The status recorded, or "cleared" where a block judgement was
+  // removed.
+  string status = 2;
+  // Why, where one was given.
+  string reason = 3;
+  // The reviewer's note at the time.
+  string note = 4;
+  // Who recorded it.
+  string reviewed_by = 5;
+  // When, RFC3339.
+  string created_at = 6;
 }

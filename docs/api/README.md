@@ -4108,6 +4108,7 @@ One run in full: every answer, every recall, and the block summary.
 | `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The run's summary. |
 | `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
+| `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
 
 <details><summary>Example request body</summary>
 
@@ -8323,9 +8324,33 @@ One run, summarised for a list.
 | `attemptNoStrongest` | `int32` | number |  | The same number read from the single most reliable identity that had an answer, rather than from the union of all three. Published beside attempt_no so a reader can see both; they differ when the identities saw different histories. |
 | `attemptSource` | `string` | string |  | Which identity produced attempt_no: account, email, cookie, or none. A sequence resting on a cookie is weaker evidence than one resting on an account, and the reviewer decides what that is worth. |
 | `attemptSourcesDisagree` | `bool` | boolean |  | The two readings disagree, so the sequence needs a human rather than a default. |
-| `priorByAccount` | `int32` | number |  | What each identity could see when the run started, as recorded. Negative means no such link existed; zero means the link existed and saw no prior sittings. The distinction is the whole reason three numbers are kept rather than one. |
-| `priorByEmail` | `int32` | number |  | Prior sittings visible by email address at the moment this started. |
-| `priorByCookie` | `int32` | number |  | Prior sittings visible by visitor cookie at the moment this started. |
+| `priorByAccount` | `int32` | number |  | Deprecated: use prior_sittings, which can express a zero. These three shipped as plain int32 and cannot carry the one distinction they exist for. Under proto3 implicit presence a scalar equal to its default is omitted from the JSON entirely, so a link that existed and saw zero prior sittings arrives indistinguishable from a link that never existed at all. They are kept and still populated, because career.v1 is additive-only and a published field is not edited in place. A reader that uses them gets the lossy answer, which is why the replacement sits beside them rather than quietly reusing a number. |
+| `priorByEmail` | `int32` | number |  | Deprecated: use prior_sittings. |
+| `priorByCookie` | `int32` | number |  | Deprecated: use prior_sittings. |
+| `keyVersion` | `string` | string |  | Which answer key graded this run. Part of the provenance triple with instrument_version and item_set_version. |
+| `wantsResults` | `bool` | boolean |  | Whether the participant asked for their results. |
+| `finishedAt` | `string` | string |  | When it ended, RFC3339, empty while still running. |
+| `reviewedByName` | `string` | string |  | Who signed the current verdict. A curated dataset whose exclusions cannot be attributed has anonymous decisions in it. |
+| `priorSittings` | [`DecisionTestPriorSittings`](#decisiontestpriorsittings) | object |  | What each identity could see when the run started, as recorded. A message rather than three scalars, because a message has natural presence: each field can distinguish "this link existed and saw nothing" from "there was no such link", which is the entire reason three observations are stored instead of one derived number. |
+
+### DecisionTestPriorSittings
+
+Prior sittings each identity could see at the moment a run started.
+
+Point-in-time observations, not a conclusion. The sitting number is
+derived from them in SQL (dt_attempt_no and friends), so the sequence
+can be recomputed under a different rule later without the raw
+observations having been thrown away.
+
+Every field is `optional`: absent means there was no such link, and
+zero means there was one and it saw no earlier sittings. Collapsing
+those two would manufacture a fact about a person.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `byAccount` | `int32` | number |  | _(oneof `_by_account`)_ Prior sittings visible by account at the moment this run started. |
+| `byEmail` | `int32` | number |  | _(oneof `_by_email`)_ Prior sittings visible by email address at the moment this started. |
+| `byCookie` | `int32` | number |  | _(oneof `_by_cookie`)_ Prior sittings visible by visitor cookie at the moment this started. |
 
 ### GetDecisionTestRunRequest
 
@@ -8344,6 +8369,7 @@ One run in full.
 | `run` | [`DecisionTestRun`](#decisiontestrun) | object |  | The run's summary. |
 | `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
+| `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
 
 ### ExportDecisionTestDataRequest
 
@@ -8419,6 +8445,9 @@ One block of a run.
 | `memoryFailurePct` | `int32` | number |  | How much of the number was lost, 0 to 100. Zero is a number held intact, 100 one lost entirely. Scored against whichever of the presented or expected number the response is closer to, so an untransformed answer reads as perfect retention rather than as total loss. Negative where the recall expired and nothing was attempted, which is not a memory failure of any size. |
 | `reviewStatus` | `string` | string |  | Curation for this block alone, so one spoiled block costs six answers rather than thirty. Empty means nobody has judged it. |
 | `reviewNote` | `string` | string |  | The note attached to this block's judgement. |
+| `digitsCorrect` | `int32` | number |  | Digit positions matching the expected number, after any transformation the block required. |
+| `digitsHeld` | `int32` | number |  | Digit positions that survived, scored against whichever of the presented or the expected number the response is closer to. This is what memory_failure_pct is derived from, and why an untransformed answer reads as full retention: the number was held and only the operation failed. Not the length of the number. |
+| `recallLatencyMs` | `int32` | number |  | How long the participant took to give the number back, in ms. |
 
 ### DecisionTestAnswer
 
@@ -8433,6 +8462,34 @@ One answer.
 | `outcome` | `string` | string |  | correct, lure, other or expired. |
 | `confidence` | `int32` | number |  | The participant's own rating, 0 to 100. |
 | `latencyMs` | `int32` | number |  | Time to answer, in milliseconds. |
+| `prompt` | `string` | string |  | The question as it was put. |
+| `chosenText` | `string` | string |  | The option the participant chose, as text. Empty on an expiry, where nothing was chosen at all. |
+| `correctText` | `string` | string |  | The option that was correct, as text. Admin-only and deliberately so. This is never served to a participant and never leaves in the CSV export, whose view carries no chosen_index and no prompt precisely so the answer key cannot be reconstructed from it (FR-DT-16). The owner built the instrument and cannot judge whether a run is usable without seeing what was actually picked. |
+| `chosenIndex` | `int32` | number |  | Zero-based index of the chosen option, -1 where it expired. |
+| `positionInBlock` | `int32` | number |  | Position within its own block, 1-based. |
+| `itemVersion` | `int32` | number |  | Which revision of the item was served. |
+| `isLure` | `bool` | boolean |  | The intuitive wrong answer was taken. |
+| `confidentlyWrong` | `bool` | boolean |  | Wrong, and reported at or above the confident threshold. This is the research question in one field. |
+| `confidentlyLured` | `bool` | boolean |  | Took the lure and was confident about it. |
+| `latencyVsBaseline` | `double` | number |  | Time to answer against this participant's own unloaded baseline, as a ratio. 1.0 is baseline speed. |
+| `brier` | `double` | number |  | Brier score for this answer, 0 is perfect calibration and 1 is maximally wrong. Negative where it could not be scored. |
+
+### DecisionTestReviewEvent
+
+One entry in a run's curation history.
+
+Every judgement is appended, including a clearing, so an exclusion
+can always be explained. Written since migration 00056 and readable
+only through the SQL console until now.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `blockNo` | `int32` | number |  | 0 for a verdict on the whole run, 1 to 5 for one block. |
+| `status` | `string` | string |  | The status recorded, or "cleared" where a block judgement was removed. |
+| `reason` | `string` | string |  | Why, where one was given. |
+| `note` | `string` | string |  | The reviewer's note at the time. |
+| `reviewedBy` | `string` | string |  | Who recorded it. |
+| `createdAt` | `string` | string |  | When, RFC3339. |
 
 ### RegisterRequest
 

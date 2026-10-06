@@ -40,6 +40,10 @@ export type Run = {
   reviewNote?: string;
   reviewedAt?: string;
   blocksExcluded?: number;
+  keyVersion?: string;
+  wantsResults?: boolean;
+  finishedAt?: string;
+  reviewedByName?: string;
   // Where this sitting falls in the participant's sequence. attemptNo
   // is 1 for a first run and 0 when no identity could place it, which
   // is a different statement and must not be shown as "first".
@@ -47,11 +51,19 @@ export type Run = {
   attemptNoStrongest?: number;
   attemptSource?: string;
   attemptSourcesDisagree?: boolean;
-  // What each identity could see when the run started. -1 means there
-  // was no such link; 0 means there was one and it saw nothing.
-  priorByAccount?: number;
-  priorByEmail?: number;
-  priorByCookie?: number;
+  // What each identity could see when the run started. Absent means
+  // there was no such link; 0 means there was one and it saw nothing.
+  //
+  // A nested message rather than three scalars: the flat
+  // prior_by_* fields are plain int32 and a zero vanishes from the
+  // JSON under proto3 implicit presence, which destroys exactly that
+  // distinction. They are deprecated in the contract and still sent;
+  // this is the one to read.
+  priorSittings?: {
+    byAccount?: number;
+    byEmail?: number;
+    byCookie?: number;
+  };
 };
 
 /**

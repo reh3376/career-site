@@ -416,3 +416,120 @@ func TestDecisionTestReadsAgainstPostgres(t *testing.T) {
 		t.Fatalf("DTPracticeItems: %v", err)
 	}
 }
+
+// The console must return the whole record, not most of it.
+//
+// The owner asked for all the data per test to be reachable from
+// /admin/decision-test. Each field here was recorded from the first
+// session and readable only through /admin/db, and a reviewer who has
+// to leave the page to judge a run will sometimes judge it without
+// leaving.
+//
+// This also executes the jsonb subscripting into dt_items.options,
+// which was written as array subscripting first and failed with
+// "invalid input syntax for type json" on every run page. Nothing
+// static could see it: the SQL is a string literal and the column type
+// lives in the database.
+func TestTheConsoleReturnsTheWholeRecord(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	sess, err := r.StartDecisionTest(ctx,
+		DTIntake{DisplayName: "whole record", Email: "whole@example.test", WantsResults: true},
+		DTConditions{AudioMode: "sound", DeviceClass: "desktop", TapCheckPassed: true,
+			BaselineRTMs: 300, BaselineRTSDMs: 40},
+		true, "db-test-whole", nil,
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-under-test")
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+	items, err := r.DTScoredItems(ctx)
+	if err != nil {
+		t.Fatalf("DTScoredItems: %v", err)
+	}
+	block, err := r.DTBuildBlock(ctx, 1, items[:DTQuestionsPerBlock])
+	if err != nil {
+		t.Fatalf("DTBuildBlock: %v", err)
+	}
+	if err := r.DTRecordBlockDigits(ctx, sess.ID, block); err != nil {
+		t.Fatalf("DTRecordBlockDigits: %v", err)
+	}
+	if err := r.DTSaveAnswer(ctx, sess.ID, 1, 1, 0, 9000, 90, items[0]); err != nil {
+		t.Fatalf("DTSaveAnswer: %v", err)
+	}
+	// Give the number back correctly, so retention is non-zero and the
+	// block's counts have something to report.
+	var expected string
+	if err := r.pool.QueryRow(ctx,
+		`SELECT expected_digits FROM dt_recalls WHERE session_id=$1 AND block_no=1`,
+		sess.ID).Scan(&expected); err != nil {
+		t.Fatalf("read the expected digits: %v", err)
+	}
+	if _, _, err := r.DTSaveRecall(ctx, sess.ID, 1, expected, 8000); err != nil {
+		t.Fatalf("DTSaveRecall: %v", err)
+	}
+
+	run, blocks, answers, err := r.DTGetRun(ctx, sess.PublicID)
+	if err != nil {
+		t.Fatalf("DTGetRun: %v", err)
+	}
+
+	// Session provenance and intent.
+	if run.KeyVersion != "key-under-test" {
+		t.Errorf("key_version = %q, want the version the run was graded under", run.KeyVersion)
+	}
+	if !run.WantsResults {
+		t.Error("wants_results is false although the participant asked for results")
+	}
+
+	// The question and the option, which is the pair a reviewer needs
+	// and the thing the export deliberately withholds.
+	if len(answers) == 0 {
+		t.Fatal("no answers came back")
+	}
+	a := answers[0]
+	if a.Prompt == "" {
+		t.Error("the answer carries no prompt: a reviewer cannot tell a careless " +
+			"answer from a misread item without seeing what was asked")
+	}
+	if a.ChosenText == "" {
+		t.Error("the answer carries no chosen option text")
+	}
+	if a.CorrectText == "" {
+		t.Error("the answer carries no correct option text")
+	}
+	if a.ChosenIndex != 0 {
+		t.Errorf("chosen_index = %d, want 0", a.ChosenIndex)
+	}
+
+	// Recall detail, which the memory-failure percentage is derived from.
+	if len(blocks) == 0 {
+		t.Fatal("no blocks came back")
+	}
+	if blocks[0].DigitsHeld != len(expected) {
+		t.Errorf("digits_held = %d for a perfectly recalled %d-digit number, "+
+			"so the memory-failure percentage has nothing visible behind it",
+			blocks[0].DigitsHeld, len(expected))
+	}
+	if blocks[0].RecallLatencyMs == 0 {
+		t.Error("the block reports no recall latency")
+	}
+
+	// The audit trail, which existed and was unreadable.
+	if err := r.DTReviewSession(ctx, sess.PublicID,
+		DTReview{Status: DTExcludingStatus, Reason: "instrument_fault", Note: "a note"},
+		nil); err != nil {
+		t.Fatalf("DTReviewSession: %v", err)
+	}
+	history, err := r.DTReviewHistory(ctx, sess.PublicID)
+	if err != nil {
+		t.Fatalf("DTReviewHistory: %v", err)
+	}
+	if len(history) == 0 {
+		t.Fatal("the curation history is empty after a judgement was recorded: " +
+			"an exclusion that cannot be explained is worse than no exclusion")
+	}
+	last := history[len(history)-1]
+	if last.Status != DTExcludingStatus || last.Reason != "instrument_fault" || last.Note != "a note" {
+		t.Errorf("history records %+v, want the judgement that was just made", last)
+	}
+}
