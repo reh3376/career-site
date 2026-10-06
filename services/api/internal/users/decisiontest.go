@@ -550,8 +550,24 @@ func (r *Repo) DTSaveAnswer(
 // is ever shown: how many of the thirty were correct, never item by
 // item.
 func (r *Repo) DTFinish(ctx context.Context, sessionID int64, strategy string) (correct, total int, err error) {
-	if _, err = r.pool.Exec(ctx,
-		`UPDATE dt_sessions SET status='completed', finished_at=now(), recall_strategy=$2 WHERE id=$1`,
+	// Idempotent, because the run screen calls this twice: once to close
+	// the run before the debrief question is shown, so a participant who
+	// shuts the tab on that question is recorded as having completed
+	// thirty answers rather than abandoned them, and once more with the
+	// answer itself.
+	//
+	// Both branches matter. finished_at keeps its first value, because
+	// the run really did end before the debrief and the second call
+	// arrives however long the participant took to read three options,
+	// which would otherwise be added to every duration. And an empty
+	// strategy never overwrites a stored one, so the order of the two
+	// calls cannot erase the answer.
+	if _, err = r.pool.Exec(ctx, `
+		UPDATE dt_sessions
+		   SET status='completed',
+		       finished_at = coalesce(finished_at, now()),
+		       recall_strategy = CASE WHEN $2::text = '' THEN recall_strategy ELSE $2::text END
+		 WHERE id=$1`,
 		sessionID, strategy); err != nil {
 		return 0, 0, fmt.Errorf("decision test: finish: %w", err)
 	}

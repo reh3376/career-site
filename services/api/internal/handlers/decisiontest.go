@@ -284,7 +284,23 @@ func (h *DecisionTest) SubmitRecall(
 func (h *DecisionTest) FinishSession(
 	ctx context.Context, req *connect.Request[v1.FinishSessionRequest],
 ) (*connect.Response[v1.FinishSessionResponse], error) {
-	sess, err := h.session(ctx, req.Msg.GetSessionKey())
+	// sessionToFinish, not session: a completed run must still accept
+	// this call.
+	//
+	// This is the bug that made recall_strategy empty for every
+	// participant. The run screen closes the run BEFORE showing the
+	// debrief question, so that a tab shut on that question leaves a
+	// complete run rather than one labelled abandoned. The debrief
+	// answer then calls FinishSession again, session() refused it with
+	// FailedPrecondition because the status was no longer `running`, and
+	// the client swallowed the error on the grounds that only the
+	// strategy was lost. The strategy was lost every single time.
+	//
+	// Nothing failed, nothing was logged above Info, and the column, the
+	// proto field, the handler allowlist and three buttons all existed
+	// and agreed with each other. The only visible symptom was an empty
+	// text column, which looks exactly like a question nobody answered.
+	sess, err := h.sessionToFinish(ctx, req.Msg.GetSessionKey())
 	if err != nil {
 		return nil, err
 	}
@@ -346,6 +362,35 @@ func (h *DecisionTest) session(ctx context.Context, key string) (*users.DTSessio
 	// on, since a question answered after a four-minute interruption is
 	// not the same question and nothing in the data would say so.
 	if s.Status != "running" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition,
+			fmt.Errorf("this session is already %s", s.Status))
+	}
+	return s, nil
+}
+
+// sessionToFinish resolves a handle for FinishSession, which is the one
+// RPC a closed run may still receive.
+//
+// The no-resume rule that session() enforces is about answers: a
+// question answered after a four-minute interruption is not the same
+// question, and nothing in the data would say so. The debrief carries
+// no answer, no timing and no item. It asks which method somebody used,
+// and the honesty of that is not a function of when it was typed.
+//
+// Everything else stays refused, so a closed run still cannot be
+// resumed, scored again or added to.
+func (h *DecisionTest) sessionToFinish(ctx context.Context, key string) (*users.DTSession, error) {
+	if h.users == nil {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("decision test is not configured"))
+	}
+	if key == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no session"))
+	}
+	s, err := h.users.DTSessionByKey(ctx, key)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such session"))
+	}
+	if s.Status != "running" && s.Status != "completed" {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			fmt.Errorf("this session is already %s", s.Status))
 	}
