@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
+
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
 // FinishSession must not resolve its session through session().
@@ -92,4 +97,63 @@ func funcBody(src, decl string) string {
 		return rest[:end]
 	}
 	return rest
+}
+
+// A prior count of zero must survive serialisation.
+//
+// This is the bug the live pass found and no other check could have.
+// The three prior-sitting counts were plain `int32`, and under proto3
+// implicit presence a scalar equal to its default is omitted from the
+// JSON entirely. So an identity that existed and saw no earlier
+// sittings arrived at the browser as `undefined`, indistinguishable
+// from an identity that never existed at all.
+//
+// That is the one distinction the three columns exist to preserve. The
+// console read it back as "no account" for an account that was there,
+// which is a confident false statement about a participant's history.
+//
+// Everything passed: the SQL was right, the Go was right, the page
+// rendered, the types checked. The fault lived entirely in the wire
+// format, between two correct halves.
+func TestAZeroPriorCountSurvivesTheWire(t *testing.T) {
+	zero := 0
+	run := toProtoRun(users.DTRun{
+		SessionKey:     "wire-test",
+		PriorByAccount: &zero,
+		// Email and cookie left nil: no such link.
+	})
+
+	if run.PriorByAccount == nil {
+		t.Fatal("prior_by_account is nil for an account that saw zero prior " +
+			"sittings: the field needs explicit presence, or the zero is " +
+			"dropped and reads as 'no account'")
+	}
+	if got := *run.PriorByAccount; got != 0 {
+		t.Errorf("prior_by_account = %d, want 0", got)
+	}
+	// And the genuinely absent ones must stay absent, or the fix would
+	// have invented links that were never there.
+	if run.PriorByEmail != nil {
+		t.Errorf("prior_by_email = %d, want absent", *run.PriorByEmail)
+	}
+	if run.PriorByCookie != nil {
+		t.Errorf("prior_by_cookie = %d, want absent", *run.PriorByCookie)
+	}
+
+	// The JSON is where it actually broke, so check the JSON.
+	b, err := protojson.Marshal(run)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := m["priorByAccount"]; !ok {
+		t.Error("priorByAccount is missing from the JSON although it is zero: " +
+			"the browser cannot tell that from an account that never existed")
+	}
+	if _, ok := m["priorByEmail"]; ok {
+		t.Error("priorByEmail is present in the JSON although there was no such link")
+	}
 }

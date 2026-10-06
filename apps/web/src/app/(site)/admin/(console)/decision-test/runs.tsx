@@ -40,6 +40,10 @@ export type Run = {
   reviewNote?: string;
   reviewedAt?: string;
   blocksExcluded?: number;
+  keyVersion?: string;
+  wantsResults?: boolean;
+  finishedAt?: string;
+  reviewedByName?: string;
   // Where this sitting falls in the participant's sequence. attemptNo
   // is 1 for a first run and 0 when no identity could place it, which
   // is a different statement and must not be shown as "first".
@@ -47,8 +51,9 @@ export type Run = {
   attemptNoStrongest?: number;
   attemptSource?: string;
   attemptSourcesDisagree?: boolean;
-  // What each identity could see when the run started. -1 means there
-  // was no such link; 0 means there was one and it saw nothing.
+  // What each identity could see when the run started. Absent means
+  // there was no such link; 0 means there was one and it saw nothing.
+  // The contract marks these optional so the zero survives the wire.
   priorByAccount?: number;
   priorByEmail?: number;
   priorByCookie?: number;

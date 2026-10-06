@@ -143,6 +143,9 @@ func (a *Admin) GetDecisionTestRun(
 			MemoryFailurePct: int32(b.MemoryFailure * 100),
 			ReviewStatus:     reviews[b.BlockNo].Status,
 			ReviewNote:       reviews[b.BlockNo].Note,
+			DigitsCorrect:    int32(b.DigitsCorrect),
+			DigitsHeld:       int32(b.DigitsHeld),
+			RecallLatencyMs:  int32(b.RecallLatencyMs),
 		})
 	}
 	pa := make([]*v1.DecisionTestAnswer, 0, len(answers))
@@ -151,10 +154,33 @@ func (a *Admin) GetDecisionTestRun(
 			Position: int32(x.Position), BlockNo: int32(x.BlockNo),
 			ItemCode: x.ItemCode, ItemFamily: x.ItemFamily, Outcome: x.Outcome,
 			Confidence: int32(x.Confidence), LatencyMs: int32(x.LatencyMs),
+			Prompt: x.Prompt, ChosenText: x.ChosenText, CorrectText: x.CorrectText,
+			ChosenIndex: int32(x.ChosenIndex), PositionInBlock: int32(x.PositionInBlock),
+			ItemVersion: int32(x.ItemVersion), IsLure: x.IsLure,
+			ConfidentlyWrong: x.ConfidentlyWrong, ConfidentlyLured: x.ConfidentlyLured,
+			LatencyVsBaseline: x.LatencyVsBaseline, Brier: x.Brier,
 		})
 	}
+
+	// The curation history. A read failure here must not take the page
+	// down: the run and its answers are the point, and a missing audit
+	// trail is worth a warning rather than a 500 on the one surface a
+	// reviewer uses.
+	history, err := a.users.DTReviewHistory(ctx, req.Msg.GetSessionKey())
+	if err != nil {
+		a.log.Warn("decision test: review history", slog.String("error", err.Error()))
+	}
+	ph := make([]*v1.DecisionTestReviewEvent, 0, len(history))
+	for _, e := range history {
+		ph = append(ph, &v1.DecisionTestReviewEvent{
+			BlockNo: int32(e.BlockNo), Status: e.Status, Reason: e.Reason,
+			Note: e.Note, ReviewedBy: e.By,
+			CreatedAt: e.At.UTC().Format(time.RFC3339),
+		})
+	}
+
 	return connect.NewResponse(&v1.GetDecisionTestRunResponse{
-		Run: toProtoRun(*run), Blocks: pb, Answers: pa,
+		Run: toProtoRun(*run), Blocks: pb, Answers: pa, ReviewHistory: ph,
 	}), nil
 }
 
@@ -268,32 +294,46 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		BlocksExcluded: int32(r.BlocksExcluded),
 		RecallStrategy: r.RecallStrategy, BaselineRtSdMs: int32(r.BaselineRTSDMs),
 		RepeatMatchedBy: r.RepeatMatchedBy,
-		// Proto has no optional int here, so NULL is carried as a
-		// sentinel rather than silently becoming zero. attempt_no uses 0
-		// for "no identity could place this run", which is why 1 is the
-		// first sitting and 0 can never be mistaken for it. The three
-		// prior counts use -1, because 0 is a real and different answer
-		// there: the link existed and saw nothing.
+		// attempt_no carries NULL as 0, which is safe because the
+		// functions never return 0: the first sitting is 1, so 0 can
+		// only mean "no identity could place this run" and cannot be
+		// mistaken for "first".
 		AttemptNo:              int32(derefOr(r.AttemptNo, 0)),
 		AttemptNoStrongest:     int32(derefOr(r.AttemptNoStrongest, 0)),
 		AttemptSource:          r.AttemptSource,
 		AttemptSourcesDisagree: r.AttemptSourcesDisagree,
-		PriorByAccount:         int32(derefOr(r.PriorByAccount, -1)),
-		PriorByEmail:           int32(derefOr(r.PriorByEmail, -1)),
-		PriorByCookie:          int32(derefOr(r.PriorByCookie, -1)),
+		// The three prior counts are nullable on the wire, because here
+		// 0 is a real and different answer: the link existed and saw no
+		// earlier sittings. A sentinel was tried and does not work, as
+		// proto3 implicit presence drops a zero from the JSON and makes
+		// it indistinguishable from absent, which is the one distinction
+		// these columns exist for.
+		PriorByAccount: int32Ptr(r.PriorByAccount),
+		PriorByEmail:   int32Ptr(r.PriorByEmail),
+		PriorByCookie:  int32Ptr(r.PriorByCookie),
+		KeyVersion:     r.KeyVersion,
+		WantsResults:   r.WantsResults,
+		FinishedAt:     rfc3339OrEmpty(r.FinishedAt),
+		ReviewedByName: r.ReviewedByName,
 	}
 }
 
-// derefOr reads a nullable int, substituting a sentinel for NULL.
-//
-// The sentinel differs by field and that is deliberate: for the prior
-// counts, zero already means "this identity existed and saw no earlier
-// sittings", so zero cannot also mean "there was no such identity".
+// derefOr reads a nullable int, substituting a value for NULL. Only safe
+// where the substitute cannot collide with a real reading.
 func derefOr(p *int, missing int) int {
 	if p == nil {
 		return missing
 	}
 	return *p
+}
+
+// int32Ptr carries NULL through as NULL rather than flattening it.
+func int32Ptr(p *int) *int32 {
+	if p == nil {
+		return nil
+	}
+	v := int32(*p)
+	return &v
 }
 
 // rfc3339OrEmpty renders a nullable timestamp. Empty rather than the

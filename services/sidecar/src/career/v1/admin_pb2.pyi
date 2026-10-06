@@ -2273,7 +2273,7 @@ class ListDecisionTestRunsResponse(_message.Message):
     def __init__(self, counts: _Optional[_Union[DecisionTestReviewCounts, _Mapping]] = ..., runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
 
 class DecisionTestRun(_message.Message):
-    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by", "attempt_no", "attempt_no_strongest", "attempt_source", "attempt_sources_disagree", "prior_by_account", "prior_by_email", "prior_by_cookie")
+    __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by", "attempt_no", "attempt_no_strongest", "attempt_source", "attempt_sources_disagree", "prior_by_account", "prior_by_email", "prior_by_cookie", "key_version", "wants_results", "finished_at", "reviewed_by_name")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -2310,6 +2310,10 @@ class DecisionTestRun(_message.Message):
     PRIOR_BY_ACCOUNT_FIELD_NUMBER: _ClassVar[int]
     PRIOR_BY_EMAIL_FIELD_NUMBER: _ClassVar[int]
     PRIOR_BY_COOKIE_FIELD_NUMBER: _ClassVar[int]
+    KEY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    WANTS_RESULTS_FIELD_NUMBER: _ClassVar[int]
+    FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_BY_NAME_FIELD_NUMBER: _ClassVar[int]
     session_key: str
     status: str
     display_name: str
@@ -2346,7 +2350,11 @@ class DecisionTestRun(_message.Message):
     prior_by_account: int
     prior_by_email: int
     prior_by_cookie: int
-    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ..., review_status: _Optional[str] = ..., review_reason: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[str] = ..., blocks_excluded: _Optional[int] = ..., recall_strategy: _Optional[str] = ..., baseline_rt_sd_ms: _Optional[int] = ..., repeat_matched_by: _Optional[str] = ..., attempt_no: _Optional[int] = ..., attempt_no_strongest: _Optional[int] = ..., attempt_source: _Optional[str] = ..., attempt_sources_disagree: _Optional[bool] = ..., prior_by_account: _Optional[int] = ..., prior_by_email: _Optional[int] = ..., prior_by_cookie: _Optional[int] = ...) -> None: ...
+    key_version: str
+    wants_results: bool
+    finished_at: str
+    reviewed_by_name: str
+    def __init__(self, session_key: _Optional[str] = ..., status: _Optional[str] = ..., display_name: _Optional[str] = ..., age_range: _Optional[str] = ..., education: _Optional[str] = ..., occupation: _Optional[str] = ..., gave_email: _Optional[bool] = ..., audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., is_repeat: _Optional[bool] = ..., is_synthetic: _Optional[bool] = ..., instrument_version: _Optional[str] = ..., item_set_version: _Optional[str] = ..., correct: _Optional[int] = ..., answered: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., duration_s: _Optional[int] = ..., started_at: _Optional[str] = ..., review_status: _Optional[str] = ..., review_reason: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[str] = ..., blocks_excluded: _Optional[int] = ..., recall_strategy: _Optional[str] = ..., baseline_rt_sd_ms: _Optional[int] = ..., repeat_matched_by: _Optional[str] = ..., attempt_no: _Optional[int] = ..., attempt_no_strongest: _Optional[int] = ..., attempt_source: _Optional[str] = ..., attempt_sources_disagree: _Optional[bool] = ..., prior_by_account: _Optional[int] = ..., prior_by_email: _Optional[int] = ..., prior_by_cookie: _Optional[int] = ..., key_version: _Optional[str] = ..., wants_results: _Optional[bool] = ..., finished_at: _Optional[str] = ..., reviewed_by_name: _Optional[str] = ...) -> None: ...
 
 class GetDecisionTestRunRequest(_message.Message):
     __slots__ = ("session_key",)
@@ -2355,14 +2363,16 @@ class GetDecisionTestRunRequest(_message.Message):
     def __init__(self, session_key: _Optional[str] = ...) -> None: ...
 
 class GetDecisionTestRunResponse(_message.Message):
-    __slots__ = ("run", "blocks", "answers")
+    __slots__ = ("run", "blocks", "answers", "review_history")
     RUN_FIELD_NUMBER: _ClassVar[int]
     BLOCKS_FIELD_NUMBER: _ClassVar[int]
     ANSWERS_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_HISTORY_FIELD_NUMBER: _ClassVar[int]
     run: DecisionTestRun
     blocks: _containers.RepeatedCompositeFieldContainer[DecisionTestBlock]
     answers: _containers.RepeatedCompositeFieldContainer[DecisionTestAnswer]
-    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ...) -> None: ...
+    review_history: _containers.RepeatedCompositeFieldContainer[DecisionTestReviewEvent]
+    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ..., review_history: _Optional[_Iterable[_Union[DecisionTestReviewEvent, _Mapping]]] = ...) -> None: ...
 
 class ExportDecisionTestDataRequest(_message.Message):
     __slots__ = ("include_synthetic", "include_excluded")
@@ -2421,7 +2431,7 @@ class DecisionTestReviewCounts(_message.Message):
     def __init__(self, total: _Optional[int] = ..., unreviewed: _Optional[int] = ..., good: _Optional[int] = ..., incomplete: _Optional[int] = ..., hold: _Optional[int] = ..., do_not_use: _Optional[int] = ...) -> None: ...
 
 class DecisionTestBlock(_message.Message):
-    __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome", "memory_failure_pct", "review_status", "review_note")
+    __slots__ = ("block_no", "load", "correct", "total", "lure", "expired", "mean_confidence", "mean_latency_ms", "presented_digits", "expected_digits", "response_digits", "recall_outcome", "memory_failure_pct", "review_status", "review_note", "digits_correct", "digits_held", "recall_latency_ms")
     BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
     LOAD_FIELD_NUMBER: _ClassVar[int]
     CORRECT_FIELD_NUMBER: _ClassVar[int]
@@ -2437,6 +2447,9 @@ class DecisionTestBlock(_message.Message):
     MEMORY_FAILURE_PCT_FIELD_NUMBER: _ClassVar[int]
     REVIEW_STATUS_FIELD_NUMBER: _ClassVar[int]
     REVIEW_NOTE_FIELD_NUMBER: _ClassVar[int]
+    DIGITS_CORRECT_FIELD_NUMBER: _ClassVar[int]
+    DIGITS_HELD_FIELD_NUMBER: _ClassVar[int]
+    RECALL_LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
     block_no: int
     load: str
     correct: int
@@ -2452,10 +2465,13 @@ class DecisionTestBlock(_message.Message):
     memory_failure_pct: int
     review_status: str
     review_note: str
-    def __init__(self, block_no: _Optional[int] = ..., load: _Optional[str] = ..., correct: _Optional[int] = ..., total: _Optional[int] = ..., lure: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., mean_latency_ms: _Optional[int] = ..., presented_digits: _Optional[str] = ..., expected_digits: _Optional[str] = ..., response_digits: _Optional[str] = ..., recall_outcome: _Optional[str] = ..., memory_failure_pct: _Optional[int] = ..., review_status: _Optional[str] = ..., review_note: _Optional[str] = ...) -> None: ...
+    digits_correct: int
+    digits_held: int
+    recall_latency_ms: int
+    def __init__(self, block_no: _Optional[int] = ..., load: _Optional[str] = ..., correct: _Optional[int] = ..., total: _Optional[int] = ..., lure: _Optional[int] = ..., expired: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., mean_latency_ms: _Optional[int] = ..., presented_digits: _Optional[str] = ..., expected_digits: _Optional[str] = ..., response_digits: _Optional[str] = ..., recall_outcome: _Optional[str] = ..., memory_failure_pct: _Optional[int] = ..., review_status: _Optional[str] = ..., review_note: _Optional[str] = ..., digits_correct: _Optional[int] = ..., digits_held: _Optional[int] = ..., recall_latency_ms: _Optional[int] = ...) -> None: ...
 
 class DecisionTestAnswer(_message.Message):
-    __slots__ = ("position", "block_no", "item_code", "item_family", "outcome", "confidence", "latency_ms")
+    __slots__ = ("position", "block_no", "item_code", "item_family", "outcome", "confidence", "latency_ms", "prompt", "chosen_text", "correct_text", "chosen_index", "position_in_block", "item_version", "is_lure", "confidently_wrong", "confidently_lured", "latency_vs_baseline", "brier")
     POSITION_FIELD_NUMBER: _ClassVar[int]
     BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
     ITEM_CODE_FIELD_NUMBER: _ClassVar[int]
@@ -2463,6 +2479,17 @@ class DecisionTestAnswer(_message.Message):
     OUTCOME_FIELD_NUMBER: _ClassVar[int]
     CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
     LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_FIELD_NUMBER: _ClassVar[int]
+    CHOSEN_TEXT_FIELD_NUMBER: _ClassVar[int]
+    CORRECT_TEXT_FIELD_NUMBER: _ClassVar[int]
+    CHOSEN_INDEX_FIELD_NUMBER: _ClassVar[int]
+    POSITION_IN_BLOCK_FIELD_NUMBER: _ClassVar[int]
+    ITEM_VERSION_FIELD_NUMBER: _ClassVar[int]
+    IS_LURE_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENTLY_WRONG_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENTLY_LURED_FIELD_NUMBER: _ClassVar[int]
+    LATENCY_VS_BASELINE_FIELD_NUMBER: _ClassVar[int]
+    BRIER_FIELD_NUMBER: _ClassVar[int]
     position: int
     block_no: int
     item_code: str
@@ -2470,4 +2497,31 @@ class DecisionTestAnswer(_message.Message):
     outcome: str
     confidence: int
     latency_ms: int
-    def __init__(self, position: _Optional[int] = ..., block_no: _Optional[int] = ..., item_code: _Optional[str] = ..., item_family: _Optional[str] = ..., outcome: _Optional[str] = ..., confidence: _Optional[int] = ..., latency_ms: _Optional[int] = ...) -> None: ...
+    prompt: str
+    chosen_text: str
+    correct_text: str
+    chosen_index: int
+    position_in_block: int
+    item_version: int
+    is_lure: bool
+    confidently_wrong: bool
+    confidently_lured: bool
+    latency_vs_baseline: float
+    brier: float
+    def __init__(self, position: _Optional[int] = ..., block_no: _Optional[int] = ..., item_code: _Optional[str] = ..., item_family: _Optional[str] = ..., outcome: _Optional[str] = ..., confidence: _Optional[int] = ..., latency_ms: _Optional[int] = ..., prompt: _Optional[str] = ..., chosen_text: _Optional[str] = ..., correct_text: _Optional[str] = ..., chosen_index: _Optional[int] = ..., position_in_block: _Optional[int] = ..., item_version: _Optional[int] = ..., is_lure: _Optional[bool] = ..., confidently_wrong: _Optional[bool] = ..., confidently_lured: _Optional[bool] = ..., latency_vs_baseline: _Optional[float] = ..., brier: _Optional[float] = ...) -> None: ...
+
+class DecisionTestReviewEvent(_message.Message):
+    __slots__ = ("block_no", "status", "reason", "note", "reviewed_by", "created_at")
+    BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_BY_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    block_no: int
+    status: str
+    reason: str
+    note: str
+    reviewed_by: str
+    created_at: str
+    def __init__(self, block_no: _Optional[int] = ..., status: _Optional[str] = ..., reason: _Optional[str] = ..., note: _Optional[str] = ..., reviewed_by: _Optional[str] = ..., created_at: _Optional[str] = ...) -> None: ...

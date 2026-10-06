@@ -27,6 +27,9 @@ type Block = {
   memoryFailurePct?: number;
   reviewStatus?: string;
   reviewNote?: string;
+  digitsCorrect?: number;
+  digitsHeld?: number;
+  recallLatencyMs?: number;
 };
 type Answer = {
   position: number;
@@ -36,6 +39,25 @@ type Answer = {
   outcome: string;
   confidence?: number;
   latencyMs?: number;
+  prompt?: string;
+  chosenText?: string;
+  correctText?: string;
+  chosenIndex?: number;
+  positionInBlock?: number;
+  itemVersion?: number;
+  isLure?: boolean;
+  confidentlyWrong?: boolean;
+  confidentlyLured?: boolean;
+  latencyVsBaseline?: number;
+  brier?: number;
+};
+type ReviewEvent = {
+  blockNo?: number;
+  status?: string;
+  reason?: string;
+  note?: string;
+  reviewedBy?: string;
+  createdAt?: string;
 };
 
 const LOAD_LABEL: Record<string, string> = {
@@ -60,11 +82,13 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
     run?: Run;
     blocks?: Block[];
     answers?: Answer[];
+    reviewHistory?: ReviewEvent[];
   };
   const run = res?.run;
   if (!run) notFound();
   const blocks = res?.blocks ?? [];
   const answers = res?.answers ?? [];
+  const history = res?.reviewHistory ?? [];
 
   const pct = (c?: number, t?: number) => (t ? Math.round((100 * (c ?? 0)) / t) : 0);
   const early = blocks.filter((b) => b.load === "d3" || b.load === "d4");
@@ -105,6 +129,9 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           run.gaveEmail ? "email given" : "no email",
           run.instrumentVersion,
           run.itemSetVersion,
+          run.keyVersion,
+          run.wantsResults ? "wants results" : null,
+          run.finishedAt ? `ended ${run.finishedAt.slice(0, 16).replace("T", " ")}` : null,
         ]
           .filter(Boolean)
           .join("  ·  ")}
@@ -253,6 +280,24 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                   {(b.memoryFailurePct ?? -1) < 0
                     ? "not scored"
                     : `${b.memoryFailurePct}%`}
+                  {/* The counts the percentage came from. A reviewer
+                      judging a block wants the reading and the digits
+                      it was computed from, not one standing in for the
+                      other. */}
+                  {/* held is scored against whichever number the
+                      response is closer to, so it is the retention
+                      reading rather than the length; the length comes
+                      from the number that was actually shown. */}
+                  {b.presentedDigits ? (
+                    <span className="block font-mono text-[10px] text-ink-3">
+                      held {b.digitsHeld ?? 0}/{b.presentedDigits.length}
+                      {", "}
+                      {b.digitsCorrect ?? 0} correct
+                      {b.recallLatencyMs
+                        ? `, ${Math.round(b.recallLatencyMs / 100) / 10}s`
+                        : ""}
+                    </span>
+                  ) : null}
                 </td>
                 {/* Per block, so a phone ringing during block three
                     costs six answers rather than thirty. The run's own
@@ -285,8 +330,10 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
               <th className="py-3 pr-4">Item</th>
               <th className="py-3 pr-4">Family</th>
               <th className="py-3 pr-4">Outcome</th>
+              <th className="py-3 pr-4">Chose</th>
               <th className="py-3 pr-4">Confidence</th>
-              <th className="py-3">Time</th>
+              <th className="py-3 pr-4">Time</th>
+              <th className="py-3">Brier</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -295,20 +342,140 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                 <td className="py-2 pr-4 tabular-nums text-ink-3">{a.position}</td>
                 <td className="py-2 pr-4 font-mono text-[11px] text-ink">{a.itemCode}</td>
                 <td className="py-2 pr-4 text-ink-3">{a.itemFamily}</td>
-                <td className="py-2 pr-4 text-ink">{a.outcome}</td>
+                <td className="py-2 pr-4 text-ink">
+                  {a.outcome}
+                  {/* The research question, per answer: wrong and sure
+                      about it. Flagged here so a reviewer can see where
+                      in the run it started rather than inferring it
+                      from a block average. */}
+                  {a.confidentlyWrong ? (
+                    <span className="ml-2 font-mono text-[10px] tracking-[0.1em] text-accent uppercase">
+                      sure
+                    </span>
+                  ) : null}
+                </td>
+                {/* Which option, by index. The option TEXT is withheld
+                    here and kept in the collapsed section below, so the
+                    answer key is not sitting in a screenshot of this
+                    table. The index alone is the curation signal that
+                    matters: a column of identical indices is somebody
+                    clicking through, and some of those clicks are
+                    correct by chance, so the outcome column cannot show
+                    it. */}
+                <td className="py-2 pr-4 font-mono text-[11px] tabular-nums text-ink-2">
+                  {(a.chosenIndex ?? -1) < 0 ? "," : a.chosenIndex}
+                  {a.isLure ? (
+                    <span className="ml-2 tracking-[0.1em] text-ink-3 uppercase">lure</span>
+                  ) : null}
+                </td>
                 <td className="py-2 pr-4 tabular-nums text-ink-2">
                   {a.outcome === "expired" ? "" : `${a.confidence ?? 0}%`}
                 </td>
-                <td className="py-2 tabular-nums text-ink-2">
+                <td className="py-2 pr-4 tabular-nums text-ink-2">
                   {a.outcome === "expired"
                     ? ""
                     : `${Math.round((a.latencyMs ?? 0) / 100) / 10}s`}
+                  {/* Against this participant's own unloaded speed, so
+                      a naturally slow person is compared with themselves
+                      rather than with anyone else. */}
+                  {a.latencyVsBaseline ? (
+                    <span className="block font-mono text-[10px] text-ink-3">
+                      {a.latencyVsBaseline.toFixed(1)}x base
+                    </span>
+                  ) : null}
+                </td>
+                <td className="py-2 tabular-nums text-ink-2">
+                  {(a.brier ?? -1) < 0 ? "," : a.brier?.toFixed(2)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* The questions themselves, and the key, behind a deliberate
+          click.
+
+          This page said "item codes, not questions. The bank is not
+          shown here, because an answer key that escapes contaminates a
+          standardized instrument permanently and it only has to escape
+          once." That reasoning still holds and the default is still
+          closed. But a reviewer cannot always judge a run without
+          seeing what was actually asked and what was actually picked:
+          an answer that looks like carelessness and an answer that
+          looks like a misread item are the same row until you read it.
+
+          So it is here, one click away, rather than at /admin/db. The
+          click is the point: nothing on this page reveals the key until
+          somebody asks for it, so a screenshot of the run, the blocks
+          or the answer table never carries it. */}
+      <details className="mt-10 rounded-md border border-line bg-paper-2 px-6 py-5">
+        <summary className="cursor-pointer font-mono text-[11px] tracking-[0.14em] text-ink-2 uppercase">
+          Show the questions and the key for this run
+        </summary>
+        <p className="mt-4 max-w-xl text-sm text-ink-3">
+          Closed by default on purpose. An answer key that escapes
+          contaminates a standardized instrument permanently, and it only
+          has to escape once. Do not screenshot this open.
+        </p>
+        <ol className="mt-6 space-y-5">
+          {answers.map((a) => (
+            <li key={a.position} className="border-b border-line pb-4 last:border-0">
+              <p className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
+                {a.position}. {a.itemCode}
+                {a.itemVersion ? ` v${a.itemVersion}` : ""} · block {a.blockNo}
+                {a.positionInBlock ? `, q${a.positionInBlock}` : ""}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-ink">{a.prompt}</p>
+              <p className="mt-2 text-sm text-ink-2">
+                Chose{" "}
+                <strong className={a.outcome === "correct" ? "text-ink" : "text-accent"}>
+                  {a.chosenText || "nothing, it expired"}
+                </strong>
+                {a.correctText && a.outcome !== "correct" ? (
+                  <>
+                    {" "}
+                    · correct was <strong className="text-ink">{a.correctText}</strong>
+                  </>
+                ) : null}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      {/* The audit trail. Written on every judgement since the curation
+          layer shipped and readable only through the SQL console until
+          now, which made "an exclusion can always be explained" true of
+          the database and false of anybody trying to explain one. */}
+      <h2 className="font-display mt-14 text-2xl text-ink">Curation history</h2>
+      {history.length ? (
+        <ol className="mt-6 space-y-3">
+          {history.map((e, i) => (
+            <li
+              key={i}
+              className="flex flex-wrap gap-x-3 gap-y-1 border-b border-line pb-3 text-sm text-ink-2"
+            >
+              <span className="font-mono text-[11px] tracking-[0.1em] text-ink-3">
+                {e.createdAt?.slice(0, 16).replace("T", " ")}
+              </span>
+              <span className="text-ink">
+                {e.blockNo ? `block ${e.blockNo}` : "whole run"}
+                {": "}
+                {e.status || "cleared"}
+              </span>
+              {e.reason ? <span className="text-ink-3">{e.reason}</span> : null}
+              {e.reviewedBy ? <span className="text-ink-3">by {e.reviewedBy}</span> : null}
+              {e.note ? <span className="w-full text-ink-2">{e.note}</span> : null}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-4 text-sm text-ink-3">
+          Nothing recorded yet. Every judgement on this run, including a
+          cleared one, is appended here and nothing is ever removed.
+        </p>
+      )}
     </>
   );
 }
@@ -342,15 +509,21 @@ function RecallTag({ outcome }: { outcome?: string }) {
 /**
  * The three observations, spelled out.
  *
- * -1 is the wire's way of saying there was no such link at all, which
- * is not the same as a link that existed and saw nothing. Writing "no
- * account" rather than "account: 0" keeps that distinction legible,
- * because it is the distinction the whole three-column design exists
- * to preserve.
+ * Absent means there was no such link at all. Zero means there was one
+ * and it saw no earlier sittings. Writing "no account" rather than
+ * "account saw 0" keeps that distinction legible, because it is the
+ * distinction the whole three-column design exists to preserve.
+ *
+ * The fields are `optional` in the contract for the same reason. They
+ * were plain int32 first, and proto3 implicit presence dropped every
+ * zero from the JSON, so a real "saw nothing" arrived as undefined and
+ * this function confidently reported "no account" for an account that
+ * existed. Found by reading the deployed page against the database
+ * rather than by any test.
  */
 function priorsRead(run: Run): string | null {
   const read = (label: string, v?: number) =>
-    v === undefined || v < 0 ? `no ${label}` : `${label} saw ${v}`;
+    v === undefined || v === null ? `no ${label}` : `${label} saw ${v}`;
   const parts = [
     read("account", run.priorByAccount),
     read("email", run.priorByEmail),

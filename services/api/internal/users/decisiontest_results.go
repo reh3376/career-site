@@ -85,6 +85,35 @@ type DTRun struct {
 	PriorByAccount *int
 	PriorByEmail   *int
 	PriorByCookie  *int
+
+	// The rest of what the session row holds, so the console is the
+	// whole record rather than most of it. The owner asked for all the
+	// data per test to be reachable from the admin page; anything left
+	// out here is something a reviewer has to open /admin/db for, and a
+	// reviewer who has to leave the page to judge a run will sometimes
+	// judge it without leaving.
+	KeyVersion   string
+	WantsResults bool
+	FinishedAt   *time.Time
+	// Who signed the verdict. A curated dataset whose exclusions cannot
+	// be attributed is a dataset with anonymous decisions in it.
+	ReviewedByName string
+}
+
+// DTReviewEvent is one entry in a run's curation history.
+//
+// Every judgement is appended, including a clearing. The history has
+// been written since migration 00056 and was readable only through
+// /admin/db, which made "an exclusion can always be explained" true of
+// the database and false of anybody trying to explain one.
+type DTReviewEvent struct {
+	// 0 for a verdict on the whole run, 1 to 5 for a block.
+	BlockNo int
+	Status  string
+	Reason  string
+	Note    string
+	By      string
+	At      time.Time
 }
 
 // DTBlockSummary is one block of a run, with its recall.
@@ -104,9 +133,30 @@ type DTBlockSummary struct {
 	// 0.0 is a number held intact, 1.0 one lost entirely. Negative means
 	// not scored, which is an expired recall: nothing was attempted.
 	MemoryFailure float64
+	// DigitsCorrect is positions matching the expected number after any
+	// transformation. DigitsHeld is positions that survived against
+	// whichever of the presented or expected number the response is
+	// closer to, which is what MemoryFailure is derived from and is not
+	// the length of the number. Both are shown because a reviewer wants
+	// the reading and the counts behind it.
+	DigitsCorrect   int
+	DigitsHeld      int
+	RecallLatencyMs int
+	// The reviewer's note on this block, if any. The status was already
+	// carried; the note was written and never displayed.
+	ReviewNote string
 }
 
-// DTAnswerRow is one answer.
+// DTAnswerRow is one answer, as the console shows it.
+//
+// Richer than the export deliberately. `v_dt_answers` carries no
+// `chosen_index` and no prompt text, because that view is what leaves
+// the server as a CSV and the answer key must not be reconstructible
+// from it (FR-DT-16). The admin console has the opposite requirement:
+// the owner is the person who built the instrument, is authenticated,
+// and cannot judge whether a run is usable without seeing what the
+// participant actually picked. So this query joins the base tables for
+// those columns and leaves the export boundary exactly as it was.
 type DTAnswerRow struct {
 	Position   int
 	BlockNo    int
@@ -115,6 +165,25 @@ type DTAnswerRow struct {
 	Outcome    string
 	Confidence int
 	LatencyMs  int
+
+	// What they were asked and what they picked.
+	//
+	// The sharpest curation signal there is. A run that answered option
+	// one thirty times in a row is somebody clicking through, and that
+	// is invisible in an outcome column because some of those clicks
+	// are correct by chance.
+	Prompt          string
+	ChosenText      string
+	CorrectText     string
+	ChosenIndex     int
+	PositionInBlock int
+	ItemVersion     int
+	// Derived readings the views already define. Not recomputed here.
+	IsLure            bool
+	ConfidentlyWrong  bool
+	ConfidentlyLured  bool
+	LatencyVsBaseline float64
+	Brier             float64
 }
 
 // dtRunSelect is the one projection of a run, shared by the list and by
@@ -156,9 +225,12 @@ const dtRunSelect = `
 		       dt_attempt_no(s.prior_by_account, s.prior_by_email, s.prior_by_cookie)
 		         IS DISTINCT FROM
 		       dt_attempt_strongest(s.prior_by_account, s.prior_by_email, s.prior_by_cookie),
-		       s.prior_by_account, s.prior_by_email, s.prior_by_cookie
+		       s.prior_by_account, s.prior_by_email, s.prior_by_cookie,
+		       s.key_version, coalesce(p.wants_results,false), s.finished_at,
+		       coalesce(ru.name, '')
 		  FROM dt_sessions s
-		  LEFT JOIN dt_participants p ON p.id = s.participant_id`
+		  LEFT JOIN dt_participants p ON p.id = s.participant_id
+		  LEFT JOIN users ru ON ru.id = s.reviewed_by`
 
 // dtScanRun reads one row of dtRunSelect. One scanner for both callers,
 // so a column added to the projection cannot be read by one and missed
@@ -174,7 +246,8 @@ func dtScanRun(rows interface{ Scan(...any) error }) (DTRun, error) {
 		&v.BlocksExcluded, &v.RecallStrategy, &v.BaselineRTSDMs,
 		&v.RepeatMatchedBy, &v.AttemptNo, &v.AttemptNoStrongest,
 		&v.AttemptSource, &v.AttemptSourcesDisagree,
-		&v.PriorByAccount, &v.PriorByEmail, &v.PriorByCookie)
+		&v.PriorByAccount, &v.PriorByEmail, &v.PriorByCookie,
+		&v.KeyVersion, &v.WantsResults, &v.FinishedAt, &v.ReviewedByName)
 	return v, err
 }
 
@@ -236,10 +309,14 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(max(rc.expected_digits),''),
 		       coalesce(max(rc.response_digits),''),
 		       coalesce(max(rc.outcome),''),
-		       coalesce(max(v.memory_failure), -1)
+		       coalesce(max(v.memory_failure), -1),
+		       coalesce(max(rc.digits_correct),0), coalesce(max(rc.digits_held),0),
+		       coalesce(max(rc.latency_ms),0),
+		       coalesce(max(br.note),'')
 		  FROM v_dt_answers v
 		  JOIN dt_sessions s  ON s.public_id::text = v.session_key::text
 		  LEFT JOIN dt_recalls rc ON rc.session_id = s.id AND rc.block_no = v.block_no
+		  LEFT JOIN dt_block_reviews br ON br.session_id = s.id AND br.block_no = v.block_no
 		 WHERE v.session_key::text = $1
 		 GROUP BY v.block_no, v.block_load
 		 ORDER BY v.block_no`, key)
@@ -253,7 +330,8 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		if err := brows.Scan(&b.BlockNo, &b.Load, &b.Correct, &b.Total, &b.Lure,
 			&b.Expired, &b.MeanConfidence, &b.MeanLatencyMs,
 			&b.PresentedDigits, &b.ExpectedDigits, &b.ResponseDigits, &b.RecallOutcome,
-			&b.MemoryFailure); err != nil {
+			&b.MemoryFailure, &b.DigitsCorrect, &b.DigitsHeld, &b.RecallLatencyMs,
+			&b.ReviewNote); err != nil {
 			return nil, nil, nil, fmt.Errorf("decision test: scan block: %w", err)
 		}
 		blocks = append(blocks, b)
@@ -262,11 +340,29 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		return nil, nil, nil, err
 	}
 
+	// The view for everything it defines, the base tables only for what
+	// it deliberately withholds: the chosen option and the prompt.
 	arows, err := r.pool.Query(ctx, `
-		SELECT position_overall, block_no, item_code, item_family, outcome,
-		       coalesce(confidence,0), coalesce(latency_ms,0)
-		  FROM v_dt_answers WHERE session_key::text = $1
-		 ORDER BY position_overall`, key)
+		SELECT v.position_overall, v.block_no, v.item_code, v.item_family, v.outcome,
+		       coalesce(v.confidence,0), coalesce(v.latency_ms,0),
+		       coalesce(i.prompt,''),
+		       -- options is jsonb, so ->> with a zero-based integer
+		       -- subscript, not array subscripting. An out-of-range or
+		       -- negative index yields NULL rather than an error, which
+		       -- is the behaviour wanted: an expired answer chose
+		       -- nothing and has no text.
+		       coalesce(i.options ->> a.chosen_index, ''),
+		       coalesce(i.options ->> i.correct_index, ''),
+		       coalesce(a.chosen_index, -1), v.position_in_block, v.item_version,
+		       v.is_lure, v.confidently_wrong, v.confidently_lured,
+		       coalesce(v.latency_vs_baseline, 0), coalesce(v.brier, -1)
+		  FROM v_dt_answers v
+		  JOIN dt_sessions s ON s.public_id::text = v.session_key::text
+		  LEFT JOIN dt_answers a ON a.session_id = s.id
+		                        AND a.position_overall = v.position_overall
+		  LEFT JOIN dt_items i ON i.id = a.item_id
+		 WHERE v.session_key::text = $1
+		 ORDER BY v.position_overall`, key)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("decision test: answers: %w", err)
 	}
@@ -275,10 +371,45 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 	for arows.Next() {
 		var a DTAnswerRow
 		if err := arows.Scan(&a.Position, &a.BlockNo, &a.ItemCode, &a.ItemFamily,
-			&a.Outcome, &a.Confidence, &a.LatencyMs); err != nil {
+			&a.Outcome, &a.Confidence, &a.LatencyMs,
+			&a.Prompt, &a.ChosenText, &a.CorrectText, &a.ChosenIndex,
+			&a.PositionInBlock, &a.ItemVersion, &a.IsLure, &a.ConfidentlyWrong,
+			&a.ConfidentlyLured, &a.LatencyVsBaseline, &a.Brier); err != nil {
 			return nil, nil, nil, fmt.Errorf("decision test: scan answer: %w", err)
 		}
 		answers = append(answers, a)
 	}
 	return run, blocks, answers, arows.Err()
+}
+
+// DTReviewHistory returns every judgement ever recorded for a run,
+// oldest first.
+//
+// The history has been written on every review since migration 00056
+// and was readable only through /admin/db. "An exclusion can always be
+// explained" was therefore true of the database and false of anybody
+// actually trying to explain one, which is the only place it matters.
+func (r *Repo) DTReviewHistory(ctx context.Context, key string) ([]DTReviewEvent, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT coalesce(e.block_no, 0), e.status, e.reason, e.note,
+		       coalesce(u.name, ''), e.created_at
+		  FROM dt_review_events e
+		  JOIN dt_sessions s ON s.id = e.session_id
+		  LEFT JOIN users u ON u.id = e.reviewed_by
+		 WHERE s.public_id::text = $1
+		 ORDER BY e.created_at, e.id`, key)
+	if err != nil {
+		return nil, fmt.Errorf("decision test: review history: %w", err)
+	}
+	defer rows.Close()
+	var out []DTReviewEvent
+	for rows.Next() {
+		var e DTReviewEvent
+		if err := rows.Scan(&e.BlockNo, &e.Status, &e.Reason, &e.Note,
+			&e.By, &e.At); err != nil {
+			return nil, fmt.Errorf("decision test: scan review event: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }
