@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -131,6 +132,74 @@ func TestTheWholeWritePathAgainstPostgres(t *testing.T) {
 	}
 	if _, err := r.DTResultFor(ctx, sess.ID); err != nil {
 		t.Fatalf("DTResultFor: %v", err)
+	}
+}
+
+// DTFinish is called twice for every run and the second call must not
+// undo the first.
+//
+// The run screen closes the run BEFORE showing the debrief question, so
+// that a participant who shuts the tab on it is recorded as having
+// completed thirty answers rather than abandoned them. The debrief
+// answer is a second call. That ordering is deliberate and it means the
+// first call always carries an empty strategy, so a plain assignment
+// would depend on which call landed last.
+//
+// It also means finished_at is written twice, once when the run really
+// ended and once however long the participant took to read three
+// options. Every duration in the data would carry that reading time.
+func TestFinishIsIdempotentAcrossTheDebrief(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "finish twice"},
+		DTConditions{AudioMode: "sound", DeviceClass: "desktop"},
+		true, "db-test-finish", nil,
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+
+	// Exactly what the run screen does: close, then answer.
+	if _, _, err := r.DTFinish(ctx, sess.ID, ""); err != nil {
+		t.Fatalf("DTFinish(close): %v", err)
+	}
+	var closedAt time.Time
+	if err := r.pool.QueryRow(ctx,
+		`SELECT finished_at FROM dt_sessions WHERE id=$1`, sess.ID).Scan(&closedAt); err != nil {
+		t.Fatalf("read finished_at: %v", err)
+	}
+
+	if _, _, err := r.DTFinish(ctx, sess.ID, "defer"); err != nil {
+		t.Fatalf("DTFinish(debrief): %v", err)
+	}
+	var strategy string
+	var finishedAt time.Time
+	if err := r.pool.QueryRow(ctx,
+		`SELECT recall_strategy, finished_at FROM dt_sessions WHERE id=$1`,
+		sess.ID).Scan(&strategy, &finishedAt); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if strategy != "defer" {
+		t.Errorf("recall_strategy is %q after the debrief answer, want %q: "+
+			"the answer the participant gave was not stored", strategy, "defer")
+	}
+	if !finishedAt.Equal(closedAt) {
+		t.Errorf("finished_at moved from %s to %s: the run ended when it was "+
+			"closed, not when the debrief was read", closedAt, finishedAt)
+	}
+
+	// And the reverse order cannot erase it. A retry, a double click or
+	// a duplicated request must not turn a stored answer back into the
+	// empty string, which reads as "never asked".
+	if _, _, err := r.DTFinish(ctx, sess.ID, ""); err != nil {
+		t.Fatalf("DTFinish(empty, again): %v", err)
+	}
+	if err := r.pool.QueryRow(ctx,
+		`SELECT recall_strategy FROM dt_sessions WHERE id=$1`, sess.ID).Scan(&strategy); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if strategy != "defer" {
+		t.Errorf("an empty strategy overwrote the stored %q", "defer")
 	}
 }
 

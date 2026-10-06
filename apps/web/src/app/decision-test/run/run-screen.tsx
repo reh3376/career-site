@@ -295,8 +295,21 @@ export function RunScreen() {
       setPhase("finishing");
       try {
         await decisionTestClient.finishSession({ sessionKey, recallStrategy: strategy });
-      } catch {
-        /* the run is already closed; only the strategy is lost */
+      } catch (e) {
+        // Logged rather than swallowed. This catch used to read "the run
+        // is already closed; only the strategy is lost", which was both
+        // the cause and the cover: the api refused this call for every
+        // participant because the run screen closes the run before
+        // asking, and the comment made the refusal sound expected. The
+        // field was empty on every browser run and nothing anywhere
+        // said so.
+        //
+        // The participant is still sent on. Thirty answers are already
+        // stored and a lost debrief answer is not worth holding
+        // somebody on a spinner for. But it is now visible to anyone
+        // with a console open, which is the live pass this surface
+        // needed and did not have.
+        console.error("decision test: the debrief answer was not stored", e);
       }
       sessionStorage.removeItem("dt");
       router.replace("/decision-test/thanks");
