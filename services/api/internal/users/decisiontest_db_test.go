@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -267,6 +268,116 @@ func TestCurationWritesAgainstPostgres(t *testing.T) {
 	}
 	if _, err := r.DTReviewSummary(ctx); err != nil {
 		t.Fatalf("DTReviewSummary: %v", err)
+	}
+}
+
+// A run must stay reachable by key once there are more runs than the
+// list shows.
+//
+// DTGetRun used to call DTListRuns, which is capped at 200, and scan the
+// returned slice in Go for a matching key. With 18 runs in production
+// that worked perfectly. With 201 it would have reported "no run" for
+// every run outside the newest 200, on a page whose entire job is to
+// show a run that exists, and nothing would have errored: the archive
+// grows and is never pruned, so this was a matter of time rather than
+// of chance.
+//
+// 201 rows inserted directly. Going through StartDecisionTest would
+// test the write path again rather than the read, and would be slower
+// for no extra coverage.
+func TestARunStaysReachableBeyondTheListCap(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	var firstKey string
+	for i := range 201 {
+		var key string
+		if err := r.pool.QueryRow(ctx, `
+			INSERT INTO dt_sessions
+			  (instrument_version, item_set_version, key_version, visitor_key, is_synthetic)
+			VALUES ('v-cap-test', 'items-cap-test', 'key-1', $1, true)
+			RETURNING public_id::text`,
+			fmt.Sprintf("cap-test-%d", i)).Scan(&key); err != nil {
+			t.Fatalf("insert session %d: %v", i, err)
+		}
+		if i == 0 {
+			firstKey = key
+		}
+	}
+
+	// The oldest of the 201, which is exactly the one a Go-side scan of
+	// the newest 200 would miss.
+	run, _, _, err := r.DTGetRun(ctx, firstKey)
+	if err != nil {
+		t.Fatalf("DTGetRun on the 201st-newest run: %v: the detail page "+
+			"reports that a run which exists does not", err)
+	}
+	if run.SessionKey != firstKey {
+		t.Fatalf("DTGetRun returned %q, want %q", run.SessionKey, firstKey)
+	}
+}
+
+// The attempt sequence as the console reads it.
+//
+// The rule lives in SQL (migration 00058) and Go must not acquire a
+// second copy of it, so this checks that the console's query reports
+// what those functions define, including the case that is easiest to
+// get wrong: a run no identity could place is not a first run.
+func TestTheConsoleReadsTheAttemptSequence(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	cases := []struct {
+		name                   string
+		account, email, cookie *int
+		wantNo                 int // 0 means NULL
+		wantSource             string
+		wantDisagree           bool
+	}{
+		{name: "no identity at all", wantNo: 0, wantSource: "none"},
+		{name: "cookie saw nothing", cookie: ptr(0), wantNo: 1, wantSource: "cookie"},
+		{name: "cookie saw two priors", cookie: ptr(2), wantNo: 3, wantSource: "cookie"},
+		{name: "account outranks cookie on a tie",
+			account: ptr(1), cookie: ptr(1), wantNo: 2, wantSource: "account"},
+		{name: "the union wins and the sources disagree",
+			account: ptr(0), cookie: ptr(3), wantNo: 4, wantSource: "cookie", wantDisagree: true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var key string
+			if err := r.pool.QueryRow(ctx, `
+				INSERT INTO dt_sessions
+				  (instrument_version, item_set_version, key_version, is_synthetic,
+				   prior_by_account, prior_by_email, prior_by_cookie)
+				VALUES ('v-attempt-test', 'items-attempt-test', 'key-1', true, $1, $2, $3)
+				RETURNING public_id::text`,
+				c.account, c.email, c.cookie).Scan(&key); err != nil {
+				t.Fatalf("insert: %v", err)
+			}
+			run, _, _, err := r.DTGetRun(ctx, key)
+			if err != nil {
+				t.Fatalf("DTGetRun: %v", err)
+			}
+			got := 0
+			if run.AttemptNo != nil {
+				got = *run.AttemptNo
+			}
+			if got != c.wantNo {
+				t.Errorf("attempt_no = %d, want %d", got, c.wantNo)
+			}
+			if run.AttemptSource != c.wantSource {
+				t.Errorf("attempt_source = %q, want %q", run.AttemptSource, c.wantSource)
+			}
+			if run.AttemptSourcesDisagree != c.wantDisagree {
+				t.Errorf("attempt_sources_disagree = %v, want %v",
+					run.AttemptSourcesDisagree, c.wantDisagree)
+			}
+			// NULL must survive as NULL. Collapsing "no such identity"
+			// into zero would turn an absent link into a claim that the
+			// link existed and saw nothing.
+			if c.cookie == nil && run.PriorByCookie != nil {
+				t.Errorf("prior_by_cookie came back %d, want NULL", *run.PriorByCookie)
+			}
+		})
 	}
 }
 

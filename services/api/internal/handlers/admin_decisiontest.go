@@ -268,7 +268,32 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		BlocksExcluded: int32(r.BlocksExcluded),
 		RecallStrategy: r.RecallStrategy, BaselineRtSdMs: int32(r.BaselineRTSDMs),
 		RepeatMatchedBy: r.RepeatMatchedBy,
+		// Proto has no optional int here, so NULL is carried as a
+		// sentinel rather than silently becoming zero. attempt_no uses 0
+		// for "no identity could place this run", which is why 1 is the
+		// first sitting and 0 can never be mistaken for it. The three
+		// prior counts use -1, because 0 is a real and different answer
+		// there: the link existed and saw nothing.
+		AttemptNo:              int32(derefOr(r.AttemptNo, 0)),
+		AttemptNoStrongest:     int32(derefOr(r.AttemptNoStrongest, 0)),
+		AttemptSource:          r.AttemptSource,
+		AttemptSourcesDisagree: r.AttemptSourcesDisagree,
+		PriorByAccount:         int32(derefOr(r.PriorByAccount, -1)),
+		PriorByEmail:           int32(derefOr(r.PriorByEmail, -1)),
+		PriorByCookie:          int32(derefOr(r.PriorByCookie, -1)),
 	}
+}
+
+// derefOr reads a nullable int, substituting a sentinel for NULL.
+//
+// The sentinel differs by field and that is deliberate: for the prior
+// counts, zero already means "this identity existed and saw no earlier
+// sittings", so zero cannot also mean "there was no such identity".
+func derefOr(p *int, missing int) int {
+	if p == nil {
+		return missing
+	}
+	return *p
 }
 
 // rfc3339OrEmpty renders a nullable timestamp. Empty rather than the

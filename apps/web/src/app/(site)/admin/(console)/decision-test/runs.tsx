@@ -12,6 +12,7 @@ export type Run = {
   sessionKey: string;
   status: string;
   displayName?: string;
+  ageRange?: string;
   education?: string;
   occupation?: string;
   gaveEmail?: boolean;
@@ -39,7 +40,56 @@ export type Run = {
   reviewNote?: string;
   reviewedAt?: string;
   blocksExcluded?: number;
+  // Where this sitting falls in the participant's sequence. attemptNo
+  // is 1 for a first run and 0 when no identity could place it, which
+  // is a different statement and must not be shown as "first".
+  attemptNo?: number;
+  attemptNoStrongest?: number;
+  attemptSource?: string;
+  attemptSourcesDisagree?: boolean;
+  // What each identity could see when the run started. -1 means there
+  // was no such link; 0 means there was one and it saw nothing.
+  priorByAccount?: number;
+  priorByEmail?: number;
+  priorByCookie?: number;
 };
+
+/**
+ * How a run's place in the sequence should read.
+ *
+ * The owner's requirement was that a first run be labelled as a first
+ * run and every later one labelled as what it is. The awkward case is
+ * the one that gets flattened by accident: a run no identity could
+ * place is not a first run, it is a run with no sequence, and calling
+ * it "first" would be inventing a fact about a person.
+ *
+ * Returns null when there is nothing worth showing, so callers can drop
+ * it from a list of tags rather than render an empty one.
+ */
+export function attemptLabel(r: Run): string | null {
+  const n = r.attemptNo ?? 0;
+  if (!n) return "sequence unknown";
+  if (n === 1) return "first run";
+  return `run ${n}`;
+}
+
+/** Where that number came from, which is how much it is worth. */
+export function attemptEvidence(r: Run): string | null {
+  const n = r.attemptNo ?? 0;
+  if (!n) return null;
+  const parts: string[] = [];
+  if (r.attemptSource && r.attemptSource !== "none") {
+    parts.push(`by ${r.attemptSource}`);
+  }
+  if (r.attemptSourcesDisagree && r.attemptNoStrongest) {
+    // Worth the words. The union and the strongest single source
+    // disagreeing means the identities saw different histories, which
+    // is exactly the case a reviewer should decide rather than a
+    // default.
+    parts.push(`strongest source says ${r.attemptNoStrongest}`);
+  }
+  return parts.length ? parts.join(", ") : null;
+}
 
 export type ReviewCounts = {
   total?: number;
@@ -74,7 +124,13 @@ export function RunTable({ runs }: { runs: Run[] }) {
             <div className="min-w-0">
               <p className="text-base text-ink transition-colors group-hover:text-accent">
                 {r.displayName || "Anonymous"}
-                {r.isRepeat ? <Tag>repeat</Tag> : null}
+                {/* The sequence rather than a bare "repeat": which
+                    sitting this was is the thing the owner asked to be
+                    labelled, and "run 3" says it where "repeat" does
+                    not. Shown for a first run too, because a list where
+                    only repeats are marked makes an unplaceable run
+                    look like a first one. */}
+                <Tag>{attemptLabel(r)}</Tag>
                 {r.isSynthetic ? <Tag>agent</Tag> : null}
                 {r.status !== "completed" ? <Tag>{r.status}</Tag> : null}
                 {r.reviewStatus ? <Tag>{statusLabel(r.reviewStatus)}</Tag> : null}
@@ -85,6 +141,7 @@ export function RunTable({ runs }: { runs: Run[] }) {
               <p className="mt-1 font-mono text-[11px] tracking-[0.1em] text-ink-3">
                 {[
                   r.startedAt?.slice(0, 16).replace("T", " "),
+                  r.ageRange || null,
                   r.education || null,
                   r.deviceClass,
                   r.gaveEmail ? "email given" : "no email",

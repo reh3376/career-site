@@ -13968,8 +13968,33 @@ type DecisionTestRun struct {
 	// reliability, and worth knowing which: a cookie match is defeated by
 	// a private window, so it is weaker evidence than an account.
 	RepeatMatchedBy string `protobuf:"bytes,29,opt,name=repeat_matched_by,json=repeatMatchedBy,proto3" json:"repeat_matched_by,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Which sitting this was for this participant, 1 for a first run.
+	// Zero means no identity could place the run at all, which is a
+	// different statement from "first" and must not be read as one.
+	AttemptNo int32 `protobuf:"varint,30,opt,name=attempt_no,json=attemptNo,proto3" json:"attempt_no,omitempty"`
+	// The same number read from the single most reliable identity that
+	// had an answer, rather than from the union of all three. Published
+	// beside attempt_no so a reader can see both; they differ when the
+	// identities saw different histories.
+	AttemptNoStrongest int32 `protobuf:"varint,31,opt,name=attempt_no_strongest,json=attemptNoStrongest,proto3" json:"attempt_no_strongest,omitempty"`
+	// Which identity produced attempt_no: account, email, cookie, or
+	// none. A sequence resting on a cookie is weaker evidence than one
+	// resting on an account, and the reviewer decides what that is worth.
+	AttemptSource string `protobuf:"bytes,32,opt,name=attempt_source,json=attemptSource,proto3" json:"attempt_source,omitempty"`
+	// The two readings disagree, so the sequence needs a human rather
+	// than a default.
+	AttemptSourcesDisagree bool `protobuf:"varint,33,opt,name=attempt_sources_disagree,json=attemptSourcesDisagree,proto3" json:"attempt_sources_disagree,omitempty"`
+	// What each identity could see when the run started, as recorded.
+	// Negative means no such link existed; zero means the link existed
+	// and saw no prior sittings. The distinction is the whole reason
+	// three numbers are kept rather than one.
+	PriorByAccount int32 `protobuf:"varint,34,opt,name=prior_by_account,json=priorByAccount,proto3" json:"prior_by_account,omitempty"`
+	// Prior sittings visible by email address at the moment this started.
+	PriorByEmail int32 `protobuf:"varint,35,opt,name=prior_by_email,json=priorByEmail,proto3" json:"prior_by_email,omitempty"`
+	// Prior sittings visible by visitor cookie at the moment this started.
+	PriorByCookie int32 `protobuf:"varint,36,opt,name=prior_by_cookie,json=priorByCookie,proto3" json:"prior_by_cookie,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DecisionTestRun) Reset() {
@@ -14203,6 +14228,55 @@ func (x *DecisionTestRun) GetRepeatMatchedBy() string {
 		return x.RepeatMatchedBy
 	}
 	return ""
+}
+
+func (x *DecisionTestRun) GetAttemptNo() int32 {
+	if x != nil {
+		return x.AttemptNo
+	}
+	return 0
+}
+
+func (x *DecisionTestRun) GetAttemptNoStrongest() int32 {
+	if x != nil {
+		return x.AttemptNoStrongest
+	}
+	return 0
+}
+
+func (x *DecisionTestRun) GetAttemptSource() string {
+	if x != nil {
+		return x.AttemptSource
+	}
+	return ""
+}
+
+func (x *DecisionTestRun) GetAttemptSourcesDisagree() bool {
+	if x != nil {
+		return x.AttemptSourcesDisagree
+	}
+	return false
+}
+
+func (x *DecisionTestRun) GetPriorByAccount() int32 {
+	if x != nil {
+		return x.PriorByAccount
+	}
+	return 0
+}
+
+func (x *DecisionTestRun) GetPriorByEmail() int32 {
+	if x != nil {
+		return x.PriorByEmail
+	}
+	return 0
+}
+
+func (x *DecisionTestRun) GetPriorByCookie() int32 {
+	if x != nil {
+		return x.PriorByCookie
+	}
+	return 0
 }
 
 // Asks for one run in full.
@@ -16026,7 +16100,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\rreview_status\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x18R\freviewStatus\"\x8b\x01\n" +
 	"\x1cListDecisionTestRunsResponse\x12;\n" +
 	"\x06counts\x18\x02 \x01(\v2#.career.v1.DecisionTestReviewCountsR\x06counts\x12.\n" +
-	"\x04runs\x18\x01 \x03(\v2\x1a.career.v1.DecisionTestRunR\x04runs\"\xfe\a\n" +
+	"\x04runs\x18\x01 \x03(\v2\x1a.career.v1.DecisionTestRunR\x04runs\"\xa8\n" +
+	"\n" +
 	"\x0fDecisionTestRun\x12\x1f\n" +
 	"\vsession_key\x18\x01 \x01(\tR\n" +
 	"sessionKey\x12\x16\n" +
@@ -16066,7 +16141,15 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x0fblocks_excluded\x18\x1a \x01(\x05R\x0eblocksExcluded\x12'\n" +
 	"\x0frecall_strategy\x18\x1b \x01(\tR\x0erecallStrategy\x12)\n" +
 	"\x11baseline_rt_sd_ms\x18\x1c \x01(\x05R\x0ebaselineRtSdMs\x12*\n" +
-	"\x11repeat_matched_by\x18\x1d \x01(\tR\x0frepeatMatchedBy\"E\n" +
+	"\x11repeat_matched_by\x18\x1d \x01(\tR\x0frepeatMatchedBy\x12\x1d\n" +
+	"\n" +
+	"attempt_no\x18\x1e \x01(\x05R\tattemptNo\x120\n" +
+	"\x14attempt_no_strongest\x18\x1f \x01(\x05R\x12attemptNoStrongest\x12%\n" +
+	"\x0eattempt_source\x18  \x01(\tR\rattemptSource\x128\n" +
+	"\x18attempt_sources_disagree\x18! \x01(\bR\x16attemptSourcesDisagree\x12(\n" +
+	"\x10prior_by_account\x18\" \x01(\x05R\x0epriorByAccount\x12$\n" +
+	"\x0eprior_by_email\x18# \x01(\x05R\fpriorByEmail\x12&\n" +
+	"\x0fprior_by_cookie\x18$ \x01(\x05R\rpriorByCookie\"E\n" +
 	"\x19GetDecisionTestRunRequest\x12(\n" +
 	"\vsession_key\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18@R\n" +
 	"sessionKey\"\xb9\x01\n" +

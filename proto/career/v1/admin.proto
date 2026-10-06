@@ -3233,6 +3233,31 @@ message DecisionTestRun {
   // reliability, and worth knowing which: a cookie match is defeated by
   // a private window, so it is weaker evidence than an account.
   string repeat_matched_by = 29;
+  // Which sitting this was for this participant, 1 for a first run.
+  // Zero means no identity could place the run at all, which is a
+  // different statement from "first" and must not be read as one.
+  int32 attempt_no = 30;
+  // The same number read from the single most reliable identity that
+  // had an answer, rather than from the union of all three. Published
+  // beside attempt_no so a reader can see both; they differ when the
+  // identities saw different histories.
+  int32 attempt_no_strongest = 31;
+  // Which identity produced attempt_no: account, email, cookie, or
+  // none. A sequence resting on a cookie is weaker evidence than one
+  // resting on an account, and the reviewer decides what that is worth.
+  string attempt_source = 32;
+  // The two readings disagree, so the sequence needs a human rather
+  // than a default.
+  bool attempt_sources_disagree = 33;
+  // What each identity could see when the run started, as recorded.
+  // Negative means no such link existed; zero means the link existed
+  // and saw no prior sittings. The distinction is the whole reason
+  // three numbers are kept rather than one.
+  int32 prior_by_account = 34;
+  // Prior sittings visible by email address at the moment this started.
+  int32 prior_by_email = 35;
+  // Prior sittings visible by visitor cookie at the moment this started.
+  int32 prior_by_cookie = 36;
 }
 
 // Asks for one run in full.
