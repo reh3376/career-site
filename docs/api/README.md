@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 77 |
+| [`AdminService`](#adminservice) | Owner console. | 78 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2130,6 +2130,7 @@ Owner console.
 | [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
 | [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
 | [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin (fresh MFA) | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
+| [`ExportDecisionTestRun`](#adminservice-exportdecisiontestrun) | `/api/career.v1.AdminService/ExportDecisionTestRun` | Admin (fresh MFA) | default | `ExportDecisionTestRunRequest` → `ExportDecisionTestRunResponse` | Downloads one run's blocks and answers as two CSV files. |
 | [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin (fresh MFA) | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
@@ -4158,6 +4159,48 @@ somebody reconstruct the answer key.
 {
   "includeSynthetic": true,
   "includeExcluded": true
+}
+```
+
+</details>
+
+### AdminService.ExportDecisionTestRun
+
+`POST /api/career.v1.AdminService/ExportDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Downloads one run's blocks and answers as two CSV files.
+
+Separate from ExportDecisionTestData, which is the whole curated
+dataset for analysis and is served from v_dt_answers. This is one
+run, for a reviewer who is looking at that run: it is scoped to a
+single session, it is built from exactly what the run page was
+given so the file and the screen cannot disagree, and it can carry
+the per-answer detail the dataset export deliberately omits,
+behind an explicit opt-in.
+
+**Request** — [`ExportDecisionTestRunRequest`](#exportdecisiontestrunrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+| `includeKey` | `bool` | boolean |  | Add the prompt, the chosen option and the correct option to the answers file. Off by default, matching the collapsed section on the run page. An answer key that escapes contaminates a standardized instrument permanently, and a file is easier to forward than a screen. The whole-dataset export never carries these at all (FR-DT-16); this is one run, downloaded deliberately. |
+
+**Response** — [`ExportDecisionTestRunResponse`](#exportdecisiontestrunresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `filenameStem` | `string` | string |  | Base filename, without an extension or a suffix. |
+| `blocksCsv` | `string` | string |  | The by-block table, one row per block, with the session context on every row so the file stands alone. |
+| `answersCsv` | `string` | string |  | The every-answer table, one row per answer, same context. |
+| `blockRows` | `int32` | number |  | Rows in the blocks file, excluding its header. |
+| `answerRows` | `int32` | number |  | Rows in the answers file, excluding its header. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "includeKey": true
 }
 ```
 
@@ -8352,6 +8395,27 @@ those two would manufacture a fact about a person.
 | `byEmail` | `int32` | number |  | _(oneof `_by_email`)_ Prior sittings visible by email address at the moment this started. |
 | `byCookie` | `int32` | number |  | _(oneof `_by_cookie`)_ Prior sittings visible by visitor cookie at the moment this started. |
 
+### ExportDecisionTestRunRequest
+
+Asks for one run as downloadable files.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+| `includeKey` | `bool` | boolean |  | Add the prompt, the chosen option and the correct option to the answers file. Off by default, matching the collapsed section on the run page. An answer key that escapes contaminates a standardized instrument permanently, and a file is easier to forward than a screen. The whole-dataset export never carries these at all (FR-DT-16); this is one run, downloaded deliberately. |
+
+### ExportDecisionTestRunResponse
+
+One run as two CSV files.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `filenameStem` | `string` | string |  | Base filename, without an extension or a suffix. |
+| `blocksCsv` | `string` | string |  | The by-block table, one row per block, with the session context on every row so the file stands alone. |
+| `answersCsv` | `string` | string |  | The every-answer table, one row per answer, same context. |
+| `blockRows` | `int32` | number |  | Rows in the blocks file, excluding its header. |
+| `answerRows` | `int32` | number |  | Rows in the answers file, excluding its header. |
+
 ### GetDecisionTestRunRequest
 
 Asks for one run in full.
@@ -8448,6 +8512,7 @@ One block of a run.
 | `digitsCorrect` | `int32` | number |  | Digit positions matching the expected number, after any transformation the block required. |
 | `digitsHeld` | `int32` | number |  | Digit positions that survived, scored against whichever of the presented or the expected number the response is closer to. This is what memory_failure_pct is derived from, and why an untransformed answer reads as full retention: the number was held and only the operation failed. Not the length of the number. |
 | `recallLatencyMs` | `int32` | number |  | How long the participant took to give the number back, in ms. |
+| `meanLatencyVsBaseline` | `double` | number |  | Mean latency for this block in units of the tap-check offset, from v_dt_blocks. Where the ratio earns its place: the load effect is the research question, and comparing block 1 with block 4 across participants needs each person's answers on their own scale. |
 
 ### DecisionTestAnswer
 

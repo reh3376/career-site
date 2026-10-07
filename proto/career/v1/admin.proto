@@ -433,6 +433,19 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Downloads one run's blocks and answers as two CSV files.
+  //
+  // Separate from ExportDecisionTestData, which is the whole curated
+  // dataset for analysis and is served from v_dt_answers. This is one
+  // run, for a reviewer who is looking at that run: it is scoped to a
+  // single session, it is built from exactly what the run page was
+  // given so the file and the screen cannot disagree, and it can carry
+  // the per-answer detail the dataset export deliberately omits,
+  // behind an explicit opt-in.
+  rpc ExportDecisionTestRun(ExportDecisionTestRunRequest) returns (ExportDecisionTestRunResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Records the owner's judgement about a run, or about one block of
   // one, and returns the run as it now reads.
   //
@@ -3304,6 +3317,36 @@ message DecisionTestPriorSittings {
   optional int32 by_cookie = 3;
 }
 
+// Asks for one run as downloadable files.
+message ExportDecisionTestRunRequest {
+  // Which run, from the list.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // Add the prompt, the chosen option and the correct option to the
+  // answers file.
+  //
+  // Off by default, matching the collapsed section on the run page. An
+  // answer key that escapes contaminates a standardized instrument
+  // permanently, and a file is easier to forward than a screen. The
+  // whole-dataset export never carries these at all (FR-DT-16); this is
+  // one run, downloaded deliberately.
+  bool include_key = 2;
+}
+
+// One run as two CSV files.
+message ExportDecisionTestRunResponse {
+  // Base filename, without an extension or a suffix.
+  string filename_stem = 1;
+  // The by-block table, one row per block, with the session context on
+  // every row so the file stands alone.
+  string blocks_csv = 2;
+  // The every-answer table, one row per answer, same context.
+  string answers_csv = 3;
+  // Rows in the blocks file, excluding its header.
+  int32 block_rows = 4;
+  // Rows in the answers file, excluding its header.
+  int32 answer_rows = 5;
+}
+
 // Asks for one run in full.
 message GetDecisionTestRunRequest {
   // From the list.
@@ -3451,6 +3494,11 @@ message DecisionTestBlock {
   int32 digits_held = 17;
   // How long the participant took to give the number back, in ms.
   int32 recall_latency_ms = 18;
+  // Mean latency for this block in units of the tap-check offset, from
+  // v_dt_blocks. Where the ratio earns its place: the load effect is
+  // the research question, and comparing block 1 with block 4 across
+  // participants needs each person's answers on their own scale.
+  double mean_latency_vs_baseline = 19;
 }
 
 // One answer.

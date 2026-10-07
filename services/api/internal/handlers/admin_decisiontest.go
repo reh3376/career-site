@@ -140,12 +140,13 @@ func (a *Admin) GetDecisionTestRun(
 			MeanConfidence: int32(b.MeanConfidence), MeanLatencyMs: int32(b.MeanLatencyMs),
 			PresentedDigits: b.PresentedDigits, ExpectedDigits: b.ExpectedDigits,
 			ResponseDigits: b.ResponseDigits, RecallOutcome: b.RecallOutcome,
-			MemoryFailurePct: int32(b.MemoryFailure * 100),
-			ReviewStatus:     reviews[b.BlockNo].Status,
-			ReviewNote:       reviews[b.BlockNo].Note,
-			DigitsCorrect:    int32(b.DigitsCorrect),
-			DigitsHeld:       int32(b.DigitsHeld),
-			RecallLatencyMs:  int32(b.RecallLatencyMs),
+			MemoryFailurePct:      int32(b.MemoryFailure * 100),
+			ReviewStatus:          reviews[b.BlockNo].Status,
+			ReviewNote:            reviews[b.BlockNo].Note,
+			DigitsCorrect:         int32(b.DigitsCorrect),
+			DigitsHeld:            int32(b.DigitsHeld),
+			RecallLatencyMs:       int32(b.RecallLatencyMs),
+			MeanLatencyVsBaseline: b.MeanLatencyVsBaseline,
 		})
 	}
 	pa := make([]*v1.DecisionTestAnswer, 0, len(answers))
@@ -181,6 +182,36 @@ func (a *Admin) GetDecisionTestRun(
 
 	return connect.NewResponse(&v1.GetDecisionTestRunResponse{
 		Run: toProtoRun(*run), Blocks: pb, Answers: pa, ReviewHistory: ph,
+	}), nil
+}
+
+// ExportDecisionTestRun hands over one run as two CSV files.
+//
+// Thin, like its neighbour: everything that decides what the files
+// contain is in users.BuildDTRunCSV, which is handed exactly what
+// DTGetRun gave the page, so the download and the screen cannot
+// disagree about a single number.
+func (a *Admin) ExportDecisionTestRun(
+	ctx context.Context, req *connect.Request[v1.ExportDecisionTestRunRequest],
+) (*connect.Response[v1.ExportDecisionTestRunResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	out, err := a.users.DTExportRun(ctx, req.Msg.GetSessionKey(), req.Msg.GetIncludeKey())
+	if err != nil {
+		a.log.Error("decision test: export run", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
+	}
+	a.log.Info("decision test run exported",
+		slog.String("session", req.Msg.GetSessionKey()),
+		slog.Bool("include_key", req.Msg.GetIncludeKey()),
+		slog.Int("answer_rows", out.AnswerRows))
+	return connect.NewResponse(&v1.ExportDecisionTestRunResponse{
+		FilenameStem: out.FilenameStem,
+		BlocksCsv:    out.BlocksCSV,
+		AnswersCsv:   out.AnswersCSV,
+		BlockRows:    int32(out.BlockRows),
+		AnswerRows:   int32(out.AnswerRows),
 	}), nil
 }
 
