@@ -913,6 +913,51 @@ CSV export, the privacy section and the product events (migrations
 [`fsd-decision-test.md`](fsd-decision-test.md); delivery is
 [`roadmap-decision-test.md`](roadmap-decision-test.md). What is left:
 
+- **Two answers of one participant's run have no row at all, and the
+  retry queue may not be the whole explanation.** Opened 2026-10-07. A
+  participant on a phone reported answering eight questions; three had
+  rows, all `expired`, and the rest had nothing. Two causes were found
+  and fixed: the question budget spanned the confidence rating and
+  destroyed answers that had been given, and a failed POST was caught
+  and the row discarded permanently. The second is now retried in the
+  background (`decision-test-retry.ts`). What is **not** established is
+  that those two account for her count: three of her eight were the
+  practice questions, which are never stored by design, which leaves
+  five against three rows. The remaining gap is consistent with the
+  phone freezing the page, but that has not been reproduced. Next step
+  is to drive a run with the tab backgrounded on a real phone and see
+  what survives; until then the cause is a hypothesis, not a finding.
+
+- **A write that is still queued when the tab closes is lost.** Opened
+  2026-10-07, and the known limit of the retry queue. The queue retries
+  in the background and flushes when the page becomes visible again,
+  which covers a participant who switches away and comes back. It does
+  not cover one who switches away and never returns: the backoff can
+  have tens of seconds outstanding, and closing the tab takes them.
+  `navigator.sendBeacon` on `pagehide` would close most of it, and
+  needs the Connect endpoint to accept a plain JSON POST that a beacon
+  can make. Worth doing before any recruitment at scale, because the
+  participants it loses are exactly the ones who were interrupted.
+
+- **Latency includes the time spent on the confidence rating**, for
+  every answer except one recovered by a timeout. Opened 2026-10-07.
+  `shownAt` is set when the question appears and the measurement is
+  taken when the rating is submitted, so `latency_ms` is
+  read + decide + rate rather than read + decide. The time of the
+  choice is now captured (`chosenAt`) and used on the timeout path
+  only, because changing it everywhere would silently redefine a column
+  that already has data in it. Decide whether to redefine it, which
+  needs an instrument version bump, or to publish both.
+
+- **27 of the 30 items are shared between `items-2026-10-04` and
+  `items-2026-10-05`**, so a repeat sitting measures item recall rather
+  than reasoning. Opened 2026-10-07 after a third sitting scored 30/30
+  at a mean answer time of 5.7s against 12.6s for first-time
+  participants. `dt_attempt_no` labels the sequence correctly and the
+  analysis can exclude repeats, which is the floor. The question left
+  open is whether to rotate the bank so a repeat is a usable
+  measurement rather than only a practice-effect data point.
+
 - **The tap-check thresholds are provisional** (FR-DT-20). The design
   document's starting figures were ten ticks, presses within 300 ms, at
   least seven of ten, and an offset standard deviation under 150 ms.
