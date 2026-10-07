@@ -521,9 +521,23 @@ func (r *Repo) DTSaveAnswer(
 
 	load := dtBlockLoads[blockNo-1]
 	positionInBlock := (positionOverall-1)%DTQuestionsPerBlock + 1
+	// Confidence is stored NULL rather than zero when it was never
+	// given, which happens when the clock runs out while the
+	// participant is still on the rating step. Zero would be a rating,
+	// would sit below "Guessing" at 10, and would be averaged into every
+	// calibration figure as though somebody had claimed it.
+	//
+	// The views already handle a NULL confidence, because an expired
+	// answer has always had one: avg() skips it and the Brier score is
+	// not computed. So an answer recovered this way contributes its
+	// accuracy, its latency and its lure capture, and abstains from the
+	// calibration measure it has nothing to say about.
 	var conf, lat *int
 	if outcome != "expired" {
-		conf, lat = &confidence, &latencyMs
+		lat = &latencyMs
+		if confidence > 0 {
+			conf = &confidence
+		}
 	}
 	var answeredAt *time.Time
 	if outcome != "expired" {

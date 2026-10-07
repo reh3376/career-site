@@ -117,6 +117,11 @@ export function RunScreen() {
   const [beat, setBeat] = useState(false);
 
   const shownAt = useRef(0);
+  // When an option was picked, as distinct from when the answer was
+  // submitted. Only used on the timeout path: an answer recovered
+  // because the clock ran out during the rating step must not be
+  // credited with the seconds the participant spent not rating it.
+  const chosenAt = useRef(0);
   const signal = useRef<Signal | null>(null);
   const question = block.questions[qi];
   const scored = blockNo > 0;
@@ -200,8 +205,14 @@ export function RunScreen() {
   );
 
   const advance = useCallback(
-    async (chosenIndex: number, confidence: number) => {
-      const latency = Math.round(performance.now() - shownAt.current);
+    async (chosenIndex: number, confidence: number, latencyOverride?: number) => {
+      // latencyOverride exists for one case: the clock ran out while the
+      // participant was on the rating step, so the answer is kept but
+      // the time it took is the time to the CHOICE, not the time to the
+      // timeout. Without it every recovered answer would be recorded at
+      // exactly the question budget and look like deliberation it never
+      // had.
+      const latency = latencyOverride ?? Math.round(performance.now() - shownAt.current);
       if (scored && question) {
         try {
           await decisionTestClient.submitAnswer({
@@ -261,7 +272,31 @@ export function RunScreen() {
     }
     if (phase === "question" || phase === "confidence") {
       const left = timings.questionMs - (performance.now() - shownAt.current);
-      const t = window.setTimeout(() => void advance(-1, 0), Math.max(0, left));
+      const t = window.setTimeout(() => {
+        // An answer that was given is kept.
+        //
+        // This budget spans the question AND the rating that follows
+        // it, and it used to fire `advance(-1, 0)` unconditionally.
+        // So a participant who read the question, chose an option, and
+        // was then slow on the five confidence buttons had their choice
+        // thrown away and stored as `expired`, indistinguishable from
+        // never having answered at all.
+        //
+        // That is not a neutral loss. The answers it destroys are the
+        // ones where somebody deliberated, which are exactly the
+        // answers the instrument is about, and it falls hardest on a
+        // phone where the rating targets are smaller. It took eight of
+        // one participant's answers on 2026-10-07 and was found by
+        // driving the page: choose an option, wait, and watch the row
+        // come back expired with a null chosen_index.
+        //
+        // Expiry now means what it says: nothing was chosen.
+        if (chosen !== null) {
+          void advance(chosen, 0, Math.round(chosenAt.current - shownAt.current));
+        } else {
+          void advance(-1, 0);
+        }
+      }, Math.max(0, left));
       return () => window.clearTimeout(t);
     }
     if (phase === "recall") {
@@ -417,6 +452,7 @@ export function RunScreen() {
                   <button
                     type="button"
                     onClick={() => {
+                      chosenAt.current = performance.now();
                       setChosen(i);
                       setPhase("confidence");
                     }}
