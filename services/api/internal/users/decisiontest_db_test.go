@@ -533,3 +533,80 @@ func TestTheConsoleReturnsTheWholeRecord(t *testing.T) {
 		t.Errorf("history records %+v, want the judgement that was just made", last)
 	}
 }
+
+// An answer that was given must survive a confidence timeout.
+//
+// The run screen's question budget spans the question AND the rating
+// that follows it, and when it expired it submitted `expired`
+// unconditionally, discarding an option the participant had already
+// chosen. One participant lost eight answers to this on 2026-10-07 and
+// the rows were indistinguishable from never having answered.
+//
+// The client decides what to send; this pins the half the api owns: an
+// answer with no confidence is stored as an answer with a NULL
+// confidence, never as a zero. Zero would sit below "Guessing" at 10
+// and would be averaged into every calibration figure as a rating
+// somebody never gave.
+func TestAnAnswerWithNoConfidenceKeepsItsChoice(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "confidence timeout"},
+		DTConditions{AudioMode: "sound", DeviceClass: "phone"},
+		true, "db-test-conf-timeout", nil,
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+	items, err := r.DTScoredItems(ctx)
+	if err != nil {
+		t.Fatalf("DTScoredItems: %v", err)
+	}
+	block, err := r.DTBuildBlock(ctx, 1, items[:DTQuestionsPerBlock])
+	if err != nil {
+		t.Fatalf("DTBuildBlock: %v", err)
+	}
+	if err := r.DTRecordBlockDigits(ctx, sess.ID, block); err != nil {
+		t.Fatalf("DTRecordBlockDigits: %v", err)
+	}
+
+	// The correct option, chosen, with no confidence given.
+	item := items[0]
+	if err := r.DTSaveAnswer(ctx, sess.ID, 1, 1, item.CorrectIndex, 4200, 0, item); err != nil {
+		t.Fatalf("DTSaveAnswer: %v", err)
+	}
+
+	var outcome string
+	var chosen, conf, lat *int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT outcome, chosen_index, confidence, latency_ms
+		  FROM dt_answers WHERE session_id=$1 AND position_overall=1`,
+		sess.ID).Scan(&outcome, &chosen, &conf, &lat); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if outcome != "correct" {
+		t.Errorf("outcome = %q, want %q: the answer was given and must not "+
+			"read as though it never was", outcome, "correct")
+	}
+	if chosen == nil || *chosen != item.CorrectIndex {
+		t.Errorf("chosen_index = %v, want %d", chosen, item.CorrectIndex)
+	}
+	if conf != nil {
+		t.Errorf("confidence = %d, want NULL: a rating that was never given "+
+			"must not be averaged in as a zero", *conf)
+	}
+	if lat == nil || *lat != 4200 {
+		t.Errorf("latency_ms = %v, want 4200: the time to the decision, not "+
+			"the time to the clock running out", lat)
+	}
+
+	// And the calibration views must skip it rather than counting a zero.
+	var meanConf *int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT round(avg(confidence))::int FROM dt_answers
+		 WHERE session_id=$1 AND outcome <> 'expired'`, sess.ID).Scan(&meanConf); err != nil {
+		t.Fatalf("mean confidence: %v", err)
+	}
+	if meanConf != nil {
+		t.Errorf("mean confidence over one unrated answer is %d, want NULL", *meanConf)
+	}
+}
