@@ -252,7 +252,13 @@ want 2" and "block 1 has 0 base_rate items, want 1".
 tripwire, and it fails loudly the next time the bank is edited by hand.
 No schema change, no behaviour change.
 
-### S2. Schema: the pools, the draw, and a view over both
+### S2. Schema: the pools, the draw, and a view over both. DONE 2026-10-07.
+
+Migration 00059. `dt_session_items` with the no-repeat rule as a unique
+constraint, `dt_category_quota(family)` as the single definition of the
+per-block mix, and `v_dt_item_pools`, which reports the honest state of
+the bank today: a spare of zero and `can_vary = false` in every
+category.
 
 One migration:
 
@@ -272,7 +278,24 @@ One migration:
 reports four categories with a spare of zero, which is the true and
 uncomfortable answer for today's bank.
 
-### S3. Selection: draw 30, balanced, distinct, and record it
+### S3. Selection: draw 30, balanced, distinct, and record it. DONE 2026-10-07.
+
+`DTDrawItems`, `DTDrawnBlock`, `DTSeenItems` and `DTItemPools`. Four
+database-backed tests: twenty-five draws each checked for composition and
+distinctness, the unique constraint refusing a repeat directly, a
+depleted category refusing rather than serving a short block and leaving
+no rows behind, and a repeat sitting sharing nothing with the first.
+
+The last of those **skips today** and says why: no category has a spare,
+so a second sitting cannot avoid the first. Verified by doubling the bank
+in a test database, where it runs and passes. That skip is the plan's
+D2c made executable.
+
+Two faults found by the tests rather than by reading: a nil exclusion
+list arrives as NULL, and `id = ANY(NULL)` is NULL rather than false, so
+a first sitting drew nothing at all; and `DTSeenItems` deliberately
+ignores synthetic runs, which is a judgement now written down in the
+code rather than implied.
 
 - `DTDrawItems(ctx, sessionID, exclude []int64)` picks the test's 30:
   for each block, `dt_category_quota(family)` items per category, chosen
