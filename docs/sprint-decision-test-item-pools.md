@@ -95,53 +95,140 @@ unequal per-block quota that is still equal per test, or a block size
 other than six. Worth knowing before anyone proposes one; not a problem
 today.
 
-### D2. Fixed parallel forms, not per-session random sampling
+### D2. A random draw per test, without replacement
 
-Two ways to make items vary:
+**Settled by the owner on 2026-10-07**, and it overrides the earlier
+recommendation in this document, which was for two or three fixed
+parallel forms. His words:
 
-**Per-session sampling** draws 30 from a larger pool for each
-participant, honouring the quota. Maximum variation, and it defeats
-practice completely. But every participant then sees a different test:
-per-item statistics accumulate far more slowly, and with n in the low
-tens `v_dt_items` would never say anything about any individual item.
+> The questions used are random within a given category and must only be
+> used once per test, therefore you will need a mechanism to exclude the
+> used questions from the pool after it is used in a given test. This
+> will all need to reset for each test.
 
-**Parallel forms** build 2 or 3 fixed sets, each balanced to the same
-quota. Two participants on form B are directly comparable, per-item
-statistics accumulate, and it is what a published instrument does.
+So: each test draws its 30 items at random from the category pools,
+honouring the per-block quota in D1, with no item appearing twice in one
+test, and the exclusion resetting at the start of every test rather than
+carrying across tests.
 
-**Recommendation: forms.** The binding constraint on this instrument is
-participants, not items. Anything that makes a given item's numbers take
-longer to stabilise is the wrong trade at n = 2 independent runs.
+**What this costs, stated once so it is not a surprise later.** Every
+participant sees a different 30. Per-item statistics therefore
+accumulate far more slowly than under fixed forms: `v_dt_items` reports
+accuracy and lure rate per item, and at n in the tens most items will
+have been seen once or twice. Item-level claims will take much longer to
+support. What is preserved is the thing the owner is protecting, which is
+the comparison that actually matters: category composition is identical
+across every test and every block, so block 4 against block 1 and person
+against person remain fair.
 
-### D3. A repeat sitting is served a form the participant has not seen
+### D2a. The draw happens once, at session start, and is stored
 
-This is the point of the whole exercise and it needs no new identity
-machinery: `prior_by_account`, `prior_by_email` and `prior_by_cookie` are
-already recorded per session, and `dt_sessions` already records which
-form each sitting used. Assignment rule, in order:
+**Confirmed by the owner on 2026-10-07**, who said the whole test may be
+generated before it begins and left the choice here. Drawing up front is
+the right one, and it is close to forced by how the test is already
+served: the client fetches blocks one at a time through
+`GetBlock(blockNo)`. Drawing per block could not guarantee that block 4
+avoids an item block 2 already used, because each call would know nothing
+of the others.
 
-1. A form this participant has no recorded sitting on.
-2. If they have seen them all, the one seen longest ago, flagged.
-3. For a first sitting with no identity at all, the least-used form, so
-   the forms fill evenly rather than form A carrying every anonymous run.
+So the whole 30 are drawn when the session starts and written to a new
+`dt_session_items` table, one row per position. `GetBlock(n)` then serves
+positions `(n-1)*6 + 1` through `n*6` from that stored draw.
 
-### D4. Forms are not assumed equivalent
+Drawing up front has a second benefit worth naming: the draw is one
+transaction at the start, so a session can never exist without its items,
+and a network failure part way through a run cannot leave later blocks
+undrawable.
 
-Two forms balanced by category are **not** thereby equally hard. Until
-there is evidence, a finding must not pool across forms.
+This table is also the direct answer to "track the questions used for a
+given test". `dt_answers` already records the item per answered position,
+but only once the question has been answered; the draw has to exist
+before that, and it has to survive a run that is abandoned half way.
 
-`item_set_version` will encode the form (`items-2026-10-05-a`), which
-means the existing grouping in `v_dt_load_curve` and `v_dt_calibration`
-already keeps them apart. A later step adds a view that reports accuracy
-per form so equivalence can be argued rather than assumed, and the
-decision to pool stays the owner's.
+### D2c. Randomness is zero until the bank grows, and that must not be silent
+
+This is the constraint that decides the order of the work.
+
+| category | needed per test | in the bank today | spare |
+|---|---|---|---|
+| `arithmetic` | 10 | 10 | 0 |
+| `syllogism` | 10 | 10 | 0 |
+| `base_rate` | 5 | 5 | 0 |
+| `conjunction` | 5 | 5 | 0 |
+
+Every pool is exactly the size of its own quota, so "draw 10 at random
+from 10" is not a draw. **Shipped against today's bank, this mechanism
+serves the same 30 items to everybody**, exactly as now, with the order
+shuffled.
+
+That is not a reason to delay the mechanism, and it is a reason to make
+the shortfall visible rather than letting it look like it is working. The
+selection reports the pool size against the quota, and the admin console
+shows it, so "the pools are too small to vary" is a number on a screen
+rather than something discovered when two participants compare notes.
+
+Meaningful variation needs roughly double: 20 arithmetic, 20 syllogism,
+10 base-rate, 10 conjunction, so 60 items against today's 30. Three
+distinct sittings' worth needs 90.
+
+### D3. Exclusion is per test, and resets after each one
+
+Stated twice by the owner, and worth being exact about because "reset"
+could mean two different things.
+
+Within one test, an item that has been drawn is removed from the pool for
+the rest of that test: no question appears twice in the same sitting.
+When the test ends the exclusion **resets**, so the next test draws from
+the full pool again and is not narrowed by what earlier tests happened to
+use. The pools do not deplete over time and item 11 is not reserved for
+participant 2.
+
+The one deliberate exception is a repeat sitting by a participant the
+system recognises (D3a), where the point is precisely to avoid what that
+person has already seen.
+
+### D3a. A repeat sitting draws from what the participant has not seen
+
+This is the original problem: a third sitting scored 30/30 because 27 of
+its 30 items were ones that participant had already answered twice.
+
+For a participant the system can recognise, the draw first excludes items
+already served to them in an earlier sitting, read from
+`dt_session_items` and joined on the identity observations already
+recorded per session. If a category cannot be filled from unseen items
+alone, it falls back to the least recently seen and the run is flagged,
+because a partly repeated sitting is a different measurement and the
+analysis has to be able to tell.
+
+This is a per-participant exclusion, not a global one: it narrows that
+person's draw and nobody else's.
+
+### D4. Items within a category are not assumed equally hard
+
+Two tests balanced by category are **not** thereby equally hard, because
+the items inside a category differ. Under fixed forms that difference
+would be a systematic offset between forms; under a random draw it
+becomes variance between participants, which is the better failure of the
+two but is not nothing.
+
+`item_set_version` continues to identify the **pool**, not the draw,
+which is correct: every run drawn from the same pool under the same
+timings is comparable in the way the instrument claims. The per-run draw
+is recorded in `dt_session_items`, so a difficulty effect can be looked
+for later rather than assumed away.
+
+A later step adds a view reporting per-item accuracy and lure rate with
+counts, so that "this item is much harder than its category" is
+answerable once there is enough data. At current n it will honestly
+report that there is not.
 
 ### D5. Mechanism ships before content
 
-Form A is today's 30 items, renamed. Forms B and C are **item-writing
-work**, not code: 60 new items with correct and lure answers, matched to
-category and difficulty. The code must therefore work correctly with
-only form A present, and must refuse to serve an incomplete form.
+The 30 new items are **item-writing work**, not code: each needs a
+correct answer and a designed lure, matched to its category. The code
+must therefore work correctly against today's bank, where every pool is
+exactly its quota and the draw is forced, and must keep working as items
+are added one at a time rather than requiring a complete new set.
 
 ---
 
@@ -149,144 +236,160 @@ only form A present, and must refuse to serve an incomplete form.
 
 Each step is independently shippable and leaves the test working.
 
-### S1. Make the existing balance enforced, and bump nothing
+### S1. Make the existing balance enforced. DONE 2026-10-07.
 
-Add a test that reads the live item bank and asserts the quota: every
-block of six is 2/1/1/2, every category total is 10/10/5/5, and there are
-exactly 30 active scored items. No schema change, no behaviour change.
+Two database-backed tests read the live bank and assert its shape:
+every block of six is 2 arithmetic / 1 base-rate / 1 conjunction / 2
+syllogism, positions run 1 to 30 with no gap or duplicate, there are 30
+active scored items and at least one practice item, and every scored item
+has a lure distinct from its correct answer.
+
+Verified to fail as well as pass: moving one item from `base_rate` to
+`syllogism` in a test database produced "block 1 has 3 syllogism items,
+want 2" and "block 1 has 0 base_rate items, want 1".
 
 *Why first:* it locks in what is true today, so every later step has a
-tripwire. It also fails loudly the next time someone edits the bank by
-hand, which is the fragility that prompted this.
+tripwire, and it fails loudly the next time the bank is edited by hand.
+No schema change, no behaviour change.
 
-*Exit:* the test passes against production's bank, and fails if an item
-is retired without a replacement in the same category.
+### S2. Schema: the pools, the draw, and a view over both
 
-### S2. Schema: forms, and the run's record of which one it drew
+One migration:
 
-Migration adding:
+- `dt_session_items (session_id, position_overall, item_id)`, primary key
+  `(session_id, position_overall)`, unique on `(session_id, item_id)`.
+  **The unique constraint is the no-repeat rule**, enforced by the
+  database rather than by the code that happens to write it.
+- `dt_category_quota(family text) RETURNS int`, the per-block quota as a
+  function, following `dt_confident_threshold()` and `dt_load_rank()`.
+  One definition, read by the view, the selection and the S1 test, so the
+  quota cannot be changed in one place and missed in another.
+- `v_dt_item_pools`: per category, the pool size, the per-test quota and
+  the spare. This is what makes D2c visible instead of silent.
+- No `form` column anywhere. That was for the superseded design.
 
-- `dt_items.form text NOT NULL DEFAULT 'a'` — existing items become
-  form `a` with no data change.
-- `dt_sessions.item_form text NOT NULL DEFAULT ''` — which form the run
-  drew. Empty for the runs taken before this existed, which is honest:
-  they predate the concept and must not be relabelled as form `a`
-  retrospectively.
-- An index on `(form, kind, active, position)` for the selection query.
-- A `v_dt_form_composition` view: per form, the per-block and per-test
-  category counts. One definition of "is this form complete and
-  balanced", readable from SQL and from the admin console.
+*Exit:* migrations replay on an empty database; `v_dt_item_pools`
+reports four categories with a spare of zero, which is the true and
+uncomfortable answer for today's bank.
 
-*Exit:* migrations replay on an empty database; the existing 30 items
-read back as form `a`; `v_dt_form_composition` reports form `a` as
-complete and balanced.
+### S3. Selection: draw 30, balanced, distinct, and record it
 
-### S3. Selection: serve a whole form, refuse a partial one
+- `DTDrawItems(ctx, sessionID, exclude []int64)` picks the test's 30:
+  for each block, `dt_category_quota(family)` items per category, chosen
+  at random from the category's active pool minus everything already
+  drawn for this session, and writes them to `dt_session_items`.
+- It **refuses rather than improvises** if a category cannot be filled.
+  A short draw must never silently produce a five-question block.
+- `DTBlockItems(ctx, sessionID, blockNo)` reads back positions
+  `(n-1)*6+1` to `n*6`, replacing the current fixed slice of the bank.
+- Randomness comes from the database (`ORDER BY random()`), so there is
+  no seed to thread through Go and no second source of truth about what
+  was drawn: the rows in `dt_session_items` are the record.
 
-- `DTScoredItemsForForm(ctx, form)` replaces `DTScoredItems`, returning
-  the form's 30 items in presentation order.
-- **It returns an error unless the form is complete and balanced.** A
-  half-written form B must never reach a participant; this is the
-  guard that makes it safe to write items incrementally in production.
-- `itemSetVersion` stops being a hand-edited constant and becomes
-  derived: the bank version plus the form (`items-2026-10-05-a`). The
-  same reasoning as `instrument_version` being derived from the timings,
-  which exists precisely so there is no version to forget to bump.
+*Exit:* a database test drawing many times over, asserting every draw has
+the right composition per block, no duplicate within a test, and a
+different composition is impossible; plus a test that a deliberately
+depleted category causes a refusal rather than a short block.
 
-*Exit:* a database test inserts a deliberately unbalanced form and
-asserts the selection refuses it; form `a` still serves identically to
-today, and a run started under it is byte-identical in its item
-sequence to a run started before the change.
+### S4. Wire the draw into the run
 
-### S4. Assignment: pick the form at session start
+- `StartDecisionTest` calls `DTDrawItems` inside the same transaction
+  that creates the session, so a session can never exist without its
+  draw.
+- `GetBlock` serves from `dt_session_items` rather than from the bank's
+  fixed order.
+- The practice block is unchanged: it is its own `kind` and is not drawn
+  from the scored pools.
 
-- `DTPickForm(ctx, priorByAccount, priorByEmail, priorByCookie, visitorKey)`
-  implementing D3, returning the form and why it was chosen.
-- `StartDecisionTest` records `item_form` and the derived
-  `item_set_version`.
-- The reason is logged, not stored: which rule fired is useful when a
-  run looks odd and is not a measurement.
+*Exit:* a synthetic run through the real UI, then reading
+`dt_session_items` for that session and confirming the 30 rows match the
+30 answers, in order.
 
-*Exit:* a database test covering each branch — unseen form preferred,
-all-seen falls back to least-recent, no-identity gets the least-used —
-and a synthetic run through the real UI confirming the session row
-carries the form it was served.
+### S5. Repeat sittings avoid what the participant has seen
 
-### S5. The form is visible everywhere a run is
+- The exclusion set for `DTDrawItems` is built from `dt_session_items`
+  for the participant's earlier sessions, found through the identity
+  observations already recorded.
+- When a category cannot be filled from unseen items, fall back to the
+  least recently seen and record on the session that it happened, so a
+  partly repeated sitting is visible in the data rather than inferred.
 
-- `DecisionTestRun.item_form` on the proto, the admin list and the run
-  page, beside `item_set_version`.
-- A form filter on the run list.
-- `item_form` in both per-run CSVs and in the dataset export.
+*Exit:* a database test running two sittings for one visitor and
+asserting the second draws nothing the first used, and that when the pool
+is too small the fallback is recorded rather than silent.
 
-*Exit:* the live pass. The owner can see which form a run used without
-opening `/admin/db`, which is the same bar S3 of the curation sprint was
-held to.
+### S6. The draw is visible where a run is
 
-### S6. Equivalence, before anything is pooled
+- The run page lists the 30 items it drew, in order, with their
+  categories, behind the same collapsed toggle the questions already sit
+  behind.
+- `v_dt_item_pools` on the admin decision-test page, so pool shortfall is
+  a number the owner sees rather than something that surfaces as two
+  participants comparing notes.
+- The per-run CSVs already carry `item_code` per answer and need nothing.
 
-- `v_dt_form_equivalence`: per form, per category, accuracy and mean
-  confidence with counts, so two forms can be compared.
-- `docs/metrics.md` gains the entry, including the plain statement that
-  forms must not be pooled until this view says they can, and that at
-  current n it cannot say so.
+*Exit:* the live pass, which is the only test that counts for UI here.
 
-*Exit:* the view exists and reports honestly on one form, which is the
-answer "not enough data" rather than a number.
+### S7. Content: grow the pools
 
-### S7. Content: forms B and C
+Thirty or more new items, each with a designed lure, to give every
+category a spare. Twenty arithmetic, twenty syllogism, ten base-rate and
+ten conjunction would give roughly double the quota and make the draw
+genuinely random. **Not code.** Items can be added one at a time; S1's
+test and `v_dt_item_pools` both keep telling the truth as they land.
 
-Sixty items, 30 per form, matched to the quota: 10 practical math, 10
-logic, 5 base rate, 5 conjunction per form, each with a correct answer
-and a designed lure. **Not code.** Each form is added to the bank
-inactive, then activated once `v_dt_form_composition` reports it
-complete, at which point S3's guard lets it be served.
-
-*Exit:* `v_dt_form_composition` reports three complete forms and S4
-starts assigning them.
+*Exit:* `v_dt_item_pools` reports a non-zero spare in every category, at
+which point two participants stop seeing the same test.
 
 ---
 
 ## Order and what gates what
 
-S1 first and alone: it protects everything after it. S2 and S3 are one
-unit of work and should land together, because a schema with no selector
-is a column nobody reads. S4 is the behaviour change and is the first
-step a participant could notice. S5 is the review surface. S6 before any
-finding is quoted across forms. S7 is content and can proceed in
-parallel with S5 and S6 once S3's guard is in place.
+S1 is done. S2 and S3 are one unit and should land together, because a
+schema with no selector is a table nobody writes to. S4 is the first step
+a participant could notice and is the point of no return: after it, the
+served items come from the draw. S5 needs S4. S6 is the review surface.
+S7 is content and can proceed at any time once S2 has landed, since the
+pools are just items with a category.
 
-**S1 to S6 are worth doing even if forms B and C are never written**,
-because they convert an implicit hand-ordered convention into an enforced
-one and make the version derived rather than remembered.
+**S2 to S6 are worth doing even if no new items are ever written**,
+because they replace a hand-ordered convention with an enforced one and
+make the no-repeat rule a database constraint. They will not, on their
+own, make two participants' tests differ. Only S7 does that, and the plan
+says so rather than letting the mechanism look like it is working.
 
 ## Risks
 
-- **A partial form reaching a participant** is the one failure that
-  costs real data. S3's refusal is the guard and it is the first test
-  written, not the last.
-- **Silent pooling across forms** would make a finding wrong rather than
-  absent. The existing `item_set_version` grouping prevents it as long as
-  the version really does encode the form, which is why S3 derives it
-  instead of leaving a constant to be edited.
-- **Item quality drifting between forms.** Sixty new items written
-  quickly will not match the originals' difficulty. S6 is the check, and
-  until it has data the honest position is that forms are separate
-  instruments.
-- **Participants are the scarce resource.** Nothing in S1 to S6 changes
-  what a participant sees, so none of it can cost a run. S4 changes which
-  items they see and should land when no one is mid-test.
+- **A short or unbalanced draw reaching a participant** is the failure
+  that costs real data. S3 refuses rather than improvises, and that
+  refusal is the first test written.
+- **The mechanism looking like it works when it cannot.** With every
+  pool exactly its quota, S4 will serve the same 30 items to everybody
+  and nothing will look wrong. `v_dt_item_pools` exists so the shortfall
+  is stated rather than discovered.
+- **Per-item statistics thinning out.** A random draw spreads
+  observations across more items, so item-level claims need more
+  participants than before. Accepted deliberately by the owner in D2; the
+  comparison he is protecting is category composition, and that is
+  preserved exactly.
+- **Participants are the scarce resource.** S1 to S3 change nothing a
+  participant sees. S4 does, and should land when nobody is mid-test,
+  which `deploy/rollout.sh` now refuses to do anyway.
 
 ## Decisions that are the owner's
 
-*(D1, the categories, was settled on 2026-10-07: keep the four existing
-families under their existing names.)*
+*(D1, the categories, and D2, a random per-test draw rather than fixed
+forms, were both settled on 2026-10-07.)*
 
-1. **Two forms or three?** Three gives a participant three clean
-   sittings; two halves the writing. The code treats the count as data
-   either way.
-2. **Who writes forms B and C?** Sixty items with designed lures is the
-   largest single piece of work here and it is content, not code.
-3. **Should the existing runs be relabelled form `a`?** The
-   recommendation is no (S2): they predate the concept, and an empty
-   `item_form` is the truthful record.
+1. **How big should the pools get?** Doubling the quota (60 items in
+   total) makes the draw genuinely random. More is better and each item
+   is real work. S7 is the only step that makes two participants' tests
+   differ, so this is the decision that determines whether any of the
+   rest changes what a participant sees.
+2. **Who writes the new items?** Each needs a correct answer and a
+   designed lure in an existing category. This is the largest single
+   piece of work in the plan and it is content, not code.
+3. **What should a repeat sitting do when the pool is too small to avoid
+   repeats?** The plan falls back to the least recently seen and flags
+   the run (D3a). The alternative is to refuse the sitting, which costs a
+   willing volunteer. The recommendation is to flag rather than refuse.
