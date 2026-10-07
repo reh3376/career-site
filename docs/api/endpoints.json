@@ -1811,6 +1811,22 @@
     },
     {
       "service": "career.v1.AdminService",
+      "method": "ExportDecisionTestRun",
+      "path": "/api/career.v1.AdminService/ExportDecisionTestRun",
+      "grpc_full_method": "/career.v1.AdminService/ExportDecisionTestRun",
+      "internal": false,
+      "request": "career.v1.ExportDecisionTestRunRequest",
+      "response": "career.v1.ExportDecisionTestRunResponse",
+      "summary": "Downloads one run's blocks and answers as two CSV files.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": true,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.AdminService",
       "method": "ReviewDecisionTestRun",
       "path": "/api/career.v1.AdminService/ReviewDecisionTestRun",
       "grpc_full_method": "/career.v1.AdminService/ReviewDecisionTestRun",

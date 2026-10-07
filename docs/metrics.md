@@ -65,6 +65,41 @@ below counts from it and nothing is stored.
 | `v_dt_threshold` | **The per-person answer.** The lowest load on the ramp at which this participant took the intended wrong answer while still reporting high confidence. |
 | `v_dt_items` | Per item: accuracy, how often the lure pulled, the gap. A `lure_pct` near zero is an item measuring nothing. |
 
+### `latency_vs_baseline`, and what its denominator actually is
+
+`v_dt_answers.latency_vs_baseline` is `latency_ms / baseline_rt_ms`,
+averaged into `mean_latency_vs_baseline` by `v_dt_blocks` and
+`v_dt_sessions`. It is in the CSV export.
+
+**The denominator is the tap check's synchronisation offset, not a
+reaction time.** It is how far the participant's presses sat from the
+metronome, typically 90 to 300ms. So a value of 174 does not mean an
+answer took 174 times a person's normal thinking time; it means the
+answer took 174 of those offsets. The admin console calls the unit
+"offsets" for that reason, and never "x baseline": the second phrasing
+invites a reading that is wrong by orders of magnitude, and did, on the
+run page, until the owner's own run showed "174.7x base" against a
+fifteen-second answer.
+
+**Within one run it adds nothing.** The denominator is a per-run
+constant, so it ranks a run's own answers in exactly the order plain
+latency does.
+
+**Across runs and across blocks it is the point.** It puts a naturally
+quick and a naturally slow participant on one scale, which is what the
+load comparison needs: block 4 against block 1, person against person.
+That is why it is surfaced per block on the review page and why it is
+kept in the export.
+
+**Known weakness, left open deliberately.** A tap-synchronisation offset
+is a poor normaliser for a reasoning latency: the two are not the same
+faculty, and the offset is bounded by the metronome's period in a way
+thinking time is not. A better denominator would be an unloaded
+*decision* time, which this instrument does not currently collect. The
+measure is kept because it is the only per-participant speed normaliser
+there is, and this paragraph exists so that nobody quotes it without
+knowing what it rests on.
+
 Two definitions had to be made rather than found, and both live in a
 function so that changing one is a single line:
 

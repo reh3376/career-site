@@ -8,6 +8,7 @@ import { getSessionCookie } from "@/lib/session";
 import type { Run } from "../runs";
 import { attemptEvidence, attemptLabel } from "../runs";
 import { BlockReview, SessionReview } from "../review";
+import { RunExport } from "../run-export";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
 
@@ -30,6 +31,7 @@ type Block = {
   digitsCorrect?: number;
   digitsHeld?: number;
   recallLatencyMs?: number;
+  meanLatencyVsBaseline?: number;
 };
 type Answer = {
   position: number;
@@ -147,7 +149,7 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
       <p className="mt-2 font-mono text-[11px] tracking-[0.1em] text-ink-3">
         {[
           run.tapCheckPassed === false ? "tap check FAILED" : "tap check passed",
-          run.baselineRtMs ? `baseline ${run.baselineRtMs}ms` : null,
+          run.baselineRtMs ? `tap offset ${run.baselineRtMs}ms` : null,
           run.baselineRtSdMs ? `sd ${run.baselineRtSdMs}ms` : null,
           run.recallStrategy ? `held the number: ${run.recallStrategy}` : "strategy not given",
           run.isRepeat ? `repeat, matched by ${run.repeatMatchedBy || "unknown"}` : null,
@@ -239,6 +241,7 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
               <th className="py-3 pr-4">Mean time</th>
               <th className="py-3 pr-4">Number</th>
               <th className="py-3 pr-4">Recall</th>
+              <th className="py-3 pr-4">Pace</th>
               <th className="py-3 pr-4">Memory lost</th>
               <th className="py-3">Use</th>
             </tr>
@@ -276,6 +279,14 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                     whichever of the two numbers the answer is closer to,
                     so an untransformed answer reads as 0% lost: the
                     number was held, only the operation failed. */}
+                {/* Per block, which is where it means something: the
+                    load effect is the research question and this is the
+                    scale on which two participants can be compared. */}
+                <td className="py-3 pr-4 tabular-nums text-ink-2">
+                  {b.meanLatencyVsBaseline
+                    ? Math.round(b.meanLatencyVsBaseline)
+                    : ","}
+                </td>
                 <td className="py-3 pr-4 tabular-nums text-ink-2">
                   {(b.memoryFailurePct ?? -1) < 0
                     ? "not scored"
@@ -315,6 +326,31 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           </tbody>
         </table>
       </div>
+
+      {/* Said once, plainly, because the unit is not self-explanatory
+          and a reader who guesses will guess wrong. */}
+      <section className="mt-12 rounded-md border border-line bg-paper-2 px-6 py-5">
+        <h2 className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+          Reading the pace figures
+        </h2>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-2">
+          Pace is answer time divided by this participant&rsquo;s tap-check
+          offset, {run.baselineRtMs || "about 90 to 300"}ms here. That offset
+          is how far their presses sat from the metronome, not a reaction
+          time, so{" "}
+          <strong className="text-ink">
+            a pace of 174 does not mean 174 times slower than normal
+          </strong>
+          . It means that answer took 174 offsets.
+        </p>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-2">
+          Within one run the denominator never changes, so pace ranks
+          answers in exactly the order plain time does and adds nothing.
+          It is worth having across runs and across blocks, where it puts
+          a naturally quick and a naturally slow participant on one scale:
+          block 4 against block 1, person against person.
+        </p>
+      </section>
 
       <h2 className="font-display mt-14 text-2xl text-ink">Every answer</h2>
       <p className="mt-3 max-w-xl text-sm text-ink-3">
@@ -385,19 +421,17 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                   {a.outcome === "expired"
                     ? ""
                     : `${Math.round((a.latencyMs ?? 0) / 100) / 10}s`}
-                  {/* latency_vs_baseline is deliberately NOT shown.
-                      It is latency_ms / baseline_rt_ms, and
-                      baseline_rt_ms is the tap check's synchronisation
-                      OFFSET, around 90ms, not a reaction time. A
-                      fifteen-second reasoning latency over a 90ms offset
-                      reads as "174x base", which a reviewer would
-                      naturally take to mean 174 times slower than this
-                      participant's normal speed. It means nothing of the
-                      kind. The field stays in the view and the export,
-                      because that is the one definition and changing it
-                      is the owner's call, but a number nobody can
-                      interpret does not belong on the page where runs
-                      are judged. */}
+                  {/* Labelled by the unit, not as "x base". The
+                      denominator is the tap-check offset and calling it
+                      a baseline invites reading 174 as "174 times
+                      slower", which is the misreading this wording
+                      exists to prevent. The section above states the
+                      unit in full. */}
+                  {a.latencyVsBaseline ? (
+                    <span className="block font-mono text-[10px] text-ink-3">
+                      {Math.round(a.latencyVsBaseline)} offsets
+                    </span>
+                  ) : null}
                 </td>
                 <td className="py-2 tabular-nums text-ink-2">
                   {(a.brier ?? -1) < 0 ? "," : a.brier?.toFixed(2)}
@@ -407,6 +441,8 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           </tbody>
         </table>
       </div>
+
+      <RunExport sessionKey={key} />
 
       {/* The questions themselves, and the key, behind a deliberate
           click.

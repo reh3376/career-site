@@ -212,6 +212,9 @@ const (
 	// AdminServiceExportDecisionTestDataProcedure is the fully-qualified name of the AdminService's
 	// ExportDecisionTestData RPC.
 	AdminServiceExportDecisionTestDataProcedure = "/career.v1.AdminService/ExportDecisionTestData"
+	// AdminServiceExportDecisionTestRunProcedure is the fully-qualified name of the AdminService's
+	// ExportDecisionTestRun RPC.
+	AdminServiceExportDecisionTestRunProcedure = "/career.v1.AdminService/ExportDecisionTestRun"
 	// AdminServiceReviewDecisionTestRunProcedure is the fully-qualified name of the AdminService's
 	// ReviewDecisionTestRun RPC.
 	AdminServiceReviewDecisionTestRunProcedure = "/career.v1.AdminService/ReviewDecisionTestRun"
@@ -500,6 +503,16 @@ type AdminServiceClient interface {
 	// chosen_index, because the raw index across enough runs would let
 	// somebody reconstruct the answer key.
 	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
+	// Downloads one run's blocks and answers as two CSV files.
+	//
+	// Separate from ExportDecisionTestData, which is the whole curated
+	// dataset for analysis and is served from v_dt_answers. This is one
+	// run, for a reviewer who is looking at that run: it is scoped to a
+	// single session, it is built from exactly what the run page was
+	// given so the file and the screen cannot disagree, and it can carry
+	// the per-answer detail the dataset export deliberately omits,
+	// behind an explicit opt-in.
+	ExportDecisionTestRun(context.Context, *connect.Request[v1.ExportDecisionTestRunRequest]) (*connect.Response[v1.ExportDecisionTestRunResponse], error)
 	// Records the owner's judgement about a run, or about one block of
 	// one, and returns the run as it now reads.
 	//
@@ -939,6 +952,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
 			connect.WithClientOptions(opts...),
 		),
+		exportDecisionTestRun: connect.NewClient[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse](
+			httpClient,
+			baseURL+AdminServiceExportDecisionTestRunProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestRun")),
+			connect.WithClientOptions(opts...),
+		),
 		reviewDecisionTestRun: connect.NewClient[v1.ReviewDecisionTestRunRequest, v1.ReviewDecisionTestRunResponse](
 			httpClient,
 			baseURL+AdminServiceReviewDecisionTestRunProcedure,
@@ -1111,6 +1130,7 @@ type adminServiceClient struct {
 	listDecisionTestRuns    *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
 	getDecisionTestRun      *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
 	exportDecisionTestData  *connect.Client[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse]
+	exportDecisionTestRun   *connect.Client[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse]
 	reviewDecisionTestRun   *connect.Client[v1.ReviewDecisionTestRunRequest, v1.ReviewDecisionTestRunResponse]
 	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
 	setSchedulerSettings    *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
@@ -1424,6 +1444,11 @@ func (c *adminServiceClient) GetDecisionTestRun(ctx context.Context, req *connec
 // ExportDecisionTestData calls career.v1.AdminService.ExportDecisionTestData.
 func (c *adminServiceClient) ExportDecisionTestData(ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
 	return c.exportDecisionTestData.CallUnary(ctx, req)
+}
+
+// ExportDecisionTestRun calls career.v1.AdminService.ExportDecisionTestRun.
+func (c *adminServiceClient) ExportDecisionTestRun(ctx context.Context, req *connect.Request[v1.ExportDecisionTestRunRequest]) (*connect.Response[v1.ExportDecisionTestRunResponse], error) {
+	return c.exportDecisionTestRun.CallUnary(ctx, req)
 }
 
 // ReviewDecisionTestRun calls career.v1.AdminService.ReviewDecisionTestRun.
@@ -1748,6 +1773,16 @@ type AdminServiceHandler interface {
 	// chosen_index, because the raw index across enough runs would let
 	// somebody reconstruct the answer key.
 	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
+	// Downloads one run's blocks and answers as two CSV files.
+	//
+	// Separate from ExportDecisionTestData, which is the whole curated
+	// dataset for analysis and is served from v_dt_answers. This is one
+	// run, for a reviewer who is looking at that run: it is scoped to a
+	// single session, it is built from exactly what the run page was
+	// given so the file and the screen cannot disagree, and it can carry
+	// the per-answer detail the dataset export deliberately omits,
+	// behind an explicit opt-in.
+	ExportDecisionTestRun(context.Context, *connect.Request[v1.ExportDecisionTestRunRequest]) (*connect.Response[v1.ExportDecisionTestRunResponse], error)
 	// Records the owner's judgement about a run, or about one block of
 	// one, and returns the run as it now reads.
 	//
@@ -2183,6 +2218,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceExportDecisionTestRunHandler := connect.NewUnaryHandler(
+		AdminServiceExportDecisionTestRunProcedure,
+		svc.ExportDecisionTestRun,
+		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestRun")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceReviewDecisionTestRunHandler := connect.NewUnaryHandler(
 		AdminServiceReviewDecisionTestRunProcedure,
 		svc.ReviewDecisionTestRun,
@@ -2411,6 +2452,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceExportDecisionTestDataProcedure:
 			adminServiceExportDecisionTestDataHandler.ServeHTTP(w, r)
+		case AdminServiceExportDecisionTestRunProcedure:
+			adminServiceExportDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionTestRunProcedure:
 			adminServiceReviewDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceGetSchedulerSettingsProcedure:
@@ -2690,6 +2733,10 @@ func (UnimplementedAdminServiceHandler) GetDecisionTestRun(context.Context, *con
 
 func (UnimplementedAdminServiceHandler) ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionTestData is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ExportDecisionTestRun(context.Context, *connect.Request[v1.ExportDecisionTestRunRequest]) (*connect.Response[v1.ExportDecisionTestRunResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionTestRun is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ReviewDecisionTestRun(context.Context, *connect.Request[v1.ReviewDecisionTestRunRequest]) (*connect.Response[v1.ReviewDecisionTestRunResponse], error) {

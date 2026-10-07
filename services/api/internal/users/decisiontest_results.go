@@ -142,9 +142,17 @@ type DTBlockSummary struct {
 	DigitsCorrect   int
 	DigitsHeld      int
 	RecallLatencyMs int
-	// The reviewer's note on this block, if any. The status was already
-	// carried; the note was written and never displayed.
-	ReviewNote string
+	// This block's own judgement. The status reaches the page through
+	// DTBlockReviews as well; it is carried here too so the CSV can be
+	// built from one read rather than joining two in the handler.
+	ReviewStatus string
+	ReviewNote   string
+	// Mean latency for this block in units of the tap-check offset,
+	// from v_dt_blocks. This is where the ratio earns its place: the
+	// load effect is the whole research question, and comparing block 1
+	// with block 4 across participants needs each person's answers on
+	// their own scale.
+	MeanLatencyVsBaseline float64
 }
 
 // DTAnswerRow is one answer, as the console shows it.
@@ -312,11 +320,18 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(max(v.memory_failure), -1),
 		       coalesce(max(rc.digits_correct),0), coalesce(max(rc.digits_held),0),
 		       coalesce(max(rc.latency_ms),0),
-		       coalesce(max(br.note),'')
+		       coalesce(max(br.status),''), coalesce(max(br.note),''),
+		       -- Averaged in the view, not here. avg() over the ratio is
+		       -- the definition v_dt_blocks publishes, and recomputing it
+		       -- from the rows this query already has would be the same
+		       -- number arrived at twice, which is how two numbers start.
+		       coalesce(max(vb.mean_latency_vs_baseline), 0)
 		  FROM v_dt_answers v
 		  JOIN dt_sessions s  ON s.public_id::text = v.session_key::text
 		  LEFT JOIN dt_recalls rc ON rc.session_id = s.id AND rc.block_no = v.block_no
 		  LEFT JOIN dt_block_reviews br ON br.session_id = s.id AND br.block_no = v.block_no
+		  LEFT JOIN v_dt_blocks vb ON vb.session_key::text = v.session_key::text
+		                          AND vb.block_no = v.block_no
 		 WHERE v.session_key::text = $1
 		 GROUP BY v.block_no, v.block_load
 		 ORDER BY v.block_no`, key)
@@ -331,7 +346,7 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 			&b.Expired, &b.MeanConfidence, &b.MeanLatencyMs,
 			&b.PresentedDigits, &b.ExpectedDigits, &b.ResponseDigits, &b.RecallOutcome,
 			&b.MemoryFailure, &b.DigitsCorrect, &b.DigitsHeld, &b.RecallLatencyMs,
-			&b.ReviewNote); err != nil {
+			&b.ReviewStatus, &b.ReviewNote, &b.MeanLatencyVsBaseline); err != nil {
 			return nil, nil, nil, fmt.Errorf("decision test: scan block: %w", err)
 		}
 		blocks = append(blocks, b)

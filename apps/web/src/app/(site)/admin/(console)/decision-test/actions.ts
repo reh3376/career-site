@@ -91,3 +91,42 @@ export async function reviewDecisionTestRunAction(formData: FormData): Promise<v
   revalidatePath(`/admin/decision-test/${key}`);
   revalidatePath("/admin/decision-test");
 }
+
+// One run, as the two files its page shows.
+//
+// Same shape as exportDecisionTestAction: the action fetches the bytes
+// and the client component turns them into saved files, because a
+// server action cannot hand the browser a download.
+export async function exportDecisionTestRunAction(
+  sessionKey: string,
+  includeKey: boolean,
+): Promise<{
+  filenameStem: string;
+  blocksCsv: string;
+  answersCsv: string;
+  blockRows: number;
+  answerRows: number;
+} | null> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return null;
+  const r = await callApi({
+    path: "/api/career.v1.AdminService/ExportDecisionTestRun",
+    body: { sessionKey, includeKey },
+    cookie,
+  });
+  if (!r.ok) return null;
+  const body = (await r.json()) as {
+    filenameStem?: string;
+    blocksCsv?: string;
+    answersCsv?: string;
+    blockRows?: number;
+    answerRows?: number;
+  };
+  return {
+    filenameStem: body.filenameStem ?? "decision-test-run",
+    blocksCsv: body.blocksCsv ?? "",
+    answersCsv: body.answersCsv ?? "",
+    blockRows: body.blockRows ?? 0,
+    answerRows: body.answerRows ?? 0,
+  };
+}
