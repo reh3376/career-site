@@ -60,32 +60,40 @@ manual and forgettable.
 
 ## Design decisions, with the reasoning
 
-### D1. Keep four categories, not three
+### D1. Four categories, and they are the families that already exist
 
-The ask suggested three (logic, practical math, common misconceptions).
-The recommendation is to keep the four that exist:
+**Settled 2026-10-07.** The owner's suggested names (logic, practical
+math, common misconceptions) were offered as examples, and he confirmed
+that existing names should be used and that more than three categories
+is fine. So there is no new taxonomy and no renaming:
 
-| proposed category | existing family | per block | per test |
-|---|---|---|---|
-| practical math | `arithmetic` | 2 | 10 |
-| logic | `syllogism` | 2 | 10 |
-| base rates | `base_rate` | 1 | 5 |
-| conjunction | `conjunction` | 1 | 5 |
+| category (`dt_items.family`) | per block | per test |
+|---|---|---|
+| `arithmetic` | 2 | 10 |
+| `syllogism` | 2 | 10 |
+| `base_rate` | 1 | 5 |
+| `conjunction` | 1 | 5 |
 
-**Why.** Four already divides a six-question block cleanly as 2/1/1/2,
-and that quota is live and working. Collapsing base-rate and conjunction
-into one "misconceptions" category would force the per-block split to be
+**Why these four.** They already divide a six-question block cleanly as
+2/1/1/2, and that quota is live and working today. Collapsing base-rate
+and conjunction into one category would force the per-block split to be
 re-derived for no measurement gain, and would lose a distinction the
 instrument already reports on: `v_dt_items` gives per-family accuracy and
 lure rates, and base-rate neglect and the conjunction fallacy are
 different errors with different literatures.
 
-The three-way framing still works for **reporting** — base rates and
-conjunction roll up to "common misconceptions" in prose whenever that
-reads better. The storage stays at four.
+**No column is added for this.** `family` is already the category, is
+already on every item, and is already carried through `v_dt_answers` to
+the export. The three-way framing still works in prose, where base-rate
+and conjunction read naturally as "common misconceptions"; it is a
+reporting choice, not a storage one.
 
-**Open to reversal** if the owner wants three for a reason the data does
-not show. It costs a re-derived quota, nothing more.
+**Room to grow.** A fifth category is possible but changes the
+arithmetic: six questions per block divides by 2, 3 and 6, so a
+five-category split cannot be equal per block. It would need either an
+unequal per-block quota that is still equal per test, or a block size
+other than six. Worth knowing before anyone proposes one; not a problem
+today.
 
 ### D2. Fixed parallel forms, not per-session random sampling
 
@@ -271,14 +279,14 @@ one and make the version derived rather than remembered.
 
 ## Decisions that are the owner's
 
-1. **Four categories or three?** The recommendation is four (D1), with
-   base rates and conjunction rolled up to "common misconceptions" in
-   prose only.
-2. **Two forms or three?** Three gives a participant three clean
+*(D1, the categories, was settled on 2026-10-07: keep the four existing
+families under their existing names.)*
+
+1. **Two forms or three?** Three gives a participant three clean
    sittings; two halves the writing. The code treats the count as data
    either way.
-3. **Who writes forms B and C?** Sixty items with designed lures is the
+2. **Who writes forms B and C?** Sixty items with designed lures is the
    largest single piece of work here and it is content, not code.
-4. **Should the existing runs be relabelled form `a`?** The
+3. **Should the existing runs be relabelled form `a`?** The
    recommendation is no (S2): they predate the concept, and an empty
    `item_form` is the truthful record.

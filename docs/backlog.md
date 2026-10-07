@@ -958,7 +958,8 @@ CSV export, the privacy section and the product events (migrations
   built:** parallel forms drawn from category-balanced pools, so a
   repeat is served items it has not seen. Step-by-step plan in
   [`sprint-decision-test-item-pools.md`](sprint-decision-test-item-pools.md);
-  no code written, and four decisions there are the owner's. Note the
+  no code written, and three decisions there are the owner's (the
+  categories are settled: the four existing families, unrenamed). Note the
   per-block category balance the plan protects (2 arithmetic, 1
   base-rate, 1 conjunction, 2 syllogism) already exists and is enforced
   only by hand-ordered `position` values, which is the fragility S1
