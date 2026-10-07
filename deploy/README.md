@@ -15,6 +15,34 @@ deploy/
 └── live-check.sh                functional check of a running deployment
 ```
 
+## Never deploy onto a live participant
+
+`rollout.sh` recreates the api and web containers. Somebody part way
+through the decision test loses the run, and there is no resume by
+design, so the cost is fifteen unbroken minutes of a volunteer's
+attention and one row out of a sample that currently has two
+independent participants in it. Volunteers are the scarce resource on
+this project. Server time is not, and neither is waiting an hour.
+
+The script checks before it touches anything:
+
+```
+== checking the site is quiet
+  decision tests in flight: 0
+  events in the last 10 min: 7
+  ok, quiet
+```
+
+It refuses if a non-synthetic run started in the last 25 minutes, or if
+more than 20 events landed in the last 10. A session sitting at
+`running` for hours is abandoned rather than active, which is why the
+question is about recent starts and not about status alone. If the
+database cannot be read the check fails closed, because "I could not
+tell" and "nobody is there" are different answers.
+
+`deploy/rollout.sh --force` skips it. That is for an outage, where
+shipping the fix beats protecting a run, and for nothing else.
+
 ## Deploying one service
 
 `deploy/rollout.sh --only web [sha]` deploys a single service and leaves

@@ -954,9 +954,25 @@ CSV export, the privacy section and the product events (migrations
   than reasoning. Opened 2026-10-07 after a third sitting scored 30/30
   at a mean answer time of 5.7s against 12.6s for first-time
   participants. `dt_attempt_no` labels the sequence correctly and the
-  analysis can exclude repeats, which is the floor. The question left
-  open is whether to rotate the bank so a repeat is a usable
-  measurement rather than only a practice-effect data point.
+  analysis can exclude repeats, which is the floor. **Planned, not
+  built:** parallel forms drawn from category-balanced pools, so a
+  repeat is served items it has not seen. Step-by-step plan in
+  [`sprint-decision-test-item-pools.md`](sprint-decision-test-item-pools.md);
+  no code written, and three decisions there are the owner's (the
+  categories are settled: the four existing families, unrenamed). Note the
+  per-block category balance the plan protects (2 arithmetic, 1
+  base-rate, 1 conjunction, 2 syllogism) already exists and is enforced
+  only by hand-ordered `position` values, which is the fragility S1
+  closes.
+
+- **The answer retry queue is covered by unit tests only.** Opened
+  2026-10-07. `decision-test-retry.ts` has four passing tests for
+  retry, give-up, head-of-line blocking and immediate flush, but the
+  wiring into the run screen has not been exercised end to end: the
+  attempt to do so froze the renderer, both questions timed out while
+  the page was blocked, and the result said nothing either way. Repeat
+  it by injecting a single `SubmitAnswer` failure and confirming the
+  row still lands, without a loop heavy enough to stall the page.
 
 - **The tap-check thresholds are provisional** (FR-DT-20). The design
   document's starting figures were ten ticks, presses within 300 ms, at
@@ -2171,6 +2187,10 @@ PR 172, sixty merges after the previous sync.
 ## Standing rules that shape all of the above
 
 - No server spend beyond the CPX41; fit the workload to the box.
+- **Never deploy while the site has traffic or a decision test is in
+  flight.** A rollout recreates the containers and ends any run in
+  progress, and there is no resume. `deploy/rollout.sh` checks and
+  refuses; `--force` is for an outage only.
 - Document every experiment and decision in the same PR
   (`docs/llm-tuning-log.md` for the reviewer, `docs/events/README.md`
   for events, `docs/decision-log.md` for the human-in-the-loop labels).

@@ -6,6 +6,7 @@
 #   deploy/rollout.sh <12-char-sha>      # deploy a specific build
 #   deploy/rollout.sh --rollback         # go back to the previous tag
 #   deploy/rollout.sh --only web [sha]   # one service, leaving the rest
+#   deploy/rollout.sh --force            # deploy even if the site is busy
 #
 # --only exists because all three services shared one IMAGE_TAG, so
 # `compose up -d` recreated the api for a CSS change and killed any
@@ -44,6 +45,14 @@ current_tag() { S "grep '^IMAGE_TAG=' $REMOTE/.env.prod | cut -d= -f2"; }
 # .env.prod still names what the untouched services are running and
 # --rollback and live-check keep telling the truth. A full rollout after
 # one of these clears the override.
+# --force skips the quiet check below. It exists for an outage, where
+# shipping a fix beats protecting a run, and for nothing else.
+FORCE=""
+if [ "${1:-}" = "--force" ]; then
+  FORCE=1
+  shift
+fi
+
 ONLY=""
 if [ "${1:-}" = "--only" ]; then
   ONLY="${2:?--only needs a service: web, api or sidecar}"
@@ -66,6 +75,54 @@ else
     TAG=$(git -C "$REPO_DIR" rev-parse origin/main | cut -c1-12)
   fi
 fi
+
+# 0. Is anybody using the site right now?
+#
+# A rollout recreates the api and web containers. A participant part way
+# through the decision test loses the run, and there is no resume by
+# design, so the cost is fifteen unbroken minutes of a volunteer's
+# attention and one row from a sample that had two independent
+# participants in it. Volunteers are the scarce resource here; server
+# time and my time are not.
+#
+# Added 2026-10-07 after a day of deploying repeatedly while volunteers
+# were being recruited. The rule was "check first"; a rule that lives
+# only in somebody's head is a rule that gets skipped on the busy day,
+# so the script checks.
+#
+# A session sitting at `running` for hours is abandoned, not active, so
+# this asks about recent starts rather than about status alone.
+quiet_check() {
+  [ -n "$FORCE" ] && { say "skipping the quiet check (--force)"; return 0; }
+  say "checking the site is quiet"
+  local sql out
+  sql="SELECT
+         (SELECT count(*) FROM dt_sessions
+           WHERE status = 'running'
+             AND NOT is_synthetic
+             AND started_at > now() - interval '25 minutes'),
+         (SELECT count(*) FROM events
+           WHERE occurred_at > now() - interval '10 minutes');"
+  out=$(S "cd $REMOTE && $CS exec -T postgres psql -U career -d career -Atc \"$sql\"" 2>/dev/null | tr -d '\r')
+  local in_test recent
+  in_test=$(echo "$out" | cut -d'|' -f1)
+  recent=$(echo "$out" | cut -d'|' -f2)
+  if [ -z "$in_test" ]; then
+    say "could not read the database to check; treating that as not quiet"
+    die "quiet check failed. Re-run with --force only if you know the site is idle"
+  fi
+  echo "  decision tests in flight: $in_test"
+  echo "  events in the last 10 min: $recent"
+  if [ "$in_test" -gt 0 ]; then
+    die "$in_test decision test run(s) started in the last 25 minutes. A rollout \
+would end them and there is no resume. Wait, or --force if you are certain"
+  fi
+  if [ "$recent" -gt 20 ]; then
+    die "$recent events in the last 10 minutes: the site is busy. Wait, or --force"
+  fi
+  echo "  ok, quiet"
+}
+quiet_check
 
 PREV_TAG=$(current_tag)
 say "deploying $TAG (currently $PREV_TAG)"
