@@ -420,3 +420,19 @@ paragraph; the task breakdown lives there.
   encoding and recall but not the decisions, which §3.1 anticipated. The
   debrief question about strategy is what would tell us, and the fix
   would be a design change rather than a bug fix.
+
+---
+
+## Item pools and parallel forms (planned 2026-10-07)
+
+A repeat sitting currently measures item recall: 27 of the 30 items are
+shared between the two item sets, and a third sitting scored 30/30 at
+half the answer time of a first-time participant.
+
+The plan is
+[`sprint-decision-test-item-pools.md`](sprint-decision-test-item-pools.md):
+category-balanced parallel forms, a repeat served a form it has not
+seen, and the per-block balance made enforced rather than implicit in
+hand-ordered `position` values. **No code written.** Four decisions in
+that document are the owner's, including whether the categories are
+four or three and who writes the sixty new items.
