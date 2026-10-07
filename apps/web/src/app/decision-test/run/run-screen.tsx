@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { decisionTestClient } from "@/lib/decision-test-client";
 import { createMetronome, type Signal } from "@/lib/metronome";
+import { enqueueRetry, flushNow } from "@/lib/decision-test-retry";
 
 // The run screen.
 //
@@ -147,6 +148,20 @@ export function RunScreen() {
     if (!handoff) router.replace("/decision-test");
   }, [handoff, router]);
 
+  // Coming back to the tab is the moment to retry anything that failed.
+  //
+  // A phone that was switched away from has had its timers throttled or
+  // stopped outright, so a queued answer may have been sitting still
+  // for minutes. Returning is both the earliest the network is likely
+  // to be working again and the last chance before the tab is closed.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") flushNow();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   // Leaving loses the run: there is no resume, because a question
   // answered after a four-minute interruption is not the same question
   // and nothing in the data would say so. This is the one browser nag
@@ -214,8 +229,8 @@ export function RunScreen() {
       // had.
       const latency = latencyOverride ?? Math.round(performance.now() - shownAt.current);
       if (scored && question) {
-        try {
-          await decisionTestClient.submitAnswer({
+        const send = () =>
+          decisionTestClient.submitAnswer({
             sessionKey,
             blockNo,
             positionOverall: question.positionOverall,
@@ -223,10 +238,21 @@ export function RunScreen() {
             latencyMs: chosenIndex < 0 ? 0 : latency,
             confidence: chosenIndex < 0 ? 0 : confidence,
           });
+        try {
+          await send();
         } catch {
-          // A failed post must not strand the participant mid-test.
-          // The row is lost; the run is not, and a partial session is
-          // still data.
+          // A failed post must not strand the participant mid-test, and
+          // must not quietly destroy the answer either. This used to do
+          // the first by doing the second: the comment said "the row is
+          // lost; the run is not", and one dropped request meant one
+          // question that nobody could tell from a question never
+          // reached. A participant on a phone lost answers that way.
+          //
+          // So the test carries on immediately, as before, and the
+          // write is retried in the background. The insert is
+          // idempotent on (session, position), so a retry that
+          // duplicates a request which did land changes nothing.
+          enqueueRetry(`answer ${question.positionOverall}`, send);
         }
       }
       setChosen(null);
@@ -246,14 +272,17 @@ export function RunScreen() {
 
   const submitRecall = useCallback(async () => {
     const latency = Math.round(performance.now() - shownAt.current);
-    try {
-      await decisionTestClient.submitRecall({
+    const send = () =>
+      decisionTestClient.submitRecall({
         sessionKey,
         blockNo,
         digits: recall,
         latencyMs: latency,
       });
+    try {
+      await send();
     } catch {
+      enqueueRetry(`recall block ${blockNo}`, send);
       /* a missed recall is a data point, not a gate */
     }
     void nextBlock(blockNo + 1);
