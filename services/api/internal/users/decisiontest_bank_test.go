@@ -191,3 +191,55 @@ func TestTheAnalysisViewsRead(t *testing.T) {
 		t.Errorf("DTThresholds: %v", err)
 	}
 }
+
+// The thresholds table must not show agent-driven runs.
+//
+// v_dt_threshold is a review surface: it exposes is_synthetic rather
+// than filtering it, so an agent run can be looked at deliberately. The
+// analysis page says agent-driven runs are excluded, and for a while it
+// was showing fifteen of them. The page was wrong, not the view.
+func TestThresholdsExcludeSyntheticRuns(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	// A synthetic run with answers, which is what a threshold needs.
+	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "threshold synthetic"},
+		DTConditions{AudioMode: "sound", DeviceClass: "desktop"},
+		true, "db-test-threshold", nil,
+		"v-threshold-test", "pool-test", "key-1", true)
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+	block, err := r.DTDrawnBlock(ctx, sess.ID, 1)
+	if err != nil {
+		t.Fatalf("DTDrawnBlock: %v", err)
+	}
+	for i := range DTQuestionsPerBlock {
+		if err := r.DTSaveAnswer(ctx, sess.ID, 1, i+1, 0, 5000, 90, block[i]); err != nil {
+			t.Fatalf("DTSaveAnswer: %v", err)
+		}
+	}
+
+	// It is in the view, which is the view behaving correctly.
+	var inView int
+	if err := r.pool.QueryRow(ctx,
+		`SELECT count(*) FROM v_dt_threshold WHERE session_key::text = $1`,
+		sess.PublicID).Scan(&inView); err != nil {
+		t.Fatalf("read the view: %v", err)
+	}
+	if inView != 1 {
+		t.Fatalf("the synthetic run is not in v_dt_threshold at all (%d rows); "+
+			"this test cannot prove the filter works", inView)
+	}
+
+	// And it must not reach the page.
+	rows, err := r.DTThresholds(ctx)
+	if err != nil {
+		t.Fatalf("DTThresholds: %v", err)
+	}
+	for _, row := range rows {
+		if row.SessionKey == sess.PublicID {
+			t.Error("DTThresholds returned a synthetic run: the analysis page " +
+				"says agent-driven runs are excluded and would be lying")
+		}
+	}
+}
