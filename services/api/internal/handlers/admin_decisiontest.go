@@ -101,8 +101,25 @@ func (a *Admin) ListDecisionTestRuns(
 		a.log.Error("decision test: review summary", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not read the runs"))
 	}
+	// Pool status, so a bank that cannot vary is a number on the page.
+	// A read failure here must not take the list down: the runs are the
+	// point and this is a warning beside them.
+	var pools []*v1.DecisionTestItemPool
+	if ps, err := a.users.DTItemPools(ctx); err != nil {
+		a.log.Warn("decision test: item pools", slog.String("error", err.Error()))
+	} else {
+		for _, p := range ps {
+			pools = append(pools, &v1.DecisionTestItemPool{
+				Category: p.Category, RealItems: int32(p.Pool),
+				PerTest: int32(p.PerTest), Spare: int32(p.Spare),
+				CanVary: p.CanVary,
+			})
+		}
+	}
+
 	return connect.NewResponse(&v1.ListDecisionTestRunsResponse{
-		Runs: out,
+		Runs:      out,
+		ItemPools: pools,
 		Counts: &v1.DecisionTestReviewCounts{
 			Total: int32(counts.Total), Unreviewed: int32(counts.Unreviewed),
 			Good: int32(counts.Good), Incomplete: int32(counts.Incomplete),
@@ -180,8 +197,23 @@ func (a *Admin) GetDecisionTestRun(
 		})
 	}
 
+	// The questions this run was drawn, including any it never reached.
+	drawn, err := a.users.DTDrawnItems(ctx, req.Msg.GetSessionKey())
+	if err != nil {
+		a.log.Warn("decision test: drawn items", slog.String("error", err.Error()))
+	}
+	pd := make([]*v1.DecisionTestDrawnItem, 0, len(drawn))
+	for _, d := range drawn {
+		pd = append(pd, &v1.DecisionTestDrawnItem{
+			Position: int32(d.Position), BlockNo: int32(d.BlockNo),
+			ItemCode: d.Code, Family: d.Family,
+			Answered: d.Answered, Fixture: d.Fixture,
+		})
+	}
+
 	return connect.NewResponse(&v1.GetDecisionTestRunResponse{
 		Run: toProtoRun(*run), Blocks: pb, Answers: pa, ReviewHistory: ph,
+		DrawnItems: pd,
 	}), nil
 }
 

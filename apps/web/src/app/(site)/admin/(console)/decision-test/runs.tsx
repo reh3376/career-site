@@ -103,6 +103,60 @@ export function attemptEvidence(r: Run): string | null {
   return parts.length ? parts.join(", ") : null;
 }
 
+export type ItemPool = {
+  category?: string;
+  realItems?: number;
+  fixtures?: number;
+  perTest?: number;
+  spare?: number;
+  canVary?: boolean;
+};
+
+/**
+ * Pool status, on the page rather than in a view nobody opens.
+ *
+ * A pool the same size as its quota is the one fault here that looks
+ * exactly like success: the draw runs, every block is balanced, every
+ * check passes, and every participant sits the identical test. It was
+ * the state of the bank for three days, and the only way to notice was
+ * to query a view by hand.
+ */
+export function PoolStatus({ pools }: { pools: ItemPool[] }) {
+  if (!pools.length) return null;
+  const stuck = pools.filter((p) => !p.canVary);
+  if (!stuck.length) {
+    return (
+      <p className="mt-6 font-mono text-[11px] tracking-[0.1em] text-ink-3">
+        item pools:{" "}
+        {pools
+          .map((p) => `${p.category} ${p.realItems}/${p.perTest}`)
+          .join("  ·  ")}
+      </p>
+    );
+  }
+  return (
+    <div className="mt-6 rounded-md border border-signal bg-paper-2 px-5 py-4">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-signal uppercase">
+        Every participant is seeing the same questions
+      </p>
+      <p className="mt-3 text-sm leading-relaxed text-ink-2">
+        {stuck.length === 1 ? "One category has" : `${stuck.length} categories have`}{" "}
+        no more items than a single test uses, so the draw has nothing to
+        leave behind. The test still works and every block is balanced;
+        it just cannot vary.
+      </p>
+      <ul className="mt-3 space-y-1">
+        {stuck.map((p) => (
+          <li key={p.category} className="font-mono text-[11px] text-ink-3">
+            {p.category}: {p.realItems} items for the {p.perTest} a test needs
+            {(p.fixtures ?? 0) > 0 ? `, plus ${p.fixtures} placeholders` : ""}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export type ReviewCounts = {
   total?: number;
   unreviewed?: number;

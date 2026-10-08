@@ -353,7 +353,20 @@ run costs the run.
 asserting the second draws nothing the first used, and that when the pool
 is too small the fallback is recorded rather than silent.
 
-### S6. The draw is visible where a run is
+### S6. The draw is visible where a run is. DONE 2026-10-08.
+
+The run page lists all thirty questions it drew, with codes, categories
+and whether the participant reached each one, dimmed where they did
+not. Separate from the answer table deliberately: an abandoned run has
+six answers and says nothing about the twenty-four questions already
+chosen for it, and "stopped at question six" against "was asked six
+questions" is the difference that decides whether a short run is
+usable.
+
+The run list carries pool status. A pool the same size as its quota is
+the one fault here that looks exactly like success, so when any
+category cannot vary the page says, in as many words, that every
+participant is seeing the same questions.
 
 - The run page lists the 30 items it drew, in order, with their
   categories, behind the same collapsed toggle the questions already sit

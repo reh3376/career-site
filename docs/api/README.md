@@ -4078,6 +4078,7 @@ Lists decision test runs, newest first.
 |---|---|---|---|---|
 | `counts` | [`DecisionTestReviewCounts`](#decisiontestreviewcounts) | object |  | The queue, counted across every real run regardless of the filter, so the page can say how much is left without a second call. |
 | `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
+| `itemPools` | [`DecisionTestItemPool`](#decisiontestitempool)[] | array of object |  | Each category's room to vary. On the list rather than tucked away, because a pool that cannot vary is the one fault here that looks exactly like success: the draw runs, every block is balanced, and every participant sits the same test. |
 
 <details><summary>Example request body</summary>
 
@@ -4110,6 +4111,7 @@ One run in full: every answer, every recall, and the block summary.
 | `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
 | `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
+| `drawnItems` | [`DecisionTestDrawnItem`](#decisiontestdrawnitem)[] | array of object |  | The thirty questions this run was drawn, in order, including any it never reached. |
 
 <details><summary>Example request body</summary>
 
@@ -8327,6 +8329,7 @@ Runs, newest first.
 |---|---|---|---|---|
 | `counts` | [`DecisionTestReviewCounts`](#decisiontestreviewcounts) | object |  | The queue, counted across every real run regardless of the filter, so the page can say how much is left without a second call. |
 | `runs` | [`DecisionTestRun`](#decisiontestrun)[] | array of object |  | The runs. |
+| `itemPools` | [`DecisionTestItemPool`](#decisiontestitempool)[] | array of object |  | Each category's room to vary. On the list rather than tucked away, because a pool that cannot vary is the one fault here that looks exactly like success: the draw runs, every block is balanced, and every participant sits the same test. |
 
 ### DecisionTestRun
 
@@ -8395,6 +8398,32 @@ those two would manufacture a fact about a person.
 | `byEmail` | `int32` | number |  | _(oneof `_by_email`)_ Prior sittings visible by email address at the moment this started. |
 | `byCookie` | `int32` | number |  | _(oneof `_by_cookie`)_ Prior sittings visible by visitor cookie at the moment this started. |
 
+### DecisionTestDrawnItem
+
+One of a run's thirty questions, as drawn.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `position` | `int32` | number |  | Position in the whole test, 1-based. |
+| `blockNo` | `int32` | number |  | Which block it falls in. |
+| `itemCode` | `string` | string |  | Stable item code. |
+| `family` | `string` | string |  | arithmetic, base_rate, conjunction or syllogism. |
+| `answered` | `bool` | boolean |  | Whether the participant ever reached it. The reason this list exists separately from the answers: an abandoned run has six answers and says nothing about the twenty-four questions that had already been chosen for it. |
+| `fixture` | `bool` | boolean |  | A placeholder from the fixture bank rather than a real item. Always false in production, where fixtures are refused. |
+
+### DecisionTestItemPool
+
+One category's room to vary.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `category` | `string` | string |  | arithmetic, base_rate, conjunction or syllogism. |
+| `realItems` | `int32` | number |  | Active scored items in this category, real ones only. |
+| `fixtures` | `int32` | number |  | Placeholders, which production never serves. |
+| `perTest` | `int32` | number |  | How many a single test consumes. |
+| `spare` | `int32` | number |  | real_items minus per_test. Negative means a test cannot be filled. |
+| `canVary` | `bool` | boolean |  | Whether there is anything to leave behind. False means every participant is served the same questions however random the selection claims to be, which is the failure that looks exactly like success. |
+
 ### ExportDecisionTestRunRequest
 
 Asks for one run as downloadable files.
@@ -8434,6 +8463,7 @@ One run in full.
 | `blocks` | [`DecisionTestBlock`](#decisiontestblock)[] | array of object |  | One row per block, in running order. |
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
 | `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
+| `drawnItems` | [`DecisionTestDrawnItem`](#decisiontestdrawnitem)[] | array of object |  | The thirty questions this run was drawn, in order, including any it never reached. |
 
 ### ExportDecisionTestDataRequest
 

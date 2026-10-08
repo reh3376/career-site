@@ -2265,12 +2265,14 @@ class ListDecisionTestRunsRequest(_message.Message):
     def __init__(self, include_synthetic: _Optional[bool] = ..., review_status: _Optional[str] = ...) -> None: ...
 
 class ListDecisionTestRunsResponse(_message.Message):
-    __slots__ = ("counts", "runs")
+    __slots__ = ("counts", "runs", "item_pools")
     COUNTS_FIELD_NUMBER: _ClassVar[int]
     RUNS_FIELD_NUMBER: _ClassVar[int]
+    ITEM_POOLS_FIELD_NUMBER: _ClassVar[int]
     counts: DecisionTestReviewCounts
     runs: _containers.RepeatedCompositeFieldContainer[DecisionTestRun]
-    def __init__(self, counts: _Optional[_Union[DecisionTestReviewCounts, _Mapping]] = ..., runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ...) -> None: ...
+    item_pools: _containers.RepeatedCompositeFieldContainer[DecisionTestItemPool]
+    def __init__(self, counts: _Optional[_Union[DecisionTestReviewCounts, _Mapping]] = ..., runs: _Optional[_Iterable[_Union[DecisionTestRun, _Mapping]]] = ..., item_pools: _Optional[_Iterable[_Union[DecisionTestItemPool, _Mapping]]] = ...) -> None: ...
 
 class DecisionTestRun(_message.Message):
     __slots__ = ("session_key", "status", "display_name", "age_range", "education", "occupation", "gave_email", "audio_mode", "device_class", "tap_check_passed", "baseline_rt_ms", "is_repeat", "is_synthetic", "instrument_version", "item_set_version", "correct", "answered", "expired", "mean_confidence", "duration_s", "started_at", "review_status", "review_reason", "review_note", "reviewed_at", "blocks_excluded", "recall_strategy", "baseline_rt_sd_ms", "repeat_matched_by", "attempt_no", "attempt_no_strongest", "attempt_source", "attempt_sources_disagree", "prior_by_account", "prior_by_email", "prior_by_cookie", "key_version", "wants_results", "finished_at", "reviewed_by_name", "prior_sittings")
@@ -2368,6 +2370,38 @@ class DecisionTestPriorSittings(_message.Message):
     by_cookie: int
     def __init__(self, by_account: _Optional[int] = ..., by_email: _Optional[int] = ..., by_cookie: _Optional[int] = ...) -> None: ...
 
+class DecisionTestDrawnItem(_message.Message):
+    __slots__ = ("position", "block_no", "item_code", "family", "answered", "fixture")
+    POSITION_FIELD_NUMBER: _ClassVar[int]
+    BLOCK_NO_FIELD_NUMBER: _ClassVar[int]
+    ITEM_CODE_FIELD_NUMBER: _ClassVar[int]
+    FAMILY_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_FIELD_NUMBER: _ClassVar[int]
+    FIXTURE_FIELD_NUMBER: _ClassVar[int]
+    position: int
+    block_no: int
+    item_code: str
+    family: str
+    answered: bool
+    fixture: bool
+    def __init__(self, position: _Optional[int] = ..., block_no: _Optional[int] = ..., item_code: _Optional[str] = ..., family: _Optional[str] = ..., answered: _Optional[bool] = ..., fixture: _Optional[bool] = ...) -> None: ...
+
+class DecisionTestItemPool(_message.Message):
+    __slots__ = ("category", "real_items", "fixtures", "per_test", "spare", "can_vary")
+    CATEGORY_FIELD_NUMBER: _ClassVar[int]
+    REAL_ITEMS_FIELD_NUMBER: _ClassVar[int]
+    FIXTURES_FIELD_NUMBER: _ClassVar[int]
+    PER_TEST_FIELD_NUMBER: _ClassVar[int]
+    SPARE_FIELD_NUMBER: _ClassVar[int]
+    CAN_VARY_FIELD_NUMBER: _ClassVar[int]
+    category: str
+    real_items: int
+    fixtures: int
+    per_test: int
+    spare: int
+    can_vary: bool
+    def __init__(self, category: _Optional[str] = ..., real_items: _Optional[int] = ..., fixtures: _Optional[int] = ..., per_test: _Optional[int] = ..., spare: _Optional[int] = ..., can_vary: _Optional[bool] = ...) -> None: ...
+
 class ExportDecisionTestRunRequest(_message.Message):
     __slots__ = ("session_key", "include_key")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
@@ -2397,16 +2431,18 @@ class GetDecisionTestRunRequest(_message.Message):
     def __init__(self, session_key: _Optional[str] = ...) -> None: ...
 
 class GetDecisionTestRunResponse(_message.Message):
-    __slots__ = ("run", "blocks", "answers", "review_history")
+    __slots__ = ("run", "blocks", "answers", "review_history", "drawn_items")
     RUN_FIELD_NUMBER: _ClassVar[int]
     BLOCKS_FIELD_NUMBER: _ClassVar[int]
     ANSWERS_FIELD_NUMBER: _ClassVar[int]
     REVIEW_HISTORY_FIELD_NUMBER: _ClassVar[int]
+    DRAWN_ITEMS_FIELD_NUMBER: _ClassVar[int]
     run: DecisionTestRun
     blocks: _containers.RepeatedCompositeFieldContainer[DecisionTestBlock]
     answers: _containers.RepeatedCompositeFieldContainer[DecisionTestAnswer]
     review_history: _containers.RepeatedCompositeFieldContainer[DecisionTestReviewEvent]
-    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ..., review_history: _Optional[_Iterable[_Union[DecisionTestReviewEvent, _Mapping]]] = ...) -> None: ...
+    drawn_items: _containers.RepeatedCompositeFieldContainer[DecisionTestDrawnItem]
+    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ..., review_history: _Optional[_Iterable[_Union[DecisionTestReviewEvent, _Mapping]]] = ..., drawn_items: _Optional[_Iterable[_Union[DecisionTestDrawnItem, _Mapping]]] = ...) -> None: ...
 
 class ExportDecisionTestDataRequest(_message.Message):
     __slots__ = ("include_synthetic", "include_excluded")
