@@ -15,6 +15,41 @@ deploy/
 └── live-check.sh                functional check of a running deployment
 ```
 
+## Docker publishes past UFW, so DOCKER-USER filters it
+
+UFW on this box is correct and insufficient. Default deny inbound,
+allowing only 22, 80 and 443 — but Docker inserts its own rules ahead
+of UFW's chain for everything it publishes, so a published container
+port is reachable from the internet whatever UFW reports.
+
+Raised by a reviewer on 2026-10-08, and demonstrated rather than
+argued. A throwaway container published on 9999 was served to the open
+internet with UFW active and saying nothing:
+
+```
+with DOCKER-USER filtered :  curl http://<host>:9999  ->  no response
+with the chain flushed    :  curl http://<host>:9999  ->  200
+https throughout          :  200
+```
+
+`deploy/docker-user-firewall.sh` fills the chain: anything arriving on
+the public interface towards a container is dropped except 80 and 443.
+It is installed by `setup-server.sh` as a systemd unit ordered after
+`docker.service`, because iptables rules do not survive a reboot and
+Docker rebuilds its own chains on restart. Applied to both iptables and
+ip6tables: the site has an AAAA record, so a v4-only rule would be a
+half measure that reads as protection.
+
+Nothing was exposed before this. Only Caddy publishes a port, and every
+other service uses `ports: !override []` in the prod compose file. But
+that was an argument from "we did not publish anything" rather than a
+control, and it would have stopped being true the first time somebody
+added a `ports:` line to debug something.
+
+DOCKER-USER is traversed for forwarded packets only, so these rules
+cannot affect SSH, which arrives on INPUT. You cannot lock yourself out
+with this script.
+
 ## Never deploy onto a live participant
 
 `rollout.sh` recreates the api and web containers. Somebody part way
