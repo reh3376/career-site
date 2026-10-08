@@ -130,8 +130,19 @@ type DTThresholdRow struct {
 	ConfidentlyWrong int
 }
 
-// DTThresholds is the per-person answer, newest first. Synthetic runs
-// are excluded by the view.
+// DTThresholds is the per-person answer, newest first.
+//
+// Synthetic runs are filtered HERE, not by the view. v_dt_threshold is
+// a review surface and exposes `is_synthetic` rather than removing it,
+// the same as v_dt_sessions and v_dt_blocks, so that an agent-driven
+// run can still be looked at deliberately. The claim-making views
+// (v_dt_load_curve, v_dt_calibration) filter it themselves.
+//
+// Reading it without this filter put fifteen of my own test runs in a
+// table on a page that said agent-driven runs were excluded. Caught by
+// opening the page, which is the only thing that would have caught it:
+// the query was valid, the view was right, and the page was confidently
+// wrong.
 func (r *Repo) DTThresholds(ctx context.Context) ([]DTThresholdRow, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT session_key::text, attempt_no, session_review_status,
@@ -140,6 +151,7 @@ func (r *Repo) DTThresholds(ctx context.Context) ([]DTThresholdRow, error) {
 		       coalesce(lured_at_load,''), coalesce(lured_in_control,false),
 		       coalesce(confidently_wrong,0)
 		  FROM v_dt_threshold
+		 WHERE NOT is_synthetic
 		 ORDER BY started_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("decision test: thresholds: %w", err)

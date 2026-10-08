@@ -214,9 +214,13 @@ export default async function AnalysisPage() {
 
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-3">
               Of {sessions} {sessions === 1 ? "run" : "runs"},{" "}
-              {points[0]?.sessionsFirstAttempt ?? 0} are first sittings and{" "}
-              {points[0]?.sessionsRepeat ?? 0} are repeats;{" "}
-              {points[0]?.sessionsUnreviewed ?? 0} have not been reviewed.
+              {points[0]?.sessionsFirstAttempt ?? 0}{" "}
+              {(points[0]?.sessionsFirstAttempt ?? 0) === 1 ? "is a first sitting" : "are first sittings"}{" "}
+              and {points[0]?.sessionsRepeat ?? 0}{" "}
+              {(points[0]?.sessionsRepeat ?? 0) === 1 ? "is a repeat" : "are repeats"};{" "}
+              {points[0]?.sessionsUnreviewed ?? 0}{" "}
+              {(points[0]?.sessionsUnreviewed ?? 0) === 1 ? "has" : "have"} not been
+              reviewed.
               A repeat is a different measurement from a first sitting and
               is counted separately rather than filtered out, so the choice
               stays yours.
