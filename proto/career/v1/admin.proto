@@ -433,6 +433,17 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.mfa_fresh) = true;
   }
+  // Reads the decision test's three analysis views.
+  //
+  // The load curve, the calibration curve and the per-person
+  // threshold. All three have existed since migration 00054 and were
+  // reachable only through the SQL console, which put the finding this
+  // instrument exists to produce one hand-written query away from
+  // anybody wanting to look at it.
+  rpc GetDecisionTestAnalysis(GetDecisionTestAnalysisRequest) returns (GetDecisionTestAnalysisResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.mfa_fresh) = true;
+  }
   // Downloads one run's blocks and answers as two CSV files.
   //
   // Separate from ExportDecisionTestData, which is the whole curated
@@ -3363,6 +3374,114 @@ message DecisionTestItemPool {
   // random the selection claims to be, which is the failure that looks
   // exactly like success.
   bool can_vary = 6;
+}
+
+// Asks for the decision test's analysis views.
+message GetDecisionTestAnalysisRequest {}
+
+// The three views that answer the research question.
+//
+// Each is grouped by instrument, because runs taken under different
+// items or different timings are different instruments and must never
+// pool into one claim (FR-DT-15).
+message GetDecisionTestAnalysisResponse {
+  // Accuracy and confidence by load level.
+  repeated DecisionTestLoadPoint load_curve = 1;
+  // What each confidence band actually achieved.
+  repeated DecisionTestCalibrationPoint calibration = 2;
+  // Per participant, the lowest load at which they were confidently
+  // wrong.
+  repeated DecisionTestThreshold thresholds = 3;
+}
+
+// One load level on the curve.
+message DecisionTestLoadPoint {
+  // Which items, so two item sets never pool.
+  string item_set_version = 1;
+  // Which timings, so two instruments never pool.
+  string instrument_version = 2;
+  // d3, d4, d4_plus1, d4_plus3 or d3_control.
+  string load = 3;
+  // Ordering on the ramp. d3_control ranks 1, the same as d3, because
+  // it is d3: block 5 returns to block 1's difficulty.
+  int32 load_rank = 4;
+  // Runs contributing to this point.
+  int32 sessions = 5;
+  // Of those, how many nobody has reviewed yet.
+  int32 sessions_unreviewed = 6;
+  // First sittings, and repeats, counted apart.
+  int32 sessions_first_attempt = 7;
+  // Second or later sittings by the same participant.
+  int32 sessions_repeat = 8;
+  // Answers behind this point.
+  int32 answers = 9;
+  // Correct, as a percentage.
+  int32 accuracy_pct = 10;
+  // How often the intended wrong answer was taken.
+  int32 lure_pct = 11;
+  // How often the clock ran out.
+  int32 expiry_pct = 12;
+  // Mean reported confidence.
+  int32 mean_confidence = 13;
+  // Confidence minus accuracy. Positive is more sure than right, which
+  // is the finding this instrument exists to measure.
+  int32 gap_pct = 14;
+  // Wrong and reported at or above the confident threshold.
+  int32 confidently_wrong_pct = 15;
+  // Mean Brier score, 0 is perfect calibration.
+  double mean_brier = 16;
+  // The item families behind this point, joined with '+'. One family
+  // means the point measures the family rather than the load.
+  string families = 17;
+}
+
+// One confidence band at one load.
+message DecisionTestCalibrationPoint {
+  // Which items.
+  string item_set_version = 1;
+  // Which timings.
+  string instrument_version = 2;
+  // The load this band was measured at.
+  string load = 3;
+  // Ordering on the ramp.
+  int32 load_rank = 4;
+  // The band, in tens: 10 is 10 to 19 percent confident.
+  int32 confidence_band = 5;
+  // Answers in this band.
+  int32 answers = 6;
+  // What the band actually achieved.
+  int32 accuracy_pct = 7;
+  // Confidence minus accuracy for this band. Positive is overclaiming.
+  int32 overclaim_pct = 8;
+  // Mean Brier score for the band.
+  double mean_brier = 9;
+}
+
+// One participant's threshold.
+message DecisionTestThreshold {
+  // The run, so the console can link to it.
+  string session_key = 1;
+  // Which sitting this was. Zero means no identity could place it.
+  int32 attempt_no = 2;
+  // Curation status, empty where nobody has judged it.
+  string review_status = 3;
+  // Accuracy across the run.
+  int32 accuracy_pct = 4;
+  // Confidence minus accuracy across the run.
+  int32 gap_pct = 5;
+  // Block 5 against block 1, which are the same difficulty. Negative
+  // means accuracy fell by the end.
+  int32 fatigue_delta_pct = 6;
+  // The lowest rank on the ramp at which they were confidently lured.
+  // Zero means it never happened.
+  int32 lured_at_rank = 7;
+  // That rank's load, as a name.
+  string lured_at_load = 8;
+  // Whether it happened in block 5, the fatigue control. That is a
+  // different claim from being lured on the hardest block.
+  bool lured_in_control = 9;
+  // How many answers in the run were wrong and confident.
+  int32 confidently_wrong = 10;
 }
 
 // Asks for one run as downloadable files.

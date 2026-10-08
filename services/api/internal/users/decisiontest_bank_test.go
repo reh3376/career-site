@@ -171,3 +171,23 @@ func TestEveryScoredItemHasADistinctLure(t *testing.T) {
 			len(seen), DTQuestionCount)
 	}
 }
+
+// The three analysis views must be selectable and scannable.
+//
+// They are the finding this instrument exists to produce, and until
+// 2026-10-08 nothing executed them outside /admin/db. A view that no
+// longer matches its Go scan fails here rather than on the page the
+// owner opens to read a result.
+func TestTheAnalysisViewsRead(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	if _, err := r.DTLoadCurve(ctx); err != nil {
+		t.Errorf("DTLoadCurve: %v", err)
+	}
+	if _, err := r.DTCalibration(ctx); err != nil {
+		t.Errorf("DTCalibration: %v", err)
+	}
+	if _, err := r.DTThresholds(ctx); err != nil {
+		t.Errorf("DTThresholds: %v", err)
+	}
+}

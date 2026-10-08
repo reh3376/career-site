@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 78 |
+| [`AdminService`](#adminservice) | Owner console. | 79 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -2130,6 +2130,7 @@ Owner console.
 | [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
 | [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
 | [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin (fresh MFA) | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
+| [`GetDecisionTestAnalysis`](#adminservice-getdecisiontestanalysis) | `/api/career.v1.AdminService/GetDecisionTestAnalysis` | Admin (fresh MFA) | default | `GetDecisionTestAnalysisRequest` → `GetDecisionTestAnalysisResponse` | Reads the decision test's three analysis views. |
 | [`ExportDecisionTestRun`](#adminservice-exportdecisiontestrun) | `/api/career.v1.AdminService/ExportDecisionTestRun` | Admin (fresh MFA) | default | `ExportDecisionTestRunRequest` → `ExportDecisionTestRunResponse` | Downloads one run's blocks and answers as two CSV files. |
 | [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin (fresh MFA) | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
@@ -4162,6 +4163,38 @@ somebody reconstruct the answer key.
   "includeSynthetic": true,
   "includeExcluded": true
 }
+```
+
+</details>
+
+### AdminService.GetDecisionTestAnalysis
+
+`POST /api/career.v1.AdminService/GetDecisionTestAnalysis` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+
+Reads the decision test's three analysis views.
+
+The load curve, the calibration curve and the per-person
+threshold. All three have existed since migration 00054 and were
+reachable only through the SQL console, which put the finding this
+instrument exists to produce one hand-written query away from
+anybody wanting to look at it.
+
+**Request** — [`GetDecisionTestAnalysisRequest`](#getdecisiontestanalysisrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetDecisionTestAnalysisResponse`](#getdecisiontestanalysisresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `loadCurve` | [`DecisionTestLoadPoint`](#decisiontestloadpoint)[] | array of object |  | Accuracy and confidence by load level. |
+| `calibration` | [`DecisionTestCalibrationPoint`](#decisiontestcalibrationpoint)[] | array of object |  | What each confidence band actually achieved. |
+| `thresholds` | [`DecisionTestThreshold`](#decisiontestthreshold)[] | array of object |  | Per participant, the lowest load at which they were confidently wrong. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
 ```
 
 </details>
@@ -8423,6 +8456,83 @@ One category's room to vary.
 | `perTest` | `int32` | number |  | How many a single test consumes. |
 | `spare` | `int32` | number |  | real_items minus per_test. Negative means a test cannot be filled. |
 | `canVary` | `bool` | boolean |  | Whether there is anything to leave behind. False means every participant is served the same questions however random the selection claims to be, which is the failure that looks exactly like success. |
+
+### GetDecisionTestAnalysisRequest
+
+Asks for the decision test's analysis views.
+
+_No fields._
+
+### GetDecisionTestAnalysisResponse
+
+The three views that answer the research question.
+
+Each is grouped by instrument, because runs taken under different
+items or different timings are different instruments and must never
+pool into one claim (FR-DT-15).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `loadCurve` | [`DecisionTestLoadPoint`](#decisiontestloadpoint)[] | array of object |  | Accuracy and confidence by load level. |
+| `calibration` | [`DecisionTestCalibrationPoint`](#decisiontestcalibrationpoint)[] | array of object |  | What each confidence band actually achieved. |
+| `thresholds` | [`DecisionTestThreshold`](#decisiontestthreshold)[] | array of object |  | Per participant, the lowest load at which they were confidently wrong. |
+
+### DecisionTestLoadPoint
+
+One load level on the curve.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `itemSetVersion` | `string` | string |  | Which items, so two item sets never pool. |
+| `instrumentVersion` | `string` | string |  | Which timings, so two instruments never pool. |
+| `load` | `string` | string |  | d3, d4, d4_plus1, d4_plus3 or d3_control. |
+| `loadRank` | `int32` | number |  | Ordering on the ramp. d3_control ranks 1, the same as d3, because it is d3: block 5 returns to block 1's difficulty. |
+| `sessions` | `int32` | number |  | Runs contributing to this point. |
+| `sessionsUnreviewed` | `int32` | number |  | Of those, how many nobody has reviewed yet. |
+| `sessionsFirstAttempt` | `int32` | number |  | First sittings, and repeats, counted apart. |
+| `sessionsRepeat` | `int32` | number |  | Second or later sittings by the same participant. |
+| `answers` | `int32` | number |  | Answers behind this point. |
+| `accuracyPct` | `int32` | number |  | Correct, as a percentage. |
+| `lurePct` | `int32` | number |  | How often the intended wrong answer was taken. |
+| `expiryPct` | `int32` | number |  | How often the clock ran out. |
+| `meanConfidence` | `int32` | number |  | Mean reported confidence. |
+| `gapPct` | `int32` | number |  | Confidence minus accuracy. Positive is more sure than right, which is the finding this instrument exists to measure. |
+| `confidentlyWrongPct` | `int32` | number |  | Wrong and reported at or above the confident threshold. |
+| `meanBrier` | `double` | number |  | Mean Brier score, 0 is perfect calibration. |
+| `families` | `string` | string |  | The item families behind this point, joined with '+'. One family means the point measures the family rather than the load. |
+
+### DecisionTestCalibrationPoint
+
+One confidence band at one load.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `itemSetVersion` | `string` | string |  | Which items. |
+| `instrumentVersion` | `string` | string |  | Which timings. |
+| `load` | `string` | string |  | The load this band was measured at. |
+| `loadRank` | `int32` | number |  | Ordering on the ramp. |
+| `confidenceBand` | `int32` | number |  | The band, in tens: 10 is 10 to 19 percent confident. |
+| `answers` | `int32` | number |  | Answers in this band. |
+| `accuracyPct` | `int32` | number |  | What the band actually achieved. |
+| `overclaimPct` | `int32` | number |  | Confidence minus accuracy for this band. Positive is overclaiming. |
+| `meanBrier` | `double` | number |  | Mean Brier score for the band. |
+
+### DecisionTestThreshold
+
+One participant's threshold.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string |  | The run, so the console can link to it. |
+| `attemptNo` | `int32` | number |  | Which sitting this was. Zero means no identity could place it. |
+| `reviewStatus` | `string` | string |  | Curation status, empty where nobody has judged it. |
+| `accuracyPct` | `int32` | number |  | Accuracy across the run. |
+| `gapPct` | `int32` | number |  | Confidence minus accuracy across the run. |
+| `fatigueDeltaPct` | `int32` | number |  | Block 5 against block 1, which are the same difficulty. Negative means accuracy fell by the end. |
+| `luredAtRank` | `int32` | number |  | The lowest rank on the ramp at which they were confidently lured. Zero means it never happened. |
+| `luredAtLoad` | `string` | string |  | That rank's load, as a name. |
+| `luredInControl` | `bool` | boolean |  | Whether it happened in block 5, the fatigue control. That is a different claim from being lured on the hardest block. |
+| `confidentlyWrong` | `int32` | number |  | How many answers in the run were wrong and confident. |
 
 ### ExportDecisionTestRunRequest
 

@@ -2402,6 +2402,104 @@ class DecisionTestItemPool(_message.Message):
     can_vary: bool
     def __init__(self, category: _Optional[str] = ..., real_items: _Optional[int] = ..., fixtures: _Optional[int] = ..., per_test: _Optional[int] = ..., spare: _Optional[int] = ..., can_vary: _Optional[bool] = ...) -> None: ...
 
+class GetDecisionTestAnalysisRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class GetDecisionTestAnalysisResponse(_message.Message):
+    __slots__ = ("load_curve", "calibration", "thresholds")
+    LOAD_CURVE_FIELD_NUMBER: _ClassVar[int]
+    CALIBRATION_FIELD_NUMBER: _ClassVar[int]
+    THRESHOLDS_FIELD_NUMBER: _ClassVar[int]
+    load_curve: _containers.RepeatedCompositeFieldContainer[DecisionTestLoadPoint]
+    calibration: _containers.RepeatedCompositeFieldContainer[DecisionTestCalibrationPoint]
+    thresholds: _containers.RepeatedCompositeFieldContainer[DecisionTestThreshold]
+    def __init__(self, load_curve: _Optional[_Iterable[_Union[DecisionTestLoadPoint, _Mapping]]] = ..., calibration: _Optional[_Iterable[_Union[DecisionTestCalibrationPoint, _Mapping]]] = ..., thresholds: _Optional[_Iterable[_Union[DecisionTestThreshold, _Mapping]]] = ...) -> None: ...
+
+class DecisionTestLoadPoint(_message.Message):
+    __slots__ = ("item_set_version", "instrument_version", "load", "load_rank", "sessions", "sessions_unreviewed", "sessions_first_attempt", "sessions_repeat", "answers", "accuracy_pct", "lure_pct", "expiry_pct", "mean_confidence", "gap_pct", "confidently_wrong_pct", "mean_brier", "families")
+    ITEM_SET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    LOAD_FIELD_NUMBER: _ClassVar[int]
+    LOAD_RANK_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_UNREVIEWED_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_FIRST_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_REPEAT_FIELD_NUMBER: _ClassVar[int]
+    ANSWERS_FIELD_NUMBER: _ClassVar[int]
+    ACCURACY_PCT_FIELD_NUMBER: _ClassVar[int]
+    LURE_PCT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRY_PCT_FIELD_NUMBER: _ClassVar[int]
+    MEAN_CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    GAP_PCT_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENTLY_WRONG_PCT_FIELD_NUMBER: _ClassVar[int]
+    MEAN_BRIER_FIELD_NUMBER: _ClassVar[int]
+    FAMILIES_FIELD_NUMBER: _ClassVar[int]
+    item_set_version: str
+    instrument_version: str
+    load: str
+    load_rank: int
+    sessions: int
+    sessions_unreviewed: int
+    sessions_first_attempt: int
+    sessions_repeat: int
+    answers: int
+    accuracy_pct: int
+    lure_pct: int
+    expiry_pct: int
+    mean_confidence: int
+    gap_pct: int
+    confidently_wrong_pct: int
+    mean_brier: float
+    families: str
+    def __init__(self, item_set_version: _Optional[str] = ..., instrument_version: _Optional[str] = ..., load: _Optional[str] = ..., load_rank: _Optional[int] = ..., sessions: _Optional[int] = ..., sessions_unreviewed: _Optional[int] = ..., sessions_first_attempt: _Optional[int] = ..., sessions_repeat: _Optional[int] = ..., answers: _Optional[int] = ..., accuracy_pct: _Optional[int] = ..., lure_pct: _Optional[int] = ..., expiry_pct: _Optional[int] = ..., mean_confidence: _Optional[int] = ..., gap_pct: _Optional[int] = ..., confidently_wrong_pct: _Optional[int] = ..., mean_brier: _Optional[float] = ..., families: _Optional[str] = ...) -> None: ...
+
+class DecisionTestCalibrationPoint(_message.Message):
+    __slots__ = ("item_set_version", "instrument_version", "load", "load_rank", "confidence_band", "answers", "accuracy_pct", "overclaim_pct", "mean_brier")
+    ITEM_SET_VERSION_FIELD_NUMBER: _ClassVar[int]
+    INSTRUMENT_VERSION_FIELD_NUMBER: _ClassVar[int]
+    LOAD_FIELD_NUMBER: _ClassVar[int]
+    LOAD_RANK_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENCE_BAND_FIELD_NUMBER: _ClassVar[int]
+    ANSWERS_FIELD_NUMBER: _ClassVar[int]
+    ACCURACY_PCT_FIELD_NUMBER: _ClassVar[int]
+    OVERCLAIM_PCT_FIELD_NUMBER: _ClassVar[int]
+    MEAN_BRIER_FIELD_NUMBER: _ClassVar[int]
+    item_set_version: str
+    instrument_version: str
+    load: str
+    load_rank: int
+    confidence_band: int
+    answers: int
+    accuracy_pct: int
+    overclaim_pct: int
+    mean_brier: float
+    def __init__(self, item_set_version: _Optional[str] = ..., instrument_version: _Optional[str] = ..., load: _Optional[str] = ..., load_rank: _Optional[int] = ..., confidence_band: _Optional[int] = ..., answers: _Optional[int] = ..., accuracy_pct: _Optional[int] = ..., overclaim_pct: _Optional[int] = ..., mean_brier: _Optional[float] = ...) -> None: ...
+
+class DecisionTestThreshold(_message.Message):
+    __slots__ = ("session_key", "attempt_no", "review_status", "accuracy_pct", "gap_pct", "fatigue_delta_pct", "lured_at_rank", "lured_at_load", "lured_in_control", "confidently_wrong")
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    ATTEMPT_NO_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_STATUS_FIELD_NUMBER: _ClassVar[int]
+    ACCURACY_PCT_FIELD_NUMBER: _ClassVar[int]
+    GAP_PCT_FIELD_NUMBER: _ClassVar[int]
+    FATIGUE_DELTA_PCT_FIELD_NUMBER: _ClassVar[int]
+    LURED_AT_RANK_FIELD_NUMBER: _ClassVar[int]
+    LURED_AT_LOAD_FIELD_NUMBER: _ClassVar[int]
+    LURED_IN_CONTROL_FIELD_NUMBER: _ClassVar[int]
+    CONFIDENTLY_WRONG_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    attempt_no: int
+    review_status: str
+    accuracy_pct: int
+    gap_pct: int
+    fatigue_delta_pct: int
+    lured_at_rank: int
+    lured_at_load: str
+    lured_in_control: bool
+    confidently_wrong: int
+    def __init__(self, session_key: _Optional[str] = ..., attempt_no: _Optional[int] = ..., review_status: _Optional[str] = ..., accuracy_pct: _Optional[int] = ..., gap_pct: _Optional[int] = ..., fatigue_delta_pct: _Optional[int] = ..., lured_at_rank: _Optional[int] = ..., lured_at_load: _Optional[str] = ..., lured_in_control: _Optional[bool] = ..., confidently_wrong: _Optional[int] = ...) -> None: ...
+
 class ExportDecisionTestRunRequest(_message.Message):
     __slots__ = ("session_key", "include_key")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
