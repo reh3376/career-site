@@ -322,3 +322,42 @@ func (r *Repo) DTDrawnItems(ctx context.Context, sessionKey string) ([]DTDrawnIt
 	}
 	return out, rows.Err()
 }
+
+// DTItemAtPosition returns the item this run was actually given at this
+// position.
+//
+// **The lookup that must never come from the bank.** Until 2026-10-08
+// SubmitAnswer resolved the item as `DTScoredItems()[pos-1]`, which was
+// correct while every run was served the bank in its stored order and
+// became silently wrong the moment runs began drawing their own
+// questions. The participant saw the draw's question and the answer was
+// graded against the bank's, so every answer in a run was compared with
+// a different item's key. One real run was scored entirely on noise
+// before anybody noticed, and the only reason it was noticed is that
+// the participant said the number looked wrong.
+//
+// Taking the session id as well as the position is the whole point:
+// there is no position-to-item mapping any more that is not a property
+// of a specific run.
+func (r *Repo) DTItemAtPosition(ctx context.Context, sessionID int64, position int) (DTItem, error) {
+	var it DTItem
+	var raw []byte
+	err := r.pool.QueryRow(ctx, `
+		SELECT i.id, i.code, i.version, i.family, i.kind, i.prompt, i.reminder,
+		       i.options, i.correct_index, i.lure_index
+		  FROM dt_session_items si
+		  JOIN dt_items i ON i.id = si.item_id
+		 WHERE si.session_id = $1 AND si.position_overall = $2`,
+		sessionID, position,
+	).Scan(&it.ID, &it.Code, &it.Version, &it.Family, &it.Kind,
+		&it.Prompt, &it.Reminder, &raw, &it.CorrectIndex, &it.LureIndex)
+	if err != nil {
+		return DTItem{}, fmt.Errorf(
+			"decision test: session %d has no question at position %d: %w",
+			sessionID, position, err)
+	}
+	if err := json.Unmarshal(raw, &it.Options); err != nil {
+		return DTItem{}, fmt.Errorf("decision test: item %s options: %w", it.Code, err)
+	}
+	return it, nil
+}

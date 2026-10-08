@@ -250,12 +250,21 @@ func (h *DecisionTest) SubmitAnswer(
 	blockNo := int(m.GetBlockNo())
 	pos := int(m.GetPositionOverall())
 
-	items, err := h.users.DTScoredItems(ctx)
-	if err != nil || pos < 1 || pos > len(items) {
+	// From THIS RUN'S draw, never from the bank.
+	//
+	// This used to be `DTScoredItems()[pos-1]`, which was right while
+	// every run was served the bank in its stored order and became
+	// silently wrong the moment runs started drawing their own
+	// questions: the participant answered the question they were shown
+	// and it was graded against a different one. Every answer of one
+	// real run was scored against the wrong item before anybody
+	// noticed, and the only reason anybody noticed is that the
+	// participant said the score looked too low.
+	item, err := h.users.DTItemAtPosition(ctx, sess.ID, pos)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			fmt.Errorf("question %d is not part of this test", pos))
 	}
-	item := items[pos-1]
 
 	if err := h.users.DTSaveAnswer(ctx, sess.ID, blockNo, pos,
 		int(m.GetChosenIndex()), int(m.GetLatencyMs()), int(m.GetConfidence()), item); err != nil {

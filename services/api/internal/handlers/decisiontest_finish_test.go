@@ -173,3 +173,55 @@ func TestAZeroPriorCountSurvivesTheWire(t *testing.T) {
 			"no longer lossy and this test's premise has changed")
 	}
 }
+
+// SubmitAnswer must resolve its item from the run's draw, never from
+// the bank.
+//
+// This reads source because the fault it guards is a correct-looking
+// line of code: `DTScoredItems()[pos-1]` was right for months and
+// became wrong the day runs started drawing their own questions.
+// Nothing about it looks suspicious, and the consequence was that
+// every answer in a real sitting was graded against a different
+// question's key while the api returned {"stored":true} each time.
+//
+// The database-backed test in the users package proves the alignment
+// holds end to end. This one stops the specific line coming back.
+func TestSubmitAnswerGradesAgainstTheDraw(t *testing.T) {
+	b, err := os.ReadFile("decisiontest.go")
+	if err != nil {
+		t.Fatalf("read the decision test handler: %v", err)
+	}
+	body := funcBody(string(b), "func (h *DecisionTest) SubmitAnswer(")
+	if body == "" {
+		t.Fatal("could not find SubmitAnswer: this test has drifted and is " +
+			"asserting nothing, which is the failure mode it exists for")
+	}
+	if !strings.Contains(body, "DTItemAtPosition(ctx, sess.ID") {
+		t.Error("SubmitAnswer does not resolve its item with DTItemAtPosition. " +
+			"The item must come from this run's draw and the session id is what " +
+			"makes that possible")
+	}
+	// Comments stripped first. The comment above the fixed line names
+	// DTScoredItems to explain what went wrong, and a check that cannot
+	// tell code from prose would fail on its own documentation and get
+	// deleted for being wrong.
+	if strings.Contains(stripLineComments(body), "DTScoredItems(") {
+		t.Error("SubmitAnswer reads the item bank. Position in the bank is not " +
+			"position in a run any more: grading against it scores answers " +
+			"against questions the participant never saw")
+	}
+}
+
+// stripLineComments removes // comments so a source check tests code
+// rather than the prose explaining it.
+func stripLineComments(src string) string {
+	var b strings.Builder
+	for _, line := range strings.Split(src, "\n") {
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = line[:i]
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
