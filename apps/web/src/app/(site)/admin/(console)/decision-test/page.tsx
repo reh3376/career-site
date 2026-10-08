@@ -6,7 +6,7 @@ import { getSessionCookie } from "@/lib/session";
 
 import { setDecisionTestTimingsAction } from "./actions";
 import { ExportPanel } from "./export";
-import { RunTable, type Run, type ReviewCounts } from "./runs";
+import { PoolStatus, RunTable, type ItemPool, type Run, type ReviewCounts } from "./runs";
 
 export const metadata: Metadata = { title: "Admin · Decision test" };
 
@@ -28,6 +28,7 @@ export default async function DecisionTestPage({
   let s: Settings = {};
   let runs: Run[] = [];
   let counts: ReviewCounts = {};
+  let pools: ItemPool[] = [];
   if (cookie) {
     // callApi returns the fetch Response, not the parsed body. The first
     // version of this page cast the Response straight to Settings, so
@@ -52,9 +53,14 @@ export default async function DecisionTestPage({
       cookie,
     });
     if (rr.ok) {
-      const body = (await rr.json()) as { runs?: Run[]; counts?: ReviewCounts };
+      const body = (await rr.json()) as {
+        runs?: Run[];
+        counts?: ReviewCounts;
+        itemPools?: ItemPool[];
+      };
       runs = body.runs ?? [];
       counts = body.counts ?? {};
+      pools = body.itemPools ?? [];
     }
   }
   const secs = (ms?: number) => Math.round((ms ?? 0) / 1000);
@@ -72,6 +78,8 @@ export default async function DecisionTestPage({
         runs are excluded: they prove the pipeline works and are not
         data.
       </p>
+
+      <PoolStatus pools={pools} />
 
       {/* The queue. Reviewing is work, so what is left to look at
           belongs at the top rather than being something to count by

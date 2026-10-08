@@ -276,3 +276,49 @@ func (r *Repo) DTItemPools(ctx context.Context) ([]DTPoolStatus, error) {
 	}
 	return out, rows.Err()
 }
+
+// DTDrawnItem is one of a run's thirty questions as drawn, whether or
+// not the participant ever reached it.
+type DTDrawnItem struct {
+	Position int
+	BlockNo  int
+	Code     string
+	Family   string
+	// Whether an answer row exists for this position. A drawn question
+	// with no answer is one the run never got to, which is the whole
+	// reason this is separate from the answer list: an abandoned run's
+	// answers show six rows and say nothing about the twenty-four
+	// questions that were already chosen for it.
+	Answered bool
+	Fixture  bool
+}
+
+// DTDrawnItems lists the questions a run was given, in order.
+func (r *Repo) DTDrawnItems(ctx context.Context, sessionKey string) ([]DTDrawnItem, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT si.position_overall,
+		       ((si.position_overall - 1) / $2) + 1 AS block_no,
+		       i.code, i.family, i.is_fixture,
+		       EXISTS (SELECT 1 FROM dt_answers a
+		                WHERE a.session_id = si.session_id
+		                  AND a.position_overall = si.position_overall)
+		  FROM dt_session_items si
+		  JOIN dt_items i ON i.id = si.item_id
+		  JOIN dt_sessions s ON s.id = si.session_id
+		 WHERE s.public_id::text = $1
+		 ORDER BY si.position_overall`, sessionKey, DTQuestionsPerBlock)
+	if err != nil {
+		return nil, fmt.Errorf("decision test: drawn items: %w", err)
+	}
+	defer rows.Close()
+	var out []DTDrawnItem
+	for rows.Next() {
+		var d DTDrawnItem
+		if err := rows.Scan(&d.Position, &d.BlockNo, &d.Code, &d.Family,
+			&d.Fixture, &d.Answered); err != nil {
+			return nil, fmt.Errorf("decision test: scan drawn item: %w", err)
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}

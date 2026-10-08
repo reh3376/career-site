@@ -310,3 +310,59 @@ func TestTwoParticipantsGetDifferentTests(t *testing.T) {
 			"too close to the same test", mean, DTQuestionCount)
 	}
 }
+
+// A run that stopped early must still show every question it was given.
+//
+// The difference between "stopped at question six" and "was asked six
+// questions" decides whether a short run is usable, and the answer
+// table cannot tell them apart: it has six rows either way.
+func TestTheDrawIsVisibleForAnAbandonedRun(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "stopped early"},
+		DTConditions{AudioMode: "sound", DeviceClass: "phone"},
+		true, "db-test-abandoned", nil,
+		"v-draw-test", "pool-test", "key-1", true)
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+
+	// Two questions answered, then nothing: the shape of a run somebody
+	// walked away from.
+	block, err := r.DTDrawnBlock(ctx, sess.ID, 1)
+	if err != nil {
+		t.Fatalf("DTDrawnBlock: %v", err)
+	}
+	for i := range 2 {
+		if err := r.DTSaveAnswer(ctx, sess.ID, 1, i+1, 0, 5000, 50, block[i]); err != nil {
+			t.Fatalf("DTSaveAnswer: %v", err)
+		}
+	}
+
+	drawn, err := r.DTDrawnItems(ctx, sess.PublicID)
+	if err != nil {
+		t.Fatalf("DTDrawnItems: %v", err)
+	}
+	if len(drawn) != DTQuestionCount {
+		t.Fatalf("the run shows %d drawn questions, want %d: an abandoned run "+
+			"must still account for everything it was given", len(drawn), DTQuestionCount)
+	}
+	reached := 0
+	for _, d := range drawn {
+		if d.Answered {
+			reached++
+		}
+		if d.Code == "" || d.Family == "" {
+			t.Errorf("position %d has no code or category", d.Position)
+		}
+	}
+	if reached != 2 {
+		t.Errorf("%d questions marked reached, want 2", reached)
+	}
+	// Ordered, or the list cannot be read against the answer table.
+	for i, d := range drawn {
+		if d.Position != i+1 {
+			t.Fatalf("drawn item %d is at position %d", i, d.Position)
+		}
+	}
+}

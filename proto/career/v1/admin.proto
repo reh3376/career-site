@@ -3171,6 +3171,13 @@ message ListDecisionTestRunsResponse {
   DecisionTestReviewCounts counts = 2;
   // The runs.
   repeated DecisionTestRun runs = 1;
+  // Each category's room to vary.
+  //
+  // On the list rather than tucked away, because a pool that cannot
+  // vary is the one fault here that looks exactly like success: the
+  // draw runs, every block is balanced, and every participant sits the
+  // same test.
+  repeated DecisionTestItemPool item_pools = 3;
 }
 
 // One run, summarised for a list.
@@ -3317,6 +3324,47 @@ message DecisionTestPriorSittings {
   optional int32 by_cookie = 3;
 }
 
+// One of a run's thirty questions, as drawn.
+message DecisionTestDrawnItem {
+  // Position in the whole test, 1-based.
+  int32 position = 1;
+  // Which block it falls in.
+  int32 block_no = 2;
+  // Stable item code.
+  string item_code = 3;
+  // arithmetic, base_rate, conjunction or syllogism.
+  string family = 4;
+  // Whether the participant ever reached it.
+  //
+  // The reason this list exists separately from the answers: an
+  // abandoned run has six answers and says nothing about the
+  // twenty-four questions that had already been chosen for it.
+  bool answered = 5;
+  // A placeholder from the fixture bank rather than a real item. Always
+  // false in production, where fixtures are refused.
+  bool fixture = 6;
+}
+
+// One category's room to vary.
+message DecisionTestItemPool {
+  // arithmetic, base_rate, conjunction or syllogism.
+  string category = 1;
+  // Active scored items in this category, real ones only.
+  int32 real_items = 2;
+  // Placeholders, which production never serves.
+  int32 fixtures = 3;
+  // How many a single test consumes.
+  int32 per_test = 4;
+  // real_items minus per_test. Negative means a test cannot be filled.
+  int32 spare = 5;
+  // Whether there is anything to leave behind.
+  //
+  // False means every participant is served the same questions however
+  // random the selection claims to be, which is the failure that looks
+  // exactly like success.
+  bool can_vary = 6;
+}
+
 // Asks for one run as downloadable files.
 message ExportDecisionTestRunRequest {
   // Which run, from the list.
@@ -3363,6 +3411,9 @@ message GetDecisionTestRunResponse {
   repeated DecisionTestAnswer answers = 3;
   // Every judgement ever recorded for this run, oldest first.
   repeated DecisionTestReviewEvent review_history = 4;
+  // The thirty questions this run was drawn, in order, including any it
+  // never reached.
+  repeated DecisionTestDrawnItem drawn_items = 5;
 }
 
 // Asks for the dataset as CSV.

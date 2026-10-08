@@ -53,6 +53,14 @@ type Answer = {
   latencyVsBaseline?: number;
   brier?: number;
 };
+type DrawnItem = {
+  position?: number;
+  blockNo?: number;
+  itemCode?: string;
+  family?: string;
+  answered?: boolean;
+  fixture?: boolean;
+};
 type ReviewEvent = {
   blockNo?: number;
   status?: string;
@@ -85,12 +93,14 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
     blocks?: Block[];
     answers?: Answer[];
     reviewHistory?: ReviewEvent[];
+    drawnItems?: DrawnItem[];
   };
   const run = res?.run;
   if (!run) notFound();
   const blocks = res?.blocks ?? [];
   const answers = res?.answers ?? [];
   const history = res?.reviewHistory ?? [];
+  const drawn = res?.drawnItems ?? [];
 
   const pct = (c?: number, t?: number) => (t ? Math.round((100 * (c ?? 0)) / t) : 0);
   const early = blocks.filter((b) => b.load === "d3" || b.load === "d4");
@@ -494,6 +504,64 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           ))}
         </ol>
       </details>
+
+      {/* The questions this run was given, including the ones it never
+          reached.
+
+          Separate from the answer table on purpose. An abandoned run
+          has six answers and says nothing about the twenty-four
+          questions that had already been chosen for it, and the
+          difference between "stopped at question six" and "was asked
+          six questions" matters when judging whether a short run is
+          usable. Since 2026-10-07 every run draws its own thirty from
+          the category pools, so which thirty is now a property of the
+          run rather than of the instrument. */}
+      {drawn.length ? (
+        <>
+          <h2 className="font-display mt-14 text-2xl text-ink">
+            The questions this run drew
+          </h2>
+          <p className="mt-3 max-w-xl text-sm text-ink-3">
+            {drawn.length} drawn, {drawn.filter((d) => d.answered).length}{" "}
+            reached. Codes and categories only; the questions themselves are
+            in the section above.
+            {drawn.some((d) => d.fixture) ? (
+              <strong className="block mt-2 text-signal">
+                This run was served placeholder items, not the instrument.
+              </strong>
+            ) : null}
+          </p>
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-sm">
+              <thead className="text-left font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
+                <tr className="border-b border-line">
+                  <th className="py-3 pr-4">#</th>
+                  <th className="py-3 pr-4">Block</th>
+                  <th className="py-3 pr-4">Item</th>
+                  <th className="py-3 pr-4">Category</th>
+                  <th className="py-3">Reached</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {drawn.map((d) => (
+                  <tr key={d.position} className={d.answered ? "" : "opacity-50"}>
+                    <td className="py-2 pr-4 tabular-nums text-ink-3">{d.position}</td>
+                    <td className="py-2 pr-4 tabular-nums text-ink-3">{d.blockNo}</td>
+                    <td className="py-2 pr-4 font-mono text-[11px] text-ink">
+                      {d.itemCode}
+                      {d.fixture ? (
+                        <span className="ml-2 text-signal">fixture</span>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-4 text-ink-3">{d.family}</td>
+                    <td className="py-2 text-ink-2">{d.answered ? "yes" : "no"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
 
       {/* The audit trail. Written on every judgement since the curation
           layer shipped and readable only through the SQL console until
