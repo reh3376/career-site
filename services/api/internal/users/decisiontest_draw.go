@@ -62,7 +62,7 @@ var dtSlotFamilies = []string{
 // returns an error and no rows, so a short or unbalanced block can never
 // reach a participant. That is the one failure here that would cost real
 // data rather than merely annoying somebody.
-func DTDrawItems(ctx context.Context, q dtQuerier, sessionID int64, exclude []int64) error {
+func DTDrawItems(ctx context.Context, q dtQuerier, sessionID int64, exclude []int64, allowFixtures bool) error {
 	if len(dtSlotFamilies) != DTQuestionsPerBlock {
 		return fmt.Errorf("decision test: %d slots defined for a %d question block",
 			len(dtSlotFamilies), DTQuestionsPerBlock)
@@ -84,13 +84,22 @@ func DTDrawItems(ctx context.Context, q dtQuerier, sessionID int64, exclude []in
 		rows, err := q.Query(ctx, `
 			SELECT id FROM dt_items
 			 WHERE active AND kind = 'scored' AND family = $1
+			   -- Fixtures are the placeholder bank the public repository
+			   -- seeds so CI and a laptop have something to draw from.
+			   -- They are obviously not the instrument, and serving them
+			   -- to a participant would waste fifteen minutes and produce
+			   -- nonsense. Excluded unless explicitly allowed, so a
+			   -- production database that never received the real bank
+			   -- refuses to start a run rather than asking somebody what
+			   -- two plus two is.
+			   AND (NOT is_fixture OR $4)
 			   -- coalesce, because a nil slice arrives as NULL and
 			   -- "id = ANY(NULL)" is NULL rather than false. Without it
 			   -- the NOT is NULL for every row, so a first sitting,
 			   -- which excludes nothing, draws nothing at all.
 			   AND NOT (id = ANY(coalesce($2::bigint[], '{}'::bigint[])))
 			 ORDER BY random()
-			 LIMIT $3`, family, exclude, n)
+			 LIMIT $3`, family, exclude, n, allowFixtures)
 		if err != nil {
 			return fmt.Errorf("decision test: draw %s: %w", family, err)
 		}
@@ -110,10 +119,15 @@ func DTDrawItems(ctx context.Context, q dtQuerier, sessionID int64, exclude []in
 		if len(ids) < n {
 			// Said with the numbers in it, because the fix is to write
 			// more items and the message should say how many.
+			hint := ""
+			if !allowFixtures {
+				hint = " (fixtures are excluded: if this database never received" +
+					" the real bank, run deploy/items-sync.sh)"
+			}
 			return fmt.Errorf(
 				"decision test: category %q can supply %d of the %d questions a test needs"+
-					" (%d excluded as already seen): refusing to serve a short block",
-				family, len(ids), n, len(exclude))
+					" (%d excluded as already seen)%s: refusing to serve a short block",
+				family, len(ids), n, len(exclude), hint)
 		}
 		drawn[family] = ids
 	}

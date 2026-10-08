@@ -361,6 +361,9 @@ func main() {
 	// The decision test. Public: its participants are recruited
 	// volunteers rather than members.
 	decisionTestHandler := handlers.NewDecisionTest(log, userRepo, authHandler)
+	// Off in production, so a database that never received the real
+	// item bank refuses to start a run rather than serving placeholders.
+	decisionTestHandler.SetAllowFixtureBank(cfg.DTAllowFixtureBank)
 	// Result emails to participants who asked for them. The audited
 	// mailer, so a send lands in notification_deliveries like every
 	// other transactional message.

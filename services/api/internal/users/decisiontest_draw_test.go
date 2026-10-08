@@ -25,7 +25,7 @@ func TestADrawIsAlwaysBalancedAndDistinct(t *testing.T) {
 	// sometimes.
 	for attempt := range 25 {
 		sess := newDrawSession(t, r, ctx)
-		if err := DTDrawItems(ctx, r.pool, sess, nil); err != nil {
+		if err := DTDrawItems(ctx, r.pool, sess, nil, true); err != nil {
 			t.Fatalf("draw %d: %v", attempt, err)
 		}
 
@@ -145,7 +145,7 @@ func TestADrawRefusesRatherThanServeAShortBlock(t *testing.T) {
 		t.Fatal("no base_rate items to exclude")
 	}
 
-	err = DTDrawItems(ctx, r.pool, sess, exclude)
+	err = DTDrawItems(ctx, r.pool, sess, exclude, true)
 	if err == nil {
 		t.Fatal("the draw succeeded with every base_rate item excluded: it must " +
 			"refuse rather than serve a block short of its quota")
@@ -186,7 +186,7 @@ func TestARepeatSittingDrawsWhatWasNotSeen(t *testing.T) {
 	// DTSeenItems deliberately ignores agent-driven runs.
 	const visitor = "draw-test-repeat-visitor"
 	first := newRealDrawSessionFor(t, r, ctx, visitor)
-	if err := DTDrawItems(ctx, r.pool, first, nil); err != nil {
+	if err := DTDrawItems(ctx, r.pool, first, nil, true); err != nil {
 		t.Fatalf("first draw: %v", err)
 	}
 	seen, err := r.DTSeenItems(ctx, visitor, nil)
@@ -199,7 +199,7 @@ func TestARepeatSittingDrawsWhatWasNotSeen(t *testing.T) {
 	}
 
 	second := newRealDrawSessionFor(t, r, ctx, visitor)
-	if err := DTDrawItems(ctx, r.pool, second, seen); err != nil {
+	if err := DTDrawItems(ctx, r.pool, second, seen, true); err != nil {
 		t.Fatalf("second draw: %v", err)
 	}
 	var shared int
@@ -242,4 +242,71 @@ func insertDrawSession(t *testing.T, r *Repo, ctx context.Context, visitor strin
 		t.Fatalf("create a session: %v", err)
 	}
 	return id
+}
+
+// Two independent participants should not sit the same test.
+//
+// This is the promise the whole exercise exists to keep, and it is
+// worth measuring rather than assuming: the draw can be perfectly
+// balanced and perfectly distinct within a test while still handing
+// everybody the same thirty questions, which is exactly what happens
+// when a pool is the same size as its quota.
+//
+// Skips, loudly, while the bank cannot support it.
+func TestTwoParticipantsGetDifferentTests(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	pools, err := r.DTItemPools(ctx)
+	if err != nil {
+		t.Fatalf("DTItemPools: %v", err)
+	}
+	for _, p := range pools {
+		if !p.CanVary {
+			t.Skipf("category %q holds %d real items for a per-test need of %d, "+
+				"so every participant sees the same questions however the draw "+
+				"is written", p.Category, p.Pool, p.PerTest)
+		}
+	}
+
+	// Several pairs, because two draws could coincide closely by chance
+	// and a single comparison would not notice a selection that is
+	// barely random.
+	worst := 0
+	total := 0
+	const pairs = 10
+	for i := range pairs {
+		a := newDrawSession(t, r, ctx)
+		b := newDrawSession(t, r, ctx)
+		if err := DTDrawItems(ctx, r.pool, a, nil, true); err != nil {
+			t.Fatalf("draw a: %v", err)
+		}
+		if err := DTDrawItems(ctx, r.pool, b, nil, true); err != nil {
+			t.Fatalf("draw b: %v", err)
+		}
+		var shared int
+		if err := r.pool.QueryRow(ctx, `
+			SELECT count(*) FROM dt_session_items x
+			  JOIN dt_session_items y ON y.item_id = x.item_id
+			 WHERE x.session_id = $1 AND y.session_id = $2`, a, b).Scan(&shared); err != nil {
+			t.Fatalf("count shared: %v", err)
+		}
+		total += shared
+		if shared > worst {
+			worst = shared
+		}
+		if shared == DTQuestionCount {
+			t.Fatalf("pair %d sat an identical test: the draw is not varying at all", i)
+		}
+	}
+	mean := float64(total) / float64(pairs)
+	t.Logf("across %d pairs: %.1f of %d questions shared on average, worst %d",
+		pairs, mean, DTQuestionCount, worst)
+
+	// With each pool at three times its quota, a third of each category
+	// is drawn, so roughly a third of questions coinciding is expected.
+	// Well over half would mean the selection is barely random.
+	if mean > float64(DTQuestionCount)*0.6 {
+		t.Errorf("two participants share %.1f of %d questions on average, which is "+
+			"too close to the same test", mean, DTQuestionCount)
+	}
 }

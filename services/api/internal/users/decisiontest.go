@@ -113,6 +113,7 @@ func (r *Repo) StartDecisionTest(
 	ctx context.Context,
 	in DTIntake, cond DTConditions, synthetic bool, visitorKey string, userID *int64,
 	instrumentVersion, itemSetVersion, keyVersion string,
+	allowFixtures bool,
 ) (*DTSession, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -166,6 +167,31 @@ func (r *Repo) StartDecisionTest(
 	if err != nil {
 		return nil, fmt.Errorf("decision test: session: %w", err)
 	}
+	// The thirty questions, drawn now and inside this transaction.
+	//
+	// In here rather than later so a session can never exist without its
+	// items: the client fetches blocks one at a time, and a run whose
+	// draw failed half way would be unservable from whichever block the
+	// failure landed on. If the draw refuses, the session is rolled back
+	// and the participant is told the test could not start, which is a
+	// far better outcome than fifteen minutes on a short instrument.
+	//
+	// A repeat sitting avoids what this participant has already seen
+	// (D3a). The lookup runs on the pool rather than the transaction
+	// because it reads earlier sessions, which this one cannot have
+	// touched.
+	var exclude []int64
+	if seen, err := r.DTSeenItems(ctx, visitorKey, participantID); err != nil {
+		// Not fatal. Failing to remember what somebody saw last time
+		// costs a less varied draw; refusing the run costs the run.
+		_ = err
+	} else {
+		exclude = seen
+	}
+	if err := DTDrawItems(ctx, tx, s.ID, exclude, allowFixtures); err != nil {
+		return nil, fmt.Errorf("decision test: draw: %w", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("decision test: commit: %w", err)
 	}

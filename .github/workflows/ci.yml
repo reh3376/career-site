@@ -261,6 +261,13 @@ jobs:
         working-directory: services/api
         env:
           TEST_DATABASE_URL: postgres://career:career@localhost:5432/career?sslmode=disable
+          # The real item bank is not in this repository: its key would
+          # be public. Migrations seed structurally valid placeholders
+          # so the decision test's draw has something to select from,
+          # and this lets the tests use them. Production never sets it,
+          # so a box that never received the real bank refuses to start
+          # a run rather than serving placeholders to a volunteer.
+          DT_ALLOW_FIXTURE_BANK: "1"
         run: go test -race -count=1 ./...
 
       - name: go build

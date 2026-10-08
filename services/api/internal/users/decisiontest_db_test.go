@@ -75,7 +75,7 @@ func TestTheWholeWritePathAgainstPostgres(t *testing.T) {
 		DTConditions{AudioMode: "sound", DeviceClass: "desktop", TapCheckPassed: true,
 			BaselineRTMs: 300, BaselineRTSDMs: 40},
 		true, "db-test-visitor", nil,
-		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1", true)
 	if err != nil {
 		// This is the failure that took the test down. The message
 		// Postgres gives is specific and worth surfacing whole.
@@ -155,7 +155,7 @@ func TestFinishIsIdempotentAcrossTheDebrief(t *testing.T) {
 	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "finish twice"},
 		DTConditions{AudioMode: "sound", DeviceClass: "desktop"},
 		true, "db-test-finish", nil,
-		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1", true)
 	if err != nil {
 		t.Fatalf("StartDecisionTest: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestCurationWritesAgainstPostgres(t *testing.T) {
 	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "curation db test"},
 		DTConditions{AudioMode: "sound", DeviceClass: "desktop"},
 		true, "db-test-curation", nil,
-		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1", true)
 	if err != nil {
 		t.Fatalf("StartDecisionTest: %v", err)
 	}
@@ -438,7 +438,7 @@ func TestTheConsoleReturnsTheWholeRecord(t *testing.T) {
 		DTConditions{AudioMode: "sound", DeviceClass: "desktop", TapCheckPassed: true,
 			BaselineRTMs: 300, BaselineRTSDMs: 40},
 		true, "db-test-whole", nil,
-		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-under-test")
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-under-test", true)
 	if err != nil {
 		t.Fatalf("StartDecisionTest: %v", err)
 	}
@@ -553,7 +553,7 @@ func TestAnAnswerWithNoConfidenceKeepsItsChoice(t *testing.T) {
 	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "confidence timeout"},
 		DTConditions{AudioMode: "sound", DeviceClass: "phone"},
 		true, "db-test-conf-timeout", nil,
-		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1")
+		"v2-m6000-q25000-r20000", "items-2026-10-05", "key-1", true)
 	if err != nil {
 		t.Fatalf("StartDecisionTest: %v", err)
 	}

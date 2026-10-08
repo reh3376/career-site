@@ -58,6 +58,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      # Local dev draws from the placeholder bank; production does not.
+      DT_ALLOW_FIXTURE_BANK: "1"
       <<: *common-env
       API_ADDR: :8080
       API_ENV: docker
