@@ -366,3 +366,86 @@ func TestTheDrawIsVisibleForAnAbandonedRun(t *testing.T) {
 		}
 	}
 }
+
+// An answer must be graded against the question the participant saw.
+//
+// **The bug this exists for cost a real run.** SubmitAnswer resolved
+// the item as `DTScoredItems()[pos-1]`, the bank's position rather than
+// the run's. That was correct while every run was served the bank in
+// its stored order, and became wrong the instant runs began drawing
+// their own questions. The participant saw the draw's question at
+// position 1 and was graded against the bank's; all thirty answers in
+// one real sitting were compared with a different item's key, and the
+// score that came out was noise.
+//
+// Nothing caught it. The draw tests checked composition and
+// distinctness. The write tests called DTSaveAnswer directly with the
+// right item, bypassing the lookup entirely. The synthetic runs through
+// the UI checked that answers were stored, never that the stored answer
+// and the drawn question referred to the same thing. It was found
+// because the participant said the number looked too low.
+//
+// So this asserts the one relationship none of those did.
+func TestAnAnswerIsGradedAgainstTheQuestionThatWasShown(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	sess, err := r.StartDecisionTest(ctx, DTIntake{DisplayName: "grading alignment"},
+		DTConditions{AudioMode: "sound", DeviceClass: "desktop"},
+		true, "db-test-grading", nil,
+		"v-grading-test", "pool-test", "key-1", true)
+	if err != nil {
+		t.Fatalf("StartDecisionTest: %v", err)
+	}
+
+	for block := 1; block <= DTBlockCount; block++ {
+		shown, err := r.DTDrawnBlock(ctx, sess.ID, int64(block))
+		if err != nil {
+			t.Fatalf("DTDrawnBlock(%d): %v", block, err)
+		}
+		for i, want := range shown {
+			pos := (block-1)*DTQuestionsPerBlock + i + 1
+
+			// The lookup the handler uses must return the same item the
+			// participant was served.
+			got, err := r.DTItemAtPosition(ctx, sess.ID, pos)
+			if err != nil {
+				t.Fatalf("DTItemAtPosition(%d): %v", pos, err)
+			}
+			if got.ID != want.ID {
+				t.Fatalf("position %d: the participant saw %s and the answer "+
+					"would be graded against %s", pos, want.Code, got.Code)
+			}
+
+			// Answer it correctly, as the participant would by picking the
+			// option they were shown.
+			if err := r.DTSaveAnswer(ctx, sess.ID, block, pos,
+				got.CorrectIndex, 4000, 80, got); err != nil {
+				t.Fatalf("DTSaveAnswer(%d): %v", pos, err)
+			}
+		}
+	}
+
+	// Every stored answer must point at the drawn item, and a run that
+	// answered every question correctly must score full marks. A
+	// misaligned grader produces roughly chance instead, which is
+	// exactly what it did in production.
+	var misaligned, correct int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE a.item_id <> si.item_id),
+		       count(*) FILTER (WHERE a.outcome = 'correct')
+		  FROM dt_answers a
+		  JOIN dt_session_items si
+		    ON si.session_id = a.session_id
+		   AND si.position_overall = a.position_overall
+		 WHERE a.session_id = $1`, sess.ID).Scan(&misaligned, &correct); err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if misaligned != 0 {
+		t.Errorf("%d answers are recorded against an item the run never drew", misaligned)
+	}
+	if correct != DTQuestionCount {
+		t.Errorf("answering every question with its own correct option scored "+
+			"%d of %d: the grader is not using the question that was shown",
+			correct, DTQuestionCount)
+	}
+}
