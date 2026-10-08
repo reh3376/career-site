@@ -353,16 +353,59 @@ is too small the fallback is recorded rather than silent.
 
 *Exit:* the live pass, which is the only test that counts for UI here.
 
-### S7. Content: grow the pools
+### S7. Content: 90 private items. DRAFTED 2026-10-07, awaiting review.
 
-Thirty or more new items, each with a designed lure, to give every
-category a spare. Twenty arithmetic, twenty syllogism, ten base-rate and
-ten conjunction would give roughly double the quota and make the draw
-genuinely random. **Not code.** Items can be added one at a time; S1's
-test and `v_dt_item_pools` both keep telling the truth as they land.
+All 90 are drafted in `docs/personal/decision-test-item-drafts.json`,
+with a generated review copy beside it. Thirty per category for
+arithmetic and syllogism, fifteen each for base-rate and conjunction,
+which is three times the per-test need everywhere.
 
-*Exit:* `v_dt_item_pools` reports a non-zero spare in every category, at
-which point two participants stop seeing the same test.
+Every number was recomputed independently rather than trusted from the
+prose. Option positions are shuffled with a fixed seed, because the
+first draft had the correct answer in position 0 on all sixty and would
+have become a test of noticing that.
+
+*Exit:* the owner vets the items, principally that each lure is
+genuinely the tempting answer, which is the part no script can check.
+
+### S8. Make the bank private, and keep the tests honest
+
+**The decision, taken on 2026-10-07.** The existing 30 items were seeded
+in a public migration on 2026-10-04. Deleting it would not un-publish
+them, and rewriting public history is neither reliable nor compatible
+with a repository whose pitch is that the diffs are in the open. So all
+30 are retired and replaced by the 90, which never enter the repository.
+The claim on the run page stays exactly as written, because once the
+live bank is private it is simply true.
+
+This is not only a data move, and the awkward part is the tests. The
+balance test, the draw tests and the CI database all need *a* bank, and
+they cannot have the real one.
+
+- **A fixture bank, public.** A migration seeds 90 structurally valid
+  placeholder items: right categories, right counts, right positions,
+  and prompts that are obviously not the instrument ("Fixture A11:
+  what is 2 + 2?"). CI and a laptop run against these. Every existing
+  test keeps working, because all of them check shape and mechanics
+  rather than content: the balance quota, the draw composition, the
+  no-repeat constraint, the refusal on a depleted category.
+- **The real bank, private.** `deploy/items-sync.sh`, following
+  `corpus-sync.sh`, reads the JSON from `docs/personal/` and upserts it
+  into production, deactivating the fixtures in the same transaction. A
+  production database therefore holds the real 90 and no fixtures; a CI
+  database holds the fixtures and no real items.
+- **A guard against the obvious disaster:** a check that refuses to
+  serve a run whose drawn items are fixtures, so a failed or forgotten
+  sync shows up as a refusal rather than as a participant being asked
+  what two plus two is.
+- **Retire the old 30** in the same public migration that seeds the
+  fixtures. They stay in the table, inactive, because nothing is ever
+  deleted and the four runs already taken point at them.
+
+*Exit:* CI green against fixtures; production serving the real bank;
+`v_dt_item_pools` reporting `can_vary = true` in all four categories for
+the first time; and a deliberate check that a fixture-backed run is
+refused.
 
 ---
 
