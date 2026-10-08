@@ -62,6 +62,22 @@ type Config struct {
 	// sidecar's stub provider (schema-valid, meaningless output). Off
 	// by default so a stub never gates real submissions.
 	LLMAllowStub bool
+
+	// DTAllowFixtureBank lets the decision test draw from the fixture
+	// item bank.
+	//
+	// The real items are not in this repository: they are synced into
+	// production from a private source, because an answer key in a
+	// public migration is an answer key anybody can read. The public
+	// repo seeds structurally valid placeholders instead, so CI and a
+	// laptop have something to draw from.
+	//
+	// Off by default, which is the safe direction. A production
+	// database that never received the real bank refuses to start a run
+	// rather than quietly asking a volunteer what two plus two is, and a
+	// developer who forgets to set it gets a clear refusal rather than
+	// a confusing pass.
+	DTAllowFixtureBank bool
 	// ResumePDFOwnerPassword locks editing on generated résumé PDFs
 	// (the user password is empty, so they open freely). Empty skips
 	// PDF rendering; never commit the value, the repo is public.
@@ -155,6 +171,7 @@ func Load() (Config, error) {
 		JDDailyLimit:           envIntOr("JD_DAILY_LIMIT", 3),
 		JDPipelineTimeout:      time.Duration(envIntOr("JD_PIPELINE_TIMEOUT_SECONDS", 900)) * time.Second,
 		LLMAllowStub:           os.Getenv("LLM_ALLOW_STUB") == "1",
+		DTAllowFixtureBank:     os.Getenv("DT_ALLOW_FIXTURE_BANK") == "1",
 		LLMNumCtx:              envIntOr("LLM_NUM_CTX", 16384),
 		ResumePDFOwnerPassword: os.Getenv("RESUME_PDF_OWNER_PASSWORD"),
 		DatabaseURL:            envOr("DATABASE_URL", "postgres://career:career_dev_only@localhost:5432/career?sslmode=disable"),

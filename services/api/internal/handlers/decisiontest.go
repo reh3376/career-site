@@ -36,6 +36,10 @@ type DecisionTest struct {
 
 	events *events.Writer // product event stream; nil is silent
 
+	// allowFixtureBank mirrors config.DTAllowFixtureBank. See there for
+	// why it defaults off.
+	allowFixtureBank bool
+
 	// Results go out to participants who asked for them. Nil leaves the
 	// test working and the emails unsent, which is the right failure:
 	// somebody mid-run must not be stopped because a mailer is down.
@@ -56,6 +60,10 @@ func (h *DecisionTest) SetMailer(p email.Provider, from, siteURL string) {
 	h.email, h.from, h.siteURL = p, from, siteURL
 }
 
+// SetAllowFixtureBank lets this instance draw from the placeholder item
+// bank. See config.DTAllowFixtureBank for why it is off by default.
+func (h *DecisionTest) SetAllowFixtureBank(v bool) { h.allowFixtureBank = v }
+
 // SetEvents wires the product event stream. Optional, like every other
 // handler's: a run must not fail because analytics is down.
 func (h *DecisionTest) SetEvents(w *events.Writer) { h.events = w }
@@ -64,12 +72,21 @@ func (h *DecisionTest) SetEvents(w *events.Writer) { h.events = w }
 // whenever the bank changes, so a reworded item does not silently pool
 // with its predecessor.
 const (
-	// Bumped on 2026-10-05 with migration 00052: three base-rate items
-	// retired, one conjunction and two syllogisms added, and the
-	// presentation order interleaved so every block carries the same
-	// family mix. A run before that is a different instrument and must
-	// not pool with one after it.
-	itemSetVersion = "items-2026-10-05"
+	// Bumped on 2026-10-07: the bank stopped being a fixed ordered set
+	// of thirty and became four category pools, drawn from per run. The
+	// version now names the POOL a run drew from rather than the order
+	// it was served in, which is the right grain: two runs from the same
+	// pool under the same timings are comparable even though they shared
+	// no questions, because what is held constant is the category
+	// composition of every block.
+	//
+	// The thirty items a given run actually saw are in dt_session_items,
+	// so nothing is lost by the version no longer implying them.
+	//
+	// The previous value, items-2026-10-05, was the hand-ordered bank
+	// whose key was published in migration 00051. Those items are
+	// retired in 00060 and the live bank is synced privately.
+	itemSetVersion = "pool-2026-10-07"
 	keyVersion     = "key-1"
 )
 
@@ -126,7 +143,8 @@ func (h *DecisionTest) StartSession(
 	timings := h.users.DTGetSettings(ctx)
 
 	sess, err := h.users.StartDecisionTest(ctx, intake, cond, m.GetSynthetic(),
-		visitorKey, userID, timings.InstrumentVersion(), itemSetVersion, keyVersion)
+		visitorKey, userID, timings.InstrumentVersion(), itemSetVersion, keyVersion,
+		h.allowFixtureBank)
 	if err != nil {
 		h.log.Error("decision test: start", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start the test"))
@@ -185,18 +203,26 @@ func (h *DecisionTest) GetBlock(
 	}
 	blockNo := int(req.Msg.GetBlockNo())
 
-	items, err := h.users.DTScoredItems(ctx)
+	// From this run's own draw, not from the bank's order.
+	//
+	// Every participant used to be served the same thirty items in the
+	// same sequence, because this sliced the bank by position. A repeat
+	// sitting therefore measured item recall: a third sitting scored
+	// 30/30 at less than half the answer time of a first-timer, on 27
+	// items it had already answered twice.
+	//
+	// The draw is written when the session is created, in the same
+	// transaction, so by the time any block is asked for the thirty
+	// questions already exist and are recorded in dt_session_items.
+	items, err := h.users.DTDrawnBlock(ctx, sess.ID, int64(blockNo))
 	if err != nil {
+		h.log.Error("decision test: drawn block",
+			slog.String("session", req.Msg.GetSessionKey()),
+			slog.Int("block", blockNo), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not load the questions"))
 	}
-	from := (blockNo - 1) * users.DTQuestionsPerBlock
-	to := from + users.DTQuestionsPerBlock
-	if to > len(items) {
-		return nil, connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("the item bank holds %d scored items, which is not enough for block %d", len(items), blockNo))
-	}
 
-	block, err := h.users.DTBuildBlock(ctx, blockNo, items[from:to])
+	block, err := h.users.DTBuildBlock(ctx, blockNo, items)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}

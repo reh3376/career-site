@@ -7,127 +7,109 @@ import (
 
 // The item bank's shape, asserted against the real one.
 //
-// S1 of docs/sprint-decision-test-item-pools.md, and the first step
-// because it protects every later one.
-//
-// **What it is guarding.** Every block of six questions carries the same
-// category mix: 2 arithmetic, 1 base-rate, 1 conjunction, 2 syllogism.
-// That is a real property of the instrument. It is why a block's
-// accuracy can be compared with another block's at all, and it is the
-// reason the load curve means anything: if block 4 had an extra
-// syllogism and one fewer arithmetic, its accuracy would differ from
-// block 1 for a reason that has nothing to do with load.
-//
-// **And nothing was checking it.** The balance is a property of
-// hand-ordered `position` values 1 to 30 in a migration. Retiring one
-// base-rate item and adding one syllogism would silently change block
-// 3's composition, and the first sign would be a load curve that moved
-// for a reason nobody could name. That has already nearly happened once:
-// migration 00052 retired three base-rate items, added one conjunction
-// and two syllogisms, and re-interleaved the order by hand to keep the
-// mix even. It was done correctly and by eye.
+// S1 of docs/sprint-decision-test-item-pools.md, rewritten at S8 when
+// the bank stopped being a fixed ordered test and became four pools.
 //
 // Read from the database rather than from a constant, because the thing
-// that can drift is the data, not the code.
-func TestTheItemBankIsBalanced(t *testing.T) {
+// that drifts is the data, not the code.
+func TestEveryPoolCanFillATest(t *testing.T) {
 	r, ctx := dtTestRepo(t)
 
-	// The quota, per block and per test. Changing these is changing the
-	// instrument, which is exactly the edit that should require somebody
-	// to come here and say so.
-	perBlock := map[string]int{
-		"arithmetic":  2,
-		"syllogism":   2,
-		"base_rate":   1,
-		"conjunction": 1,
-	}
-
-	total := 0
-	for _, n := range perBlock {
-		total += n
-	}
-	if total != DTQuestionsPerBlock {
-		t.Fatalf("the per-block quota sums to %d, but a block is %d questions",
-			total, DTQuestionsPerBlock)
-	}
-
+	// **This invariant changed on 2026-10-07 and the change is the
+	// point.** It used to assert a fixed ordered bank of thirty: block 1
+	// is positions 1 to 6, holding 2 arithmetic, 1 base-rate, 1
+	// conjunction and 2 syllogism, and so on. That was true while every
+	// participant was served the same thirty items in the same order.
+	//
+	// Now the bank is four pools and each run draws from them, so
+	// position no longer decides composition: `dt_category_quota` does,
+	// and the draw honours it on every single draw (see
+	// decisiontest_draw_test.go). What the bank itself has to guarantee
+	// is simply that each pool can fill a test.
 	rows, err := r.pool.Query(ctx, `
-		SELECT ((position - 1) / $1) + 1 AS block, family, count(*)
-		  FROM dt_items
-		 WHERE active AND kind = 'scored'
-		 GROUP BY 1, 2`, DTQuestionsPerBlock)
+		SELECT category, pool, per_test, can_vary FROM v_dt_item_pools ORDER BY category`)
 	if err != nil {
-		t.Fatalf("read the bank: %v", err)
+		t.Fatalf("read the pools: %v", err)
 	}
 	defer rows.Close()
 
-	got := map[int]map[string]int{}
+	seen := 0
 	for rows.Next() {
-		var block, n int
-		var family string
-		if err := rows.Scan(&block, &family, &n); err != nil {
+		var category string
+		var pool, perTest int
+		var canVary bool
+		if err := rows.Scan(&category, &pool, &perTest, &canVary); err != nil {
 			t.Fatalf("scan: %v", err)
 		}
-		if got[block] == nil {
-			got[block] = map[string]int{}
+		seen++
+		if perTest == 0 {
+			t.Errorf("category %q has no quota, so dt_category_quota does not know "+
+				"about it and the draw will never select from it", category)
 		}
-		got[block][family] = n
+		if pool < perTest {
+			t.Errorf("category %q holds %d items for the %d a single test needs: "+
+				"every draw will refuse", category, pool, perTest)
+		}
 	}
 	if err := rows.Err(); err != nil {
-		t.Fatalf("read the bank: %v", err)
+		t.Fatalf("read the pools: %v", err)
+	}
+	if seen != 4 {
+		t.Fatalf("v_dt_item_pools reports %d categories, expected 4", seen)
 	}
 
-	for block := 1; block <= DTBlockCount; block++ {
-		for family, want := range perBlock {
-			if got[block][family] != want {
-				t.Errorf("block %d has %d %s items, want %d. "+
-					"Every block must carry the same mix, or a block's accuracy "+
-					"differs from another's for a reason that is not load",
-					block, got[block][family], family, want)
-			}
-		}
-		sum := 0
-		for _, n := range got[block] {
-			sum += n
-		}
-		if sum != DTQuestionsPerBlock {
-			t.Errorf("block %d holds %d items, want %d", block, sum, DTQuestionsPerBlock)
-		}
-	}
-
-	// Positions must be 1..30 with no gap and no duplicate. A gap would
-	// silently shorten a block; a duplicate would serve one item twice
-	// and leave another unserved.
-	var n, lo, hi, distinct int
+	// The quota must add up to a block, or the draw lays out five
+	// questions where six belong.
+	var perBlock int
 	if err := r.pool.QueryRow(ctx, `
-		SELECT count(*), coalesce(min(position),0), coalesce(max(position),0),
-		       count(DISTINCT position)
-		  FROM dt_items WHERE active AND kind = 'scored'`,
-	).Scan(&n, &lo, &hi, &distinct); err != nil {
-		t.Fatalf("read positions: %v", err)
+		SELECT sum(dt_category_quota(family))::int
+		  FROM (SELECT DISTINCT family FROM dt_items
+		         WHERE active AND kind = 'scored') f`).Scan(&perBlock); err != nil {
+		t.Fatalf("sum the quota: %v", err)
 	}
-	if n != DTQuestionCount {
-		t.Errorf("the bank holds %d active scored items, want %d", n, DTQuestionCount)
+	if perBlock != DTQuestionsPerBlock {
+		t.Errorf("the category quotas sum to %d, but a block holds %d questions",
+			perBlock, DTQuestionsPerBlock)
 	}
-	if distinct != n {
-		t.Errorf("%d items share %d distinct positions: one item would be served "+
-			"twice and another not at all", n, distinct)
+}
+
+// A production database must never be able to serve placeholders.
+//
+// The real items are synced privately and the public repository seeds
+// fixtures so CI has a bank. The flag that separates them is the only
+// thing standing between a volunteer and fifteen minutes of "which
+// answer is the number four", so it is asserted rather than trusted.
+func TestFixturesAreRefusedUnlessAllowed(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	var fixtures int
+	if err := r.pool.QueryRow(ctx,
+		`SELECT count(*) FROM dt_items WHERE active AND kind='scored' AND is_fixture`,
+	).Scan(&fixtures); err != nil {
+		t.Fatalf("count fixtures: %v", err)
 	}
-	if lo != 1 || hi != DTQuestionCount {
-		t.Errorf("positions run %d to %d, want 1 to %d", lo, hi, DTQuestionCount)
+	if fixtures == 0 {
+		t.Skip("no fixtures in this database, so there is nothing to refuse")
 	}
 
-	// Practice is its own kind and must not be short either: the warm-up
-	// exists so the first real trap does not arrive at question one.
-	var practice int
+	var realItems int
 	if err := r.pool.QueryRow(ctx,
-		`SELECT count(*) FROM dt_items WHERE active AND kind = 'practice'`,
-	).Scan(&practice); err != nil {
-		t.Fatalf("count practice: %v", err)
+		`SELECT count(*) FROM dt_items WHERE active AND kind='scored' AND NOT is_fixture`,
+	).Scan(&realItems); err != nil {
+		t.Fatalf("count real items: %v", err)
 	}
-	if practice == 0 {
-		t.Error("no active practice items: the first scored question would be " +
-			"the participant's first sight of the format")
+	if realItems > 0 {
+		t.Skip("this database holds real items too, so a refusal would not prove anything")
+	}
+
+	sess := newDrawSession(t, r, ctx)
+	if err := DTDrawItems(ctx, r.pool, sess, nil, false); err == nil {
+		t.Error("a draw succeeded against a fixture-only bank with fixtures " +
+			"disallowed: production would serve placeholders to a participant")
+	}
+	// And allowed, it must work, or CI has no bank at all.
+	if err := DTDrawItems(ctx, r.pool, sess, nil, true); err != nil {
+		t.Errorf("a draw failed against fixtures with them allowed: %v", err)
 	}
 }
 
@@ -180,7 +162,12 @@ func TestEveryScoredItemHasADistinctLure(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatalf("read the bank: %v", err)
 	}
-	if len(seen) != DTQuestionCount {
-		t.Errorf("checked %d items, expected %d", len(seen), DTQuestionCount)
+	// At least a full test's worth, and in practice far more now that
+	// the bank is pools. A hard number here would have to be edited
+	// every time an item is written, which is how a guard becomes a
+	// nuisance and then gets deleted.
+	if len(seen) < DTQuestionCount {
+		t.Errorf("checked %d active scored items, which cannot fill a %d question test",
+			len(seen), DTQuestionCount)
 	}
 }

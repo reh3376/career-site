@@ -314,7 +314,14 @@ the right composition per block, no duplicate within a test, and a
 different composition is impossible; plus a test that a deliberately
 depleted category causes a refusal rather than a short block.
 
-### S4. Wire the draw into the run
+### S4. Wire the draw into the run. DONE 2026-10-07.
+
+The draw runs inside the transaction that creates the session, so a
+session can never exist without its items. `GetBlock` serves from
+`dt_session_items` instead of slicing the bank by position.
+`item_set_version` becomes `pool-2026-10-07`: it now names the pool a
+run drew from rather than an order it was served in, which is the right
+grain once two runs from one pool share no questions.
 
 - `StartDecisionTest` calls `DTDrawItems` inside the same transaction
   that creates the session, so a session can never exist without its
@@ -328,7 +335,12 @@ depleted category causes a refusal rather than a short block.
 `dt_session_items` for that session and confirming the 30 rows match the
 30 answers, in order.
 
-### S5. Repeat sittings avoid what the participant has seen
+### S5. Repeat sittings avoid what the participant has seen. DONE 2026-10-07.
+
+Folded into S4: the exclusion set comes from `DTSeenItems` and is passed
+to the draw. A lookup failure is not fatal, because failing to remember
+what somebody saw last time costs a less varied draw while refusing the
+run costs the run.
 
 - The exclusion set for `DTDrawItems` is built from `dt_session_items`
   for the participant's earlier sessions, found through the identity
@@ -368,7 +380,26 @@ have become a test of noticing that.
 *Exit:* the owner vets the items, principally that each lure is
 genuinely the tempting answer, which is the part no script can check.
 
-### S8. Make the bank private, and keep the tests honest
+### S8. Make the bank private, and keep the tests honest. DONE 2026-10-07.
+
+Migration 00060 retires every published scored item, adds
+`dt_items.is_fixture`, and seeds 90 placeholders. `DT_ALLOW_FIXTURE_BANK`
+gates them: CI and the dev compose set it, production does not, so a box
+that never received the real bank refuses to start a run rather than
+asking a volunteer which answer is the number four.
+`deploy/items-sync.sh` pushes the real bank from `docs/personal/`,
+validates it first, and refuses to finish if any category still cannot
+vary.
+
+Rehearsed against a local database: 90 real items in, fixtures
+deactivated, every category `can_vary`. Two independent draws then
+shared 10.1 of 30 questions on average, which is the third expected at
+three times quota.
+
+S1's test was rewritten here rather than deleted. It asserted a fixed
+ordered bank of thirty; position no longer decides composition, so it
+now asserts that every pool can fill a test and that the quotas sum to a
+block.
 
 **The decision, taken on 2026-10-07.** The existing 30 items were seeded
 in a public migration on 2026-10-04. Deleting it would not un-publish
