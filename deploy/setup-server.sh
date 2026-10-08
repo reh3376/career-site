@@ -80,6 +80,39 @@ ufw allow 80/tcp   comment 'http (acme + redirect)'
 ufw allow 443/tcp  comment 'https'
 ufw --force enable
 
+# UFW is not enough on a Docker host, and saying so here rather than
+# discovering it later.
+#
+# Docker inserts its own rules ahead of UFW's chain for every port it
+# publishes, so `ufw default deny incoming` does not apply to them. The
+# DOCKER-USER chain is the hook Docker leaves for this, and it is empty
+# by default. Without a rule in it, the firewall above protects the
+# host and not the containers, which is the part exposed to the
+# internet.
+#
+# Installed as a systemd unit rather than run once, because iptables
+# rules do not survive a reboot and Docker rebuilds its own chains on
+# restart. Ordered after docker.service so the chain exists by the time
+# this runs.
+install -m 0755 "$(dirname "$0")/docker-user-firewall.sh" /usr/local/bin/docker-user-firewall
+cat > /etc/systemd/system/docker-user-firewall.service <<'UNIT'
+[Unit]
+Description=Filter Docker-published ports that UFW cannot see
+After=docker.service
+Wants=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/docker-user-firewall
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now docker-user-firewall.service
+
 # unattended-upgrades ships enabled on Ubuntu; nudge it anyway.
 dpkg-reconfigure -f noninteractive unattended-upgrades >/dev/null 2>&1 || true
 
