@@ -79,6 +79,15 @@ export default async function DecisionTestPage({
         data.
       </p>
 
+      <p className="mt-6">
+        <Link
+          href="/admin/decision-test/analysis"
+          className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase no-underline"
+        >
+          What the runs say &rarr;
+        </Link>
+      </p>
+
       <PoolStatus pools={pools} />
 
       {/* The queue. Reviewing is work, so what is left to look at

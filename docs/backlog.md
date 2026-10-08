@@ -906,7 +906,11 @@ against 9.
 
 ## 4d. Decision test (opened 2026-10-05)
 
-**Closed 2026-10-08:** the shared-item problem (every participant saw
+**Closed 2026-10-08:** the retry queue's in-page wiring, verified on
+production by failing one SubmitAnswer and watching the queue resend it
+and the row land; the console pages for the load curve, the calibration
+curve and the per-person threshold, now at `/admin/decision-test/analysis`;
+the shared-item problem (every participant saw
 the same thirty questions, so a repeat sitting measured recall) and the
 loss of writes still queued when a tab closes. The first is fixed by
 per-run draws from category pools of three times the per-test need, the
@@ -946,19 +950,6 @@ CSV export, the privacy section and the product events (migrations
   that already has data in it. Decide whether to redefine it, which
   needs an instrument version bump, or to publish both.
 
-- **The retry queue's in-page wiring is not verified end to end.**
-  Opened 2026-10-07, narrowed 2026-10-08. The queue itself has six
-  passing tests, and the beacon path is now verified against production:
-  a plain JSON POST in exactly the shape `navigator.sendBeacon` sends
-  was accepted at
-  `/api/career.v1.DecisionTestService/SubmitAnswer` and the row landed
-  with the right chosen index, confidence and latency. What remains
-  unproven is the wiring inside the run screen: that a failed
-  `submitAnswer` really does reach the queue during a live run. The
-  attempt to show it froze the renderer and proved nothing either way.
-  Repeat it by injecting a single failure without a loop heavy enough
-  to stall the page.
-
 - **The tap-check thresholds are provisional** (FR-DT-20). The design
   document's starting figures were ten ticks, presses within 300 ms, at
   least seven of ten, and an offset standard deviation under 150 ms.
@@ -979,12 +970,6 @@ CSV export, the privacy section and the product events (migrations
   sets apart, so nothing is corrupted, but the usable sample is zero
   until the next run completes. Not a work item; a statement of where
   the data actually stands.
-
-- **Console pages for the load curve, the calibration curve and the
-  per-person threshold.** `/admin/db` reads all seven views today and
-  `docs/metrics.md` carries the queries, so this is convenience rather
-  than capability. Worth doing before there are enough runs that
-  reading them by hand becomes the bottleneck.
 
 - **The graph projection**, deferred by
   [ADR 0030](adr/0030-relational-collection-graph-analysis.md) until

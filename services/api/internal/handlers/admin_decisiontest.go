@@ -217,6 +217,71 @@ func (a *Admin) GetDecisionTestRun(
 	}), nil
 }
 
+// GetDecisionTestAnalysis reads the three views that answer the
+// research question.
+//
+// Thin, like the exports: every number is defined in a view
+// (docs/metrics.md) and nothing is computed here. A partial read is
+// better than none, so each view's failure is logged and the rest are
+// still returned: a load curve with no thresholds beside it is still
+// the load curve.
+func (a *Admin) GetDecisionTestAnalysis(
+	ctx context.Context, req *connect.Request[v1.GetDecisionTestAnalysisRequest],
+) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error) {
+	if _, err := requireAdmin(a, ctx, req); err != nil {
+		return nil, err
+	}
+	out := &v1.GetDecisionTestAnalysisResponse{}
+
+	if curve, err := a.users.DTLoadCurve(ctx); err != nil {
+		a.log.Error("decision test: load curve", slog.String("error", err.Error()))
+	} else {
+		for _, p := range curve {
+			out.LoadCurve = append(out.LoadCurve, &v1.DecisionTestLoadPoint{
+				ItemSetVersion: p.ItemSetVersion, InstrumentVersion: p.InstrumentVersion,
+				Load: p.Load, LoadRank: int32(p.LoadRank),
+				Sessions: int32(p.Sessions), SessionsUnreviewed: int32(p.SessionsUnreviewed),
+				SessionsFirstAttempt: int32(p.SessionsFirst), SessionsRepeat: int32(p.SessionsRepeat),
+				Answers: int32(p.Answers), AccuracyPct: int32(p.AccuracyPct),
+				LurePct: int32(p.LurePct), ExpiryPct: int32(p.ExpiryPct),
+				MeanConfidence: int32(p.MeanConfidence), GapPct: int32(p.GapPct),
+				ConfidentlyWrongPct: int32(p.ConfidentlyWrongPct),
+				MeanBrier:           p.MeanBrier, Families: p.Families,
+			})
+		}
+	}
+
+	if cal, err := a.users.DTCalibration(ctx); err != nil {
+		a.log.Error("decision test: calibration", slog.String("error", err.Error()))
+	} else {
+		for _, p := range cal {
+			out.Calibration = append(out.Calibration, &v1.DecisionTestCalibrationPoint{
+				ItemSetVersion: p.ItemSetVersion, InstrumentVersion: p.InstrumentVersion,
+				Load: p.Load, LoadRank: int32(p.LoadRank),
+				ConfidenceBand: int32(p.Band), Answers: int32(p.Answers),
+				AccuracyPct: int32(p.AccuracyPct), OverclaimPct: int32(p.OverclaimPct),
+				MeanBrier: p.MeanBrier,
+			})
+		}
+	}
+
+	if th, err := a.users.DTThresholds(ctx); err != nil {
+		a.log.Error("decision test: thresholds", slog.String("error", err.Error()))
+	} else {
+		for _, t := range th {
+			out.Thresholds = append(out.Thresholds, &v1.DecisionTestThreshold{
+				SessionKey: t.SessionKey, AttemptNo: int32(derefOr(t.AttemptNo, 0)),
+				ReviewStatus: t.ReviewStatus, AccuracyPct: int32(t.AccuracyPct),
+				GapPct: int32(t.GapPct), FatigueDeltaPct: int32(t.FatigueDeltaPct),
+				LuredAtRank: int32(t.LuredAtRank), LuredAtLoad: t.LuredAtLoad,
+				LuredInControl:   t.LuredInControl,
+				ConfidentlyWrong: int32(t.ConfidentlyWrong),
+			})
+		}
+	}
+	return connect.NewResponse(out), nil
+}
+
 // ExportDecisionTestRun hands over one run as two CSV files.
 //
 // Thin, like its neighbour: everything that decides what the files

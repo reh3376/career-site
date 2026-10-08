@@ -212,6 +212,9 @@ const (
 	// AdminServiceExportDecisionTestDataProcedure is the fully-qualified name of the AdminService's
 	// ExportDecisionTestData RPC.
 	AdminServiceExportDecisionTestDataProcedure = "/career.v1.AdminService/ExportDecisionTestData"
+	// AdminServiceGetDecisionTestAnalysisProcedure is the fully-qualified name of the AdminService's
+	// GetDecisionTestAnalysis RPC.
+	AdminServiceGetDecisionTestAnalysisProcedure = "/career.v1.AdminService/GetDecisionTestAnalysis"
 	// AdminServiceExportDecisionTestRunProcedure is the fully-qualified name of the AdminService's
 	// ExportDecisionTestRun RPC.
 	AdminServiceExportDecisionTestRunProcedure = "/career.v1.AdminService/ExportDecisionTestRun"
@@ -503,6 +506,14 @@ type AdminServiceClient interface {
 	// chosen_index, because the raw index across enough runs would let
 	// somebody reconstruct the answer key.
 	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
+	// Reads the decision test's three analysis views.
+	//
+	// The load curve, the calibration curve and the per-person
+	// threshold. All three have existed since migration 00054 and were
+	// reachable only through the SQL console, which put the finding this
+	// instrument exists to produce one hand-written query away from
+	// anybody wanting to look at it.
+	GetDecisionTestAnalysis(context.Context, *connect.Request[v1.GetDecisionTestAnalysisRequest]) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error)
 	// Downloads one run's blocks and answers as two CSV files.
 	//
 	// Separate from ExportDecisionTestData, which is the whole curated
@@ -952,6 +963,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
 			connect.WithClientOptions(opts...),
 		),
+		getDecisionTestAnalysis: connect.NewClient[v1.GetDecisionTestAnalysisRequest, v1.GetDecisionTestAnalysisResponse](
+			httpClient,
+			baseURL+AdminServiceGetDecisionTestAnalysisProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestAnalysis")),
+			connect.WithClientOptions(opts...),
+		),
 		exportDecisionTestRun: connect.NewClient[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse](
 			httpClient,
 			baseURL+AdminServiceExportDecisionTestRunProcedure,
@@ -1130,6 +1147,7 @@ type adminServiceClient struct {
 	listDecisionTestRuns    *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
 	getDecisionTestRun      *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
 	exportDecisionTestData  *connect.Client[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse]
+	getDecisionTestAnalysis *connect.Client[v1.GetDecisionTestAnalysisRequest, v1.GetDecisionTestAnalysisResponse]
 	exportDecisionTestRun   *connect.Client[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse]
 	reviewDecisionTestRun   *connect.Client[v1.ReviewDecisionTestRunRequest, v1.ReviewDecisionTestRunResponse]
 	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
@@ -1444,6 +1462,11 @@ func (c *adminServiceClient) GetDecisionTestRun(ctx context.Context, req *connec
 // ExportDecisionTestData calls career.v1.AdminService.ExportDecisionTestData.
 func (c *adminServiceClient) ExportDecisionTestData(ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
 	return c.exportDecisionTestData.CallUnary(ctx, req)
+}
+
+// GetDecisionTestAnalysis calls career.v1.AdminService.GetDecisionTestAnalysis.
+func (c *adminServiceClient) GetDecisionTestAnalysis(ctx context.Context, req *connect.Request[v1.GetDecisionTestAnalysisRequest]) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error) {
+	return c.getDecisionTestAnalysis.CallUnary(ctx, req)
 }
 
 // ExportDecisionTestRun calls career.v1.AdminService.ExportDecisionTestRun.
@@ -1773,6 +1796,14 @@ type AdminServiceHandler interface {
 	// chosen_index, because the raw index across enough runs would let
 	// somebody reconstruct the answer key.
 	ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error)
+	// Reads the decision test's three analysis views.
+	//
+	// The load curve, the calibration curve and the per-person
+	// threshold. All three have existed since migration 00054 and were
+	// reachable only through the SQL console, which put the finding this
+	// instrument exists to produce one hand-written query away from
+	// anybody wanting to look at it.
+	GetDecisionTestAnalysis(context.Context, *connect.Request[v1.GetDecisionTestAnalysisRequest]) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error)
 	// Downloads one run's blocks and answers as two CSV files.
 	//
 	// Separate from ExportDecisionTestData, which is the whole curated
@@ -2218,6 +2249,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ExportDecisionTestData")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetDecisionTestAnalysisHandler := connect.NewUnaryHandler(
+		AdminServiceGetDecisionTestAnalysisProcedure,
+		svc.GetDecisionTestAnalysis,
+		connect.WithSchema(adminServiceMethods.ByName("GetDecisionTestAnalysis")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceExportDecisionTestRunHandler := connect.NewUnaryHandler(
 		AdminServiceExportDecisionTestRunProcedure,
 		svc.ExportDecisionTestRun,
@@ -2452,6 +2489,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceGetDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceExportDecisionTestDataProcedure:
 			adminServiceExportDecisionTestDataHandler.ServeHTTP(w, r)
+		case AdminServiceGetDecisionTestAnalysisProcedure:
+			adminServiceGetDecisionTestAnalysisHandler.ServeHTTP(w, r)
 		case AdminServiceExportDecisionTestRunProcedure:
 			adminServiceExportDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionTestRunProcedure:
@@ -2733,6 +2772,10 @@ func (UnimplementedAdminServiceHandler) GetDecisionTestRun(context.Context, *con
 
 func (UnimplementedAdminServiceHandler) ExportDecisionTestData(context.Context, *connect.Request[v1.ExportDecisionTestDataRequest]) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ExportDecisionTestData is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetDecisionTestAnalysis(context.Context, *connect.Request[v1.GetDecisionTestAnalysisRequest]) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GetDecisionTestAnalysis is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ExportDecisionTestRun(context.Context, *connect.Request[v1.ExportDecisionTestRunRequest]) (*connect.Response[v1.ExportDecisionTestRunResponse], error) {
