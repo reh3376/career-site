@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  beaconPending,
   enqueueRetry,
   flushNow,
   pendingCount,
@@ -87,5 +88,50 @@ describe("the decision test retry queue", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(attempts).toBe(1);
     expect(pendingCount()).toBe(0);
+  });
+});
+
+describe("beaconPending", () => {
+  it("hands everything outstanding to the browser and empties the queue", () => {
+    vi.useFakeTimers();
+    const sent: { url: string; type: string; body: string }[] = [];
+    const beacon = vi.fn((url: string, blob: Blob) => {
+      sent.push({ url, type: blob.type, body: "" });
+      return true;
+    });
+    vi.stubGlobal("navigator", { sendBeacon: beacon });
+
+    enqueueRetry("answer 4", async () => undefined, {
+      path: "/api/career.v1.DecisionTestService/SubmitAnswer",
+      body: { sessionKey: "s", positionOverall: 4 },
+    });
+    enqueueRetry("recall 1", async () => undefined, {
+      path: "/api/career.v1.DecisionTestService/SubmitRecall",
+      body: { sessionKey: "s", blockNo: 1 },
+    });
+
+    expect(pendingCount()).toBe(2);
+    beaconPending();
+
+    // Both delivered, as JSON, to the right endpoints.
+    expect(beacon).toHaveBeenCalledTimes(2);
+    expect(sent.map((s) => s.url)).toEqual([
+      "/api/career.v1.DecisionTestService/SubmitAnswer",
+      "/api/career.v1.DecisionTestService/SubmitRecall",
+    ]);
+    expect(sent.every((s) => s.type === "application/json")).toBe(true);
+    // And nothing is left to retry against a page that no longer exists.
+    expect(pendingCount()).toBe(0);
+    vi.unstubAllGlobals();
+  });
+
+  it("does nothing when the browser cannot beacon, rather than throwing", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("navigator", {});
+    enqueueRetry("answer 9", async () => undefined, { path: "/x", body: {} });
+    expect(() => beaconPending()).not.toThrow();
+    // Left queued: a browser without sendBeacon still has the backoff.
+    expect(pendingCount()).toBe(1);
+    vi.unstubAllGlobals();
   });
 });

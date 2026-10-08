@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { decisionTestClient } from "@/lib/decision-test-client";
 import { createMetronome, type Signal } from "@/lib/metronome";
-import { enqueueRetry, flushNow } from "@/lib/decision-test-retry";
+import { beaconPending, enqueueRetry, flushNow } from "@/lib/decision-test-retry";
 
 // The run screen.
 //
@@ -158,8 +158,20 @@ export function RunScreen() {
     const onVisible = () => {
       if (document.visibilityState === "visible") flushNow();
     };
+    // pagehide rather than beforeunload: it fires when a phone moves the
+    // page into the back/forward cache, which is exactly what happens
+    // when somebody switches apps mid-run and never comes back, and
+    // beforeunload does not fire reliably on mobile at all.
+    //
+    // Anything still queued at this point would otherwise be lost with
+    // the tab. A beacon is handed to the browser and survives the page.
+    const onHide = () => beaconPending();
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pagehide", onHide);
+    };
   }, []);
 
   // Leaving loses the run: there is no resume, because a question
@@ -229,15 +241,15 @@ export function RunScreen() {
       // had.
       const latency = latencyOverride ?? Math.round(performance.now() - shownAt.current);
       if (scored && question) {
-        const send = () =>
-          decisionTestClient.submitAnswer({
-            sessionKey,
-            blockNo,
-            positionOverall: question.positionOverall,
-            chosenIndex,
-            latencyMs: chosenIndex < 0 ? 0 : latency,
-            confidence: chosenIndex < 0 ? 0 : confidence,
-          });
+        const payload = {
+          sessionKey,
+          blockNo,
+          positionOverall: question.positionOverall,
+          chosenIndex,
+          latencyMs: chosenIndex < 0 ? 0 : latency,
+          confidence: chosenIndex < 0 ? 0 : confidence,
+        };
+        const send = () => decisionTestClient.submitAnswer(payload);
         try {
           await send();
         } catch {
@@ -252,7 +264,12 @@ export function RunScreen() {
           // write is retried in the background. The insert is
           // idempotent on (session, position), so a retry that
           // duplicates a request which did land changes nothing.
-          enqueueRetry(`answer ${question.positionOverall}`, send);
+          enqueueRetry(`answer ${question.positionOverall}`, send, {
+            // The same request as data, so it can still be delivered by
+            // the browser if the tab closes before a retry lands.
+            path: "/api/career.v1.DecisionTestService/SubmitAnswer",
+            body: payload,
+          });
         }
       }
       setChosen(null);
@@ -272,17 +289,15 @@ export function RunScreen() {
 
   const submitRecall = useCallback(async () => {
     const latency = Math.round(performance.now() - shownAt.current);
-    const send = () =>
-      decisionTestClient.submitRecall({
-        sessionKey,
-        blockNo,
-        digits: recall,
-        latencyMs: latency,
-      });
+    const payload = { sessionKey, blockNo, digits: recall, latencyMs: latency };
+    const send = () => decisionTestClient.submitRecall(payload);
     try {
       await send();
     } catch {
-      enqueueRetry(`recall block ${blockNo}`, send);
+      enqueueRetry(`recall block ${blockNo}`, send, {
+        path: "/api/career.v1.DecisionTestService/SubmitRecall",
+        body: payload,
+      });
       /* a missed recall is a data point, not a gate */
     }
     void nextBlock(blockNo + 1);

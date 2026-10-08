@@ -906,6 +906,14 @@ against 9.
 
 ## 4d. Decision test (opened 2026-10-05)
 
+**Closed 2026-10-08:** the shared-item problem (every participant saw
+the same thirty questions, so a repeat sitting measured recall) and the
+loss of writes still queued when a tab closes. The first is fixed by
+per-run draws from category pools of three times the per-test need, the
+second by `navigator.sendBeacon` on `pagehide`. Both are deployed; the
+item bank is now private and synced by `deploy/items-sync.sh`.
+
+
 Shipped and deployed: the instrument, the participant screens, the
 debrief, the admin surface, the results email, seven metric views, the
 CSV export, the privacy section and the product events (migrations
@@ -928,17 +936,6 @@ CSV export, the privacy section and the product events (migrations
   is to drive a run with the tab backgrounded on a real phone and see
   what survives; until then the cause is a hypothesis, not a finding.
 
-- **A write that is still queued when the tab closes is lost.** Opened
-  2026-10-07, and the known limit of the retry queue. The queue retries
-  in the background and flushes when the page becomes visible again,
-  which covers a participant who switches away and comes back. It does
-  not cover one who switches away and never returns: the backoff can
-  have tens of seconds outstanding, and closing the tab takes them.
-  `navigator.sendBeacon` on `pagehide` would close most of it, and
-  needs the Connect endpoint to accept a plain JSON POST that a beacon
-  can make. Worth doing before any recruitment at scale, because the
-  participants it loses are exactly the ones who were interrupted.
-
 - **Latency includes the time spent on the confidence rating**, for
   every answer except one recovered by a timeout. Opened 2026-10-07.
   `shownAt` is set when the question appears and the measurement is
@@ -949,30 +946,18 @@ CSV export, the privacy section and the product events (migrations
   that already has data in it. Decide whether to redefine it, which
   needs an instrument version bump, or to publish both.
 
-- **27 of the 30 items are shared between `items-2026-10-04` and
-  `items-2026-10-05`**, so a repeat sitting measures item recall rather
-  than reasoning. Opened 2026-10-07 after a third sitting scored 30/30
-  at a mean answer time of 5.7s against 12.6s for first-time
-  participants. `dt_attempt_no` labels the sequence correctly and the
-  analysis can exclude repeats, which is the floor. **Planned, not
-  built:** parallel forms drawn from category-balanced pools, so a
-  repeat is served items it has not seen. Step-by-step plan in
-  [`sprint-decision-test-item-pools.md`](sprint-decision-test-item-pools.md);
-  no code written, and three decisions there are the owner's (the
-  categories are settled: the four existing families, unrenamed). Note the
-  per-block category balance the plan protects (2 arithmetic, 1
-  base-rate, 1 conjunction, 2 syllogism) already exists and is enforced
-  only by hand-ordered `position` values, which is the fragility S1
-  closes.
-
-- **The answer retry queue is covered by unit tests only.** Opened
-  2026-10-07. `decision-test-retry.ts` has four passing tests for
-  retry, give-up, head-of-line blocking and immediate flush, but the
-  wiring into the run screen has not been exercised end to end: the
-  attempt to do so froze the renderer, both questions timed out while
-  the page was blocked, and the result said nothing either way. Repeat
-  it by injecting a single `SubmitAnswer` failure and confirming the
-  row still lands, without a loop heavy enough to stall the page.
+- **The retry queue's in-page wiring is not verified end to end.**
+  Opened 2026-10-07, narrowed 2026-10-08. The queue itself has six
+  passing tests, and the beacon path is now verified against production:
+  a plain JSON POST in exactly the shape `navigator.sendBeacon` sends
+  was accepted at
+  `/api/career.v1.DecisionTestService/SubmitAnswer` and the row landed
+  with the right chosen index, confidence and latency. What remains
+  unproven is the wiring inside the run screen: that a failed
+  `submitAnswer` really does reach the queue during a live run. The
+  attempt to show it froze the renderer and proved nothing either way.
+  Repeat it by injecting a single failure without a loop heavy enough
+  to stall the page.
 
 - **The tap-check thresholds are provisional** (FR-DT-20). The design
   document's starting figures were ten ticks, presses within 300 ms, at
