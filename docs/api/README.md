@@ -141,7 +141,7 @@ Registration, verification, sign-in, and credential management.
 | [`Verify`](#authservice-verify) | `/api/career.v1.AuthService/Verify` | Public | default | `VerifyRequest` → `VerifyResponse` | Confirms control of the email address with the emailed link token or the six-digit code, activates the account, and starts a session (cookie set in the response). |
 | [`ResendVerification`](#authservice-resendverification) | `/api/career.v1.AuthService/ResendVerification` | Public | default | `ResendVerificationRequest` → `ResendVerificationResponse` | Re-sends the verification email for an unverified account. |
 | [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | default | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
-| [`Logout`](#authservice-logout) | `/api/career.v1.AuthService/Logout` | Member (unverified OK) | default | `LogoutRequest` → `LogoutResponse` | Ends the current session and clears the cookie. |
+| [`Logout`](#authservice-logout) | `/api/career.v1.AuthService/Logout` | Public (unverified OK) | default | `LogoutRequest` → `LogoutResponse` | Ends the current session and clears the cookie. |
 | [`LogoutAll`](#authservice-logoutall) | `/api/career.v1.AuthService/LogoutAll` | Member | default | `LogoutAllRequest` → `LogoutAllResponse` | Ends every session of the member ("sign out of all devices"). |
 | [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
 | [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
@@ -296,9 +296,22 @@ methods stay unavailable until MfaVerify succeeds.
 
 ### AuthService.Logout
 
-`POST /api/career.v1.AuthService/Logout` · **Auth:** Member (unverified OK) · **Rate limit:** default/min
+`POST /api/career.v1.AuthService/Logout` · **Auth:** Public (unverified OK) · **Rate limit:** default/min
 
 Ends the current session and clears the cookie.
+
+Public, not MEMBER. It declared MEMBER until 2026-10-09 and the
+handler never enforced it, which S1 of
+docs/sprint-auth-interceptor.md found. The declaration was the
+wrong half: there is nothing here to protect, because the session
+token the caller presents IS the thing being revoked, so nobody
+can log out anyone but themselves. With no token it is a no-op that
+returns success.
+
+Requiring a session would also break the case that needs this
+most. Once a session has expired the cookie is still in the
+browser, and that is exactly when someone wants it cleared;
+enforcing MEMBER would answer `unauthenticated` and leave it there.
 
 **Request** — [`LogoutRequest`](#logoutrequest)
 

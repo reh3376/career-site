@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 
 	"connectrpc.com/connect"
 
@@ -93,6 +94,83 @@ type Interceptor struct {
 	resolve ResolveFunc
 	mode    Mode
 	log     *slog.Logger
+	counts  counters
+}
+
+// counters make a quiet observation period mean something.
+//
+// Once Logout was declared PUBLIC on 2026-10-09, observe mode has
+// nothing left to disagree about, so the expected output for the week is
+// an empty log. That is a problem: an empty log is exactly what a
+// misconfigured interceptor produces, or one installed on no services,
+// or one whose policy lookups all miss. "No disagreements logged" is
+// only evidence if something was compared.
+//
+// So the interceptor counts what it did, and the server reports it
+// periodically. The exit criterion for S3 then reads as "N comparisons,
+// 0 disagreements" rather than as silence.
+type counters struct {
+	public     atomic.Int64
+	compared   atomic.Int64
+	wouldClose atomic.Int64
+	wouldOpen  atomic.Int64
+	ambiguous  atomic.Int64
+	unknown    atomic.Int64
+}
+
+// Stats is a snapshot of what the interceptor has seen.
+type Stats struct {
+	// Public procedures, which are allowed without resolving a session
+	// and are never compared.
+	Public int64
+	// Compared is MEMBER and ADMIN calls where the interceptor reached
+	// a decision and the handler then ran, so the two could be
+	// compared. This is the number that makes a clean run meaningful.
+	Compared int64
+	// Disagreements, by kind. See observe().
+	WouldClose int64
+	WouldOpen  int64
+	Ambiguous  int64
+	// Unknown procedures: served but absent from the policy map. Should
+	// always be zero.
+	Unknown int64
+}
+
+func (s Stats) Disagreements() int64 { return s.WouldClose + s.WouldOpen }
+
+func (i *Interceptor) Stats() Stats {
+	return Stats{
+		Public:     i.counts.public.Load(),
+		Compared:   i.counts.compared.Load(),
+		WouldClose: i.counts.wouldClose.Load(),
+		WouldOpen:  i.counts.wouldOpen.Load(),
+		Ambiguous:  i.counts.ambiguous.Load(),
+		Unknown:    i.counts.unknown.Load(),
+	}
+}
+
+// LogSummary reports the running totals. Called on a timer by the
+// server while in observe mode, and once at shutdown.
+//
+// Logged at warn when there is anything to act on, so the line that
+// matters is not the same severity as the routine one.
+func (i *Interceptor) LogSummary(reason string) {
+	st := i.Stats()
+	attrs := []any{
+		slog.String("reason", reason),
+		slog.String("mode", i.mode.String()),
+		slog.Int64("compared", st.Compared),
+		slog.Int64("public_allowed", st.Public),
+		slog.Int64("would_close", st.WouldClose),
+		slog.Int64("would_open", st.WouldOpen),
+		slog.Int64("ambiguous", st.Ambiguous),
+		slog.Int64("unknown_procedure", st.Unknown),
+	}
+	if st.Disagreements() > 0 || st.Unknown > 0 {
+		i.log.Warn("auth policy observation", attrs...)
+		return
+	}
+	i.log.Info("auth policy observation", attrs...)
 }
 
 // NewInterceptor fails rather than returning something that would allow
@@ -259,13 +337,16 @@ func (i *Interceptor) observe(procedure string, d decision, handlerErr error) {
 	if !d.known {
 		// Worth knowing regardless of mode: the routes are serving
 		// something the policy map does not cover.
+		i.counts.unknown.Add(1)
 		i.log.Error("auth policy: procedure is served but has no policy",
 			slog.String("procedure", procedure))
 		return
 	}
 	if d.level == v1.AuthLevel_AUTH_LEVEL_PUBLIC {
+		i.counts.public.Add(1)
 		return
 	}
+	i.counts.compared.Add(1)
 
 	handlerDenied := false
 	handlerCode := connect.Code(0)
@@ -277,6 +358,7 @@ func (i *Interceptor) observe(procedure string, d decision, handlerErr error) {
 
 	switch {
 	case !d.allow && !handlerDenied:
+		i.counts.wouldClose.Add(1)
 		i.log.Warn("auth policy disagreement",
 			slog.String("kind", "would_close"),
 			slog.String("procedure", procedure),
@@ -285,6 +367,7 @@ func (i *Interceptor) observe(procedure string, d decision, handlerErr error) {
 			slog.String("handler", handlerOutcome(handlerErr, handlerCode)))
 
 	case d.allow && handlerCode == connect.CodeUnauthenticated:
+		i.counts.wouldOpen.Add(1)
 		i.log.Warn("auth policy disagreement",
 			slog.String("kind", "would_open"),
 			slog.String("procedure", procedure),
@@ -293,6 +376,7 @@ func (i *Interceptor) observe(procedure string, d decision, handlerErr error) {
 			slog.String("handler", "unauthenticated"))
 
 	case d.allow && handlerCode == connect.CodePermissionDenied:
+		i.counts.ambiguous.Add(1)
 		i.log.Info("auth policy: handler refused a call the policy allows",
 			slog.String("kind", "handler_denied_permission"),
 			slog.String("procedure", procedure),

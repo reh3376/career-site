@@ -74,7 +74,7 @@
       "request": "career.v1.LogoutRequest",
       "response": "career.v1.LogoutResponse",
       "summary": "Ends the current session and clears the cookie.",
-      "auth": "member",
+      "auth": "public",
       "allow_unverified": true,
       "rate_limit_per_minute": 0,
       "mfa_fresh": false,
