@@ -257,7 +257,9 @@ written. The `RecordEvents` mutation initially "passed" the mutation test
 by failing to compile, which proved nothing; it was redone so it
 compiles.
 
-### S2. The policy map, and a server that will not start without one
+### S2. The policy map, and a server that will not start without one — **done 2026-10-09**
+
+`services/api/internal/authpolicy`, built in `cmd/api/main.go`.
 
 - Build `procedure -> policy` once at startup by walking the registered
   file descriptors and reading the `career.v1.auth` extension.
@@ -268,7 +270,73 @@ compiles.
 - No interception yet.
 
 *Exit:* the server starts, logs 81/44/16, and fails to start against a
-deliberately unannotated method in a test.
+deliberately unannotated method in a test. **Met.**
+
+#### What it does
+
+The map is keyed by `connect.Spec.Procedure`
+(`/career.v1.AdminService/ListMembers`), so the S3 interceptor does one
+lookup with no string surgery and cannot derive the key differently from
+how it was built. `Level()` reports an unknown procedure as unknown
+rather than as a level, which is what lets the interceptor fail closed
+per D2.
+
+It is built in `main` immediately after config load, before migrations
+and before any connection is opened, so an incomplete policy is the
+cheapest possible failure. It exits rather than warns: once S4 is live,
+"no policy" has to mean denied, and a server that started anyway would
+serve that method as a hole or a 500.
+
+This also makes a claim in `options.proto` true for the first time. The
+`AuthLevel` enum's comment said *"Lint fails any method that leaves the
+level unspecified"* and no such lint rule ever existed. Now it is a boot
+failure instead, which is a stronger control than a lint rule and runs in
+the one place that matters.
+
+The boot log, from the real descriptors:
+
+```
+auth policy loaded   policy="141 methods: admin=81 member=44 public=16"
+auth policy coverage policy="141 methods: ..." mounted_services=11 procedures_served=133
+declared services that are not mounted, so unreachable
+                     services=career.v1.ContentService,career.v1.DownloadService,career.v1.HomeService
+```
+
+The third line is S1's unmounted-service finding turned into a runtime
+signal rather than a note in this document. A mounted service with *no*
+policy entries logs at **error**, because once S4 enforces, every
+procedure on it would be denied and the cause should not have to be
+inferred from a wall of `permission_denied`.
+
+#### What is tested
+
+Ten tests, and two of them exist because the alternative was asserting
+behaviour by reading it:
+
+- The exact distribution, 81/44/16, asserted rather than floored. "At
+  least 141" would be satisfied by a map that had quietly gained a
+  service.
+- The key format, pinned against one real procedure per level, so a map
+  that collapsed every method to one level fails.
+- **Fail-to-start**, run against a synthetic registry holding a
+  `career.v1` service with one annotated and one unannotated method,
+  since every method in the real binary declares a level. The test also
+  checks the error names the offending method and not the healthy one: an
+  error that says "some method is missing a level" is useless on a
+  141-method API at boot during a deploy. It guards itself too, by
+  asserting the annotated method really does read as ADMIN, so the test
+  cannot pass by having both methods read as unannotated.
+- **An empty registry is an error, not a clean result.** If the
+  descriptors were not linked in, the walk finds nothing, reports no
+  missing levels, and looks exactly like success; enforcing on that map
+  would deny every request for an invisible reason.
+- The coverage log, asserted on its real output, including that a mounted
+  service with no policy is reported at error level.
+- The production shape, with all eleven services mounted, pinning
+  `mounted_services=11` and `procedures_served=133` and that the
+  unmounted set is exactly Content, Download and Home. 133 is the number
+  of procedures the S4 interceptor will decide on, so it should not drift
+  quietly.
 
 ### S3. The interceptor in observe mode
 

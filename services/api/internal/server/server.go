@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/authpolicy"
 	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/db"
@@ -36,6 +38,7 @@ type Server struct {
 	dtest    *handlers.DecisionTest
 	sidecar  *sidecar.Client
 	db       *db.Pool
+	policy   authpolicy.Map
 }
 
 // Deps carries the process-level singletons the server wires into handlers.
@@ -64,6 +67,13 @@ type Deps struct {
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
 	Users *users.Repo
+	// AuthPolicy is the declared auth level per procedure, built and
+	// validated in main before anything else starts. Nothing reads it
+	// yet: the interceptor that enforces it is S3 of
+	// docs/sprint-auth-interceptor.md, and it is carried here now so
+	// that step adds an interceptor rather than also re-plumbing the
+	// map. Handlers continue to enforce by hand until S5.
+	AuthPolicy authpolicy.Map
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
@@ -84,6 +94,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		dtest:    deps.DecisionTest,
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
+		policy:   deps.AuthPolicy,
 	}
 	if deps.Users != nil {
 		s.system.SetUsers(log, deps.Users)
@@ -119,7 +130,11 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("GET /api/meetings/{file}", s.meetings.ServeMeetingICS)
 	}
 
+	// Collected so the policy map can be checked against what is
+	// actually served, below.
+	var mountedPaths []string
 	mount := func(path string, h http.Handler) {
+		mountedPaths = append(mountedPaths, path)
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))
 	}
 
@@ -175,6 +190,8 @@ func (s *Server) routes() http.Handler {
 		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events)
 		mount(eventsPath, eventsHandler)
 	}
+
+	s.logPolicyCoverage(mountedPaths)
 
 	// Every RPC body is small (the JD text is capped at 50k characters
 	// by the proto); a 1 MB cap stops oversized bodies from being read
@@ -369,5 +386,80 @@ func (r *recorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 func (r *recorder) Flush() {
 	if f, ok := r.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
+	}
+}
+
+// logPolicyCoverage reports the declared auth policy against the
+// services actually mounted.
+//
+// S2 of docs/sprint-auth-interceptor.md. Nothing here enforces
+// anything; the interceptor is S3. What this catches is the mismatch
+// between "declared in the proto" and "served by this process", which
+// S1 found and which is invisible from either side alone:
+//
+//   - A mounted service with no policy entries would, once S4 enforces,
+//     have every one of its procedures denied, because an unknown
+//     procedure must fail closed. Logged at error: it cannot happen
+//     while main validates the map, and if it ever does the cause
+//     should not have to be inferred from a wall of permission_denied.
+//   - A declared service that is mounted nowhere is unreachable, which
+//     is safe. Logged once at info because "it is declared ADMIN" and
+//     "it is protected" are different claims, and because the day one
+//     of these is mounted it arrives with no enforcement at all.
+func (s *Server) logPolicyCoverage(mountedPaths []string) {
+	if s.policy == nil {
+		// Only reachable from a test that constructs a Server directly;
+		// main exits before this if the map could not be built.
+		s.log.Warn("no auth policy loaded, so nothing can report on it")
+		return
+	}
+
+	// A Connect service path is "/career.v1.SystemService/".
+	mounted := make(map[string]bool, len(mountedPaths))
+	for _, p := range mountedPaths {
+		mounted[strings.Trim(p, "/")] = true
+	}
+
+	perService := map[string]int{}
+	for procedure := range s.policy {
+		cut := strings.LastIndex(procedure, "/")
+		if cut <= 0 {
+			continue
+		}
+		perService[strings.TrimPrefix(procedure[:cut], "/")]++
+	}
+
+	var unmounted []string
+	covered := 0
+	for svc, n := range perService {
+		if mounted[svc] {
+			covered += n
+			continue
+		}
+		unmounted = append(unmounted, svc)
+	}
+
+	var bare []string
+	for svc := range mounted {
+		if perService[svc] == 0 {
+			bare = append(bare, svc)
+		}
+	}
+
+	s.log.Info("auth policy coverage",
+		slog.String("policy", s.policy.Summary()),
+		slog.Int("mounted_services", len(mounted)),
+		slog.Int("procedures_served", covered))
+
+	if len(unmounted) > 0 {
+		sort.Strings(unmounted)
+		s.log.Info("declared services that are not mounted, so unreachable",
+			slog.String("services", strings.Join(unmounted, ",")))
+	}
+	if len(bare) > 0 {
+		sort.Strings(bare)
+		s.log.Error("mounted services with no declared auth policy; once the "+
+			"interceptor enforces, every procedure on these is denied",
+			slog.String("services", strings.Join(bare, ",")))
 	}
 }
