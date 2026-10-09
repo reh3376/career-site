@@ -25,9 +25,22 @@ exist.
 | `AUTH_LEVEL_PUBLIC` | 16 |
 
 **Nothing reads those declarations.** There are no Connect interceptors
-in the codebase at all. Enforcement is 81 hand-written `requireAdmin`
-calls and 17 `LookupSessionUser` call sites, one per handler that
-remembered.
+in the codebase at all. Enforcement is hand-written, one call per handler
+that remembered. Measured by S1's test across the 105 handlers that exist
+and are reachable:
+
+| gate | handlers |
+|---|---|
+| `requireAdmin` | 69 |
+| `requireMember` | 16 |
+| `requireChatAdmin` | 2 |
+| a bare `LookupSessionUser` used to deny | 3 |
+| nothing | 15 |
+
+The 71 admin-enforcing handlers are exactly the 81 declared ADMIN methods
+minus the 10 AdminService methods nobody has written yet, and 14 of the
+15 ungated handlers are the implemented PUBLIC methods. The remaining one
+is `Logout`, discussed under S1.
 
 **Three of the four options are enforced nowhere:**
 
@@ -141,7 +154,10 @@ qualification.
 
 ## The steps
 
-### S1. Prove the contract and the code already agree
+### S1. Prove the contract and the code already agree — **done 2026-10-09**
+
+`services/api/internal/handlers/authpolicy_test.go`. It passes, and the
+findings are below.
 
 Before anything changes behaviour, a test that reads both sides and
 compares them: every method's declared level against what its handler
@@ -162,7 +178,84 @@ method where the two disagree.
 
 *Exit:* the comparison runs over all 141 methods and either passes or
 produces a list, and every disagreement on that list is resolved before
-S3. No behaviour change.
+S3. No behaviour change. **Met.**
+
+#### What the comparison found
+
+All 141 methods resolve, and they account for themselves exactly:
+
+| | methods |
+|---|---|
+| declared | 141 (ADMIN 81, MEMBER 44, PUBLIC 16, unspecified 0) |
+| on services `server.go` never mounts | 8 |
+| declared, mounted, no handler written | 28 |
+| handlers found and compared | 105 |
+
+The 81/44/16 split matches the table at the top of this plan, which
+matters because this count comes from the registered descriptors rather
+than from reading the `.proto` files, so the two numbers are independent.
+
+**Enforcement matches the declaration on all 105.** There is no method
+that declares ADMIN and fails to enforce it, which was the outcome worth
+checking first: it would have meant an admin method open today.
+
+**One real disagreement: `AuthService.Logout`.** It declares MEMBER and
+gates nothing. It revokes whatever session token the caller presents and
+clears their own cookie; with no token it is a no-op returning success.
+That is defensible, because the token *is* the thing being revoked and
+there is no way to log out anybody but yourself. But enforcing MEMBER on
+it at S4 would make logout fail with `unauthenticated` exactly when a
+session has already expired, which is when somebody most wants their
+cookie cleared. **Decision needed before S4: declare it PUBLIC.** It is
+recorded in `knownUngated` in the test with that reasoning, so the test
+passes today and the choice is not silently lost.
+
+**The 8 unmounted methods are a trap worth naming.** `HomeService`,
+`ContentService` and `DownloadService` are declared in the proto and have
+generated code, and `server.go` registers none of them, so their routes
+do not exist and the methods are unreachable. Unreachable is safe, so
+this is not a hole. It is worth knowing because the day one of them is
+mounted it arrives with no enforcement whatsoever, and because an
+unmounted service otherwise shows up in this comparison as "declares
+ADMIN, enforces nothing", which reads alarming and is not true.
+
+**The 28 unwritten methods are pinned by name in the test**, not counted.
+That bucket is where a broken matcher drains: a method the AST walk fails
+to find is indistinguishable from a method nobody wrote, and a comparison
+over nothing passes. Pinning the set makes that a failure. Among them are
+`MfaEnroll` and `MfaVerify`, which is the same gap that removing
+`mfa_fresh` from 79 methods addressed from the other end.
+
+#### On trusting this result
+
+The check reads both sides from the real artefacts: declared levels from
+the registered protobuf descriptors, enforcement from the Go AST. That is
+not fastidiousness. The first four versions of it were wrong, each time
+in the direction of a confident answer:
+
+1. a regex that matched 0 of 141 handlers, reported as 141 mismatches
+2. a regex that matched 89, then 105, each time reporting the rest as
+   ungated
+3. two admin methods reported as ungated; they call `requireChatAdmin`,
+   a gate the pattern did not know about
+4. four methods reported as "PUBLIC but enforces MEMBER", the dangerous
+   direction; all four use `LookupSessionUser` to *attribute* an
+   optional session, not to deny
+
+The last one is why session lookups are now classified by shape rather
+than by name. `u, err := Lookup(...)` followed by `if err != nil {
+return }` denies; `if u, err := Lookup(...); err == nil && u != nil`
+carries on without a user when there is none. Only the first is a gate,
+and the second is how four public endpoints legitimately record who
+submitted something.
+
+Four deliberate mutations confirm it fails when it should, each checked
+for failing with the *right* message and not incidentally: breaking the
+AST walk, removing the gate from `Activity.RecordEvents`, mis-mapping a
+receiver to the wrong service, and claiming an unwritten method is
+written. The `RecordEvents` mutation initially "passed" the mutation test
+by failing to compile, which proved nothing; it was redone so it
+compiles.
 
 ### S2. The policy map, and a server that will not start without one
 
@@ -235,8 +328,10 @@ exist.
 
 ## Order and risk
 
-S1 gates everything; nothing else starts until its list is empty. S2 is
-inert and can land any time after. S3 must run for long enough to see
+S1 gates everything; nothing else starts until its list is empty. **S1 is
+done and its list has one item, `Logout`,** which is a declaration change
+rather than a code change and is only load-bearing at S4, so S2 and S3
+can proceed. S2 is inert and can land any time after. S3 must run for long enough to see
 real traffic, which is the only part of this that takes calendar time
 rather than work. S4 is the behaviour change. S5 is cleanup and is
 optional in the sense that the system is correct without it, though
@@ -264,6 +359,11 @@ command.
    which `buf breaking` will not let us delete outright. So D1's
    exclusion of `mfa_fresh` is now permanent rather than deferred, and
    the contract no longer describes a control that does not exist.
-3. **Does rate limiting matter yet?** 35 methods declare a budget. With
+3. **`Logout`: declare it PUBLIC?** S1's one finding. It declares MEMBER
+   and gates nothing, deliberately. The recommendation is to change the
+   declaration to PUBLIC, because the alternative is logout failing for
+   people whose session has already expired. Needed before S4, and it is
+   a one-line proto change plus removing the `knownUngated` entry.
+4. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.
