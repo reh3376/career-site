@@ -10059,13 +10059,24 @@ What the member said matters most to them.
 
 ### AuthLevel
 
-Who may call a method. Enforced before the handler runs; a caller below
-the required level receives the Connect code `unauthenticated` (no
-session) or `permission_denied` (session without the role).
+Who may call a method.
+
+Enforced by hand inside each handler, not before it. This comment used
+to say "Enforced before the handler runs", which described the
+interceptor in docs/sprint-auth-interceptor.md rather than the code.
+The level here is the contract those handlers are checked against:
+internal/handlers/authpolicy_test.go compares every declaration with
+what its handler actually calls and fails on any disagreement.
+
+A caller below the required level receives the Connect code
+`unauthenticated` (no session) or `permission_denied` (session without
+the role). That part is accurate, because it is what the handlers
+return, and it is what the interceptor will return when S4 moves the
+decision out of them.
 
 | Value | Number | Description |
 |---|---|---|
-| `AUTH_LEVEL_UNSPECIFIED` | 0 | Not set. Lint fails any method that leaves the level unspecified. |
+| `AUTH_LEVEL_UNSPECIFIED` | 0 | Not set, and the server will not start that way: internal/authpolicy builds the policy from these declarations at boot and exits naming any method that left the level unspecified. This comment previously claimed "Lint fails any method that leaves the level unspecified"; no such lint rule existed, which is why it is a boot failure now. |
 | `AUTH_LEVEL_PUBLIC` | 1 | No session required. |
 | `AUTH_LEVEL_MEMBER` | 2 | A verified member session is required (status ACTIVE). Methods that an unverified member may call additionally set `allow_unverified`. |
 | `AUTH_LEVEL_ADMIN` | 3 | An admin session with a recent TOTP verification is required. |
