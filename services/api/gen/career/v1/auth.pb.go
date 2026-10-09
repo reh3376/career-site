@@ -1418,22 +1418,20 @@ const file_career_v1_auth_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x06\x18 R\x04code\"l\n" +
 	"\x11MfaVerifyResponse\x12\x1d\n" +
 	"\x02me\x18\x01 \x01(\v2\r.career.v1.MeR\x02me\x128\n" +
-	"\x18recovery_codes_remaining\x18\x02 \x01(\x05R\x16recoveryCodesRemaining2\x87\b\n" +
-	"\vAuthService\x12M\n" +
-	"\bRegister\x12\x1a.career.v1.RegisterRequest\x1a\x1b.career.v1.RegisterResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x05\x12G\n" +
-	"\x06Verify\x12\x18.career.v1.VerifyRequest\x1a\x19.career.v1.VerifyResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\n" +
-	"\x12k\n" +
-	"\x12ResendVerification\x12$.career.v1.ResendVerificationRequest\x1a%.career.v1.ResendVerificationResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03\x12D\n" +
-	"\x05Login\x12\x17.career.v1.LoginRequest\x1a\x18.career.v1.LoginResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\n" +
-	"\x12G\n" +
+	"\x18recovery_codes_remaining\x18\x02 \x01(\x05R\x16recoveryCodesRemaining2\xe3\a\n" +
+	"\vAuthService\x12I\n" +
+	"\bRegister\x12\x1a.career.v1.RegisterRequest\x1a\x1b.career.v1.RegisterResponse\"\x04\x80\xb5\x18\x01\x12C\n" +
+	"\x06Verify\x12\x18.career.v1.VerifyRequest\x1a\x19.career.v1.VerifyResponse\"\x04\x80\xb5\x18\x01\x12g\n" +
+	"\x12ResendVerification\x12$.career.v1.ResendVerificationRequest\x1a%.career.v1.ResendVerificationResponse\"\x04\x80\xb5\x18\x01\x12@\n" +
+	"\x05Login\x12\x17.career.v1.LoginRequest\x1a\x18.career.v1.LoginResponse\"\x04\x80\xb5\x18\x01\x12G\n" +
 	"\x06Logout\x12\x18.career.v1.LogoutRequest\x1a\x19.career.v1.LogoutResponse\"\b\x80\xb5\x18\x02\x88\xb5\x18\x01\x12L\n" +
-	"\tLogoutAll\x12\x1b.career.v1.LogoutAllRequest\x1a\x1c.career.v1.LogoutAllResponse\"\x04\x80\xb5\x18\x02\x12_\n" +
-	"\x0eForgotPassword\x12 .career.v1.ForgotPasswordRequest\x1a!.career.v1.ForgotPasswordResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03\x12\\\n" +
-	"\rResetPassword\x12\x1f.career.v1.ResetPasswordRequest\x1a .career.v1.ResetPasswordResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x05\x12_\n" +
-	"\x0eChangePassword\x12 .career.v1.ChangePasswordRequest\x1a!.career.v1.ChangePasswordResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x05\x12V\n" +
-	"\vChangeEmail\x12\x1d.career.v1.ChangeEmailRequest\x1a\x1e.career.v1.ChangeEmailResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12L\n" +
-	"\tMfaEnroll\x12\x1b.career.v1.MfaEnrollRequest\x1a\x1c.career.v1.MfaEnrollResponse\"\x04\x80\xb5\x18\x02\x12P\n" +
-	"\tMfaVerify\x12\x1b.career.v1.MfaVerifyRequest\x1a\x1c.career.v1.MfaVerifyResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x05B\xa3\x01\n" +
+	"\tLogoutAll\x12\x1b.career.v1.LogoutAllRequest\x1a\x1c.career.v1.LogoutAllResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
+	"\x0eForgotPassword\x12 .career.v1.ForgotPasswordRequest\x1a!.career.v1.ForgotPasswordResponse\"\x04\x80\xb5\x18\x01\x12X\n" +
+	"\rResetPassword\x12\x1f.career.v1.ResetPasswordRequest\x1a .career.v1.ResetPasswordResponse\"\x04\x80\xb5\x18\x01\x12[\n" +
+	"\x0eChangePassword\x12 .career.v1.ChangePasswordRequest\x1a!.career.v1.ChangePasswordResponse\"\x04\x80\xb5\x18\x02\x12R\n" +
+	"\vChangeEmail\x12\x1d.career.v1.ChangeEmailRequest\x1a\x1e.career.v1.ChangeEmailResponse\"\x04\x80\xb5\x18\x02\x12L\n" +
+	"\tMfaEnroll\x12\x1b.career.v1.MfaEnrollRequest\x1a\x1c.career.v1.MfaEnrollResponse\"\x04\x80\xb5\x18\x02\x12L\n" +
+	"\tMfaVerify\x12\x1b.career.v1.MfaVerifyRequest\x1a\x1c.career.v1.MfaVerifyResponse\"\x04\x80\xb5\x18\x02B\xa3\x01\n" +
 	"\rcom.career.v1B\tAuthProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

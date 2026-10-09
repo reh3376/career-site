@@ -843,12 +843,12 @@ const file_career_v1_system_proto_rawDesc = "" +
 	"veryStrong\x12\x16\n" +
 	"\x06strong\x18\x02 \x01(\x01R\x06strong\x12\x1a\n" +
 	"\bpossible\x18\x03 \x01(\x01R\bpossible\x12\x12\n" +
-	"\x04weak\x18\x04 \x01(\x01R\x04weak2\xbe\x02\n" +
-	"\rSystemService\x12S\n" +
+	"\x04weak\x18\x04 \x01(\x01R\x04weak2\xb2\x02\n" +
+	"\rSystemService\x12O\n" +
 	"\n" +
-	"GetVersion\x12\x1c.career.v1.GetVersionRequest\x1a\x1d.career.v1.GetVersionResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12n\n" +
-	"\x13GetGovernanceStatus\x12%.career.v1.GetGovernanceStatusRequest\x1a&.career.v1.GetGovernanceStatusResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12h\n" +
-	"\x11GetReviewerStatus\x12#.career.v1.GetReviewerStatusRequest\x1a$.career.v1.GetReviewerStatusResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<B\xa5\x01\n" +
+	"GetVersion\x12\x1c.career.v1.GetVersionRequest\x1a\x1d.career.v1.GetVersionResponse\"\x04\x80\xb5\x18\x01\x12j\n" +
+	"\x13GetGovernanceStatus\x12%.career.v1.GetGovernanceStatusRequest\x1a&.career.v1.GetGovernanceStatusResponse\"\x04\x80\xb5\x18\x01\x12d\n" +
+	"\x11GetReviewerStatus\x12#.career.v1.GetReviewerStatusRequest\x1a$.career.v1.GetReviewerStatusResponse\"\x04\x80\xb5\x18\x01B\xa5\x01\n" +
 	"\rcom.career.v1B\vSystemProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

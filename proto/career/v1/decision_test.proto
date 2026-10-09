@@ -29,33 +29,28 @@ service DecisionTestService {
   // audio in the browser.
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 10;
   }
   // Returns the next block: the number to memorise and its six
   // questions. Blocks are served one at a time so the client never
   // holds the whole test.
   rpc GetBlock(GetBlockRequest) returns (GetBlockResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
   // Records one answer and grades it server-side. The response confirms
   // receipt and says nothing about correctness.
   rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 120;
   }
   // Records the digits returned at the end of a block, scored by
   // failure type rather than pass or fail.
   rpc SubmitRecall(SubmitRecallRequest) returns (SubmitRecallResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 30;
   }
   // Closes the session. A session that is never finished stays
   // abandoned, which is kept rather than deleted because where people
   // stop measures the fifteen-minute burden.
   rpc FinishSession(FinishSessionRequest) returns (FinishSessionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 10;
   }
 }
 

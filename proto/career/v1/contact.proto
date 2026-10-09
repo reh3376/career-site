@@ -21,7 +21,6 @@ service ContactService {
   // message with the sender's context and replies from their mailbox.
   rpc SubmitContact(SubmitContactRequest) returns (SubmitContactResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 3;
   }
 }
 

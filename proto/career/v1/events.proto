@@ -20,7 +20,6 @@ service EventService {
   // dropped, never errors; the response says how many were stored.
   rpc Record(RecordRequest) returns (RecordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 120;
   }
 }
 

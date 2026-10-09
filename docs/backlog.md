@@ -1138,7 +1138,20 @@ Still open:
 
 - **An auth interceptor, so the proto's AUTH_LEVEL_* becomes
   enforcement rather than documentation. Opened 2026-10-05 after it
-  cost a live data exposure.**
+  cost a live data exposure. Planned 2026-10-09.**
+
+  Step-by-step plan in
+  [`sprint-auth-interceptor.md`](sprint-auth-interceptor.md); no code
+  written, three decisions there are the owner's. Three findings from
+  planning it: all 141 methods already declare a level, so the work is
+  enforcement rather than annotation; `mfa_fresh` was declared on **79**
+  methods with no TOTP implementation anywhere, so it was unenforceable
+  rather than merely unenforced, and the owner decided on 2026-10-09
+  not to build a second factor: all 79 usages are removed and the
+  option is deprecated; and `options.proto`
+  describes the interceptor in the present tense today, which is false
+  in every clause. Nothing stops a new method shipping with no level
+  either, despite the enum comment claiming lint catches it.
 
   `ExportDecisionTestData` shipped without `requireAdmin` and the whole
   decision test dataset was downloadable with no session for about five

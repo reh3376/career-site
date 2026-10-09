@@ -20,14 +20,12 @@ service SystemService {
   // Returns the deployed version and build metadata.
   rpc GetVersion(GetVersionRequest) returns (GetVersionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
   // Returns the governance status shown on the public "How this site was
   // built" page: UxTS frameworks, spec counts, last verification, pass rate,
   // and hash-integrity summary, read from the reports CI publishes.
   rpc GetGovernanceStatus(GetGovernanceStatusRequest) returns (GetGovernanceStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
   // Returns how the JD reviewer is currently measuring, for the public
   // "How Ask Roger works" page: agreement with the owner's own grading,
@@ -36,7 +34,6 @@ service SystemService {
   // number the owner is not also looking at.
   rpc GetReviewerStatus(GetReviewerStatusRequest) returns (GetReviewerStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
 }
 

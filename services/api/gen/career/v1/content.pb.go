@@ -2414,7 +2414,7 @@ const file_career_v1_content_proto_rawDesc = "" +
 	"\x05score\x18\x03 \x01(\x02R\x05score\"g\n" +
 	"\x0eSearchResponse\x12(\n" +
 	"\x04hits\x18\x01 \x03(\v2\x14.career.v1.SearchHitR\x04hits\x12+\n" +
-	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page2\xe8\x03\n" +
+	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page2\xe4\x03\n" +
 	"\x0eContentService\x12R\n" +
 	"\vListContent\x12\x1d.career.v1.ListContentRequest\x1a\x1e.career.v1.ListContentResponse\"\x04\x80\xb5\x18\x02\x12O\n" +
 	"\n" +
@@ -2422,8 +2422,8 @@ const file_career_v1_content_proto_rawDesc = "" +
 	"\bWhatsNew\x12\x1a.career.v1.WhatsNewRequest\x1a\x1b.career.v1.WhatsNewResponse\"\x04\x80\xb5\x18\x02\x12O\n" +
 	"\n" +
 	"ListTracks\x12\x1c.career.v1.ListTracksRequest\x1a\x1d.career.v1.ListTracksResponse\"\x04\x80\xb5\x18\x02\x12L\n" +
-	"\tGetSkills\x12\x1b.career.v1.GetSkillsRequest\x1a\x1c.career.v1.GetSkillsResponse\"\x04\x80\xb5\x18\x02\x12G\n" +
-	"\x06Search\x12\x18.career.v1.SearchRequest\x1a\x19.career.v1.SearchResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18<B\xa6\x01\n" +
+	"\tGetSkills\x12\x1b.career.v1.GetSkillsRequest\x1a\x1c.career.v1.GetSkillsResponse\"\x04\x80\xb5\x18\x02\x12C\n" +
+	"\x06Search\x12\x18.career.v1.SearchRequest\x1a\x19.career.v1.SearchResponse\"\x04\x80\xb5\x18\x02B\xa6\x01\n" +
 	"\rcom.career.v1B\fContentProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

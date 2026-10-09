@@ -28,67 +28,56 @@ service AdminService {
   // Lists members with search, filters, and pagination.
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Re-sends the approval or decline email to a member and returns
   // the audited attempt so the console can show the provider's verdict
   // inline. Backs the "Resend" button on /admin/registrations/[id].
   rpc ResendNotification(ResendNotificationRequest) returns (ResendNotificationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns one member with recent activity, conversations, admin notes,
   // and email delivery history.
   rpc GetMember(GetMemberRequest) returns (GetMemberResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Adds a private admin note to a member.
   rpc AddMemberNote(AddMemberNoteRequest) returns (AddMemberNoteResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Approves or rejects a registration waiting in PENDING_APPROVAL (approval
   // mode only), or disables/re-enables an account.
   rpc SetMemberStatus(SetMemberStatusRequest) returns (SetMemberStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists items needing the owner's attention: negative feedback,
   // "I don't know" answers, escalations, and out-of-scope refusals.
   rpc GetReviewQueue(GetReviewQueueRequest) returns (GetReviewQueueResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Resolves a review item, optionally recording that it was converted into
   // a Q&A-bank entry (the entry itself is authored in `content/qa/`).
   rpc ResolveReviewItem(ResolveReviewItemRequest) returns (ResolveReviewItemResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Replies to an escalation. The reply is appended to the member's
   // conversation as an OWNER message and the member is emailed.
   rpc ReplyEscalation(ReplyEscalationRequest) returns (ReplyEscalationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns any member's conversation with messages, sources, and persona
   // versions (read-only).
   rpc GetMemberConversation(GetMemberConversationRequest) returns (GetMemberConversationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns corpus statistics: documents, chunks, Q&A entries, last ingest,
   // embedding model, and persona version.
   rpc GetCorpusStatus(GetCorpusStatusRequest) returns (GetCorpusStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Runs retrieval for a question and returns the chunks the assistant
   // would see, with scores ("what would the assistant retrieve?").
   rpc TestRetrieval(TestRetrievalRequest) returns (TestRetrievalResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Starts a background job inside the api (corpus reindex of the public
   // or private mount, embed sweep) and returns its id at once; the
@@ -96,29 +85,24 @@ service AdminService {
   // reserved and rejected as not runnable here. One job at a time.
   rpc RunJob(RunJobRequest) returns (RunJobResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the status and progress of a job started by RunJob.
   rpc GetJob(GetJobRequest) returns (GetJobResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the active persona version and its history. The prompt text is
   // governed in the repository and pinned by its ULTS hash; this shows which
   // version is live.
   rpc GetPersona(GetPersonaRequest) returns (GetPersonaResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns aggregate analytics for a date range.
   rpc GetAnalytics(GetAnalyticsRequest) returns (GetAnalyticsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists audit-log entries.
   rpc GetAudit(GetAuditRequest) returns (GetAuditResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
 
   // Lists messages sent via the public contact form (FR-ADM-14). Backs
@@ -127,40 +111,34 @@ service AdminService {
   // table this reads from.
   rpc ListContactMessages(ListContactMessagesRequest) returns (ListContactMessagesResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Marks a contact message as resolved (or re-opens it). Records the
   // acting admin's user_id + timestamp so the audit trail is clean.
   rpc ResolveContactMessage(ResolveContactMessageRequest) returns (ResolveContactMessageResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Approves a pending registration from the admin console. Same DB
   // transitions + emails as the one-click Accept link, but recorded
   // as decided_via="console" in the audit trail.
   rpc ApproveRegistration(ApproveRegistrationRequest) returns (ApproveRegistrationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Declines a pending registration from the admin console. Same DB
   // transitions + emails as the one-click Decline link, but recorded
   // as decided_via="console" in the audit trail.
   rpc DeclineRegistration(DeclineRegistrationRequest) returns (DeclineRegistrationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Extends an active member's access period by a fixed duration
   // (`extend_days`), or sets a specific new `expires_at`. Absolute
   // and relative are exclusive; passing both is InvalidArgument.
   rpc ExtendAccess(ExtendAccessRequest) returns (ExtendAccessResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the public tables + columns of the API database, from
   // information_schema. Backs the schema panel on /admin/db.
   rpc ListDbTables(ListDbTablesRequest) returns (ListDbTablesResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Runs a SQL query against the API database from the /admin/db
   // console. MVP is read-only: only SELECT statements are accepted;
@@ -169,14 +147,12 @@ service AdminService {
   // capped (rows past the cap are dropped with `truncated=true`).
   rpc RunDbQuery(RunDbQueryRequest) returns (RunDbQueryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists the access whitelist entries. An entry with an email means
   // a registration from that address is auto-approved for
   // `default_ttl`. Backs /admin/access.
   rpc ListAccessGrants(ListAccessGrantsRequest) returns (ListAccessGrantsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Creates a new access whitelist entry or updates an existing one
   // by email (email is the natural key). The default_ttl controls how
@@ -184,31 +160,26 @@ service AdminService {
   // controls how long the whitelist entry itself stays active.
   rpc UpsertAccessGrant(UpsertAccessGrantRequest) returns (UpsertAccessGrantResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Removes a whitelist entry. Existing accounts already granted
   // access are unaffected — this only stops future auto-approvals.
   rpc DeleteAccessGrant(DeleteAccessGrantRequest) returns (DeleteAccessGrantResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the calling admin's saved SQL statements from /admin/db.
   // Scoped to the caller — one admin never sees another's slots.
   rpc ListSavedQueries(ListSavedQueriesRequest) returns (ListSavedQueriesResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Creates or updates a saved query for the caller. The tuple
   // (caller, name) is the natural key: passing an existing name
   // overwrites the body.
   rpc UpsertSavedQuery(UpsertSavedQueryRequest) returns (UpsertSavedQueryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Removes one of the caller's saved queries by id.
   rpc DeleteSavedQuery(DeleteSavedQueryRequest) returns (DeleteSavedQueryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns one row per member with engagement aggregates (session
   // count, total active time, ask-roger count, last event). Backs
@@ -216,7 +187,6 @@ service AdminService {
   // the site" surface.
   rpc ListMemberActivity(ListMemberActivityRequest) returns (ListMemberActivityResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Ingests one text document into the Ask Roger corpus. Chunks
   // it, embeds via the sidecar, and stores under (source_kind,
@@ -225,13 +195,11 @@ service AdminService {
   // the paste-a-document form on /admin/corpus.
   rpc IngestCorpusText(IngestCorpusTextRequest) returns (IngestCorpusTextResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns every document currently in the corpus with a per-row
   // chunk count. Backs the list on /admin/corpus.
   rpc ListCorpusDocuments(ListCorpusDocumentsRequest) returns (ListCorpusDocumentsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Walks a corpus mount for markdown files and runs each through
   // IngestCorpusText, so the corpus can be seeded from committed
@@ -243,7 +211,6 @@ service AdminService {
   // because a private reindex outlives the proxy's response timeout.
   rpc ReindexCorpus(ReindexCorpusRequest) returns (ReindexCorpusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Re-embeds every chunk whose vector is missing or was produced by a
   // different embedder than the sidecar's current one. Bounded per call
@@ -255,21 +222,18 @@ service AdminService {
   // as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
   rpc SweepCorpusEmbeddings(SweepCorpusEmbeddingsRequest) returns (SweepCorpusEmbeddingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns every JD submission with score + status. Backs
   // /admin/jd — Roger's triage view for the JD-upload flow. Full
   // JD body is elided from the list; the detail lookup returns it.
   rpc ListJdSubmissions(ListJdSubmissionsRequest) returns (ListJdSubmissionsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns one JD submission in full: the JD text, both scores, the
   // assessment derivation (requirements, evidence, verdicts) and the
   // generated résumé when present. Backs /admin/jd/[id].
   rpc GetJdSubmission(GetJdSubmissionRequest) returns (GetJdSubmissionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
   // per-requirement assessment, score in code, résumé and locked PDF
@@ -278,7 +242,6 @@ service AdminService {
   // immediately; poll GetJdSubmission for the outcome.
   rpc RescoreJd(RescoreJdRequest) returns (RescoreJdResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Records what happened in the world after a review: applied,
   // interview, offer, no response. One per posting, revised in place.
@@ -286,7 +249,6 @@ service AdminService {
   // anything, so nothing else can substitute for it.
   rpc SetJdOutcome(SetJdOutcomeRequest) returns (SetJdOutcomeResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Records the owner's judgment of one run's output: whether the score
   // was accurate, too generous or too harsh, and whether the résumé is
@@ -294,42 +256,35 @@ service AdminService {
   // an opinion of the thing it replaced.
   rpc RecordJdFeedback(RecordJdFeedbackRequest) returns (RecordJdFeedbackResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists the golden set: fixed postings with a stated expectation,
   // re-scored to measure whether a prompt or model change helped.
   rpc ListGoldenPostings(ListGoldenPostingsRequest) returns (ListGoldenPostingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Adds or replaces a golden posting, keyed by name.
   rpc UpsertGoldenPosting(UpsertGoldenPostingRequest) returns (UpsertGoldenPostingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Retires or restores a golden posting. Retired postings are kept,
   // because deleting one would silently change what every past
   // evaluation was measuring.
   rpc SetGoldenActive(SetGoldenActiveRequest) returns (SetGoldenActiveResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Records which side of the gate a posting belongs on. Separate from
   // the upsert so labelling a posting does not mean resending its text,
   // and so an unlabelled posting is a state the console can act on.
   rpc LabelGoldenPosting(LabelGoldenPostingRequest) returns (LabelGoldenPostingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists evaluations, newest first, without their per-posting results.
   rpc ListEvalRuns(ListEvalRunsRequest) returns (ListEvalRunsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns one evaluation with every posting's result.
   rpc GetEvalRun(GetEvalRunRequest) returns (GetEvalRunResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the state of the reviewer, read from the SQL views that
   // define each metric once. Nothing here is computed in the api or in
@@ -337,14 +292,12 @@ service AdminService {
   // starts disagreeing with itself.
   rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns what the box is doing right now: jobs the runner knows
   // about, the submission pipeline, recent model activity and host
   // load. Backs /admin/ops.
   rpc GetOpsStatus(GetOpsStatusRequest) returns (GetOpsStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns one job with every progress report it made, for the detail
   // view on /admin/ops. Separate from GetOpsStatus because that call is
@@ -353,7 +306,6 @@ service AdminService {
   // backwards for a page you open because something is running.
   rpc GetJobDetail(GetJobDetailRequest) returns (GetJobDetailResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the criteria as a gate: one row per criterion with pass,
   // value, target and as_of, read from the views that define them.
@@ -361,62 +313,52 @@ service AdminService {
   // answers whether each one is met.
   rpc GetGate(GetGateRequest) returns (GetGateResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists logged reviewer decisions (per-requirement verdicts, gate
   // outcomes) with the evidence each was made from, for the owner's
   // human-in-the-loop review. Backs /admin/decisions.
   rpc ListDecisionLog(ListDecisionLogRequest) returns (ListDecisionLogResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Records the owner's own verdict and note on one logged decision.
   // Saving again overwrites the label; the model's output is never
   // changed.
   rpc ReviewDecision(ReviewDecisionRequest) returns (ReviewDecisionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Exports decisions as JSON Lines for adapter training and
   // evaluation; reviewed rows carry the human label.
   rpc ExportDecisionLog(ExportDecisionLogRequest) returns (ExportDecisionLogResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads the JD fit bands (the numbers that classify a review as very
   // strong / strong / possible / weak / very weak; "strong" is the gate).
   rpc GetJdFitBands(GetJdFitBandsRequest) returns (GetJdFitBandsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Sets the JD fit bands (stored in app_settings; the api caches them
   // for 15 s). Takes effect for the next submission within seconds;
   // existing scores are re-classified on read.
   rpc SetJdFitBands(SetJdFitBandsRequest) returns (SetJdFitBandsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads the decision test's timings.
   rpc GetDecisionTestSettings(GetDecisionTestSettingsRequest) returns (GetDecisionTestSettingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Sets the decision test's timings. The instrument version is derived
   // from them, so a change here is recorded on every run taken after it
   // and runs under different timings never pool into one dataset.
   rpc SetDecisionTestSettings(SetDecisionTestSettingsRequest) returns (SetDecisionTestSettingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists decision test runs, newest first.
   rpc ListDecisionTestRuns(ListDecisionTestRunsRequest) returns (ListDecisionTestRunsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // One run in full: every answer, every recall, and the block summary.
   rpc GetDecisionTestRun(GetDecisionTestRunRequest) returns (GetDecisionTestRunResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // The curated dataset as CSV, one row per question presented.
   //
@@ -431,7 +373,6 @@ service AdminService {
   // somebody reconstruct the answer key.
   rpc ExportDecisionTestData(ExportDecisionTestDataRequest) returns (ExportDecisionTestDataResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads the decision test's three analysis views.
   //
@@ -442,7 +383,6 @@ service AdminService {
   // anybody wanting to look at it.
   rpc GetDecisionTestAnalysis(GetDecisionTestAnalysisRequest) returns (GetDecisionTestAnalysisResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Downloads one run's blocks and answers as two CSV files.
   //
@@ -455,7 +395,6 @@ service AdminService {
   // behind an explicit opt-in.
   rpc ExportDecisionTestRun(ExportDecisionTestRunRequest) returns (ExportDecisionTestRunResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Records the owner's judgement about a run, or about one block of
   // one, and returns the run as it now reads.
@@ -468,14 +407,12 @@ service AdminService {
   // it produced.
   rpc ReviewDecisionTestRun(ReviewDecisionTestRunRequest) returns (ReviewDecisionTestRunResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads the meeting-scheduler settings: the weekly windows a member
   // may book into, the lengths on offer, the clearance between
   // meetings, and the zone all of it is quoted in.
   rpc GetSchedulerSettings(GetSchedulerSettingsRequest) returns (GetSchedulerSettingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Replaces the meeting-scheduler settings (stored in app_settings;
   // the api caches them for 15 s). Validated server-side and refused
@@ -484,95 +421,80 @@ service AdminService {
   // narrowing the windows stops new bookings, it does not cancel.
   rpc SetSchedulerSettings(SetSchedulerSettingsRequest) returns (SetSchedulerSettingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists the Q&A bank: the owner's own answers, served verbatim by
   // Ask Roger with no model involved.
   rpc ListQaEntries(ListQaEntriesRequest) returns (ListQaEntriesResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Writes a new bank entry along with its canonical phrasing. The
   // entry is unreachable until the embedding job has given its
   // phrasings vectors, which happens within five minutes.
   rpc CreateQaEntry(CreateQaEntryRequest) returns (CreateQaEntryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Replaces an entry's editable fields. Changing the question clears
   // the canonical phrasing's vector, so the entry stops matching the
   // old wording immediately and matches the new one once re-embedded.
   rpc UpdateQaEntry(UpdateQaEntryRequest) returns (UpdateQaEntryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Approves or withdraws an entry. Enabling is the approval: a
   // disabled entry is never matched and never served, which is how a
   // statement is taken back without losing what it said.
   rpc SetQaEntryEnabled(SetQaEntryEnabledRequest) returns (SetQaEntryEnabledResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Deletes an entry and its phrasings.
   rpc DeleteQaEntry(DeleteQaEntryRequest) returns (DeleteQaEntryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Adds another way of asking an existing entry's question. Matching
   // runs over every phrasing, so variants are how one answer covers the
   // several ways people ask for it.
   rpc AddQaPhrasing(AddQaPhrasingRequest) returns (AddQaPhrasingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Removes one variant phrasing. The canonical phrasing cannot be
   // removed: it is the entry's own question.
   rpc DeleteQaPhrasing(DeleteQaPhrasingRequest) returns (DeleteQaPhrasingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Returns the Google consent URL the owner visits to connect his
   // calendar, carrying a signed, short-lived state so the callback
   // cannot be driven by anyone else.
   rpc GetCalendarConnectURL(GetCalendarConnectURLRequest) returns (GetCalendarConnectURLResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Completes the handshake: exchanges the authorisation code for a
   // refresh token and stores it encrypted at rest. The code is
   // single-use and the state is verified before anything is stored.
   rpc ConnectCalendar(ConnectCalendarRequest) returns (ConnectCalendarResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads the calendar connection: which account, when it was
   // connected, and whether it is currently working.
   rpc GetCalendarStatus(GetCalendarStatusRequest) returns (GetCalendarStatusResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Forgets the stored credential. Booking stops immediately; existing
   // meetings are left alone, on the calendar and in this application.
   rpc DisconnectCalendar(DisconnectCalendarRequest) returns (DisconnectCalendarResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Lists booked meetings, soonest first, so the owner can see what has
   // been taken without opening Google. Cancelling here frees the time
   // and removes the calendar event.
   rpc ListMeetings(ListMeetingsRequest) returns (ListMeetingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Cancels a meeting on the member's behalf and frees the slot.
   rpc CancelMeetingAsAdmin(CancelMeetingAsAdminRequest) returns (CancelMeetingAsAdminResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Reads how many postings one member may submit per rolling day.
   rpc GetJdSubmissionLimit(GetJdSubmissionLimitRequest) returns (GetJdSubmissionLimitResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
   // Sets how many postings one member may submit per rolling day
   // (stored in app_settings; the api caches it for 15 s). Takes effect
@@ -581,7 +503,6 @@ service AdminService {
   // their oldest submission to age out.
   rpc SetJdSubmissionLimit(SetJdSubmissionLimitRequest) returns (SetJdSubmissionLimitResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
-    option (career.v1.mfa_fresh) = true;
   }
 }
 

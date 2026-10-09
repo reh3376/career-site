@@ -137,22 +137,22 @@ Registration, verification, sign-in, and credential management.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`Register`](#authservice-register) | `/api/career.v1.AuthService/Register` | Public | 5 | `RegisterRequest` → `RegisterResponse` | Creates an unverified account and sends a verification email. |
-| [`Verify`](#authservice-verify) | `/api/career.v1.AuthService/Verify` | Public | 10 | `VerifyRequest` → `VerifyResponse` | Confirms control of the email address with the emailed link token or the six-digit code, activates the account, and starts a session (cookie set in the response). |
-| [`ResendVerification`](#authservice-resendverification) | `/api/career.v1.AuthService/ResendVerification` | Public | 3 | `ResendVerificationRequest` → `ResendVerificationResponse` | Re-sends the verification email for an unverified account. |
-| [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | 10 | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
+| [`Register`](#authservice-register) | `/api/career.v1.AuthService/Register` | Public | default | `RegisterRequest` → `RegisterResponse` | Creates an unverified account and sends a verification email. |
+| [`Verify`](#authservice-verify) | `/api/career.v1.AuthService/Verify` | Public | default | `VerifyRequest` → `VerifyResponse` | Confirms control of the email address with the emailed link token or the six-digit code, activates the account, and starts a session (cookie set in the response). |
+| [`ResendVerification`](#authservice-resendverification) | `/api/career.v1.AuthService/ResendVerification` | Public | default | `ResendVerificationRequest` → `ResendVerificationResponse` | Re-sends the verification email for an unverified account. |
+| [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | default | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
 | [`Logout`](#authservice-logout) | `/api/career.v1.AuthService/Logout` | Member (unverified OK) | default | `LogoutRequest` → `LogoutResponse` | Ends the current session and clears the cookie. |
 | [`LogoutAll`](#authservice-logoutall) | `/api/career.v1.AuthService/LogoutAll` | Member | default | `LogoutAllRequest` → `LogoutAllResponse` | Ends every session of the member ("sign out of all devices"). |
-| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | 3 | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
-| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | 5 | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
-| [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | 5 | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
-| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | 3 | `ChangeEmailRequest` → `ChangeEmailResponse` | Starts an email change: a verification email goes to the new address and the change applies when it is confirmed via Verify. |
+| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
+| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
+| [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | default | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
+| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | default | `ChangeEmailRequest` → `ChangeEmailResponse` | Starts an email change: a verification email goes to the new address and the change applies when it is confirmed via Verify. |
 | [`MfaEnroll`](#authservice-mfaenroll) | `/api/career.v1.AuthService/MfaEnroll` | Member | default | `MfaEnrollRequest` → `MfaEnrollResponse` | Enrols TOTP MFA for an admin account that has none. |
-| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | 5 | `MfaVerifyRequest` → `MfaVerifyResponse` | Verifies a TOTP code (or a recovery code) for the current admin session. |
+| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | default | `MfaVerifyRequest` → `MfaVerifyResponse` | Verifies a TOTP code (or a recovery code) for the current admin session. |
 
 ### AuthService.Register
 
-`POST /api/career.v1.AuthService/Register` · **Auth:** Public · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/Register` · **Auth:** Public · **Rate limit:** default/min
 
 Creates an unverified account and sends a verification email. The
 response is identical whether or not the email address already exists,
@@ -197,7 +197,7 @@ to prevent account enumeration; an existing verified account receives a
 
 ### AuthService.Verify
 
-`POST /api/career.v1.AuthService/Verify` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.AuthService/Verify` · **Auth:** Public · **Rate limit:** default/min
 
 Confirms control of the email address with the emailed link token or the
 six-digit code, activates the account, and starts a session (cookie set
@@ -231,7 +231,7 @@ in the response).
 
 ### AuthService.ResendVerification
 
-`POST /api/career.v1.AuthService/ResendVerification` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ResendVerification` · **Auth:** Public · **Rate limit:** default/min
 
 Re-sends the verification email for an unverified account. Identical
 response whether or not the address is known.
@@ -260,7 +260,7 @@ response whether or not the address is known.
 
 ### AuthService.Login
 
-`POST /api/career.v1.AuthService/Login` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.AuthService/Login` · **Auth:** Public · **Rate limit:** default/min
 
 Signs in with email and password and sets the session cookie. For an
 admin account the session is created but flagged `mfa_required`; admin
@@ -342,7 +342,7 @@ _No fields; send `{}`._
 
 ### AuthService.ForgotPassword
 
-`POST /api/career.v1.AuthService/ForgotPassword` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ForgotPassword` · **Auth:** Public · **Rate limit:** default/min
 
 Emails a single-use password-reset link (valid one hour). Identical
 response whether or not the address is known.
@@ -371,7 +371,7 @@ response whether or not the address is known.
 
 ### AuthService.ResetPassword
 
-`POST /api/career.v1.AuthService/ResetPassword` · **Auth:** Public · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/ResetPassword` · **Auth:** Public · **Rate limit:** default/min
 
 Sets a new password using a reset token and signs the member in on
 success. All other sessions are revoked.
@@ -402,7 +402,7 @@ success. All other sessions are revoked.
 
 ### AuthService.ChangePassword
 
-`POST /api/career.v1.AuthService/ChangePassword` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/ChangePassword` · **Auth:** Member · **Rate limit:** default/min
 
 Changes the password of the signed-in member; requires the current
 password. Other sessions are revoked.
@@ -433,7 +433,7 @@ password. Other sessions are revoked.
 
 ### AuthService.ChangeEmail
 
-`POST /api/career.v1.AuthService/ChangeEmail` · **Auth:** Member · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ChangeEmail` · **Auth:** Member · **Rate limit:** default/min
 
 Starts an email change: a verification email goes to the new address and
 the change applies when it is confirmed via Verify. Requires the current
@@ -494,7 +494,7 @@ _No fields; send `{}`._
 
 ### AuthService.MfaVerify
 
-`POST /api/career.v1.AuthService/MfaVerify` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/MfaVerify` · **Auth:** Member · **Rate limit:** default/min
 
 Verifies a TOTP code (or a recovery code) for the current admin session.
 
@@ -536,9 +536,9 @@ no member ID parameter.
 | [`ListSaved`](#memberservice-listsaved) | `/api/career.v1.MemberService/ListSaved` | Member | default | `ListSavedRequest` → `ListSavedResponse` | Lists saved items, newest first. |
 | [`SaveItem`](#memberservice-saveitem) | `/api/career.v1.MemberService/SaveItem` | Member | default | `SaveItemRequest` → `SaveItemResponse` | Saves a content item with an optional private note. |
 | [`UnsaveItem`](#memberservice-unsaveitem) | `/api/career.v1.MemberService/UnsaveItem` | Member | default | `UnsaveItemRequest` → `UnsaveItemResponse` | Removes a saved item. |
-| [`RequestExport`](#memberservice-requestexport) | `/api/career.v1.MemberService/RequestExport` | Member | 2 | `RequestExportRequest` → `RequestExportResponse` | Requests an export of all data held about the member (profile, interests, activity, saved items, conversations) as JSON. |
+| [`RequestExport`](#memberservice-requestexport) | `/api/career.v1.MemberService/RequestExport` | Member | default | `RequestExportRequest` → `RequestExportResponse` | Requests an export of all data held about the member (profile, interests, activity, saved items, conversations) as JSON. |
 | [`GetExport`](#memberservice-getexport) | `/api/career.v1.MemberService/GetExport` | Member | default | `GetExportRequest` → `GetExportResponse` | Returns the status of an export and, when ready, a short-lived download URL. |
-| [`DeleteAccount`](#memberservice-deleteaccount) | `/api/career.v1.MemberService/DeleteAccount` | Member (unverified OK) | 2 | `DeleteAccountRequest` → `DeleteAccountResponse` | Schedules deletion of the account and all personal data. |
+| [`DeleteAccount`](#memberservice-deleteaccount) | `/api/career.v1.MemberService/DeleteAccount` | Member (unverified OK) | default | `DeleteAccountRequest` → `DeleteAccountResponse` | Schedules deletion of the account and all personal data. |
 
 ### MemberService.GetMe
 
@@ -775,7 +775,7 @@ _No fields; send `{}`._
 
 ### MemberService.RequestExport
 
-`POST /api/career.v1.MemberService/RequestExport` · **Auth:** Member · **Rate limit:** 2/min
+`POST /api/career.v1.MemberService/RequestExport` · **Auth:** Member · **Rate limit:** default/min
 
 Requests an export of all data held about the member (profile,
 interests, activity, saved items, conversations) as JSON. The export is
@@ -834,7 +834,7 @@ URL.
 
 ### MemberService.DeleteAccount
 
-`POST /api/career.v1.MemberService/DeleteAccount` · **Auth:** Member (unverified OK) · **Rate limit:** 2/min
+`POST /api/career.v1.MemberService/DeleteAccount` · **Auth:** Member (unverified OK) · **Rate limit:** default/min
 
 Schedules deletion of the account and all personal data. The session
 ends immediately; data is purged within 30 days (conversations and
@@ -875,7 +875,7 @@ Read access to the content catalog.
 | [`WhatsNew`](#contentservice-whatsnew) | `/api/career.v1.ContentService/WhatsNew` | Member | default | `WhatsNewRequest` → `WhatsNewResponse` | Lists items published or materially updated since a point in time (default: the member's previous visit, or 90 days for a first visit). |
 | [`ListTracks`](#contentservice-listtracks) | `/api/career.v1.ContentService/ListTracks` | Member | default | `ListTracksRequest` → `ListTracksResponse` | Lists the track taxonomy with framing copy and reading paths. |
 | [`GetSkills`](#contentservice-getskills) | `/api/career.v1.ContentService/GetSkills` | Member | default | `GetSkillsRequest` → `GetSkillsResponse` | Returns the skills matrix grouped by category, each skill with its evidence links. |
-| [`Search`](#contentservice-search) | `/api/career.v1.ContentService/Search` | Member | 60 | `SearchRequest` → `SearchResponse` | Full-text search across titles, summaries, bodies, and tags, with a relevance boost for the member's tracks. |
+| [`Search`](#contentservice-search) | `/api/career.v1.ContentService/Search` | Member | default | `SearchRequest` → `SearchResponse` | Full-text search across titles, summaries, bodies, and tags, with a relevance boost for the member's tracks. |
 
 ### ContentService.ListContent
 
@@ -1035,7 +1035,7 @@ _No fields; send `{}`._
 
 ### ContentService.Search
 
-`POST /api/career.v1.ContentService/Search` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.ContentService/Search` · **Auth:** Member · **Rate limit:** default/min
 
 Full-text search across titles, summaries, bodies, and tags, with a
 relevance boost for the member's tracks.
@@ -1157,7 +1157,7 @@ Reaching the owner outside the assistant.
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
 | [`GetContactOptions`](#contactservice-getcontactoptions) | `/api/career.v1.ContactService/GetContactOptions` | Member | default | `GetContactOptionsRequest` → `GetContactOptionsResponse` | Returns the owner's availability statement and the contact channels he has chosen to publish. |
-| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
+| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | default | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
 
 ### ContactService.GetContactOptions
 
@@ -1188,7 +1188,7 @@ _No fields; send `{}`._
 
 ### ContactService.SubmitContact
 
-`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** default/min
 
 Sends a message to the owner. Accepts both signed-in members (identity
 read from the session cookie) and anonymous visitors (name + email
@@ -1244,14 +1244,14 @@ submit or poll, and the submitting member is recorded on the row.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
-| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
-| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
-| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
+| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | default | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | default | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
+| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | default | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
+| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | default | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
 
 ### JdService.SubmitJd
 
-`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** 3/min
+`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** default/min
 
 Accepts a job description and stores it for scoring. Returns the
 submission id the caller uses to poll GetJdResult. Never blocks
@@ -1295,7 +1295,7 @@ on the actual scoring / generation — those run out of band.
 
 ### JdService.GetJdResult
 
-`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the current state of a submission (received / scoring /
 below-threshold / generating / ready / failed) with progress, the
@@ -1343,7 +1343,7 @@ the résumé and its PDF link when status is `ready`.
 
 ### JdService.ListMySubmissions
 
-`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** default/min
 
 Lists the signed-in member's own submissions, newest first, so a
 review can be reopened after the tab that submitted it is gone.
@@ -1368,7 +1368,7 @@ _No fields; send `{}`._
 
 ### JdService.GetJdReviewConfig
 
-`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the fit bands in force (the gate is the "strong" edge), so
 the JD pages quote the numbers the pipeline actually uses.
@@ -1400,15 +1400,15 @@ the row.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`GetMeetingOptions`](#meetingservice-getmeetingoptions) | `/api/career.v1.MeetingService/GetMeetingOptions` | Member | 60 | `GetMeetingOptionsRequest` → `GetMeetingOptionsResponse` | Returns what the member is allowed to choose before they choose it: the meeting lengths on offer, the zone every time is quoted in, and how far ahead the calendar runs. |
-| [`GetAvailability`](#meetingservice-getavailability) | `/api/career.v1.MeetingService/GetAvailability` | Member | 30 | `GetAvailabilityRequest` → `GetAvailabilityResponse` | Returns the start times a member may book for one meeting length. |
-| [`BookMeeting`](#meetingservice-bookmeeting) | `/api/career.v1.MeetingService/BookMeeting` | Member | 6 | `BookMeetingRequest` → `BookMeetingResponse` | Books one slot. |
-| [`ListMyMeetings`](#meetingservice-listmymeetings) | `/api/career.v1.MeetingService/ListMyMeetings` | Member | 30 | `ListMyMeetingsRequest` → `ListMyMeetingsResponse` | Lists the calling member's own meetings, upcoming first, so a booking can be found again after the tab that made it is gone. |
-| [`CancelMeeting`](#meetingservice-cancelmeeting) | `/api/career.v1.MeetingService/CancelMeeting` | Member | 10 | `CancelMeetingRequest` → `CancelMeetingResponse` | Cancels the caller's own meeting and frees the time. |
+| [`GetMeetingOptions`](#meetingservice-getmeetingoptions) | `/api/career.v1.MeetingService/GetMeetingOptions` | Member | default | `GetMeetingOptionsRequest` → `GetMeetingOptionsResponse` | Returns what the member is allowed to choose before they choose it: the meeting lengths on offer, the zone every time is quoted in, and how far ahead the calendar runs. |
+| [`GetAvailability`](#meetingservice-getavailability) | `/api/career.v1.MeetingService/GetAvailability` | Member | default | `GetAvailabilityRequest` → `GetAvailabilityResponse` | Returns the start times a member may book for one meeting length. |
+| [`BookMeeting`](#meetingservice-bookmeeting) | `/api/career.v1.MeetingService/BookMeeting` | Member | default | `BookMeetingRequest` → `BookMeetingResponse` | Books one slot. |
+| [`ListMyMeetings`](#meetingservice-listmymeetings) | `/api/career.v1.MeetingService/ListMyMeetings` | Member | default | `ListMyMeetingsRequest` → `ListMyMeetingsResponse` | Lists the calling member's own meetings, upcoming first, so a booking can be found again after the tab that made it is gone. |
+| [`CancelMeeting`](#meetingservice-cancelmeeting) | `/api/career.v1.MeetingService/CancelMeeting` | Member | default | `CancelMeetingRequest` → `CancelMeetingResponse` | Cancels the caller's own meeting and frees the time. |
 
 ### MeetingService.GetMeetingOptions
 
-`POST /api/career.v1.MeetingService/GetMeetingOptions` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.MeetingService/GetMeetingOptions` · **Auth:** Member · **Rate limit:** default/min
 
 Returns what the member is allowed to choose before they choose it:
 the meeting lengths on offer, the zone every time is quoted in, and
@@ -1443,7 +1443,7 @@ _No fields; send `{}`._
 
 ### MeetingService.GetAvailability
 
-`POST /api/career.v1.MeetingService/GetAvailability` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.MeetingService/GetAvailability` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the start times a member may book for one meeting length.
 Computed per length rather than once, because a 45-minute meeting
@@ -1481,7 +1481,7 @@ that cannot fit is worse than offering nothing.
 
 ### MeetingService.BookMeeting
 
-`POST /api/career.v1.MeetingService/BookMeeting` · **Auth:** Member · **Rate limit:** 6/min
+`POST /api/career.v1.MeetingService/BookMeeting` · **Auth:** Member · **Rate limit:** default/min
 
 Books one slot. Re-reads the calendar for the claimed interval
 first, because the list the member saw is stale by the time they
@@ -1525,7 +1525,7 @@ cannot be created is released.
 
 ### MeetingService.ListMyMeetings
 
-`POST /api/career.v1.MeetingService/ListMyMeetings` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.MeetingService/ListMyMeetings` · **Auth:** Member · **Rate limit:** default/min
 
 Lists the calling member's own meetings, upcoming first, so a
 booking can be found again after the tab that made it is gone.
@@ -1554,7 +1554,7 @@ booking can be found again after the tab that made it is gone.
 
 ### MeetingService.CancelMeeting
 
-`POST /api/career.v1.MeetingService/CancelMeeting` · **Auth:** Member · **Rate limit:** 10/min
+`POST /api/career.v1.MeetingService/CancelMeeting` · **Auth:** Member · **Rate limit:** default/min
 
 Cancels the caller's own meeting and frees the time. Cancelling
 something already cancelled succeeds, so a double click or a stale
@@ -1588,13 +1588,13 @@ Conversations with the assistant.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`CreateConversation`](#chatservice-createconversation) | `/api/career.v1.ChatService/CreateConversation` | Member | 20 | `CreateConversationRequest` → `CreateConversationResponse` | Starts a conversation. |
+| [`CreateConversation`](#chatservice-createconversation) | `/api/career.v1.ChatService/CreateConversation` | Member | default | `CreateConversationRequest` → `CreateConversationResponse` | Starts a conversation. |
 | [`ListConversations`](#chatservice-listconversations) | `/api/career.v1.ChatService/ListConversations` | Member | default | `ListConversationsRequest` → `ListConversationsResponse` | Lists the member's conversations, most recent first. |
 | [`GetConversation`](#chatservice-getconversation) | `/api/career.v1.ChatService/GetConversation` | Member | default | `GetConversationRequest` → `GetConversationResponse` | Returns a conversation with all of its messages. |
-| [`SendMessage`](#chatservice-sendmessage) | `/api/career.v1.ChatService/SendMessage` | Member | 20 | `SendMessageRequest` → `SendMessageResponse` (server-streaming) | Sends a member message and streams the assistant's reply: a `start` event, then `delta` events with text as it is generated, then `citations`, `usage`, and a final `done` carrying the complete message. |
+| [`SendMessage`](#chatservice-sendmessage) | `/api/career.v1.ChatService/SendMessage` | Member | default | `SendMessageRequest` → `SendMessageResponse` (server-streaming) | Sends a member message and streams the assistant's reply: a `start` event, then `delta` events with text as it is generated, then `citations`, `usage`, and a final `done` carrying the complete message. |
 | [`DeleteConversation`](#chatservice-deleteconversation) | `/api/career.v1.ChatService/DeleteConversation` | Member | default | `DeleteConversationRequest` → `DeleteConversationResponse` | Deletes a conversation. |
 | [`RateMessage`](#chatservice-ratemessage) | `/api/career.v1.ChatService/RateMessage` | Member | default | `RateMessageRequest` → `RateMessageResponse` | Rates an assistant message up or down with an optional comment. |
-| [`Escalate`](#chatservice-escalate) | `/api/career.v1.ChatService/Escalate` | Member | 5 | `EscalateRequest` → `EscalateResponse` | Sends a question, with the conversation context, to the owner. |
+| [`Escalate`](#chatservice-escalate) | `/api/career.v1.ChatService/Escalate` | Member | default | `EscalateRequest` → `EscalateResponse` | Sends a question, with the conversation context, to the owner. |
 | [`GetSuggestions`](#chatservice-getsuggestions) | `/api/career.v1.ChatService/GetSuggestions` | Member | default | `GetSuggestionsRequest` → `GetSuggestionsResponse` | Returns suggested questions for the current page and the member's tracks (at least three). |
 | [`GetQuota`](#chatservice-getquota) | `/api/career.v1.ChatService/GetQuota` | Member | default | `GetQuotaRequest` → `GetQuotaResponse` | Returns the member's remaining allowance and the global budget mode so the panel can show limits before they are hit. |
 | [`ListAdminQueries`](#chatservice-listadminqueries) | `/api/career.v1.ChatService/ListAdminQueries` | Admin | default | `ListAdminQueriesRequest` → `ListAdminQueriesResponse` | Lists the database queries an admin may run from the assistant, for the dropdown. |
@@ -1602,7 +1602,7 @@ Conversations with the assistant.
 
 ### ChatService.CreateConversation
 
-`POST /api/career.v1.ChatService/CreateConversation` · **Auth:** Member · **Rate limit:** 20/min
+`POST /api/career.v1.ChatService/CreateConversation` · **Auth:** Member · **Rate limit:** default/min
 
 Starts a conversation. The first assistant message is the AI disclosure
 (FSD §15.C) and is included in the response so the panel can render it
@@ -1694,7 +1694,7 @@ Returns a conversation with all of its messages.
 
 ### ChatService.SendMessage
 
-`POST /api/career.v1.ChatService/SendMessage` · **Auth:** Member · **Rate limit:** 20/min · **Server-streaming**
+`POST /api/career.v1.ChatService/SendMessage` · **Auth:** Member · **Rate limit:** default/min · **Server-streaming**
 
 Sends a member message and streams the assistant's reply: a `start`
 event, then `delta` events with text as it is generated, then
@@ -1791,7 +1791,7 @@ _No fields; send `{}`._
 
 ### ChatService.Escalate
 
-`POST /api/career.v1.ChatService/Escalate` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.ChatService/Escalate` · **Auth:** Member · **Rate limit:** default/min
 
 Sends a question, with the conversation context, to the owner. The owner
 replies inside the conversation (as a message with role OWNER) and the
@@ -1950,11 +1950,11 @@ Batched, fire-and-forget activity reporting.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | 120 | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
+| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | default | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
 
 ### ActivityService.RecordEvents
 
-`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** 120/min
+`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** default/min
 
 Records a batch of events. Duplicate `client_event_id`s are ignored, so
 clients may retry a failed batch safely. Failures never affect page
@@ -2024,11 +2024,11 @@ itself and never trusts those from the client.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | 120 | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
+| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | default | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
 
 ### EventService.Record
 
-`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** 120/min
+`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** default/min
 
 Records up to 50 events. Unknown names and oversized props are
 dropped, never errors; the response says how many were stored.
@@ -2071,89 +2071,89 @@ Owner console.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`ListMembers`](#adminservice-listmembers) | `/api/career.v1.AdminService/ListMembers` | Admin (fresh MFA) | default | `ListMembersRequest` → `ListMembersResponse` | Lists members with search, filters, and pagination. |
-| [`ResendNotification`](#adminservice-resendnotification) | `/api/career.v1.AdminService/ResendNotification` | Admin (fresh MFA) | default | `ResendNotificationRequest` → `ResendNotificationResponse` | Re-sends the approval or decline email to a member and returns the audited attempt so the console can show the provider's verdict inline. |
-| [`GetMember`](#adminservice-getmember) | `/api/career.v1.AdminService/GetMember` | Admin (fresh MFA) | default | `GetMemberRequest` → `GetMemberResponse` | Returns one member with recent activity, conversations, admin notes, and email delivery history. |
-| [`AddMemberNote`](#adminservice-addmembernote) | `/api/career.v1.AdminService/AddMemberNote` | Admin (fresh MFA) | default | `AddMemberNoteRequest` → `AddMemberNoteResponse` | Adds a private admin note to a member. |
-| [`SetMemberStatus`](#adminservice-setmemberstatus) | `/api/career.v1.AdminService/SetMemberStatus` | Admin (fresh MFA) | default | `SetMemberStatusRequest` → `SetMemberStatusResponse` | Approves or rejects a registration waiting in PENDING_APPROVAL (approval mode only), or disables/re-enables an account. |
-| [`GetReviewQueue`](#adminservice-getreviewqueue) | `/api/career.v1.AdminService/GetReviewQueue` | Admin (fresh MFA) | default | `GetReviewQueueRequest` → `GetReviewQueueResponse` | Lists items needing the owner's attention: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals. |
-| [`ResolveReviewItem`](#adminservice-resolvereviewitem) | `/api/career.v1.AdminService/ResolveReviewItem` | Admin (fresh MFA) | default | `ResolveReviewItemRequest` → `ResolveReviewItemResponse` | Resolves a review item, optionally recording that it was converted into a Q&A-bank entry (the entry itself is authored in `content/qa/`). |
-| [`ReplyEscalation`](#adminservice-replyescalation) | `/api/career.v1.AdminService/ReplyEscalation` | Admin (fresh MFA) | default | `ReplyEscalationRequest` → `ReplyEscalationResponse` | Replies to an escalation. |
-| [`GetMemberConversation`](#adminservice-getmemberconversation) | `/api/career.v1.AdminService/GetMemberConversation` | Admin (fresh MFA) | default | `GetMemberConversationRequest` → `GetMemberConversationResponse` | Returns any member's conversation with messages, sources, and persona versions (read-only). |
-| [`GetCorpusStatus`](#adminservice-getcorpusstatus) | `/api/career.v1.AdminService/GetCorpusStatus` | Admin (fresh MFA) | default | `GetCorpusStatusRequest` → `GetCorpusStatusResponse` | Returns corpus statistics: documents, chunks, Q&A entries, last ingest, embedding model, and persona version. |
-| [`TestRetrieval`](#adminservice-testretrieval) | `/api/career.v1.AdminService/TestRetrieval` | Admin (fresh MFA) | default | `TestRetrievalRequest` → `TestRetrievalResponse` | Runs retrieval for a question and returns the chunks the assistant would see, with scores ("what would the assistant retrieve?"). |
-| [`RunJob`](#adminservice-runjob) | `/api/career.v1.AdminService/RunJob` | Admin (fresh MFA) | default | `RunJobRequest` → `RunJobResponse` | Starts a background job inside the api (corpus reindex of the public or private mount, embed sweep) and returns its id at once; the console polls GetJob for progress. |
-| [`GetJob`](#adminservice-getjob) | `/api/career.v1.AdminService/GetJob` | Admin (fresh MFA) | default | `GetJobRequest` → `GetJobResponse` | Returns the status and progress of a job started by RunJob. |
-| [`GetPersona`](#adminservice-getpersona) | `/api/career.v1.AdminService/GetPersona` | Admin (fresh MFA) | default | `GetPersonaRequest` → `GetPersonaResponse` | Returns the active persona version and its history. |
-| [`GetAnalytics`](#adminservice-getanalytics) | `/api/career.v1.AdminService/GetAnalytics` | Admin (fresh MFA) | default | `GetAnalyticsRequest` → `GetAnalyticsResponse` | Returns aggregate analytics for a date range. |
-| [`GetAudit`](#adminservice-getaudit) | `/api/career.v1.AdminService/GetAudit` | Admin (fresh MFA) | default | `GetAuditRequest` → `GetAuditResponse` | Lists audit-log entries. |
-| [`ListContactMessages`](#adminservice-listcontactmessages) | `/api/career.v1.AdminService/ListContactMessages` | Admin (fresh MFA) | default | `ListContactMessagesRequest` → `ListContactMessagesResponse` | Lists messages sent via the public contact form (FR-ADM-14). |
-| [`ResolveContactMessage`](#adminservice-resolvecontactmessage) | `/api/career.v1.AdminService/ResolveContactMessage` | Admin (fresh MFA) | default | `ResolveContactMessageRequest` → `ResolveContactMessageResponse` | Marks a contact message as resolved (or re-opens it). |
-| [`ApproveRegistration`](#adminservice-approveregistration) | `/api/career.v1.AdminService/ApproveRegistration` | Admin (fresh MFA) | default | `ApproveRegistrationRequest` → `ApproveRegistrationResponse` | Approves a pending registration from the admin console. |
-| [`DeclineRegistration`](#adminservice-declineregistration) | `/api/career.v1.AdminService/DeclineRegistration` | Admin (fresh MFA) | default | `DeclineRegistrationRequest` → `DeclineRegistrationResponse` | Declines a pending registration from the admin console. |
-| [`ExtendAccess`](#adminservice-extendaccess) | `/api/career.v1.AdminService/ExtendAccess` | Admin (fresh MFA) | default | `ExtendAccessRequest` → `ExtendAccessResponse` | Extends an active member's access period by a fixed duration (`extend_days`), or sets a specific new `expires_at`. |
-| [`ListDbTables`](#adminservice-listdbtables) | `/api/career.v1.AdminService/ListDbTables` | Admin (fresh MFA) | default | `ListDbTablesRequest` → `ListDbTablesResponse` | Returns the public tables + columns of the API database, from information_schema. |
-| [`RunDbQuery`](#adminservice-rundbquery) | `/api/career.v1.AdminService/RunDbQuery` | Admin (fresh MFA) | default | `RunDbQueryRequest` → `RunDbQueryResponse` | Runs a SQL query against the API database from the /admin/db console. |
-| [`ListAccessGrants`](#adminservice-listaccessgrants) | `/api/career.v1.AdminService/ListAccessGrants` | Admin (fresh MFA) | default | `ListAccessGrantsRequest` → `ListAccessGrantsResponse` | Lists the access whitelist entries. |
-| [`UpsertAccessGrant`](#adminservice-upsertaccessgrant) | `/api/career.v1.AdminService/UpsertAccessGrant` | Admin (fresh MFA) | default | `UpsertAccessGrantRequest` → `UpsertAccessGrantResponse` | Creates a new access whitelist entry or updates an existing one by email (email is the natural key). |
-| [`DeleteAccessGrant`](#adminservice-deleteaccessgrant) | `/api/career.v1.AdminService/DeleteAccessGrant` | Admin (fresh MFA) | default | `DeleteAccessGrantRequest` → `DeleteAccessGrantResponse` | Removes a whitelist entry. |
-| [`ListSavedQueries`](#adminservice-listsavedqueries) | `/api/career.v1.AdminService/ListSavedQueries` | Admin (fresh MFA) | default | `ListSavedQueriesRequest` → `ListSavedQueriesResponse` | Returns the calling admin's saved SQL statements from /admin/db. |
-| [`UpsertSavedQuery`](#adminservice-upsertsavedquery) | `/api/career.v1.AdminService/UpsertSavedQuery` | Admin (fresh MFA) | default | `UpsertSavedQueryRequest` → `UpsertSavedQueryResponse` | Creates or updates a saved query for the caller. |
-| [`DeleteSavedQuery`](#adminservice-deletesavedquery) | `/api/career.v1.AdminService/DeleteSavedQuery` | Admin (fresh MFA) | default | `DeleteSavedQueryRequest` → `DeleteSavedQueryResponse` | Removes one of the caller's saved queries by id. |
-| [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin (fresh MFA) | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
-| [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin (fresh MFA) | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
-| [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin (fresh MFA) | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
-| [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin (fresh MFA) | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a corpus mount for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed content instead of paste-by-paste. |
-| [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin (fresh MFA) | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
-| [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin (fresh MFA) | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
-| [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin (fresh MFA) | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
-| [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin (fresh MFA) | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score for diagnostics, per-requirement assessment, score in code, résumé and locked PDF when the fit is strong or better) for one submission in the background, e.g. |
-| [`SetJdOutcome`](#adminservice-setjdoutcome) | `/api/career.v1.AdminService/SetJdOutcome` | Admin (fresh MFA) | default | `SetJdOutcomeRequest` → `SetJdOutcomeResponse` | Records what happened in the world after a review: applied, interview, offer, no response. |
-| [`RecordJdFeedback`](#adminservice-recordjdfeedback) | `/api/career.v1.AdminService/RecordJdFeedback` | Admin (fresh MFA) | default | `RecordJdFeedbackRequest` → `RecordJdFeedbackResponse` | Records the owner's judgment of one run's output: whether the score was accurate, too generous or too harsh, and whether the résumé is sendable. |
-| [`ListGoldenPostings`](#adminservice-listgoldenpostings) | `/api/career.v1.AdminService/ListGoldenPostings` | Admin (fresh MFA) | default | `ListGoldenPostingsRequest` → `ListGoldenPostingsResponse` | Lists the golden set: fixed postings with a stated expectation, re-scored to measure whether a prompt or model change helped. |
-| [`UpsertGoldenPosting`](#adminservice-upsertgoldenposting) | `/api/career.v1.AdminService/UpsertGoldenPosting` | Admin (fresh MFA) | default | `UpsertGoldenPostingRequest` → `UpsertGoldenPostingResponse` | Adds or replaces a golden posting, keyed by name. |
-| [`SetGoldenActive`](#adminservice-setgoldenactive) | `/api/career.v1.AdminService/SetGoldenActive` | Admin (fresh MFA) | default | `SetGoldenActiveRequest` → `SetGoldenActiveResponse` | Retires or restores a golden posting. |
-| [`LabelGoldenPosting`](#adminservice-labelgoldenposting) | `/api/career.v1.AdminService/LabelGoldenPosting` | Admin (fresh MFA) | default | `LabelGoldenPostingRequest` → `LabelGoldenPostingResponse` | Records which side of the gate a posting belongs on. |
-| [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin (fresh MFA) | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
-| [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin (fresh MFA) | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
-| [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin (fresh MFA) | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
-| [`GetOpsStatus`](#adminservice-getopsstatus) | `/api/career.v1.AdminService/GetOpsStatus` | Admin (fresh MFA) | default | `GetOpsStatusRequest` → `GetOpsStatusResponse` | Returns what the box is doing right now: jobs the runner knows about, the submission pipeline, recent model activity and host load. |
-| [`GetJobDetail`](#adminservice-getjobdetail) | `/api/career.v1.AdminService/GetJobDetail` | Admin (fresh MFA) | default | `GetJobDetailRequest` → `GetJobDetailResponse` | Returns one job with every progress report it made, for the detail view on /admin/ops. |
-| [`GetGate`](#adminservice-getgate) | `/api/career.v1.AdminService/GetGate` | Admin (fresh MFA) | default | `GetGateRequest` → `GetGateResponse` | Returns the criteria as a gate: one row per criterion with pass, value, target and as_of, read from the views that define them. |
-| [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin (fresh MFA) | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
-| [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin (fresh MFA) | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
-| [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin (fresh MFA) | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
-| [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin (fresh MFA) | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
-| [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin (fresh MFA) | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
-| [`GetDecisionTestSettings`](#adminservice-getdecisiontestsettings) | `/api/career.v1.AdminService/GetDecisionTestSettings` | Admin (fresh MFA) | default | `GetDecisionTestSettingsRequest` → `GetDecisionTestSettingsResponse` | Reads the decision test's timings. |
-| [`SetDecisionTestSettings`](#adminservice-setdecisiontestsettings) | `/api/career.v1.AdminService/SetDecisionTestSettings` | Admin (fresh MFA) | default | `SetDecisionTestSettingsRequest` → `SetDecisionTestSettingsResponse` | Sets the decision test's timings. |
-| [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin (fresh MFA) | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
-| [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin (fresh MFA) | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
-| [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin (fresh MFA) | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
-| [`GetDecisionTestAnalysis`](#adminservice-getdecisiontestanalysis) | `/api/career.v1.AdminService/GetDecisionTestAnalysis` | Admin (fresh MFA) | default | `GetDecisionTestAnalysisRequest` → `GetDecisionTestAnalysisResponse` | Reads the decision test's three analysis views. |
-| [`ExportDecisionTestRun`](#adminservice-exportdecisiontestrun) | `/api/career.v1.AdminService/ExportDecisionTestRun` | Admin (fresh MFA) | default | `ExportDecisionTestRunRequest` → `ExportDecisionTestRunResponse` | Downloads one run's blocks and answers as two CSV files. |
-| [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin (fresh MFA) | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
-| [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin (fresh MFA) | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
-| [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin (fresh MFA) | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
-| [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin (fresh MFA) | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
-| [`CreateQaEntry`](#adminservice-createqaentry) | `/api/career.v1.AdminService/CreateQaEntry` | Admin (fresh MFA) | default | `CreateQaEntryRequest` → `CreateQaEntryResponse` | Writes a new bank entry along with its canonical phrasing. |
-| [`UpdateQaEntry`](#adminservice-updateqaentry) | `/api/career.v1.AdminService/UpdateQaEntry` | Admin (fresh MFA) | default | `UpdateQaEntryRequest` → `UpdateQaEntryResponse` | Replaces an entry's editable fields. |
-| [`SetQaEntryEnabled`](#adminservice-setqaentryenabled) | `/api/career.v1.AdminService/SetQaEntryEnabled` | Admin (fresh MFA) | default | `SetQaEntryEnabledRequest` → `SetQaEntryEnabledResponse` | Approves or withdraws an entry. |
-| [`DeleteQaEntry`](#adminservice-deleteqaentry) | `/api/career.v1.AdminService/DeleteQaEntry` | Admin (fresh MFA) | default | `DeleteQaEntryRequest` → `DeleteQaEntryResponse` | Deletes an entry and its phrasings. |
-| [`AddQaPhrasing`](#adminservice-addqaphrasing) | `/api/career.v1.AdminService/AddQaPhrasing` | Admin (fresh MFA) | default | `AddQaPhrasingRequest` → `AddQaPhrasingResponse` | Adds another way of asking an existing entry's question. |
-| [`DeleteQaPhrasing`](#adminservice-deleteqaphrasing) | `/api/career.v1.AdminService/DeleteQaPhrasing` | Admin (fresh MFA) | default | `DeleteQaPhrasingRequest` → `DeleteQaPhrasingResponse` | Removes one variant phrasing. |
-| [`GetCalendarConnectURL`](#adminservice-getcalendarconnecturl) | `/api/career.v1.AdminService/GetCalendarConnectURL` | Admin (fresh MFA) | default | `GetCalendarConnectURLRequest` → `GetCalendarConnectURLResponse` | Returns the Google consent URL the owner visits to connect his calendar, carrying a signed, short-lived state so the callback cannot be driven by anyone else. |
-| [`ConnectCalendar`](#adminservice-connectcalendar) | `/api/career.v1.AdminService/ConnectCalendar` | Admin (fresh MFA) | default | `ConnectCalendarRequest` → `ConnectCalendarResponse` | Completes the handshake: exchanges the authorisation code for a refresh token and stores it encrypted at rest. |
-| [`GetCalendarStatus`](#adminservice-getcalendarstatus) | `/api/career.v1.AdminService/GetCalendarStatus` | Admin (fresh MFA) | default | `GetCalendarStatusRequest` → `GetCalendarStatusResponse` | Reads the calendar connection: which account, when it was connected, and whether it is currently working. |
-| [`DisconnectCalendar`](#adminservice-disconnectcalendar) | `/api/career.v1.AdminService/DisconnectCalendar` | Admin (fresh MFA) | default | `DisconnectCalendarRequest` → `DisconnectCalendarResponse` | Forgets the stored credential. |
-| [`ListMeetings`](#adminservice-listmeetings) | `/api/career.v1.AdminService/ListMeetings` | Admin (fresh MFA) | default | `ListMeetingsRequest` → `ListMeetingsResponse` | Lists booked meetings, soonest first, so the owner can see what has been taken without opening Google. |
-| [`CancelMeetingAsAdmin`](#adminservice-cancelmeetingasadmin) | `/api/career.v1.AdminService/CancelMeetingAsAdmin` | Admin (fresh MFA) | default | `CancelMeetingAsAdminRequest` → `CancelMeetingAsAdminResponse` | Cancels a meeting on the member's behalf and frees the slot. |
-| [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin (fresh MFA) | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
-| [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin (fresh MFA) | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
+| [`ListMembers`](#adminservice-listmembers) | `/api/career.v1.AdminService/ListMembers` | Admin | default | `ListMembersRequest` → `ListMembersResponse` | Lists members with search, filters, and pagination. |
+| [`ResendNotification`](#adminservice-resendnotification) | `/api/career.v1.AdminService/ResendNotification` | Admin | default | `ResendNotificationRequest` → `ResendNotificationResponse` | Re-sends the approval or decline email to a member and returns the audited attempt so the console can show the provider's verdict inline. |
+| [`GetMember`](#adminservice-getmember) | `/api/career.v1.AdminService/GetMember` | Admin | default | `GetMemberRequest` → `GetMemberResponse` | Returns one member with recent activity, conversations, admin notes, and email delivery history. |
+| [`AddMemberNote`](#adminservice-addmembernote) | `/api/career.v1.AdminService/AddMemberNote` | Admin | default | `AddMemberNoteRequest` → `AddMemberNoteResponse` | Adds a private admin note to a member. |
+| [`SetMemberStatus`](#adminservice-setmemberstatus) | `/api/career.v1.AdminService/SetMemberStatus` | Admin | default | `SetMemberStatusRequest` → `SetMemberStatusResponse` | Approves or rejects a registration waiting in PENDING_APPROVAL (approval mode only), or disables/re-enables an account. |
+| [`GetReviewQueue`](#adminservice-getreviewqueue) | `/api/career.v1.AdminService/GetReviewQueue` | Admin | default | `GetReviewQueueRequest` → `GetReviewQueueResponse` | Lists items needing the owner's attention: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals. |
+| [`ResolveReviewItem`](#adminservice-resolvereviewitem) | `/api/career.v1.AdminService/ResolveReviewItem` | Admin | default | `ResolveReviewItemRequest` → `ResolveReviewItemResponse` | Resolves a review item, optionally recording that it was converted into a Q&A-bank entry (the entry itself is authored in `content/qa/`). |
+| [`ReplyEscalation`](#adminservice-replyescalation) | `/api/career.v1.AdminService/ReplyEscalation` | Admin | default | `ReplyEscalationRequest` → `ReplyEscalationResponse` | Replies to an escalation. |
+| [`GetMemberConversation`](#adminservice-getmemberconversation) | `/api/career.v1.AdminService/GetMemberConversation` | Admin | default | `GetMemberConversationRequest` → `GetMemberConversationResponse` | Returns any member's conversation with messages, sources, and persona versions (read-only). |
+| [`GetCorpusStatus`](#adminservice-getcorpusstatus) | `/api/career.v1.AdminService/GetCorpusStatus` | Admin | default | `GetCorpusStatusRequest` → `GetCorpusStatusResponse` | Returns corpus statistics: documents, chunks, Q&A entries, last ingest, embedding model, and persona version. |
+| [`TestRetrieval`](#adminservice-testretrieval) | `/api/career.v1.AdminService/TestRetrieval` | Admin | default | `TestRetrievalRequest` → `TestRetrievalResponse` | Runs retrieval for a question and returns the chunks the assistant would see, with scores ("what would the assistant retrieve?"). |
+| [`RunJob`](#adminservice-runjob) | `/api/career.v1.AdminService/RunJob` | Admin | default | `RunJobRequest` → `RunJobResponse` | Starts a background job inside the api (corpus reindex of the public or private mount, embed sweep) and returns its id at once; the console polls GetJob for progress. |
+| [`GetJob`](#adminservice-getjob) | `/api/career.v1.AdminService/GetJob` | Admin | default | `GetJobRequest` → `GetJobResponse` | Returns the status and progress of a job started by RunJob. |
+| [`GetPersona`](#adminservice-getpersona) | `/api/career.v1.AdminService/GetPersona` | Admin | default | `GetPersonaRequest` → `GetPersonaResponse` | Returns the active persona version and its history. |
+| [`GetAnalytics`](#adminservice-getanalytics) | `/api/career.v1.AdminService/GetAnalytics` | Admin | default | `GetAnalyticsRequest` → `GetAnalyticsResponse` | Returns aggregate analytics for a date range. |
+| [`GetAudit`](#adminservice-getaudit) | `/api/career.v1.AdminService/GetAudit` | Admin | default | `GetAuditRequest` → `GetAuditResponse` | Lists audit-log entries. |
+| [`ListContactMessages`](#adminservice-listcontactmessages) | `/api/career.v1.AdminService/ListContactMessages` | Admin | default | `ListContactMessagesRequest` → `ListContactMessagesResponse` | Lists messages sent via the public contact form (FR-ADM-14). |
+| [`ResolveContactMessage`](#adminservice-resolvecontactmessage) | `/api/career.v1.AdminService/ResolveContactMessage` | Admin | default | `ResolveContactMessageRequest` → `ResolveContactMessageResponse` | Marks a contact message as resolved (or re-opens it). |
+| [`ApproveRegistration`](#adminservice-approveregistration) | `/api/career.v1.AdminService/ApproveRegistration` | Admin | default | `ApproveRegistrationRequest` → `ApproveRegistrationResponse` | Approves a pending registration from the admin console. |
+| [`DeclineRegistration`](#adminservice-declineregistration) | `/api/career.v1.AdminService/DeclineRegistration` | Admin | default | `DeclineRegistrationRequest` → `DeclineRegistrationResponse` | Declines a pending registration from the admin console. |
+| [`ExtendAccess`](#adminservice-extendaccess) | `/api/career.v1.AdminService/ExtendAccess` | Admin | default | `ExtendAccessRequest` → `ExtendAccessResponse` | Extends an active member's access period by a fixed duration (`extend_days`), or sets a specific new `expires_at`. |
+| [`ListDbTables`](#adminservice-listdbtables) | `/api/career.v1.AdminService/ListDbTables` | Admin | default | `ListDbTablesRequest` → `ListDbTablesResponse` | Returns the public tables + columns of the API database, from information_schema. |
+| [`RunDbQuery`](#adminservice-rundbquery) | `/api/career.v1.AdminService/RunDbQuery` | Admin | default | `RunDbQueryRequest` → `RunDbQueryResponse` | Runs a SQL query against the API database from the /admin/db console. |
+| [`ListAccessGrants`](#adminservice-listaccessgrants) | `/api/career.v1.AdminService/ListAccessGrants` | Admin | default | `ListAccessGrantsRequest` → `ListAccessGrantsResponse` | Lists the access whitelist entries. |
+| [`UpsertAccessGrant`](#adminservice-upsertaccessgrant) | `/api/career.v1.AdminService/UpsertAccessGrant` | Admin | default | `UpsertAccessGrantRequest` → `UpsertAccessGrantResponse` | Creates a new access whitelist entry or updates an existing one by email (email is the natural key). |
+| [`DeleteAccessGrant`](#adminservice-deleteaccessgrant) | `/api/career.v1.AdminService/DeleteAccessGrant` | Admin | default | `DeleteAccessGrantRequest` → `DeleteAccessGrantResponse` | Removes a whitelist entry. |
+| [`ListSavedQueries`](#adminservice-listsavedqueries) | `/api/career.v1.AdminService/ListSavedQueries` | Admin | default | `ListSavedQueriesRequest` → `ListSavedQueriesResponse` | Returns the calling admin's saved SQL statements from /admin/db. |
+| [`UpsertSavedQuery`](#adminservice-upsertsavedquery) | `/api/career.v1.AdminService/UpsertSavedQuery` | Admin | default | `UpsertSavedQueryRequest` → `UpsertSavedQueryResponse` | Creates or updates a saved query for the caller. |
+| [`DeleteSavedQuery`](#adminservice-deletesavedquery) | `/api/career.v1.AdminService/DeleteSavedQuery` | Admin | default | `DeleteSavedQueryRequest` → `DeleteSavedQueryResponse` | Removes one of the caller's saved queries by id. |
+| [`ListMemberActivity`](#adminservice-listmemberactivity) | `/api/career.v1.AdminService/ListMemberActivity` | Admin | default | `ListMemberActivityRequest` → `ListMemberActivityResponse` | Returns one row per member with engagement aggregates (session count, total active time, ask-roger count, last event). |
+| [`IngestCorpusText`](#adminservice-ingestcorpustext) | `/api/career.v1.AdminService/IngestCorpusText` | Admin | default | `IngestCorpusTextRequest` → `IngestCorpusTextResponse` | Ingests one text document into the Ask Roger corpus. |
+| [`ListCorpusDocuments`](#adminservice-listcorpusdocuments) | `/api/career.v1.AdminService/ListCorpusDocuments` | Admin | default | `ListCorpusDocumentsRequest` → `ListCorpusDocumentsResponse` | Returns every document currently in the corpus with a per-row chunk count. |
+| [`ReindexCorpus`](#adminservice-reindexcorpus) | `/api/career.v1.AdminService/ReindexCorpus` | Admin | default | `ReindexCorpusRequest` → `ReindexCorpusResponse` | Walks a corpus mount for markdown files and runs each through IngestCorpusText, so the corpus can be seeded from committed content instead of paste-by-paste. |
+| [`SweepCorpusEmbeddings`](#adminservice-sweepcorpusembeddings) | `/api/career.v1.AdminService/SweepCorpusEmbeddings` | Admin | default | `SweepCorpusEmbeddingsRequest` → `SweepCorpusEmbeddingsResponse` | Re-embeds every chunk whose vector is missing or was produced by a different embedder than the sidecar's current one. |
+| [`ListJdSubmissions`](#adminservice-listjdsubmissions) | `/api/career.v1.AdminService/ListJdSubmissions` | Admin | default | `ListJdSubmissionsRequest` → `ListJdSubmissionsResponse` | Returns every JD submission with score + status. |
+| [`GetJdSubmission`](#adminservice-getjdsubmission) | `/api/career.v1.AdminService/GetJdSubmission` | Admin | default | `GetJdSubmissionRequest` → `GetJdSubmissionResponse` | Returns one JD submission in full: the JD text, both scores, the assessment derivation (requirements, evidence, verdicts) and the generated résumé when present. |
+| [`RescoreJd`](#adminservice-rescorejd) | `/api/career.v1.AdminService/RescoreJd` | Admin | default | `RescoreJdRequest` → `RescoreJdResponse` | Re-runs the scoring pipeline (retrieval pre-score for diagnostics, per-requirement assessment, score in code, résumé and locked PDF when the fit is strong or better) for one submission in the background, e.g. |
+| [`SetJdOutcome`](#adminservice-setjdoutcome) | `/api/career.v1.AdminService/SetJdOutcome` | Admin | default | `SetJdOutcomeRequest` → `SetJdOutcomeResponse` | Records what happened in the world after a review: applied, interview, offer, no response. |
+| [`RecordJdFeedback`](#adminservice-recordjdfeedback) | `/api/career.v1.AdminService/RecordJdFeedback` | Admin | default | `RecordJdFeedbackRequest` → `RecordJdFeedbackResponse` | Records the owner's judgment of one run's output: whether the score was accurate, too generous or too harsh, and whether the résumé is sendable. |
+| [`ListGoldenPostings`](#adminservice-listgoldenpostings) | `/api/career.v1.AdminService/ListGoldenPostings` | Admin | default | `ListGoldenPostingsRequest` → `ListGoldenPostingsResponse` | Lists the golden set: fixed postings with a stated expectation, re-scored to measure whether a prompt or model change helped. |
+| [`UpsertGoldenPosting`](#adminservice-upsertgoldenposting) | `/api/career.v1.AdminService/UpsertGoldenPosting` | Admin | default | `UpsertGoldenPostingRequest` → `UpsertGoldenPostingResponse` | Adds or replaces a golden posting, keyed by name. |
+| [`SetGoldenActive`](#adminservice-setgoldenactive) | `/api/career.v1.AdminService/SetGoldenActive` | Admin | default | `SetGoldenActiveRequest` → `SetGoldenActiveResponse` | Retires or restores a golden posting. |
+| [`LabelGoldenPosting`](#adminservice-labelgoldenposting) | `/api/career.v1.AdminService/LabelGoldenPosting` | Admin | default | `LabelGoldenPostingRequest` → `LabelGoldenPostingResponse` | Records which side of the gate a posting belongs on. |
+| [`ListEvalRuns`](#adminservice-listevalruns) | `/api/career.v1.AdminService/ListEvalRuns` | Admin | default | `ListEvalRunsRequest` → `ListEvalRunsResponse` | Lists evaluations, newest first, without their per-posting results. |
+| [`GetEvalRun`](#adminservice-getevalrun) | `/api/career.v1.AdminService/GetEvalRun` | Admin | default | `GetEvalRunRequest` → `GetEvalRunResponse` | Returns one evaluation with every posting's result. |
+| [`GetMetrics`](#adminservice-getmetrics) | `/api/career.v1.AdminService/GetMetrics` | Admin | default | `GetMetricsRequest` → `GetMetricsResponse` | Returns the state of the reviewer, read from the SQL views that define each metric once. |
+| [`GetOpsStatus`](#adminservice-getopsstatus) | `/api/career.v1.AdminService/GetOpsStatus` | Admin | default | `GetOpsStatusRequest` → `GetOpsStatusResponse` | Returns what the box is doing right now: jobs the runner knows about, the submission pipeline, recent model activity and host load. |
+| [`GetJobDetail`](#adminservice-getjobdetail) | `/api/career.v1.AdminService/GetJobDetail` | Admin | default | `GetJobDetailRequest` → `GetJobDetailResponse` | Returns one job with every progress report it made, for the detail view on /admin/ops. |
+| [`GetGate`](#adminservice-getgate) | `/api/career.v1.AdminService/GetGate` | Admin | default | `GetGateRequest` → `GetGateResponse` | Returns the criteria as a gate: one row per criterion with pass, value, target and as_of, read from the views that define them. |
+| [`ListDecisionLog`](#adminservice-listdecisionlog) | `/api/career.v1.AdminService/ListDecisionLog` | Admin | default | `ListDecisionLogRequest` → `ListDecisionLogResponse` | Lists logged reviewer decisions (per-requirement verdicts, gate outcomes) with the evidence each was made from, for the owner's human-in-the-loop review. |
+| [`ReviewDecision`](#adminservice-reviewdecision) | `/api/career.v1.AdminService/ReviewDecision` | Admin | default | `ReviewDecisionRequest` → `ReviewDecisionResponse` | Records the owner's own verdict and note on one logged decision. |
+| [`ExportDecisionLog`](#adminservice-exportdecisionlog) | `/api/career.v1.AdminService/ExportDecisionLog` | Admin | default | `ExportDecisionLogRequest` → `ExportDecisionLogResponse` | Exports decisions as JSON Lines for adapter training and evaluation; reviewed rows carry the human label. |
+| [`GetJdFitBands`](#adminservice-getjdfitbands) | `/api/career.v1.AdminService/GetJdFitBands` | Admin | default | `GetJdFitBandsRequest` → `GetJdFitBandsResponse` | Reads the JD fit bands (the numbers that classify a review as very strong / strong / possible / weak / very weak; "strong" is the gate). |
+| [`SetJdFitBands`](#adminservice-setjdfitbands) | `/api/career.v1.AdminService/SetJdFitBands` | Admin | default | `SetJdFitBandsRequest` → `SetJdFitBandsResponse` | Sets the JD fit bands (stored in app_settings; the api caches them for 15 s). |
+| [`GetDecisionTestSettings`](#adminservice-getdecisiontestsettings) | `/api/career.v1.AdminService/GetDecisionTestSettings` | Admin | default | `GetDecisionTestSettingsRequest` → `GetDecisionTestSettingsResponse` | Reads the decision test's timings. |
+| [`SetDecisionTestSettings`](#adminservice-setdecisiontestsettings) | `/api/career.v1.AdminService/SetDecisionTestSettings` | Admin | default | `SetDecisionTestSettingsRequest` → `SetDecisionTestSettingsResponse` | Sets the decision test's timings. |
+| [`ListDecisionTestRuns`](#adminservice-listdecisiontestruns) | `/api/career.v1.AdminService/ListDecisionTestRuns` | Admin | default | `ListDecisionTestRunsRequest` → `ListDecisionTestRunsResponse` | Lists decision test runs, newest first. |
+| [`GetDecisionTestRun`](#adminservice-getdecisiontestrun) | `/api/career.v1.AdminService/GetDecisionTestRun` | Admin | default | `GetDecisionTestRunRequest` → `GetDecisionTestRunResponse` | One run in full: every answer, every recall, and the block summary. |
+| [`ExportDecisionTestData`](#adminservice-exportdecisiontestdata) | `/api/career.v1.AdminService/ExportDecisionTestData` | Admin | default | `ExportDecisionTestDataRequest` → `ExportDecisionTestDataResponse` | The curated dataset as CSV, one row per question presented. |
+| [`GetDecisionTestAnalysis`](#adminservice-getdecisiontestanalysis) | `/api/career.v1.AdminService/GetDecisionTestAnalysis` | Admin | default | `GetDecisionTestAnalysisRequest` → `GetDecisionTestAnalysisResponse` | Reads the decision test's three analysis views. |
+| [`ExportDecisionTestRun`](#adminservice-exportdecisiontestrun) | `/api/career.v1.AdminService/ExportDecisionTestRun` | Admin | default | `ExportDecisionTestRunRequest` → `ExportDecisionTestRunResponse` | Downloads one run's blocks and answers as two CSV files. |
+| [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
+| [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
+| [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
+| [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
+| [`CreateQaEntry`](#adminservice-createqaentry) | `/api/career.v1.AdminService/CreateQaEntry` | Admin | default | `CreateQaEntryRequest` → `CreateQaEntryResponse` | Writes a new bank entry along with its canonical phrasing. |
+| [`UpdateQaEntry`](#adminservice-updateqaentry) | `/api/career.v1.AdminService/UpdateQaEntry` | Admin | default | `UpdateQaEntryRequest` → `UpdateQaEntryResponse` | Replaces an entry's editable fields. |
+| [`SetQaEntryEnabled`](#adminservice-setqaentryenabled) | `/api/career.v1.AdminService/SetQaEntryEnabled` | Admin | default | `SetQaEntryEnabledRequest` → `SetQaEntryEnabledResponse` | Approves or withdraws an entry. |
+| [`DeleteQaEntry`](#adminservice-deleteqaentry) | `/api/career.v1.AdminService/DeleteQaEntry` | Admin | default | `DeleteQaEntryRequest` → `DeleteQaEntryResponse` | Deletes an entry and its phrasings. |
+| [`AddQaPhrasing`](#adminservice-addqaphrasing) | `/api/career.v1.AdminService/AddQaPhrasing` | Admin | default | `AddQaPhrasingRequest` → `AddQaPhrasingResponse` | Adds another way of asking an existing entry's question. |
+| [`DeleteQaPhrasing`](#adminservice-deleteqaphrasing) | `/api/career.v1.AdminService/DeleteQaPhrasing` | Admin | default | `DeleteQaPhrasingRequest` → `DeleteQaPhrasingResponse` | Removes one variant phrasing. |
+| [`GetCalendarConnectURL`](#adminservice-getcalendarconnecturl) | `/api/career.v1.AdminService/GetCalendarConnectURL` | Admin | default | `GetCalendarConnectURLRequest` → `GetCalendarConnectURLResponse` | Returns the Google consent URL the owner visits to connect his calendar, carrying a signed, short-lived state so the callback cannot be driven by anyone else. |
+| [`ConnectCalendar`](#adminservice-connectcalendar) | `/api/career.v1.AdminService/ConnectCalendar` | Admin | default | `ConnectCalendarRequest` → `ConnectCalendarResponse` | Completes the handshake: exchanges the authorisation code for a refresh token and stores it encrypted at rest. |
+| [`GetCalendarStatus`](#adminservice-getcalendarstatus) | `/api/career.v1.AdminService/GetCalendarStatus` | Admin | default | `GetCalendarStatusRequest` → `GetCalendarStatusResponse` | Reads the calendar connection: which account, when it was connected, and whether it is currently working. |
+| [`DisconnectCalendar`](#adminservice-disconnectcalendar) | `/api/career.v1.AdminService/DisconnectCalendar` | Admin | default | `DisconnectCalendarRequest` → `DisconnectCalendarResponse` | Forgets the stored credential. |
+| [`ListMeetings`](#adminservice-listmeetings) | `/api/career.v1.AdminService/ListMeetings` | Admin | default | `ListMeetingsRequest` → `ListMeetingsResponse` | Lists booked meetings, soonest first, so the owner can see what has been taken without opening Google. |
+| [`CancelMeetingAsAdmin`](#adminservice-cancelmeetingasadmin) | `/api/career.v1.AdminService/CancelMeetingAsAdmin` | Admin | default | `CancelMeetingAsAdminRequest` → `CancelMeetingAsAdminResponse` | Cancels a meeting on the member's behalf and frees the slot. |
+| [`GetJdSubmissionLimit`](#adminservice-getjdsubmissionlimit) | `/api/career.v1.AdminService/GetJdSubmissionLimit` | Admin | default | `GetJdSubmissionLimitRequest` → `GetJdSubmissionLimitResponse` | Reads how many postings one member may submit per rolling day. |
+| [`SetJdSubmissionLimit`](#adminservice-setjdsubmissionlimit) | `/api/career.v1.AdminService/SetJdSubmissionLimit` | Admin | default | `SetJdSubmissionLimitRequest` → `SetJdSubmissionLimitResponse` | Sets how many postings one member may submit per rolling day (stored in app_settings; the api caches it for 15 s). |
 
 ### AdminService.ListMembers
 
-`POST /api/career.v1.AdminService/ListMembers` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListMembers` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists members with search, filters, and pagination.
 
@@ -2193,7 +2193,7 @@ Lists members with search, filters, and pagination.
 
 ### AdminService.ResendNotification
 
-`POST /api/career.v1.AdminService/ResendNotification` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ResendNotification` · **Auth:** Admin · **Rate limit:** default/min
 
 Re-sends the approval or decline email to a member and returns
 the audited attempt so the console can show the provider's verdict
@@ -2225,7 +2225,7 @@ inline. Backs the "Resend" button on /admin/registrations/[id].
 
 ### AdminService.GetMember
 
-`POST /api/career.v1.AdminService/GetMember` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetMember` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns one member with recent activity, conversations, admin notes,
 and email delivery history.
@@ -2258,7 +2258,7 @@ and email delivery history.
 
 ### AdminService.AddMemberNote
 
-`POST /api/career.v1.AdminService/AddMemberNote` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/AddMemberNote` · **Auth:** Admin · **Rate limit:** default/min
 
 Adds a private admin note to a member.
 
@@ -2288,7 +2288,7 @@ Adds a private admin note to a member.
 
 ### AdminService.SetMemberStatus
 
-`POST /api/career.v1.AdminService/SetMemberStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetMemberStatus` · **Auth:** Admin · **Rate limit:** default/min
 
 Approves or rejects a registration waiting in PENDING_APPROVAL (approval
 mode only), or disables/re-enables an account.
@@ -2321,7 +2321,7 @@ mode only), or disables/re-enables an account.
 
 ### AdminService.GetReviewQueue
 
-`POST /api/career.v1.AdminService/GetReviewQueue` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetReviewQueue` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists items needing the owner's attention: negative feedback,
 "I don't know" answers, escalations, and out-of-scope refusals.
@@ -2359,7 +2359,7 @@ Lists items needing the owner's attention: negative feedback,
 
 ### AdminService.ResolveReviewItem
 
-`POST /api/career.v1.AdminService/ResolveReviewItem` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ResolveReviewItem` · **Auth:** Admin · **Rate limit:** default/min
 
 Resolves a review item, optionally recording that it was converted into
 a Q&A-bank entry (the entry itself is authored in `content/qa/`).
@@ -2390,7 +2390,7 @@ _No fields; send `{}`._
 
 ### AdminService.ReplyEscalation
 
-`POST /api/career.v1.AdminService/ReplyEscalation` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ReplyEscalation` · **Auth:** Admin · **Rate limit:** default/min
 
 Replies to an escalation. The reply is appended to the member's
 conversation as an OWNER message and the member is emailed.
@@ -2423,7 +2423,7 @@ conversation as an OWNER message and the member is emailed.
 
 ### AdminService.GetMemberConversation
 
-`POST /api/career.v1.AdminService/GetMemberConversation` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetMemberConversation` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns any member's conversation with messages, sources, and persona
 versions (read-only).
@@ -2454,7 +2454,7 @@ versions (read-only).
 
 ### AdminService.GetCorpusStatus
 
-`POST /api/career.v1.AdminService/GetCorpusStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetCorpusStatus` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns corpus statistics: documents, chunks, Q&A entries, last ingest,
 embedding model, and persona version.
@@ -2487,7 +2487,7 @@ _No fields; send `{}`._
 
 ### AdminService.TestRetrieval
 
-`POST /api/career.v1.AdminService/TestRetrieval` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/TestRetrieval` · **Auth:** Admin · **Rate limit:** default/min
 
 Runs retrieval for a question and returns the chunks the assistant
 would see, with scores ("what would the assistant retrieve?").
@@ -2523,7 +2523,7 @@ would see, with scores ("what would the assistant retrieve?").
 
 ### AdminService.RunJob
 
-`POST /api/career.v1.AdminService/RunJob` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/RunJob` · **Auth:** Admin · **Rate limit:** default/min
 
 Starts a background job inside the api (corpus reindex of the public
 or private mount, embed sweep) and returns its id at once; the
@@ -2556,7 +2556,7 @@ reserved and rejected as not runnable here. One job at a time.
 
 ### AdminService.GetJob
 
-`POST /api/career.v1.AdminService/GetJob` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetJob` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the status and progress of a job started by RunJob.
 
@@ -2590,7 +2590,7 @@ Returns the status and progress of a job started by RunJob.
 
 ### AdminService.GetPersona
 
-`POST /api/career.v1.AdminService/GetPersona` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetPersona` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the active persona version and its history. The prompt text is
 governed in the repository and pinned by its ULTS hash; this shows which
@@ -2617,7 +2617,7 @@ _No fields; send `{}`._
 
 ### AdminService.GetAnalytics
 
-`POST /api/career.v1.AdminService/GetAnalytics` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetAnalytics` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns aggregate analytics for a date range.
 
@@ -2655,7 +2655,7 @@ Returns aggregate analytics for a date range.
 
 ### AdminService.GetAudit
 
-`POST /api/career.v1.AdminService/GetAudit` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetAudit` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists audit-log entries.
 
@@ -2695,7 +2695,7 @@ Lists audit-log entries.
 
 ### AdminService.ListContactMessages
 
-`POST /api/career.v1.AdminService/ListContactMessages` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListContactMessages` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists messages sent via the public contact form (FR-ADM-14). Backs
 /admin/contacts in the console; every submission from
@@ -2738,7 +2738,7 @@ table this reads from.
 
 ### AdminService.ResolveContactMessage
 
-`POST /api/career.v1.AdminService/ResolveContactMessage` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ResolveContactMessage` · **Auth:** Admin · **Rate limit:** default/min
 
 Marks a contact message as resolved (or re-opens it). Records the
 acting admin's user_id + timestamp so the audit trail is clean.
@@ -2769,7 +2769,7 @@ acting admin's user_id + timestamp so the audit trail is clean.
 
 ### AdminService.ApproveRegistration
 
-`POST /api/career.v1.AdminService/ApproveRegistration` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ApproveRegistration` · **Auth:** Admin · **Rate limit:** default/min
 
 Approves a pending registration from the admin console. Same DB
 transitions + emails as the one-click Accept link, but recorded
@@ -2801,7 +2801,7 @@ as decided_via="console" in the audit trail.
 
 ### AdminService.DeclineRegistration
 
-`POST /api/career.v1.AdminService/DeclineRegistration` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DeclineRegistration` · **Auth:** Admin · **Rate limit:** default/min
 
 Declines a pending registration from the admin console. Same DB
 transitions + emails as the one-click Decline link, but recorded
@@ -2833,7 +2833,7 @@ as decided_via="console" in the audit trail.
 
 ### AdminService.ExtendAccess
 
-`POST /api/career.v1.AdminService/ExtendAccess` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ExtendAccess` · **Auth:** Admin · **Rate limit:** default/min
 
 Extends an active member's access period by a fixed duration
 (`extend_days`), or sets a specific new `expires_at`. Absolute
@@ -2871,7 +2871,7 @@ and relative are exclusive; passing both is InvalidArgument.
 
 ### AdminService.ListDbTables
 
-`POST /api/career.v1.AdminService/ListDbTables` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListDbTables` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the public tables + columns of the API database, from
 information_schema. Backs the schema panel on /admin/db.
@@ -2896,7 +2896,7 @@ _No fields; send `{}`._
 
 ### AdminService.RunDbQuery
 
-`POST /api/career.v1.AdminService/RunDbQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/RunDbQuery` · **Auth:** Admin · **Rate limit:** default/min
 
 Runs a SQL query against the API database from the /admin/db
 console. MVP is read-only: only SELECT statements are accepted;
@@ -2937,7 +2937,7 @@ capped (rows past the cap are dropped with `truncated=true`).
 
 ### AdminService.ListAccessGrants
 
-`POST /api/career.v1.AdminService/ListAccessGrants` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListAccessGrants` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists the access whitelist entries. An entry with an email means
 a registration from that address is auto-approved for
@@ -2969,7 +2969,7 @@ a registration from that address is auto-approved for
 
 ### AdminService.UpsertAccessGrant
 
-`POST /api/career.v1.AdminService/UpsertAccessGrant` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/UpsertAccessGrant` · **Auth:** Admin · **Rate limit:** default/min
 
 Creates a new access whitelist entry or updates an existing one
 by email (email is the natural key). The default_ttl controls how
@@ -3007,7 +3007,7 @@ controls how long the whitelist entry itself stays active.
 
 ### AdminService.DeleteAccessGrant
 
-`POST /api/career.v1.AdminService/DeleteAccessGrant` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DeleteAccessGrant` · **Auth:** Admin · **Rate limit:** default/min
 
 Removes a whitelist entry. Existing accounts already granted
 access are unaffected — this only stops future auto-approvals.
@@ -3034,7 +3034,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListSavedQueries
 
-`POST /api/career.v1.AdminService/ListSavedQueries` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListSavedQueries` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the calling admin's saved SQL statements from /admin/db.
 Scoped to the caller — one admin never sees another's slots.
@@ -3059,7 +3059,7 @@ _No fields; send `{}`._
 
 ### AdminService.UpsertSavedQuery
 
-`POST /api/career.v1.AdminService/UpsertSavedQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/UpsertSavedQuery` · **Auth:** Admin · **Rate limit:** default/min
 
 Creates or updates a saved query for the caller. The tuple
 (caller, name) is the natural key: passing an existing name
@@ -3092,7 +3092,7 @@ overwrites the body.
 
 ### AdminService.DeleteSavedQuery
 
-`POST /api/career.v1.AdminService/DeleteSavedQuery` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DeleteSavedQuery` · **Auth:** Admin · **Rate limit:** default/min
 
 Removes one of the caller's saved queries by id.
 
@@ -3118,7 +3118,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListMemberActivity
 
-`POST /api/career.v1.AdminService/ListMemberActivity` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListMemberActivity` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns one row per member with engagement aggregates (session
 count, total active time, ask-roger count, last event). Backs
@@ -3149,7 +3149,7 @@ the site" surface.
 
 ### AdminService.IngestCorpusText
 
-`POST /api/career.v1.AdminService/IngestCorpusText` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/IngestCorpusText` · **Auth:** Admin · **Rate limit:** default/min
 
 Ingests one text document into the Ask Roger corpus. Chunks
 it, embeds via the sidecar, and stores under (source_kind,
@@ -3194,7 +3194,7 @@ the paste-a-document form on /admin/corpus.
 
 ### AdminService.ListCorpusDocuments
 
-`POST /api/career.v1.AdminService/ListCorpusDocuments` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListCorpusDocuments` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns every document currently in the corpus with a per-row
 chunk count. Backs the list on /admin/corpus.
@@ -3225,7 +3225,7 @@ _No fields; send `{}`._
 
 ### AdminService.ReindexCorpus
 
-`POST /api/career.v1.AdminService/ReindexCorpus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ReindexCorpus` · **Auth:** Admin · **Rate limit:** default/min
 
 Walks a corpus mount for markdown files and runs each through
 IngestCorpusText, so the corpus can be seeded from committed
@@ -3270,7 +3270,7 @@ because a private reindex outlives the proxy's response timeout.
 
 ### AdminService.SweepCorpusEmbeddings
 
-`POST /api/career.v1.AdminService/SweepCorpusEmbeddings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SweepCorpusEmbeddings` · **Auth:** Admin · **Rate limit:** default/min
 
 Re-embeds every chunk whose vector is missing or was produced by a
 different embedder than the sidecar's current one. Bounded per call
@@ -3309,7 +3309,7 @@ as a job through RunJob (JOB_KIND_EMBED_SWEEP) with progress.
 
 ### AdminService.ListJdSubmissions
 
-`POST /api/career.v1.AdminService/ListJdSubmissions` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListJdSubmissions` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns every JD submission with score + status. Backs
 /admin/jd — Roger's triage view for the JD-upload flow. Full
@@ -3339,7 +3339,7 @@ _No fields; send `{}`._
 
 ### AdminService.GetJdSubmission
 
-`POST /api/career.v1.AdminService/GetJdSubmission` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetJdSubmission` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns one JD submission in full: the JD text, both scores, the
 assessment derivation (requirements, evidence, verdicts) and the
@@ -3379,7 +3379,7 @@ generated résumé when present. Backs /admin/jd/[id].
 
 ### AdminService.RescoreJd
 
-`POST /api/career.v1.AdminService/RescoreJd` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/RescoreJd` · **Auth:** Admin · **Rate limit:** default/min
 
 Re-runs the scoring pipeline (retrieval pre-score for diagnostics,
 per-requirement assessment, score in code, résumé and locked PDF
@@ -3411,7 +3411,7 @@ immediately; poll GetJdSubmission for the outcome.
 
 ### AdminService.SetJdOutcome
 
-`POST /api/career.v1.AdminService/SetJdOutcome` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetJdOutcome` · **Auth:** Admin · **Rate limit:** default/min
 
 Records what happened in the world after a review: applied,
 interview, offer, no response. One per posting, revised in place.
@@ -3448,7 +3448,7 @@ anything, so nothing else can substitute for it.
 
 ### AdminService.RecordJdFeedback
 
-`POST /api/career.v1.AdminService/RecordJdFeedback` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/RecordJdFeedback` · **Auth:** Admin · **Rate limit:** default/min
 
 Records the owner's judgment of one run's output: whether the score
 was accurate, too generous or too harsh, and whether the résumé is
@@ -3485,7 +3485,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListGoldenPostings
 
-`POST /api/career.v1.AdminService/ListGoldenPostings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListGoldenPostings` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists the golden set: fixed postings with a stated expectation,
 re-scored to measure whether a prompt or model change helped.
@@ -3514,7 +3514,7 @@ re-scored to measure whether a prompt or model change helped.
 
 ### AdminService.UpsertGoldenPosting
 
-`POST /api/career.v1.AdminService/UpsertGoldenPosting` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/UpsertGoldenPosting` · **Auth:** Admin · **Rate limit:** default/min
 
 Adds or replaces a golden posting, keyed by name.
 
@@ -3558,7 +3558,7 @@ Adds or replaces a golden posting, keyed by name.
 
 ### AdminService.SetGoldenActive
 
-`POST /api/career.v1.AdminService/SetGoldenActive` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetGoldenActive` · **Auth:** Admin · **Rate limit:** default/min
 
 Retires or restores a golden posting. Retired postings are kept,
 because deleting one would silently change what every past
@@ -3588,7 +3588,7 @@ _No fields; send `{}`._
 
 ### AdminService.LabelGoldenPosting
 
-`POST /api/career.v1.AdminService/LabelGoldenPosting` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/LabelGoldenPosting` · **Auth:** Admin · **Rate limit:** default/min
 
 Records which side of the gate a posting belongs on. Separate from
 the upsert so labelling a posting does not mean resending its text,
@@ -3620,7 +3620,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListEvalRuns
 
-`POST /api/career.v1.AdminService/ListEvalRuns` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListEvalRuns` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists evaluations, newest first, without their per-posting results.
 
@@ -3648,7 +3648,7 @@ Lists evaluations, newest first, without their per-posting results.
 
 ### AdminService.GetEvalRun
 
-`POST /api/career.v1.AdminService/GetEvalRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetEvalRun` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns one evaluation with every posting's result.
 
@@ -3676,7 +3676,7 @@ Returns one evaluation with every posting's result.
 
 ### AdminService.GetMetrics
 
-`POST /api/career.v1.AdminService/GetMetrics` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetMetrics` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the state of the reviewer, read from the SQL views that
 define each metric once. Nothing here is computed in the api or in
@@ -3732,7 +3732,7 @@ _No fields; send `{}`._
 
 ### AdminService.GetOpsStatus
 
-`POST /api/career.v1.AdminService/GetOpsStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetOpsStatus` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns what the box is doing right now: jobs the runner knows
 about, the submission pipeline, recent model activity and host
@@ -3771,7 +3771,7 @@ _No fields; send `{}`._
 
 ### AdminService.GetJobDetail
 
-`POST /api/career.v1.AdminService/GetJobDetail` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetJobDetail` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns one job with every progress report it made, for the detail
 view on /admin/ops. Separate from GetOpsStatus because that call is
@@ -3805,7 +3805,7 @@ backwards for a page you open because something is running.
 
 ### AdminService.GetGate
 
-`POST /api/career.v1.AdminService/GetGate` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetGate` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the criteria as a gate: one row per criterion with pass,
 value, target and as_of, read from the views that define them.
@@ -3832,7 +3832,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListDecisionLog
 
-`POST /api/career.v1.AdminService/ListDecisionLog` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListDecisionLog` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists logged reviewer decisions (per-requirement verdicts, gate
 outcomes) with the evidence each was made from, for the owner's
@@ -3872,7 +3872,7 @@ human-in-the-loop review. Backs /admin/decisions.
 
 ### AdminService.ReviewDecision
 
-`POST /api/career.v1.AdminService/ReviewDecision` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ReviewDecision` · **Auth:** Admin · **Rate limit:** default/min
 
 Records the owner's own verdict and note on one logged decision.
 Saving again overwrites the label; the model's output is never
@@ -3910,7 +3910,7 @@ _No fields; send `{}`._
 
 ### AdminService.ExportDecisionLog
 
-`POST /api/career.v1.AdminService/ExportDecisionLog` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ExportDecisionLog` · **Auth:** Admin · **Rate limit:** default/min
 
 Exports decisions as JSON Lines for adapter training and
 evaluation; reviewed rows carry the human label.
@@ -3940,7 +3940,7 @@ evaluation; reviewed rows carry the human label.
 
 ### AdminService.GetJdFitBands
 
-`POST /api/career.v1.AdminService/GetJdFitBands` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetJdFitBands` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads the JD fit bands (the numbers that classify a review as very
 strong / strong / possible / weak / very weak; "strong" is the gate).
@@ -3965,7 +3965,7 @@ _No fields; send `{}`._
 
 ### AdminService.SetJdFitBands
 
-`POST /api/career.v1.AdminService/SetJdFitBands` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetJdFitBands` · **Auth:** Admin · **Rate limit:** default/min
 
 Sets the JD fit bands (stored in app_settings; the api caches them
 for 15 s). Takes effect for the next submission within seconds;
@@ -4000,7 +4000,7 @@ existing scores are re-classified on read.
 
 ### AdminService.GetDecisionTestSettings
 
-`POST /api/career.v1.AdminService/GetDecisionTestSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetDecisionTestSettings` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads the decision test's timings.
 
@@ -4028,7 +4028,7 @@ _No fields; send `{}`._
 
 ### AdminService.SetDecisionTestSettings
 
-`POST /api/career.v1.AdminService/SetDecisionTestSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetDecisionTestSettings` · **Auth:** Admin · **Rate limit:** default/min
 
 Sets the decision test's timings. The instrument version is derived
 from them, so a change here is recorded on every run taken after it
@@ -4062,7 +4062,7 @@ and runs under different timings never pool into one dataset.
 
 ### AdminService.ListDecisionTestRuns
 
-`POST /api/career.v1.AdminService/ListDecisionTestRuns` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListDecisionTestRuns` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists decision test runs, newest first.
 
@@ -4094,7 +4094,7 @@ Lists decision test runs, newest first.
 
 ### AdminService.GetDecisionTestRun
 
-`POST /api/career.v1.AdminService/GetDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetDecisionTestRun` · **Auth:** Admin · **Rate limit:** default/min
 
 One run in full: every answer, every recall, and the block summary.
 
@@ -4126,7 +4126,7 @@ One run in full: every answer, every recall, and the block summary.
 
 ### AdminService.ExportDecisionTestData
 
-`POST /api/career.v1.AdminService/ExportDecisionTestData` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ExportDecisionTestData` · **Auth:** Admin · **Rate limit:** default/min
 
 The curated dataset as CSV, one row per question presented.
 
@@ -4169,7 +4169,7 @@ somebody reconstruct the answer key.
 
 ### AdminService.GetDecisionTestAnalysis
 
-`POST /api/career.v1.AdminService/GetDecisionTestAnalysis` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetDecisionTestAnalysis` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads the decision test's three analysis views.
 
@@ -4201,7 +4201,7 @@ _No fields; send `{}`._
 
 ### AdminService.ExportDecisionTestRun
 
-`POST /api/career.v1.AdminService/ExportDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ExportDecisionTestRun` · **Auth:** Admin · **Rate limit:** default/min
 
 Downloads one run's blocks and answers as two CSV files.
 
@@ -4243,7 +4243,7 @@ behind an explicit opt-in.
 
 ### AdminService.ReviewDecisionTestRun
 
-`POST /api/career.v1.AdminService/ReviewDecisionTestRun` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ReviewDecisionTestRun` · **Auth:** Admin · **Rate limit:** default/min
 
 Records the owner's judgement about a run, or about one block of
 one, and returns the run as it now reads.
@@ -4287,7 +4287,7 @@ it produced.
 
 ### AdminService.GetSchedulerSettings
 
-`POST /api/career.v1.AdminService/GetSchedulerSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetSchedulerSettings` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads the meeting-scheduler settings: the weekly windows a member
 may book into, the lengths on offer, the clearance between
@@ -4315,7 +4315,7 @@ _No fields; send `{}`._
 
 ### AdminService.SetSchedulerSettings
 
-`POST /api/career.v1.AdminService/SetSchedulerSettings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetSchedulerSettings` · **Auth:** Admin · **Rate limit:** default/min
 
 Replaces the meeting-scheduler settings (stored in app_settings;
 the api caches them for 15 s). Validated server-side and refused
@@ -4364,7 +4364,7 @@ narrowing the windows stops new bookings, it does not cancel.
 
 ### AdminService.ListQaEntries
 
-`POST /api/career.v1.AdminService/ListQaEntries` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListQaEntries` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists the Q&A bank: the owner's own answers, served verbatim by
 Ask Roger with no model involved.
@@ -4394,7 +4394,7 @@ Ask Roger with no model involved.
 
 ### AdminService.CreateQaEntry
 
-`POST /api/career.v1.AdminService/CreateQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/CreateQaEntry` · **Auth:** Admin · **Rate limit:** default/min
 
 Writes a new bank entry along with its canonical phrasing. The
 entry is unreachable until the embedding job has given its
@@ -4445,7 +4445,7 @@ phrasings vectors, which happens within five minutes.
 
 ### AdminService.UpdateQaEntry
 
-`POST /api/career.v1.AdminService/UpdateQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/UpdateQaEntry` · **Auth:** Admin · **Rate limit:** default/min
 
 Replaces an entry's editable fields. Changing the question clears
 the canonical phrasing's vector, so the entry stops matching the
@@ -4492,7 +4492,7 @@ _No fields; send `{}`._
 
 ### AdminService.SetQaEntryEnabled
 
-`POST /api/career.v1.AdminService/SetQaEntryEnabled` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetQaEntryEnabled` · **Auth:** Admin · **Rate limit:** default/min
 
 Approves or withdraws an entry. Enabling is the approval: a
 disabled entry is never matched and never served, which is how a
@@ -4522,7 +4522,7 @@ _No fields; send `{}`._
 
 ### AdminService.DeleteQaEntry
 
-`POST /api/career.v1.AdminService/DeleteQaEntry` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DeleteQaEntry` · **Auth:** Admin · **Rate limit:** default/min
 
 Deletes an entry and its phrasings.
 
@@ -4548,7 +4548,7 @@ _No fields; send `{}`._
 
 ### AdminService.AddQaPhrasing
 
-`POST /api/career.v1.AdminService/AddQaPhrasing` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/AddQaPhrasing` · **Auth:** Admin · **Rate limit:** default/min
 
 Adds another way of asking an existing entry's question. Matching
 runs over every phrasing, so variants are how one answer covers the
@@ -4580,7 +4580,7 @@ several ways people ask for it.
 
 ### AdminService.DeleteQaPhrasing
 
-`POST /api/career.v1.AdminService/DeleteQaPhrasing` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DeleteQaPhrasing` · **Auth:** Admin · **Rate limit:** default/min
 
 Removes one variant phrasing. The canonical phrasing cannot be
 removed: it is the entry's own question.
@@ -4609,7 +4609,7 @@ _No fields; send `{}`._
 
 ### AdminService.GetCalendarConnectURL
 
-`POST /api/career.v1.AdminService/GetCalendarConnectURL` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetCalendarConnectURL` · **Auth:** Admin · **Rate limit:** default/min
 
 Returns the Google consent URL the owner visits to connect his
 calendar, carrying a signed, short-lived state so the callback
@@ -4635,7 +4635,7 @@ _No fields; send `{}`._
 
 ### AdminService.ConnectCalendar
 
-`POST /api/career.v1.AdminService/ConnectCalendar` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ConnectCalendar` · **Auth:** Admin · **Rate limit:** default/min
 
 Completes the handshake: exchanges the authorisation code for a
 refresh token and stores it encrypted at rest. The code is
@@ -4667,7 +4667,7 @@ single-use and the state is verified before anything is stored.
 
 ### AdminService.GetCalendarStatus
 
-`POST /api/career.v1.AdminService/GetCalendarStatus` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetCalendarStatus` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads the calendar connection: which account, when it was
 connected, and whether it is currently working.
@@ -4692,7 +4692,7 @@ _No fields; send `{}`._
 
 ### AdminService.DisconnectCalendar
 
-`POST /api/career.v1.AdminService/DisconnectCalendar` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/DisconnectCalendar` · **Auth:** Admin · **Rate limit:** default/min
 
 Forgets the stored credential. Booking stops immediately; existing
 meetings are left alone, on the calendar and in this application.
@@ -4717,7 +4717,7 @@ _No fields; send `{}`._
 
 ### AdminService.ListMeetings
 
-`POST /api/career.v1.AdminService/ListMeetings` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/ListMeetings` · **Auth:** Admin · **Rate limit:** default/min
 
 Lists booked meetings, soonest first, so the owner can see what has
 been taken without opening Google. Cancelling here frees the time
@@ -4748,7 +4748,7 @@ and removes the calendar event.
 
 ### AdminService.CancelMeetingAsAdmin
 
-`POST /api/career.v1.AdminService/CancelMeetingAsAdmin` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/CancelMeetingAsAdmin` · **Auth:** Admin · **Rate limit:** default/min
 
 Cancels a meeting on the member's behalf and frees the slot.
 
@@ -4776,7 +4776,7 @@ Cancels a meeting on the member's behalf and frees the slot.
 
 ### AdminService.GetJdSubmissionLimit
 
-`POST /api/career.v1.AdminService/GetJdSubmissionLimit` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/GetJdSubmissionLimit` · **Auth:** Admin · **Rate limit:** default/min
 
 Reads how many postings one member may submit per rolling day.
 
@@ -4801,7 +4801,7 @@ _No fields; send `{}`._
 
 ### AdminService.SetJdSubmissionLimit
 
-`POST /api/career.v1.AdminService/SetJdSubmissionLimit` · **Auth:** Admin (fresh MFA) · **Rate limit:** default/min
+`POST /api/career.v1.AdminService/SetJdSubmissionLimit` · **Auth:** Admin · **Rate limit:** default/min
 
 Sets how many postings one member may submit per rolling day
 (stored in app_settings; the api caches it for 15 s). Takes effect
@@ -4838,13 +4838,13 @@ Version and governance status.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`GetVersion`](#systemservice-getversion) | `/api/career.v1.SystemService/GetVersion` | Public | 60 | `GetVersionRequest` → `GetVersionResponse` | Returns the deployed version and build metadata. |
-| [`GetGovernanceStatus`](#systemservice-getgovernancestatus) | `/api/career.v1.SystemService/GetGovernanceStatus` | Public | 60 | `GetGovernanceStatusRequest` → `GetGovernanceStatusResponse` | Returns the governance status shown on the public "How this site was built" page: UxTS frameworks, spec counts, last verification, pass rate, and hash-integrity summary, read from the reports CI publishes. |
-| [`GetReviewerStatus`](#systemservice-getreviewerstatus) | `/api/career.v1.SystemService/GetReviewerStatus` | Public | 60 | `GetReviewerStatusRequest` → `GetReviewerStatusResponse` | Returns how the JD reviewer is currently measuring, for the public "How Ask Roger works" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set. |
+| [`GetVersion`](#systemservice-getversion) | `/api/career.v1.SystemService/GetVersion` | Public | default | `GetVersionRequest` → `GetVersionResponse` | Returns the deployed version and build metadata. |
+| [`GetGovernanceStatus`](#systemservice-getgovernancestatus) | `/api/career.v1.SystemService/GetGovernanceStatus` | Public | default | `GetGovernanceStatusRequest` → `GetGovernanceStatusResponse` | Returns the governance status shown on the public "How this site was built" page: UxTS frameworks, spec counts, last verification, pass rate, and hash-integrity summary, read from the reports CI publishes. |
+| [`GetReviewerStatus`](#systemservice-getreviewerstatus) | `/api/career.v1.SystemService/GetReviewerStatus` | Public | default | `GetReviewerStatusRequest` → `GetReviewerStatusResponse` | Returns how the JD reviewer is currently measuring, for the public "How Ask Roger works" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set. |
 
 ### SystemService.GetVersion
 
-`POST /api/career.v1.SystemService/GetVersion` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetVersion` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the deployed version and build metadata.
 
@@ -4872,7 +4872,7 @@ _No fields; send `{}`._
 
 ### SystemService.GetGovernanceStatus
 
-`POST /api/career.v1.SystemService/GetGovernanceStatus` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetGovernanceStatus` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the governance status shown on the public "How this site was
 built" page: UxTS frameworks, spec counts, last verification, pass rate,
@@ -4900,7 +4900,7 @@ _No fields; send `{}`._
 
 ### SystemService.GetReviewerStatus
 
-`POST /api/career.v1.SystemService/GetReviewerStatus` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetReviewerStatus` · **Auth:** Public · **Rate limit:** default/min
 
 Returns how the JD reviewer is currently measuring, for the public
 "How Ask Roger works" page: agreement with the owner's own grading,
@@ -4947,15 +4947,15 @@ Runs one sitting of the decision test.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`StartSession`](#decisiontestservice-startsession) | `/api/career.v1.DecisionTestService/StartSession` | Public | 10 | `StartSessionRequest` → `StartSessionResponse` | Opens a session and returns the practice block. |
-| [`GetBlock`](#decisiontestservice-getblock) | `/api/career.v1.DecisionTestService/GetBlock` | Public | 60 | `GetBlockRequest` → `GetBlockResponse` | Returns the next block: the number to memorise and its six questions. |
-| [`SubmitAnswer`](#decisiontestservice-submitanswer) | `/api/career.v1.DecisionTestService/SubmitAnswer` | Public | 120 | `SubmitAnswerRequest` → `SubmitAnswerResponse` | Records one answer and grades it server-side. |
-| [`SubmitRecall`](#decisiontestservice-submitrecall) | `/api/career.v1.DecisionTestService/SubmitRecall` | Public | 30 | `SubmitRecallRequest` → `SubmitRecallResponse` | Records the digits returned at the end of a block, scored by failure type rather than pass or fail. |
-| [`FinishSession`](#decisiontestservice-finishsession) | `/api/career.v1.DecisionTestService/FinishSession` | Public | 10 | `FinishSessionRequest` → `FinishSessionResponse` | Closes the session. |
+| [`StartSession`](#decisiontestservice-startsession) | `/api/career.v1.DecisionTestService/StartSession` | Public | default | `StartSessionRequest` → `StartSessionResponse` | Opens a session and returns the practice block. |
+| [`GetBlock`](#decisiontestservice-getblock) | `/api/career.v1.DecisionTestService/GetBlock` | Public | default | `GetBlockRequest` → `GetBlockResponse` | Returns the next block: the number to memorise and its six questions. |
+| [`SubmitAnswer`](#decisiontestservice-submitanswer) | `/api/career.v1.DecisionTestService/SubmitAnswer` | Public | default | `SubmitAnswerRequest` → `SubmitAnswerResponse` | Records one answer and grades it server-side. |
+| [`SubmitRecall`](#decisiontestservice-submitrecall) | `/api/career.v1.DecisionTestService/SubmitRecall` | Public | default | `SubmitRecallRequest` → `SubmitRecallResponse` | Records the digits returned at the end of a block, scored by failure type rather than pass or fail. |
+| [`FinishSession`](#decisiontestservice-finishsession) | `/api/career.v1.DecisionTestService/FinishSession` | Public | default | `FinishSessionRequest` → `FinishSessionResponse` | Closes the session. |
 
 ### DecisionTestService.StartSession
 
-`POST /api/career.v1.DecisionTestService/StartSession` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.DecisionTestService/StartSession` · **Auth:** Public · **Rate limit:** default/min
 
 Opens a session and returns the practice block. Called when the
 participant presses start, which is also the gesture that unlocks
@@ -5006,7 +5006,7 @@ audio in the browser.
 
 ### DecisionTestService.GetBlock
 
-`POST /api/career.v1.DecisionTestService/GetBlock` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.DecisionTestService/GetBlock` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the next block: the number to memorise and its six
 questions. Blocks are served one at a time so the client never
@@ -5038,7 +5038,7 @@ holds the whole test.
 
 ### DecisionTestService.SubmitAnswer
 
-`POST /api/career.v1.DecisionTestService/SubmitAnswer` · **Auth:** Public · **Rate limit:** 120/min
+`POST /api/career.v1.DecisionTestService/SubmitAnswer` · **Auth:** Public · **Rate limit:** default/min
 
 Records one answer and grades it server-side. The response confirms
 receipt and says nothing about correctness.
@@ -5077,7 +5077,7 @@ receipt and says nothing about correctness.
 
 ### DecisionTestService.SubmitRecall
 
-`POST /api/career.v1.DecisionTestService/SubmitRecall` · **Auth:** Public · **Rate limit:** 30/min
+`POST /api/career.v1.DecisionTestService/SubmitRecall` · **Auth:** Public · **Rate limit:** default/min
 
 Records the digits returned at the end of a block, scored by
 failure type rather than pass or fail.
@@ -5112,7 +5112,7 @@ failure type rather than pass or fail.
 
 ### DecisionTestService.FinishSession
 
-`POST /api/career.v1.DecisionTestService/FinishSession` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.DecisionTestService/FinishSession` · **Auth:** Public · **Rate limit:** default/min
 
 Closes the session. A session that is never finished stays
 abandoned, which is kept rather than deleted because where people

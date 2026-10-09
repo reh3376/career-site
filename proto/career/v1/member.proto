@@ -54,7 +54,6 @@ service MemberService {
   // prepared asynchronously; poll GetExport or wait for the email.
   rpc RequestExport(RequestExportRequest) returns (RequestExportResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 2;
   }
   // Returns the status of an export and, when ready, a short-lived download
   // URL.
@@ -67,7 +66,6 @@ service MemberService {
   rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
     option (career.v1.allow_unverified) = true;
-    option (career.v1.rate_limit_per_minute) = 2;
   }
 }
 
