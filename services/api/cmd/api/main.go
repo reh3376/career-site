@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -183,6 +184,52 @@ func main() {
 		SessionTTL:          cfg.SessionTTL,
 		CookieSecure:        cfg.CookieSecure,
 	})
+	// The auth interceptor. Built here, after authHandler exists, so a
+	// construction failure exits before anything is served rather than
+	// leaving the server running with nothing enforcing the policy.
+	//
+	// S3 of docs/sprint-auth-interceptor.md: it ships in observe mode,
+	// computing the decision and acting on nothing, so its answers can
+	// be compared against the handlers' own gates on real traffic.
+	// AUTH_INTERCEPTOR_MODE=enforce turns it on, which makes S4 a
+	// redeploy rather than a code change.
+	authMode, err := authpolicy.ParseMode(cfg.AuthInterceptorMode)
+	if err != nil {
+		log.Error("bad AUTH_INTERCEPTOR_MODE, refusing to start",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	// Maps a resolved session to the three questions the auth level
+	// turns on. Active and Admin are read here, in the one place that
+	// knows what a user record looks like, so internal/authpolicy stays
+	// free of the users package.
+	//
+	// A session that resolves to nothing is an anonymous caller, not an
+	// error: Login refuses every non-active status, so a session only
+	// exists for an account that was active when it was minted, and the
+	// Active check below is about suspension *after* that.
+	resolveCaller := func(ctx context.Context, header http.Header) (authpolicy.Caller, error) {
+		u, err := authHandler.LookupSessionUserHeader(ctx, header)
+		if err != nil {
+			return authpolicy.Caller{}, err
+		}
+		if u == nil {
+			return authpolicy.Caller{}, nil
+		}
+		return authpolicy.Caller{
+			Authenticated: true,
+			Active:        u.Status == users.StatusActive,
+			Admin:         u.Role == users.RoleAdmin,
+		}, nil
+	}
+	authInterceptor, err := authpolicy.NewInterceptor(authPolicy, resolveCaller, authMode, log)
+	if err != nil {
+		log.Error("auth interceptor init failed, refusing to start",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	log.Info("auth interceptor ready", slog.String("mode", authMode.String()))
+
 	memberHandler := handlers.NewMember(authHandler, userRepo)
 	contactHandler := handlers.NewContact(
 		log, userRepo, authHandler, mailer,
@@ -451,20 +498,21 @@ func main() {
 	}
 
 	srv := server.New(cfg, log, server.Deps{
-		AuthPolicy:   authPolicy,
-		Sidecar:      sc,
-		DB:           pool,
-		Auth:         authHandler,
-		Member:       memberHandler,
-		Contact:      contactHandler,
-		Decision:     decisionHandler,
-		Admin:        adminHandler,
-		Activity:     activityHandler,
-		Jd:           jdHandler,
-		Meetings:     meetingsHandler,
-		Chat:         chatHandler,
-		Events:       eventsHandler,
-		DecisionTest: decisionTestHandler,
+		AuthPolicy:      authPolicy,
+		AuthInterceptor: authInterceptor,
+		Sidecar:         sc,
+		DB:              pool,
+		Auth:            authHandler,
+		Member:          memberHandler,
+		Contact:         contactHandler,
+		Decision:        decisionHandler,
+		Admin:           adminHandler,
+		Activity:        activityHandler,
+		Jd:              jdHandler,
+		Meetings:        meetingsHandler,
+		Chat:            chatHandler,
+		Events:          eventsHandler,
+		DecisionTest:    decisionTestHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})
