@@ -1144,9 +1144,11 @@ Still open:
   [`sprint-auth-interceptor.md`](sprint-auth-interceptor.md); no code
   written, three decisions there are the owner's. Three findings from
   planning it: all 141 methods already declare a level, so the work is
-  enforcement rather than annotation; `mfa_fresh` is declared on **79**
-  methods and there is no TOTP implementation at all, so it is
-  unenforceable rather than merely unenforced; and `options.proto`
+  enforcement rather than annotation; `mfa_fresh` was declared on **79**
+  methods with no TOTP implementation anywhere, so it was unenforceable
+  rather than merely unenforced, and the owner decided on 2026-10-09
+  not to build a second factor: all 79 usages are removed and the
+  option is deprecated; and `options.proto`
   describes the interceptor in the present tense today, which is false
   in every clause. Nothing stops a new method shipping with no level
   either, despite the enum comment claiming lint catches it.

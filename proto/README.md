@@ -33,7 +33,7 @@ proto/
 ## Rules for editing
 
 1. **Comment everything.** `buf lint` enforces the COMMENTS category: every service, RPC, message, field, oneof, enum, and enum value carries a leading comment. The comments are the API reference, so write them for the frontend developer reading `docs/api/README.md`.
-2. **Declare access on every RPC** with `option (career.v1.auth) = AUTH_LEVEL_…;` and, where they apply, `allow_unverified`, `rate_limit_per_minute`, and `mfa_fresh` (see `career/v1/options.proto`). The server refuses to start with a method that has no auth level.
+2. **Declare access on every RPC** with `option (career.v1.auth) = AUTH_LEVEL_…;` (see `career/v1/options.proto`). Also declare `allow_unverified` or `rate_limit_per_minute` where they apply, but note that neither is enforced yet, and `mfa_fresh` is deprecated and set on nothing. **`auth` is enforced by hand in each handler, not by an interceptor**, so declaring it is necessary and not sufficient: the handler must carry its own check until `docs/sprint-auth-interceptor.md` lands. The auth-gate tests are what currently hold the two together.
 3. **Validate at the edge** with `buf.validate` rules on request fields (lengths, formats, enum `defined_only`, list sizes). The interceptor rejects invalid requests with `invalid_argument` before handlers run, so handlers can assume well-formed input.
 4. **Additive changes only** within `career.v1`: add fields, methods, and enum values; never renumber, rename, or change types. `make breaking` (and CI) compares against `main`.
 5. **Streaming** is reserved for genuinely incremental responses (chat). Everything else is unary.

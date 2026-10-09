@@ -38,8 +38,14 @@ import (
 // admin console pages) until each surface lands.
 //
 // Every method here MUST call requireAdmin() to gate on session +
-// admin role. The proto declares AUTH_LEVEL_ADMIN + mfa_fresh, but
-// enforcement lives in the handler until the auth interceptor lands.
+// admin role. The proto declares AUTH_LEVEL_ADMIN and nothing reads
+// it: enforcement lives in the handler until the auth interceptor
+// lands (docs/sprint-auth-interceptor.md), and admin_authgate_test.go
+// is what holds the declaration and the code together in the meantime.
+//
+// mfa_fresh used to be declared beside it on 79 methods. It was never
+// enforceable, because no second factor was ever built, and it was
+// removed on 2026-10-09 rather than left reading as a control.
 type Admin struct {
 	careerv1connect.UnimplementedAdminServiceHandler
 
@@ -126,9 +132,12 @@ func NewAdmin(
 }
 
 // requireAdmin gates a call on session + admin role. Called at the
-// top of every RPC that returns admin-only data. The MFA-fresh check
-// declared in admin.proto comes later with the TOTP hookup
-// (FR-AUTH-11); today we only enforce role.
+// top of every RPC that returns admin-only data.
+//
+// Role is the whole check, and that is now the intended end state
+// rather than a stepping stone: the MFA-fresh option this once
+// deferred to was removed on 2026-10-09, because there was no TOTP
+// implementation and the owner decided not to build one.
 func requireAdmin[T any](a *Admin, ctx context.Context, req *connect.Request[T]) (*users.User, error) {
 	u, err := a.auth.LookupSessionUser(ctx, req)
 	if err != nil {

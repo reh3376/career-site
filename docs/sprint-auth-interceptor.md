@@ -34,23 +34,28 @@ remembered.
 | option | declared on | enforced |
 |---|---|---|
 | `auth` | 141 methods | by hand, per handler |
-| `mfa_fresh` | **79 methods** | never |
+| `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | 35 methods | never |
 | `allow_unverified` | 3 methods | never |
 
-**`options.proto` describes the interceptor in the present tense.** Its
-own doc comment reads: *"The Go server reads these options from the
-method descriptor in a Connect interceptor and enforces them uniformly,
-so no handler carries its own auth check."* Every clause of that is
-currently false. It is the same kind of untrue claim as the run page's
-line about the answer key, and it should be fixed whether or not the
-rest of this is built.
+**Four documents described the interceptor as if it existed.**
+`options.proto` said *"The Go server reads these options from the method
+descriptor in a Connect interceptor and enforces them uniformly, so no
+handler carries its own auth check"*; `proto/README.md` said the server
+refuses to start without an auth level; ADR 0017 and FSD D-17 both said
+a Connect interceptor enforces the policy before handlers run. Every one
+of those was false. All four were corrected on 2026-10-09, before any of
+the work below, because they were the kind of claim a security review
+takes at face value.
 
-**There is no second factor.** `mfa_fresh` is declared on 79 methods and
-there is no TOTP implementation anywhere in the service: the `sessions`
-table has no verification timestamp and nothing issues or checks a code.
-So that option is not merely unenforced, it is unenforceable until a
-second factor exists.
+**There is no second factor, and there will not be one.** `mfa_fresh`
+was declared on 79 methods with no TOTP implementation anywhere in the
+service: the `sessions` table has no verification timestamp and nothing
+issues or checks a code. It was unenforceable rather than unenforced.
+The owner settled it on 2026-10-09 by deciding not to build a second
+factor, so all 79 usages were removed and the option is deprecated.
+`buf breaking` will not allow deleting a published extension, so the
+field remains in `options.proto`, declared on nothing and marked.
 
 **Nothing stops a new method shipping without a level.** The enum's
 comment says *"Lint fails any method that leaves the level
@@ -63,11 +68,12 @@ today is luck and care, not a control.
 
 ### D1. Scope is the auth level. Not MFA, not rate limiting.
 
-`mfa_fresh` is out because the factor does not exist. Turning it on
-today would deny 79 admin methods to the only admin, which is a lockout
-rather than a hardening. It needs TOTP enrolment, a verification
-timestamp on the session and a recovery path first, and that is its own
-piece of work.
+`mfa_fresh` is gone rather than out of scope. It would have needed TOTP
+enrolment, a verification timestamp on the session and a recovery path
+before it could be enforced at all, and enforcing it before that would
+have denied 79 admin methods to the only admin. The owner decided on
+2026-10-09 not to build a second factor, so the option was removed from
+every method instead of being carried as a control that did not exist.
 
 `rate_limit_per_minute` is out because it needs a counter store and has
 entirely different failure modes. A shared counter that is unreachable
@@ -75,9 +81,9 @@ must fail *open* or the site goes down; an auth check that is uncertain
 must fail *closed*. Putting two opposite failure policies in one
 interceptor is how one of them ends up wrong.
 
-Both stay declared in the contract. The plan makes the API reference
-state plainly which options are enforced and which are aspirational, so
-the contract stops overstating itself.
+`rate_limit_per_minute` stays declared. The API reference and
+`options.proto` now state plainly which options are enforced and which
+are not, so the contract stops overstating itself either way.
 
 ### D2. Fail closed, and refuse to start rather than guess
 
@@ -253,10 +259,11 @@ command.
 1. **Is a week of observe mode right?** Shorter gets to enforcement
    sooner on a site with few users; longer sees more of the admin
    surface, much of which is used rarely.
-2. **Is TOTP worth building?** It decides whether `mfa_fresh` ever
-   becomes real or should be removed from the 79 methods that declare
-   it. A contract that permanently describes an unenforced control is
-   worse than one that does not mention it.
+2. ~~Is TOTP worth building?~~ **Settled 2026-10-09: no.** The option
+   was removed from all 79 methods and deprecated in `options.proto`,
+   which `buf breaking` will not let us delete outright. So D1's
+   exclusion of `mfa_fresh` is now permanent rather than deferred, and
+   the contract no longer describes a control that does not exist.
 3. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

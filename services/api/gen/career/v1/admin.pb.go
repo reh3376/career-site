@@ -17703,91 +17703,91 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1dACTIVITY_SORT_LAST_EVENT_DESC\x10\x01\x12\x1f\n" +
 	"\x1bACTIVITY_SORT_SESSIONS_DESC\x10\x02\x12\"\n" +
 	"\x1eACTIVITY_SORT_ACTIVE_TIME_DESC\x10\x03\x12 \n" +
-	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xe5>\n" +
-	"\fAdminService\x12V\n" +
-	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12ResendNotification\x12$.career.v1.ResendNotificationRequest\x1a%.career.v1.ResendNotificationResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12P\n" +
-	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rAddMemberNote\x12\x1f.career.v1.AddMemberNoteRequest\x1a .career.v1.AddMemberNoteResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fSetMemberStatus\x12!.career.v1.SetMemberStatusRequest\x1a\".career.v1.SetMemberStatusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12_\n" +
-	"\x0eGetReviewQueue\x12 .career.v1.GetReviewQueueRequest\x1a!.career.v1.GetReviewQueueResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11ResolveReviewItem\x12#.career.v1.ResolveReviewItemRequest\x1a$.career.v1.ResolveReviewItemResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fReplyEscalation\x12!.career.v1.ReplyEscalationRequest\x1a\".career.v1.ReplyEscalationResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15GetMemberConversation\x12'.career.v1.GetMemberConversationRequest\x1a(.career.v1.GetMemberConversationResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fGetCorpusStatus\x12!.career.v1.GetCorpusStatusRequest\x1a\".career.v1.GetCorpusStatusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rTestRetrieval\x12\x1f.career.v1.TestRetrievalRequest\x1a .career.v1.TestRetrievalResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12G\n" +
-	"\x06RunJob\x12\x18.career.v1.RunJobRequest\x1a\x19.career.v1.RunJobResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12G\n" +
-	"\x06GetJob\x12\x18.career.v1.GetJobRequest\x1a\x19.career.v1.GetJobResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12S\n" +
+	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xa9<\n" +
+	"\fAdminService\x12R\n" +
+	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12ResendNotification\x12$.career.v1.ResendNotificationRequest\x1a%.career.v1.ResendNotificationResponse\"\x04\x80\xb5\x18\x03\x12L\n" +
+	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rAddMemberNote\x12\x1f.career.v1.AddMemberNoteRequest\x1a .career.v1.AddMemberNoteResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fSetMemberStatus\x12!.career.v1.SetMemberStatusRequest\x1a\".career.v1.SetMemberStatusResponse\"\x04\x80\xb5\x18\x03\x12[\n" +
+	"\x0eGetReviewQueue\x12 .career.v1.GetReviewQueueRequest\x1a!.career.v1.GetReviewQueueResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11ResolveReviewItem\x12#.career.v1.ResolveReviewItemRequest\x1a$.career.v1.ResolveReviewItemResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fReplyEscalation\x12!.career.v1.ReplyEscalationRequest\x1a\".career.v1.ReplyEscalationResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15GetMemberConversation\x12'.career.v1.GetMemberConversationRequest\x1a(.career.v1.GetMemberConversationResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fGetCorpusStatus\x12!.career.v1.GetCorpusStatusRequest\x1a\".career.v1.GetCorpusStatusResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rTestRetrieval\x12\x1f.career.v1.TestRetrievalRequest\x1a .career.v1.TestRetrievalResponse\"\x04\x80\xb5\x18\x03\x12C\n" +
+	"\x06RunJob\x12\x18.career.v1.RunJobRequest\x1a\x19.career.v1.RunJobResponse\"\x04\x80\xb5\x18\x03\x12C\n" +
+	"\x06GetJob\x12\x18.career.v1.GetJobRequest\x1a\x19.career.v1.GetJobResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
 	"\n" +
-	"GetPersona\x12\x1c.career.v1.GetPersonaRequest\x1a\x1d.career.v1.GetPersonaResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fGetAnalytics\x12\x1e.career.v1.GetAnalyticsRequest\x1a\x1f.career.v1.GetAnalyticsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12M\n" +
-	"\bGetAudit\x12\x1a.career.v1.GetAuditRequest\x1a\x1b.career.v1.GetAuditResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13ListContactMessages\x12%.career.v1.ListContactMessagesRequest\x1a&.career.v1.ListContactMessagesResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15ResolveContactMessage\x12'.career.v1.ResolveContactMessageRequest\x1a(.career.v1.ResolveContactMessageResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13ApproveRegistration\x12%.career.v1.ApproveRegistrationRequest\x1a&.career.v1.ApproveRegistrationResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13DeclineRegistration\x12%.career.v1.DeclineRegistrationRequest\x1a&.career.v1.DeclineRegistrationResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fExtendAccess\x12\x1e.career.v1.ExtendAccessRequest\x1a\x1f.career.v1.ExtendAccessResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fListDbTables\x12\x1e.career.v1.ListDbTablesRequest\x1a\x1f.career.v1.ListDbTablesResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12S\n" +
+	"GetPersona\x12\x1c.career.v1.GetPersonaRequest\x1a\x1d.career.v1.GetPersonaResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fGetAnalytics\x12\x1e.career.v1.GetAnalyticsRequest\x1a\x1f.career.v1.GetAnalyticsResponse\"\x04\x80\xb5\x18\x03\x12I\n" +
+	"\bGetAudit\x12\x1a.career.v1.GetAuditRequest\x1a\x1b.career.v1.GetAuditResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
+	"\x13ListContactMessages\x12%.career.v1.ListContactMessagesRequest\x1a&.career.v1.ListContactMessagesResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15ResolveContactMessage\x12'.career.v1.ResolveContactMessageRequest\x1a(.career.v1.ResolveContactMessageResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
+	"\x13ApproveRegistration\x12%.career.v1.ApproveRegistrationRequest\x1a&.career.v1.ApproveRegistrationResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
+	"\x13DeclineRegistration\x12%.career.v1.DeclineRegistrationRequest\x1a&.career.v1.DeclineRegistrationResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fExtendAccess\x12\x1e.career.v1.ExtendAccessRequest\x1a\x1f.career.v1.ExtendAccessResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fListDbTables\x12\x1e.career.v1.ListDbTablesRequest\x1a\x1f.career.v1.ListDbTablesResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
 	"\n" +
-	"RunDbQuery\x12\x1c.career.v1.RunDbQueryRequest\x1a\x1d.career.v1.RunDbQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10ListAccessGrants\x12\".career.v1.ListAccessGrantsRequest\x1a#.career.v1.ListAccessGrantsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11UpsertAccessGrant\x12#.career.v1.UpsertAccessGrantRequest\x1a$.career.v1.UpsertAccessGrantResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11DeleteAccessGrant\x12#.career.v1.DeleteAccessGrantRequest\x1a$.career.v1.DeleteAccessGrantResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10ListSavedQueries\x12\".career.v1.ListSavedQueriesRequest\x1a#.career.v1.ListSavedQueriesResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10UpsertSavedQuery\x12\".career.v1.UpsertSavedQueryRequest\x1a#.career.v1.UpsertSavedQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rReindexCorpus\x12\x1f.career.v1.ReindexCorpusRequest\x1a .career.v1.ReindexCorpusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15SweepCorpusEmbeddings\x12'.career.v1.SweepCorpusEmbeddingsRequest\x1a(.career.v1.SweepCorpusEmbeddingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11ListJdSubmissions\x12#.career.v1.ListJdSubmissionsRequest\x1a$.career.v1.ListJdSubmissionsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fGetJdSubmission\x12!.career.v1.GetJdSubmissionRequest\x1a\".career.v1.GetJdSubmissionResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12P\n" +
-	"\tRescoreJd\x12\x1b.career.v1.RescoreJdRequest\x1a\x1c.career.v1.RescoreJdResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fSetJdOutcome\x12\x1e.career.v1.SetJdOutcomeRequest\x1a\x1f.career.v1.SetJdOutcomeResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10RecordJdFeedback\x12\".career.v1.RecordJdFeedbackRequest\x1a#.career.v1.RecordJdFeedbackResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12ListGoldenPostings\x12$.career.v1.ListGoldenPostingsRequest\x1a%.career.v1.ListGoldenPostingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12n\n" +
-	"\x13UpsertGoldenPosting\x12%.career.v1.UpsertGoldenPostingRequest\x1a&.career.v1.UpsertGoldenPostingResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fSetGoldenActive\x12!.career.v1.SetGoldenActiveRequest\x1a\".career.v1.SetGoldenActiveResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12LabelGoldenPosting\x12$.career.v1.LabelGoldenPostingRequest\x1a%.career.v1.LabelGoldenPostingResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fListEvalRuns\x12\x1e.career.v1.ListEvalRunsRequest\x1a\x1f.career.v1.ListEvalRunsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12S\n" +
+	"RunDbQuery\x12\x1c.career.v1.RunDbQueryRequest\x1a\x1d.career.v1.RunDbQueryResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10ListAccessGrants\x12\".career.v1.ListAccessGrantsRequest\x1a#.career.v1.ListAccessGrantsResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11UpsertAccessGrant\x12#.career.v1.UpsertAccessGrantRequest\x1a$.career.v1.UpsertAccessGrantResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11DeleteAccessGrant\x12#.career.v1.DeleteAccessGrantRequest\x1a$.career.v1.DeleteAccessGrantResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10ListSavedQueries\x12\".career.v1.ListSavedQueriesRequest\x1a#.career.v1.ListSavedQueriesResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10UpsertSavedQuery\x12\".career.v1.UpsertSavedQueryRequest\x1a#.career.v1.UpsertSavedQueryResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
+	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rReindexCorpus\x12\x1f.career.v1.ReindexCorpusRequest\x1a .career.v1.ReindexCorpusResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15SweepCorpusEmbeddings\x12'.career.v1.SweepCorpusEmbeddingsRequest\x1a(.career.v1.SweepCorpusEmbeddingsResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11ListJdSubmissions\x12#.career.v1.ListJdSubmissionsRequest\x1a$.career.v1.ListJdSubmissionsResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fGetJdSubmission\x12!.career.v1.GetJdSubmissionRequest\x1a\".career.v1.GetJdSubmissionResponse\"\x04\x80\xb5\x18\x03\x12L\n" +
+	"\tRescoreJd\x12\x1b.career.v1.RescoreJdRequest\x1a\x1c.career.v1.RescoreJdResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fSetJdOutcome\x12\x1e.career.v1.SetJdOutcomeRequest\x1a\x1f.career.v1.SetJdOutcomeResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10RecordJdFeedback\x12\".career.v1.RecordJdFeedbackRequest\x1a#.career.v1.RecordJdFeedbackResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12ListGoldenPostings\x12$.career.v1.ListGoldenPostingsRequest\x1a%.career.v1.ListGoldenPostingsResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
+	"\x13UpsertGoldenPosting\x12%.career.v1.UpsertGoldenPostingRequest\x1a&.career.v1.UpsertGoldenPostingResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fSetGoldenActive\x12!.career.v1.SetGoldenActiveRequest\x1a\".career.v1.SetGoldenActiveResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12LabelGoldenPosting\x12$.career.v1.LabelGoldenPostingRequest\x1a%.career.v1.LabelGoldenPostingResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fListEvalRuns\x12\x1e.career.v1.ListEvalRunsRequest\x1a\x1f.career.v1.ListEvalRunsResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
 	"\n" +
-	"GetEvalRun\x12\x1c.career.v1.GetEvalRunRequest\x1a\x1d.career.v1.GetEvalRunResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12S\n" +
+	"GetEvalRun\x12\x1c.career.v1.GetEvalRunRequest\x1a\x1d.career.v1.GetEvalRunResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
 	"\n" +
-	"GetMetrics\x12\x1c.career.v1.GetMetricsRequest\x1a\x1d.career.v1.GetMetricsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fGetOpsStatus\x12\x1e.career.v1.GetOpsStatusRequest\x1a\x1f.career.v1.GetOpsStatusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fGetJobDetail\x12\x1e.career.v1.GetJobDetailRequest\x1a\x1f.career.v1.GetJobDetailResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12J\n" +
-	"\aGetGate\x12\x19.career.v1.GetGateRequest\x1a\x1a.career.v1.GetGateResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fListDecisionLog\x12!.career.v1.ListDecisionLogRequest\x1a\".career.v1.ListDecisionLogResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12_\n" +
-	"\x0eReviewDecision\x12 .career.v1.ReviewDecisionRequest\x1a!.career.v1.ReviewDecisionResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11ExportDecisionLog\x12#.career.v1.ExportDecisionLogRequest\x1a$.career.v1.ExportDecisionLogResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rGetJdFitBands\x12\x1f.career.v1.GetJdFitBandsRequest\x1a .career.v1.GetJdFitBandsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rSetJdFitBands\x12\x1f.career.v1.SetJdFitBandsRequest\x1a .career.v1.SetJdFitBandsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12z\n" +
-	"\x17GetDecisionTestSettings\x12).career.v1.GetDecisionTestSettingsRequest\x1a*.career.v1.GetDecisionTestSettingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12z\n" +
-	"\x17SetDecisionTestSettings\x12).career.v1.SetDecisionTestSettingsRequest\x1a*.career.v1.SetDecisionTestSettingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14ListDecisionTestRuns\x12&.career.v1.ListDecisionTestRunsRequest\x1a'.career.v1.ListDecisionTestRunsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12GetDecisionTestRun\x12$.career.v1.GetDecisionTestRunRequest\x1a%.career.v1.GetDecisionTestRunResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12w\n" +
-	"\x16ExportDecisionTestData\x12(.career.v1.ExportDecisionTestDataRequest\x1a).career.v1.ExportDecisionTestDataResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12z\n" +
-	"\x17GetDecisionTestAnalysis\x12).career.v1.GetDecisionTestAnalysisRequest\x1a*.career.v1.GetDecisionTestAnalysisResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15ExportDecisionTestRun\x12'.career.v1.ExportDecisionTestRunRequest\x1a(.career.v1.ExportDecisionTestRunResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15ReviewDecisionTestRun\x12'.career.v1.ReviewDecisionTestRunRequest\x1a(.career.v1.ReviewDecisionTestRunResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14GetSchedulerSettings\x12&.career.v1.GetSchedulerSettingsRequest\x1a'.career.v1.GetSchedulerSettingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14SetSchedulerSettings\x12&.career.v1.SetSchedulerSettingsRequest\x1a'.career.v1.SetSchedulerSettingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rListQaEntries\x12\x1f.career.v1.ListQaEntriesRequest\x1a .career.v1.ListQaEntriesResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rCreateQaEntry\x12\x1f.career.v1.CreateQaEntryRequest\x1a .career.v1.CreateQaEntryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rUpdateQaEntry\x12\x1f.career.v1.UpdateQaEntryRequest\x1a .career.v1.UpdateQaEntryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11SetQaEntryEnabled\x12#.career.v1.SetQaEntryEnabledRequest\x1a$.career.v1.SetQaEntryEnabledResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rDeleteQaEntry\x12\x1f.career.v1.DeleteQaEntryRequest\x1a .career.v1.DeleteQaEntryResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12\\\n" +
-	"\rAddQaPhrasing\x12\x1f.career.v1.AddQaPhrasingRequest\x1a .career.v1.AddQaPhrasingResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12e\n" +
-	"\x10DeleteQaPhrasing\x12\".career.v1.DeleteQaPhrasingRequest\x1a#.career.v1.DeleteQaPhrasingResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12t\n" +
-	"\x15GetCalendarConnectURL\x12'.career.v1.GetCalendarConnectURLRequest\x1a(.career.v1.GetCalendarConnectURLResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12b\n" +
-	"\x0fConnectCalendar\x12!.career.v1.ConnectCalendarRequest\x1a\".career.v1.ConnectCalendarResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12h\n" +
-	"\x11GetCalendarStatus\x12#.career.v1.GetCalendarStatusRequest\x1a$.career.v1.GetCalendarStatusResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12k\n" +
-	"\x12DisconnectCalendar\x12$.career.v1.DisconnectCalendarRequest\x1a%.career.v1.DisconnectCalendarResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12Y\n" +
-	"\fListMeetings\x12\x1e.career.v1.ListMeetingsRequest\x1a\x1f.career.v1.ListMeetingsResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14CancelMeetingAsAdmin\x12&.career.v1.CancelMeetingAsAdminRequest\x1a'.career.v1.CancelMeetingAsAdminResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14GetJdSubmissionLimit\x12&.career.v1.GetJdSubmissionLimitRequest\x1a'.career.v1.GetJdSubmissionLimitResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01\x12q\n" +
-	"\x14SetJdSubmissionLimit\x12&.career.v1.SetJdSubmissionLimitRequest\x1a'.career.v1.SetJdSubmissionLimitResponse\"\b\x80\xb5\x18\x03\x98\xb5\x18\x01B\xa4\x01\n" +
+	"GetMetrics\x12\x1c.career.v1.GetMetricsRequest\x1a\x1d.career.v1.GetMetricsResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fGetOpsStatus\x12\x1e.career.v1.GetOpsStatusRequest\x1a\x1f.career.v1.GetOpsStatusResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fGetJobDetail\x12\x1e.career.v1.GetJobDetailRequest\x1a\x1f.career.v1.GetJobDetailResponse\"\x04\x80\xb5\x18\x03\x12F\n" +
+	"\aGetGate\x12\x19.career.v1.GetGateRequest\x1a\x1a.career.v1.GetGateResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fListDecisionLog\x12!.career.v1.ListDecisionLogRequest\x1a\".career.v1.ListDecisionLogResponse\"\x04\x80\xb5\x18\x03\x12[\n" +
+	"\x0eReviewDecision\x12 .career.v1.ReviewDecisionRequest\x1a!.career.v1.ReviewDecisionResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11ExportDecisionLog\x12#.career.v1.ExportDecisionLogRequest\x1a$.career.v1.ExportDecisionLogResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rGetJdFitBands\x12\x1f.career.v1.GetJdFitBandsRequest\x1a .career.v1.GetJdFitBandsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rSetJdFitBands\x12\x1f.career.v1.SetJdFitBandsRequest\x1a .career.v1.SetJdFitBandsResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
+	"\x17GetDecisionTestSettings\x12).career.v1.GetDecisionTestSettingsRequest\x1a*.career.v1.GetDecisionTestSettingsResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
+	"\x17SetDecisionTestSettings\x12).career.v1.SetDecisionTestSettingsRequest\x1a*.career.v1.SetDecisionTestSettingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14ListDecisionTestRuns\x12&.career.v1.ListDecisionTestRunsRequest\x1a'.career.v1.ListDecisionTestRunsResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12GetDecisionTestRun\x12$.career.v1.GetDecisionTestRunRequest\x1a%.career.v1.GetDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12s\n" +
+	"\x16ExportDecisionTestData\x12(.career.v1.ExportDecisionTestDataRequest\x1a).career.v1.ExportDecisionTestDataResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
+	"\x17GetDecisionTestAnalysis\x12).career.v1.GetDecisionTestAnalysisRequest\x1a*.career.v1.GetDecisionTestAnalysisResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15ExportDecisionTestRun\x12'.career.v1.ExportDecisionTestRunRequest\x1a(.career.v1.ExportDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15ReviewDecisionTestRun\x12'.career.v1.ReviewDecisionTestRunRequest\x1a(.career.v1.ReviewDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14GetSchedulerSettings\x12&.career.v1.GetSchedulerSettingsRequest\x1a'.career.v1.GetSchedulerSettingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14SetSchedulerSettings\x12&.career.v1.SetSchedulerSettingsRequest\x1a'.career.v1.SetSchedulerSettingsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rListQaEntries\x12\x1f.career.v1.ListQaEntriesRequest\x1a .career.v1.ListQaEntriesResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rCreateQaEntry\x12\x1f.career.v1.CreateQaEntryRequest\x1a .career.v1.CreateQaEntryResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rUpdateQaEntry\x12\x1f.career.v1.UpdateQaEntryRequest\x1a .career.v1.UpdateQaEntryResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11SetQaEntryEnabled\x12#.career.v1.SetQaEntryEnabledRequest\x1a$.career.v1.SetQaEntryEnabledResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rDeleteQaEntry\x12\x1f.career.v1.DeleteQaEntryRequest\x1a .career.v1.DeleteQaEntryResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
+	"\rAddQaPhrasing\x12\x1f.career.v1.AddQaPhrasingRequest\x1a .career.v1.AddQaPhrasingResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
+	"\x10DeleteQaPhrasing\x12\".career.v1.DeleteQaPhrasingRequest\x1a#.career.v1.DeleteQaPhrasingResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
+	"\x15GetCalendarConnectURL\x12'.career.v1.GetCalendarConnectURLRequest\x1a(.career.v1.GetCalendarConnectURLResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
+	"\x0fConnectCalendar\x12!.career.v1.ConnectCalendarRequest\x1a\".career.v1.ConnectCalendarResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
+	"\x11GetCalendarStatus\x12#.career.v1.GetCalendarStatusRequest\x1a$.career.v1.GetCalendarStatusResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
+	"\x12DisconnectCalendar\x12$.career.v1.DisconnectCalendarRequest\x1a%.career.v1.DisconnectCalendarResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
+	"\fListMeetings\x12\x1e.career.v1.ListMeetingsRequest\x1a\x1f.career.v1.ListMeetingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14CancelMeetingAsAdmin\x12&.career.v1.CancelMeetingAsAdminRequest\x1a'.career.v1.CancelMeetingAsAdminResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14GetJdSubmissionLimit\x12&.career.v1.GetJdSubmissionLimitRequest\x1a'.career.v1.GetJdSubmissionLimitResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
+	"\x14SetJdSubmissionLimit\x12&.career.v1.SetJdSubmissionLimitRequest\x1a'.career.v1.SetJdSubmissionLimitResponse\"\x04\x80\xb5\x18\x03B\xa4\x01\n" +
 	"\rcom.career.v1B\n" +
 	"AdminProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"

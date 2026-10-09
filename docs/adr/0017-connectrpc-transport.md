@@ -11,6 +11,7 @@ The browser-facing API needs a contract the frontend can build against, streamin
 - All browser-facing RPCs are Protobuf services in `proto/career/v1/`, served by the Go API with `connect-go` under `/api/{package}.{Service}/{Method}` and called from the Next.js app through the generated `connect-es` client.
 - JSON encoding by default (switchable to binary without a server change); `ChatService.SendMessage` uses server streaming.
 - Method-level options (`career.v1.auth`, `allow_unverified`, `rate_limit_per_minute`, `mfa_fresh`) declare the access policy; a Connect interceptor enforces it and `protovalidate` enforces the field rules, both before handlers run.
+  - **Not built as decided (noted 2026-10-09).** The interceptor was never written: `auth` is enforced by hand in each handler, `allow_unverified` and `rate_limit_per_minute` are not enforced at all, and `mfa_fresh` is now deprecated and set on no method because no second factor was ever built. The decision above stands and is planned in `docs/sprint-auth-interceptor.md`; this note records that the ADR described an intent that the code did not follow, which is worth knowing when reading it as evidence.
 - `docs/api/README.md` and `docs/api/endpoints.json` are generated from the compiled descriptors (`make docs-api`) so the reference cannot drift from the contract.
 - OAuth redirects, downloads, and health probes stay plain HTTP `GET` handlers because browsers navigate to them.
 

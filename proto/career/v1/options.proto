@@ -1,10 +1,25 @@
 // Method-level options that make the API's access policy machine-readable.
 //
-// The Go server reads these options from the method descriptor in a Connect
-// interceptor and enforces them uniformly, so no handler carries its own
-// auth check. The API reference generator (scripts/gen_api_docs.py) and the
-// UATS spec scaffolder read the same options, which keeps documentation,
-// enforcement, and contract tests derived from one declaration.
+// **What is enforced today, stated plainly, because this comment used to
+// overstate it.** It read: "The Go server reads these options from the
+// method descriptor in a Connect interceptor and enforces them uniformly,
+// so no handler carries its own auth check." Every clause of that was
+// false. There are no Connect interceptors in the service; `auth` is
+// enforced by hand, once per handler, and the other options are not
+// enforced at all.
+//
+//   auth                  declared on every method; enforced per handler
+//   allow_unverified      declared on 3; not enforced
+//   rate_limit_per_minute declared on 35; not enforced
+//   mfa_fresh             deprecated, declared on none, unenforceable
+//
+// Making `auth` interceptor-enforced is planned in
+// docs/sprint-auth-interceptor.md. Until that lands, treat this file as
+// a contract the code is checked against (see the auth-gate tests) and
+// not as a description of a mechanism.
+//
+// The API reference generator (scripts/gen_api_docs.py) reads the same
+// options, so documentation stays derived from one declaration.
 syntax = "proto3";
 
 package career.v1;
@@ -38,7 +53,23 @@ extend google.protobuf.MethodOptions {
   // returns `resource_exhausted` with a `Retry-After` header. Zero means the
   // method uses the default budget (120 per minute).
   uint32 rate_limit_per_minute = 50002;
-  // When true, the method also requires that the admin session's last TOTP
-  // verification is younger than the configured freshness window.
-  bool mfa_fresh = 50003;
+  // Deprecated and unused. Set on no method.
+  //
+  // This described a freshness requirement on an admin session's last
+  // TOTP verification, and was declared on 79 admin methods. There has
+  // never been a TOTP implementation: no enrolment, no verification
+  // timestamp on the session, nothing issuing or checking a code. So it
+  // was not an unenforced control, it was an unenforceable one, and on
+  // 79 methods it read in a security review as protection that existed.
+  //
+  // The owner decided on 2026-10-09 not to build a second factor, so
+  // every usage was removed rather than left describing something that
+  // will never happen. The field itself stays because career.v1 is
+  // additive-only and buf breaking refuses to delete a published
+  // extension; it is reserved in effect by being deprecated here.
+  //
+  // If a second factor is ever built, prefer a new field over reviving
+  // this one: its number carries the history of having meant something
+  // that was never true.
+  bool mfa_fresh = 50003 [deprecated = true];
 }
