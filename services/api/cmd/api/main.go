@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/auth"
+	"github.com/reh3376/career-site/services/api/internal/authpolicy"
 	"github.com/reh3376/career-site/services/api/internal/chat"
 	"github.com/reh3376/career-site/services/api/internal/config"
 	"github.com/reh3376/career-site/services/api/internal/db"
@@ -37,6 +38,29 @@ func main() {
 		log.Error("config load failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	// Build the auth policy from the proto before anything else is
+	// touched. It needs only the descriptors compiled into this binary,
+	// so it is the cheapest possible failure: no migrations have run and
+	// no connection has been opened.
+	//
+	// This exits rather than warning. A method that declares no auth
+	// level has no policy to enforce, and once the S3/S4 interceptor is
+	// live, "no policy" has to mean denied; a server that starts anyway
+	// would serve that method as a 500 or, worse, a hole. Failing here
+	// is loud, happens during the deploy, and `rollout.sh --rollback`
+	// puts the previous image back.
+	//
+	// It also makes a claim in options.proto true for the first time.
+	// The AuthLevel enum's comment said "Lint fails any method that
+	// leaves the level unspecified"; no such lint rule existed.
+	authPolicy, err := authpolicy.Build()
+	if err != nil {
+		log.Error("auth policy incomplete, refusing to start",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	log.Info("auth policy loaded", slog.String("policy", authPolicy.Summary()))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -427,6 +451,7 @@ func main() {
 	}
 
 	srv := server.New(cfg, log, server.Deps{
+		AuthPolicy:   authPolicy,
 		Sidecar:      sc,
 		DB:           pool,
 		Auth:         authHandler,

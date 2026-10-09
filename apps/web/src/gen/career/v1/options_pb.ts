@@ -38,15 +38,30 @@ export const file_career_v1_options: GenFile = /*@__PURE__*/
   fileDesc("ChdjYXJlZXIvdjEvb3B0aW9ucy5wcm90bxIJY2FyZWVyLnYxKmsKCUF1dGhMZXZlbBIaChZBVVRIX0xFVkVMX1VOU1BFQ0lGSUVEEAASFQoRQVVUSF9MRVZFTF9QVUJMSUMQARIVChFBVVRIX0xFVkVMX01FTUJFUhACEhQKEEFVVEhfTEVWRUxfQURNSU4QAzpKCgRhdXRoEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY0IYDIAEoDjIULmNhcmVlci52MS5BdXRoTGV2ZWxSBGF1dGg6SwoQYWxsb3dfdW52ZXJpZmllZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNGGAyABKAhSD2FsbG93VW52ZXJpZmllZDpXChVyYXRlX2xpbWl0X3Blcl9taW51dGUSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjShgMgASgNQgIYAVIScmF0ZUxpbWl0UGVyTWludXRlOkEKCW1mYV9mcmVzaBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNOGAyABKAhCAhgBUghtZmFGcmVzaEKmAQoNY29tLmNhcmVlci52MUIMT3B0aW9uc1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_google_protobuf_descriptor]);
 
 /**
- * Who may call a method. Enforced before the handler runs; a caller below
- * the required level receives the Connect code `unauthenticated` (no
- * session) or `permission_denied` (session without the role).
+ * Who may call a method.
+ *
+ * Enforced by hand inside each handler, not before it. This comment used
+ * to say "Enforced before the handler runs", which described the
+ * interceptor in docs/sprint-auth-interceptor.md rather than the code.
+ * The level here is the contract those handlers are checked against:
+ * internal/handlers/authpolicy_test.go compares every declaration with
+ * what its handler actually calls and fails on any disagreement.
+ *
+ * A caller below the required level receives the Connect code
+ * `unauthenticated` (no session) or `permission_denied` (session without
+ * the role). That part is accurate, because it is what the handlers
+ * return, and it is what the interceptor will return when S4 moves the
+ * decision out of them.
  *
  * @generated from enum career.v1.AuthLevel
  */
 export enum AuthLevel {
   /**
-   * Not set. Lint fails any method that leaves the level unspecified.
+   * Not set, and the server will not start that way: internal/authpolicy
+   * builds the policy from these declarations at boot and exits naming
+   * any method that left the level unspecified. This comment previously
+   * claimed "Lint fails any method that leaves the level unspecified";
+   * no such lint rule existed, which is why it is a boot failure now.
    *
    * @generated from enum value: AUTH_LEVEL_UNSPECIFIED = 0;
    */
