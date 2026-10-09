@@ -2590,15 +2590,15 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\x06Rating\x12\x16\n" +
 	"\x12RATING_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tRATING_UP\x10\x01\x12\x0f\n" +
-	"\vRATING_DOWN\x10\x022\x8b\b\n" +
-	"\vChatService\x12k\n" +
-	"\x12CreateConversation\x12$.career.v1.CreateConversationRequest\x1a%.career.v1.CreateConversationResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x14\x12d\n" +
+	"\vRATING_DOWN\x10\x022\xff\a\n" +
+	"\vChatService\x12g\n" +
+	"\x12CreateConversation\x12$.career.v1.CreateConversationRequest\x1a%.career.v1.CreateConversationResponse\"\x04\x80\xb5\x18\x02\x12d\n" +
 	"\x11ListConversations\x12#.career.v1.ListConversationsRequest\x1a$.career.v1.ListConversationsResponse\"\x04\x80\xb5\x18\x02\x12^\n" +
-	"\x0fGetConversation\x12!.career.v1.GetConversationRequest\x1a\".career.v1.GetConversationResponse\"\x04\x80\xb5\x18\x02\x12X\n" +
-	"\vSendMessage\x12\x1d.career.v1.SendMessageRequest\x1a\x1e.career.v1.SendMessageResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x140\x01\x12g\n" +
+	"\x0fGetConversation\x12!.career.v1.GetConversationRequest\x1a\".career.v1.GetConversationResponse\"\x04\x80\xb5\x18\x02\x12T\n" +
+	"\vSendMessage\x12\x1d.career.v1.SendMessageRequest\x1a\x1e.career.v1.SendMessageResponse\"\x04\x80\xb5\x18\x020\x01\x12g\n" +
 	"\x12DeleteConversation\x12$.career.v1.DeleteConversationRequest\x1a%.career.v1.DeleteConversationResponse\"\x04\x80\xb5\x18\x02\x12R\n" +
-	"\vRateMessage\x12\x1d.career.v1.RateMessageRequest\x1a\x1e.career.v1.RateMessageResponse\"\x04\x80\xb5\x18\x02\x12M\n" +
-	"\bEscalate\x12\x1a.career.v1.EscalateRequest\x1a\x1b.career.v1.EscalateResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x05\x12[\n" +
+	"\vRateMessage\x12\x1d.career.v1.RateMessageRequest\x1a\x1e.career.v1.RateMessageResponse\"\x04\x80\xb5\x18\x02\x12I\n" +
+	"\bEscalate\x12\x1a.career.v1.EscalateRequest\x1a\x1b.career.v1.EscalateResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
 	"\x0eGetSuggestions\x12 .career.v1.GetSuggestionsRequest\x1a!.career.v1.GetSuggestionsResponse\"\x04\x80\xb5\x18\x02\x12I\n" +
 	"\bGetQuota\x12\x1a.career.v1.GetQuotaRequest\x1a\x1b.career.v1.GetQuotaResponse\"\x04\x80\xb5\x18\x02\x12a\n" +
 	"\x10ListAdminQueries\x12\".career.v1.ListAdminQueriesRequest\x1a#.career.v1.ListAdminQueriesResponse\"\x04\x80\xb5\x18\x03\x12X\n" +

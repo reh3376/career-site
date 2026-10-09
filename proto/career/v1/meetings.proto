@@ -42,7 +42,6 @@ service MeetingService {
   // from constants compiled into the frontend.
   rpc GetMeetingOptions(GetMeetingOptionsRequest) returns (GetMeetingOptionsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
   // Returns the start times a member may book for one meeting length.
   // Computed per length rather than once, because a 45-minute meeting
@@ -50,7 +49,6 @@ service MeetingService {
   // that cannot fit is worse than offering nothing.
   rpc GetAvailability(GetAvailabilityRequest) returns (GetAvailabilityResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 30;
   }
   // Books one slot. Re-reads the calendar for the claimed interval
   // first, because the list the member saw is stale by the time they
@@ -59,20 +57,17 @@ service MeetingService {
   // cannot be created is released.
   rpc BookMeeting(BookMeetingRequest) returns (BookMeetingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 6;
   }
   // Lists the calling member's own meetings, upcoming first, so a
   // booking can be found again after the tab that made it is gone.
   rpc ListMyMeetings(ListMyMeetingsRequest) returns (ListMyMeetingsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 30;
   }
   // Cancels the caller's own meeting and frees the time. Cancelling
   // something already cancelled succeeds, so a double click or a stale
   // tab is not an error the member has to understand.
   rpc CancelMeeting(CancelMeetingRequest) returns (CancelMeetingResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 10;
   }
 }
 

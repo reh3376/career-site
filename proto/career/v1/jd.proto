@@ -27,7 +27,6 @@ service JdService {
   // on the actual scoring / generation — those run out of band.
   rpc SubmitJd(SubmitJdRequest) returns (SubmitJdResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 3;
   }
   // Returns the current state of a submission (received / scoring /
   // below-threshold / generating / ready / failed) with progress, the
@@ -36,19 +35,16 @@ service JdService {
   // the résumé and its PDF link when status is `ready`.
   rpc GetJdResult(GetJdResultRequest) returns (GetJdResultResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 30;
   }
   // Lists the signed-in member's own submissions, newest first, so a
   // review can be reopened after the tab that submitted it is gone.
   rpc ListMySubmissions(ListMySubmissionsRequest) returns (ListMySubmissionsResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 30;
   }
   // Returns the fit bands in force (the gate is the "strong" edge), so
   // the JD pages quote the numbers the pipeline actually uses.
   rpc GetJdReviewConfig(GetJdReviewConfigRequest) returns (GetJdReviewConfigResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
 }
 

@@ -1187,15 +1187,13 @@ const file_career_v1_decision_test_proto_rawDesc = "" +
 	"\x0frecall_strategy\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\x0erecallStrategy\"G\n" +
 	"\x15FinishSessionResponse\x12\x18\n" +
 	"\acorrect\x18\x01 \x01(\x05R\acorrect\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total2\xd3\x03\n" +
-	"\x13DecisionTestService\x12Y\n" +
-	"\fStartSession\x12\x1e.career.v1.StartSessionRequest\x1a\x1f.career.v1.StartSessionResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\n" +
-	"\x12M\n" +
-	"\bGetBlock\x12\x1a.career.v1.GetBlockRequest\x1a\x1b.career.v1.GetBlockResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18<\x12Y\n" +
-	"\fSubmitAnswer\x12\x1e.career.v1.SubmitAnswerRequest\x1a\x1f.career.v1.SubmitAnswerResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18x\x12Y\n" +
-	"\fSubmitRecall\x12\x1e.career.v1.SubmitRecallRequest\x1a\x1f.career.v1.SubmitRecallResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x1e\x12\\\n" +
-	"\rFinishSession\x12\x1f.career.v1.FinishSessionRequest\x1a .career.v1.FinishSessionResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\n" +
-	"B\xab\x01\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total2\xbf\x03\n" +
+	"\x13DecisionTestService\x12U\n" +
+	"\fStartSession\x12\x1e.career.v1.StartSessionRequest\x1a\x1f.career.v1.StartSessionResponse\"\x04\x80\xb5\x18\x01\x12I\n" +
+	"\bGetBlock\x12\x1a.career.v1.GetBlockRequest\x1a\x1b.career.v1.GetBlockResponse\"\x04\x80\xb5\x18\x01\x12U\n" +
+	"\fSubmitAnswer\x12\x1e.career.v1.SubmitAnswerRequest\x1a\x1f.career.v1.SubmitAnswerResponse\"\x04\x80\xb5\x18\x01\x12U\n" +
+	"\fSubmitRecall\x12\x1e.career.v1.SubmitRecallRequest\x1a\x1f.career.v1.SubmitRecallResponse\"\x04\x80\xb5\x18\x01\x12X\n" +
+	"\rFinishSession\x12\x1f.career.v1.FinishSessionRequest\x1a .career.v1.FinishSessionResponse\"\x04\x80\xb5\x18\x01B\xab\x01\n" +
 	"\rcom.career.v1B\x11DecisionTestProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

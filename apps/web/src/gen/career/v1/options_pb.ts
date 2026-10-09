@@ -10,7 +10,8 @@
 //
 //   auth                  declared on every method; enforced per handler
 //   allow_unverified      declared on 3; not enforced
-//   rate_limit_per_minute declared on 35; not enforced
+//   rate_limit_per_minute deprecated, declared on none. Rate limiting
+//                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
 //
 // Making `auth` interceptor-enforced is planned in
@@ -34,7 +35,7 @@ import { file_google_protobuf_descriptor } from "@bufbuild/protobuf/wkt";
  * Describes the file career/v1/options.proto.
  */
 export const file_career_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXJlZXIvdjEvb3B0aW9ucy5wcm90bxIJY2FyZWVyLnYxKmsKCUF1dGhMZXZlbBIaChZBVVRIX0xFVkVMX1VOU1BFQ0lGSUVEEAASFQoRQVVUSF9MRVZFTF9QVUJMSUMQARIVChFBVVRIX0xFVkVMX01FTUJFUhACEhQKEEFVVEhfTEVWRUxfQURNSU4QAzpKCgRhdXRoEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY0IYDIAEoDjIULmNhcmVlci52MS5BdXRoTGV2ZWxSBGF1dGg6SwoQYWxsb3dfdW52ZXJpZmllZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNGGAyABKAhSD2FsbG93VW52ZXJpZmllZDpTChVyYXRlX2xpbWl0X3Blcl9taW51dGUSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjShgMgASgNUhJyYXRlTGltaXRQZXJNaW51dGU6QQoJbWZhX2ZyZXNoEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY04YDIAEoCEICGAFSCG1mYUZyZXNoQqYBCg1jb20uY2FyZWVyLnYxQgxPcHRpb25zUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_google_protobuf_descriptor]);
+  fileDesc("ChdjYXJlZXIvdjEvb3B0aW9ucy5wcm90bxIJY2FyZWVyLnYxKmsKCUF1dGhMZXZlbBIaChZBVVRIX0xFVkVMX1VOU1BFQ0lGSUVEEAASFQoRQVVUSF9MRVZFTF9QVUJMSUMQARIVChFBVVRIX0xFVkVMX01FTUJFUhACEhQKEEFVVEhfTEVWRUxfQURNSU4QAzpKCgRhdXRoEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY0IYDIAEoDjIULmNhcmVlci52MS5BdXRoTGV2ZWxSBGF1dGg6SwoQYWxsb3dfdW52ZXJpZmllZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNGGAyABKAhSD2FsbG93VW52ZXJpZmllZDpXChVyYXRlX2xpbWl0X3Blcl9taW51dGUSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjShgMgASgNQgIYAVIScmF0ZUxpbWl0UGVyTWludXRlOkEKCW1mYV9mcmVzaBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNOGAyABKAhCAhgBUghtZmFGcmVzaEKmAQoNY29tLmNhcmVlci52MUIMT3B0aW9uc1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_google_protobuf_descriptor]);
 
 /**
  * Who may call a method. Enforced before the handler runs; a caller below
@@ -98,11 +99,28 @@ export const allow_unverified: GenExtension<MethodOptions, boolean> = /*@__PURE_
   extDesc(file_career_v1_options, 1);
 
 /**
- * Per-account (or per-IP for public methods) request budget. Exceeding it
- * returns `resource_exhausted` with a `Retry-After` header. Zero means the
- * method uses the default budget (120 per minute).
+ * Deprecated and unused. Set on no method.
  *
- * @generated from extension: uint32 rate_limit_per_minute = 50002;
+ * This declared a per-account or per-IP request budget on 35 methods.
+ * Nothing ever read it. Rate limiting is real on this service, but it
+ * is hand-wired in `internal/ratelimit` at the handlers that need it
+ * (login, password reset, registration, JD submission, events), with
+ * its own constants.
+ *
+ * So these numbers were not merely inert, they were wrong, and in
+ * both directions. The contract said Login allowed 10 a minute; the
+ * code allows 5 attempts refilling over 15 minutes, roughly thirty
+ * times stricter. Anyone reading the contract to understand the
+ * throttle got a materially wrong answer.
+ *
+ * Removed on 2026-10-09 for that reason. The field stays because
+ * career.v1 is additive-only and buf breaking refuses to delete a
+ * published extension. If budgets are ever driven from the contract,
+ * take a new number and make the interceptor the only thing that
+ * applies them.
+ *
+ * @generated from extension: uint32 rate_limit_per_minute = 50002 [deprecated = true];
+ * @deprecated
  */
 export const rate_limit_per_minute: GenExtension<MethodOptions, number> = /*@__PURE__*/
   extDesc(file_career_v1_options, 2);

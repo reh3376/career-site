@@ -558,10 +558,10 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"#SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS\x10\x04\x12\"\n" +
 	"\x1eSUPPORT_CATEGORY_PRESS_INQUIRY\x10\x05\x12\x1a\n" +
 	"\x16SUPPORT_CATEGORY_OTHER\x10\x06\x12#\n" +
-	"\x1fSUPPORT_CATEGORY_HIRING_INQUIRY\x10\a2\xd4\x01\n" +
+	"\x1fSUPPORT_CATEGORY_HIRING_INQUIRY\x10\a2\xd0\x01\n" +
 	"\x0eContactService\x12d\n" +
-	"\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12\\\n" +
-	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18\x03B\xa6\x01\n" +
+	"\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12X\n" +
+	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\x04\x80\xb5\x18\x01B\xa6\x01\n" +
 	"\rcom.career.v1B\fContactProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

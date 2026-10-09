@@ -10,7 +10,8 @@
 //
 //   auth                  declared on every method; enforced per handler
 //   allow_unverified      declared on 3; not enforced
-//   rate_limit_per_minute declared on 35; not enforced
+//   rate_limit_per_minute deprecated, declared on none. Rate limiting
+//                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
 //
 // Making `auth` interceptor-enforced is planned in
@@ -49,10 +50,26 @@ extend google.protobuf.MethodOptions {
   // When true with `auth = AUTH_LEVEL_MEMBER`, a session whose member is
   // still UNVERIFIED may call the method (verification, resend, logout).
   bool allow_unverified = 50001;
-  // Per-account (or per-IP for public methods) request budget. Exceeding it
-  // returns `resource_exhausted` with a `Retry-After` header. Zero means the
-  // method uses the default budget (120 per minute).
-  uint32 rate_limit_per_minute = 50002;
+  // Deprecated and unused. Set on no method.
+  //
+  // This declared a per-account or per-IP request budget on 35 methods.
+  // Nothing ever read it. Rate limiting is real on this service, but it
+  // is hand-wired in `internal/ratelimit` at the handlers that need it
+  // (login, password reset, registration, JD submission, events), with
+  // its own constants.
+  //
+  // So these numbers were not merely inert, they were wrong, and in
+  // both directions. The contract said Login allowed 10 a minute; the
+  // code allows 5 attempts refilling over 15 minutes, roughly thirty
+  // times stricter. Anyone reading the contract to understand the
+  // throttle got a materially wrong answer.
+  //
+  // Removed on 2026-10-09 for that reason. The field stays because
+  // career.v1 is additive-only and buf breaking refuses to delete a
+  // published extension. If budgets are ever driven from the contract,
+  // take a new number and make the interceptor the only thing that
+  // applies them.
+  uint32 rate_limit_per_minute = 50002 [deprecated = true];
   // Deprecated and unused. Set on no method.
   //
   // This described a freshness requirement on an admin session's last

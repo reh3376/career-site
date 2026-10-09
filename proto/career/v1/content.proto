@@ -45,7 +45,6 @@ service ContentService {
   // relevance boost for the member's tracks.
   rpc Search(SearchRequest) returns (SearchResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 60;
   }
 }
 

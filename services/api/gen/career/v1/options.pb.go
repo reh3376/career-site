@@ -10,7 +10,8 @@
 //
 //   auth                  declared on every method; enforced per handler
 //   allow_unverified      declared on 3; not enforced
-//   rate_limit_per_minute declared on 35; not enforced
+//   rate_limit_per_minute deprecated, declared on none. Rate limiting
+//                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
 //
 // Making `auth` interceptor-enforced is planned in
@@ -151,11 +152,29 @@ var (
 	//
 	// optional bool allow_unverified = 50001;
 	E_AllowUnverified = &file_career_v1_options_proto_extTypes[1]
-	// Per-account (or per-IP for public methods) request budget. Exceeding it
-	// returns `resource_exhausted` with a `Retry-After` header. Zero means the
-	// method uses the default budget (120 per minute).
+	// Deprecated and unused. Set on no method.
+	//
+	// This declared a per-account or per-IP request budget on 35 methods.
+	// Nothing ever read it. Rate limiting is real on this service, but it
+	// is hand-wired in `internal/ratelimit` at the handlers that need it
+	// (login, password reset, registration, JD submission, events), with
+	// its own constants.
+	//
+	// So these numbers were not merely inert, they were wrong, and in
+	// both directions. The contract said Login allowed 10 a minute; the
+	// code allows 5 attempts refilling over 15 minutes, roughly thirty
+	// times stricter. Anyone reading the contract to understand the
+	// throttle got a materially wrong answer.
+	//
+	// Removed on 2026-10-09 for that reason. The field stays because
+	// career.v1 is additive-only and buf breaking refuses to delete a
+	// published extension. If budgets are ever driven from the contract,
+	// take a new number and make the interceptor the only thing that
+	// applies them.
 	//
 	// optional uint32 rate_limit_per_minute = 50002;
+	//
+	// Deprecated: Marked as deprecated in career/v1/options.proto.
 	E_RateLimitPerMinute = &file_career_v1_options_proto_extTypes[2]
 	// Deprecated and unused. Set on no method.
 	//
@@ -193,8 +212,8 @@ const file_career_v1_options_proto_rawDesc = "" +
 	"\x11AUTH_LEVEL_MEMBER\x10\x02\x12\x14\n" +
 	"\x10AUTH_LEVEL_ADMIN\x10\x03:J\n" +
 	"\x04auth\x12\x1e.google.protobuf.MethodOptions\x18І\x03 \x01(\x0e2\x14.career.v1.AuthLevelR\x04auth:K\n" +
-	"\x10allow_unverified\x12\x1e.google.protobuf.MethodOptions\x18ц\x03 \x01(\bR\x0fallowUnverified:S\n" +
-	"\x15rate_limit_per_minute\x12\x1e.google.protobuf.MethodOptions\x18҆\x03 \x01(\rR\x12rateLimitPerMinute:A\n" +
+	"\x10allow_unverified\x12\x1e.google.protobuf.MethodOptions\x18ц\x03 \x01(\bR\x0fallowUnverified:W\n" +
+	"\x15rate_limit_per_minute\x12\x1e.google.protobuf.MethodOptions\x18҆\x03 \x01(\rB\x02\x18\x01R\x12rateLimitPerMinute:A\n" +
 	"\tmfa_fresh\x12\x1e.google.protobuf.MethodOptions\x18ӆ\x03 \x01(\bB\x02\x18\x01R\bmfaFreshB\xa6\x01\n" +
 	"\rcom.career.v1B\fOptionsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"

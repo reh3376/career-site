@@ -36,27 +36,23 @@ service AuthService {
   // "someone tried to register with your address" email instead.
   rpc Register(RegisterRequest) returns (RegisterResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 5;
   }
   // Confirms control of the email address with the emailed link token or the
   // six-digit code, activates the account, and starts a session (cookie set
   // in the response).
   rpc Verify(VerifyRequest) returns (VerifyResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 10;
   }
   // Re-sends the verification email for an unverified account. Identical
   // response whether or not the address is known.
   rpc ResendVerification(ResendVerificationRequest) returns (ResendVerificationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 3;
   }
   // Signs in with email and password and sets the session cookie. For an
   // admin account the session is created but flagged `mfa_required`; admin
   // methods stay unavailable until MfaVerify succeeds.
   rpc Login(LoginRequest) returns (LoginResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 10;
   }
   // Ends the current session and clears the cookie.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
@@ -71,19 +67,16 @@ service AuthService {
   // response whether or not the address is known.
   rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 3;
   }
   // Sets a new password using a reset token and signs the member in on
   // success. All other sessions are revoked.
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.rate_limit_per_minute) = 5;
   }
   // Changes the password of the signed-in member; requires the current
   // password. Other sessions are revoked.
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 5;
   }
   // Starts an email change: a verification email goes to the new address and
   // the change applies when it is confirmed via Verify. Requires the current
@@ -91,7 +84,6 @@ service AuthService {
   // the last ten minutes).
   rpc ChangeEmail(ChangeEmailRequest) returns (ChangeEmailResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 3;
   }
   // Enrols TOTP MFA for an admin account that has none. Returns the shared
   // secret as an otpauth URI plus one-time recovery codes; enrolment
@@ -102,7 +94,6 @@ service AuthService {
   // Verifies a TOTP code (or a recovery code) for the current admin session.
   rpc MfaVerify(MfaVerifyRequest) returns (MfaVerifyResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 5;
   }
 }
 

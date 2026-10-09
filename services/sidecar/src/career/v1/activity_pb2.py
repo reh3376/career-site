@@ -27,7 +27,7 @@ from career.v1 import common_pb2 as career_dot_v1_dot_common__pb2
 from career.v1 import options_pb2 as career_dot_v1_dot_options__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x63\x61reer/v1/activity.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x16\x63\x61reer/v1/common.proto\x1a\x17\x63\x61reer/v1/options.proto\"S\n\x13RecordEventsRequest\x12<\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x18.career.v1.ActivityEventB\n\xbaH\x07\x92\x01\x04\x08\x01\x10\x32R\x06\x65vents\"R\n\x14RecordEventsResponse\x12\x1a\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x05R\x08\x61\x63\x63\x65pted\x12\x1e\n\nduplicates\x18\x02 \x01(\x05R\nduplicates2l\n\x0f\x41\x63tivityService\x12Y\n\x0cRecordEvents\x12\x1e.career.v1.RecordEventsRequest\x1a\x1f.career.v1.RecordEventsResponse\"\x08\x80\xb5\x18\x02\x90\xb5\x18xB\xa7\x01\n\rcom.career.v1B\rActivityProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x63\x61reer/v1/activity.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x16\x63\x61reer/v1/common.proto\x1a\x17\x63\x61reer/v1/options.proto\"S\n\x13RecordEventsRequest\x12<\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x18.career.v1.ActivityEventB\n\xbaH\x07\x92\x01\x04\x08\x01\x10\x32R\x06\x65vents\"R\n\x14RecordEventsResponse\x12\x1a\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x05R\x08\x61\x63\x63\x65pted\x12\x1e\n\nduplicates\x18\x02 \x01(\x05R\nduplicates2h\n\x0f\x41\x63tivityService\x12U\n\x0cRecordEvents\x12\x1e.career.v1.RecordEventsRequest\x1a\x1f.career.v1.RecordEventsResponse\"\x04\x80\xb5\x18\x02\x42\xa7\x01\n\rcom.career.v1B\rActivityProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,11 +38,11 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RECORDEVENTSREQUEST'].fields_by_name['events']._loaded_options = None
   _globals['_RECORDEVENTSREQUEST'].fields_by_name['events']._serialized_options = b'\272H\007\222\001\004\010\001\0202'
   _globals['_ACTIVITYSERVICE'].methods_by_name['RecordEvents']._loaded_options = None
-  _globals['_ACTIVITYSERVICE'].methods_by_name['RecordEvents']._serialized_options = b'\200\265\030\002\220\265\030x'
+  _globals['_ACTIVITYSERVICE'].methods_by_name['RecordEvents']._serialized_options = b'\200\265\030\002'
   _globals['_RECORDEVENTSREQUEST']._serialized_start=117
   _globals['_RECORDEVENTSREQUEST']._serialized_end=200
   _globals['_RECORDEVENTSRESPONSE']._serialized_start=202
   _globals['_RECORDEVENTSRESPONSE']._serialized_end=284
   _globals['_ACTIVITYSERVICE']._serialized_start=286
-  _globals['_ACTIVITYSERVICE']._serialized_end=394
+  _globals['_ACTIVITYSERVICE']._serialized_end=390
 # @@protoc_insertion_point(module_scope)

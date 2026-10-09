@@ -1068,14 +1068,13 @@ const file_career_v1_meetings_proto_rawDesc = "" +
 	"\x1aVIDEO_PROVIDER_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aVIDEO_PROVIDER_GOOGLE_MEET\x10\x01\x12\x18\n" +
 	"\x14VIDEO_PROVIDER_TEAMS\x10\x02\x12\x17\n" +
-	"\x13VIDEO_PROVIDER_ZOOM\x10\x032\xf5\x03\n" +
-	"\x0eMeetingService\x12h\n" +
-	"\x11GetMeetingOptions\x12#.career.v1.GetMeetingOptionsRequest\x1a$.career.v1.GetMeetingOptionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18<\x12b\n" +
-	"\x0fGetAvailability\x12!.career.v1.GetAvailabilityRequest\x1a\".career.v1.GetAvailabilityResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12V\n" +
-	"\vBookMeeting\x12\x1d.career.v1.BookMeetingRequest\x1a\x1e.career.v1.BookMeetingResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x06\x12_\n" +
-	"\x0eListMyMeetings\x12 .career.v1.ListMyMeetingsRequest\x1a!.career.v1.ListMyMeetingsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12\\\n" +
-	"\rCancelMeeting\x12\x1f.career.v1.CancelMeetingRequest\x1a .career.v1.CancelMeetingResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\n" +
-	"B\xa7\x01\n" +
+	"\x13VIDEO_PROVIDER_ZOOM\x10\x032\xe1\x03\n" +
+	"\x0eMeetingService\x12d\n" +
+	"\x11GetMeetingOptions\x12#.career.v1.GetMeetingOptionsRequest\x1a$.career.v1.GetMeetingOptionsResponse\"\x04\x80\xb5\x18\x02\x12^\n" +
+	"\x0fGetAvailability\x12!.career.v1.GetAvailabilityRequest\x1a\".career.v1.GetAvailabilityResponse\"\x04\x80\xb5\x18\x02\x12R\n" +
+	"\vBookMeeting\x12\x1d.career.v1.BookMeetingRequest\x1a\x1e.career.v1.BookMeetingResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
+	"\x0eListMyMeetings\x12 .career.v1.ListMyMeetingsRequest\x1a!.career.v1.ListMyMeetingsResponse\"\x04\x80\xb5\x18\x02\x12X\n" +
+	"\rCancelMeeting\x12\x1f.career.v1.CancelMeetingRequest\x1a .career.v1.CancelMeetingResponse\"\x04\x80\xb5\x18\x02B\xa7\x01\n" +
 	"\rcom.career.v1B\rMeetingsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

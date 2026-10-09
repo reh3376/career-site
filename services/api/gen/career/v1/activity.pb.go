@@ -138,9 +138,9 @@ const file_career_v1_activity_proto_rawDesc = "" +
 	"\baccepted\x18\x01 \x01(\x05R\baccepted\x12\x1e\n" +
 	"\n" +
 	"duplicates\x18\x02 \x01(\x05R\n" +
-	"duplicates2l\n" +
-	"\x0fActivityService\x12Y\n" +
-	"\fRecordEvents\x12\x1e.career.v1.RecordEventsRequest\x1a\x1f.career.v1.RecordEventsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18xB\xa7\x01\n" +
+	"duplicates2h\n" +
+	"\x0fActivityService\x12U\n" +
+	"\fRecordEvents\x12\x1e.career.v1.RecordEventsRequest\x1a\x1f.career.v1.RecordEventsResponse\"\x04\x80\xb5\x18\x02B\xa7\x01\n" +
 	"\rcom.career.v1B\rActivityProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

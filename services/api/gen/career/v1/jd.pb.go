@@ -1265,12 +1265,12 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x14JD_STATUS_GENERATING\x10\x04\x12\x13\n" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
 	"\x10JD_STATUS_FAILED\x10\x06\x12\x1b\n" +
-	"\x17JD_STATUS_NOT_A_POSTING\x10\a2\x86\x03\n" +
-	"\tJdService\x12M\n" +
-	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x03\x12V\n" +
-	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +
-	"\x11ListMySubmissions\x12#.career.v1.ListMySubmissionsRequest\x1a$.career.v1.ListMySubmissionsResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18\x1e\x12h\n" +
-	"\x11GetJdReviewConfig\x12#.career.v1.GetJdReviewConfigRequest\x1a$.career.v1.GetJdReviewConfigResponse\"\b\x80\xb5\x18\x02\x90\xb5\x18<B\xa1\x01\n" +
+	"\x17JD_STATUS_NOT_A_POSTING\x10\a2\xf6\x02\n" +
+	"\tJdService\x12I\n" +
+	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\x04\x80\xb5\x18\x02\x12R\n" +
+	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\x04\x80\xb5\x18\x02\x12d\n" +
+	"\x11ListMySubmissions\x12#.career.v1.ListMySubmissionsRequest\x1a$.career.v1.ListMySubmissionsResponse\"\x04\x80\xb5\x18\x02\x12d\n" +
+	"\x11GetJdReviewConfig\x12#.career.v1.GetJdReviewConfigRequest\x1a$.career.v1.GetJdReviewConfigResponse\"\x04\x80\xb5\x18\x02B\xa1\x01\n" +
 	"\rcom.career.v1B\aJdProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

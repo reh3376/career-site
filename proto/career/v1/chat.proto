@@ -24,7 +24,6 @@ service ChatService {
   // without a round trip.
   rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 20;
   }
   // Lists the member's conversations, most recent first.
   rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse) {
@@ -41,7 +40,6 @@ service ChatService {
   // call fails with `resource_exhausted` and no message is stored.
   rpc SendMessage(SendMessageRequest) returns (stream SendMessageResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 20;
   }
   // Deletes a conversation. It disappears immediately for the member and is
   // hard-deleted within 30 days.
@@ -57,7 +55,6 @@ service ChatService {
   // member is notified by email.
   rpc Escalate(EscalateRequest) returns (EscalateResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
-    option (career.v1.rate_limit_per_minute) = 5;
   }
   // Returns suggested questions for the current page and the member's
   // tracks (at least three).

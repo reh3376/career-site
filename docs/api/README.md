@@ -137,22 +137,22 @@ Registration, verification, sign-in, and credential management.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`Register`](#authservice-register) | `/api/career.v1.AuthService/Register` | Public | 5 | `RegisterRequest` → `RegisterResponse` | Creates an unverified account and sends a verification email. |
-| [`Verify`](#authservice-verify) | `/api/career.v1.AuthService/Verify` | Public | 10 | `VerifyRequest` → `VerifyResponse` | Confirms control of the email address with the emailed link token or the six-digit code, activates the account, and starts a session (cookie set in the response). |
-| [`ResendVerification`](#authservice-resendverification) | `/api/career.v1.AuthService/ResendVerification` | Public | 3 | `ResendVerificationRequest` → `ResendVerificationResponse` | Re-sends the verification email for an unverified account. |
-| [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | 10 | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
+| [`Register`](#authservice-register) | `/api/career.v1.AuthService/Register` | Public | default | `RegisterRequest` → `RegisterResponse` | Creates an unverified account and sends a verification email. |
+| [`Verify`](#authservice-verify) | `/api/career.v1.AuthService/Verify` | Public | default | `VerifyRequest` → `VerifyResponse` | Confirms control of the email address with the emailed link token or the six-digit code, activates the account, and starts a session (cookie set in the response). |
+| [`ResendVerification`](#authservice-resendverification) | `/api/career.v1.AuthService/ResendVerification` | Public | default | `ResendVerificationRequest` → `ResendVerificationResponse` | Re-sends the verification email for an unverified account. |
+| [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | default | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
 | [`Logout`](#authservice-logout) | `/api/career.v1.AuthService/Logout` | Member (unverified OK) | default | `LogoutRequest` → `LogoutResponse` | Ends the current session and clears the cookie. |
 | [`LogoutAll`](#authservice-logoutall) | `/api/career.v1.AuthService/LogoutAll` | Member | default | `LogoutAllRequest` → `LogoutAllResponse` | Ends every session of the member ("sign out of all devices"). |
-| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | 3 | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
-| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | 5 | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
-| [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | 5 | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
-| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | 3 | `ChangeEmailRequest` → `ChangeEmailResponse` | Starts an email change: a verification email goes to the new address and the change applies when it is confirmed via Verify. |
+| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
+| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
+| [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | default | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
+| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | default | `ChangeEmailRequest` → `ChangeEmailResponse` | Starts an email change: a verification email goes to the new address and the change applies when it is confirmed via Verify. |
 | [`MfaEnroll`](#authservice-mfaenroll) | `/api/career.v1.AuthService/MfaEnroll` | Member | default | `MfaEnrollRequest` → `MfaEnrollResponse` | Enrols TOTP MFA for an admin account that has none. |
-| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | 5 | `MfaVerifyRequest` → `MfaVerifyResponse` | Verifies a TOTP code (or a recovery code) for the current admin session. |
+| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | default | `MfaVerifyRequest` → `MfaVerifyResponse` | Verifies a TOTP code (or a recovery code) for the current admin session. |
 
 ### AuthService.Register
 
-`POST /api/career.v1.AuthService/Register` · **Auth:** Public · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/Register` · **Auth:** Public · **Rate limit:** default/min
 
 Creates an unverified account and sends a verification email. The
 response is identical whether or not the email address already exists,
@@ -197,7 +197,7 @@ to prevent account enumeration; an existing verified account receives a
 
 ### AuthService.Verify
 
-`POST /api/career.v1.AuthService/Verify` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.AuthService/Verify` · **Auth:** Public · **Rate limit:** default/min
 
 Confirms control of the email address with the emailed link token or the
 six-digit code, activates the account, and starts a session (cookie set
@@ -231,7 +231,7 @@ in the response).
 
 ### AuthService.ResendVerification
 
-`POST /api/career.v1.AuthService/ResendVerification` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ResendVerification` · **Auth:** Public · **Rate limit:** default/min
 
 Re-sends the verification email for an unverified account. Identical
 response whether or not the address is known.
@@ -260,7 +260,7 @@ response whether or not the address is known.
 
 ### AuthService.Login
 
-`POST /api/career.v1.AuthService/Login` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.AuthService/Login` · **Auth:** Public · **Rate limit:** default/min
 
 Signs in with email and password and sets the session cookie. For an
 admin account the session is created but flagged `mfa_required`; admin
@@ -342,7 +342,7 @@ _No fields; send `{}`._
 
 ### AuthService.ForgotPassword
 
-`POST /api/career.v1.AuthService/ForgotPassword` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ForgotPassword` · **Auth:** Public · **Rate limit:** default/min
 
 Emails a single-use password-reset link (valid one hour). Identical
 response whether or not the address is known.
@@ -371,7 +371,7 @@ response whether or not the address is known.
 
 ### AuthService.ResetPassword
 
-`POST /api/career.v1.AuthService/ResetPassword` · **Auth:** Public · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/ResetPassword` · **Auth:** Public · **Rate limit:** default/min
 
 Sets a new password using a reset token and signs the member in on
 success. All other sessions are revoked.
@@ -402,7 +402,7 @@ success. All other sessions are revoked.
 
 ### AuthService.ChangePassword
 
-`POST /api/career.v1.AuthService/ChangePassword` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/ChangePassword` · **Auth:** Member · **Rate limit:** default/min
 
 Changes the password of the signed-in member; requires the current
 password. Other sessions are revoked.
@@ -433,7 +433,7 @@ password. Other sessions are revoked.
 
 ### AuthService.ChangeEmail
 
-`POST /api/career.v1.AuthService/ChangeEmail` · **Auth:** Member · **Rate limit:** 3/min
+`POST /api/career.v1.AuthService/ChangeEmail` · **Auth:** Member · **Rate limit:** default/min
 
 Starts an email change: a verification email goes to the new address and
 the change applies when it is confirmed via Verify. Requires the current
@@ -494,7 +494,7 @@ _No fields; send `{}`._
 
 ### AuthService.MfaVerify
 
-`POST /api/career.v1.AuthService/MfaVerify` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.AuthService/MfaVerify` · **Auth:** Member · **Rate limit:** default/min
 
 Verifies a TOTP code (or a recovery code) for the current admin session.
 
@@ -536,9 +536,9 @@ no member ID parameter.
 | [`ListSaved`](#memberservice-listsaved) | `/api/career.v1.MemberService/ListSaved` | Member | default | `ListSavedRequest` → `ListSavedResponse` | Lists saved items, newest first. |
 | [`SaveItem`](#memberservice-saveitem) | `/api/career.v1.MemberService/SaveItem` | Member | default | `SaveItemRequest` → `SaveItemResponse` | Saves a content item with an optional private note. |
 | [`UnsaveItem`](#memberservice-unsaveitem) | `/api/career.v1.MemberService/UnsaveItem` | Member | default | `UnsaveItemRequest` → `UnsaveItemResponse` | Removes a saved item. |
-| [`RequestExport`](#memberservice-requestexport) | `/api/career.v1.MemberService/RequestExport` | Member | 2 | `RequestExportRequest` → `RequestExportResponse` | Requests an export of all data held about the member (profile, interests, activity, saved items, conversations) as JSON. |
+| [`RequestExport`](#memberservice-requestexport) | `/api/career.v1.MemberService/RequestExport` | Member | default | `RequestExportRequest` → `RequestExportResponse` | Requests an export of all data held about the member (profile, interests, activity, saved items, conversations) as JSON. |
 | [`GetExport`](#memberservice-getexport) | `/api/career.v1.MemberService/GetExport` | Member | default | `GetExportRequest` → `GetExportResponse` | Returns the status of an export and, when ready, a short-lived download URL. |
-| [`DeleteAccount`](#memberservice-deleteaccount) | `/api/career.v1.MemberService/DeleteAccount` | Member (unverified OK) | 2 | `DeleteAccountRequest` → `DeleteAccountResponse` | Schedules deletion of the account and all personal data. |
+| [`DeleteAccount`](#memberservice-deleteaccount) | `/api/career.v1.MemberService/DeleteAccount` | Member (unverified OK) | default | `DeleteAccountRequest` → `DeleteAccountResponse` | Schedules deletion of the account and all personal data. |
 
 ### MemberService.GetMe
 
@@ -775,7 +775,7 @@ _No fields; send `{}`._
 
 ### MemberService.RequestExport
 
-`POST /api/career.v1.MemberService/RequestExport` · **Auth:** Member · **Rate limit:** 2/min
+`POST /api/career.v1.MemberService/RequestExport` · **Auth:** Member · **Rate limit:** default/min
 
 Requests an export of all data held about the member (profile,
 interests, activity, saved items, conversations) as JSON. The export is
@@ -834,7 +834,7 @@ URL.
 
 ### MemberService.DeleteAccount
 
-`POST /api/career.v1.MemberService/DeleteAccount` · **Auth:** Member (unverified OK) · **Rate limit:** 2/min
+`POST /api/career.v1.MemberService/DeleteAccount` · **Auth:** Member (unverified OK) · **Rate limit:** default/min
 
 Schedules deletion of the account and all personal data. The session
 ends immediately; data is purged within 30 days (conversations and
@@ -875,7 +875,7 @@ Read access to the content catalog.
 | [`WhatsNew`](#contentservice-whatsnew) | `/api/career.v1.ContentService/WhatsNew` | Member | default | `WhatsNewRequest` → `WhatsNewResponse` | Lists items published or materially updated since a point in time (default: the member's previous visit, or 90 days for a first visit). |
 | [`ListTracks`](#contentservice-listtracks) | `/api/career.v1.ContentService/ListTracks` | Member | default | `ListTracksRequest` → `ListTracksResponse` | Lists the track taxonomy with framing copy and reading paths. |
 | [`GetSkills`](#contentservice-getskills) | `/api/career.v1.ContentService/GetSkills` | Member | default | `GetSkillsRequest` → `GetSkillsResponse` | Returns the skills matrix grouped by category, each skill with its evidence links. |
-| [`Search`](#contentservice-search) | `/api/career.v1.ContentService/Search` | Member | 60 | `SearchRequest` → `SearchResponse` | Full-text search across titles, summaries, bodies, and tags, with a relevance boost for the member's tracks. |
+| [`Search`](#contentservice-search) | `/api/career.v1.ContentService/Search` | Member | default | `SearchRequest` → `SearchResponse` | Full-text search across titles, summaries, bodies, and tags, with a relevance boost for the member's tracks. |
 
 ### ContentService.ListContent
 
@@ -1035,7 +1035,7 @@ _No fields; send `{}`._
 
 ### ContentService.Search
 
-`POST /api/career.v1.ContentService/Search` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.ContentService/Search` · **Auth:** Member · **Rate limit:** default/min
 
 Full-text search across titles, summaries, bodies, and tags, with a
 relevance boost for the member's tracks.
@@ -1157,7 +1157,7 @@ Reaching the owner outside the assistant.
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
 | [`GetContactOptions`](#contactservice-getcontactoptions) | `/api/career.v1.ContactService/GetContactOptions` | Member | default | `GetContactOptionsRequest` → `GetContactOptionsResponse` | Returns the owner's availability statement and the contact channels he has chosen to publish. |
-| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | 3 | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
+| [`SubmitContact`](#contactservice-submitcontact) | `/api/career.v1.ContactService/SubmitContact` | Public | default | `SubmitContactRequest` → `SubmitContactResponse` | Sends a message to the owner. |
 
 ### ContactService.GetContactOptions
 
@@ -1188,7 +1188,7 @@ _No fields; send `{}`._
 
 ### ContactService.SubmitContact
 
-`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** 3/min
+`POST /api/career.v1.ContactService/SubmitContact` · **Auth:** Public · **Rate limit:** default/min
 
 Sends a message to the owner. Accepts both signed-in members (identity
 read from the session cookie) and anonymous visitors (name + email
@@ -1244,14 +1244,14 @@ submit or poll, and the submitting member is recorded on the row.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | 3 | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
-| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | 30 | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
-| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | 30 | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
-| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | 60 | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
+| [`SubmitJd`](#jdservice-submitjd) | `/api/career.v1.JdService/SubmitJd` | Member | default | `SubmitJdRequest` → `SubmitJdResponse` | Accepts a job description and stores it for scoring. |
+| [`GetJdResult`](#jdservice-getjdresult) | `/api/career.v1.JdService/GetJdResult` | Member | default | `GetJdResultRequest` → `GetJdResultResponse` | Returns the current state of a submission (received / scoring / below-threshold / generating / ready / failed) with progress, the score and fit category once known, and, for the submitting member or a caller holding the result token, the requirement verdicts plus the résumé and its PDF link when status is `ready`. |
+| [`ListMySubmissions`](#jdservice-listmysubmissions) | `/api/career.v1.JdService/ListMySubmissions` | Member | default | `ListMySubmissionsRequest` → `ListMySubmissionsResponse` | Lists the signed-in member's own submissions, newest first, so a review can be reopened after the tab that submitted it is gone. |
+| [`GetJdReviewConfig`](#jdservice-getjdreviewconfig) | `/api/career.v1.JdService/GetJdReviewConfig` | Member | default | `GetJdReviewConfigRequest` → `GetJdReviewConfigResponse` | Returns the fit bands in force (the gate is the "strong" edge), so the JD pages quote the numbers the pipeline actually uses. |
 
 ### JdService.SubmitJd
 
-`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** 3/min
+`POST /api/career.v1.JdService/SubmitJd` · **Auth:** Member · **Rate limit:** default/min
 
 Accepts a job description and stores it for scoring. Returns the
 submission id the caller uses to poll GetJdResult. Never blocks
@@ -1295,7 +1295,7 @@ on the actual scoring / generation — those run out of band.
 
 ### JdService.GetJdResult
 
-`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.JdService/GetJdResult` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the current state of a submission (received / scoring /
 below-threshold / generating / ready / failed) with progress, the
@@ -1343,7 +1343,7 @@ the résumé and its PDF link when status is `ready`.
 
 ### JdService.ListMySubmissions
 
-`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.JdService/ListMySubmissions` · **Auth:** Member · **Rate limit:** default/min
 
 Lists the signed-in member's own submissions, newest first, so a
 review can be reopened after the tab that submitted it is gone.
@@ -1368,7 +1368,7 @@ _No fields; send `{}`._
 
 ### JdService.GetJdReviewConfig
 
-`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.JdService/GetJdReviewConfig` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the fit bands in force (the gate is the "strong" edge), so
 the JD pages quote the numbers the pipeline actually uses.
@@ -1400,15 +1400,15 @@ the row.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`GetMeetingOptions`](#meetingservice-getmeetingoptions) | `/api/career.v1.MeetingService/GetMeetingOptions` | Member | 60 | `GetMeetingOptionsRequest` → `GetMeetingOptionsResponse` | Returns what the member is allowed to choose before they choose it: the meeting lengths on offer, the zone every time is quoted in, and how far ahead the calendar runs. |
-| [`GetAvailability`](#meetingservice-getavailability) | `/api/career.v1.MeetingService/GetAvailability` | Member | 30 | `GetAvailabilityRequest` → `GetAvailabilityResponse` | Returns the start times a member may book for one meeting length. |
-| [`BookMeeting`](#meetingservice-bookmeeting) | `/api/career.v1.MeetingService/BookMeeting` | Member | 6 | `BookMeetingRequest` → `BookMeetingResponse` | Books one slot. |
-| [`ListMyMeetings`](#meetingservice-listmymeetings) | `/api/career.v1.MeetingService/ListMyMeetings` | Member | 30 | `ListMyMeetingsRequest` → `ListMyMeetingsResponse` | Lists the calling member's own meetings, upcoming first, so a booking can be found again after the tab that made it is gone. |
-| [`CancelMeeting`](#meetingservice-cancelmeeting) | `/api/career.v1.MeetingService/CancelMeeting` | Member | 10 | `CancelMeetingRequest` → `CancelMeetingResponse` | Cancels the caller's own meeting and frees the time. |
+| [`GetMeetingOptions`](#meetingservice-getmeetingoptions) | `/api/career.v1.MeetingService/GetMeetingOptions` | Member | default | `GetMeetingOptionsRequest` → `GetMeetingOptionsResponse` | Returns what the member is allowed to choose before they choose it: the meeting lengths on offer, the zone every time is quoted in, and how far ahead the calendar runs. |
+| [`GetAvailability`](#meetingservice-getavailability) | `/api/career.v1.MeetingService/GetAvailability` | Member | default | `GetAvailabilityRequest` → `GetAvailabilityResponse` | Returns the start times a member may book for one meeting length. |
+| [`BookMeeting`](#meetingservice-bookmeeting) | `/api/career.v1.MeetingService/BookMeeting` | Member | default | `BookMeetingRequest` → `BookMeetingResponse` | Books one slot. |
+| [`ListMyMeetings`](#meetingservice-listmymeetings) | `/api/career.v1.MeetingService/ListMyMeetings` | Member | default | `ListMyMeetingsRequest` → `ListMyMeetingsResponse` | Lists the calling member's own meetings, upcoming first, so a booking can be found again after the tab that made it is gone. |
+| [`CancelMeeting`](#meetingservice-cancelmeeting) | `/api/career.v1.MeetingService/CancelMeeting` | Member | default | `CancelMeetingRequest` → `CancelMeetingResponse` | Cancels the caller's own meeting and frees the time. |
 
 ### MeetingService.GetMeetingOptions
 
-`POST /api/career.v1.MeetingService/GetMeetingOptions` · **Auth:** Member · **Rate limit:** 60/min
+`POST /api/career.v1.MeetingService/GetMeetingOptions` · **Auth:** Member · **Rate limit:** default/min
 
 Returns what the member is allowed to choose before they choose it:
 the meeting lengths on offer, the zone every time is quoted in, and
@@ -1443,7 +1443,7 @@ _No fields; send `{}`._
 
 ### MeetingService.GetAvailability
 
-`POST /api/career.v1.MeetingService/GetAvailability` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.MeetingService/GetAvailability` · **Auth:** Member · **Rate limit:** default/min
 
 Returns the start times a member may book for one meeting length.
 Computed per length rather than once, because a 45-minute meeting
@@ -1481,7 +1481,7 @@ that cannot fit is worse than offering nothing.
 
 ### MeetingService.BookMeeting
 
-`POST /api/career.v1.MeetingService/BookMeeting` · **Auth:** Member · **Rate limit:** 6/min
+`POST /api/career.v1.MeetingService/BookMeeting` · **Auth:** Member · **Rate limit:** default/min
 
 Books one slot. Re-reads the calendar for the claimed interval
 first, because the list the member saw is stale by the time they
@@ -1525,7 +1525,7 @@ cannot be created is released.
 
 ### MeetingService.ListMyMeetings
 
-`POST /api/career.v1.MeetingService/ListMyMeetings` · **Auth:** Member · **Rate limit:** 30/min
+`POST /api/career.v1.MeetingService/ListMyMeetings` · **Auth:** Member · **Rate limit:** default/min
 
 Lists the calling member's own meetings, upcoming first, so a
 booking can be found again after the tab that made it is gone.
@@ -1554,7 +1554,7 @@ booking can be found again after the tab that made it is gone.
 
 ### MeetingService.CancelMeeting
 
-`POST /api/career.v1.MeetingService/CancelMeeting` · **Auth:** Member · **Rate limit:** 10/min
+`POST /api/career.v1.MeetingService/CancelMeeting` · **Auth:** Member · **Rate limit:** default/min
 
 Cancels the caller's own meeting and frees the time. Cancelling
 something already cancelled succeeds, so a double click or a stale
@@ -1588,13 +1588,13 @@ Conversations with the assistant.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`CreateConversation`](#chatservice-createconversation) | `/api/career.v1.ChatService/CreateConversation` | Member | 20 | `CreateConversationRequest` → `CreateConversationResponse` | Starts a conversation. |
+| [`CreateConversation`](#chatservice-createconversation) | `/api/career.v1.ChatService/CreateConversation` | Member | default | `CreateConversationRequest` → `CreateConversationResponse` | Starts a conversation. |
 | [`ListConversations`](#chatservice-listconversations) | `/api/career.v1.ChatService/ListConversations` | Member | default | `ListConversationsRequest` → `ListConversationsResponse` | Lists the member's conversations, most recent first. |
 | [`GetConversation`](#chatservice-getconversation) | `/api/career.v1.ChatService/GetConversation` | Member | default | `GetConversationRequest` → `GetConversationResponse` | Returns a conversation with all of its messages. |
-| [`SendMessage`](#chatservice-sendmessage) | `/api/career.v1.ChatService/SendMessage` | Member | 20 | `SendMessageRequest` → `SendMessageResponse` (server-streaming) | Sends a member message and streams the assistant's reply: a `start` event, then `delta` events with text as it is generated, then `citations`, `usage`, and a final `done` carrying the complete message. |
+| [`SendMessage`](#chatservice-sendmessage) | `/api/career.v1.ChatService/SendMessage` | Member | default | `SendMessageRequest` → `SendMessageResponse` (server-streaming) | Sends a member message and streams the assistant's reply: a `start` event, then `delta` events with text as it is generated, then `citations`, `usage`, and a final `done` carrying the complete message. |
 | [`DeleteConversation`](#chatservice-deleteconversation) | `/api/career.v1.ChatService/DeleteConversation` | Member | default | `DeleteConversationRequest` → `DeleteConversationResponse` | Deletes a conversation. |
 | [`RateMessage`](#chatservice-ratemessage) | `/api/career.v1.ChatService/RateMessage` | Member | default | `RateMessageRequest` → `RateMessageResponse` | Rates an assistant message up or down with an optional comment. |
-| [`Escalate`](#chatservice-escalate) | `/api/career.v1.ChatService/Escalate` | Member | 5 | `EscalateRequest` → `EscalateResponse` | Sends a question, with the conversation context, to the owner. |
+| [`Escalate`](#chatservice-escalate) | `/api/career.v1.ChatService/Escalate` | Member | default | `EscalateRequest` → `EscalateResponse` | Sends a question, with the conversation context, to the owner. |
 | [`GetSuggestions`](#chatservice-getsuggestions) | `/api/career.v1.ChatService/GetSuggestions` | Member | default | `GetSuggestionsRequest` → `GetSuggestionsResponse` | Returns suggested questions for the current page and the member's tracks (at least three). |
 | [`GetQuota`](#chatservice-getquota) | `/api/career.v1.ChatService/GetQuota` | Member | default | `GetQuotaRequest` → `GetQuotaResponse` | Returns the member's remaining allowance and the global budget mode so the panel can show limits before they are hit. |
 | [`ListAdminQueries`](#chatservice-listadminqueries) | `/api/career.v1.ChatService/ListAdminQueries` | Admin | default | `ListAdminQueriesRequest` → `ListAdminQueriesResponse` | Lists the database queries an admin may run from the assistant, for the dropdown. |
@@ -1602,7 +1602,7 @@ Conversations with the assistant.
 
 ### ChatService.CreateConversation
 
-`POST /api/career.v1.ChatService/CreateConversation` · **Auth:** Member · **Rate limit:** 20/min
+`POST /api/career.v1.ChatService/CreateConversation` · **Auth:** Member · **Rate limit:** default/min
 
 Starts a conversation. The first assistant message is the AI disclosure
 (FSD §15.C) and is included in the response so the panel can render it
@@ -1694,7 +1694,7 @@ Returns a conversation with all of its messages.
 
 ### ChatService.SendMessage
 
-`POST /api/career.v1.ChatService/SendMessage` · **Auth:** Member · **Rate limit:** 20/min · **Server-streaming**
+`POST /api/career.v1.ChatService/SendMessage` · **Auth:** Member · **Rate limit:** default/min · **Server-streaming**
 
 Sends a member message and streams the assistant's reply: a `start`
 event, then `delta` events with text as it is generated, then
@@ -1791,7 +1791,7 @@ _No fields; send `{}`._
 
 ### ChatService.Escalate
 
-`POST /api/career.v1.ChatService/Escalate` · **Auth:** Member · **Rate limit:** 5/min
+`POST /api/career.v1.ChatService/Escalate` · **Auth:** Member · **Rate limit:** default/min
 
 Sends a question, with the conversation context, to the owner. The owner
 replies inside the conversation (as a message with role OWNER) and the
@@ -1950,11 +1950,11 @@ Batched, fire-and-forget activity reporting.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | 120 | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
+| [`RecordEvents`](#activityservice-recordevents) | `/api/career.v1.ActivityService/RecordEvents` | Member | default | `RecordEventsRequest` → `RecordEventsResponse` | Records a batch of events. |
 
 ### ActivityService.RecordEvents
 
-`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** 120/min
+`POST /api/career.v1.ActivityService/RecordEvents` · **Auth:** Member · **Rate limit:** default/min
 
 Records a batch of events. Duplicate `client_event_id`s are ignored, so
 clients may retry a failed batch safely. Failures never affect page
@@ -2024,11 +2024,11 @@ itself and never trusts those from the client.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | 120 | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
+| [`Record`](#eventservice-record) | `/api/career.v1.EventService/Record` | Public | default | `RecordRequest` → `RecordResponse` | Records up to 50 events. |
 
 ### EventService.Record
 
-`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** 120/min
+`POST /api/career.v1.EventService/Record` · **Auth:** Public · **Rate limit:** default/min
 
 Records up to 50 events. Unknown names and oversized props are
 dropped, never errors; the response says how many were stored.
@@ -4838,13 +4838,13 @@ Version and governance status.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`GetVersion`](#systemservice-getversion) | `/api/career.v1.SystemService/GetVersion` | Public | 60 | `GetVersionRequest` → `GetVersionResponse` | Returns the deployed version and build metadata. |
-| [`GetGovernanceStatus`](#systemservice-getgovernancestatus) | `/api/career.v1.SystemService/GetGovernanceStatus` | Public | 60 | `GetGovernanceStatusRequest` → `GetGovernanceStatusResponse` | Returns the governance status shown on the public "How this site was built" page: UxTS frameworks, spec counts, last verification, pass rate, and hash-integrity summary, read from the reports CI publishes. |
-| [`GetReviewerStatus`](#systemservice-getreviewerstatus) | `/api/career.v1.SystemService/GetReviewerStatus` | Public | 60 | `GetReviewerStatusRequest` → `GetReviewerStatusResponse` | Returns how the JD reviewer is currently measuring, for the public "How Ask Roger works" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set. |
+| [`GetVersion`](#systemservice-getversion) | `/api/career.v1.SystemService/GetVersion` | Public | default | `GetVersionRequest` → `GetVersionResponse` | Returns the deployed version and build metadata. |
+| [`GetGovernanceStatus`](#systemservice-getgovernancestatus) | `/api/career.v1.SystemService/GetGovernanceStatus` | Public | default | `GetGovernanceStatusRequest` → `GetGovernanceStatusResponse` | Returns the governance status shown on the public "How this site was built" page: UxTS frameworks, spec counts, last verification, pass rate, and hash-integrity summary, read from the reports CI publishes. |
+| [`GetReviewerStatus`](#systemservice-getreviewerstatus) | `/api/career.v1.SystemService/GetReviewerStatus` | Public | default | `GetReviewerStatusRequest` → `GetReviewerStatusResponse` | Returns how the JD reviewer is currently measuring, for the public "How Ask Roger works" page: agreement with the owner's own grading, and the last evaluation of the fixed posting set. |
 
 ### SystemService.GetVersion
 
-`POST /api/career.v1.SystemService/GetVersion` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetVersion` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the deployed version and build metadata.
 
@@ -4872,7 +4872,7 @@ _No fields; send `{}`._
 
 ### SystemService.GetGovernanceStatus
 
-`POST /api/career.v1.SystemService/GetGovernanceStatus` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetGovernanceStatus` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the governance status shown on the public "How this site was
 built" page: UxTS frameworks, spec counts, last verification, pass rate,
@@ -4900,7 +4900,7 @@ _No fields; send `{}`._
 
 ### SystemService.GetReviewerStatus
 
-`POST /api/career.v1.SystemService/GetReviewerStatus` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.SystemService/GetReviewerStatus` · **Auth:** Public · **Rate limit:** default/min
 
 Returns how the JD reviewer is currently measuring, for the public
 "How Ask Roger works" page: agreement with the owner's own grading,
@@ -4947,15 +4947,15 @@ Runs one sitting of the decision test.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
-| [`StartSession`](#decisiontestservice-startsession) | `/api/career.v1.DecisionTestService/StartSession` | Public | 10 | `StartSessionRequest` → `StartSessionResponse` | Opens a session and returns the practice block. |
-| [`GetBlock`](#decisiontestservice-getblock) | `/api/career.v1.DecisionTestService/GetBlock` | Public | 60 | `GetBlockRequest` → `GetBlockResponse` | Returns the next block: the number to memorise and its six questions. |
-| [`SubmitAnswer`](#decisiontestservice-submitanswer) | `/api/career.v1.DecisionTestService/SubmitAnswer` | Public | 120 | `SubmitAnswerRequest` → `SubmitAnswerResponse` | Records one answer and grades it server-side. |
-| [`SubmitRecall`](#decisiontestservice-submitrecall) | `/api/career.v1.DecisionTestService/SubmitRecall` | Public | 30 | `SubmitRecallRequest` → `SubmitRecallResponse` | Records the digits returned at the end of a block, scored by failure type rather than pass or fail. |
-| [`FinishSession`](#decisiontestservice-finishsession) | `/api/career.v1.DecisionTestService/FinishSession` | Public | 10 | `FinishSessionRequest` → `FinishSessionResponse` | Closes the session. |
+| [`StartSession`](#decisiontestservice-startsession) | `/api/career.v1.DecisionTestService/StartSession` | Public | default | `StartSessionRequest` → `StartSessionResponse` | Opens a session and returns the practice block. |
+| [`GetBlock`](#decisiontestservice-getblock) | `/api/career.v1.DecisionTestService/GetBlock` | Public | default | `GetBlockRequest` → `GetBlockResponse` | Returns the next block: the number to memorise and its six questions. |
+| [`SubmitAnswer`](#decisiontestservice-submitanswer) | `/api/career.v1.DecisionTestService/SubmitAnswer` | Public | default | `SubmitAnswerRequest` → `SubmitAnswerResponse` | Records one answer and grades it server-side. |
+| [`SubmitRecall`](#decisiontestservice-submitrecall) | `/api/career.v1.DecisionTestService/SubmitRecall` | Public | default | `SubmitRecallRequest` → `SubmitRecallResponse` | Records the digits returned at the end of a block, scored by failure type rather than pass or fail. |
+| [`FinishSession`](#decisiontestservice-finishsession) | `/api/career.v1.DecisionTestService/FinishSession` | Public | default | `FinishSessionRequest` → `FinishSessionResponse` | Closes the session. |
 
 ### DecisionTestService.StartSession
 
-`POST /api/career.v1.DecisionTestService/StartSession` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.DecisionTestService/StartSession` · **Auth:** Public · **Rate limit:** default/min
 
 Opens a session and returns the practice block. Called when the
 participant presses start, which is also the gesture that unlocks
@@ -5006,7 +5006,7 @@ audio in the browser.
 
 ### DecisionTestService.GetBlock
 
-`POST /api/career.v1.DecisionTestService/GetBlock` · **Auth:** Public · **Rate limit:** 60/min
+`POST /api/career.v1.DecisionTestService/GetBlock` · **Auth:** Public · **Rate limit:** default/min
 
 Returns the next block: the number to memorise and its six
 questions. Blocks are served one at a time so the client never
@@ -5038,7 +5038,7 @@ holds the whole test.
 
 ### DecisionTestService.SubmitAnswer
 
-`POST /api/career.v1.DecisionTestService/SubmitAnswer` · **Auth:** Public · **Rate limit:** 120/min
+`POST /api/career.v1.DecisionTestService/SubmitAnswer` · **Auth:** Public · **Rate limit:** default/min
 
 Records one answer and grades it server-side. The response confirms
 receipt and says nothing about correctness.
@@ -5077,7 +5077,7 @@ receipt and says nothing about correctness.
 
 ### DecisionTestService.SubmitRecall
 
-`POST /api/career.v1.DecisionTestService/SubmitRecall` · **Auth:** Public · **Rate limit:** 30/min
+`POST /api/career.v1.DecisionTestService/SubmitRecall` · **Auth:** Public · **Rate limit:** default/min
 
 Records the digits returned at the end of a block, scored by
 failure type rather than pass or fail.
@@ -5112,7 +5112,7 @@ failure type rather than pass or fail.
 
 ### DecisionTestService.FinishSession
 
-`POST /api/career.v1.DecisionTestService/FinishSession` · **Auth:** Public · **Rate limit:** 10/min
+`POST /api/career.v1.DecisionTestService/FinishSession` · **Auth:** Public · **Rate limit:** default/min
 
 Closes the session. A session that is never finished stays
 abandoned, which is kept rather than deleted because where people

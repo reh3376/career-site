@@ -240,9 +240,9 @@ const file_career_v1_events_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x17.career.v1.BrowserEventB\n" +
 	"\xbaH\a\x92\x01\x04\b\x01\x102R\x06events\",\n" +
 	"\x0eRecordResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\x05R\baccepted2W\n" +
-	"\fEventService\x12G\n" +
-	"\x06Record\x12\x18.career.v1.RecordRequest\x1a\x19.career.v1.RecordResponse\"\b\x80\xb5\x18\x01\x90\xb5\x18xB\xa5\x01\n" +
+	"\baccepted\x18\x01 \x01(\x05R\baccepted2S\n" +
+	"\fEventService\x12C\n" +
+	"\x06Record\x12\x18.career.v1.RecordRequest\x1a\x19.career.v1.RecordResponse\"\x04\x80\xb5\x18\x01B\xa5\x01\n" +
 	"\rcom.career.v1B\vEventsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
