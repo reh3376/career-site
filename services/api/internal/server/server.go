@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
+
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/authpolicy"
 	"github.com/reh3376/career-site/services/api/internal/build"
@@ -39,6 +41,7 @@ type Server struct {
 	sidecar  *sidecar.Client
 	db       *db.Pool
 	policy   authpolicy.Map
+	authIntc *authpolicy.Interceptor
 }
 
 // Deps carries the process-level singletons the server wires into handlers.
@@ -74,6 +77,12 @@ type Deps struct {
 	// that step adds an interceptor rather than also re-plumbing the
 	// map. Handlers continue to enforce by hand until S5.
 	AuthPolicy authpolicy.Map
+	// AuthInterceptor enforces, or in observe mode merely reports on,
+	// the declared level for every Connect procedure. Built in main so
+	// a construction failure can exit before serving. Nil leaves every
+	// service mounted without it, which is the pre-S3 behaviour and is
+	// logged as such rather than passed over in silence.
+	AuthInterceptor *authpolicy.Interceptor
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
@@ -95,6 +104,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		sidecar:  deps.Sidecar,
 		db:       deps.DB,
 		policy:   deps.AuthPolicy,
+		authIntc: deps.AuthInterceptor,
 	}
 	if deps.Users != nil {
 		s.system.SetUsers(log, deps.Users)
@@ -138,56 +148,69 @@ func (s *Server) routes() http.Handler {
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))
 	}
 
-	systemPath, systemHandler := careerv1connect.NewSystemServiceHandler(s.system)
+	// One option set, applied to every service. Built here rather than
+	// per mount so a service cannot be added later without it: an
+	// unintercepted service is exactly the hole this sprint is closing.
+	var opts []connect.HandlerOption
+	if s.authIntc != nil {
+		opts = append(opts, connect.WithInterceptors(s.authIntc))
+		s.log.Info("auth interceptor installed",
+			slog.String("mode", s.authIntc.Mode().String()))
+	} else {
+		s.log.Warn("no auth interceptor: every procedure is enforced only " +
+			"by whatever check its own handler happens to make")
+	}
+
+	systemPath, systemHandler := careerv1connect.NewSystemServiceHandler(s.system, opts...)
 	mount(systemPath, systemHandler)
 
 	if s.auth != nil {
-		authPath, authHandler := careerv1connect.NewAuthServiceHandler(s.auth)
+		authPath, authHandler := careerv1connect.NewAuthServiceHandler(s.auth, opts...)
 		mount(authPath, authHandler)
 	}
 
 	if s.member != nil {
-		memberPath, memberHandler := careerv1connect.NewMemberServiceHandler(s.member)
+		memberPath, memberHandler := careerv1connect.NewMemberServiceHandler(s.member, opts...)
 		mount(memberPath, memberHandler)
 	}
 
 	if s.contact != nil {
-		contactPath, contactHandler := careerv1connect.NewContactServiceHandler(s.contact)
+		contactPath, contactHandler := careerv1connect.NewContactServiceHandler(s.contact, opts...)
 		mount(contactPath, contactHandler)
 	}
 
 	if s.admin != nil {
-		adminPath, adminHandler := careerv1connect.NewAdminServiceHandler(s.admin)
+		adminPath, adminHandler := careerv1connect.NewAdminServiceHandler(s.admin, opts...)
 		mount(adminPath, adminHandler)
 	}
 
 	if s.activity != nil {
-		activityPath, activityHandler := careerv1connect.NewActivityServiceHandler(s.activity)
+		activityPath, activityHandler := careerv1connect.NewActivityServiceHandler(s.activity, opts...)
 		mount(activityPath, activityHandler)
 	}
 
 	if s.dtest != nil {
-		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest)
+		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest, opts...)
 		mount(dtPath, dtHandler)
 	}
 
 	if s.jd != nil {
-		jdPath, jdHandler := careerv1connect.NewJdServiceHandler(s.jd)
+		jdPath, jdHandler := careerv1connect.NewJdServiceHandler(s.jd, opts...)
 		mount(jdPath, jdHandler)
 	}
 
 	if s.meetings != nil {
-		meetingsPath, meetingsHandler := careerv1connect.NewMeetingServiceHandler(s.meetings)
+		meetingsPath, meetingsHandler := careerv1connect.NewMeetingServiceHandler(s.meetings, opts...)
 		mount(meetingsPath, meetingsHandler)
 	}
 
 	if s.chat != nil {
-		chatPath, chatHandler := careerv1connect.NewChatServiceHandler(s.chat)
+		chatPath, chatHandler := careerv1connect.NewChatServiceHandler(s.chat, opts...)
 		mount(chatPath, withoutWriteDeadline(chatHandler))
 	}
 
 	if s.events != nil {
-		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events)
+		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events, opts...)
 		mount(eventsPath, eventsHandler)
 	}
 

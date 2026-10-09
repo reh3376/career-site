@@ -140,6 +140,15 @@ func (h *Auth) LookupSessionUser(ctx context.Context, req connect.AnyRequest) (*
 	return h.lookupSessionToken(ctx, sessionTokenFromRequest(req))
 }
 
+// LookupSessionUserHeader resolves a session from raw request headers.
+//
+// This is what the auth interceptor calls. It takes headers rather than
+// a connect.AnyRequest because the streaming path has no request
+// object, only a connection, and both expose http.Header.
+func (h *Auth) LookupSessionUserHeader(ctx context.Context, header http.Header) (*users.User, error) {
+	return h.lookupSessionToken(ctx, sessionTokenFromHeader(header))
+}
+
 // LookupSessionUserHTTP is LookupSessionUser for plain net/http
 // handlers (file downloads) that are not Connect RPCs.
 func (h *Auth) LookupSessionUserHTTP(ctx context.Context, r *http.Request) (*users.User, error) {
@@ -251,7 +260,15 @@ var badCredentials = connect.NewError(connect.CodeUnauthenticated, errors.New("e
 // sessionTokenFromRequest extracts the session cookie value from a Connect
 // request. Returns "" when the cookie is missing.
 func sessionTokenFromRequest(req connect.AnyRequest) string {
-	raw := req.Header().Values("Cookie")
+	return sessionTokenFromHeader(req.Header())
+}
+
+// sessionTokenFromHeader is the one place the session cookie is parsed.
+// Both the Connect request path and the auth interceptor go through it,
+// so there is no second parser that could disagree about what counts as
+// a session.
+func sessionTokenFromHeader(header http.Header) string {
+	raw := header.Values("Cookie")
 	for _, line := range raw {
 		for _, part := range strings.Split(line, ";") {
 			part = strings.TrimSpace(part)

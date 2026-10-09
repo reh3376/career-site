@@ -147,6 +147,12 @@ type Config struct {
 	// Sessions (FR-AUTH-08)
 	SessionTTL   time.Duration
 	CookieSecure bool
+	// AuthInterceptorMode is "observe" or "enforce" (S3/S4 of
+	// docs/sprint-auth-interceptor.md). Observe decides and logs
+	// disagreements without acting, so enforcement can be turned on by
+	// changing AUTH_INTERCEPTOR_MODE and redeploying rather than by
+	// changing code. Unset means observe, which is the inert default.
+	AuthInterceptorMode string
 
 	// Admin bootstrap. When both are set the API ensures a user with
 	// AdminEmail exists in role=admin, status=active on every boot,
@@ -200,8 +206,9 @@ func Load() (Config, error) {
 
 		DecisionTokenTTL: time.Duration(envIntOr("DECISION_TOKEN_TTL_HOURS", 24*7)) * time.Hour,
 
-		SessionTTL:   time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
-		CookieSecure: os.Getenv("COOKIE_SECURE") == "1",
+		SessionTTL:          time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
+		CookieSecure:        os.Getenv("COOKIE_SECURE") == "1",
+		AuthInterceptorMode: envOr("AUTH_INTERCEPTOR_MODE", "observe"),
 
 		AdminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_USERNAME"))),
 		AdminPassword: os.Getenv("CAREER_SITE_ADMIN_PW"),

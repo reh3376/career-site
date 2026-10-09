@@ -393,7 +393,10 @@ behaviour by reading it:
   of procedures the S4 interceptor will decide on, so it should not drift
   quietly.
 
-### S3. The interceptor in observe mode
+### S3. The interceptor in observe mode — **built 2026-10-09, awaiting the observation period**
+
+`services/api/internal/authpolicy/interceptor.go`, installed on all
+eleven mounted services in `routes()`.
 
 Installed on every Connect handler, computing the decision and
 **enforcing nothing**. When its decision would differ from what the
@@ -406,6 +409,110 @@ parse cannot see.
 
 *Exit:* a period of real use with no disagreements logged. A single
 disagreement stops the sprint and is investigated.
+
+#### The levels, as settled
+
+The owner settled the open question on 2026-10-09: **an active account is
+required for both MEMBER and ADMIN.**
+
+```
+PUBLIC   no session
+MEMBER   a session, on an active account
+ADMIN    a session, on an active account, holding the admin role
+```
+
+Status is checked before the role, so a suspended admin is refused for
+being suspended rather than for lacking a role. This is stricter than 72
+of the 105 gated handlers are today, and strictness is the safe
+direction: it only ever closes access, and it is what makes S5 safe,
+because removing `requireMember` then cannot loosen anything.
+
+#### Keeping the signal clean
+
+Observe mode is worth nothing if its output is noise. Two things would
+have made it noise:
+
+**A handler error is not a handler denial.** It may be validating input
+or reporting that the database is down. Only `unauthenticated` and
+`permission_denied` count as the handler refusing access.
+
+**A denial on a PUBLIC procedure is never about the auth level.** The
+interceptor always allows those, so `Login` rejecting a declined account
+with `permission_denied` would read as "the handler refused something the
+policy allows" and would put a warning in the log on *every failed
+sign-in*. PUBLIC procedures are therefore not compared at all, which S1
+already justified statically: no PUBLIC handler gates on a session.
+
+What is left is three outcomes, and they are not equally meaningful:
+
+| kind | meaning | level |
+|---|---|---|
+| `would_close` | the handler served a request the interceptor would refuse | warn |
+| `would_open` | the handler demanded a session the interceptor did not | warn |
+| `handler_denied_permission` | the interceptor allowed, the handler refused with `permission_denied` | info |
+
+The third is ambiguous on purpose. It may be authorisation the auth level
+does not describe, such as "not your resource", so it is recorded without
+burying the two that are unambiguous. `would_open` is the dangerous
+direction and should never appear.
+
+**One `would_close` is expected** and is the known `Logout` finding: a
+logout with no valid session is served today and the interceptor would
+refuse it. Seeing it in the log is confirmation that observe mode works
+on real traffic, not a new problem.
+
+#### Mode is configuration, not code
+
+`AUTH_INTERCEPTOR_MODE` is `observe` (the default) or `enforce`, so S4 is
+a line in `.env.prod` and a redeploy. Anything else is a **boot failure**
+rather than a default: a typo selecting `enforce` would deny the admin
+console, and a typo selecting `observe` would leave enforcement off while
+the deploy meant to turn it on reported success. Neither is acceptable as
+a guess.
+
+#### Cost during S3 and S4
+
+A MEMBER or ADMIN request now resolves the session **twice**: once in the
+interceptor and once in the handler's own gate, which stays until S5.
+That is one extra query on those paths and none on the public ones, since
+the interceptor resolves nothing for a PUBLIC procedure. Deliberate, and
+temporary: D4 requires both to be live before either is removed, and the
+public decision test, which is the busiest surface, is unaffected.
+
+#### What is tested
+
+Twelve test functions, in `internal/authpolicy/interceptor_test.go` and
+`internal/server/authpolicy_wiring_test.go`, several of them table-driven
+so the executed count is higher. The ones that carry weight:
+
+- **The full decision table in enforce mode**, driven through a real
+  Connect server over HTTP with the session arriving as a cookie, so
+  `Spec().Procedure` and header propagation are real rather than
+  stubbed. Includes both suspended cases, which are the behaviour change
+  the owner approved, and the streaming path via
+  `ChatService.SendMessage`.
+- **That a denial never reaches the handler.** Every refused case asserts
+  the stub handler ran zero times. Without it, the handler's own gate
+  could be doing the denying and the test would prove nothing about
+  enforcement.
+- **That observe mode enforces nothing**: every case the enforce table
+  refuses must succeed in observe mode, or S3 is not inert.
+- **That the interceptor is attached to all eleven mounted services.**
+  `routes()` applies it per mount, so there are eleven places to leave it
+  off, and the next service added is the one that gets missed. This
+  drives real HTTP at a non-public procedure on each, derived from the
+  policy map rather than listed, and requires a 401. Several probes land
+  on procedures no handler implements, which is the point: Connect would
+  answer `unimplemented`, so a 401 proves the interceptor decided first.
+  Dropping `opts...` from one mount fails it with `501 unimplemented`,
+  naming the service.
+- **That a public procedure costs no session lookup**, with a member call
+  in the same test to show the resolver is reachable, so the zero means
+  "skipped" rather than "never called".
+
+Verified by mutation: making `decide` always allow, dropping the active
+check, making observe mode enforce, and resolving a session on public
+procedures each fail the test that should catch them.
 
 ### S4. Enforce
 
@@ -454,7 +561,9 @@ exist.
 S1 gates everything; nothing else starts until its list is empty. **S1 is
 done and its list has one item, `Logout`,** which is a declaration change
 rather than a code change and is only load-bearing at S4, so S2 and S3
-can proceed. S2 is inert and can land any time after. S3 must run for long enough to see
+can proceed. S2 is inert and can land any time after. **S2 and S3 are
+done**; what remains before S4 is calendar time, not work: the
+observation period, and the `Logout` declaration. S3 must run for long enough to see
 real traffic, which is the only part of this that takes calendar time
 rather than work. S4 is the behaviour change. S5 is cleanup and is
 optional in the sense that the system is correct without it, though
@@ -482,7 +591,10 @@ command.
    which `buf breaking` will not let us delete outright. So D1's
    exclusion of `mfa_fresh` is now permanent rather than deferred, and
    the contract no longer describes a control that does not exist.
-3. **Does MEMBER require an active account?** The gates disagree today:
+3. ~~**Does MEMBER require an active account?**~~ **Settled 2026-10-09:
+   yes, for both MEMBER and ADMIN.** Implemented in S3's interceptor,
+   where status is checked before the role. The original question and its
+   reasoning: the gates disagree today:
    `requireMember` revokes access when a member is suspended mid-session,
    the three bare lookups and all 69 `requireAdmin` methods do not. S4
    has to pick one, and the recommendation is that both MEMBER and ADMIN
