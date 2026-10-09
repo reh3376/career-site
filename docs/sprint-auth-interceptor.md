@@ -70,10 +70,13 @@ factor, so all 79 usages were removed and the option is deprecated.
 `buf breaking` will not allow deleting a published extension, so the
 field remains in `options.proto`, declared on nothing and marked.
 
-**Nothing stops a new method shipping without a level.** The enum's
-comment says *"Lint fails any method that leaves the level
-unspecified"*; no such lint rule or test exists. That none are missing
-today is luck and care, not a control.
+**Nothing stopped a new method shipping without a level.** The enum's
+comment claimed *"Lint fails any method that leaves the level
+unspecified"* and no such lint rule or test existed; that none were
+missing was care, not a control. **Fixed by S2 on 2026-10-09:** the
+server now builds the policy at boot and refuses to start, naming any
+method that declares no level. The enum comment was corrected to describe
+that instead.
 
 ---
 
@@ -225,6 +228,58 @@ to find is indistinguishable from a method nobody wrote, and a comparison
 over nothing passes. Pinning the set makes that a failure. Among them are
 `MfaEnroll` and `MfaVerify`, which is the same gap that removing
 `mfa_fresh` from 79 methods addressed from the other end.
+
+#### The gates do not agree on what a level means
+
+Found while preparing S3, after the comparison above had already passed.
+The first version of S1 matched a handler to a gate *by name*, which
+answers "is this method gated at all" and nothing more. The gates
+themselves check different things:
+
+| gate | session | active status | admin role | handlers |
+|---|---|---|---|---|
+| `requireAdmin` | yes | **no** | yes | 69 |
+| `requireChatAdmin` | yes | yes | yes | 2 |
+| `requireMember` | yes | yes | no | 16 |
+| a bare `LookupSessionUser` | yes | **no** | no | 3 |
+
+`Login` refuses every non-active status, so a session only exists for an
+account that was active when it was minted. The status checks are
+therefore about what happens *afterwards*: an admin suspending,
+declining or expiring a member mid-session. `requireMember` revokes
+access on that member's next call. `requireAdmin` and the three bare
+lookups do not.
+
+Concretely, today: a suspended member can still read their own profile
+(`GetMe`), read their history (`GetHistory`) and record activity events
+(`RecordEvents`), and a suspended admin would keep all 69 admin methods.
+The second is theoretical, since there is one admin and he is active.
+
+**This means S4 cannot be behaviour-preserving on every method, whatever
+it does.** One definition has to win:
+
+- **MEMBER and ADMIN both require an active status** (recommended). Then
+  the three bare-lookup methods and the 69 admin methods get *stricter*,
+  which is the safe direction, and nothing is opened. It also makes S5
+  safe: removing `requireMember` cannot loosen anything, because the
+  interceptor already checks what it checked.
+- **MEMBER means session only.** Then nothing changes at S4, because the
+  handler checks are still in place, and S5 silently removes the status
+  check from 16 methods. That is the dangerous direction, deferred to the
+  step least likely to be scrutinised.
+
+The recommendation costs one visible thing: a member whose access was
+revoked mid-session currently sees their own `/settings` and `/home`
+until they act, and would instead be routed to sign-in. That is arguably
+what revoked access should do, and it is the same trade-off
+`requireMember` already made for Ask Roger, the JD upload and meetings.
+
+Two tests now pin this, in `authpolicy_test.go`: the per-gate semantics,
+parsed from the AST rather than asserted from this table, and that all
+**three** definitions of `requireMember` (chat.go, jd.go, meetings.go)
+check the same things, which is the precondition for one interceptor
+replacing all three. Dropping the status check from any one of them fails
+both, naming the file.
 
 #### On trusting this result
 
@@ -427,11 +482,19 @@ command.
    which `buf breaking` will not let us delete outright. So D1's
    exclusion of `mfa_fresh` is now permanent rather than deferred, and
    the contract no longer describes a control that does not exist.
-3. **`Logout`: declare it PUBLIC?** S1's one finding. It declares MEMBER
+3. **Does MEMBER require an active account?** The gates disagree today:
+   `requireMember` revokes access when a member is suspended mid-session,
+   the three bare lookups and all 69 `requireAdmin` methods do not. S4
+   has to pick one, and the recommendation is that both MEMBER and ADMIN
+   require an active status, because it only ever closes access and it is
+   what makes S5 safe. The visible cost is that a revoked member is
+   routed to sign-in rather than seeing their own settings page. See
+   "The gates do not agree on what a level means" under S1.
+4. **`Logout`: declare it PUBLIC?** S1's one finding. It declares MEMBER
    and gates nothing, deliberately. The recommendation is to change the
    declaration to PUBLIC, because the alternative is logout failing for
    people whose session has already expired. Needed before S4, and it is
    a one-line proto change plus removing the `knownUngated` entry.
-4. **Does rate limiting matter yet?** 35 methods declare a budget. With
+5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.
