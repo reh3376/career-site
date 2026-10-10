@@ -103,6 +103,19 @@ type AuthServiceClient interface {
 	// methods stay unavailable until MfaVerify succeeds.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Ends the current session and clears the cookie.
+	//
+	// Public, not MEMBER. It declared MEMBER until 2026-10-09 and the
+	// handler never enforced it, which S1 of
+	// docs/sprint-auth-interceptor.md found. The declaration was the
+	// wrong half: there is nothing here to protect, because the session
+	// token the caller presents IS the thing being revoked, so nobody
+	// can log out anyone but themselves. With no token it is a no-op that
+	// returns success.
+	//
+	// Requiring a session would also break the case that needs this
+	// most. Once a session has expired the cookie is still in the
+	// browser, and that is exactly when someone wants it cleared;
+	// enforcing MEMBER would answer `unauthenticated` and leave it there.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Ends every session of the member ("sign out of all devices").
 	LogoutAll(context.Context, *connect.Request[v1.LogoutAllRequest]) (*connect.Response[v1.LogoutAllResponse], error)
@@ -309,6 +322,19 @@ type AuthServiceHandler interface {
 	// methods stay unavailable until MfaVerify succeeds.
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
 	// Ends the current session and clears the cookie.
+	//
+	// Public, not MEMBER. It declared MEMBER until 2026-10-09 and the
+	// handler never enforced it, which S1 of
+	// docs/sprint-auth-interceptor.md found. The declaration was the
+	// wrong half: there is nothing here to protect, because the session
+	// token the caller presents IS the thing being revoked, so nobody
+	// can log out anyone but themselves. With no token it is a no-op that
+	// returns success.
+	//
+	// Requiring a session would also break the case that needs this
+	// most. Once a session has expired the cookie is still in the
+	// browser, and that is exactly when someone wants it cleared;
+	// enforcing MEMBER would answer `unauthenticated` and leave it there.
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Ends every session of the member ("sign out of all devices").
 	LogoutAll(context.Context, *connect.Request[v1.LogoutAllRequest]) (*connect.Response[v1.LogoutAllResponse], error)

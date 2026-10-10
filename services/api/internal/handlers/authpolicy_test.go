@@ -68,19 +68,18 @@ var lookupFuncs = map[string]bool{
 // not enforce it, with the reason. Every entry here is a decision, and
 // every one of them is a behaviour change waiting to happen when the
 // interceptor starts enforcing, so the list is short and explicit.
-var knownUngated = map[string]string{
-	// Logout revokes whatever session token the caller presents and
-	// clears their own cookie. With no token it is a no-op that returns
-	// success. There is nothing to protect: you cannot log anybody out
-	// but yourself, because the token IS the thing being revoked.
-	//
-	// It matters for the interceptor. Enforcing MEMBER here would make
-	// logging out fail with `unauthenticated` once a session has already
-	// expired, which is exactly when somebody wants their cookie
-	// cleared. The declaration should become PUBLIC before S4, or S4
-	// breaks a working flow in the name of consistency.
-	"Logout": "declared MEMBER, public by design: the token is the thing being revoked",
-}
+//
+// **Empty, and that is the goal.** It held one entry, AuthService.Logout,
+// which declared MEMBER and gated nothing. Rather than carry the
+// exception, the owner settled it on 2026-10-09 by declaring Logout
+// PUBLIC, which is what it always was: the session token the caller
+// presents is the thing being revoked, so nobody can log out anyone but
+// themselves, and requiring a session would have broken logout for
+// exactly the expired-session case that most needs it.
+//
+// An empty list means every declaration now matches its handler with no
+// carve-outs, so the S4 interceptor has nothing to special-case.
+var knownUngated = map[string]string{}
 
 // declaredNotImplemented are the methods the proto declares, the server
 // mounts, and no handler in this package implements, so Connect's

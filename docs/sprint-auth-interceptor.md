@@ -21,8 +21,10 @@ exist.
 | level | methods |
 |---|---|
 | `AUTH_LEVEL_ADMIN` | 81 |
-| `AUTH_LEVEL_MEMBER` | 44 |
-| `AUTH_LEVEL_PUBLIC` | 16 |
+| `AUTH_LEVEL_MEMBER` | 43 |
+| `AUTH_LEVEL_PUBLIC` | 17 |
+
+(44 and 16 until 2026-10-09, when `Logout` was moved to PUBLIC. See S1.)
 
 **Nothing reads those declarations.** There are no Connect interceptors
 in the codebase at all. Enforcement is hand-written, one call per handler
@@ -38,9 +40,9 @@ and are reachable:
 | nothing | 15 |
 
 The 71 admin-enforcing handlers are exactly the 81 declared ADMIN methods
-minus the 10 AdminService methods nobody has written yet, and 14 of the
-15 ungated handlers are the implemented PUBLIC methods. The remaining one
-is `Logout`, discussed under S1.
+minus the 10 AdminService methods nobody has written yet, and all 15
+ungated handlers are the implemented PUBLIC methods. `Logout` was the
+sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 **Three of the four options are enforced nowhere:**
 
@@ -202,16 +204,18 @@ than from reading the `.proto` files, so the two numbers are independent.
 that declares ADMIN and fails to enforce it, which was the outcome worth
 checking first: it would have meant an admin method open today.
 
-**One real disagreement: `AuthService.Logout`.** It declares MEMBER and
-gates nothing. It revokes whatever session token the caller presents and
+**One real disagreement, since resolved: `AuthService.Logout`.** It
+declared MEMBER and gates nothing. It revokes whatever session token the caller presents and
 clears their own cookie; with no token it is a no-op returning success.
 That is defensible, because the token *is* the thing being revoked and
 there is no way to log out anybody but yourself. But enforcing MEMBER on
 it at S4 would make logout fail with `unauthenticated` exactly when a
 session has already expired, which is when somebody most wants their
 cookie cleared. **Decision needed before S4: declare it PUBLIC.** It is
-recorded in `knownUngated` in the test with that reasoning, so the test
-passes today and the choice is not silently lost.
+**Settled 2026-10-09: declared PUBLIC.** That is what it always was, and
+the declaration was the wrong half. `knownUngated` in the test is now
+empty, which is the point: every declaration matches its handler with no
+carve-outs, so S4 has nothing to special-case.
 
 **The 8 unmounted methods are a trap worth naming.** `HomeService`,
 `ContentService` and `DownloadService` are declared in the proto and have
@@ -470,6 +474,47 @@ console, and a typo selecting `observe` would leave enforcement off while
 the deploy meant to turn it on reported success. Neither is acceptable as
 a guess.
 
+#### Judging a quiet week
+
+Observe mode went live on `8928c45ef8ac` at 18:15 UTC on 2026-10-09. The
+window closes **2026-10-16**.
+
+Declaring `Logout` PUBLIC removed the one disagreement that was expected
+to appear, which is the right outcome and creates a problem: **the
+expected log for the week is now empty, and an empty log is also what an
+interceptor installed on nothing produces.** That is the failure mode
+this sprint keeps running into, from the Docker rule that filtered
+nothing to the `make breaking` check that compared against a stale
+baseline. "No disagreements logged" is not evidence unless something was
+compared.
+
+Checked on the first deploy: the rollout's live check makes five
+authenticated admin calls, and the log recorded zero disagreements. True,
+and it says nothing, because nothing in the log distinguishes five
+comparisons from none.
+
+So the interceptor counts what it did and the server logs a summary every
+15 minutes, but only when the counters have moved, so an idle night stays
+quiet:
+
+```
+auth policy observation  reason=periodic mode=observe compared=412
+    public_allowed=1983 would_close=0 would_open=0 ambiguous=0
+    unknown_procedure=0
+```
+
+`compared` is the number that matters: MEMBER and ADMIN calls where the
+interceptor reached a decision and the handler then ran, so the two could
+be compared. The summary is logged at **warn** when there is anything to
+act on and at info otherwise, so the line worth seeing is not the same
+severity as the routine one. A final summary is written at shutdown, so a
+restart does not lose the window since the last tick.
+
+**S4 is gated on `compared` being a real number with no disagreements,**
+not on the date alone. If the week ends with `compared` near zero, the
+answer is that the week proved nothing, and the observation continues or
+the admin surfaces get exercised deliberately.
+
 #### Cost during S3 and S4
 
 A MEMBER or ADMIN request now resolves the session **twice**: once in the
@@ -481,9 +526,9 @@ public decision test, which is the busiest surface, is unaffected.
 
 #### What is tested
 
-Twelve test functions, in `internal/authpolicy/interceptor_test.go` and
-`internal/server/authpolicy_wiring_test.go`, several of them table-driven
-so the executed count is higher. The ones that carry weight:
+Seventeen test functions, in `internal/authpolicy/interceptor_test.go`
+and `internal/server/authpolicy_wiring_test.go`, several table-driven so
+the executed count is higher. The ones that carry weight:
 
 - **The full decision table in enforce mode**, driven through a real
   Connect server over HTTP with the session arriving as a cookie, so
@@ -509,6 +554,13 @@ so the executed count is higher. The ones that carry weight:
 - **That a public procedure costs no session lookup**, with a member call
   in the same test to show the resolver is reachable, so the zero means
   "skipped" rather than "never called".
+- **The counters and the heartbeat.** `observeInterval` is a var so the
+  goroutine is driven at 10ms rather than shipped unexercised, and the
+  test waits for a real `reason=periodic` line instead of sleeping. It
+  also asserts the summary is not a warning when there is nothing to act
+  on, and that nothing starts in enforce mode. Writing it surfaced a
+  data race in the test itself, reading the log buffer while the
+  heartbeat wrote to it, which only `-race` reports.
 
 Verified by mutation: making `decide` always allow, dropping the active
 check, making observe mode enforce, and resolving a session on public
@@ -583,9 +635,12 @@ command.
 
 ## Decisions that are the owner's
 
-1. **Is a week of observe mode right?** Shorter gets to enforcement
-   sooner on a site with few users; longer sees more of the admin
-   surface, much of which is used rarely.
+1. ~~**Is a week of observe mode right?**~~ **Settled 2026-10-09: one
+   week.** Observe mode went live in production on `8928c45ef8ac` at
+   18:15 UTC on 2026-10-09, so the window closes **2026-10-16**. What
+   closes it is the periodic summary showing a non-trivial number of
+   comparisons and no disagreements, not merely the date: see "Judging a
+   quiet week" under S3.
 2. ~~Is TOTP worth building?~~ **Settled 2026-10-09: no.** The option
    was removed from all 79 methods and deprecated in `options.proto`,
    which `buf breaking` will not let us delete outright. So D1's
@@ -602,11 +657,9 @@ command.
    what makes S5 safe. The visible cost is that a revoked member is
    routed to sign-in rather than seeing their own settings page. See
    "The gates do not agree on what a level means" under S1.
-4. **`Logout`: declare it PUBLIC?** S1's one finding. It declares MEMBER
-   and gates nothing, deliberately. The recommendation is to change the
-   declaration to PUBLIC, because the alternative is logout failing for
-   people whose session has already expired. Needed before S4, and it is
-   a one-line proto change plus removing the `knownUngated` entry.
+4. ~~**`Logout`: declare it PUBLIC?**~~ **Settled 2026-10-09: yes.** Done
+   in the proto, `knownUngated` is now empty, and the declared split
+   moved to 81/43/17.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

@@ -88,6 +88,8 @@ type stack struct {
 	logs    func() string
 	served  func() int
 	resolls func() int
+	stats   func() Stats
+	summary func(string)
 }
 
 // handlerBehaviour lets a test say what the stub handler does, which is
@@ -154,6 +156,8 @@ func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 		logs:    buf.String,
 		served:  func() int { return served },
 		resolls: func() int { return resolls },
+		stats:   intc.Stats,
+		summary: intc.LogSummary,
 	}
 }
 
@@ -609,4 +613,91 @@ func (s *stubChat) SendMessage(
 		return err
 	}
 	return stream.Send(&v1.SendMessageResponse{})
+}
+
+// ---------------------------------------------------------------
+// Counters
+// ---------------------------------------------------------------
+
+// The counters are what make a quiet observation period mean anything.
+// Once Logout was declared PUBLIC on 2026-10-09 the interceptor has
+// nothing left to disagree about, so the expected log for the week is
+// empty, and an empty log is also what an interceptor installed on
+// nothing produces. "0 disagreements out of 0 comparisons" and "0 out of
+// 4,000" are very different claims and must not look the same.
+func TestStatsCountWhatWasActuallyCompared(t *testing.T) {
+	s := newStack(t, ModeObserve, nil)
+
+	// Public calls are allowed without a session and never compared.
+	for range 3 {
+		if err := callPublic(s, ""); err != nil {
+			t.Fatalf("public call: %v", err)
+		}
+	}
+	// Agreement: an active member on a member procedure.
+	if err := callMember(s, tokenMember); err != nil {
+		t.Fatalf("member call: %v", err)
+	}
+	// would_close: the stub serves an admin procedure the policy refuses.
+	if err := callAdmin(s, ""); err != nil {
+		t.Fatalf("admin call in observe mode: %v", err)
+	}
+
+	got := s.stats()
+	want := Stats{Public: 3, Compared: 2, WouldClose: 1}
+	if got != want {
+		t.Errorf("stats = %+v, want %+v", got, want)
+	}
+	if got.Disagreements() != 1 {
+		t.Errorf("Disagreements() = %d, want 1", got.Disagreements())
+	}
+}
+
+func TestStatsCountEachDisagreementKindSeparately(t *testing.T) {
+	// A handler that always refuses with unauthenticated gives would_open.
+	open := newStack(t, ModeObserve, func(string) error {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("nope"))
+	})
+	_ = callMember(open, tokenMember)
+	if st := open.stats(); st.WouldOpen != 1 || st.WouldClose != 0 || st.Ambiguous != 0 {
+		t.Errorf("would_open case: stats = %+v", st)
+	}
+
+	// permission_denied where the policy allows is ambiguous, not
+	// would_open, because it may be authorisation the level does not
+	// describe.
+	amb := newStack(t, ModeObserve, func(string) error {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
+	})
+	_ = callMember(amb, tokenMember)
+	if st := amb.stats(); st.Ambiguous != 1 || st.WouldOpen != 0 {
+		t.Errorf("ambiguous case: stats = %+v", st)
+	}
+}
+
+// The summary line is what the observation period is judged on, so its
+// severity has to track whether there is anything to act on.
+func TestLogSummarySeverityTracksTheFindings(t *testing.T) {
+	clean := newStack(t, ModeObserve, nil)
+	if err := callMember(clean, tokenMember); err != nil {
+		t.Fatalf("member call: %v", err)
+	}
+	clean.summary("test")
+	out := clean.logs()
+	if !strings.Contains(out, "auth policy observation") {
+		t.Fatalf("no summary was logged:\n%s", out)
+	}
+	if !strings.Contains(out, "compared=1") {
+		t.Errorf("the summary does not report what was compared:\n%s", out)
+	}
+	if strings.Contains(out, "level=WARN") {
+		t.Errorf("a clean summary was logged at warn:\n%s", out)
+	}
+
+	dirty := newStack(t, ModeObserve, nil)
+	_ = callAdmin(dirty, "") // would_close
+	dirty.summary("test")
+	if out := dirty.logs(); !strings.Contains(out, "level=WARN") {
+		t.Errorf("a summary with a disagreement was not logged at warn:\n%s", out)
+	}
 }

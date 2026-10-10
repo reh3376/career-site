@@ -42,6 +42,9 @@ type Server struct {
 	db       *db.Pool
 	policy   authpolicy.Map
 	authIntc *authpolicy.Interceptor
+	// observeStop ends the periodic policy-observation summary. Nil
+	// unless the interceptor is running in observe mode.
+	observeStop chan struct{}
 }
 
 // Deps carries the process-level singletons the server wires into handlers.
@@ -223,7 +226,67 @@ func (s *Server) routes() http.Handler {
 	return withLogging(s.log, http.MaxBytesHandler(mux, 1<<20))
 }
 
+// observeInterval is how often the policy-observation summary is
+// logged during S3. Short enough that the first one arrives within a
+// coffee break of a deploy, so the week does not start on an
+// unverified assumption; long enough that a busy day does not fill the
+// log.
+//
+// A var so a test can shorten it; nothing else writes to it.
+var observeInterval = 15 * time.Minute
+
+// startPolicyObservation reports what the interceptor has compared,
+// periodically, while it is only observing.
+//
+// This exists because S3's success condition is the absence of
+// something. Once Logout was declared PUBLIC there is nothing left for
+// observe mode to disagree about, so the expected output for the week
+// is an empty log, and an empty log is also what an interceptor
+// installed on nothing produces. The summary turns "no disagreements"
+// into "N comparisons, 0 disagreements", which is a different claim.
+//
+// Only logs when something has been observed since the last summary, so
+// an idle night is quiet rather than 32 identical lines.
+func (s *Server) startPolicyObservation() {
+	if s.authIntc == nil || s.authIntc.Mode() != authpolicy.ModeObserve {
+		return
+	}
+	s.observeStop = make(chan struct{})
+	stop := s.observeStop
+
+	go func() {
+		t := time.NewTicker(observeInterval)
+		defer t.Stop()
+		var last authpolicy.Stats
+		for {
+			select {
+			case <-stop:
+				return
+			case <-t.C:
+				now := s.authIntc.Stats()
+				if now == last {
+					continue
+				}
+				last = now
+				s.authIntc.LogSummary("periodic")
+			}
+		}
+	}()
+}
+
+func (s *Server) stopPolicyObservation() {
+	if s.observeStop == nil {
+		return
+	}
+	close(s.observeStop)
+	s.observeStop = nil
+	// A final summary, so a restart does not lose the window between
+	// the last tick and shutdown.
+	s.authIntc.LogSummary("shutdown")
+}
+
 func (s *Server) Start() error {
+	s.startPolicyObservation()
 	s.log.Info("api listening",
 		slog.String("addr", s.cfg.Addr),
 		slog.String("env", s.cfg.Env),
@@ -237,6 +300,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	s.stopPolicyObservation()
 	shutdownCtx, cancel := context.WithTimeout(ctx, s.cfg.ShutdownTimeout)
 	defer cancel()
 	return s.http.Shutdown(shutdownCtx)

@@ -55,8 +55,21 @@ service AuthService {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
   }
   // Ends the current session and clears the cookie.
+  //
+  // Public, not MEMBER. It declared MEMBER until 2026-10-09 and the
+  // handler never enforced it, which S1 of
+  // docs/sprint-auth-interceptor.md found. The declaration was the
+  // wrong half: there is nothing here to protect, because the session
+  // token the caller presents IS the thing being revoked, so nobody
+  // can log out anyone but themselves. With no token it is a no-op that
+  // returns success.
+  //
+  // Requiring a session would also break the case that needs this
+  // most. Once a session has expired the cookie is still in the
+  // browser, and that is exactly when someone wants it cleared;
+  // enforcing MEMBER would answer `unauthenticated` and leave it there.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
-    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
     option (career.v1.allow_unverified) = true;
   }
   // Ends every session of the member ("sign out of all devices").

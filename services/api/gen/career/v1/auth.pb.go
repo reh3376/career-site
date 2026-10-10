@@ -1424,7 +1424,7 @@ const file_career_v1_auth_proto_rawDesc = "" +
 	"\x06Verify\x12\x18.career.v1.VerifyRequest\x1a\x19.career.v1.VerifyResponse\"\x04\x80\xb5\x18\x01\x12g\n" +
 	"\x12ResendVerification\x12$.career.v1.ResendVerificationRequest\x1a%.career.v1.ResendVerificationResponse\"\x04\x80\xb5\x18\x01\x12@\n" +
 	"\x05Login\x12\x17.career.v1.LoginRequest\x1a\x18.career.v1.LoginResponse\"\x04\x80\xb5\x18\x01\x12G\n" +
-	"\x06Logout\x12\x18.career.v1.LogoutRequest\x1a\x19.career.v1.LogoutResponse\"\b\x80\xb5\x18\x02\x88\xb5\x18\x01\x12L\n" +
+	"\x06Logout\x12\x18.career.v1.LogoutRequest\x1a\x19.career.v1.LogoutResponse\"\b\x80\xb5\x18\x01\x88\xb5\x18\x01\x12L\n" +
 	"\tLogoutAll\x12\x1b.career.v1.LogoutAllRequest\x1a\x1c.career.v1.LogoutAllResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
 	"\x0eForgotPassword\x12 .career.v1.ForgotPasswordRequest\x1a!.career.v1.ForgotPasswordResponse\"\x04\x80\xb5\x18\x01\x12X\n" +
 	"\rResetPassword\x12\x1f.career.v1.ResetPasswordRequest\x1a .career.v1.ResetPasswordResponse\"\x04\x80\xb5\x18\x01\x12[\n" +
