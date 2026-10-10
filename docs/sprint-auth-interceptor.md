@@ -515,6 +515,75 @@ not on the date alone. If the week ends with `compared` near zero, the
 answer is that the week proved nothing, and the observation continues or
 the admin surfaces get exercised deliberately.
 
+#### Building the sample deliberately, 2026-10-10
+
+The first ten hours of observation produced **five** comparisons, all of
+them from `deploy/live-check.sh` during the deploy itself. The heartbeat
+correctly stayed silent for those ten hours, since the counters never
+moved, which is both the feature working and a blunt measure of how
+little organic traffic the site gets. A week of that would have proved
+the mechanism runs and nothing about whether the gates agree.
+
+So `deploy/exercise-admin.sh` calls the read-only admin and member
+procedures directly. It is a better sample than clicking through the
+console, which only reaches surfaces that have a UI, and it is
+repeatable.
+
+**Read-only by an explicit allowlist, not by a name pattern.** A rule
+like "anything starting with `Get` or `List`" would silently pick up a
+new procedure the day somebody adds `GetAndClearQueue`, and this runs
+against production. `RunDbQuery`, `RunAdminQuery` and
+`GetCalendarConnectURL` are excluded by name; so are `SubmitJd`, which
+starts a 25-minute LLM pipeline, and every mutation. The calls run on the
+server over ssh, so the admin password never leaves `.env.prod`.
+
+After 1,255 calls: **`compared=1260`, zero disagreements**, and the
+counter reconciles to the call (5 + 31 + 124 + 620 + 480).
+
+**Four gate types are now covered live**, which matters more than the
+volume:
+
+| gate | covered by |
+|---|---|
+| `requireAdmin` | 25 AdminService procedures |
+| `requireChatAdmin` | `ChatService/ListAdminQueries` |
+| `requireMember` × 3 definitions | Chat, Jd and Meeting procedures, one each |
+| a bare `LookupSessionUser` | `MemberService/GetMe`, `GetHistory` |
+
+The MEMBER rows were added after reviewing the first 780 comparisons and
+finding them almost entirely ADMIN. MEMBER is the level whose semantics
+the 2026-10-09 decision actually changed, so it was the one most likely
+to behave differently at S4 and the one that had barely been observed.
+Volume on the admin path was hiding that.
+
+**What this evidence does not cover**, stated so the numbers are not read
+as more than they are:
+
+- **26 of the 71 admin-enforcing procedures.** The other 45 are mutations
+  that will not be called against production. They share the identical
+  `requireAdmin` call and S1 established that statically for all 69, but
+  they are not confirmed live.
+- **Only an active admin calls.** No suspended and no non-admin session
+  has been observed, so the paths that *deny* are covered by tests and
+  not by production traffic. Those are exactly where the interceptor is
+  now stricter than the handlers. Proving it live would mean suspending a
+  real account, which needs the owner's say-so.
+
+Two things the exercise itself found, neither of them about auth:
+
+- **The login rate limiter counts successful logins, not just failures.**
+  `ratelimit.New(5, 5.0/(15*60))` keyed on (ip, email): five attempts,
+  then one token every three minutes. The first version of the script
+  logged in once per pass and got `429` on the fifth. It now reuses one
+  session per run, which is also closer to what it stands in for.
+- **A 400 still means the gate ran.** Every gate is the first statement
+  in its handler and there is no validation interceptor in front of them,
+  so `MeetingService/GetAvailability` returning `invalid_argument` for an
+  empty request had already passed `requireMember`. The script counted
+  only 200s as meaningful at first, which understated the coverage; a
+  `501` is the real negative, because it comes from the `Unimplemented`
+  embed with no handler and no gate behind it.
+
 #### Cost during S3 and S4
 
 A MEMBER or ADMIN request now resolves the session **twice**: once in the
