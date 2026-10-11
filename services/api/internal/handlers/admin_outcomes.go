@@ -27,7 +27,7 @@ func (a *Admin) SetJdOutcome(
 	ctx context.Context,
 	req *connect.Request[v1.SetJdOutcomeRequest],
 ) (*connect.Response[v1.SetJdOutcomeResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (a *Admin) RecordJdFeedback(
 	ctx context.Context,
 	req *connect.Request[v1.RecordJdFeedbackRequest],
 ) (*connect.Response[v1.RecordJdFeedbackResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

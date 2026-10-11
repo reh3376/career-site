@@ -131,27 +131,6 @@ func NewAdmin(
 	}
 }
 
-// requireAdmin gates a call on session + admin role. Called at the
-// top of every RPC that returns admin-only data.
-//
-// Role is the whole check, and that is now the intended end state
-// rather than a stepping stone: the MFA-fresh option this once
-// deferred to was removed on 2026-10-09, because there was no TOTP
-// implementation and the owner decided not to build one.
-func requireAdmin[T any](a *Admin, ctx context.Context, req *connect.Request[T]) (*users.User, error) {
-	u, err := a.auth.LookupSessionUser(ctx, req)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
-	}
-	if u.Role != users.RoleAdmin {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
-	}
-	return u, nil
-}
-
 // ---------------------------------------------------------------
 // ListMembers
 // ---------------------------------------------------------------
@@ -160,9 +139,6 @@ func (a *Admin) ListMembers(
 	ctx context.Context,
 	req *connect.Request[v1.ListMembersRequest],
 ) (*connect.Response[v1.ListMembersResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	msg := req.Msg
 	f := users.ListMembersFilter{
 		Query:  msg.Query,
@@ -196,9 +172,6 @@ func (a *Admin) GetMember(
 	ctx context.Context,
 	req *connect.Request[v1.GetMemberRequest],
 ) (*connect.Response[v1.GetMemberResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
@@ -245,9 +218,6 @@ func (a *Admin) SetMemberStatus(
 	ctx context.Context,
 	req *connect.Request[v1.SetMemberStatusRequest],
 ) (*connect.Response[v1.SetMemberStatusResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
@@ -302,9 +272,6 @@ func (a *Admin) ListDbTables(
 	ctx context.Context,
 	req *connect.Request[v1.ListDbTablesRequest],
 ) (*connect.Response[v1.ListDbTablesResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	tables, err := adminquery.ListTables(ctx, a.roPool)
 	if err != nil {
 		a.log.Error("ListTables failed", slog.String("error", err.Error()))
@@ -336,7 +303,7 @@ func (a *Admin) RunDbQuery(
 	ctx context.Context,
 	req *connect.Request[v1.RunDbQueryRequest],
 ) (*connect.Response[v1.RunDbQueryResponse], error) {
-	u, err := requireAdmin(a, ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -440,9 +407,6 @@ func (a *Admin) ExtendAccess(
 	ctx context.Context,
 	req *connect.Request[v1.ExtendAccessRequest],
 ) (*connect.Response[v1.ExtendAccessResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
@@ -512,9 +476,6 @@ func (a *Admin) ApproveRegistration(
 	ctx context.Context,
 	req *connect.Request[v1.ApproveRegistrationRequest],
 ) (*connect.Response[v1.ApproveRegistrationResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
@@ -540,9 +501,6 @@ func (a *Admin) DeclineRegistration(
 	ctx context.Context,
 	req *connect.Request[v1.DeclineRegistrationRequest],
 ) (*connect.Response[v1.DeclineRegistrationResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
@@ -572,9 +530,6 @@ func (a *Admin) IngestCorpusText(
 	ctx context.Context,
 	req *connect.Request[v1.IngestCorpusTextRequest],
 ) (*connect.Response[v1.IngestCorpusTextResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.ingest == nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
 			errors.New("corpus ingester not wired"))
@@ -605,9 +560,6 @@ func (a *Admin) ListCorpusDocuments(
 	ctx context.Context,
 	req *connect.Request[v1.ListCorpusDocumentsRequest],
 ) (*connect.Response[v1.ListCorpusDocumentsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	summary, err := a.users.ListCorpusDocuments(ctx)
 	if err != nil {
 		a.log.Error("ListCorpusDocuments failed", slog.String("error", err.Error()))
@@ -676,9 +628,6 @@ func (a *Admin) ReindexCorpus(
 	ctx context.Context,
 	req *connect.Request[v1.ReindexCorpusRequest],
 ) (*connect.Response[v1.ReindexCorpusResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.ingest == nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
 			errors.New("corpus ingester not wired"))
@@ -728,9 +677,6 @@ func (a *Admin) ListJdSubmissions(
 	ctx context.Context,
 	req *connect.Request[v1.ListJdSubmissionsRequest],
 ) (*connect.Response[v1.ListJdSubmissionsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	rows, err := a.users.ListJdSubmissions(ctx)
 	if err != nil {
 		a.log.Error("ListJdSubmissions failed", slog.String("error", err.Error()))
@@ -806,9 +752,6 @@ func (a *Admin) ListMemberActivity(
 	ctx context.Context,
 	req *connect.Request[v1.ListMemberActivityRequest],
 ) (*connect.Response[v1.ListMemberActivityResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	sort := activitySortProtoToRepo(req.Msg.Sort)
 	rows, err := a.users.ListMemberActivity(ctx, sort)
 	if err != nil {
@@ -866,7 +809,7 @@ func (a *Admin) ListSavedQueries(
 	ctx context.Context,
 	req *connect.Request[v1.ListSavedQueriesRequest],
 ) (*connect.Response[v1.ListSavedQueriesResponse], error) {
-	u, err := requireAdmin(a, ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -888,7 +831,7 @@ func (a *Admin) UpsertSavedQuery(
 	ctx context.Context,
 	req *connect.Request[v1.UpsertSavedQueryRequest],
 ) (*connect.Response[v1.UpsertSavedQueryResponse], error) {
-	u, err := requireAdmin(a, ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -911,7 +854,7 @@ func (a *Admin) DeleteSavedQuery(
 	ctx context.Context,
 	req *connect.Request[v1.DeleteSavedQueryRequest],
 ) (*connect.Response[v1.DeleteSavedQueryResponse], error) {
-	u, err := requireAdmin(a, ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -938,9 +881,6 @@ func (a *Admin) ListAccessGrants(
 	ctx context.Context,
 	req *connect.Request[v1.ListAccessGrantsRequest],
 ) (*connect.Response[v1.ListAccessGrantsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	res, err := a.users.ListGrants(ctx, users.ListGrantsFilter{Query: req.Msg.Query})
 	if err != nil {
 		a.log.Error("ListGrants failed", slog.String("error", err.Error()))
@@ -961,7 +901,7 @@ func (a *Admin) UpsertAccessGrant(
 	ctx context.Context,
 	req *connect.Request[v1.UpsertAccessGrantRequest],
 ) (*connect.Response[v1.UpsertAccessGrantResponse], error) {
-	u, err := requireAdmin(a, ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -997,9 +937,6 @@ func (a *Admin) DeleteAccessGrant(
 	ctx context.Context,
 	req *connect.Request[v1.DeleteAccessGrantRequest],
 ) (*connect.Response[v1.DeleteAccessGrantResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.Id, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
@@ -1022,9 +959,6 @@ func (a *Admin) ListContactMessages(
 	ctx context.Context,
 	req *connect.Request[v1.ListContactMessagesRequest],
 ) (*connect.Response[v1.ListContactMessagesResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	msg := req.Msg
 	f := users.ListSupportFilter{
 		Query:    msg.Query,
@@ -1064,9 +998,6 @@ func (a *Admin) ResolveContactMessage(
 	ctx context.Context,
 	req *connect.Request[v1.ResolveContactMessageRequest],
 ) (*connect.Response[v1.ResolveContactMessageResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.Id, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
@@ -1157,9 +1088,6 @@ func (a *Admin) SweepCorpusEmbeddings(
 	ctx context.Context,
 	req *connect.Request[v1.SweepCorpusEmbeddingsRequest],
 ) (*connect.Response[v1.SweepCorpusEmbeddingsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.ingest == nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
 			errors.New("corpus ingester not wired"))
@@ -1190,7 +1118,7 @@ func (a *Admin) ResendNotification(
 	ctx context.Context,
 	req *connect.Request[v1.ResendNotificationRequest],
 ) (*connect.Response[v1.ResendNotificationResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1264,9 +1192,6 @@ func (a *Admin) GetJdSubmission(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdSubmissionRequest],
 ) (*connect.Response[v1.GetJdSubmissionResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	id, err := strconv.ParseInt(req.Msg.SubmissionId, 10, 64)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid submission_id"))
@@ -1389,7 +1314,7 @@ func (a *Admin) RescoreJd(
 	ctx context.Context,
 	req *connect.Request[v1.RescoreJdRequest],
 ) (*connect.Response[v1.RescoreJdResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

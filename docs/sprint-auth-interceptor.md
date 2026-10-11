@@ -818,7 +818,7 @@ returns `unauthenticated`; a member session calling an admin procedure
 returns `permission_denied`. Verified by actually making those calls,
 not by reading the code.
 
-### S5. Remove the handler checks — **in progress, 3 of 87 done 2026-10-11**
+### S5. Remove the handler checks — **done 2026-10-11**
 
 Measured before starting, because it decides whether this is mechanical
 or invasive. The 69 `requireAdmin` call sites are four shapes:
@@ -892,6 +892,63 @@ attaches a marker and asserts the handler sees it, on the unary and the
 streaming path, and asserts a public procedure sees nothing. Confirmed by
 mutation: dropping the enriched context fails that test and **only** that
 test.
+
+#### S5b: all 87 converted, and the gates deleted
+
+69 `requireAdmin` call sites, 15 `requireMember` and `requireChatAdmin`
+sites using the account, 4 gate-only, and then the five helper
+definitions: `requireAdmin`, `requireChatAdmin`, and the three separate
+`requireMember` copies in chat.go, jd.go and meetings.go. The 48 sites
+that only used their gate to refuse lost three lines each; the 38 that
+used the account now read it with `RequireCaller(ctx)`.
+
+**Both auth-gate tests inverted.** `admin_authgate_test.go` required all
+69 admin methods to call `requireAdmin`; it now requires that none of
+them do, and that none resolve a session either. The S1 comparison
+likewise: for a MEMBER or ADMIN handler a gate is now the failure.
+`TestTheGateHelpersAreGone` is separate, because a helper can exist while
+being called from nowhere, and a dead gate invites someone to start
+calling it again.
+
+#### Removing observe mode was part of S5, not optional
+
+Found while reviewing the diff, and it was nearly shipped as a hole.
+
+S5 takes away D4's overlap: the interceptor becomes the only thing
+enforcing. For the 48 handlers that only ever used their gate to refuse,
+**nothing replaced it** — `ListMembers` now goes straight to the
+database. And `AUTH_INTERCEPTOR_MODE` **defaulted to `observe`**, in
+which the interceptor computes a decision and acts on nothing. One
+missing line in `.env.prod` would have booted the server with 48 admin
+methods completely open.
+
+Observe mode existed to compare the interceptor against the handler
+gates. With the gates gone it compares nothing, and its only remaining
+effect is to disable the sole enforcement. That is not a mode, so it is
+gone: `Mode`, `ParseMode`, the counters, `LogSummary`, the 15-minute
+heartbeat, the config field and the compose variable. The interceptor
+always enforces.
+
+The observation machinery did its job first — 1,205 comparisons with no
+disagreement is what justified S4 — and keeping it afterwards would have
+left a switch whose only function was to turn protection off.
+
+#### The test that matters most after S5
+
+`TestImplementedAdminHandlersWithNoCheckAreStillRefused` probes six
+real, implemented, now-check-free admin handlers anonymously and
+requires 401. The generic wiring test picks `AddMemberNote`
+alphabetically, which has no handler, so a 401 there only proves the
+interceptor beat Connect's `Unimplemented` answer. These six would
+return real data if reached.
+
+`ExportDecisionTestData` is on that list deliberately. It is the handler
+that shipped without a gate on 2026-10-05 and served 21,708 bytes of
+participant data to anonymous callers for five hours. It has no gate
+again now, by design, and this test is what stands in for the one it
+lost. Its comment in `admin_decisiontest.go` was still telling readers
+that "the auth interceptor has not landed and every method here gates
+itself"; that is corrected.
 
 ### S5 as originally planned
 

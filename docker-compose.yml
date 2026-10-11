@@ -72,10 +72,6 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PWNED_CHECK_ENABLED: "0"
-      # Auth interceptor mode. Observe locally by default so dev
-      # behaves like production did before S4; set it in the repo-root
-      # .env to try enforce.
-      AUTH_INTERCEPTOR_MODE: ${AUTH_INTERCEPTOR_MODE:-observe}
       # Meeting scheduler, optional in dev. Without them the scheduler
       # pages render and report that booking is not switched on, which
       # is the same thing production shows before it is connected.

@@ -75,7 +75,7 @@ func (h *Jd) SubmitJd(
 	ctx context.Context,
 	req *connect.Request[v1.SubmitJdRequest],
 ) (*connect.Response[v1.SubmitJdResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (h *Jd) GetJdResult(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdResultRequest],
 ) (*connect.Response[v1.GetJdResultResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +356,7 @@ func (h *Jd) GetJdReviewConfig(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdReviewConfigRequest],
 ) (*connect.Response[v1.GetJdReviewConfigResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (h *Jd) ListMySubmissions(
 	ctx context.Context,
 	req *connect.Request[v1.ListMySubmissionsRequest],
 ) (*connect.Response[v1.ListMySubmissionsResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -473,26 +473,6 @@ func cleanApplyURL(raw string) (string, error) {
 		return "", errors.New("application link must be a full http(s) URL")
 	}
 	return u.String(), nil
-}
-
-// requireMember resolves the caller's session or fails the RPC. JD
-// upload is members-only; the proto declares AUTH_LEVEL_MEMBER but
-// enforcement lives here until the auth interceptor lands.
-func (h *Jd) requireMember(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
-	if h.auth == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("auth not wired"))
-	}
-	u, err := h.auth.LookupSessionUser(ctx, req)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("sign in to use the JD upload"))
-	}
-	if u.Status != users.StatusActive {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("account is not active"))
-	}
-	return u, nil
 }
 
 // ServeResumePDF streams a submission's locked PDF. Plain HTTP (a

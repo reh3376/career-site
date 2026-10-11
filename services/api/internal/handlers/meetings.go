@@ -81,9 +81,6 @@ func (h *Meetings) GetMeetingOptions(
 	ctx context.Context,
 	req *connect.Request[careerv1.GetMeetingOptionsRequest],
 ) (*connect.Response[careerv1.GetMeetingOptionsResponse], error) {
-	if _, err := h.requireMember(ctx, req); err != nil {
-		return nil, err
-	}
 	set := h.settings.Get(ctx)
 
 	out := &careerv1.GetMeetingOptionsResponse{
@@ -111,9 +108,6 @@ func (h *Meetings) GetAvailability(
 	ctx context.Context,
 	req *connect.Request[careerv1.GetAvailabilityRequest],
 ) (*connect.Response[careerv1.GetAvailabilityResponse], error) {
-	if _, err := h.requireMember(ctx, req); err != nil {
-		return nil, err
-	}
 	set := h.settings.Get(ctx)
 	dur := int(req.Msg.GetDurationMinutes())
 	if !set.Allows(dur) {
@@ -165,7 +159,7 @@ func (h *Meetings) BookMeeting(
 	ctx context.Context,
 	req *connect.Request[careerv1.BookMeetingRequest],
 ) (*connect.Response[careerv1.BookMeetingResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +244,7 @@ func (h *Meetings) ListMyMeetings(
 	ctx context.Context,
 	req *connect.Request[careerv1.ListMyMeetingsRequest],
 ) (*connect.Response[careerv1.ListMyMeetingsResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +275,7 @@ func (h *Meetings) CancelMeeting(
 	ctx context.Context,
 	req *connect.Request[careerv1.CancelMeetingRequest],
 ) (*connect.Response[careerv1.CancelMeetingResponse], error) {
-	member, err := h.requireMember(ctx, req)
+	member, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -396,26 +390,6 @@ func (h *Meetings) activeBookings(ctx context.Context, from, to time.Time) ([]sc
 		})
 	}
 	return out, nil
-}
-
-// requireMember resolves the caller's session or fails the RPC. The
-// proto declares AUTH_LEVEL_MEMBER; enforcement lives here until the
-// auth interceptor lands, matching the JD handler.
-func (h *Meetings) requireMember(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
-	if h.auth == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("auth not wired"))
-	}
-	u, err := h.auth.LookupSessionUser(ctx, req)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("sign in to book a meeting"))
-	}
-	if u.Status != users.StatusActive {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("account is not active"))
-	}
-	return u, nil
 }
 
 func toProto(b scheduling.Booking, zone string) *careerv1.Meeting {

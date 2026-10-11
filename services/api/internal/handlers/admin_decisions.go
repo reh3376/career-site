@@ -25,9 +25,6 @@ func (a *Admin) ListDecisionLog(
 	ctx context.Context,
 	req *connect.Request[v1.ListDecisionLogRequest],
 ) (*connect.Response[v1.ListDecisionLogResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	f := users.DecisionFilter{
 		Kind:           strings.TrimSpace(req.Msg.GetKind()),
 		UnreviewedOnly: req.Msg.GetUnreviewedOnly(),
@@ -67,7 +64,7 @@ func (a *Admin) ReviewDecision(
 	ctx context.Context,
 	req *connect.Request[v1.ReviewDecisionRequest],
 ) (*connect.Response[v1.ReviewDecisionResponse], error) {
-	me, err := requireAdmin(a, ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +129,6 @@ func (a *Admin) ExportDecisionLog(
 	ctx context.Context,
 	req *connect.Request[v1.ExportDecisionLogRequest],
 ) (*connect.Response[v1.ExportDecisionLogResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	rows, err := a.users.ExportDecisions(ctx, req.Msg.GetReviewedOnly())
 	if err != nil {
 		a.log.Error("ExportDecisionLog failed", slog.String("error", err.Error()))

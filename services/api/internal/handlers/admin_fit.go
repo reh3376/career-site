@@ -18,9 +18,6 @@ func (a *Admin) GetJdFitBands(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdFitBandsRequest],
 ) (*connect.Response[v1.GetJdFitBandsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.jdScorer == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("JD pipeline not wired"))
 	}
@@ -31,7 +28,7 @@ func (a *Admin) SetJdFitBands(
 	ctx context.Context,
 	req *connect.Request[v1.SetJdFitBandsRequest],
 ) (*connect.Response[v1.SetJdFitBandsResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +59,6 @@ func (a *Admin) GetJdSubmissionLimit(
 	ctx context.Context,
 	req *connect.Request[v1.GetJdSubmissionLimitRequest],
 ) (*connect.Response[v1.GetJdSubmissionLimitResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.jdLimits == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("JD pipeline not wired"))
 	}
@@ -78,7 +72,7 @@ func (a *Admin) SetJdSubmissionLimit(
 	ctx context.Context,
 	req *connect.Request[v1.SetJdSubmissionLimitRequest],
 ) (*connect.Response[v1.SetJdSubmissionLimitResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

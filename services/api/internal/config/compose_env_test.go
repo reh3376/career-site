@@ -151,30 +151,11 @@ func TestEverySettingTheApiReadsReachesTheContainer(t *testing.T) {
 	}
 }
 
-// The specific setting that prompted this test, pinned. It controls
-// whether the auth interceptor enforces, so it being inert is the
-// difference between S4 having happened and only appearing to.
-func TestTheAuthInterceptorModeReachesProduction(t *testing.T) {
-	root := repoRoot(t)
-	prod := apiEnvKeys(t, filepath.Join(root, "docker-compose.prod.yml"))
-
-	if !prod["AUTH_INTERCEPTOR_MODE"] {
-		t.Error("docker-compose.prod.yml does not pass AUTH_INTERCEPTOR_MODE " +
-			"to the api service, so setting it in .env.prod does nothing and " +
-			"the interceptor stays in observe mode whatever the file says")
-	}
-
-	// And the default has to be the inert one. A missing or mistyped
-	// value must not turn enforcement on by accident.
-	body, err := os.ReadFile(filepath.Join(root, "docker-compose.prod.yml"))
-	if err != nil {
-		t.Fatalf("read the prod compose file: %v", err)
-	}
-	if !strings.Contains(string(body), "AUTH_INTERCEPTOR_MODE: ${AUTH_INTERCEPTOR_MODE:-observe}") {
-		t.Error("AUTH_INTERCEPTOR_MODE should default to observe in the prod " +
-			"compose file, so an unset value is inert rather than enforcing")
-	}
-}
+// The setting that prompted this test was AUTH_INTERCEPTOR_MODE, and it
+// no longer exists: S5 removed the interceptor's observe mode, because
+// with the handler gates gone a mode that observes without acting would
+// have left 48 admin methods open. The lesson it taught is what this
+// file keeps.
 
 var envReadRe = regexp.MustCompile(`(?:os\.Getenv|envOr|envIntOr|envFloatOr)\("([A-Z_0-9]+)"`)
 

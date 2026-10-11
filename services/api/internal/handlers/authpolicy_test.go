@@ -17,8 +17,15 @@ import (
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 )
 
-// S1 of docs/sprint-auth-interceptor.md: does what the contract declares
-// match what the handlers actually enforce?
+// Does any handler still decide its own access?
+//
+// **This test has inverted.** As S1 of docs/sprint-auth-interceptor.md it
+// asked the opposite: every method declared a level, nothing read the
+// declaration, and enforcement was ~90 hand-written gate calls, so it
+// compared each declaration against the gate its handler happened to
+// call. Since S4 the interceptor reads the declaration and refuses
+// before the handler runs, and S5 removed the gates, because a check
+// that cannot fire can only disagree with the thing in front of it.
 //
 // **Why this comes before the interceptor.** Today `career.v1.auth` is
 // documentation: 141 methods declare a level and nothing reads it, while
@@ -42,19 +49,6 @@ import (
 // ungated when they used a gate helper the pattern did not know about. A
 // check that cries wolf is a check that gets deleted.
 
-// gateFuncs are the helpers that decide access. A handler that calls one
-// is enforcing; a handler that calls none is open.
-//
-// Listed explicitly rather than matched by prefix, so adding a gate means
-// coming here and saying what level it enforces. A new `requireXyz` that
-// this does not know about shows up as an ungated handler, which is the
-// safe direction to be wrong in.
-var gateFuncs = map[string]string{
-	"requireAdmin":     "ADMIN",
-	"requireChatAdmin": "ADMIN",
-	"requireMember":    "MEMBER",
-}
-
 // lookupFuncs resolve the session cookie to a user and decide nothing.
 // Whether a call to one gates depends entirely on what the handler does
 // with the result, so they are classified by shape rather than by name
@@ -62,54 +56,6 @@ var gateFuncs = map[string]string{
 var lookupFuncs = map[string]bool{
 	"LookupSessionUser":  true,
 	"lookupSessionToken": true,
-}
-
-// knownUngated records methods that declare a level but deliberately do
-// not enforce it, with the reason. Every entry here is a decision, and
-// every one of them is a behaviour change waiting to happen when the
-// interceptor starts enforcing, so the list is short and explicit.
-//
-// **Empty, and that is the goal.** It held one entry, AuthService.Logout,
-// which declared MEMBER and gated nothing. Rather than carry the
-// exception, the owner settled it on 2026-10-09 by declaring Logout
-// PUBLIC, which is what it always was: the session token the caller
-// presents is the thing being revoked, so nobody can log out anyone but
-// themselves, and requiring a session would have broken logout for
-// exactly the expired-session case that most needs it.
-//
-// An empty list means every declaration now matches its handler with no
-// carve-outs, so the S4 interceptor has nothing to special-case.
-var knownUngated = map[string]string{}
-
-// migratedToInterceptor are handlers that no longer gate, because the
-// interceptor does it for them.
-//
-// S5 of docs/sprint-auth-interceptor.md, in progress. For these methods
-// the comparison above inverts: a gate is now the failure, not the
-// requirement. Two things are asserted instead.
-//
-// **No gate.** The interceptor refused every caller below the declared
-// level before the handler ran, so a handler check can only disagree
-// with it, and a second opinion that cannot be reached is how the
-// original problem comes back in a new form.
-//
-// **No session lookup of any shape**, not even an attribution one. The
-// resolver already loaded the account to answer the interceptor's
-// questions and attached it to the request context; a handler that looks
-// it up again is doing the query twice. PUBLIC handlers are different
-// and are not on this list: nothing is resolved for them, so attributing
-// an optional session really does require a lookup.
-//
-// The list shrinks the comparison as it grows. When it covers every
-// gated handler the two halves of this test swap over completely and
-// `gateFuncs` can go.
-var migratedToInterceptor = map[string]string{
-	// The three bare-lookup handlers, converted first because they were
-	// the simplest and prove the mechanism end to end: each one used to
-	// resolve the session itself and check only that it existed.
-	"MemberService.GetMe":          "reads the caller from the request context",
-	"MemberService.GetHistory":     "reads the caller from the request context",
-	"ActivityService.RecordEvents": "reads the caller from the request context",
 }
 
 // declaredNotImplemented are the methods the proto declares, the server
@@ -202,6 +148,7 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 	var problems []string
 	var unimplementedNames []string
 	unmounted := 0
+	gatedHandlers := 0
 	for _, key := range sortedKeys(declared) {
 		level := declared[key]
 		name := key.method
@@ -228,65 +175,36 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 			continue
 		}
 
-		enforced := strongest(h.gates)
-
-		// S5: for a migrated handler the expectation is inverted.
-		if note, migrated := migratedToInterceptor[key.service+"."+name]; migrated {
-			if len(h.gates) > 0 {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s is migrated to the interceptor (%s) but still "+
-						"calls %v. The interceptor already refused everyone "+
-						"below %s, so this check cannot fire and can only "+
-						"disagree with it.",
-					key.service, name, note, h.gates,
-					strings.TrimPrefix(level, "AUTH_LEVEL_")))
-			}
-			if lookups := sessionLookupsIn(h); len(lookups) > 0 {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s is migrated to the interceptor (%s) but still "+
-						"looks the session up via %v. The resolver already "+
-						"loaded the account and put it on the context; this "+
-						"is the same query twice.",
-					key.service, name, note, lookups))
-			}
+		if level == "PUBLIC" {
+			// Nothing is resolved for a public procedure, so a handler
+			// that wants to know who is calling has to ask. Several do,
+			// to attribute a contact message or a decision test run to
+			// a member who happens to be signed in. gatesCalled already
+			// tells that shape apart from a denial, and S1 established
+			// statically that no public handler denies on a session.
 			continue
 		}
 
-		if reason, exempt := knownUngated[name]; exempt {
-			if enforced != "" {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s is on the knownUngated list (%s) but now calls %v. "+
-						"Remove the exemption.", key.service, name, reason, h.gates))
-			}
-			continue
-		}
-
-		switch level {
-		case "ADMIN":
-			if enforced != "ADMIN" {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s declares ADMIN but enforces %q (%s). It is reachable by "+
-						"anyone who can reach the service today.",
-					key.service, name, orNone(enforced), h.file))
-			}
-		case "MEMBER":
-			if enforced == "" {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s declares MEMBER but enforces nothing (%s). Either gate it, "+
-						"or declare it PUBLIC and say why in knownUngated.",
-					key.service, name, h.file))
-			}
-		case "PUBLIC":
-			if enforced != "" {
-				problems = append(problems, fmt.Sprintf(
-					"%s.%s declares PUBLIC but enforces %s (%s). An interceptor would "+
-						"OPEN this method, which is the dangerous direction.",
-					key.service, name, enforced, h.file))
-			}
-		default:
+		// MEMBER and ADMIN. The interceptor decided before this handler
+		// ran, so the handler must not decide again, and must not repeat
+		// the lookup the resolver already did.
+		gatedHandlers++
+		if len(h.gates) > 0 {
 			problems = append(problems, fmt.Sprintf(
-				"%s.%s declares no auth level", key.service, name))
+				"%s.%s declares %s and still calls %v (%s). Since S4 the "+
+					"interceptor refuses every caller below %s before this "+
+					"handler runs, so that check cannot fire and can only "+
+					"disagree with it. Read the caller with RequireCaller(ctx).",
+				key.service, name, level, h.gates, h.file, level))
 		}
+	}
+
+	// A negative assertion over an empty set always passes, so the
+	// number of handlers it was made over has to be checked.
+	if gatedHandlers < 60 {
+		t.Errorf("only %d MEMBER or ADMIN handlers were compared, expected "+
+			"about 87: the walk is finding handlers but not classifying them",
+			gatedHandlers)
 	}
 
 	// The distribution, cross-checked against the figures in
@@ -300,10 +218,10 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 		dist["ADMIN"], dist["MEMBER"], dist["PUBLIC"],
 		len(declared)-dist["ADMIN"]-dist["MEMBER"]-dist["PUBLIC"])
 
-	// How the 105 compared handlers actually enforce, which is the
-	// figure S5 has to replace. Logged rather than asserted: it changes
-	// whenever a handler is added, and the comparison above is what
-	// guards correctness.
+	// What the handlers still call. After S5 this should be (none) for
+	// every MEMBER and ADMIN handler, with a lookup only on the PUBLIC
+	// ones that attribute an optional session. Logged rather than
+	// asserted, because the comparison above is what guards it.
 	gateUse := map[string]int{}
 	for _, h := range impl {
 		if len(h.gates) == 0 {
@@ -314,32 +232,13 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 			gateUse[g]++
 		}
 	}
-	t.Logf("enforcement across the %d compared handlers: %s",
-		len(impl), strings.Join(countsLine(gateUse), ", "))
-
-	// The list must name real handlers, or it silently exempts nothing
-	// and the inverted assertions above never run.
-	for qualified, note := range migratedToInterceptor {
-		svc, method, found := strings.Cut(qualified, ".")
-		if !found {
-			t.Errorf("migratedToInterceptor key %q is not Service.Method", qualified)
-			continue
-		}
-		if _, ok := impl[methodKey{svc, method}]; !ok {
-			t.Errorf("%s is on migratedToInterceptor (%s) but no handler for "+
-				"it was found; the name is wrong or the handler was removed",
-				qualified, note)
-		}
-	}
-	t.Logf("S5 migration: %d of the %d gated handlers now read the caller "+
-		"from the context", len(migratedToInterceptor), 90-len(migratedToInterceptor))
+	t.Logf("what the %d handlers still call: %s", len(impl),
+		strings.Join(countsLine(gateUse), ", "))
 
 	sort.Strings(unimplementedNames)
 	t.Logf("%d methods declared; %d handlers found; %d on services the "+
-		"server never mounts; %d answered by the Unimplemented embed; "+
-		"%d deliberately ungated",
-		len(declared), len(impl), unmounted, len(unimplementedNames),
-		len(knownUngated))
+		"server never mounts; %d answered by the Unimplemented embed",
+		len(declared), len(impl), unmounted, len(unimplementedNames))
 
 	// The pinned set, checked both ways.
 	found := map[string]bool{}
@@ -363,9 +262,8 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 
 	if len(problems) > 0 {
 		sort.Strings(problems)
-		t.Errorf("the contract and the handlers disagree on %d methods. "+
-			"Every one of these changes behaviour when the interceptor starts "+
-			"enforcing (docs/sprint-auth-interceptor.md S1):\n  %s",
+		t.Errorf("%d handler(s) still decide their own access, which S5 "+
+			"removed (docs/sprint-auth-interceptor.md):\n  %s",
 			len(problems), strings.Join(problems, "\n  "))
 	}
 }
@@ -574,14 +472,16 @@ func gatesCalled(body *ast.BlockStmt) []string {
 			return true
 		}
 		name := calleeName(call)
-		if _, isGate := gateFuncs[name]; isGate {
-			add(name)
-			return true
-		}
 		if lookupFuncs[name] && !attribution[call] {
 			// A bare lookup assigned to a variable, with the failure
 			// handled by returning. That is a gate even though the
 			// helper itself decides nothing.
+			//
+			// The named helpers requireAdmin, requireMember and
+			// requireChatAdmin used to be matched here too. S5 deleted
+			// them; TestTheGateHelpersAreGone asserts they stay
+			// deleted, and any reintroduced helper that denies on a
+			// session lookup is still caught by this.
 			add(name)
 		}
 		return true
@@ -659,29 +559,6 @@ func calleeName(call *ast.CallExpr) string {
 	return ""
 }
 
-// strongest returns the highest level any of the called gates enforces.
-//
-// A gating session lookup enforces MEMBER: it is only on this list when
-// gatesCalled decided its failure path denies, and what it can
-// establish is that the caller has a session, not that they are an
-// admin. Nothing here reads a role.
-func strongest(gates []string) string {
-	best := ""
-	for _, g := range gates {
-		level := gateFuncs[g]
-		if level == "" && lookupFuncs[g] {
-			level = "MEMBER"
-		}
-		switch level {
-		case "ADMIN":
-			return "ADMIN"
-		case "MEMBER":
-			best = "MEMBER"
-		}
-	}
-	return best
-}
-
 func orNone(s string) string {
 	if s == "" {
 		return "nothing"
@@ -733,226 +610,6 @@ func countsLine(m map[string]int) []string {
 	out := make([]string, 0, len(keys))
 	for _, k := range keys {
 		out = append(out, fmt.Sprintf("%s=%d", k, m[k]))
-	}
-	return out
-}
-
-// ---------------------------------------------------------------
-// What the gates actually check
-// ---------------------------------------------------------------
-
-// The comparison above matches a handler to a gate by name. That is
-// enough to answer "is this method gated at all", which was S1's
-// question, and it is not enough for S4 or S5, because the gates do not
-// agree with each other about what a level means:
-//
-//	requireAdmin      session + admin role
-//	requireChatAdmin  session + active status + admin role
-//	requireMember     session + active status
-//	a bare lookup     session
-//
-// Login refuses every non-active status, so a session only exists for an
-// account that was active when it was minted. The status checks are
-// therefore about what happens *after* that: an admin suspending,
-// declining or expiring a member mid-session. `requireMember` revokes
-// access on the next call; `requireAdmin` and the bare lookups do not.
-//
-// So a suspended member can still read their own profile and history and
-// record activity events, and a suspended admin keeps every admin
-// method. One admin exists and he is active, so the second is
-// theoretical, but both are the kind of difference an interceptor has to
-// settle deliberately rather than inherit by accident.
-//
-// Pinned here so that the interceptor's definition of each level can be
-// checked against the thing it is replacing, and so that the three
-// separate `requireMember` definitions cannot drift apart unnoticed.
-
-type gateChecks struct {
-	session      bool
-	activeStatus bool
-	adminRole    bool
-}
-
-func (g gateChecks) String() string {
-	parts := []string{}
-	if g.session {
-		parts = append(parts, "session")
-	}
-	if g.activeStatus {
-		parts = append(parts, "active-status")
-	}
-	if g.adminRole {
-		parts = append(parts, "admin-role")
-	}
-	if len(parts) == 0 {
-		return "nothing"
-	}
-	return strings.Join(parts, "+")
-}
-
-var wantGateSemantics = map[string]gateChecks{
-	// No status check. A member whose access was revoked keeps admin
-	// methods denied by role anyway, but an admin whose own account was
-	// disabled would not be stopped here.
-	"requireAdmin": {session: true, adminRole: true},
-	// The strictest of the four, because it goes through requireMember.
-	"requireChatAdmin": {session: true, activeStatus: true, adminRole: true},
-	// Defined separately in chat.go, jd.go and meetings.go. All three
-	// must agree; the test below fails if they stop agreeing.
-	"requireMember": {session: true, activeStatus: true},
-}
-
-func TestGatesCheckWhatTheyAreDocumentedToCheck(t *testing.T) {
-	funcs := gateFuncDecls(t)
-
-	for name, want := range wantGateSemantics {
-		decls := funcs[name]
-		if len(decls) == 0 {
-			t.Errorf("no definition of %s was found; the gate was renamed or "+
-				"the AST walk is broken", name)
-			continue
-		}
-
-		// Every definition of a given gate name must check the same
-		// things. Three copies of requireMember exist, and a status
-		// check quietly dropped from one of them would leave one
-		// service's members gated more weakly than the other two.
-		for i, decl := range decls {
-			got := resolveChecks(decl, funcs, map[string]bool{})
-			if got != want {
-				t.Errorf("%s (definition %d of %d, %s) checks %s, expected %s",
-					name, i+1, len(decls), decl.file, got, want)
-			}
-		}
-	}
-}
-
-// The three definitions of requireMember are byte-for-byte equivalent in
-// what they check, so a single interceptor can replace all three. Stated
-// as its own test because it is the precondition for S5 collapsing them.
-func TestEveryRequireMemberDefinitionAgrees(t *testing.T) {
-	funcs := gateFuncDecls(t)
-	decls := funcs["requireMember"]
-	if len(decls) != 3 {
-		t.Fatalf("found %d definitions of requireMember, expected 3 "+
-			"(chat.go, jd.go, meetings.go)", len(decls))
-	}
-
-	first := resolveChecks(decls[0], funcs, map[string]bool{})
-	for _, d := range decls[1:] {
-		if got := resolveChecks(d, funcs, map[string]bool{}); got != first {
-			t.Errorf("requireMember in %s checks %s but the one in %s checks "+
-				"%s; one interceptor cannot replace both",
-				d.file, got, decls[0].file, first)
-		}
-	}
-}
-
-type gateDecl struct {
-	fn   *ast.FuncDecl
-	file string
-}
-
-// gateFuncDecls indexes every function or method in the package by name,
-// since a gate may be a plain generic function (requireAdmin) or a
-// method (requireMember on three receivers).
-func gateFuncDecls(t *testing.T) map[string][]gateDecl {
-	t.Helper()
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("read the handlers directory: %v", err)
-	}
-	fset := token.NewFileSet()
-	out := map[string][]gateDecl{}
-	for _, e := range entries {
-		name := e.Name()
-		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(fset, name, nil, 0)
-		if err != nil {
-			t.Fatalf("parse %s: %v", name, err)
-		}
-		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
-				out[fn.Name.Name] = append(out[fn.Name.Name], gateDecl{fn: fn, file: name})
-			}
-		}
-	}
-	// Stable order, so a failure names the same "definition N" each run.
-	for _, decls := range out {
-		sort.Slice(decls, func(i, j int) bool { return decls[i].file < decls[j].file })
-	}
-	return out
-}
-
-// resolveChecks reports what a gate checks, following calls to other
-// gates so that requireChatAdmin inherits requireMember's checks rather
-// than appearing to check only the role.
-func resolveChecks(d gateDecl, funcs map[string][]gateDecl, seen map[string]bool) gateChecks {
-	if seen[d.fn.Name.Name] {
-		return gateChecks{}
-	}
-	seen[d.fn.Name.Name] = true
-
-	var out gateChecks
-	ast.Inspect(d.fn.Body, func(n ast.Node) bool {
-		switch node := n.(type) {
-		case *ast.CallExpr:
-			name := calleeName(node)
-			if lookupFuncs[name] {
-				out.session = true
-			}
-			// A gate calling another gate inherits its checks.
-			if _, isGate := wantGateSemantics[name]; isGate {
-				for _, inner := range funcs[name] {
-					c := resolveChecks(inner, funcs, seen)
-					out.session = out.session || c.session
-					out.activeStatus = out.activeStatus || c.activeStatus
-					out.adminRole = out.adminRole || c.adminRole
-					break
-				}
-			}
-		case *ast.BinaryExpr:
-			// `u.Status != users.StatusActive` and
-			// `u.Role != users.RoleAdmin`. Matched on both operands so
-			// that comparing against some other status or role does not
-			// read as the check it is not.
-			if comparesFieldToConst(node, "Status", "StatusActive") {
-				out.activeStatus = true
-			}
-			if comparesFieldToConst(node, "Role", "RoleAdmin") {
-				out.adminRole = true
-			}
-		}
-		return true
-	})
-	return out
-}
-
-// comparesFieldToConst matches `x.<field> <op> users.<constant>`.
-func comparesFieldToConst(bin *ast.BinaryExpr, field, constant string) bool {
-	if bin.Op != token.NEQ && bin.Op != token.EQL {
-		return false
-	}
-	sel, ok := bin.X.(*ast.SelectorExpr)
-	if !ok || sel.Sel.Name != field {
-		return false
-	}
-	rhs, ok := bin.Y.(*ast.SelectorExpr)
-	return ok && rhs.Sel.Name == constant
-}
-
-// sessionLookupsIn reports every session lookup a handler makes,
-// regardless of shape. Unlike gatesCalled it does not care whether the
-// lookup gates: after S5 a handler should not be touching the session at
-// all, because the resolver already did.
-func sessionLookupsIn(h handlerImpl) []string {
-	var out []string
-	for _, g := range h.gates {
-		if lookupFuncs[g] {
-			out = append(out, g)
-		}
 	}
 	return out
 }

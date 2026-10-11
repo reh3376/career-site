@@ -23,9 +23,6 @@ func (a *Admin) GetMetrics(
 	ctx context.Context,
 	req *connect.Request[v1.GetMetricsRequest],
 ) (*connect.Response[v1.GetMetricsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	m, err := a.users.GetMetrics(ctx)
 	if err != nil {
 		a.log.Error("GetMetrics failed", slog.String("error", err.Error()))
@@ -98,9 +95,6 @@ func (a *Admin) GetGate(
 	ctx context.Context,
 	req *connect.Request[v1.GetGateRequest],
 ) (*connect.Response[v1.GetGateResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	rows, err := a.users.Gate(ctx)
 	if err != nil {
 		a.log.Error("GetGate failed", slog.String("error", err.Error()))

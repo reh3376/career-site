@@ -30,9 +30,6 @@ func (a *Admin) GetOpsStatus(
 	ctx context.Context,
 	req *connect.Request[v1.GetOpsStatusRequest],
 ) (*connect.Response[v1.GetOpsStatusResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.jobs == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("job runner not wired"))
 	}
@@ -111,9 +108,6 @@ func (a *Admin) GetJobDetail(
 	ctx context.Context,
 	req *connect.Request[v1.GetJobDetailRequest],
 ) (*connect.Response[v1.GetJobDetailResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.jobs == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("job runner not wired"))
 	}

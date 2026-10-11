@@ -50,24 +50,6 @@ func NewChat(log *slog.Logger, repo *users.Repo, auth *Auth, answer *chat.Servic
 	return &Chat{log: log, users: repo, auth: auth, answer: answer}
 }
 
-// requireMember resolves the caller's session or fails the RPC.
-func (h *Chat) requireMember(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
-	if h.auth == nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("auth not wired"))
-	}
-	u, err := h.auth.LookupSessionUser(ctx, req)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("sign in to ask a question"))
-	}
-	if u.Status != users.StatusActive {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("account is not active"))
-	}
-	return u, nil
-}
-
 // DisclosureText is the first message of every conversation
 // (FR-CHAT-02).
 //
@@ -83,7 +65,7 @@ const DisclosureText = "I am an AI assistant. I answer in Roger's voice, using o
 func (h *Chat) CreateConversation(
 	ctx context.Context, req *connect.Request[careerv1.CreateConversationRequest],
 ) (*connect.Response[careerv1.CreateConversationResponse], error) {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +99,7 @@ func (h *Chat) CreateConversation(
 func (h *Chat) ListConversations(
 	ctx context.Context, req *connect.Request[careerv1.ListConversationsRequest],
 ) (*connect.Response[careerv1.ListConversationsResponse], error) {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +125,7 @@ func (h *Chat) ListConversations(
 func (h *Chat) GetConversation(
 	ctx context.Context, req *connect.Request[careerv1.GetConversationRequest],
 ) (*connect.Response[careerv1.GetConversationResponse], error) {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +167,7 @@ func (h *Chat) SendMessage(
 	req *connect.Request[careerv1.SendMessageRequest],
 	stream *connect.ServerStream[careerv1.SendMessageResponse],
 ) error {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return err
 	}
@@ -352,7 +334,7 @@ func (h *Chat) SendMessage(
 func (h *Chat) DeleteConversation(
 	ctx context.Context, req *connect.Request[careerv1.DeleteConversationRequest],
 ) (*connect.Response[careerv1.DeleteConversationResponse], error) {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +361,7 @@ func (h *Chat) DeleteConversation(
 func (h *Chat) RateMessage(
 	ctx context.Context, req *connect.Request[careerv1.RateMessageRequest],
 ) (*connect.Response[careerv1.RateMessageResponse], error) {
-	me, err := h.requireMember(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -418,9 +400,6 @@ func (h *Chat) RateMessage(
 func (h *Chat) GetSuggestions(
 	ctx context.Context, req *connect.Request[careerv1.GetSuggestionsRequest],
 ) (*connect.Response[careerv1.GetSuggestionsResponse], error) {
-	if _, err := h.requireMember(ctx, req); err != nil {
-		return nil, err
-	}
 	var qs []string
 	entries, err := h.users.ListQAEntries(ctx, false)
 	if err != nil {
@@ -581,30 +560,10 @@ func parseID(s string) (int64, error) {
 	return id, nil
 }
 
-// requireChatAdmin resolves an admin session or fails the RPC.
-//
-// Separate from requireMember because these two RPCs read the database
-// and a member must not. The proto declares AUTH_LEVEL_ADMIN and
-// enforcement lives here until the auth interceptor lands, same as
-// everywhere else on this service.
-func (h *Chat) requireChatAdmin(ctx context.Context, req connect.AnyRequest) (*users.User, error) {
-	me, err := h.requireMember(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if me.Role != users.RoleAdmin {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("admin role required"))
-	}
-	return me, nil
-}
-
 // ListAdminQueries returns the dropdown contents.
 func (h *Chat) ListAdminQueries(
 	ctx context.Context, req *connect.Request[careerv1.ListAdminQueriesRequest],
 ) (*connect.Response[careerv1.ListAdminQueriesResponse], error) {
-	if _, err := h.requireChatAdmin(ctx, req); err != nil {
-		return nil, err
-	}
 	list := users.ListAdminQueries()
 	out := &careerv1.ListAdminQueriesResponse{Queries: make([]*careerv1.AdminQuery, 0, len(list))}
 	for _, q := range list {
@@ -624,7 +583,7 @@ func (h *Chat) ListAdminQueries(
 func (h *Chat) RunAdminQuery(
 	ctx context.Context, req *connect.Request[careerv1.RunAdminQueryRequest],
 ) (*connect.Response[careerv1.RunAdminQueryResponse], error) {
-	me, err := h.requireChatAdmin(ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
