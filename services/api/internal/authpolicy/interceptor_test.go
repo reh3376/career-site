@@ -45,24 +45,24 @@ const (
 )
 
 func testResolver(calls *int) ResolveFunc {
-	return func(_ context.Context, header http.Header) (Caller, error) {
+	return func(ctx context.Context, header http.Header) (Caller, context.Context, error) {
 		if calls != nil {
 			*calls++
 		}
 		switch sessionToken(header) {
 		case tokenAdmin:
-			return Caller{Authenticated: true, Active: true, Admin: true}, nil
+			return Caller{Authenticated: true, Active: true, Admin: true}, ctx, nil
 		case tokenMember:
-			return Caller{Authenticated: true, Active: true}, nil
+			return Caller{Authenticated: true, Active: true}, ctx, nil
 		case tokenSuspended:
-			return Caller{Authenticated: true}, nil
+			return Caller{Authenticated: true}, ctx, nil
 		case tokenSuspendedAd:
-			return Caller{Authenticated: true, Admin: true}, nil
+			return Caller{Authenticated: true, Admin: true}, ctx, nil
 		case tokenBroken:
-			return Caller{}, errors.New("database is down")
+			return Caller{}, ctx, errors.New("database is down")
 		default:
 			// No session. Not an error.
-			return Caller{}, nil
+			return Caller{}, ctx, nil
 		}
 	}
 }
@@ -96,7 +96,7 @@ type stack struct {
 // how observe mode's comparison gets exercised: the interesting cases
 // are a handler that serves a request the policy would refuse, and a
 // handler that refuses one the policy allows.
-type handlerBehaviour func(procedure string) error
+type handlerBehaviour func(ctx context.Context, procedure string) error
 
 func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 	t.Helper()
@@ -114,14 +114,29 @@ func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 	if err != nil {
 		t.Fatalf("new interceptor: %v", err)
 	}
+	s := buildStack(t, intc, behave)
+	s.logs = buf.String
+	s.resolls = func() int { return resolls }
+	return s
+}
+
+// newStackWith mounts the services around an interceptor the caller
+// built, for tests that need a different resolver.
+func newStackWith(t *testing.T, intc *Interceptor, behave handlerBehaviour) *stack {
+	t.Helper()
+	return buildStack(t, intc, behave)
+}
+
+func buildStack(t *testing.T, intc *Interceptor, behave handlerBehaviour) *stack {
+	t.Helper()
 
 	if behave == nil {
-		behave = func(string) error { return nil }
+		behave = func(context.Context, string) error { return nil }
 	}
 	served := 0
-	count := func(procedure string) error {
+	count := func(ctx context.Context, procedure string) error {
 		served++
-		return behave(procedure)
+		return behave(ctx, procedure)
 	}
 
 	opts := connect.WithInterceptors(intc)
@@ -153,9 +168,9 @@ func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 		member:  careerv1connect.NewMemberServiceClient(c, srv.URL),
 		system:  careerv1connect.NewSystemServiceClient(c, srv.URL),
 		chat:    careerv1connect.NewChatServiceClient(c, srv.URL),
-		logs:    buf.String,
+		logs:    func() string { return "" },
 		served:  func() int { return served },
-		resolls: func() int { return resolls },
+		resolls: func() int { return 0 },
 		stats:   intc.Stats,
 		summary: intc.LogSummary,
 	}
@@ -372,7 +387,7 @@ func TestObserveLogsWouldClose(t *testing.T) {
 // would_open: the handler demanded a session the interceptor did not.
 // This is the dangerous direction and should never appear in production.
 func TestObserveLogsWouldOpen(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
+	s := newStack(t, ModeObserve, func(_ context.Context, procedure string) error {
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
 	})
 
@@ -396,7 +411,7 @@ func TestObserveLogsWouldOpen(t *testing.T) {
 // such as "not your resource". Logged at info so it can be triaged
 // without burying the two findings that are unambiguous.
 func TestObserveSeparatesAmbiguousPermissionDenials(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
+	s := newStack(t, ModeObserve, func(_ context.Context, procedure string) error {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not your record"))
 	})
 
@@ -421,7 +436,7 @@ func TestObserveSeparatesAmbiguousPermissionDenials(t *testing.T) {
 // permission_denied, and warning on every failed sign-in would make
 // this mode's output worthless.
 func TestObserveIgnoresDenialsOnPublicProcedures(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
+	s := newStack(t, ModeObserve, func(_ context.Context, procedure string) error {
 		return connect.NewError(connect.CodePermissionDenied,
 			errors.New("this account is not permitted to sign in"))
 	})
@@ -589,10 +604,10 @@ type stubAdmin struct {
 }
 
 func (s *stubAdmin) ListMembers(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.ListMembersRequest],
 ) (*connect.Response[v1.ListMembersResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.ListMembersResponse{}), nil
@@ -604,20 +619,20 @@ type stubMember struct {
 }
 
 func (s *stubMember) GetMe(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetMeRequest],
 ) (*connect.Response[v1.GetMeResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetMeResponse{}), nil
 }
 
 func (s *stubMember) GetHistory(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetHistoryRequest],
 ) (*connect.Response[v1.GetHistoryResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetHistoryResponse{}), nil
@@ -629,10 +644,10 @@ type stubSystem struct {
 }
 
 func (s *stubSystem) GetVersion(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetVersionRequest],
 ) (*connect.Response[v1.GetVersionResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetVersionResponse{}), nil
@@ -644,11 +659,11 @@ type stubChat struct {
 }
 
 func (s *stubChat) SendMessage(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.SendMessageRequest],
 	stream *connect.ServerStream[v1.SendMessageResponse],
 ) error {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return err
 	}
 	return stream.Send(&v1.SendMessageResponse{})
@@ -694,7 +709,7 @@ func TestStatsCountWhatWasActuallyCompared(t *testing.T) {
 
 func TestStatsCountEachDisagreementKindSeparately(t *testing.T) {
 	// A handler that always refuses with unauthenticated gives would_open.
-	open := newStack(t, ModeObserve, func(string) error {
+	open := newStack(t, ModeObserve, func(context.Context, string) error {
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("nope"))
 	})
 	_ = callMember(open, tokenMember)
@@ -705,7 +720,7 @@ func TestStatsCountEachDisagreementKindSeparately(t *testing.T) {
 	// permission_denied where the policy allows is ambiguous, not
 	// would_open, because it may be authorisation the level does not
 	// describe.
-	amb := newStack(t, ModeObserve, func(string) error {
+	amb := newStack(t, ModeObserve, func(context.Context, string) error {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
 	})
 	_ = callMember(amb, tokenMember)
@@ -738,5 +753,93 @@ func TestLogSummarySeverityTracksTheFindings(t *testing.T) {
 	dirty.summary("test")
 	if out := dirty.logs(); !strings.Contains(out, "level=WARN") {
 		t.Errorf("a summary with a disagreement was not logged at warn:\n%s", out)
+	}
+}
+
+// ---------------------------------------------------------------
+// The resolved caller reaches the handler
+// ---------------------------------------------------------------
+
+// S5 has handlers read the caller from the request context instead of
+// looking the session up themselves. That only works if the context the
+// resolver returns actually reaches the handler, through both the unary
+// and the streaming path.
+//
+// Worth testing rather than assuming: the interceptor takes `ctx` as a
+// parameter and passes it to `next`, so a version that decided on the
+// enriched context and then called `next(ctx, ...)` with the *original*
+// would behave identically in every other test here. Every assertion
+// about levels and codes would still pass, and handlers would silently
+// see nothing.
+
+type probeKey struct{}
+
+func resolverAttaching(value string) ResolveFunc {
+	return func(ctx context.Context, header http.Header) (Caller, context.Context, error) {
+		switch sessionToken(header) {
+		case tokenAdmin:
+			return Caller{Authenticated: true, Active: true, Admin: true},
+				context.WithValue(ctx, probeKey{}, value), nil
+		case tokenMember:
+			return Caller{Authenticated: true, Active: true},
+				context.WithValue(ctx, probeKey{}, value), nil
+		default:
+			// No session: the context is returned unchanged, so a
+			// public handler sees nothing, which is correct.
+			return Caller{}, ctx, nil
+		}
+	}
+}
+
+func TestTheResolvedCallerReachesTheHandler(t *testing.T) {
+	policy, err := Build()
+	if err != nil {
+		t.Fatalf("build the policy: %v", err)
+	}
+
+	for _, c := range []struct {
+		name  string
+		token string
+		call  func(*stack, string) error
+		want  string
+	}{
+		{"unary, admin procedure", tokenAdmin, callAdmin, "carried"},
+		{"unary, member procedure", tokenMember, callMemberStrict, "carried"},
+		{"streaming, member procedure", tokenMember, callChat, "carried"},
+		// A public procedure resolves no session, so nothing is
+		// attached. The handler seeing nothing here is the correct
+		// result, not a failure of the plumbing.
+		{"public procedure, anonymous", "", callPublic, ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			var seen string
+			var ran bool
+			intc, err := NewInterceptor(policy, resolverAttaching("carried"),
+				ModeEnforce, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+			if err != nil {
+				t.Fatalf("new interceptor: %v", err)
+			}
+			s := newStackWith(t, intc, func(ctx context.Context, _ string) error {
+				ran = true
+				if v, ok := ctx.Value(probeKey{}).(string); ok {
+					seen = v
+				}
+				return nil
+			})
+
+			if err := c.call(s, c.token); err != nil {
+				t.Fatalf("call failed: %v", err)
+			}
+			if !ran {
+				t.Fatal("the handler never ran, so this proves nothing about " +
+					"what it would have seen")
+			}
+			if seen != c.want {
+				t.Errorf("the handler saw %q on its context, want %q. The "+
+					"interceptor is deciding on the resolver's context and "+
+					"then calling the handler with the original one.",
+					seen, c.want)
+			}
+		})
 	}
 }

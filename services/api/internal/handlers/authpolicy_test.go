@@ -81,6 +81,37 @@ var lookupFuncs = map[string]bool{
 // carve-outs, so the S4 interceptor has nothing to special-case.
 var knownUngated = map[string]string{}
 
+// migratedToInterceptor are handlers that no longer gate, because the
+// interceptor does it for them.
+//
+// S5 of docs/sprint-auth-interceptor.md, in progress. For these methods
+// the comparison above inverts: a gate is now the failure, not the
+// requirement. Two things are asserted instead.
+//
+// **No gate.** The interceptor refused every caller below the declared
+// level before the handler ran, so a handler check can only disagree
+// with it, and a second opinion that cannot be reached is how the
+// original problem comes back in a new form.
+//
+// **No session lookup of any shape**, not even an attribution one. The
+// resolver already loaded the account to answer the interceptor's
+// questions and attached it to the request context; a handler that looks
+// it up again is doing the query twice. PUBLIC handlers are different
+// and are not on this list: nothing is resolved for them, so attributing
+// an optional session really does require a lookup.
+//
+// The list shrinks the comparison as it grows. When it covers every
+// gated handler the two halves of this test swap over completely and
+// `gateFuncs` can go.
+var migratedToInterceptor = map[string]string{
+	// The three bare-lookup handlers, converted first because they were
+	// the simplest and prove the mechanism end to end: each one used to
+	// resolve the session itself and check only that it existed.
+	"MemberService.GetMe":          "reads the caller from the request context",
+	"MemberService.GetHistory":     "reads the caller from the request context",
+	"ActivityService.RecordEvents": "reads the caller from the request context",
+}
+
 // declaredNotImplemented are the methods the proto declares, the server
 // mounts, and no handler in this package implements, so Connect's
 // embedded Unimplemented*ServiceHandler answers them. Verified one by
@@ -198,6 +229,29 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 		}
 
 		enforced := strongest(h.gates)
+
+		// S5: for a migrated handler the expectation is inverted.
+		if note, migrated := migratedToInterceptor[key.service+"."+name]; migrated {
+			if len(h.gates) > 0 {
+				problems = append(problems, fmt.Sprintf(
+					"%s.%s is migrated to the interceptor (%s) but still "+
+						"calls %v. The interceptor already refused everyone "+
+						"below %s, so this check cannot fire and can only "+
+						"disagree with it.",
+					key.service, name, note, h.gates,
+					strings.TrimPrefix(level, "AUTH_LEVEL_")))
+			}
+			if lookups := sessionLookupsIn(h); len(lookups) > 0 {
+				problems = append(problems, fmt.Sprintf(
+					"%s.%s is migrated to the interceptor (%s) but still "+
+						"looks the session up via %v. The resolver already "+
+						"loaded the account and put it on the context; this "+
+						"is the same query twice.",
+					key.service, name, note, lookups))
+			}
+			continue
+		}
+
 		if reason, exempt := knownUngated[name]; exempt {
 			if enforced != "" {
 				problems = append(problems, fmt.Sprintf(
@@ -262,6 +316,23 @@ func TestDeclaredAuthMatchesHandlerEnforcement(t *testing.T) {
 	}
 	t.Logf("enforcement across the %d compared handlers: %s",
 		len(impl), strings.Join(countsLine(gateUse), ", "))
+
+	// The list must name real handlers, or it silently exempts nothing
+	// and the inverted assertions above never run.
+	for qualified, note := range migratedToInterceptor {
+		svc, method, found := strings.Cut(qualified, ".")
+		if !found {
+			t.Errorf("migratedToInterceptor key %q is not Service.Method", qualified)
+			continue
+		}
+		if _, ok := impl[methodKey{svc, method}]; !ok {
+			t.Errorf("%s is on migratedToInterceptor (%s) but no handler for "+
+				"it was found; the name is wrong or the handler was removed",
+				qualified, note)
+		}
+	}
+	t.Logf("S5 migration: %d of the %d gated handlers now read the caller "+
+		"from the context", len(migratedToInterceptor), 90-len(migratedToInterceptor))
 
 	sort.Strings(unimplementedNames)
 	t.Logf("%d methods declared; %d handlers found; %d on services the "+
@@ -870,4 +941,18 @@ func comparesFieldToConst(bin *ast.BinaryExpr, field, constant string) bool {
 	}
 	rhs, ok := bin.Y.(*ast.SelectorExpr)
 	return ok && rhs.Sel.Name == constant
+}
+
+// sessionLookupsIn reports every session lookup a handler makes,
+// regardless of shape. Unlike gatesCalled it does not care whether the
+// lookup gates: after S5 a handler should not be touching the session at
+// all, because the resolver already did.
+func sessionLookupsIn(h handlerImpl) []string {
+	var out []string
+	for _, g := range h.gates {
+		if lookupFuncs[g] {
+			out = append(out, g)
+		}
+	}
+	return out
 }

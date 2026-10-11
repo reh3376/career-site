@@ -208,19 +208,23 @@ func main() {
 	// error: Login refuses every non-active status, so a session only
 	// exists for an account that was active when it was minted, and the
 	// Active check below is about suspension *after* that.
-	resolveCaller := func(ctx context.Context, header http.Header) (authpolicy.Caller, error) {
+	// It also attaches the account to the context. The lookup has
+	// already happened to answer the three questions below, and the
+	// handler is about to want the same record; S5 has handlers read it
+	// from the context instead of loading it a second time.
+	resolveCaller := func(ctx context.Context, header http.Header) (authpolicy.Caller, context.Context, error) {
 		u, err := authHandler.LookupSessionUserHeader(ctx, header)
 		if err != nil {
-			return authpolicy.Caller{}, err
+			return authpolicy.Caller{}, ctx, err
 		}
 		if u == nil {
-			return authpolicy.Caller{}, nil
+			return authpolicy.Caller{}, ctx, nil
 		}
 		return authpolicy.Caller{
 			Authenticated: true,
 			Active:        u.Status == users.StatusActive,
 			Admin:         u.Role == users.RoleAdmin,
-		}, nil
+		}, handlers.WithCaller(ctx, u), nil
 	}
 	authInterceptor, err := authpolicy.NewInterceptor(authPolicy, resolveCaller, authMode, log)
 	if err != nil {

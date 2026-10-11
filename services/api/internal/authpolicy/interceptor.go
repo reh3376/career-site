@@ -87,7 +87,18 @@ type Caller struct {
 // has no request object, only a connection, and both expose
 // http.Header. One signature means one resolution path and no chance of
 // the two disagreeing.
-type ResolveFunc func(ctx context.Context, header http.Header) (Caller, error)
+//
+// **It returns a context, which is how S5 works.** The resolver has
+// already loaded the account in order to answer the three questions in
+// Caller, and the handler is about to need the same record. Returning a
+// context lets the resolver attach it, so the interceptor can hand it
+// down to the handler and the handler does not repeat the lookup. This
+// package stays free of the users package: it passes the context along
+// without knowing what was put in it.
+//
+// Implementations return the input context unchanged when there is no
+// session, and must never return a nil context.
+type ResolveFunc func(ctx context.Context, header http.Header) (Caller, context.Context, error)
 
 type Interceptor struct {
 	policy  Map
@@ -236,7 +247,10 @@ type decision struct {
 //
 // The role check still applies, so this cannot widen ADMIN; BuildFrom
 // refuses the option on any level but MEMBER.
-func (i *Interceptor) decide(ctx context.Context, procedure string, header http.Header) decision {
+// decide answers whether this caller may call this procedure, and
+// returns the context the handler should run with: the resolver's
+// enriched one where a session was resolved, the original otherwise.
+func (i *Interceptor) decide(ctx context.Context, procedure string, header http.Header) (decision, context.Context) {
 	policy, ok := i.policy.Lookup(procedure)
 	if !ok {
 		// D2: a procedure with no policy is denied. Build() makes this
@@ -248,7 +262,7 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 			allow: false,
 			code:  connect.CodePermissionDenied,
 			why:   "no auth policy for this procedure",
-		}
+		}, ctx
 	}
 
 	level := policy.Level
@@ -260,10 +274,13 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 		// busiest surface on the site, and resolving a session it does
 		// not have would add a database round trip to every answer.
 		d.allow = true
-		return d
+		return d, ctx
 	}
 
-	caller, err := i.resolve(ctx, header)
+	caller, next, err := i.resolve(ctx, header)
+	if next != nil {
+		ctx = next
+	}
 	switch {
 	case err != nil:
 		// Matches what every handler returns today when the lookup
@@ -278,13 +295,13 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 	default:
 		d.allow = true
 	}
-	return d
+	return d, ctx
 }
 
 func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		procedure := req.Spec().Procedure
-		d := i.decide(ctx, procedure, req.Header())
+		d, ctx := i.decide(ctx, procedure, req.Header())
 
 		if i.mode == ModeEnforce && !d.allow {
 			return nil, connect.NewError(d.code, errors.New(d.why))
@@ -304,7 +321,7 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		procedure := conn.Spec().Procedure
-		d := i.decide(ctx, procedure, conn.RequestHeader())
+		d, ctx := i.decide(ctx, procedure, conn.RequestHeader())
 
 		if i.mode == ModeEnforce && !d.allow {
 			return connect.NewError(d.code, errors.New(d.why))

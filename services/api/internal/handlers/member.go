@@ -32,12 +32,9 @@ func (m *Member) GetMe(
 	ctx context.Context,
 	req *connect.Request[v1.GetMeRequest],
 ) (*connect.Response[v1.GetMeResponse], error) {
-	u, err := m.auth.LookupSessionUser(ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
+		return nil, err
 	}
 	return connect.NewResponse(&v1.GetMeResponse{Me: m.auth.buildMe(u)}), nil
 }
@@ -49,12 +46,9 @@ func (m *Member) GetHistory(
 	ctx context.Context,
 	req *connect.Request[v1.GetHistoryRequest],
 ) (*connect.Response[v1.GetHistoryResponse], error) {
-	u, err := m.auth.LookupSessionUser(ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
+		return nil, err
 	}
 	// The proto's PageRequest carries page_size; treat missing / <=0
 	// as the default 50 (matches admin surface).

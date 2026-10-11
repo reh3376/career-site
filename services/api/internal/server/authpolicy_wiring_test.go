@@ -47,8 +47,8 @@ func TestTheInterceptorIsAttachedToEveryMountedService(t *testing.T) {
 
 	// Anonymous: no session resolves, so every non-public procedure must
 	// be refused with unauthenticated.
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	var logBuf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logBuf, nil))
@@ -141,8 +141,8 @@ func TestPublicProceduresStayReachableWithTheInterceptorEnforcing(t *testing.T) 
 	if err != nil {
 		t.Fatalf("build the policy: %v", err)
 	}
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeEnforce, log)
@@ -232,8 +232,8 @@ func TestTheObservationHeartbeatReportsWhatWasCompared(t *testing.T) {
 	}
 
 	// An active member, so a member procedure is allowed and compared.
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{Authenticated: true, Active: true}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{Authenticated: true, Active: true}, ctx, nil
 	}
 	logBuf := &syncWriter{w: &bytes.Buffer{}}
 	log := slog.New(slog.NewTextHandler(logBuf, nil))
@@ -296,8 +296,8 @@ func TestTheHeartbeatDoesNotRunWhenEnforcing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeEnforce, log)
