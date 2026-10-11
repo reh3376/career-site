@@ -90,6 +90,18 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       SECRETS_KEY: ${SECRETS_KEY:-}
+      # Auth interceptor mode, "observe" or "enforce" (S3/S4 of
+      # docs/sprint-auth-interceptor.md). Unset means observe, which is
+      # the inert default; anything the server does not recognise is a
+      # boot failure rather than a silent fallback.
+      #
+      # It has to be listed here or it never reaches the container. The
+      # api service enumerates its environment, so setting a variable in
+      # .env.prod does nothing on its own: the first attempt to flip to
+      # enforce on 2026-10-11 set it there, compose saw no change, did
+      # not recreate the container, and the boot log correctly went on
+      # reporting observe.
+      AUTH_INTERCEPTOR_MODE: ${AUTH_INTERCEPTOR_MODE:-observe}
       EVENT_IP_SALT: ${EVENT_IP_SALT:-}
       EVENT_IDENTITY_RETENTION_DAYS: ${EVENT_IDENTITY_RETENTION_DAYS:-400}
       COOKIE_SECURE: "1"

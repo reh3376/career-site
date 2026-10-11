@@ -557,12 +557,38 @@ on real traffic, not a new problem.
 
 #### Mode is configuration, not code
 
-`AUTH_INTERCEPTOR_MODE` is `observe` (the default) or `enforce`, so S4 is
-a line in `.env.prod` and a redeploy. Anything else is a **boot failure**
-rather than a default: a typo selecting `enforce` would deny the admin
-console, and a typo selecting `observe` would leave enforcement off while
-the deploy meant to turn it on reported success. Neither is acceptable as
-a guess.
+`AUTH_INTERCEPTOR_MODE` is `observe` (the default) or `enforce`. Anything
+else is a **boot failure** rather than a default: a typo selecting
+`enforce` would deny the admin console, and a typo selecting `observe`
+would leave enforcement off while the deploy meant to turn it on reported
+success. Neither is acceptable as a guess.
+
+**It is two lines, not one, and finding that out cost a failed flip.**
+This section said S4 was "a line in `.env.prod` and a redeploy". That was
+wrong. The api service enumerates its environment in the compose files,
+so a variable set in `.env.prod` and not listed there never reaches the
+process. On 2026-10-11 the line was added and `compose up -d api` was
+run; compose saw no change to the service definition, did not recreate
+the container, and the boot log went on reporting `mode=observe`, which
+was correct. The flip had not happened.
+
+The failure mode is the one this sprint keeps meeting. The config field
+existed, the code read it, every test passed, the deploy succeeded, and
+the setting was inert. It is the UFW rule that filtered nothing and the
+auth option declared and never enforced, in a third costume.
+
+So `AUTH_INTERCEPTOR_MODE: ${AUTH_INTERCEPTOR_MODE:-observe}` is now in
+the api service's environment in both compose files, defaulting to the
+inert value, and `services/api/internal/config/compose_env_test.go`
+fails if a setting `config.Load` reads is not passed by
+**docker-compose.prod.yml**. Two exemption lists carry the reason for
+each setting deliberately defaulted in production or deliberately
+dev-only, so adding to either is a decision rather than a shrug.
+
+It checks production specifically rather than accepting either compose
+file, because "set in dev, missing in prod" is the same silent default
+and is easier to introduce: the local stack works, so nothing looks
+wrong. Verified by mutation in both shapes.
 
 #### Judging a quiet week
 
@@ -832,12 +858,12 @@ week of calendar time; that was replaced by one run against explicit
 conditions once it was clear the week would have measured waiting rather
 than evidence.
 
-S4 is the behaviour change, and it is a one-line edit to `.env.prod`
-(`AUTH_INTERCEPTOR_MODE=enforce`, currently unset and so defaulting to
-observe) plus an api restart. No image rebuild, no PR. Reverting is the
-same edit backwards. S3 must run for long enough to see
-real traffic, which is the only part of this that takes calendar time
-rather than work. S4 is the behaviour change. S5 is cleanup and is
+S4 is the behaviour change. It is `AUTH_INTERCEPTOR_MODE=enforce` in
+`.env.prod`, **and** the variable listed in the api service's compose
+environment, or it never reaches the container: see "Mode is
+configuration, not code" under S3 for the flip that silently did nothing
+because only the first half was done. Reverting is the same edit
+backwards. S5 is cleanup and is
 optional in the sense that the system is correct without it, though
 leaving two enforcement paths in place indefinitely recreates the
 original problem in a new form.
