@@ -39,9 +39,18 @@ const protoPackage = "career.v1"
 // interceptor in S3 does a single map lookup with no string surgery on
 // the hot path, and no opportunity to derive the key differently from
 // how it was derived here.
-type Map map[string]v1.AuthLevel
+type Map map[string]Policy
 
-// Level returns the declared level for a procedure.
+// Policy is everything the interceptor needs about one procedure.
+type Policy struct {
+	Level v1.AuthLevel
+	// AllowUnverified drops the active-account requirement, leaving the
+	// session requirement in place. Only meaningful with MEMBER, which
+	// BuildFrom enforces.
+	AllowUnverified bool
+}
+
+// Lookup returns the policy for a procedure.
 //
 // A procedure that is not in the map returns false, and the caller must
 // treat that as **deny**, per D2 of the sprint plan. Build() makes an
@@ -49,9 +58,15 @@ type Map map[string]v1.AuthLevel
 // means either a service outside our proto package or a map that was
 // not built by Build() — neither of which should be allowed through on
 // the strength of a lookup that failed.
+func (m Map) Lookup(procedure string) (Policy, bool) {
+	p, ok := m[procedure]
+	return p, ok
+}
+
+// Level is Lookup when only the level matters.
 func (m Map) Level(procedure string) (v1.AuthLevel, bool) {
-	lvl, ok := m[procedure]
-	return lvl, ok
+	p, ok := m[procedure]
+	return p.Level, ok
 }
 
 // Build walks the registered file descriptors and reads the declared
@@ -82,7 +97,7 @@ func Build() (Map, error) {
 // it rather than by running it.
 func BuildFrom(files *protoregistry.Files) (Map, error) {
 	out := Map{}
-	var missing []string
+	var missing, misplaced []string
 
 	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
 		if fd.Package() != protoPackage {
@@ -101,7 +116,23 @@ func BuildFrom(files *protoregistry.Files) (Map, error) {
 					missing = append(missing, procedure)
 					continue
 				}
-				out[procedure] = lvl
+
+				// `allow_unverified` only means something alongside
+				// MEMBER. PUBLIC resolves no session at all, so there is
+				// no account whose status could be waived, and ADMIN
+				// waiving the active check would let a disabled admin
+				// keep every admin method. Either is a contract mistake
+				// rather than a configuration choice, so it is a boot
+				// failure like a missing level: see D2.
+				unverified := declaredAllowUnverified(m)
+				if unverified && lvl != v1.AuthLevel_AUTH_LEVEL_MEMBER {
+					misplaced = append(misplaced, fmt.Sprintf(
+						"%s (declares %s)", procedure,
+						strings.TrimPrefix(lvl.String(), "AUTH_LEVEL_")))
+					continue
+				}
+
+				out[procedure] = Policy{Level: lvl, AllowUnverified: unverified}
 			}
 		}
 		return true
@@ -113,7 +144,14 @@ func BuildFrom(files *protoregistry.Files) (Map, error) {
 	// missing levels, which looks identical to success. Enforcing on an
 	// empty map would then deny every request, and the reason would be
 	// a silent no-op here rather than anything visible.
-	if len(out) == 0 && len(missing) == 0 {
+	// Checked after the two specific failures below would have been
+	// collected, but reported before them, so ordering matters: a
+	// method rejected for a misplaced option is not added to `out`, so
+	// a registry holding only such methods leaves the map empty. This
+	// guard firing first would report "the descriptors are not linked
+	// in" for what is really a one-line contract mistake, which is a
+	// worse diagnosis than no diagnosis.
+	if len(out) == 0 && len(missing) == 0 && len(misplaced) == 0 {
 		return nil, fmt.Errorf(
 			"no %s methods found in the proto registry: the descriptors are "+
 				"not linked in, or the package name has changed", protoPackage)
@@ -127,7 +165,25 @@ func BuildFrom(files *protoregistry.Files) (Map, error) {
 			len(missing), strings.Join(missing, "\n  "))
 	}
 
+	if len(misplaced) > 0 {
+		sort.Strings(misplaced)
+		return nil, fmt.Errorf(
+			"%d method(s) declare career.v1.allow_unverified without "+
+				"AUTH_LEVEL_MEMBER, where it has no meaning:\n  %s",
+			len(misplaced), strings.Join(misplaced, "\n  "))
+	}
+
 	return out, nil
+}
+
+// declaredAllowUnverified reads the allow_unverified option.
+func declaredAllowUnverified(m protoreflect.MethodDescriptor) bool {
+	opts := m.Options()
+	if opts == nil {
+		return false
+	}
+	v, ok := proto.GetExtension(opts, v1.E_AllowUnverified).(bool)
+	return ok && v
 }
 
 // declaredLevel reads the option off one method descriptor.
@@ -153,8 +209,8 @@ func declaredLevel(m protoreflect.MethodDescriptor) v1.AuthLevel {
 // eleven methods from MEMBER to PUBLIC without reading the diff.
 func (m Map) Distribution() map[v1.AuthLevel]int {
 	out := map[v1.AuthLevel]int{}
-	for _, lvl := range m {
-		out[lvl]++
+	for _, p := range m {
+		out[p.Level]++
 	}
 	return out
 }

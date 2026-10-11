@@ -148,11 +148,11 @@ func TestPolicyCoverageFlagsAMountedServiceWithNoPolicy(t *testing.T) {
 
 	// Drop SystemService, which is the one service this test mounts.
 	stripped := authpolicy.Map{}
-	for procedure, lvl := range policy {
+	for procedure, pol := range policy {
 		if strings.HasPrefix(procedure, "/career.v1.SystemService/") {
 			continue
 		}
-		stripped[procedure] = lvl
+		stripped[procedure] = pol
 	}
 	if len(stripped) == len(policy) {
 		t.Fatalf("nothing was stripped, so this test is not exercising the " +

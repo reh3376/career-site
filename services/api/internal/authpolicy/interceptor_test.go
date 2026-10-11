@@ -195,11 +195,28 @@ func TestEnforceModeDecisions(t *testing.T) {
 			connect.CodeUnauthenticated, "not signed in"},
 		{"member procedure, active member", tokenMember, callMember, 0, ""},
 		{"member procedure, active admin", tokenAdmin, callMember, 0, ""},
-		// Suspended mid-session. requireMember already refuses this;
-		// the three bare-lookup handlers do not, and this is the
-		// decision to match the stricter one.
-		{"member procedure, suspended member", tokenSuspended, callMember,
+		// Suspended mid-session on a procedure that does not waive the
+		// status check. requireMember already refuses this; the bare
+		// lookups do not, and this is the decision to match the
+		// stricter one.
+		{"strict member procedure, suspended member", tokenSuspended, callMemberStrict,
 			connect.CodePermissionDenied, "account is not active"},
+		{"strict member procedure, active member", tokenMember, callMemberStrict, 0, ""},
+		{"strict member procedure, anonymous", "", callMemberStrict,
+			connect.CodeUnauthenticated, "not signed in"},
+
+		// GetMe declares allow_unverified, so a session on a non-active
+		// account is enough. This is not a loophole: ResetPassword mints
+		// a session and refuses only DISABLED and DECLINED, so a member
+		// who verified into PENDING_APPROVAL and then reset their
+		// password holds exactly this session, and GetMe is how the
+		// "awaiting approval" state is shown. The handler answers them
+		// today via a bare lookup with no status check.
+		{"allow_unverified procedure, suspended member", tokenSuspended, callMember, 0, ""},
+		// Still needs a session, though. The option waives the status
+		// check and nothing else.
+		{"allow_unverified procedure, anonymous", "", callMember,
+			connect.CodeUnauthenticated, "not signed in"},
 
 		{"admin procedure, anonymous", "", callAdmin,
 			connect.CodeUnauthenticated, "not signed in"},
@@ -527,9 +544,21 @@ func callPublic(s *stack, token string) error {
 	return err
 }
 
+// callMember hits GetMe, which declares allow_unverified: a session is
+// required, an active account is not.
 func callMember(s *stack, token string) error {
 	_, err := s.member.GetMe(context.Background(),
 		withSession(&v1.GetMeRequest{}, token))
+	return err
+}
+
+// callMemberStrict hits GetHistory, a MEMBER procedure that does *not*
+// declare allow_unverified, so the active-account requirement applies.
+// Both are needed: with only GetMe, every member assertion here would be
+// about the exception rather than the rule.
+func callMemberStrict(s *stack, token string) error {
+	_, err := s.member.GetHistory(context.Background(),
+		withSession(&v1.GetHistoryRequest{}, token))
 	return err
 }
 
@@ -582,6 +611,16 @@ func (s *stubMember) GetMe(
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetMeResponse{}), nil
+}
+
+func (s *stubMember) GetHistory(
+	_ context.Context,
+	req *connect.Request[v1.GetHistoryRequest],
+) (*connect.Response[v1.GetHistoryResponse], error) {
+	if err := s.on(req.Spec().Procedure); err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&v1.GetHistoryResponse{}), nil
 }
 
 type stubSystem struct {
