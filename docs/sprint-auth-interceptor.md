@@ -50,7 +50,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 |---|---|---|
 | `auth` | 141 methods | by hand, per handler |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
-| `rate_limit_per_minute` | 35 methods | never |
+| `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
 
 **Four documents described the interceptor as if it existed.**
@@ -99,9 +99,22 @@ must fail *open* or the site goes down; an auth check that is uncertain
 must fail *closed*. Putting two opposite failure policies in one
 interceptor is how one of them ends up wrong.
 
-`rate_limit_per_minute` stays declared. The API reference and
-`options.proto` now state plainly which options are enforced and which
-are not, so the contract stops overstating itself either way.
+**`rate_limit_per_minute` was then removed outright on 2026-10-09**, the
+same day and for the same reason as `mfa_fresh`: 35 methods declared a
+budget, nothing read any of them, and a declared control that is not
+applied is worse than an absent one. The extension field survives at
+50002, deprecated and declared on nothing, because `career.v1` is
+additive-only and `buf breaking` refuses to delete a published
+extension.
+
+Rate limiting itself is real and unaffected: it is hand-wired in
+`internal/ratelimit` on the surfaces that actually get hammered. The
+login limiter is `ratelimit.New(5, 5.0/(15*60))` keyed on (ip, email),
+five attempts then one token every three minutes, and it counts
+successful logins as well as failures, which is how
+`deploy/exercise-admin.sh` ran into it. If budgets are ever driven from
+the contract again, the field comment says to take a new number and make
+one interceptor the only thing that applies them.
 
 ### D2. Fail closed, and refuse to start rather than guess
 
