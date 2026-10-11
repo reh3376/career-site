@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 141 methods | by hand, per handler |
+| `auth` | 141 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -751,7 +751,58 @@ Verified by mutation: making `decide` always allow, dropping the active
 check, making observe mode enforce, and resolving a session on public
 procedures each fail the test that should catch them.
 
-### S4. Enforce
+### S4. Enforce — **done 2026-10-11**
+
+Live on `b27fd6996f64`. `AUTH_INTERCEPTOR_MODE=enforce`, and the boot log
+says so:
+
+```
+auth interceptor ready      mode=enforce
+auth interceptor installed  mode=enforce
+auth policy coverage        mounted_services=11 procedures_served=133
+```
+
+**The exit checks: 13 ok, 0 failed, identical to the observe baseline
+taken minutes earlier.** That is the result D4 predicted. The
+interceptor and the handlers agree, so moving the decision in front of
+the handler changed nothing a caller can see.
+
+Which is also the problem with those 13 checks as evidence. An anonymous
+call to an admin procedure returns `unauthenticated` either way, because
+`requireAdmin` returns the same code and the same "not signed in"
+message. Behaviour-preserving by design means the checks cannot tell you
+*which* layer refused.
+
+**What does distinguish them: an unimplemented admin procedure.** There
+is no handler behind `GetAnalytics`, `GetAudit` or `GetPersona`, so no
+handler gate can refuse an anonymous caller. In observe mode the
+interceptor acts on nothing and Connect's embedded
+`Unimplemented*ServiceHandler` answers `501`. Under enforce the
+interceptor has to deny first.
+
+| anonymous call | observe (earlier today) | enforce (now) |
+|---|---|---|
+| `AdminService/GetAnalytics` | 501 | **401** |
+| `AdminService/GetAudit` | 501 | **401** |
+| `AdminService/GetPersona` | 501 | **401** |
+
+Those three numbers are the whole proof that S4 happened. Everything else
+is consistent with the interceptor doing nothing at all.
+
+**Two exit criteria are not established live**, and the check script
+prints them rather than leaving them implied: a member session calling an
+admin procedure, expecting `permission_denied`, and `GetMe` on a
+non-active session, the `allow_unverified` path. Both need an account
+that does not exist, so producing them means registering or suspending
+one in production. They stay covered by `TestEnforceModeDecisions`.
+
+**Counters stop accruing under enforce.** `observe()` only runs in
+observe mode, so the periodic summary goes quiet. That is correct: in
+enforce mode the evidence is the denials themselves, not a comparison.
+
+---
+
+### S4 as originally planned
 
 Flip observe mode off. The interceptor now denies, with
 `unauthenticated` where there is no session and `permission_denied`
@@ -851,7 +902,10 @@ exist.
 S1 gates everything; nothing else starts until its list is empty. S2 is
 inert and can land any time after.
 
-**S1, S2 and S3 are all done as of 2026-10-10, and nothing blocks S4.**
+**S1 through S4 are done as of 2026-10-11. The proto's `AUTH_LEVEL_*` is
+enforcement rather than documentation.** Only S5, removing the now-
+redundant handler checks, and S6's remaining contract corrections are
+left, and the system is correct without either.
 S1's one finding, `Logout`, was settled by declaring it PUBLIC. S3's
 qualifying run is recorded above. The observation period was originally a
 week of calendar time; that was replaced by one run against explicit
