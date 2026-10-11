@@ -397,7 +397,7 @@ behaviour by reading it:
   of procedures the S4 interceptor will decide on, so it should not drift
   quietly.
 
-### S3. The interceptor in observe mode — **built 2026-10-09, awaiting the observation period**
+### S3. The interceptor in observe mode — **done 2026-10-10**
 
 `services/api/internal/authpolicy/interceptor.go`, installed on all
 eleven mounted services in `routes()`.
@@ -411,8 +411,85 @@ test is enough to cover the real paths. S1 proves the static picture;
 this proves the dynamic one, including the session edge cases a source
 parse cannot see.
 
-*Exit:* a period of real use with no disagreements logged. A single
-disagreement stops the sprint and is investigated.
+*Exit (original):* a period of real use with no disagreements logged. A
+single disagreement stops the sprint and is investigated.
+
+*Exit (revised 2026-10-10, owner's decision):* **one exercise run that
+meets every condition below.** A single disagreement still stops the
+sprint and is investigated.
+
+| condition | why |
+|---|---|
+| at least 1,000 comparisons | enough that a gate which disagreed would have had many chances to say so |
+| `would_close`, `would_open` and `unknown_procedure` all zero | the two real disagreement kinds, plus a procedure served with no policy |
+| all four gate types exercised | `requireAdmin`, `requireChatAdmin`, all three `requireMember` definitions, and both bare `LookupSessionUser` handlers |
+| no 401 or 403 for the authenticated admin | the one outcome that must not happen while the handlers still gate |
+
+**Why a week was dropped.** Three reasons, and the first is the one that
+matters:
+
+- **There is no organic traffic to observe.** From 02:02 to 12:23 on
+  2026-10-10 the counters did not move at all. A week of that adds no
+  information; what is actually being tested is the coverage of
+  `deploy/exercise-admin.sh`, and that does not improve by waiting.
+- **The gates are deterministic.** They read a session, a status and a
+  role. The same caller on the same procedure decides the same way every
+  time, so the hundredth identical comparison tells you nothing the first
+  did not. Elapsed time would only help if there were callers in states
+  the exerciser cannot produce, and the states it cannot produce are
+  suspended and non-admin sessions, which no amount of waiting creates
+  either.
+- **The counters live in process memory and reset on deploy.** The
+  deploy of `4f9925416f2a` shipped only a shell script and this document
+  and still zeroed `compared` from 1,260. Persisting them was considered
+  and rejected: it means a table and a write path to preserve evidence
+  that regenerates in about two minutes.
+
+**What the revised criterion does not establish**: 26 of 71
+admin-enforcing procedures, because the other 45 are mutations that will
+not be called against production. Dropping the week does not make that
+gap wider, because a week of no traffic would not have closed it.
+
+#### The qualifying run, on `4f9925416f2a`
+
+Measured at 13:14:12 UTC on 2026-10-10, fifteen minutes after the api
+started at 12:59:12:
+
+```
+auth policy observation  reason=periodic mode=observe compared=1205
+    public_allowed=3 would_close=0 would_open=0 ambiguous=0
+    unknown_procedure=0
+```
+
+| condition | result |
+|---|---|
+| ≥1,000 comparisons | **1,205** |
+| `would_close`, `would_open`, `unknown_procedure` zero | **all zero** |
+| all four gate types exercised | **yes** |
+| no 401/403 for the authenticated admin | **zero, across 1,200 calls** |
+
+**All four met.** S3 is satisfied.
+
+The counters reconcile exactly, which is worth doing because it is the
+only way to know the number means what it says. `public_allowed=3` is the
+exerciser's login and logout plus the live check's login.
+`compared=1205` is 1,200 from the exerciser, 4 admin RPCs from the live
+check, and **one more that was not predicted**: `live-check.sh` probes
+`JdService/SubmitJd` anonymously to confirm it refuses, and `SubmitJd` is
+MEMBER-declared.
+
+That one call is the most informative comparison of the whole run. It is
+the only production comparison where the interceptor **denied** and the
+handler denied too, and they agreed. Every other comparison was an
+allow. So the deny path has been exercised once in production, against an
+anonymous caller on a MEMBER procedure, with both sides reaching
+`unauthenticated`.
+
+It remains true that no *suspended* and no *non-admin-but-authenticated*
+session has been observed, and those are where the interceptor is
+stricter than the handlers. They are covered by the enforce-mode tests.
+Producing them live would mean suspending a real account or creating a
+second one, which is the owner's call and has not been made.
 
 #### The levels, as settled
 
@@ -679,12 +756,20 @@ exist.
 
 ## Order and risk
 
-S1 gates everything; nothing else starts until its list is empty. **S1 is
-done and its list has one item, `Logout`,** which is a declaration change
-rather than a code change and is only load-bearing at S4, so S2 and S3
-can proceed. S2 is inert and can land any time after. **S2 and S3 are
-done**; what remains before S4 is calendar time, not work: the
-observation period, and the `Logout` declaration. S3 must run for long enough to see
+S1 gates everything; nothing else starts until its list is empty. S2 is
+inert and can land any time after.
+
+**S1, S2 and S3 are all done as of 2026-10-10, and nothing blocks S4.**
+S1's one finding, `Logout`, was settled by declaring it PUBLIC. S3's
+qualifying run is recorded above. The observation period was originally a
+week of calendar time; that was replaced by one run against explicit
+conditions once it was clear the week would have measured waiting rather
+than evidence.
+
+S4 is the behaviour change, and it is a one-line edit to `.env.prod`
+(`AUTH_INTERCEPTOR_MODE=enforce`, currently unset and so defaulting to
+observe) plus an api restart. No image rebuild, no PR. Reverting is the
+same edit backwards. S3 must run for long enough to see
 real traffic, which is the only part of this that takes calendar time
 rather than work. S4 is the behaviour change. S5 is cleanup and is
 optional in the sense that the system is correct without it, though
@@ -704,12 +789,12 @@ command.
 
 ## Decisions that are the owner's
 
-1. ~~**Is a week of observe mode right?**~~ **Settled 2026-10-09: one
-   week.** Observe mode went live in production on `8928c45ef8ac` at
-   18:15 UTC on 2026-10-09, so the window closes **2026-10-16**. What
-   closes it is the periodic summary showing a non-trivial number of
-   comparisons and no disagreements, not merely the date: see "Judging a
-   quiet week" under S3.
+1. ~~**Is a week of observe mode right?**~~ **Settled twice.** First on
+   2026-10-09: one week, closing 2026-10-16. Then revised on 2026-10-10,
+   once it was clear the site has no organic traffic to observe and the
+   counters reset on every deploy: **judge S4 on one exercise run against
+   explicit conditions**, listed under S3. The week was measuring elapsed
+   time rather than evidence.
 2. ~~Is TOTP worth building?~~ **Settled 2026-10-09: no.** The option
    was removed from all 79 methods and deprecated in `options.proto`,
    which `buf breaking` will not let us delete outright. So D1's
