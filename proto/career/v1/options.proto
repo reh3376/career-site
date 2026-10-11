@@ -9,7 +9,7 @@
 // enforced at all.
 //
 //   auth                  declared on every method; enforced per handler
-//   allow_unverified      declared on 3; not enforced
+//   allow_unverified      declared on 2; enforced by the interceptor
 //   rate_limit_per_minute deprecated, declared on none. Rate limiting
 //                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
@@ -62,8 +62,20 @@ enum AuthLevel {
 extend google.protobuf.MethodOptions {
   // Required access level for the method.
   AuthLevel auth = 50000;
-  // When true with `auth = AUTH_LEVEL_MEMBER`, a session whose member is
-  // still UNVERIFIED may call the method (verification, resend, logout).
+  // When true with `auth = AUTH_LEVEL_MEMBER`, the caller needs a session
+  // but not an active account, so a member who is unverified, awaiting
+  // approval or expired may still call the method.
+  //
+  // Enforced by the auth interceptor since 2026-10-11. It is only
+  // meaningful alongside AUTH_LEVEL_MEMBER, and the server refuses to
+  // start if it is declared on a method at any other level, because
+  // PUBLIC resolves no session and ADMIN implies an active account.
+  //
+  // This matters because a non-active session is reachable: ResetPassword
+  // mints one and refuses only DISABLED and DECLINED, so a member who
+  // verified into PENDING_APPROVAL and then reset their password holds a
+  // session on a non-active account. GetMe has to answer them or the
+  // "awaiting approval" state cannot be shown.
   bool allow_unverified = 50001;
   // Deprecated and unused. Set on no method.
   //

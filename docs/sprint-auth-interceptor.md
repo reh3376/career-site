@@ -50,8 +50,8 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 |---|---|---|
 | `auth` | 141 methods | by hand, per handler |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
-| `rate_limit_per_minute` | 35 methods | never |
-| `allow_unverified` | 3 methods | never |
+| `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
+| `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
 
 **Four documents described the interceptor as if it existed.**
 `options.proto` said *"The Go server reads these options from the method
@@ -99,9 +99,22 @@ must fail *open* or the site goes down; an auth check that is uncertain
 must fail *closed*. Putting two opposite failure policies in one
 interceptor is how one of them ends up wrong.
 
-`rate_limit_per_minute` stays declared. The API reference and
-`options.proto` now state plainly which options are enforced and which
-are not, so the contract stops overstating itself either way.
+**`rate_limit_per_minute` was then removed outright on 2026-10-09**, the
+same day and for the same reason as `mfa_fresh`: 35 methods declared a
+budget, nothing read any of them, and a declared control that is not
+applied is worse than an absent one. The extension field survives at
+50002, deprecated and declared on nothing, because `career.v1` is
+additive-only and `buf breaking` refuses to delete a published
+extension.
+
+Rate limiting itself is real and unaffected: it is hand-wired in
+`internal/ratelimit` on the surfaces that actually get hammered. The
+login limiter is `ratelimit.New(5, 5.0/(15*60))` keyed on (ip, email),
+five attempts then one token every three minutes, and it counts
+successful logins as well as failures, which is how
+`deploy/exercise-admin.sh` ran into it. If budgets are ever driven from
+the contract again, the field comment says to take a new number and make
+one interceptor the only thing that applies them.
 
 ### D2. Fail closed, and refuse to start rather than guess
 
@@ -740,6 +753,59 @@ disagree with the interceptor.
 
 *Exit:* no handler decides its own access; the API reference and
 `options.proto` describe what the code does.
+
+### S3a. `allow_unverified`, enforced — **done 2026-10-11**
+
+Not in the original plan. It became a prerequisite for S4 rather than
+S6 cleanup, because the strict MEMBER rule would otherwise have closed a
+working flow.
+
+**The path that forced it.** `ResetPassword` mints a session and refuses
+only `DISABLED` and `DECLINED`. It does not refuse `UNVERIFIED`,
+`PENDING_APPROVAL` or `EXPIRED`. So this sequence is live today: register,
+verify (which lands on `PENDING_APPROVAL` and mints no session), then use
+forgot-password, and the member holds a session on a non-active account.
+`GetMe` serves them through a bare `LookupSessionUser` with no status
+check, which is how the "awaiting approval" state is shown at all. Under
+S4's rule that MEMBER requires an active account, that becomes
+`permission_denied`.
+
+`allow_unverified` was declared on `GetMe` for exactly this reason and
+enforced nowhere, so the declaration was already describing the behaviour
+the handler had. Enforcing it makes the interceptor match that handler
+instead of closing the flow, and turns one of the three
+declared-but-unenforced options into a real control.
+
+Checked rather than assumed, because the first reading was wrong: social
+sign-in looked like another way to hold a non-active session, and it does
+not exist. `auth.proto`'s header documents `GET /api/auth/oauth/{provider}/start`
+and `/callback` for linkedin, github and google; no route, handler or
+provider code exists anywhere in the service. The only OAuth in the
+codebase is Google Calendar for the owner's own calendar. That is another
+contract claim describing something unbuilt, and it belongs in S6.
+
+**What it does.** A MEMBER method declaring `allow_unverified` needs a
+session and not an active account. The role check is untouched, so it
+cannot widen ADMIN.
+
+**The option is now constrained as its own comment always claimed.** It is
+only meaningful with MEMBER, so the server refuses to start if it appears
+at any other level: PUBLIC resolves no session, so there is no status to
+waive, and ADMIN waiving the active check would let a disabled admin keep
+every admin method. `Logout` carried the option until this change and
+lost it when it became PUBLIC, where it had stopped meaning anything.
+
+Declared on two methods now, `GetMe` and `DeleteAccount`, both MEMBER,
+and the set is pinned in a test: adding the option widens who can call a
+method, which should not pass unnoticed.
+
+**One real bug, found by the test for the new boot failure.** A method
+rejected for a misplaced option is skipped rather than added, so a
+registry containing only such a method leaves the map empty, and the
+"no career.v1 methods found, the descriptors are not linked in" guard
+fired first. A one-line contract mistake would have reported itself as a
+build or linking problem. Precedence fixed: that guard now also requires
+no misplaced options.
 
 ### S6. Make the contract honest about the rest
 

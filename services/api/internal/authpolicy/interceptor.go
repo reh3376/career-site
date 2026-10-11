@@ -221,8 +221,23 @@ type decision struct {
 // safe direction: it only ever closes access. The alternative, MEMBER
 // meaning "any session", would leave S5 quietly removing the status
 // check from 16 methods at the step least likely to be reviewed.
+//
+// **`allow_unverified` is the one exception, and it is enforced here
+// rather than waived.** A MEMBER method declaring it needs a session but
+// not an active account. Two methods declare it, GetMe and
+// DeleteAccount, and without it the strict rule above would break a real
+// path: ResetPassword mints a session and refuses only DISABLED and
+// DECLINED, so a member who verified into PENDING_APPROVAL and then
+// reset their password holds a session on a non-active account. GetMe
+// has to answer them, because that is how the "awaiting approval" state
+// is shown, and its handler answers them today via a bare lookup with no
+// status check. Honouring the option makes the interceptor match that
+// handler exactly instead of closing a working flow.
+//
+// The role check still applies, so this cannot widen ADMIN; BuildFrom
+// refuses the option on any level but MEMBER.
 func (i *Interceptor) decide(ctx context.Context, procedure string, header http.Header) decision {
-	level, ok := i.policy.Level(procedure)
+	policy, ok := i.policy.Lookup(procedure)
 	if !ok {
 		// D2: a procedure with no policy is denied. Build() makes this
 		// unreachable for anything in career.v1, so reaching it means
@@ -236,6 +251,7 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 		}
 	}
 
+	level := policy.Level
 	d := decision{level: level, known: true}
 
 	if level == v1.AuthLevel_AUTH_LEVEL_PUBLIC {
@@ -255,7 +271,7 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 		d.code, d.why = connect.CodeInternal, "session lookup failed"
 	case !caller.Authenticated:
 		d.code, d.why = connect.CodeUnauthenticated, "not signed in"
-	case !caller.Active:
+	case !caller.Active && !policy.AllowUnverified:
 		d.code, d.why = connect.CodePermissionDenied, "account is not active"
 	case level == v1.AuthLevel_AUTH_LEVEL_ADMIN && !caller.Admin:
 		d.code, d.why = connect.CodePermissionDenied, "admin role required"

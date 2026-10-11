@@ -219,3 +219,148 @@ func syntheticRegistry(t *testing.T) *protoregistry.Files {
 	}
 	return files
 }
+
+// allow_unverified in the real contract: exactly two methods, both
+// MEMBER, and both of them methods a non-active member must still reach.
+func TestAllowUnverifiedIsDeclaredWhereExpected(t *testing.T) {
+	m, err := Build()
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	got := map[string]bool{}
+	for procedure, pol := range m {
+		if pol.AllowUnverified {
+			got[procedure] = true
+			if pol.Level != v1.AuthLevel_AUTH_LEVEL_MEMBER {
+				t.Errorf("%s declares allow_unverified at %s; BuildFrom "+
+					"should have refused this", procedure, pol.Level)
+			}
+		}
+	}
+
+	// Pinned, because adding the option to a method widens who can call
+	// it and should not pass unnoticed. Logout carried it until
+	// 2026-10-11 and lost it when it became PUBLIC, where it meant
+	// nothing: PUBLIC resolves no session, so there is no status to
+	// waive.
+	want := map[string]bool{
+		"/career.v1.MemberService/GetMe":         true,
+		"/career.v1.MemberService/DeleteAccount": true,
+	}
+	for p := range want {
+		if !got[p] {
+			t.Errorf("%s no longer declares allow_unverified. A non-active "+
+				"member reaches GetMe through the ResetPassword path, and "+
+				"without the option the interceptor refuses them.", p)
+		}
+	}
+	for p := range got {
+		if !want[p] {
+			t.Errorf("%s now declares allow_unverified and is not on the "+
+				"expected list. It waives the active-account check, so say "+
+				"why here before adding it.", p)
+		}
+	}
+}
+
+// The option is only meaningful with MEMBER, and the server refuses to
+// start otherwise. PUBLIC resolves no session, so there is no account
+// whose status could be waived; ADMIN waiving it would let a disabled
+// admin keep every admin method.
+func TestBuildRejectsAllowUnverifiedAwayFromMember(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		level v1.AuthLevel
+	}{
+		{"public", v1.AuthLevel_AUTH_LEVEL_PUBLIC},
+		{"admin", v1.AuthLevel_AUTH_LEVEL_ADMIN},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			files := registryWithAllowUnverified(t, c.level)
+
+			m, err := BuildFrom(files)
+			if err == nil {
+				t.Fatalf("BuildFrom accepted allow_unverified at %s and "+
+					"returned %d entries", c.level, len(m))
+			}
+			if m != nil {
+				t.Error("returned both an error and a map")
+			}
+			if !strings.Contains(err.Error(), "allow_unverified") {
+				t.Errorf("the error does not name the option:\n%v", err)
+			}
+			if !strings.Contains(err.Error(), "/career.v1.SyntheticService/Waived") {
+				t.Errorf("the error does not name the method, so a deploy "+
+					"hitting it cannot be diagnosed:\n%v", err)
+			}
+		})
+	}
+}
+
+// MEMBER plus allow_unverified is accepted, so the test above is
+// rejecting the level rather than the option.
+func TestBuildAcceptsAllowUnverifiedWithMember(t *testing.T) {
+	files := registryWithAllowUnverified(t, v1.AuthLevel_AUTH_LEVEL_MEMBER)
+
+	m, err := BuildFrom(files)
+	if err != nil {
+		t.Fatalf("BuildFrom refused allow_unverified at MEMBER: %v", err)
+	}
+	pol, ok := m.Lookup("/career.v1.SyntheticService/Waived")
+	if !ok {
+		t.Fatal("the method is missing from the map")
+	}
+	if !pol.AllowUnverified {
+		t.Error("allow_unverified was read as false")
+	}
+	if pol.Level != v1.AuthLevel_AUTH_LEVEL_MEMBER {
+		t.Errorf("level = %s, want MEMBER", pol.Level)
+	}
+}
+
+// registryWithAllowUnverified builds a registry holding one career.v1
+// method that declares allow_unverified at the given level.
+func registryWithAllowUnverified(t *testing.T, level v1.AuthLevel) *protoregistry.Files {
+	t.Helper()
+
+	opts := &descriptorpb.MethodOptions{}
+	proto.SetExtension(opts, v1.E_Auth, level)
+	proto.SetExtension(opts, v1.E_AllowUnverified, true)
+
+	fdp := &descriptorpb.FileDescriptorProto{
+		Name:    proto.String("career/v1/synthetic_unverified_for_test.proto"),
+		Package: proto.String("career.v1"),
+		Syntax:  proto.String("proto3"),
+		MessageType: []*descriptorpb.DescriptorProto{
+			{Name: proto.String("WaivedRequest")},
+			{Name: proto.String("WaivedResponse")},
+		},
+		Service: []*descriptorpb.ServiceDescriptorProto{{
+			Name: proto.String("SyntheticService"),
+			Method: []*descriptorpb.MethodDescriptorProto{{
+				Name:       proto.String("Waived"),
+				InputType:  proto.String(".career.v1.WaivedRequest"),
+				OutputType: proto.String(".career.v1.WaivedResponse"),
+				Options:    opts,
+			}},
+		}},
+	}
+
+	fd, err := protodesc.NewFile(fdp, nil)
+	if err != nil {
+		t.Fatalf("build the synthetic file descriptor: %v", err)
+	}
+	files := &protoregistry.Files{}
+	if err := files.RegisterFile(fd); err != nil {
+		t.Fatalf("register the synthetic file: %v", err)
+	}
+
+	// Guard the guard: if the option stops round-tripping, every case
+	// here reads as "not declared" and passes for the wrong reason.
+	if !declaredAllowUnverified(fd.Services().Get(0).Methods().Get(0)) {
+		t.Fatal("the synthetic method's allow_unverified reads as false, so " +
+			"this test is not exercising the option at all")
+	}
+	return files
+}

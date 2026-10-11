@@ -176,10 +176,13 @@ func TestPublicProceduresStayReachableWithTheInterceptorEnforcing(t *testing.T) 
 // procedure every run.
 func nonPublicProbePerService(policy authpolicy.Map) map[string]string {
 	byService := map[string][]string{}
-	for procedure, lvl := range policy {
-		if lvl == v1.AuthLevel_AUTH_LEVEL_PUBLIC {
+	for procedure, pol := range policy {
+		if pol.Level == v1.AuthLevel_AUTH_LEVEL_PUBLIC {
 			continue
 		}
+		// A procedure that waives the active-account check still
+		// requires a session, so an anonymous probe is still refused and
+		// it is still a valid target here.
 		cut := strings.LastIndex(procedure, "/")
 		if cut <= 0 {
 			continue

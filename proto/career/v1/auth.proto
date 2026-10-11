@@ -70,7 +70,6 @@ service AuthService {
   // enforcing MEMBER would answer `unauthenticated` and leave it there.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
-    option (career.v1.allow_unverified) = true;
   }
   // Ends every session of the member ("sign out of all devices").
   rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse) {

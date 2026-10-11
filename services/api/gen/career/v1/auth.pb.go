@@ -1418,13 +1418,13 @@ const file_career_v1_auth_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x06\x18 R\x04code\"l\n" +
 	"\x11MfaVerifyResponse\x12\x1d\n" +
 	"\x02me\x18\x01 \x01(\v2\r.career.v1.MeR\x02me\x128\n" +
-	"\x18recovery_codes_remaining\x18\x02 \x01(\x05R\x16recoveryCodesRemaining2\xe3\a\n" +
+	"\x18recovery_codes_remaining\x18\x02 \x01(\x05R\x16recoveryCodesRemaining2\xdf\a\n" +
 	"\vAuthService\x12I\n" +
 	"\bRegister\x12\x1a.career.v1.RegisterRequest\x1a\x1b.career.v1.RegisterResponse\"\x04\x80\xb5\x18\x01\x12C\n" +
 	"\x06Verify\x12\x18.career.v1.VerifyRequest\x1a\x19.career.v1.VerifyResponse\"\x04\x80\xb5\x18\x01\x12g\n" +
 	"\x12ResendVerification\x12$.career.v1.ResendVerificationRequest\x1a%.career.v1.ResendVerificationResponse\"\x04\x80\xb5\x18\x01\x12@\n" +
-	"\x05Login\x12\x17.career.v1.LoginRequest\x1a\x18.career.v1.LoginResponse\"\x04\x80\xb5\x18\x01\x12G\n" +
-	"\x06Logout\x12\x18.career.v1.LogoutRequest\x1a\x19.career.v1.LogoutResponse\"\b\x80\xb5\x18\x01\x88\xb5\x18\x01\x12L\n" +
+	"\x05Login\x12\x17.career.v1.LoginRequest\x1a\x18.career.v1.LoginResponse\"\x04\x80\xb5\x18\x01\x12C\n" +
+	"\x06Logout\x12\x18.career.v1.LogoutRequest\x1a\x19.career.v1.LogoutResponse\"\x04\x80\xb5\x18\x01\x12L\n" +
 	"\tLogoutAll\x12\x1b.career.v1.LogoutAllRequest\x1a\x1c.career.v1.LogoutAllResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
 	"\x0eForgotPassword\x12 .career.v1.ForgotPasswordRequest\x1a!.career.v1.ForgotPasswordResponse\"\x04\x80\xb5\x18\x01\x12X\n" +
 	"\rResetPassword\x12\x1f.career.v1.ResetPasswordRequest\x1a .career.v1.ResetPasswordResponse\"\x04\x80\xb5\x18\x01\x12[\n" +
