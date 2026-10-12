@@ -1,212 +1,179 @@
 # FSD open items, for ranking
 
-Working document, opened 2026-10-12. Every item the FSD does not record
-as fully shipped, so we can decide together what stays, add the context
-that makes each one judgeable, and then rank them.
+Working document, opened 2026-10-12. Every FSD row not recorded as fully
+shipped, so we can decide what stays, add the context that makes each one
+judgeable, and rank them.
 
-**Two kinds of item here, and the second is the one that surprises.**
+**Two kinds of item here.** *Not built* is what it says. *Partially
+shipped* is a row the FSD marks shipped with a hole in it, and those were
+invisible until the documentation audit on 2026-10-12 went looking:
+`FR-CNT-22` promises Turnstile on anonymous contact and enforces none,
+`FR-AUTH-09` promises it on registration and has no check at all,
+`FR-ADM-09` promises an audit log whose table has never been written to.
+A gap behind a "Shipped" marker is likelier to bite than something nobody
+started, because nobody is looking for it.
 
-*Not built* is what it says. *Partially shipped* is a row the FSD marks
-shipped with a hole in it, and those were invisible until the
-documentation audit on 2026-10-12 went looking: `FR-CNT-22` promises
-Turnstile on anonymous contact and enforces none, `FR-AUTH-09` promises
-it on registration and has no check at all, `FR-ADM-09` promises an
-audit log whose table has never been written to. A gap behind a
-"Shipped" marker is likelier to bite than something nobody started,
-because nobody is looking for it.
+**One decision already collapses several.** D-31 (ADR 0031): a declared
+control is an enforced control. That fixes the direction on the Turnstile
+pair, on `audit_log`, and on the `buf.validate` gap behind several
+contract rows. Those still need ranking and costing; they no longer need
+a decision.
 
-**What this list is not.** It is not a plan, and the order below is the
-FSD's own, not a priority. Nothing here has been costed.
-
-**How to use it.** For each item: decide *keep / drop / defer*, add the
-context that makes it judgeable (who it is for, what breaks without it,
-what it depends on), then rank. Blank fields are deliberate — they are
-for the pass we do together.
+**Counting note.** This list said 61 items when first generated on
+2026-10-12 and the number was wrong. The classifier matched the word
+"partial" anywhere in a row, which caught `FR-EVAL-09`, whose status
+discusses a partial *run*, and `FR-DT-09`, which has an outcome literally
+named `partial`; both are shipped. `FR-ADM-13` was also listed as
+partial on the strength of a status line reading "Not yet: the connect
+flow, the encrypted refresh token, and the bookings list" — all three
+exist. Reclassifying from the priority cell alone gives the figures
+below.
 
 | | |
 |---|---|
-| Not built | 48 |
-| Partially shipped | 13 |
-| **Total** | **61** |
+| Not built | 45 |
+| Partially shipped | 11 |
+| **Total** | **56** |
 
-`FR-AUTH-12` (TOTP MFA for admin) is deliberately absent: cancelled by
-the owner's 2026-10-09 decision, not pending.
+`FR-AUTH-12` (TOTP MFA) is deliberately absent: cancelled by the owner's
+2026-10-09 decision, not pending.
+
+**How to use it.** For each item: decide *keep / drop / defer*, add the
+context that makes it judgeable, then rank. The partially-shipped section
+below is ranked as of 2026-10-12; the not-built section is not yet.
 
 ---
 
 # Partially shipped — a hole behind a Shipped marker
 
-## Content (CNT) — 4
+Ranked 2026-10-12. Ranks 1 and 2 are decided by D-31 and need only costing.
 
-### FR-CNT-16 · Must
-
-> Content model. All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time.
-
-**FSD status today:** Marked Shipped until 2026-10-02, which overstated it: the storage half is done, the validation half is not. All content is Markdown with front matter under `apps/web/content/`, but nothing validates that front matter at build time. `packages/schema/` was deleted on 2026-10-02 (§7.2) because it was…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-CNT-17 · Must
-
-> Each content item shall carry: `id`, `slug`, `type`, `title`, `summary`, dates, `tracks` (weights), `tags`, `visibility` (`landing` or `member`), `chatbot_include`, `assets`, and `related` links.
-
-**FSD status today:** Partially shipped. Articles carry title, subtitle, date, series, part and tags. No `id` or `type` field.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-CNT-19 · Should
-
-> External links shall open in a new tab with `rel="noopener"`, and CI shall check link health on content changes.
-
-**FSD status today:** Partially shipped. External links carry `rel="noopener noreferrer"` and `target="_blank"`. No CI link checker.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-CNT-22 · Must
-
-> Contact / support form (public + member views differ). Visitors and members shall be able to reach the owner through a typed form with category buckets — `general_question`, `bug_report`, `feature_request`, `contributor_access`,…
-
-**FSD status today:** `/contact` live; messages reach the admin console. Turnstile is not enforced: `Contact.turnstileEnforced()` returns false unconditionally, so the token check is skipped and an anonymous submission needs nothing. Found 2026-10-12.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Admin console (ADM) — 2
-
-### FR-ADM-09 · Must
-
-> All admin actions shall be recorded in the audit log.
-
-**FSD status today:** Partially shipped. Admin actions emit registry events (`admin.decision_reviewed`, `admin.qa_entry_*`, `admin.rescore`, `admin.jd_limit_changed`). There is no separate immutable audit log.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-13 · Must
-
-> The admin shall have a *Scheduler* surface (`/admin/scheduler`) with (a) a Google-Calendar connect flow that stores an OAuth refresh token encrypted-at-rest; (b) availability windows (days-of-week + hour ranges + slot length + per-day…
-
-**FSD status today:** Shipped: `/admin/scheduler` editing zone, windows, lengths, clearance, step, per-day cap, lead time and horizon, stored in `app_settings` and read by the booking flow within 15 s. Saved whole or refused whole, with the validator's own message, because a half-applied calendar is worse than an…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Evaluation (EVAL) — 2
-
-### FR-EVAL-06 · Must
-
-> An evaluation shall not be silently destroyed by a deploy.
-
-**FSD status today:** The job runner keeps jobs in memory, so recreating the api container kills a run. `/admin/ops` (FR-ADM-19) answers whether one is in flight, which is the control today. All three services share one `IMAGE_TAG`, so there is no partial deploy that avoids this; per-service tags are in the backlog.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-EVAL-09 · Must
-
-> An evaluation interrupted part way through shall keep the results it produced.
-
-**FSD status today:** The counters lived only in memory until a run finished, and there is no cancel RPC, so stopping a run means restarting the api (FR-EVAL-06), which is exactly the path that skips the close. Run 14 was stopped at 5 of 9 and its row read "scored 0, errors 0" beside five finished `eval_items`.…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Decision test (DT) — 2
-
-### FR-DT-09 · Must
-
-> A recall shall be graded by failure type, and its severity scored against what was retained rather than against what was correct.
-
-**FSD status today:** Outcomes are exact, partial, untransformed, wrong_digits and expired. `digits_held` counts positional matches against whichever of the presented or expected number the response is closer to, so giving back the raw digits scores as perfect retention with a failed transformation rather than as total…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-DT-20 · Should
-
-> The tap-along check shall separate real tracking from mashing, on thresholds set from pilot data rather than guessed.
-
-**FSD status today:** The check is built and its result and baseline reaction time are recorded on every session. The cut is provisional: at least seven of ten presses inside 300 ms with an offset standard deviation at or under 80 ms. The design document's starting figure of 150 ms is unreachable, since the maximum…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Public site (PUB) — 1
-
-### FR-PUB-05 · Could
-
-> The site shall render acceptably with JavaScript disabled for the landing and legal pages.
-
-**FSD status today:** Partially shipped. Pages are server-rendered so the landing and legal pages read without JavaScript; the mode toggle, the assistant panel and the action modals need it.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Auth and accounts (AUTH) — 1
-
-### FR-AUTH-09 · Must
+### 1. FR-AUTH-09 · Must
 
 > Authentication endpoints shall be rate-limited per IP and per account, with progressive delays after failed attempts, and registration shall be protected by Cloudflare Turnstile (or equivalent).
 
 **FSD status today:** Partially shipped. Login is rate-limited on (IP, email) jointly, 5 attempts then one token every three minutes (`ratelimit.New(5, 5.0/(15*60))`, `handlers/auth_session.go`), which counts successful logins as well as failures. In-process and single-instance only, and no progressive lockout.…
 
+**Why here:** Turnstile pair. D-31 settled the direction; the work is the Cloudflare-unreachable behaviour, not the API call.
+
 - **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
 - **Depends on:**
-- **Rank:**
 
-## History and data rights (HIST) — 1
+### 1. FR-CNT-22 · Must
 
-### FR-HIST-02 · Must
+> Contact / support form (public + member views differ). Visitors and members shall be able to reach the owner through a typed form with category buckets — `general_question`, `bug_report`, `feature_request`, `contributor_access`,…
+
+**FSD status today:** `/contact` live; messages reach the admin console. Turnstile is not enforced: `Contact.turnstileEnforced()` returns false unconditionally, so the token check is skipped and an anonymous submission needs nothing. Found 2026-10-12.
+
+**Why here:** Same change as FR-AUTH-09 — one Turnstile implementation closes both.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 2. FR-ADM-09 · Must
+
+> All admin actions shall be recorded in the audit log.
+
+**FSD status today:** Partially shipped, and the gap is wider than it reads. Admin actions emit registry events (`admin.decision_reviewed`, `admin.qa_entry_*`, `admin.rescore`, `admin.jd_limit_changed`), which is real coverage of *some* actions. The `audit_log` table has existed since migration 00001 and nothing in the…
+
+**Why here:** D-31 settled it: write the table. The reason fields already exist on the mutating paths and are discarded.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 3. FR-CNT-16 · Must
+
+> Content model. All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time.
+
+**FSD status today:** Marked Shipped until 2026-10-02, which overstated it: the storage half is done, the validation half is not. All content is Markdown with front matter under `apps/web/content/`, but nothing validates that front matter at build time. `packages/schema/` was deleted on 2026-10-02 (§7.2) because it was…
+
+**Why here:** Same shape as buf.validate: a schema nothing applies. packages/schema was deleted 2026-10-02 as unused.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 4. FR-CNT-17 · Must
+
+> Each content item shall carry: `id`, `slug`, `type`, `title`, `summary`, dates, `tracks` (weights), `tags`, `visibility` (`landing` or `member`), `chatbot_include`, `assets`, and `related` links.
+
+**FSD status today:** Partially shipped. Articles carry title, subtitle, date, series, part and tags. No `id` or `type` field.
+
+**Why here:** Small, and blocks anything that needs stable content identity (related links, chatbot_include, tracks).
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 5. FR-HIST-02 · Must
 
 > Returning members shall see a welcome-back panel: last visit date, up to three items viewed, topics asked about, and items new since the last visit.
 
 **FSD status today:** Partially shipped. `/home` shows a RECENT ACTIVITY list and what is new since last time. No last-visit date and no three-item resume list.
 
+**Why here:** Half there: /home already shows recent activity and what is new. Missing the last-visit date and the three-item resume.
+
 - **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
 - **Depends on:**
-- **Rank:**
+
+### 6. FR-ADM-03 · Must
+
+> The admin shall have a conversation-review queue: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals.
+
+**FSD status today:** Partially shipped. `/admin/decisions` reviews and grades `decision_log`, including chat answers. Not driven by negative feedback, because FR-CHAT-14 (member rating) is not built.
+
+**Why here:** Needs verifying before costing — not yet checked against the code.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 7. FR-EVAL-06 · Must
+
+> An evaluation shall not be silently destroyed by a deploy.
+
+**FSD status today:** The job runner keeps jobs in memory, so recreating the api container kills a run. `/admin/ops` (FR-ADM-19) answers whether one is in flight, which is the control today. All three services share one `IMAGE_TAG`, so there is no partial deploy that avoids this; per-service tags are in the backlog.
+
+**Why here:** Real architectural work: the job runner is in-memory. /admin/ops is the mitigation and it is a control, not a fix.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 8. FR-CNT-19 · Should
+
+> External links shall open in a new tab with `rel="noopener"`, and CI shall check link health on content changes.
+
+**FSD status today:** Partially shipped. External links carry `rel="noopener noreferrer"` and `target="_blank"`. No CI link checker.
+
+**Why here:** Mechanical. rel="noopener" is done; the CI link checker is not.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 9. FR-DT-20 · Should
+
+> The tap-along check shall separate real tracking from mashing, on thresholds set from pilot data rather than guessed.
+
+**FSD status today:** The check is built and its result and baseline reaction time are recorded on every session. The cut is provisional: at least seven of ten presses inside 300 ms with an offset standard deviation at or under 80 ms. The design document's starting figure of 150 ms is unreachable, since the maximum…
+
+**Why here:** Blocked on participant data, not on code. Thresholds cannot be set from pilot data that does not exist yet.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+### 10. FR-PUB-05 · Could
+
+> The site shall render acceptably with JavaScript disabled for the landing and legal pages.
+
+**FSD status today:** Partially shipped. Pages are server-rendered so the landing and legal pages read without JavaScript; the mode toggle, the assistant panel and the action modals need it.
+
+**Why here:** Arguably already acceptable: the landing and legal pages read without JS. Only the toggle, assistant and modals need it.
+
+- **Keep / drop / defer:**
+- **Depends on:**
+
+---
 
 # Not built
+
+Not yet ranked.
 
 ## Content (CNT) — 12
 
@@ -600,85 +567,11 @@ the owner's 2026-10-09 decision, not pending.
 - **Depends on:**
 - **Rank:**
 
-### FR-AUTH-14 · Must
+### FR-AUTH-12 · Must
 
-> The site shall require admin approval for every new registration EXCEPT those whose verified email matches an active entry in `access_grants` (FR-AUTH-17). A verified user in `pending_approval` state has no session and no access to any…
+> The admin role shall be granted only to allow-listed emails. (This also required TOTP MFA at sign-in until 2026-10-12.)
 
-**FSD status today:** Invite-code mode moves to §7 backlog. Shipped behaviour: approval via the one-click email or `AdminService.ApproveRegistration` / `DeclineRegistration`; the default access window on approval is 7 days, and the registration detail page in the console shows the expiry. OIDC registration is not built.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-## Admin console (ADM) — 6
-
-### FR-ADM-03 · Must
-
-> The admin shall have a conversation-review queue: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals.
-
-**FSD status today:** Partially shipped. `/admin/decisions` reviews and grades `decision_log`, including chat answers. Not driven by negative feedback, because FR-CHAT-14 (member rating) is not built.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-04 · Should
-
-> The admin shall be able to reply to escalations from the console; replies are delivered into the member's conversation and by email.
-
-**FSD status today:** Not built. Depends on FR-CHAT-10 escalation, which is not built.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-08 · Could
-
-> The admin may send an opt-in digest to members summarizing new content.
-
-**FSD status today:** Not built. No member digest; no non-transactional email at all (FR-NOTF-04).
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-10 · Must
-
-> The admin shall have a *Pending approvals* review surface listing every `pending_approval` user (name, email, organization, stated role, submitted at, IP hash, user-agent) with per-row Approve and Decline actions and decision history. The…
-
-**FSD status today:** Ships in Phase 2 as the destination for review links in FR-NOTF-05 emails; expanded coverage of admin activity lives in the full admin console (Phase 5). Shipped: list and per-registration detail with the access expiry; approve with a TTL (default 7 days), decline, extend, and resend a notification…
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-12 · Should
-
-> The admin shall have a *Quotes* surface (`/admin/quotes`) listing every `quotes` row with add, edit, reorder, activate/deactivate actions. An "active" quote is eligible for rotation on the public landing page (FR-CNT-24); a deactivated one…
-
-**FSD status today:** Not built. No `/admin/quotes`; depends on FR-CNT-24.
-
-- **Keep / drop / defer:**
-- **Who it is for:**
-- **What breaks without it:**
-- **Depends on:**
-- **Rank:**
-
-### FR-ADM-14 · Must
-
-> The admin shall have a *Contact messages* surface (`/admin/contacts`) listing every `support_messages` row (category, subject, submitter, body preview, submitted at, status) with per-row Resolve, Reopen, and Delete actions plus category…
-
-**FSD status today:** Reply flow is external — the admin replies from their normal mailbox — this surface only tracks status so nothing falls through. Verified 2026-09-29: the proto has `ListContactMessages` and `ResolveContactMessage` only. Reopen and Delete are not built; the page filters by category client-side. The…
+**FSD status today:** Allow-list shipped; MFA cancelled. The owner decided on 2026-10-09 not to build a second factor, and `mfa_fresh` was removed from all 79 methods that declared it. This is not a pending requirement.
 
 - **Keep / drop / defer:**
 - **Who it is for:**
@@ -741,6 +634,44 @@ the owner's 2026-10-09 decision, not pending.
 > Members may generate an invite link that pre-selects tracks for a colleague and attributes the referral.
 
 **FSD status today:** Not built. No invite links.
+
+- **Keep / drop / defer:**
+- **Who it is for:**
+- **What breaks without it:**
+- **Depends on:**
+- **Rank:**
+
+## Admin console (ADM) — 3
+
+### FR-ADM-04 · Should
+
+> The admin shall be able to reply to escalations from the console; replies are delivered into the member's conversation and by email.
+
+**FSD status today:** Not built. Depends on FR-CHAT-10 escalation, which is not built.
+
+- **Keep / drop / defer:**
+- **Who it is for:**
+- **What breaks without it:**
+- **Depends on:**
+- **Rank:**
+
+### FR-ADM-08 · Could
+
+> The admin may send an opt-in digest to members summarizing new content.
+
+**FSD status today:** Not built. No member digest; no non-transactional email at all (FR-NOTF-04).
+
+- **Keep / drop / defer:**
+- **Who it is for:**
+- **What breaks without it:**
+- **Depends on:**
+- **Rank:**
+
+### FR-ADM-12 · Should
+
+> The admin shall have a *Quotes* surface (`/admin/quotes`) listing every `quotes` row with add, edit, reorder, activate/deactivate actions. An "active" quote is eligible for rotation on the public landing page (FR-CNT-24); a deactivated one…
+
+**FSD status today:** Not built. No `/admin/quotes`; depends on FR-CNT-24.
 
 - **Keep / drop / defer:**
 - **Who it is for:**

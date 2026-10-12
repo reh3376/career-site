@@ -1190,11 +1190,15 @@ Still open:
   2026-10-12 before checking — the reactivation reason I said was "in the
   audit log" went nowhere.
 
-  Decide which it is. Either write to the table on the mutating admin
-  paths, which is where the reason fields already exist and are being
-  thrown away, or drop the table and stop promising it in three
-  requirements and the console copy. An empty table that four documents
-  describe as a control is worse than no table.
+  **Decided 2026-10-12 (D-31 / ADR 0031): write to it.** The reason
+  fields already exist on the mutating admin paths and are being
+  discarded, so the work is the insert and the read surface, not the
+  plumbing. The alternative — dropping the table and the three
+  requirements that promise it — was rejected because the admin surface
+  is where a wrong decision is least recoverable.
+
+  The easy way to do this badly is a log nobody reads. Whatever lands
+  should be reachable from the console, or it is another empty control.
 
 - **Turnstile is declared on two surfaces and enforced on neither.**
   Found 2026-10-12 during the docs audit, and it compounds with the
@@ -1208,6 +1212,13 @@ Still open:
   Shipped claiming "anonymous submissions require Turnstile", and
   FR-AUTH-09 claims registration "shall be protected by Cloudflare
   Turnstile"; both corrected.
+
+  **Decided 2026-10-12 (D-31 / ADR 0031): verify the token, or remove
+  both declarations.** Verifying needs a Cloudflare secret in
+  `.env.prod` and a decision about what happens when Cloudflare is
+  unreachable — failing closed locks out registration during their
+  outage, failing open is the state we are in now. That choice is the
+  work, not the API call.
 
   **What the exposure actually is**, stated carefully: registration is
   approval-gated and email-verified, so an automated signup cannot reach
@@ -1235,13 +1246,16 @@ Still open:
   declared rule has a counterpart, across 420 messages. Two ways out,
   and the second is cheaper than it sounds:
 
-  1. Wire `protovalidate-go` as an interceptor so the declaration is the
-     enforcement, the way `career.v1.auth` now is. Note the same trap the
-     auth interceptor hit: it changes behaviour, so it wants the
-     observe-then-enforce treatment rather than a flip.
-  2. Or decide the rules are contract documentation only, say so in
-     `proto/README.md` (done), and add a test that spot-checks the
-     constraints that carry security weight.
+  **Decided 2026-10-12 (D-31 / ADR 0031): wire it.** `protovalidate-go`
+  becomes an interceptor so the declaration is the enforcement, the way
+  `career.v1.auth` now is. Declaring the rules documentation-only was
+  rejected: 420 messages of constraints that may or may not have a
+  hand-written counterpart is the drift this is about.
+
+  It carries the same trap the auth interceptor hit, so it gets the same
+  treatment: it will start rejecting requests that are accepted today,
+  and "no caller sends an invalid request" is a belief until it has been
+  measured. Observe first, then enforce.
 
 - Pin third-party GitHub Actions by commit SHA.
 - CodeQL `security-extended` on a daily schedule; Trivy on the images.
