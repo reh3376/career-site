@@ -1178,6 +1178,26 @@ Still open:
   from 501 to 401 when enforcement came on. That is the only evidence
   that distinguishes the interceptor working from it doing nothing.
 
+- **Turnstile is declared on two surfaces and enforced on neither.**
+  Found 2026-10-12 during the docs audit, and it compounds with the
+  `buf.validate` gap below.
+
+  `Contact.turnstileEnforced()` returns `false` unconditionally, so the
+  anonymous contact form's token check never runs. `Register` reads
+  `turnstile_token` nowhere at all; the only thing that would have
+  required one is `min_len: 1` on that field in `auth.proto`, which is a
+  `buf.validate` rule and therefore decorative. FSD FR-CNT-22 was marked
+  Shipped claiming "anonymous submissions require Turnstile", and
+  FR-AUTH-09 claims registration "shall be protected by Cloudflare
+  Turnstile"; both corrected.
+
+  **What the exposure actually is**, stated carefully: registration is
+  approval-gated and email-verified, so an automated signup cannot reach
+  member content. What it can do is make the service send a verification
+  email to any address someone supplies, and fill the users table. That
+  is an email-reputation and noise problem rather than an access one,
+  which is why this is worth fixing and is not an emergency.
+
 - **`buf.validate` rules are declared and not enforced at runtime.**
   Found 2026-10-12 while auditing the docs. There is no `protovalidate`
   interceptor and `protovalidate-go` is not a dependency; the only
