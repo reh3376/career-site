@@ -1178,6 +1178,24 @@ Still open:
   from 501 to 401 when enforcement came on. That is the only evidence
   that distinguishes the interceptor working from it doing nothing.
 
+- **`audit_log` has never been written to.** Found 2026-10-12. The table
+  has existed since migration 00001, no code path inserts into it, and
+  production holds 0 rows.
+
+  FR-ADM-09 ("All admin actions shall be recorded in the audit log") is
+  marked partially shipped on the strength of registry events, which do
+  cover some actions. FR-ADM-11 promises every mutation on the access
+  surface is written to `audit_log`; none is. `ExtendAccess` accepts a
+  `reason` and discards it, which I relied on in conversation on
+  2026-10-12 before checking — the reactivation reason I said was "in the
+  audit log" went nowhere.
+
+  Decide which it is. Either write to the table on the mutating admin
+  paths, which is where the reason fields already exist and are being
+  thrown away, or drop the table and stop promising it in three
+  requirements and the console copy. An empty table that four documents
+  describe as a control is worse than no table.
+
 - **Turnstile is declared on two surfaces and enforced on neither.**
   Found 2026-10-12 during the docs audit, and it compounds with the
   `buf.validate` gap below.
