@@ -1016,7 +1016,49 @@ fired first. A one-line contract mistake would have reported itself as a
 build or linking problem. Precedence fixed: that guard now also requires
 no misplaced options.
 
-### S6. Make the contract honest about the rest
+### S6. Make the contract honest about the rest — **done 2026-10-11**
+
+`options.proto` and the API reference were corrected as the work landed:
+which options are enforced, the `AuthLevel` enum's false lint claim, and
+`rate_limit_per_minute`'s stale count. What remained was `auth.proto`,
+and it turned out to hold more than the one known problem.
+
+**Nine false claims, found by checking each one rather than only the one
+that was flagged.** The OAuth routes were the known item; the rest came
+out of verifying the sentences around it.
+
+| claim | reality |
+|---|---|
+| `GET /api/auth/oauth/{provider}/start` and `/callback` for linkedin, github, google, with PKCE and account linking | no route, handler or provider code exists; social sign-in was never built |
+| session cookie is `career_session` | it is `career_site_session` |
+| "7-day idle timeout" | not enforced: `last_active_at` is written and read only for admin activity figures, and nothing sweeps idle rows |
+| CSRF has "no same-origin path" because `Connect-Protocol-Version: 1` is required | the header is not required; `connect.WithRequireConnectProtocolHeader()` is not set, and a `Login` POST without it is processed |
+| the service covers "admin MFA" | there is no second factor and will not be |
+| Login flags admin sessions `mfa_required`; admin methods wait for MfaVerify | nothing sets it; admin methods work immediately |
+| `mfa_required` field | hardcoded `false`, deferred to a task never done |
+| MfaEnroll returns a TOTP otpauth URI and recovery codes | no handler; nothing issues, stores or checks a secret |
+| ChangeEmail accepts "a fresh social sign-in" for social-only accounts | no social accounts exist, and ChangeEmail has no handler |
+| LoginResponse.me may be UNVERIFIED, and "such a session can only call verification methods" | Login refuses unverified with `failed_precondition`, so that response never happens |
+
+Each correction says what the old text claimed, not just what is true,
+so a reader who saw the old version can tell what changed.
+
+**One of these is worth more than a comment fix.** The CSRF claim is
+false about the mechanism and right about the outcome: these endpoints
+*are* protected from cross-site POSTs, by `SameSite=Lax` on the cookie,
+not by a required header. Setting
+`connect.WithRequireConnectProtocolHeader()` would add the second layer
+the comment described. It is a behaviour change rather than a comment
+fix, because `live-check.sh`, `exercise-admin.sh` and
+`auth-enforce-checks.sh` all call these RPCs with plain curl and would
+start failing, so it is left as a recommendation.
+
+*Exit:* nothing in the contract claims an enforcement that does not
+exist. **Met**, for `auth.proto` and `options.proto`. The claim that is
+true but attributed to the wrong mechanism is now described accurately
+and flagged as worth strengthening.
+
+### S6 as originally planned
 
 `options.proto`'s doc comment is corrected to say which options are
 enforced and which are declared only, and `docs/api/README.md` carries
