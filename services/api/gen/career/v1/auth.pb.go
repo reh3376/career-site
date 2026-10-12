@@ -35,10 +35,19 @@
 //     `Content-Type: application/json` is accepted and processed.
 //     What does protect these endpoints is `SameSite=Lax` on the cookie,
 //     which stops a cross-site POST from carrying it at all. The
-//     protection is real; the mechanism named was not. Requiring the
-//     header would add a second layer and is worth doing, and it is a
-//     behaviour change rather than a comment fix: three deploy scripts
-//     call these RPCs with plain curl and would start failing.
+//     protection was real; the mechanism named was absent.
+//
+//     **Now set, so the claim is true.** The option is applied to every
+//     service but two, and the exception matters:
+//     `navigator.sendBeacon` cannot set request headers at all, and the
+//     web app beacons `EventService/Record` and the decision test's
+//     `SubmitAnswer` and `SubmitRecall` on `pagehide` so a closing tab
+//     does not lose a run. Requiring a header they cannot send would
+//     discard those writes silently. All three are PUBLIC, so there is
+//     no session privilege for a forged request to borrow, which is what
+//     this defends; the exemption costs nothing and keeps participant
+//     data. `TestOnlyBeaconReachableServicesAreExempt` fails if a
+//     privileged procedure ever appears behind it.
 //
 //  4. Two `GET /api/auth/oauth/{provider}/start` and `/callback` routes
 //     were documented for linkedin, github and google, with PKCE, state

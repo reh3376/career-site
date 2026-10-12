@@ -178,7 +178,14 @@ export function JdResult({
       try {
         const resp = await fetch("/api/career.v1.JdService/GetJdResult", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          // Connect-Protocol-Version is required by the server as of
+          // 2026-10-11. This poll bypasses lib/api-fetch.ts, which is
+          // where every other call picks the header up, so it has to
+          // set it itself.
+          headers: {
+            "Content-Type": "application/json",
+            "Connect-Protocol-Version": "1",
+          },
           body: JSON.stringify({ submissionId, resultToken }),
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

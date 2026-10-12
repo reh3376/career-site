@@ -51,7 +51,7 @@ check "sitemap.xml -> $smap" "[ '$smap' = '200' ]"
 hz=$(curl -s --max-time 10 "$BASE/api/healthz"); check "healthz: $hz" "echo '$hz' | grep -q '\"ok\"'"
 rz=$(curl -s --max-time 10 "$BASE/api/readyz");  check "readyz: $rz"   "echo '$rz' | grep -q '\"postgres\":true' && echo '$rz' | grep -q '\"sidecar\":true'"
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/api/jd/resume/1.pdf"); check "pdf route refuses without a session -> $code" "[ '$code' = '401' ] || [ '$code' = '403' ] || [ '$code' = '404' ]"
-code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' -X POST "$BASE/api/career.v1.JdService/SubmitJd" -d '{"jdText":"anonymous probe"}')
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.JdService/SubmitJd" -d '{"jdText":"anonymous probe"}')
 check "SubmitJd refuses anonymous callers -> $code" "[ '$code' = '401' ] || [ '$code' = '403' ]"
 
 # The JD submission itself is a member action, so it runs on the server
@@ -78,16 +78,16 @@ echo "  jd: $(cs exec -T postgres psql -U career -d career -At -c "select count(
 echo "  deliveries: $(cs exec -T postgres psql -U career -d career -At -c "select count(*)||' total, '||count(*) filter (where error is not null)||' failed' from notification_deliveries" 2>/dev/null)"
 U=$(grep ^ADMIN_USERNAME .env.prod | cut -d= -f2); P=$(grep ^CAREER_SITE_ADMIN_PW .env.prod | cut -d= -f2)
 CJ=$(mktemp)
-code=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' -X POST "$BASE/api/career.v1.AuthService/Login" -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")
+code=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.AuthService/Login" -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")
 echo "  admin login: http $code"
 for rpc in ListMembers ListCorpusDocuments ListJdSubmissions ListMemberActivity; do
-  c=$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' -X POST "$BASE/api/career.v1.AdminService/$rpc" -d '{}')
+  c=$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.AdminService/$rpc" -d '{}')
   echo "  admin $rpc: http $c"
 done
 if [ "$SUBMIT" = 1 ]; then
   echo "  -- JD submission (labelled LIVE TEST, as the admin member)"
   body='{"jdText":"LIVE TEST submission from deploy/live-check.sh. Principal Controls and Industrial AI Engineer for a distilled spirits producer: Rockwell ControlLogix and Ignition standards, OT network design, historian and MQTT Unified Namespace, hub-and-spoke data platform, model predictive control of the still, delivery pipelines with release gates, post-mortems, multi-year digital strategy. 15+ years process manufacturing automation.","source":"JD_SOURCE_PASTE","roleHint":"LIVE TEST","employerHint":"live-check"}'
-  resp=$(curl -s --max-time 20 -b "$CJ" -H 'Content-Type: application/json' -X POST "$BASE/api/career.v1.JdService/SubmitJd" -d "$body")
+  resp=$(curl -s --max-time 20 -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.JdService/SubmitJd" -d "$body")
   id=$(echo "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("submissionId",""))' 2>/dev/null)
   tok=$(echo "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("resultToken",""))' 2>/dev/null)
   echo "  SubmitJd: id=${id:-none} token=${tok:0:6}..."
@@ -96,7 +96,7 @@ if [ "$SUBMIT" = 1 ]; then
   status=""; t0=$(date +%s)
   for _ in $(seq 1 100); do
     sleep 15
-    status=$(curl -s --max-time 10 -b "$CJ" -H 'Content-Type: application/json' -X POST "$BASE/api/career.v1.JdService/GetJdResult" -d "{\"submissionId\":\"$id\",\"resultToken\":\"$tok\"}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status",""), round(d.get("matchScore",0) or 0,3), "pdf" if d.get("generatedResumeUrl") else "no-pdf")' 2>/dev/null)
+    status=$(curl -s --max-time 10 -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.JdService/GetJdResult" -d "{\"submissionId\":\"$id\",\"resultToken\":\"$tok\"}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("status",""), round(d.get("matchScore",0) or 0,3), "pdf" if d.get("generatedResumeUrl") else "no-pdf")' 2>/dev/null)
     case "$status" in JD_STATUS_RECEIVED*|JD_STATUS_SCORING*|JD_STATUS_GENERATING*|"") continue;; *) break;; esac
   done
   echo "  GetJdResult after $(( $(date +%s) - t0 )) s: ${status:-no answer}"
