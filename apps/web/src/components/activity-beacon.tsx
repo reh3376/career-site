@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { recordActivityAction } from "./actions";
+import { recordActivityAction } from "@/app/actions/activity";
 
 // Fires a single `view` activity event for the current page after
 // mount. React Strict Mode double-invokes effects in dev, we guard
@@ -12,8 +12,13 @@ import { recordActivityAction } from "./actions";
 //
 // Kept intentionally minimal: no dwell tracking yet (that needs a
 // beforeunload/pagehide handler with `navigator.sendBeacon`, which
-// server actions don't naturally support). Adding dwell is a
-// follow-up when we introduce content pages beyond /home.
+// server actions don't naturally support).
+//
+// `contentId` should be the `id` from the content file's front matter
+// (see scripts/check_content.py), because that is what
+// ContentSummary.id means and what lets the web resolve a title back
+// from an activity row. /home passes its own path, which the API
+// excludes from "recently viewed" by name.
 export function ActivityBeacon({ contentId }: { contentId: string }) {
   const fired = useRef(false);
   useEffect(() => {

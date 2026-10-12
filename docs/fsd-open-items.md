@@ -99,16 +99,14 @@ schema authored from the content that exists rather than from §7.2.
 `summary` are deliberately not added and are named as deferred in the
 FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 
-### 5. FR-HIST-02 · Must
+### 5. FR-HIST-02 · Must — CLOSED 2026-10-12
 
-> Returning members shall see a welcome-back panel: last visit date, up to three items viewed, topics asked about, and items new since the last visit.
-
-**FSD status today:** Partially shipped. `/home` shows a RECENT ACTIVITY list and what is new since last time. No last-visit date and no three-item resume list.
-
-**Why here:** Half there: /home already shows recent activity and what is new. Missing the last-visit date and the three-item resume.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed for two of the four elements.** Last-visit date and
+recently-viewed items now render on `/home`. The blocker was
+instrumentation: `/home` was the only page recording a view, so there
+was one distinct content id in the entire member history. Topics asked
+about and "new since last visit" are named as deferred in the FSD row,
+with what each needs.
 
 ### 6. FR-ADM-03 · Must — CLOSED 2026-10-12
 

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { AccessNote } from "@/components/access-note";
 import { OG_IMAGE, SITE_NAME, SITE_ORIGIN } from "@/lib/site";
+import { ActivityBeacon } from "@/components/activity-beacon";
 import { getArticle, listArticles } from "@/lib/articles";
 
 // Statically prerender each known slug at build time. Combined with
@@ -63,6 +64,12 @@ export default async function ArticleReaderPage({
 
   return (
     <article className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
+      {/* Records the view against the article's front-matter id, which
+          is what ContentSummary.id means, so /home can name it back.
+          Before this the only instrumented page in the app was /home
+          itself, and FR-HIST-02's "recently viewed" had nothing but the
+          home page to list. */}
+      <ActivityBeacon contentId={article.id} />
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
         <Link
           href="/articles"

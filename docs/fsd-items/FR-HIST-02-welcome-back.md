@@ -1,6 +1,84 @@
 # FR-HIST-02: the welcome-back panel
 
-**State as of 2026-10-12.** The welcome-back panel is fully designed,
+**Built 2026-10-12.** The state this was written from is kept below.
+
+## Outcome
+
+Shipped for two of the four elements.
+
+**The finding that reshaped the item.** This document said the data was
+thin "for a structural reason rather than a missing query": the only
+client code recording a view was scoped to `/home`. Querying production
+made that concrete. **27 view events across exactly one distinct content
+id, and that id was `/home` itself.** FR-HIST-02's "up to three items
+viewed" had only the page the member was standing on to list. So this
+was not a panel to build; it was instrumentation to add, and the panel
+was the easy half.
+
+The server action that records activity lived in
+`app/(site)/home/actions.ts`, a route-scoped `"use server"` file, which
+is why no other page could call it. It and the beacon component are now
+shared, and the article reader, the gallery and `/jd-upload` each record
+their own view against the content's front-matter `id`, which is what
+`ContentSummary.id` has always meant and what item 3 added to every
+content file a few hours earlier.
+
+**Decision #1, `HomeService` or `MemberService`: MemberService.**
+`HomeService` specified this panel field for field and was never
+implemented or mounted. Building a second service for one panel would
+add a surface for no gain, so the panel is served from
+`MemberService.GetHistory`, which `/home` already calls, reusing the
+`WelcomeBack` message the contract already described rather than
+redefining it. `HomeService` stays declared and unmounted; the reasoning
+is written at the new field.
+
+**Decision #2, the false FSD claim: corrected.** The row said `/home`
+already showed "what is new since last time". No such logic has ever
+existed.
+
+**Decision #3, where to instrument: the article reader, the gallery and
+`/jd-upload`**, which is what this document recommended. Each sends a
+real content id rather than a route.
+
+**Decision #4, chat topics: out of scope**, and named in the FSD row
+rather than left implied. It needs an instrumentation call on the chat
+send path that does not exist, plus a decision about what a useful
+"topic" phrase is.
+
+**Decision #5, selection logic: most recent distinct content, newest
+first, excluding the home page by name.** Across all history rather than
+only the previous visit: a member who read one article last week and
+nothing since should still be greeted with it, and scoping to the last
+session makes the panel empty for exactly the people it exists to greet.
+
+**What is populated and what is not.** `WelcomeBack` has six fields.
+`last_visit_at`, `previous_visits` and `recently_viewed` are filled.
+`recent_topics` needs the chat instrumentation above;
+`new_since_last_visit` needs per-item update timestamps the content
+model does not carry, since articles date to a bare year;
+`resume_conversation_id` is a separate feature. Each is left unset
+rather than filled with a guess, and the proto says why at the field.
+
+**A visit is a session, not a login.** `session_id` is already on every
+activity row, and counting logins would double-count a member who signs
+in twice on one device.
+
+**Verified by rendering it.** Three prior sessions and two article views
+were created in the local stack; the API returned `previousVisits: 2`,
+the correct `lastVisitAt`, and three content ids newest-first excluding
+`/home`; `/home` rendered "Last here 4 days ago, your 3rd visit" and
+named the articles as links, in both UI modes. The synthetic rows were
+removed afterwards.
+
+**One thing worth knowing about the API's shape.** It returns content
+ids and nothing else. The web app owns content metadata and resolves the
+title and link from its own files; duplicating that into the API would
+give the two a way to disagree, which is the failure this roadmap keeps
+finding.
+
+---
+
+**State as of 2026-10-12, before the build.** The welcome-back panel is fully designed,
 field for field, in a proto service that has never been implemented or
 mounted: `HomeService.GetHome` and its `WelcomeBack` message
 (`proto/career/v1/home.proto:14-40`) already specify `last_visit_at`,

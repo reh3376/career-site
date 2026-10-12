@@ -273,7 +273,7 @@ func main() {
 	)
 	log.Info("auth interceptor ready, enforcing the declared level")
 
-	memberHandler := handlers.NewMember(authHandler, userRepo)
+	memberHandler := handlers.NewMember(log, authHandler, userRepo)
 	contactHandler := handlers.NewContact(
 		log, userRepo, authHandler, mailer,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,

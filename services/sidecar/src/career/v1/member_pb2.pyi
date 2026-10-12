@@ -2,6 +2,7 @@ import datetime
 
 from buf.validate import validate_pb2 as _validate_pb2
 from career.v1 import common_pb2 as _common_pb2
+from career.v1 import home_pb2 as _home_pb2
 from career.v1 import options_pb2 as _options_pb2
 from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
@@ -69,12 +70,14 @@ class GetHistoryRequest(_message.Message):
     def __init__(self, kind: _Optional[_Union[_common_pb2.ActivityEvent.Kind, str]] = ..., page: _Optional[_Union[_common_pb2.PageRequest, _Mapping]] = ...) -> None: ...
 
 class GetHistoryResponse(_message.Message):
-    __slots__ = ("events", "page")
+    __slots__ = ("events", "page", "welcome_back")
     EVENTS_FIELD_NUMBER: _ClassVar[int]
     PAGE_FIELD_NUMBER: _ClassVar[int]
+    WELCOME_BACK_FIELD_NUMBER: _ClassVar[int]
     events: _containers.RepeatedCompositeFieldContainer[_common_pb2.ActivityEvent]
     page: _common_pb2.PageResponse
-    def __init__(self, events: _Optional[_Iterable[_Union[_common_pb2.ActivityEvent, _Mapping]]] = ..., page: _Optional[_Union[_common_pb2.PageResponse, _Mapping]] = ...) -> None: ...
+    welcome_back: _home_pb2.WelcomeBack
+    def __init__(self, events: _Optional[_Iterable[_Union[_common_pb2.ActivityEvent, _Mapping]]] = ..., page: _Optional[_Union[_common_pb2.PageResponse, _Mapping]] = ..., welcome_back: _Optional[_Union[_home_pb2.WelcomeBack, _Mapping]] = ...) -> None: ...
 
 class ListSavedRequest(_message.Message):
     __slots__ = ("page",)

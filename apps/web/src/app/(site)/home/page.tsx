@@ -8,7 +8,7 @@ import { getSessionCookie } from "@/lib/session";
 import { getSocialLinks } from "@/lib/social-links";
 import { getUiMode } from "@/lib/ui-mode";
 
-import { ActivityBeacon } from "./activity-beacon";
+import { ActivityBeacon } from "@/components/activity-beacon";
 import { logoutAction } from "./actions";
 
 export const metadata: Metadata = { title: "Member home" };
@@ -50,17 +50,38 @@ async function fetchMe(): Promise<Me | null> {
   return j.me ?? null;
 }
 
-async function fetchHistory(): Promise<ActivityEvent[]> {
+// WelcomeBack is FR-HIST-02's panel. Three of its six proto fields are
+// populated by the API; the rest are deliberately unset and the reason
+// is at the field in member.proto.
+type WelcomeBack = {
+  last_visit_at?: string;
+  lastVisitAt?: string;
+  previous_visits?: number;
+  previousVisits?: number;
+  recently_viewed?: { id?: string }[];
+  recentlyViewed?: { id?: string }[];
+};
+
+type History = { events: ActivityEvent[]; welcome: WelcomeBack | null };
+
+async function fetchHistory(): Promise<History> {
   const cookie = await getSessionCookie();
-  if (!cookie) return [];
+  if (!cookie) return { events: [], welcome: null };
   const resp = await callApi({
     path: "/api/career.v1.MemberService/GetHistory",
     body: { page: { pageSize: 10 } },
     cookie,
   });
-  if (!resp.ok) return [];
-  const j = (await resp.json()) as { events?: ActivityEvent[] };
-  return j.events ?? [];
+  if (!resp.ok) return { events: [], welcome: null };
+  const j = (await resp.json()) as {
+    events?: ActivityEvent[];
+    welcome_back?: WelcomeBack;
+    welcomeBack?: WelcomeBack;
+  };
+  return {
+    events: j.events ?? [],
+    welcome: j.welcome_back ?? j.welcomeBack ?? null,
+  };
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -75,11 +96,13 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [me, mode, history] = await Promise.all([
+  const [me, mode, historyResult] = await Promise.all([
     fetchMe(),
     getUiMode(),
     fetchHistory(),
   ]);
+  const history = historyResult.events;
+  const welcome = historyResult.welcome;
   if (!me) redirect("/login");
 
   const firstName = me.name?.split(" ")[0] ?? "there";
@@ -119,8 +142,13 @@ export default async function HomePage() {
         <dl className="mt-10 grid gap-3 border-t border-line pt-6 font-mono text-[12px] text-ink-2 sm:grid-cols-[10rem_1fr]">
           <dt className="text-ink-3">STATUS</dt>
           <dd className="m-0 text-success">
-            <span className="pilot mr-2 align-middle text-success" aria-hidden="true" />
-            {me.status === "MEMBER_STATUS_ACTIVE" ? "ACTIVE" : me.status.replace("MEMBER_STATUS_", "")}
+            <span
+              className="pilot mr-2 align-middle text-success"
+              aria-hidden="true"
+            />
+            {me.status === "MEMBER_STATUS_ACTIVE"
+              ? "ACTIVE"
+              : me.status.replace("MEMBER_STATUS_", "")}
           </dd>
           <dt className="text-ink-3">EMAIL</dt>
           <dd className="m-0 text-ink">{me.email}</dd>
@@ -139,7 +167,9 @@ export default async function HomePage() {
           {memberSince ? (
             <>
               <dt className="text-ink-3">MEMBER SINCE</dt>
-              <dd className="m-0 text-ink">{memberSince.toISOString().slice(0, 10)}</dd>
+              <dd className="m-0 text-ink">
+                {memberSince.toISOString().slice(0, 10)}
+              </dd>
             </>
           ) : null}
           {expiresAt ? (
@@ -147,11 +177,15 @@ export default async function HomePage() {
               <dt className="text-ink-3">EXPIRES</dt>
               <dd className="m-0 text-ink">
                 {expiresAt.toISOString().slice(0, 10)}{" "}
-                <span className="text-ink-3">· {formatDaysUntil(expiresAt, nowMs)}</span>
+                <span className="text-ink-3">
+                  · {formatDaysUntil(expiresAt, nowMs)}
+                </span>
               </dd>
             </>
           ) : null}
         </dl>
+
+        <WelcomeBackPanel welcome={welcome} nowMs={nowMs} tone="ot" />
 
         {history.length > 0 ? (
           <>
@@ -179,7 +213,9 @@ export default async function HomePage() {
             >
               /jd-upload
             </Link>{" "}
-            <span className="text-ink-3">: paste a posting, get a scored review</span>
+            <span className="text-ink-3">
+              : paste a posting, get a scored review
+            </span>
           </li>
           <li>
             <span className="text-signal">MEETING</span>{" "}
@@ -190,7 +226,9 @@ export default async function HomePage() {
             >
               /meetings
             </Link>{" "}
-            <span className="text-ink-3">: book time on Roger&rsquo;s calendar</span>
+            <span className="text-ink-3">
+              : book time on Roger&rsquo;s calendar
+            </span>
           </li>
           <li>
             <span className="text-signal">ARTICLES</span>{" "}
@@ -212,7 +250,9 @@ export default async function HomePage() {
             >
               /gallery
             </Link>{" "}
-            <span className="text-ink-3">: on-the-floor photos with context</span>
+            <span className="text-ink-3">
+              : on-the-floor photos with context
+            </span>
           </li>
           <li>
             <span className="text-signal">ASK.ROGER</span>{" "}
@@ -269,9 +309,11 @@ export default async function HomePage() {
         Welcome, <span className="italic text-accent">{firstName}</span>.
       </h1>
       <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-2">
-        You&rsquo;re in. Five surfaces are live: the JD review, booking
-        time with Roger, Ask Roger, the articles, and the gallery.
+        You&rsquo;re in. Five surfaces are live: the JD review, booking time
+        with Roger, Ask Roger, the articles, and the gallery.
       </p>
+
+      <WelcomeBackPanel welcome={welcome} nowMs={nowMs} />
 
       <section className="mt-14 grid gap-6 md:grid-cols-3">
         <LiveCard
@@ -403,11 +445,7 @@ function AccessPill({
       ? "font-mono text-[11px] uppercase tracking-[0.14em]"
       : "font-mono text-[11px] uppercase tracking-[0.14em]";
   if (!expiresAt) {
-    return (
-      <p className={base + " text-success"}>
-        access · permanent
-      </p>
-    );
+    return <p className={base + " text-success"}>access · permanent</p>;
   }
   const days = daysUntil(expiresAt, nowMs);
   const tone2 =
@@ -527,13 +565,7 @@ function LiveCard({
   );
 }
 
-function HistoryLine({
-  e,
-  nowMs,
-}: {
-  e: ActivityEvent;
-  nowMs: number;
-}) {
+function HistoryLine({ e, nowMs }: { e: ActivityEvent; nowMs: number }) {
   const at = e.occurred_at ?? e.occurredAt;
   const contentId = e.content_id ?? e.contentId;
   const when = at ? relative(new Date(at), nowMs) : "-";
@@ -591,4 +623,128 @@ function relative(d: Date, nowMs: number): string {
   if (days < 30) return `${days}d ago`;
   if (days < 365) return `${Math.round(days / 30)}mo ago`;
   return `${Math.round(days / 365)}y ago`;
+}
+
+// WelcomeBackPanel is FR-HIST-02: when the member was last here, how
+// many visits that makes, and what they were reading.
+//
+// It renders nothing on a first visit, and nothing about reading until
+// there is something to name. That is deliberate: a greeting that says
+// "you have visited 0 times" or lists the page you are standing on is
+// worse than no greeting, and listing /home was the only thing this
+// panel could have done before the rest of the app was instrumented.
+function WelcomeBackPanel({
+  welcome,
+  nowMs,
+  tone = "it",
+}: {
+  welcome: WelcomeBack | null;
+  nowMs: number;
+  // The site renders /home two ways. The panel says the same thing in
+  // both; only the typography differs, matching AccessPill.
+  tone?: "it" | "ot";
+}) {
+  if (!welcome) return null;
+  const lastIso = welcome.last_visit_at ?? welcome.lastVisitAt;
+  const visits = welcome.previous_visits ?? welcome.previousVisits ?? 0;
+  const viewed = (welcome.recently_viewed ?? welcome.recentlyViewed ?? [])
+    .map((c) => c.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (!lastIso && viewed.length === 0) return null;
+
+  const since = lastIso ? relativeDays(new Date(lastIso), nowMs) : "";
+
+  const ot = tone === "ot";
+  return (
+    <section
+      className={
+        ot
+          ? "mt-10 border-l border-accent pl-3"
+          : "mt-10 border-l-2 border-accent bg-paper-2 px-5 py-4"
+      }
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        {ot ? "WELCOME BACK" : "welcome back"}
+      </p>
+      {lastIso ? (
+        <p
+          className={
+            ot
+              ? "mt-2 font-mono text-[12px] leading-relaxed text-ink-2"
+              : "mt-2 text-sm leading-relaxed text-ink-2"
+          }
+        >
+          Last here {since}
+          {visits > 0 ? `, your ${ordinal(visits + 1)} visit` : ""}.
+        </p>
+      ) : null}
+      {viewed.length > 0 ? (
+        <p
+          className={
+            ot
+              ? "mt-2 font-mono text-[12px] leading-relaxed text-ink-2"
+              : "mt-2 text-sm leading-relaxed text-ink-2"
+          }
+        >
+          You were reading{" "}
+          {viewed.map((id, i) => (
+            <span key={id}>
+              {i > 0 ? (i === viewed.length - 1 ? " and " : ", ") : ""}
+              <Link
+                href={contentHref(id)}
+                className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+              >
+                {contentLabel(id)}
+              </Link>
+            </span>
+          ))}
+          .
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+// The API returns content ids and nothing else, deliberately: the web
+// app owns content metadata, and duplicating titles into the API would
+// give the two a way to disagree. These two functions are where an id
+// becomes something a person can read and click.
+function contentHref(id: string): string {
+  if (id === "gallery") return "/gallery";
+  if (id === "jd-upload") return "/jd-upload";
+  return `/articles/${id}`;
+}
+
+function contentLabel(id: string): string {
+  if (id === "gallery") return "the gallery";
+  if (id === "jd-upload") return "the JD review";
+  // Article ids are their slug, which is readable enough once the
+  // hyphens come out. Resolving the real title would mean reading every
+  // content file to render one line.
+  return id.replace(/-/g, " ");
+}
+
+function relativeDays(then: Date, nowMs: number): string {
+  const days = Math.floor((nowMs - then.getTime()) / 86_400_000);
+  if (days <= 0) return "earlier today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "about a month ago" : `about ${months} months ago`;
+}
+
+function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
 }

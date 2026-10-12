@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 import { AccessNote } from "@/components/access-note";
+import { ActivityBeacon } from "@/components/activity-beacon";
 import { listPhotos } from "@/lib/photos";
 import { getSessionUser } from "@/lib/session-user";
 
@@ -24,6 +25,10 @@ export default async function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-24">
+      {/* The gallery is one page rather than one page per photo, so the
+          view is recorded against the gallery itself. A per-photo id
+          would need a per-photo route, which does not exist. */}
+      <ActivityBeacon contentId="gallery" />
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
         on the floor
       </p>

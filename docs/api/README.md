@@ -704,6 +704,7 @@ Returns the member's activity history, newest first.
 |---|---|---|---|---|
 | `events` | [`ActivityEvent`](#activityevent)[] | array of object |  | Events, newest first, with `content` populated where applicable. |
 | `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `welcomeBack` | [`WelcomeBack`](#welcomeback) | object |  | The welcome-back summary for `/home` (FR-HIST-02). The message is HomeService.GetHome's, reused rather than redefined. That service was specified field for field and never implemented or mounted: there is no handler for it anywhere, and server.go does not route it. Rather than build a second service for one panel, the panel is served from the RPC `/home` already calls, and the shape stays the one the contract already described. Three of WelcomeBack's six fields are populated. `recent_topics` needs instrumentation on the chat send path that does not exist; `new_since_last_visit` needs reliable per-item update timestamps, which the content model does not carry (articles date to a bare year); `resume_conversation_id` is a separate feature. Each is left unset rather than filled with a guess. |
 
 <details><summary>Example request body</summary>
 
@@ -9737,6 +9738,7 @@ History page.
 |---|---|---|---|---|
 | `events` | [`ActivityEvent`](#activityevent)[] | array of object |  | Events, newest first, with `content` populated where applicable. |
 | `page` | [`PageResponse`](#pageresponse) | object |  | Pagination. |
+| `welcomeBack` | [`WelcomeBack`](#welcomeback) | object |  | The welcome-back summary for `/home` (FR-HIST-02). The message is HomeService.GetHome's, reused rather than redefined. That service was specified field for field and never implemented or mounted: there is no handler for it anywhere, and server.go does not route it. Rather than build a second service for one panel, the panel is served from the RPC `/home` already calls, and the shape stays the one the contract already described. Three of WelcomeBack's six fields are populated. `recent_topics` needs instrumentation on the chat send path that does not exist; `new_since_last_visit` needs reliable per-item update timestamps, which the content model does not carry (articles date to a bare year); `resume_conversation_id` is a separate feature. Each is left unset rather than filled with a guess. |
 
 ### ListSavedRequest
 
