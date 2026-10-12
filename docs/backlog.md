@@ -1137,64 +1137,93 @@ work on one machine.
 Still open:
 
 - **An auth interceptor, so the proto's AUTH_LEVEL_* becomes
-  enforcement rather than documentation. Opened 2026-10-05 after it
-  cost a live data exposure. Planned 2026-10-09.**
+  enforcement rather than documentation. Opened 2026-10-05 after it cost
+  a live data exposure. SHIPPED 2026-10-11.**
 
-  Step-by-step plan in
-  [`sprint-auth-interceptor.md`](sprint-auth-interceptor.md); no code
-  written, three decisions there are the owner's. Three findings from
-  planning it: all 141 methods already declare a level, so the work is
-  enforcement rather than annotation; `mfa_fresh` was declared on **79**
-  methods with no TOTP implementation anywhere, so it was unenforceable
-  rather than merely unenforced, and the owner decided on 2026-10-09
-  not to build a second factor: all 79 usages are removed and the
-  option is deprecated; and `options.proto`
-  describes the interceptor in the present tense today, which is false
-  in every clause. Nothing stops a new method shipping with no level
-  either, despite the enum comment claiming lint catches it.
+  Plan and full record in
+  [`sprint-auth-interceptor.md`](sprint-auth-interceptor.md). The
+  declaration is now the enforcement: one interceptor reads
+  `career.v1.auth` from the descriptors, the server refuses to start if
+  any method omits a level, and no handler decides its own access. 87
+  handler gates and five helpers were removed; both auth-gate tests
+  inverted from "every admin method must call `requireAdmin`" to "none
+  of them may".
 
-  `ExportDecisionTestData` shipped without `requireAdmin` and the whole
-  decision test dataset was downloadable with no session for about five
-  hours. Every one of the 66 methods on `*Admin` declares
-  `AUTH_LEVEL_ADMIN` in the proto, and the comment on the type says
-  plainly that enforcement lives in the handler because the interceptor
-  has not landed. So the declaration is decorative, 66 handlers each
-  have to remember, and one forgot.
+  **Two things in the original entry turned out to be wrong, and the
+  second mattered.**
 
-  Verified while writing this: `internal/server/server.go` mounts every
-  service with `careerv1connect.New*ServiceHandler(h)` and **no
-  interceptor options at all**. There is nothing to extend; this is a
-  new file plus one option on each mount.
+  It said *"Keep the handler calls. Removing 66 call sites would be risk
+  for no benefit, and `TestEveryAdminMethodGatesOnAdmin` stays as the net
+  under the net."* That was sound when written, and it was reversed on
+  the owner's instruction after D4's overlap had been proven: the
+  interceptor and the handlers were run side by side for 1,205 compared
+  calls with no disagreement, which is what made removal safe rather than
+  risky. Two enforcement paths left in place indefinitely recreate the
+  original problem in a new form, because the next person has to
+  remember both.
 
-  **The shape.** A unary and a streaming interceptor that take
-  `req.Spec().Procedure`, resolve the method descriptor through
-  `protoregistry.GlobalFiles`, read the `career.v1.auth` extension and
-  enforce it: public passes, member requires a session, admin requires
-  a session and the admin role. The resolved user goes into the context
-  so a handler reads it rather than looking it up again.
+  It also said the shape was *"a new file plus one option on each
+  mount"*. The option on each mount was right. The rest was not: the
+  level definitions disagreed with each other across the existing gates
+  (`requireAdmin` checked role but not status, `requireMember` checked
+  status but not role, three bare lookups checked neither), so S4 could
+  not be behaviour-preserving on every method whatever it did, and the
+  owner had to settle what MEMBER means. `allow_unverified` then had to
+  be enforced before enforcement could land at all, because
+  `ResetPassword` mints a session for a non-active account and `GetMe`
+  has to answer it.
 
-  **The property that matters is failing closed on an undeclared
-  level.** A method with no `auth` option, or `AUTH_LEVEL_UNSPECIFIED`,
-  must be refused rather than allowed. That is what makes a new RPC
-  safe the day somebody adds it, instead of open until somebody
-  notices. It is also the one design choice here that is easy to get
-  backwards.
+  Verified live on 2026-10-11: three *unimplemented* admin procedures,
+  which have no handler and therefore no possible handler check, went
+  from 501 to 401 when enforcement came on. That is the only evidence
+  that distinguishes the interceptor working from it doing nothing.
 
-  **Keep the handler calls.** `requireAdmin` also returns the user that
-  handlers use, and two layers is the right number for authorization.
-  Removing 66 call sites would be risk for no benefit, and
-  `TestEveryAdminMethodGatesOnAdmin` stays as the net under the net.
+- **Turnstile is declared on two surfaces and enforced on neither.**
+  Found 2026-10-12 during the docs audit, and it compounds with the
+  `buf.validate` gap below.
 
-  **A descriptor test is the stronger half.** Walk every method in
-  every service and assert it declares an auth level. That is static
-  and complete, unlike parsing Go source, and it guarantees the
-  interceptor can always decide. It would not have caught this
-  incident, because the option *was* declared, which is the point: the
-  two checks cover different halves and neither covers both.
+  `Contact.turnstileEnforced()` returns `false` unconditionally, so the
+  anonymous contact form's token check never runs. `Register` reads
+  `turnstile_token` nowhere at all; the only thing that would have
+  required one is `min_len: 1` on that field in `auth.proto`, which is a
+  `buf.validate` rule and therefore decorative. FSD FR-CNT-22 was marked
+  Shipped claiming "anonymous submissions require Turnstile", and
+  FR-AUTH-09 claims registration "shall be protected by Cloudflare
+  Turnstile"; both corrected.
 
-  `mfa_fresh` cannot be enforced until TOTP exists (§12 says it is
-  declared and checked as role-only). The interceptor should record
-  that it is ignored in one place rather than leaving it implied in 66.
+  **What the exposure actually is**, stated carefully: registration is
+  approval-gated and email-verified, so an automated signup cannot reach
+  member content. What it can do is make the service send a verification
+  email to any address someone supplies, and fill the users table. That
+  is an email-reputation and noise problem rather than an access one,
+  which is why this is worth fixing and is not an emergency.
+
+- **`buf.validate` rules are declared and not enforced at runtime.**
+  Found 2026-10-12 while auditing the docs. There is no `protovalidate`
+  interceptor and `protovalidate-go` is not a dependency; the only
+  `protovalidate` entry in `services/api/go.mod` is the generated
+  descriptor types, which exist because the protos import
+  `buf/validate/validate.proto`. So every `min_len`, `max_len`, `email`
+  and `defined_only` rule in the contract is documentation.
+
+  `proto/README.md` told authors the opposite — "the interceptor rejects
+  invalid requests with `invalid_argument` before handlers run, so
+  handlers can assume well-formed input" — which is advice that gets a
+  check skipped. Corrected 2026-10-12.
+
+  The handlers do validate, and the rules that matter most are mirrored
+  in code: `Register` checks `len(password) < auth.MinPasswordLen` and
+  `HashPassword` checks it again. What is unknown is whether *every*
+  declared rule has a counterpart, across 420 messages. Two ways out,
+  and the second is cheaper than it sounds:
+
+  1. Wire `protovalidate-go` as an interceptor so the declaration is the
+     enforcement, the way `career.v1.auth` now is. Note the same trap the
+     auth interceptor hit: it changes behaviour, so it wants the
+     observe-then-enforce treatment rather than a flip.
+  2. Or decide the rules are contract documentation only, say so in
+     `proto/README.md` (done), and add a test that spot-checks the
+     constraints that carry security weight.
 
 - Pin third-party GitHub Actions by commit SHA.
 - CodeQL `security-extended` on a daily schedule; Trivy on the images.

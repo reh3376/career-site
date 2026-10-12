@@ -8,7 +8,7 @@ The site needs a serving path (auth, sessions, personalization, streaming chat, 
 
 ## Decision
 
-- **Go** (current stable) owns everything on the request path and everything that touches member data: the ConnectRPC API, argon2id/session/TOTP/OIDC auth, personalization, chat orchestration and streaming, admin, audit, retention, exports, and the in-process scheduler. Data access through `pgx` + `sqlc`; migrations with `goose` embedded in the binary.
+- **Go** (current stable) owns everything on the request path and everything that touches member data: the ConnectRPC API, argon2id/session auth (TOTP and OIDC appeared in this list and were never built), personalization, chat orchestration and streaming, admin, audit, retention, exports, and the in-process scheduler. Data access through `pgx` + `sqlc`; migrations with `goose` embedded in the binary.
 - **Python 3.12+** (`uv`, `Ruff`, `pyright`) owns the sidecar: a gRPC service (`Embed`, `Rerank`, `Classify`, `RunJob`, `GetJob`, `Health`) and the `career-cli` for batch jobs.
 - The boundary is the Protobuf contract in `proto/career/sidecar/v1/`. The API calls the sidecar with short deadlines and fallbacks so a sidecar outage degrades retrieval quality rather than availability.
 - Generated code lands inside each consumer (`services/api/gen`, `apps/web/src/gen`, `services/sidecar/src`) so each toolchain's import rules are natural; all outputs are committed and drift-checked.

@@ -50,6 +50,37 @@ DOCKER-USER is traversed for forwarded packets only, so these rules
 cannot affect SSH, which arrives on INPUT. You cannot lock yourself out
 with this script.
 
+## Checking auth after a deploy
+
+Two scripts exist for this and neither is run by `rollout.sh`, because
+both are slower than a deploy gate should be.
+
+`deploy/auth-enforce-checks.sh` is the S4 exit criteria from
+`docs/sprint-auth-interceptor.md`, executable. It confirms from the boot
+log that the interceptor is installed, that the public surfaces stay
+reachable, that an anonymous caller is refused on an admin and a member
+procedure, and that an admin session still reaches the admin surface.
+The admin half runs on the server over ssh so the password never leaves
+`.env.prod`. It prints the two criteria it *cannot* establish — a member
+session on an admin procedure, and `GetMe` on a non-active session —
+rather than leaving them implied; both need an account that does not
+exist and are covered by `TestEnforceModeDecisions`.
+
+`deploy/exercise-admin.sh [passes]` calls every read-only admin and
+member procedure. It was written to give the observe-mode comparison a
+sample when the site had no traffic, and it is still the quickest way to
+put real load across both auth gates after a change. Read-only by an
+explicit allowlist, never a name pattern: a rule like "anything starting
+with Get or List" would pick up a mutating procedure the day somebody
+adds one, and this runs against production. One login covers the whole
+run, because the login limiter counts successful logins and allows five
+before refilling one every three minutes.
+
+```
+deploy/auth-enforce-checks.sh          # 14 checks, ~20s
+deploy/exercise-admin.sh 20            # ~620 calls on one session
+```
+
 ## Never deploy onto a live participant
 
 `rollout.sh` recreates the api and web containers. Somebody part way
@@ -254,7 +285,11 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 deploy/live-check.sh https://rogerhenley.dev          # compare with the baseline
 ```
 
-`git pull` matters: `apps/web/content` is bind-mounted into the api as the public corpus and the Caddyfile is read from the checkout. To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations (goose, currently up to `00023`) are additive and run on api boot. Pulling the sidecar image can take longer than the default compose timeout on a slow pull; if `pull` times out, run it again.
+`git pull` matters: `apps/web/content` is bind-mounted into the api as the public corpus and the Caddyfile is read from the checkout. To roll back, re-run with the previous SHA. Postgres data volumes survive; migrations (goose) are additive and run on api boot. `deploy/live-check.sh`
+prints the current version on every rollout, and
+`select max(version_id) from goose_db_version` answers it directly. This
+sentence used to name a specific migration number, which was 38 behind by
+the time anyone read it, so it no longer names one. Pulling the sidecar image can take longer than the default compose timeout on a slow pull; if `pull` times out, run it again.
 
 Every merge to `main` adds three images to the box, and they are never removed on their own. On 2026-09-22 that reached 159 stale deploy tags and 93 % disk, and one image layer failed to extract mid-deploy because of it. Finish each rollout by dropping the build cache (a pull-only box never reads it) and every career-site tag except the one running and the one before it, so a rollback is still a local `up`:
 

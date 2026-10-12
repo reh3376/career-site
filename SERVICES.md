@@ -114,7 +114,9 @@ Every prod variable, with comments, is in [`.env.prod.example`](.env.prod.exampl
 
 ## Database schema
 
-Migrations live in [`services/api/internal/db/migrations/`](services/api/internal/db/migrations/) and run automatically on api boot via goose. Current version: **55**.
+Migrations live in [`services/api/internal/db/migrations/`](services/api/internal/db/migrations/) and run automatically on api boot via goose. The head migration is whatever the directory's highest number is; this
+line used to name one and fell six behind. `deploy/live-check.sh` prints
+the version running in production on every rollout.
 
 | # | File | Purpose |
 |---|---|---|
@@ -173,6 +175,12 @@ Migrations live in [`services/api/internal/db/migrations/`](services/api/interna
 | 00053 | `decision_test_memory_failure.sql` | `digits_held`: recall severity scored against what was retained rather than against what was correct |
 | 00054 | `decision_test_metrics.sql` | the seven decision-test metric views (`docs/metrics.md`), plus `dt_confident_threshold()` and `dt_load_rank()` |
 | 00055 | `decision_test_curve_by_version.sql` | the load and calibration curves grouped by item set and instrument version, so runs under different items or timings never pool into one claim |
+| 00056 | `decision_test_review.sql` | the owner's curation judgement on whether a run, or one block of it, is fit to use; the dataset nobody has vouched for is not a dataset |
+| 00057 | `decision_test_attempts.sql` | which sitting this is for a person, recorded as observations rather than as a conclusion, because people may take the test more than once |
+| 00058 | `decision_test_attempt_rule.sql` | the attempt sequence derived in one place, after the per-row version disagreed with itself in production data |
+| 00059 | `decision_test_item_pools.sql` | `dt_session_items` and the per-family quota: every run draws its own questions and no item repeats within a test |
+| 00060 | `decision_test_private_bank.sql` | retires the published items and seeds the 90-item private bank, so the answer key is not readable in a public repo |
+| 00061 | `decision_test_regrade_misaligned.sql` | re-grades answers scored against the wrong item after the draw landed and `SubmitAnswer` kept resolving by bank position |
 
 Roles: `career` (app owner, full DML), `career_admin_readonly` (SELECT-only; bounds the `/admin/db` blast radius).
 

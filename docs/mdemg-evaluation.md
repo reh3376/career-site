@@ -207,6 +207,13 @@ risk this investigation found, and no memory graph addresses it.
 > real risk, and it is still not a memory graph that fixes it.
 > `docs/backlog.md` §4c tracks the next three targets.
 
+> **Second note, 2026-10-12.** The count in the note above is itself out
+> of date, which is the hazard of putting a number in a correction.
+> `apps/web` now has four test files — `metronome`, `decision-test-retry`,
+> `public-routes` and `synthetic-flag` — against roughly 183 hand-written
+> source files, and `pnpm test` runs in CI. Still thin; no longer one
+> against 147.
+
 **For the guardrail, a bounded experiment is justified, but not
 today.** The integration is genuinely cheap and well contained: hooks
 live in `.claude/`, blocking is off by default, it fails open, and the

@@ -219,8 +219,9 @@ definition of the dataset, and the first column added to one and not the
 other ships an export narrower than the console while both still look
 right.
 
-**Still open in M6:** surfacing the load curve, the calibration curve
-and the per-person threshold as console pages. The query console at
+**M6 shipped:** the load curve, the calibration curve and the per-person
+threshold are console pages at `/admin/decision-test/analysis`. This
+said "still open" until 2026-10-12. The query console at
 `/admin/db` reads all seven views today and `docs/metrics.md` carries
 the queries, so the analysis is possible now and what is left is
 convenience rather than capability.
@@ -423,7 +424,7 @@ paragraph; the task breakdown lives there.
 
 ---
 
-## Item pools and parallel forms (planned 2026-10-07)
+## Item pools and parallel forms (shipped 2026-10-07/08, content pending)
 
 A repeat sitting currently measures item recall: 27 of the 30 items are
 shared between the two item sets, and a third sitting scored 30/30 at
@@ -433,6 +434,12 @@ The plan is
 [`sprint-decision-test-item-pools.md`](sprint-decision-test-item-pools.md):
 category-balanced parallel forms, a repeat served a form it has not
 seen, and the per-block balance made enforced rather than implicit in
-hand-ordered `position` values. **No code written.** Four decisions in
-that document are the owner's, including whether the categories are
-four or three and who writes the sixty new items.
+hand-ordered `position` values. **The mechanism shipped on 2026-10-07 and
+2026-10-08** — S1 through S6 and S8 of that sprint, covering the schema
+(migration `00059`), the balanced draw, the wiring into `StartSession`
+and `GetBlock`, repeat-avoidance, the run-page display, and the private
+90-item bank (`00060`). This paragraph said "No code written" until
+2026-10-12.
+
+What is actually open: S7, reviewing the item content itself, and the
+owner decisions in that document that are still unanswered.

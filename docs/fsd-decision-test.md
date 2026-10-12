@@ -1,6 +1,10 @@
 # FSD: the decision test
 
-**Status: design settled, not built.** Every open decision has been answered by the owner. What remains before a sprint plan is the thirty item texts, the data model, and the roadmap.
+**Status: built and live at `/decision-test`,** with real participants
+and a private item bank. This line said "design settled, not built"
+until 2026-10-12, which was true the day it was written and stayed on
+the page through the build, the launch and three rounds of curation. The
+roadmap in `docs/roadmap-decision-test.md` carries current state.
 
 A supplement to the *Better Business Decisions Require Better
 Information* series (`/articles/better-business-decisions-part-1` to
@@ -588,14 +592,24 @@ afterwards are in the roadmap under M5b.
 
 ## 8. Still to specify
 
-Not yet drafted, pending the decisions above:
+**Nothing in this list is still to specify.** Every item below shipped,
+and the section is kept rather than deleted because it is what the
+specification looked like before the thing existed.
 
-- Routes, and whether the test is public or gated. The data argument says public, since anonymous reach is the point.
-- Data model and migrations, to §7b: `dt_participants`, `dt_sessions`, `dt_answers`, `dt_recalls`, `dt_items` (key included, server only), plus the flat analysis view.
-- Events, which go into `docs/events/README.md` in the same PR.
-- Admin surface for reading results.
-- Metric views, under the one-definition rule in `docs/metrics.md`.
-- Test length, which is downstream of §2.2 and §3 and is the single biggest driver of completion rate.
+- ~~Routes, and whether the test is public or gated.~~ Public, and
+  listed in `apps/web/src/lib/public-routes.ts`. All five
+  `DecisionTestService` RPCs declare `AUTH_LEVEL_PUBLIC`.
+- ~~Data model and migrations.~~ Migration `00049_decision_test.sql`
+  created `dt_participants`, `dt_sessions`, `dt_answers`, `dt_recalls`
+  and `dt_items` plus the flat view; `00059` added `dt_session_items`
+  and the per-family quota for the item pools.
+- ~~Events.~~ In `docs/events/README.md`.
+- ~~Admin surface for reading results.~~
+  `/admin/decision-test`, with per-run detail, analysis, review and
+  export.
+- ~~Metric views.~~ Migration `00054_decision_test_metrics.sql`, under
+  the one-definition rule, documented in `docs/metrics.md`.
+- ~~Test length.~~ Decided in §4b above: fifteen minutes.
 
 ## 9. Open decisions, collected
 

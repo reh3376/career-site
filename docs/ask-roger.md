@@ -385,7 +385,7 @@ have fired, and chat spend was invisible next to the JD reviewer's.
 
 ### Export
 
-`ExportDecisionLog` (admin, MFA-fresh) emits JSON Lines. Each line
+`ExportDecisionLog` (admin) emits JSON Lines. Each line
 carries the prompt, the response, the input and output jsonb, usage
 including `first_token_ms`, and the `human` block with verdict, note,
 **answer** and **dimensions**. Format in
