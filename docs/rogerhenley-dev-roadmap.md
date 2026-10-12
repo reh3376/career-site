@@ -4,6 +4,33 @@
 **Scope:** The live site at https://rogerhenley.dev (signed out), the public repository `reh3376/career-site` at commit `8ee974c` (merged 2026-10-01 14:13 ET), and the résumés in the job-search project.
 **Lens:** The site exists to move a hiring manager from "who is this" to "let's talk." Every item is ranked by how much it helps that outcome, not by engineering interest.
 
+> **Correction added 2026-10-12.** This is a point-in-time audit of
+> commit `8ee974c`, not a live status document, and the body below is
+> left exactly as it was written. Ten of its open action items have since
+> shipped, so a reader working from it today would redo finished work.
+> Each was re-checked against the code on 2026-10-12:
+>
+> | item | now |
+> |---|---|
+> | 1.1 role/record above the fold | the hero renders "VP Engineering & Technology, Whiskey House · Director of Engineering, Bardstown Bourbon" (`it-landing.tsx`) |
+> | 1.3 beta label in the hero eyebrow | removed; beta is in the header only |
+> | 1.4 `RecentWriting` built but imported nowhere | rendered as `RecentWritingStrip` (`it-landing.tsx`) |
+> | 2.1 no `openGraph` metadata | present in `app/layout.tsx` |
+> | 2.2 résumés omit the domain | present across `docs/personal/resume/*.md` |
+> | 3.2 stale "later phase" gallery line | gone; direct `/gallery` links instead |
+> | 3.3 curate the repo cards | explicit allow-list in `lib/github-repos.ts` |
+> | 4.2 `/timeline`, `/projects`, `/downloads` 307 to `/login` | they 404 (`proxy.ts`) |
+> | 5.1 README status block stale at 2026-09-22 | carries a 2026-10-06 block |
+> | 5.2 FSD and backlog disagree on `/how-ask-roger-works` | agree; it is public |
+> | 5.3 `apps/web` has no tests and no test script | `"test": "vitest run"`, four test files, run in CI |
+>
+> **Item 4.1 (the seven-day default access window) is still genuinely
+> open** — `access_grants.go` still defaults to `7d`.
+>
+> Three items were not re-checked: 1.2 (a copy change I could not confirm
+> exactly), 4.3 (production funnel numbers, which need live analytics),
+> and anything already marked DECIDED, DECLINED or DONE inline.
+
 ## How this was verified
 
 Every finding below cites what was checked. Nothing comes from memory or assumption.
