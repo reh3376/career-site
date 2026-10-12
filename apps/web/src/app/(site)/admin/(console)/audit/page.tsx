@@ -116,7 +116,7 @@ export default async function AdminAuditPage({
       {!result.ok ? (
         <p
           role="alert"
-          className="mt-8 border-l-2 border-danger bg-danger-soft/40 px-4 py-3 text-sm text-ink"
+          className="mt-8 border-l-2 border-danger bg-paper-2 px-4 py-3 text-sm text-ink"
         >
           Could not load the audit log: {result.error}
         </p>
