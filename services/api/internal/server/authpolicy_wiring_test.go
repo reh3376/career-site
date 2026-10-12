@@ -323,7 +323,14 @@ func TestConnectProtocolHeaderIsRequiredExceptOnBeaconServices(t *testing.T) {
 		Events:          &handlers.Events{},
 	}).routes()
 
-	post := func(procedure string, withHeader bool) int {
+	// Returns the status and the body, because the status alone cannot
+	// tell a protocol rejection from an ordinary validation error.
+	// Connect reports both as 400 invalid_argument; only the message
+	// distinguishes them. Checking the code alone reported two false
+	// failures against production on 2026-10-11, when SubmitAnswer
+	// answered 400 "no session" from its own validation and that read as
+	// the requirement being wrongly applied.
+	post := func(procedure string, withHeader bool) (int, string) {
 		req := httptest.NewRequest(http.MethodPost, "/api"+procedure,
 			strings.NewReader("{}"))
 		req.Header.Set("Content-Type", "application/json")
@@ -332,20 +339,30 @@ func TestConnectProtocolHeaderIsRequiredExceptOnBeaconServices(t *testing.T) {
 		}
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
-		return rec.Code
+		body, _ := io.ReadAll(rec.Body)
+		return rec.Code, string(body)
 	}
+
+	// What connect-go says when the header is missing and required.
+	const protocolRejection = "missing required header"
 
 	// A public procedure on a strict service: reachable with the header,
 	// refused without it. GetVersion needs no dependencies, so the only
 	// thing that can turn it away is the requirement itself.
 	const strict = "/career.v1.SystemService/GetVersion"
-	if got := post(strict, true); got != http.StatusOK {
-		t.Errorf("%s with the header returned %d, want 200", strict, got)
+	if got, body := post(strict, true); got != http.StatusOK {
+		t.Errorf("%s with the header returned %d, want 200: %s", strict, got, body)
 	}
-	if got := post(strict, false); got == http.StatusOK {
+	got, body := post(strict, false)
+	if got == http.StatusOK {
 		t.Errorf("%s without the header returned 200; the requirement is "+
 			"not in effect, so the CSRF claim in auth.proto is false again",
 			strict)
+	}
+	if !strings.Contains(body, protocolRejection) {
+		t.Errorf("%s without the header returned %d but not a protocol "+
+			"rejection, so something else refused it and this proves "+
+			"nothing: %s", strict, got, body)
 	}
 
 	// The beacon-reachable services must answer without it, because
@@ -357,12 +374,16 @@ func TestConnectProtocolHeaderIsRequiredExceptOnBeaconServices(t *testing.T) {
 		"/career.v1.DecisionTestService/SubmitAnswer",
 		"/career.v1.DecisionTestService/SubmitRecall",
 	} {
-		code := post(procedure, false)
-		if code == http.StatusBadRequest {
-			t.Errorf("%s was rejected with 400 for a missing "+
-				"Connect-Protocol-Version. sendBeacon cannot set that "+
+		// Only a protocol rejection matters here. These reach
+		// zero-value handlers and may refuse for their own reasons,
+		// which is fine: the question is whether the request was
+		// accepted for dispatch at all.
+		code, body := post(procedure, false)
+		if strings.Contains(body, protocolRejection) {
+			t.Errorf("%s was rejected for a missing "+
+				"Connect-Protocol-Version (%d). sendBeacon cannot set that "+
 				"header, so this procedure's writes would be silently lost "+
-				"when a tab closes mid-run.", procedure)
+				"when a tab closes mid-run: %s", procedure, code, body)
 		}
 	}
 }
