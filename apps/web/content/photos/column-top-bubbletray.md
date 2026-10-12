@@ -1,4 +1,6 @@
 ---
+id: "column-top-bubbletray"
+type: "photo"
 title: "Inside the column"
 caption: "Looking down onto a bubble-cap tray inside a copper distillation column."
 context: "Distillation control work: the physics the loop tuning has to respect."

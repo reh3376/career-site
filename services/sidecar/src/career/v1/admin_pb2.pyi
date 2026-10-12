@@ -598,7 +598,7 @@ class GetAuditRequest(_message.Message):
     def __init__(self, actor_id: _Optional[str] = ..., action_prefix: _Optional[str] = ..., to: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., page: _Optional[_Union[_common_pb2.PageRequest, _Mapping]] = ..., **kwargs) -> None: ...
 
 class AuditEntry(_message.Message):
-    __slots__ = ("id", "actor_id", "action", "target_type", "target_id", "payload_json", "occurred_at")
+    __slots__ = ("id", "actor_id", "action", "target_type", "target_id", "payload_json", "occurred_at", "actor_name", "outcome")
     ID_FIELD_NUMBER: _ClassVar[int]
     ACTOR_ID_FIELD_NUMBER: _ClassVar[int]
     ACTION_FIELD_NUMBER: _ClassVar[int]
@@ -606,6 +606,8 @@ class AuditEntry(_message.Message):
     TARGET_ID_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_JSON_FIELD_NUMBER: _ClassVar[int]
     OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_NAME_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_FIELD_NUMBER: _ClassVar[int]
     id: str
     actor_id: str
     action: str
@@ -613,7 +615,9 @@ class AuditEntry(_message.Message):
     target_id: str
     payload_json: str
     occurred_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., actor_id: _Optional[str] = ..., action: _Optional[str] = ..., target_type: _Optional[str] = ..., target_id: _Optional[str] = ..., payload_json: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    actor_name: str
+    outcome: str
+    def __init__(self, id: _Optional[str] = ..., actor_id: _Optional[str] = ..., action: _Optional[str] = ..., target_type: _Optional[str] = ..., target_id: _Optional[str] = ..., payload_json: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., actor_name: _Optional[str] = ..., outcome: _Optional[str] = ...) -> None: ...
 
 class GetAuditResponse(_message.Message):
     __slots__ = ("entries", "page")
@@ -1629,7 +1633,7 @@ class ListJdSubmissionsResponse(_message.Message):
     def __init__(self, submissions: _Optional[_Iterable[_Union[JdSubmissionRow, _Mapping]]] = ..., ready_count: _Optional[int] = ..., below_threshold_count: _Optional[int] = ..., failed_count: _Optional[int] = ..., in_flight_count: _Optional[int] = ...) -> None: ...
 
 class DecisionLogRow(_message.Message):
-    __slots__ = ("id", "kind", "ref_kind", "ref_id", "key", "model", "prompt_id", "prompt_version", "num_ctx", "input_json", "output_json", "prompt_text", "response_text", "prompt_tokens", "completion_tokens", "latency_ms", "created_at", "human_verdict", "human_note", "reviewed_by", "reviewed_at", "error", "human_answer", "human_dimensions", "first_token_ms")
+    __slots__ = ("id", "kind", "ref_kind", "ref_id", "key", "model", "prompt_id", "prompt_version", "num_ctx", "input_json", "output_json", "prompt_text", "response_text", "prompt_tokens", "completion_tokens", "latency_ms", "created_at", "human_verdict", "human_note", "reviewed_by", "reviewed_at", "error", "human_answer", "human_dimensions", "first_token_ms", "rating_up", "rating_comment")
     class HumanDimensionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -1662,6 +1666,8 @@ class DecisionLogRow(_message.Message):
     HUMAN_ANSWER_FIELD_NUMBER: _ClassVar[int]
     HUMAN_DIMENSIONS_FIELD_NUMBER: _ClassVar[int]
     FIRST_TOKEN_MS_FIELD_NUMBER: _ClassVar[int]
+    RATING_UP_FIELD_NUMBER: _ClassVar[int]
+    RATING_COMMENT_FIELD_NUMBER: _ClassVar[int]
     id: str
     kind: str
     ref_kind: str
@@ -1687,21 +1693,25 @@ class DecisionLogRow(_message.Message):
     human_answer: str
     human_dimensions: _containers.ScalarMap[str, str]
     first_token_ms: int
-    def __init__(self, id: _Optional[str] = ..., kind: _Optional[str] = ..., ref_kind: _Optional[str] = ..., ref_id: _Optional[str] = ..., key: _Optional[str] = ..., model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., num_ctx: _Optional[int] = ..., input_json: _Optional[str] = ..., output_json: _Optional[str] = ..., prompt_text: _Optional[str] = ..., response_text: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., human_verdict: _Optional[str] = ..., human_note: _Optional[str] = ..., reviewed_by: _Optional[str] = ..., reviewed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[str] = ..., human_answer: _Optional[str] = ..., human_dimensions: _Optional[_Mapping[str, str]] = ..., first_token_ms: _Optional[int] = ...) -> None: ...
+    rating_up: bool
+    rating_comment: str
+    def __init__(self, id: _Optional[str] = ..., kind: _Optional[str] = ..., ref_kind: _Optional[str] = ..., ref_id: _Optional[str] = ..., key: _Optional[str] = ..., model: _Optional[str] = ..., prompt_id: _Optional[str] = ..., prompt_version: _Optional[int] = ..., num_ctx: _Optional[int] = ..., input_json: _Optional[str] = ..., output_json: _Optional[str] = ..., prompt_text: _Optional[str] = ..., response_text: _Optional[str] = ..., prompt_tokens: _Optional[int] = ..., completion_tokens: _Optional[int] = ..., latency_ms: _Optional[int] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., human_verdict: _Optional[str] = ..., human_note: _Optional[str] = ..., reviewed_by: _Optional[str] = ..., reviewed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[str] = ..., human_answer: _Optional[str] = ..., human_dimensions: _Optional[_Mapping[str, str]] = ..., first_token_ms: _Optional[int] = ..., rating_up: _Optional[bool] = ..., rating_comment: _Optional[str] = ...) -> None: ...
 
 class ListDecisionLogRequest(_message.Message):
-    __slots__ = ("kind", "ref_id", "unreviewed_only", "limit", "failed_only")
+    __slots__ = ("kind", "ref_id", "unreviewed_only", "limit", "failed_only", "needs_attention")
     KIND_FIELD_NUMBER: _ClassVar[int]
     REF_ID_FIELD_NUMBER: _ClassVar[int]
     UNREVIEWED_ONLY_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     FAILED_ONLY_FIELD_NUMBER: _ClassVar[int]
+    NEEDS_ATTENTION_FIELD_NUMBER: _ClassVar[int]
     kind: str
     ref_id: str
     unreviewed_only: bool
     limit: int
     failed_only: bool
-    def __init__(self, kind: _Optional[str] = ..., ref_id: _Optional[str] = ..., unreviewed_only: _Optional[bool] = ..., limit: _Optional[int] = ..., failed_only: _Optional[bool] = ...) -> None: ...
+    needs_attention: bool
+    def __init__(self, kind: _Optional[str] = ..., ref_id: _Optional[str] = ..., unreviewed_only: _Optional[bool] = ..., limit: _Optional[int] = ..., failed_only: _Optional[bool] = ..., needs_attention: _Optional[bool] = ...) -> None: ...
 
 class ListDecisionLogResponse(_message.Message):
     __slots__ = ("decisions", "total_count", "reviewed_count")

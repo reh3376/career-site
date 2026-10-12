@@ -1,4 +1,6 @@
 ---
+id: "jbbi-podium"
+type: "photo"
 title: "At the podium"
 caption: "Presenting at the University of Kentucky, James B. Beam Institute, 2024."
 context: "Talks on digital transformation and decision infrastructure for distillers."

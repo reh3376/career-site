@@ -9,6 +9,21 @@ import { getSessionCookie } from "@/lib/session";
 // /admin/registrations. Forwards the admin session cookie via callApi
 // and revalidates the layout so counts, list, and the row's own state
 // all update on the next paint.
+//
+// Each of these four carries a `reason`, read from the row's reason box.
+// The proto fields have existed since the first contract, with comments
+// saying the value is "recorded in the audit log"; until 2026-10-12 no
+// handler read them and no audit log existed to record them in. Now the
+// audit interceptor writes the reason into the row's payload, so a blank
+// box is a real choice rather than the only possibility.
+
+// reasonFrom reads the optional free-text reason for an action. Empty is
+// allowed: requiring one would mean an admin with nothing to add types a
+// character to get past the form, and a log full of "." is worse than a
+// log of blanks.
+function reasonFrom(formData: FormData): string {
+  return String(formData.get("reason") ?? "").trim().slice(0, 1000);
+}
 export async function approveRegistrationAction(formData: FormData): Promise<void> {
   const memberId = String(formData.get("member_id") ?? "");
   if (!memberId) return;
@@ -16,7 +31,7 @@ export async function approveRegistrationAction(formData: FormData): Promise<voi
   if (!cookie) return;
   await callApi({
     path: "/api/career.v1.AdminService/ApproveRegistration",
-    body: { memberId },
+    body: { memberId, reason: reasonFrom(formData) },
     cookie,
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
@@ -29,7 +44,7 @@ export async function declineRegistrationAction(formData: FormData): Promise<voi
   if (!cookie) return;
   await callApi({
     path: "/api/career.v1.AdminService/DeclineRegistration",
-    body: { memberId },
+    body: { memberId, reason: reasonFrom(formData) },
     cookie,
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
@@ -46,7 +61,7 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
   if (!cookie) return;
   await callApi({
     path: "/api/career.v1.AdminService/SetMemberStatus",
-    body: { memberId, status },
+    body: { memberId, status, reason: reasonFrom(formData) },
     cookie,
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
@@ -84,8 +99,9 @@ export async function extendAccessAction(formData: FormData): Promise<void> {
     memberId: string;
     extendDays?: number;
     permanent?: boolean;
+    reason?: string;
   };
-  const body: Body = { memberId };
+  const body: Body = { memberId, reason: reasonFrom(formData) };
   if (mode === "permanent") {
     body.permanent = true;
   } else if (mode === "days") {

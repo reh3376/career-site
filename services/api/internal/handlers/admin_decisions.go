@@ -29,6 +29,7 @@ func (a *Admin) ListDecisionLog(
 		Kind:           strings.TrimSpace(req.Msg.GetKind()),
 		UnreviewedOnly: req.Msg.GetUnreviewedOnly(),
 		FailedOnly:     req.Msg.GetFailedOnly(),
+		NeedsAttention: req.Msg.GetNeedsAttention(),
 		Limit:          int(req.Msg.GetLimit()),
 	}
 	if s := strings.TrimSpace(req.Msg.GetRefId()); s != "" {
@@ -175,6 +176,8 @@ func decisionToProto(d *users.Decision) *v1.DecisionLogRow {
 		HumanAnswer:      d.HumanAnswer,
 		HumanDimensions:  d.HumanDimensions,
 		FirstTokenMs:     d.FirstTokenMs,
+		RatingUp:         d.RatingUp,
+		RatingComment:    d.RatingComment,
 	}
 	if d.ReviewedBy != nil {
 		row.ReviewedBy = strconv.FormatInt(*d.ReviewedBy, 10)

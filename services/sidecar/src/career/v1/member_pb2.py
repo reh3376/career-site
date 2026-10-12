@@ -24,12 +24,13 @@ _sym_db = _symbol_database.Default()
 
 from buf.validate import validate_pb2 as buf_dot_validate_dot_validate__pb2
 from career.v1 import common_pb2 as career_dot_v1_dot_common__pb2
+from career.v1 import home_pb2 as career_dot_v1_dot_home__pb2
 from career.v1 import options_pb2 as career_dot_v1_dot_options__pb2
 from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mask__pb2
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x63\x61reer/v1/member.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x16\x63\x61reer/v1/common.proto\x1a\x17\x63\x61reer/v1/options.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x0e\n\x0cGetMeRequest\".\n\rGetMeResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"\xf9\x01\n\x0fUpdateMeRequest\x12\x1b\n\x04name\x18\x01 \x01(\tB\x07\xbaH\x04r\x02\x18xR\x04name\x12,\n\x0corganization\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\xc8\x01R\x0corganization\x12(\n\x0bstated_role\x18\x03 \x01(\tB\x07\xbaH\x04r\x02\x18xR\nstatedRole\x12,\n\x07profile\x18\x04 \x01(\x0b\x32\x12.career.v1.ProfileR\x07profile\x12\x43\n\x0bupdate_mask\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskB\x06\xbaH\x03\xc8\x01\x01R\nupdateMask\"1\n\x10UpdateMeResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"\xbd\x01\n\x13SetInterestsRequest\x12@\n\tinterests\x18\x01 \x03(\x0b\x32\x18.career.v1.TrackInterestB\x08\xbaH\x05\x92\x01\x02\x10\x08R\tinterests\x12+\n\x11tailoring_enabled\x18\x02 \x01(\x08R\x10tailoringEnabled\x12\x37\n\x17questionnaire_completed\x18\x03 \x01(\x08R\x16questionnaireCompleted\"5\n\x14SetInterestsResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"|\n\x11GetHistoryRequest\x12;\n\x04kind\x18\x01 \x01(\x0e\x32\x1d.career.v1.ActivityEvent.KindB\x08\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x12*\n\x04page\x18\x02 \x01(\x0b\x32\x16.career.v1.PageRequestR\x04page\"s\n\x12GetHistoryResponse\x12\x30\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x18.career.v1.ActivityEventR\x06\x65vents\x12+\n\x04page\x18\x02 \x01(\x0b\x32\x17.career.v1.PageResponseR\x04page\">\n\x10ListSavedRequest\x12*\n\x04page\x18\x01 \x01(\x0b\x32\x16.career.v1.PageRequestR\x04page\"\x8b\x01\n\tSavedItem\x12\x33\n\x07\x63ontent\x18\x01 \x01(\x0b\x32\x19.career.v1.ContentSummaryR\x07\x63ontent\x12\x12\n\x04note\x18\x02 \x01(\tR\x04note\x12\x35\n\x08saved_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x07savedAt\"l\n\x11ListSavedResponse\x12*\n\x05items\x18\x01 \x03(\x0b\x32\x14.career.v1.SavedItemR\x05items\x12+\n\x04page\x18\x02 \x01(\x0b\x32\x17.career.v1.PageResponseR\x04page\"Z\n\x0fSaveItemRequest\x12)\n\ncontent_id\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x80\x01R\tcontentId\x12\x1c\n\x04note\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\xd0\x0fR\x04note\"<\n\x10SaveItemResponse\x12(\n\x04item\x18\x01 \x01(\x0b\x32\x14.career.v1.SavedItemR\x04item\">\n\x11UnsaveItemRequest\x12)\n\ncontent_id\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x80\x01R\tcontentId\"\x14\n\x12UnsaveItemResponse\"\x16\n\x14RequestExportRequest\"~\n\x15RequestExportResponse\x12\x1b\n\texport_id\x18\x01 \x01(\tR\x08\x65xportId\x12H\n\x12\x65stimated_ready_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x10\x65stimatedReadyAt\":\n\x10GetExportRequest\x12&\n\texport_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x08\x65xportId\"\xd4\x02\n\x11GetExportResponse\x12;\n\x06status\x18\x01 \x01(\x0e\x32#.career.v1.GetExportResponse.StatusR\x06status\x12!\n\x0c\x64ownload_url\x18\x02 \x01(\tR\x0b\x64ownloadUrl\x12Q\n\x17\x64ownload_url_expires_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x14\x64ownloadUrlExpiresAt\x12\x1d\n\nsize_bytes\x18\x04 \x01(\x03R\tsizeBytes\"m\n\x06Status\x12\x16\n\x12STATUS_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_PENDING\x10\x01\x12\x10\n\x0cSTATUS_READY\x10\x02\x12\x11\n\rSTATUS_FAILED\x10\x03\x12\x12\n\x0eSTATUS_EXPIRED\x10\x04\"~\n\x14\x44\x65leteAccountRequest\x12\x31\n\x0c\x63onfirmation\x18\x01 \x01(\tB\r\xbaH\nr\x08\n\x06\x44\x45LETER\x0c\x63onfirmation\x12\x33\n\x10\x63urrent_password\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\x80\x02R\x0f\x63urrentPassword\"N\n\x15\x44\x65leteAccountResponse\x12\x35\n\x08purge_by\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x07purgeBy2\xb8\x06\n\rMemberService\x12\x44\n\x05GetMe\x12\x17.career.v1.GetMeRequest\x1a\x18.career.v1.GetMeResponse\"\x08\x80\xb5\x18\x02\x88\xb5\x18\x01\x12I\n\x08UpdateMe\x12\x1a.career.v1.UpdateMeRequest\x1a\x1b.career.v1.UpdateMeResponse\"\x04\x80\xb5\x18\x02\x12U\n\x0cSetInterests\x12\x1e.career.v1.SetInterestsRequest\x1a\x1f.career.v1.SetInterestsResponse\"\x04\x80\xb5\x18\x02\x12O\n\nGetHistory\x12\x1c.career.v1.GetHistoryRequest\x1a\x1d.career.v1.GetHistoryResponse\"\x04\x80\xb5\x18\x02\x12L\n\tListSaved\x12\x1b.career.v1.ListSavedRequest\x1a\x1c.career.v1.ListSavedResponse\"\x04\x80\xb5\x18\x02\x12I\n\x08SaveItem\x12\x1a.career.v1.SaveItemRequest\x1a\x1b.career.v1.SaveItemResponse\"\x04\x80\xb5\x18\x02\x12O\n\nUnsaveItem\x12\x1c.career.v1.UnsaveItemRequest\x1a\x1d.career.v1.UnsaveItemResponse\"\x04\x80\xb5\x18\x02\x12X\n\rRequestExport\x12\x1f.career.v1.RequestExportRequest\x1a .career.v1.RequestExportResponse\"\x04\x80\xb5\x18\x02\x12L\n\tGetExport\x12\x1b.career.v1.GetExportRequest\x1a\x1c.career.v1.GetExportResponse\"\x04\x80\xb5\x18\x02\x12\\\n\rDeleteAccount\x12\x1f.career.v1.DeleteAccountRequest\x1a .career.v1.DeleteAccountResponse\"\x08\x80\xb5\x18\x02\x88\xb5\x18\x01\x42\xa5\x01\n\rcom.career.v1B\x0bMemberProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16\x63\x61reer/v1/member.proto\x12\tcareer.v1\x1a\x1b\x62uf/validate/validate.proto\x1a\x16\x63\x61reer/v1/common.proto\x1a\x14\x63\x61reer/v1/home.proto\x1a\x17\x63\x61reer/v1/options.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x0e\n\x0cGetMeRequest\".\n\rGetMeResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"\xf9\x01\n\x0fUpdateMeRequest\x12\x1b\n\x04name\x18\x01 \x01(\tB\x07\xbaH\x04r\x02\x18xR\x04name\x12,\n\x0corganization\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\xc8\x01R\x0corganization\x12(\n\x0bstated_role\x18\x03 \x01(\tB\x07\xbaH\x04r\x02\x18xR\nstatedRole\x12,\n\x07profile\x18\x04 \x01(\x0b\x32\x12.career.v1.ProfileR\x07profile\x12\x43\n\x0bupdate_mask\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskB\x06\xbaH\x03\xc8\x01\x01R\nupdateMask\"1\n\x10UpdateMeResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"\xbd\x01\n\x13SetInterestsRequest\x12@\n\tinterests\x18\x01 \x03(\x0b\x32\x18.career.v1.TrackInterestB\x08\xbaH\x05\x92\x01\x02\x10\x08R\tinterests\x12+\n\x11tailoring_enabled\x18\x02 \x01(\x08R\x10tailoringEnabled\x12\x37\n\x17questionnaire_completed\x18\x03 \x01(\x08R\x16questionnaireCompleted\"5\n\x14SetInterestsResponse\x12\x1d\n\x02me\x18\x01 \x01(\x0b\x32\r.career.v1.MeR\x02me\"|\n\x11GetHistoryRequest\x12;\n\x04kind\x18\x01 \x01(\x0e\x32\x1d.career.v1.ActivityEvent.KindB\x08\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x12*\n\x04page\x18\x02 \x01(\x0b\x32\x16.career.v1.PageRequestR\x04page\"\xae\x01\n\x12GetHistoryResponse\x12\x30\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x18.career.v1.ActivityEventR\x06\x65vents\x12+\n\x04page\x18\x02 \x01(\x0b\x32\x17.career.v1.PageResponseR\x04page\x12\x39\n\x0cwelcome_back\x18\x03 \x01(\x0b\x32\x16.career.v1.WelcomeBackR\x0bwelcomeBack\">\n\x10ListSavedRequest\x12*\n\x04page\x18\x01 \x01(\x0b\x32\x16.career.v1.PageRequestR\x04page\"\x8b\x01\n\tSavedItem\x12\x33\n\x07\x63ontent\x18\x01 \x01(\x0b\x32\x19.career.v1.ContentSummaryR\x07\x63ontent\x12\x12\n\x04note\x18\x02 \x01(\tR\x04note\x12\x35\n\x08saved_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x07savedAt\"l\n\x11ListSavedResponse\x12*\n\x05items\x18\x01 \x03(\x0b\x32\x14.career.v1.SavedItemR\x05items\x12+\n\x04page\x18\x02 \x01(\x0b\x32\x17.career.v1.PageResponseR\x04page\"Z\n\x0fSaveItemRequest\x12)\n\ncontent_id\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x80\x01R\tcontentId\x12\x1c\n\x04note\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\xd0\x0fR\x04note\"<\n\x10SaveItemResponse\x12(\n\x04item\x18\x01 \x01(\x0b\x32\x14.career.v1.SavedItemR\x04item\">\n\x11UnsaveItemRequest\x12)\n\ncontent_id\x18\x01 \x01(\tB\n\xbaH\x07r\x05\x10\x01\x18\x80\x01R\tcontentId\"\x14\n\x12UnsaveItemResponse\"\x16\n\x14RequestExportRequest\"~\n\x15RequestExportResponse\x12\x1b\n\texport_id\x18\x01 \x01(\tR\x08\x65xportId\x12H\n\x12\x65stimated_ready_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x10\x65stimatedReadyAt\":\n\x10GetExportRequest\x12&\n\texport_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x08\x65xportId\"\xd4\x02\n\x11GetExportResponse\x12;\n\x06status\x18\x01 \x01(\x0e\x32#.career.v1.GetExportResponse.StatusR\x06status\x12!\n\x0c\x64ownload_url\x18\x02 \x01(\tR\x0b\x64ownloadUrl\x12Q\n\x17\x64ownload_url_expires_at\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x14\x64ownloadUrlExpiresAt\x12\x1d\n\nsize_bytes\x18\x04 \x01(\x03R\tsizeBytes\"m\n\x06Status\x12\x16\n\x12STATUS_UNSPECIFIED\x10\x00\x12\x12\n\x0eSTATUS_PENDING\x10\x01\x12\x10\n\x0cSTATUS_READY\x10\x02\x12\x11\n\rSTATUS_FAILED\x10\x03\x12\x12\n\x0eSTATUS_EXPIRED\x10\x04\"~\n\x14\x44\x65leteAccountRequest\x12\x31\n\x0c\x63onfirmation\x18\x01 \x01(\tB\r\xbaH\nr\x08\n\x06\x44\x45LETER\x0c\x63onfirmation\x12\x33\n\x10\x63urrent_password\x18\x02 \x01(\tB\x08\xbaH\x05r\x03\x18\x80\x02R\x0f\x63urrentPassword\"N\n\x15\x44\x65leteAccountResponse\x12\x35\n\x08purge_by\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\x07purgeBy2\xb8\x06\n\rMemberService\x12\x44\n\x05GetMe\x12\x17.career.v1.GetMeRequest\x1a\x18.career.v1.GetMeResponse\"\x08\x80\xb5\x18\x02\x88\xb5\x18\x01\x12I\n\x08UpdateMe\x12\x1a.career.v1.UpdateMeRequest\x1a\x1b.career.v1.UpdateMeResponse\"\x04\x80\xb5\x18\x02\x12U\n\x0cSetInterests\x12\x1e.career.v1.SetInterestsRequest\x1a\x1f.career.v1.SetInterestsResponse\"\x04\x80\xb5\x18\x02\x12O\n\nGetHistory\x12\x1c.career.v1.GetHistoryRequest\x1a\x1d.career.v1.GetHistoryResponse\"\x04\x80\xb5\x18\x02\x12L\n\tListSaved\x12\x1b.career.v1.ListSavedRequest\x1a\x1c.career.v1.ListSavedResponse\"\x04\x80\xb5\x18\x02\x12I\n\x08SaveItem\x12\x1a.career.v1.SaveItemRequest\x1a\x1b.career.v1.SaveItemResponse\"\x04\x80\xb5\x18\x02\x12O\n\nUnsaveItem\x12\x1c.career.v1.UnsaveItemRequest\x1a\x1d.career.v1.UnsaveItemResponse\"\x04\x80\xb5\x18\x02\x12X\n\rRequestExport\x12\x1f.career.v1.RequestExportRequest\x1a .career.v1.RequestExportResponse\"\x04\x80\xb5\x18\x02\x12L\n\tGetExport\x12\x1b.career.v1.GetExportRequest\x1a\x1c.career.v1.GetExportResponse\"\x04\x80\xb5\x18\x02\x12\\\n\rDeleteAccount\x12\x1f.career.v1.DeleteAccountRequest\x1a .career.v1.DeleteAccountResponse\"\x08\x80\xb5\x18\x02\x88\xb5\x18\x01\x42\xa5\x01\n\rcom.career.v1B\x0bMemberProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -81,50 +82,50 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MEMBERSERVICE'].methods_by_name['GetExport']._serialized_options = b'\200\265\030\002'
   _globals['_MEMBERSERVICE'].methods_by_name['DeleteAccount']._loaded_options = None
   _globals['_MEMBERSERVICE'].methods_by_name['DeleteAccount']._serialized_options = b'\200\265\030\002\210\265\030\001'
-  _globals['_GETMEREQUEST']._serialized_start=182
-  _globals['_GETMEREQUEST']._serialized_end=196
-  _globals['_GETMERESPONSE']._serialized_start=198
-  _globals['_GETMERESPONSE']._serialized_end=244
-  _globals['_UPDATEMEREQUEST']._serialized_start=247
-  _globals['_UPDATEMEREQUEST']._serialized_end=496
-  _globals['_UPDATEMERESPONSE']._serialized_start=498
-  _globals['_UPDATEMERESPONSE']._serialized_end=547
-  _globals['_SETINTERESTSREQUEST']._serialized_start=550
-  _globals['_SETINTERESTSREQUEST']._serialized_end=739
-  _globals['_SETINTERESTSRESPONSE']._serialized_start=741
-  _globals['_SETINTERESTSRESPONSE']._serialized_end=794
-  _globals['_GETHISTORYREQUEST']._serialized_start=796
-  _globals['_GETHISTORYREQUEST']._serialized_end=920
-  _globals['_GETHISTORYRESPONSE']._serialized_start=922
-  _globals['_GETHISTORYRESPONSE']._serialized_end=1037
-  _globals['_LISTSAVEDREQUEST']._serialized_start=1039
-  _globals['_LISTSAVEDREQUEST']._serialized_end=1101
-  _globals['_SAVEDITEM']._serialized_start=1104
-  _globals['_SAVEDITEM']._serialized_end=1243
-  _globals['_LISTSAVEDRESPONSE']._serialized_start=1245
-  _globals['_LISTSAVEDRESPONSE']._serialized_end=1353
-  _globals['_SAVEITEMREQUEST']._serialized_start=1355
-  _globals['_SAVEITEMREQUEST']._serialized_end=1445
-  _globals['_SAVEITEMRESPONSE']._serialized_start=1447
-  _globals['_SAVEITEMRESPONSE']._serialized_end=1507
-  _globals['_UNSAVEITEMREQUEST']._serialized_start=1509
-  _globals['_UNSAVEITEMREQUEST']._serialized_end=1571
-  _globals['_UNSAVEITEMRESPONSE']._serialized_start=1573
-  _globals['_UNSAVEITEMRESPONSE']._serialized_end=1593
-  _globals['_REQUESTEXPORTREQUEST']._serialized_start=1595
-  _globals['_REQUESTEXPORTREQUEST']._serialized_end=1617
-  _globals['_REQUESTEXPORTRESPONSE']._serialized_start=1619
-  _globals['_REQUESTEXPORTRESPONSE']._serialized_end=1745
-  _globals['_GETEXPORTREQUEST']._serialized_start=1747
-  _globals['_GETEXPORTREQUEST']._serialized_end=1805
-  _globals['_GETEXPORTRESPONSE']._serialized_start=1808
-  _globals['_GETEXPORTRESPONSE']._serialized_end=2148
-  _globals['_GETEXPORTRESPONSE_STATUS']._serialized_start=2039
-  _globals['_GETEXPORTRESPONSE_STATUS']._serialized_end=2148
-  _globals['_DELETEACCOUNTREQUEST']._serialized_start=2150
-  _globals['_DELETEACCOUNTREQUEST']._serialized_end=2276
-  _globals['_DELETEACCOUNTRESPONSE']._serialized_start=2278
-  _globals['_DELETEACCOUNTRESPONSE']._serialized_end=2356
-  _globals['_MEMBERSERVICE']._serialized_start=2359
-  _globals['_MEMBERSERVICE']._serialized_end=3183
+  _globals['_GETMEREQUEST']._serialized_start=204
+  _globals['_GETMEREQUEST']._serialized_end=218
+  _globals['_GETMERESPONSE']._serialized_start=220
+  _globals['_GETMERESPONSE']._serialized_end=266
+  _globals['_UPDATEMEREQUEST']._serialized_start=269
+  _globals['_UPDATEMEREQUEST']._serialized_end=518
+  _globals['_UPDATEMERESPONSE']._serialized_start=520
+  _globals['_UPDATEMERESPONSE']._serialized_end=569
+  _globals['_SETINTERESTSREQUEST']._serialized_start=572
+  _globals['_SETINTERESTSREQUEST']._serialized_end=761
+  _globals['_SETINTERESTSRESPONSE']._serialized_start=763
+  _globals['_SETINTERESTSRESPONSE']._serialized_end=816
+  _globals['_GETHISTORYREQUEST']._serialized_start=818
+  _globals['_GETHISTORYREQUEST']._serialized_end=942
+  _globals['_GETHISTORYRESPONSE']._serialized_start=945
+  _globals['_GETHISTORYRESPONSE']._serialized_end=1119
+  _globals['_LISTSAVEDREQUEST']._serialized_start=1121
+  _globals['_LISTSAVEDREQUEST']._serialized_end=1183
+  _globals['_SAVEDITEM']._serialized_start=1186
+  _globals['_SAVEDITEM']._serialized_end=1325
+  _globals['_LISTSAVEDRESPONSE']._serialized_start=1327
+  _globals['_LISTSAVEDRESPONSE']._serialized_end=1435
+  _globals['_SAVEITEMREQUEST']._serialized_start=1437
+  _globals['_SAVEITEMREQUEST']._serialized_end=1527
+  _globals['_SAVEITEMRESPONSE']._serialized_start=1529
+  _globals['_SAVEITEMRESPONSE']._serialized_end=1589
+  _globals['_UNSAVEITEMREQUEST']._serialized_start=1591
+  _globals['_UNSAVEITEMREQUEST']._serialized_end=1653
+  _globals['_UNSAVEITEMRESPONSE']._serialized_start=1655
+  _globals['_UNSAVEITEMRESPONSE']._serialized_end=1675
+  _globals['_REQUESTEXPORTREQUEST']._serialized_start=1677
+  _globals['_REQUESTEXPORTREQUEST']._serialized_end=1699
+  _globals['_REQUESTEXPORTRESPONSE']._serialized_start=1701
+  _globals['_REQUESTEXPORTRESPONSE']._serialized_end=1827
+  _globals['_GETEXPORTREQUEST']._serialized_start=1829
+  _globals['_GETEXPORTREQUEST']._serialized_end=1887
+  _globals['_GETEXPORTRESPONSE']._serialized_start=1890
+  _globals['_GETEXPORTRESPONSE']._serialized_end=2230
+  _globals['_GETEXPORTRESPONSE_STATUS']._serialized_start=2121
+  _globals['_GETEXPORTRESPONSE_STATUS']._serialized_end=2230
+  _globals['_DELETEACCOUNTREQUEST']._serialized_start=2232
+  _globals['_DELETEACCOUNTREQUEST']._serialized_end=2358
+  _globals['_DELETEACCOUNTRESPONSE']._serialized_start=2360
+  _globals['_DELETEACCOUNTRESPONSE']._serialized_end=2438
+  _globals['_MEMBERSERVICE']._serialized_start=2441
+  _globals['_MEMBERSERVICE']._serialized_end=3265
 # @@protoc_insertion_point(module_scope)

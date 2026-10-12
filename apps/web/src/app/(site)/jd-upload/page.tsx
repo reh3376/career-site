@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { ActivityBeacon } from "@/components/activity-beacon";
 import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
 import { getSessionUser } from "@/lib/session-user";
@@ -27,6 +28,7 @@ export default async function JdUploadPage() {
   const weakEdge = bands.weak.toFixed(2);
   return (
     <div className="mx-auto max-w-3xl px-6 py-16 sm:px-10 sm:py-24">
+      <ActivityBeacon contentId="jd-upload" />
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
         for hiring managers
       </p>

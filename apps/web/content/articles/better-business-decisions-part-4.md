@@ -1,4 +1,6 @@
 ---
+id: "better-business-decisions-part-4"
+type: "article"
 title: "Better Business Decisions Require Better Information — Part 4"
 subtitle: "The Technical Review Standard"
 author: "Roger E. Henley II"

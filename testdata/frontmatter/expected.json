@@ -1,0 +1,12 @@
+{
+  "title": "A quoted title",
+  "subtitle": "single quoted",
+  "plain": "unquoted value",
+  "with_colon": "Part 1: the setup",
+  "numeric": "42",
+  "hyphen-key": "allowed",
+  "lone_quote": "\"",
+  "trailing": "spaces outside the quotes",
+  "tags": "",
+  "empty": ""
+}

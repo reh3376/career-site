@@ -472,7 +472,23 @@ type GetHistoryResponse struct {
 	// Events, newest first, with `content` populated where applicable.
 	Events []*ActivityEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
 	// Pagination.
-	Page          *PageResponse `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	Page *PageResponse `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	// The welcome-back summary for `/home` (FR-HIST-02).
+	//
+	// The message is HomeService.GetHome's, reused rather than redefined.
+	// That service was specified field for field and never implemented or
+	// mounted: there is no handler for it anywhere, and server.go does not
+	// route it. Rather than build a second service for one panel, the
+	// panel is served from the RPC `/home` already calls, and the shape
+	// stays the one the contract already described.
+	//
+	// Three of WelcomeBack's six fields are populated. `recent_topics`
+	// needs instrumentation on the chat send path that does not exist;
+	// `new_since_last_visit` needs reliable per-item update timestamps,
+	// which the content model does not carry (articles date to a bare
+	// year); `resume_conversation_id` is a separate feature. Each is left
+	// unset rather than filled with a guess.
+	WelcomeBack   *WelcomeBack `protobuf:"bytes,3,opt,name=welcome_back,json=welcomeBack,proto3" json:"welcome_back,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -517,6 +533,13 @@ func (x *GetHistoryResponse) GetEvents() []*ActivityEvent {
 func (x *GetHistoryResponse) GetPage() *PageResponse {
 	if x != nil {
 		return x.Page
+	}
+	return nil
+}
+
+func (x *GetHistoryResponse) GetWelcomeBack() *WelcomeBack {
+	if x != nil {
+		return x.WelcomeBack
 	}
 	return nil
 }
@@ -1187,7 +1210,7 @@ var File_career_v1_member_proto protoreflect.FileDescriptor
 
 const file_career_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x16career/v1/member.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16career/v1/common.proto\x1a\x17career/v1/options.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x0e\n" +
+	"\x16career/v1/member.proto\x12\tcareer.v1\x1a\x1bbuf/validate/validate.proto\x1a\x16career/v1/common.proto\x1a\x14career/v1/home.proto\x1a\x17career/v1/options.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x0e\n" +
 	"\fGetMeRequest\".\n" +
 	"\rGetMeResponse\x12\x1d\n" +
 	"\x02me\x18\x01 \x01(\v2\r.career.v1.MeR\x02me\"\xf9\x01\n" +
@@ -1209,10 +1232,11 @@ const file_career_v1_member_proto_rawDesc = "" +
 	"\x02me\x18\x01 \x01(\v2\r.career.v1.MeR\x02me\"|\n" +
 	"\x11GetHistoryRequest\x12;\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.career.v1.ActivityEvent.KindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x12*\n" +
-	"\x04page\x18\x02 \x01(\v2\x16.career.v1.PageRequestR\x04page\"s\n" +
+	"\x04page\x18\x02 \x01(\v2\x16.career.v1.PageRequestR\x04page\"\xae\x01\n" +
 	"\x12GetHistoryResponse\x120\n" +
 	"\x06events\x18\x01 \x03(\v2\x18.career.v1.ActivityEventR\x06events\x12+\n" +
-	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\">\n" +
+	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\x129\n" +
+	"\fwelcome_back\x18\x03 \x01(\v2\x16.career.v1.WelcomeBackR\vwelcomeBack\">\n" +
 	"\x10ListSavedRequest\x12*\n" +
 	"\x04page\x18\x01 \x01(\v2\x16.career.v1.PageRequestR\x04page\"\x8b\x01\n" +
 	"\tSavedItem\x123\n" +
@@ -1320,8 +1344,9 @@ var file_career_v1_member_proto_goTypes = []any{
 	(*PageRequest)(nil),           // 27: career.v1.PageRequest
 	(*ActivityEvent)(nil),         // 28: career.v1.ActivityEvent
 	(*PageResponse)(nil),          // 29: career.v1.PageResponse
-	(*ContentSummary)(nil),        // 30: career.v1.ContentSummary
-	(*timestamppb.Timestamp)(nil), // 31: google.protobuf.Timestamp
+	(*WelcomeBack)(nil),           // 30: career.v1.WelcomeBack
+	(*ContentSummary)(nil),        // 31: career.v1.ContentSummary
+	(*timestamppb.Timestamp)(nil), // 32: google.protobuf.Timestamp
 }
 var file_career_v1_member_proto_depIdxs = []int32{
 	22, // 0: career.v1.GetMeResponse.me:type_name -> career.v1.Me
@@ -1334,41 +1359,42 @@ var file_career_v1_member_proto_depIdxs = []int32{
 	27, // 7: career.v1.GetHistoryRequest.page:type_name -> career.v1.PageRequest
 	28, // 8: career.v1.GetHistoryResponse.events:type_name -> career.v1.ActivityEvent
 	29, // 9: career.v1.GetHistoryResponse.page:type_name -> career.v1.PageResponse
-	27, // 10: career.v1.ListSavedRequest.page:type_name -> career.v1.PageRequest
-	30, // 11: career.v1.SavedItem.content:type_name -> career.v1.ContentSummary
-	31, // 12: career.v1.SavedItem.saved_at:type_name -> google.protobuf.Timestamp
-	10, // 13: career.v1.ListSavedResponse.items:type_name -> career.v1.SavedItem
-	29, // 14: career.v1.ListSavedResponse.page:type_name -> career.v1.PageResponse
-	10, // 15: career.v1.SaveItemResponse.item:type_name -> career.v1.SavedItem
-	31, // 16: career.v1.RequestExportResponse.estimated_ready_at:type_name -> google.protobuf.Timestamp
-	0,  // 17: career.v1.GetExportResponse.status:type_name -> career.v1.GetExportResponse.Status
-	31, // 18: career.v1.GetExportResponse.download_url_expires_at:type_name -> google.protobuf.Timestamp
-	31, // 19: career.v1.DeleteAccountResponse.purge_by:type_name -> google.protobuf.Timestamp
-	1,  // 20: career.v1.MemberService.GetMe:input_type -> career.v1.GetMeRequest
-	3,  // 21: career.v1.MemberService.UpdateMe:input_type -> career.v1.UpdateMeRequest
-	5,  // 22: career.v1.MemberService.SetInterests:input_type -> career.v1.SetInterestsRequest
-	7,  // 23: career.v1.MemberService.GetHistory:input_type -> career.v1.GetHistoryRequest
-	9,  // 24: career.v1.MemberService.ListSaved:input_type -> career.v1.ListSavedRequest
-	12, // 25: career.v1.MemberService.SaveItem:input_type -> career.v1.SaveItemRequest
-	14, // 26: career.v1.MemberService.UnsaveItem:input_type -> career.v1.UnsaveItemRequest
-	16, // 27: career.v1.MemberService.RequestExport:input_type -> career.v1.RequestExportRequest
-	18, // 28: career.v1.MemberService.GetExport:input_type -> career.v1.GetExportRequest
-	20, // 29: career.v1.MemberService.DeleteAccount:input_type -> career.v1.DeleteAccountRequest
-	2,  // 30: career.v1.MemberService.GetMe:output_type -> career.v1.GetMeResponse
-	4,  // 31: career.v1.MemberService.UpdateMe:output_type -> career.v1.UpdateMeResponse
-	6,  // 32: career.v1.MemberService.SetInterests:output_type -> career.v1.SetInterestsResponse
-	8,  // 33: career.v1.MemberService.GetHistory:output_type -> career.v1.GetHistoryResponse
-	11, // 34: career.v1.MemberService.ListSaved:output_type -> career.v1.ListSavedResponse
-	13, // 35: career.v1.MemberService.SaveItem:output_type -> career.v1.SaveItemResponse
-	15, // 36: career.v1.MemberService.UnsaveItem:output_type -> career.v1.UnsaveItemResponse
-	17, // 37: career.v1.MemberService.RequestExport:output_type -> career.v1.RequestExportResponse
-	19, // 38: career.v1.MemberService.GetExport:output_type -> career.v1.GetExportResponse
-	21, // 39: career.v1.MemberService.DeleteAccount:output_type -> career.v1.DeleteAccountResponse
-	30, // [30:40] is the sub-list for method output_type
-	20, // [20:30] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	30, // 10: career.v1.GetHistoryResponse.welcome_back:type_name -> career.v1.WelcomeBack
+	27, // 11: career.v1.ListSavedRequest.page:type_name -> career.v1.PageRequest
+	31, // 12: career.v1.SavedItem.content:type_name -> career.v1.ContentSummary
+	32, // 13: career.v1.SavedItem.saved_at:type_name -> google.protobuf.Timestamp
+	10, // 14: career.v1.ListSavedResponse.items:type_name -> career.v1.SavedItem
+	29, // 15: career.v1.ListSavedResponse.page:type_name -> career.v1.PageResponse
+	10, // 16: career.v1.SaveItemResponse.item:type_name -> career.v1.SavedItem
+	32, // 17: career.v1.RequestExportResponse.estimated_ready_at:type_name -> google.protobuf.Timestamp
+	0,  // 18: career.v1.GetExportResponse.status:type_name -> career.v1.GetExportResponse.Status
+	32, // 19: career.v1.GetExportResponse.download_url_expires_at:type_name -> google.protobuf.Timestamp
+	32, // 20: career.v1.DeleteAccountResponse.purge_by:type_name -> google.protobuf.Timestamp
+	1,  // 21: career.v1.MemberService.GetMe:input_type -> career.v1.GetMeRequest
+	3,  // 22: career.v1.MemberService.UpdateMe:input_type -> career.v1.UpdateMeRequest
+	5,  // 23: career.v1.MemberService.SetInterests:input_type -> career.v1.SetInterestsRequest
+	7,  // 24: career.v1.MemberService.GetHistory:input_type -> career.v1.GetHistoryRequest
+	9,  // 25: career.v1.MemberService.ListSaved:input_type -> career.v1.ListSavedRequest
+	12, // 26: career.v1.MemberService.SaveItem:input_type -> career.v1.SaveItemRequest
+	14, // 27: career.v1.MemberService.UnsaveItem:input_type -> career.v1.UnsaveItemRequest
+	16, // 28: career.v1.MemberService.RequestExport:input_type -> career.v1.RequestExportRequest
+	18, // 29: career.v1.MemberService.GetExport:input_type -> career.v1.GetExportRequest
+	20, // 30: career.v1.MemberService.DeleteAccount:input_type -> career.v1.DeleteAccountRequest
+	2,  // 31: career.v1.MemberService.GetMe:output_type -> career.v1.GetMeResponse
+	4,  // 32: career.v1.MemberService.UpdateMe:output_type -> career.v1.UpdateMeResponse
+	6,  // 33: career.v1.MemberService.SetInterests:output_type -> career.v1.SetInterestsResponse
+	8,  // 34: career.v1.MemberService.GetHistory:output_type -> career.v1.GetHistoryResponse
+	11, // 35: career.v1.MemberService.ListSaved:output_type -> career.v1.ListSavedResponse
+	13, // 36: career.v1.MemberService.SaveItem:output_type -> career.v1.SaveItemResponse
+	15, // 37: career.v1.MemberService.UnsaveItem:output_type -> career.v1.UnsaveItemResponse
+	17, // 38: career.v1.MemberService.RequestExport:output_type -> career.v1.RequestExportResponse
+	19, // 39: career.v1.MemberService.GetExport:output_type -> career.v1.GetExportResponse
+	21, // 40: career.v1.MemberService.DeleteAccount:output_type -> career.v1.DeleteAccountResponse
+	31, // [31:41] is the sub-list for method output_type
+	21, // [21:31] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_member_proto_init() }
@@ -1377,6 +1403,7 @@ func file_career_v1_member_proto_init() {
 		return
 	}
 	file_career_v1_common_proto_init()
+	file_career_v1_home_proto_init()
 	file_career_v1_options_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{

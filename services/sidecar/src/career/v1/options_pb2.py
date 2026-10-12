@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import descriptor_pb2 as google_dot_protobuf_dot_descriptor__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63\x61reer/v1/options.proto\x12\tcareer.v1\x1a google/protobuf/descriptor.proto*k\n\tAuthLevel\x12\x1a\n\x16\x41UTH_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n\x11\x41UTH_LEVEL_PUBLIC\x10\x01\x12\x15\n\x11\x41UTH_LEVEL_MEMBER\x10\x02\x12\x14\n\x10\x41UTH_LEVEL_ADMIN\x10\x03:J\n\x04\x61uth\x12\x1e.google.protobuf.MethodOptions\x18\xd0\x86\x03 \x01(\x0e\x32\x14.career.v1.AuthLevelR\x04\x61uth:K\n\x10\x61llow_unverified\x12\x1e.google.protobuf.MethodOptions\x18\xd1\x86\x03 \x01(\x08R\x0f\x61llowUnverified:W\n\x15rate_limit_per_minute\x12\x1e.google.protobuf.MethodOptions\x18\xd2\x86\x03 \x01(\rB\x02\x18\x01R\x12rateLimitPerMinute:A\n\tmfa_fresh\x12\x1e.google.protobuf.MethodOptions\x18\xd3\x86\x03 \x01(\x08\x42\x02\x18\x01R\x08mfaFreshB\xa6\x01\n\rcom.career.v1B\x0cOptionsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63\x61reer/v1/options.proto\x12\tcareer.v1\x1a google/protobuf/descriptor.proto*k\n\tAuthLevel\x12\x1a\n\x16\x41UTH_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n\x11\x41UTH_LEVEL_PUBLIC\x10\x01\x12\x15\n\x11\x41UTH_LEVEL_MEMBER\x10\x02\x12\x14\n\x10\x41UTH_LEVEL_ADMIN\x10\x03*Y\n\nAuditLevel\x12\x1b\n\x17\x41UDIT_LEVEL_UNSPECIFIED\x10\x00\x12\x14\n\x10\x41UDIT_LEVEL_NONE\x10\x01\x12\x18\n\x14\x41UDIT_LEVEL_RECORDED\x10\x02:J\n\x04\x61uth\x12\x1e.google.protobuf.MethodOptions\x18\xd0\x86\x03 \x01(\x0e\x32\x14.career.v1.AuthLevelR\x04\x61uth:K\n\x10\x61llow_unverified\x12\x1e.google.protobuf.MethodOptions\x18\xd1\x86\x03 \x01(\x08R\x0f\x61llowUnverified:W\n\x15rate_limit_per_minute\x12\x1e.google.protobuf.MethodOptions\x18\xd2\x86\x03 \x01(\rB\x02\x18\x01R\x12rateLimitPerMinute:A\n\tmfa_fresh\x12\x1e.google.protobuf.MethodOptions\x18\xd3\x86\x03 \x01(\x08\x42\x02\x18\x01R\x08mfaFresh:M\n\x05\x61udit\x12\x1e.google.protobuf.MethodOptions\x18\xd4\x86\x03 \x01(\x0e\x32\x15.career.v1.AuditLevelR\x05\x61uditB\xa6\x01\n\rcom.career.v1B\x0cOptionsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03\x43XX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15\x43\x61reer\\V1\\GPBMetadata\xea\x02\nCareer::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,4 +39,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['mfa_fresh']._serialized_options = b'\030\001'
   _globals['_AUTHLEVEL']._serialized_start=72
   _globals['_AUTHLEVEL']._serialized_end=179
+  _globals['_AUDITLEVEL']._serialized_start=181
+  _globals['_AUDITLEVEL']._serialized_end=270
 # @@protoc_insertion_point(module_scope)

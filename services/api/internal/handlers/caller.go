@@ -76,3 +76,12 @@ func RequireCaller(ctx context.Context) (*users.User, error) {
 	}
 	return u, nil
 }
+
+// HashClientIP exposes the service's one client-address hashing scheme
+// so other packages record a comparable value.
+//
+// The audit interceptor is the caller. Letting it hash addresses its own
+// way would give audit_log.ip_hash a different salt and truncation from
+// events.ip_hash, and the two columns would look joinable while never
+// matching, which is worse than not recording the address at all.
+func HashClientIP(addr string) []byte { return hashIPBytes(addr) }

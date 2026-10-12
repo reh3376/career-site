@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/auditpolicy"
 	"github.com/reh3376/career-site/services/api/internal/auth"
 	"github.com/reh3376/career-site/services/api/internal/authpolicy"
 	"github.com/reh3376/career-site/services/api/internal/chat"
@@ -63,6 +64,19 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("auth policy loaded", slog.String("policy", authPolicy.Summary()))
+
+	// The audit policy, same shape and for the same reason. FR-ADM-09
+	// says every admin action is recorded; audit_log held zero rows for
+	// a year while three requirement rows said otherwise. The contract
+	// now has to say, per admin method, whether a call is recorded, and
+	// this refuses to start when one does not.
+	auditPolicy, err := auditpolicy.Build()
+	if err != nil {
+		log.Error("audit policy incomplete, refusing to start",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	log.Info("audit policy loaded", slog.String("policy", auditPolicy.Summary()))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -240,9 +254,26 @@ func main() {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	// The audit interceptor. Its actor comes from the context the auth
+	// interceptor just populated, which is why it is mounted inside that
+	// one; see server.go. The IP hash deliberately reuses the handlers'
+	// scheme so audit_log.ip_hash and events.ip_hash are comparable.
+	auditWriter := auditSink{repo: userRepo}
+	auditInterceptor := auditpolicy.NewInterceptor(
+		auditPolicy, auditWriter,
+		func(ctx context.Context) (int64, bool) {
+			if u := handlers.CallerFromContext(ctx); u != nil {
+				return u.ID, true
+			}
+			return 0, false
+		},
+		handlers.HashClientIP,
+		log,
+	)
 	log.Info("auth interceptor ready, enforcing the declared level")
 
-	memberHandler := handlers.NewMember(authHandler, userRepo)
+	memberHandler := handlers.NewMember(log, authHandler, userRepo)
 	contactHandler := handlers.NewContact(
 		log, userRepo, authHandler, mailer,
 		cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL,
@@ -513,21 +544,22 @@ func main() {
 	}
 
 	srv := server.New(cfg, log, server.Deps{
-		AuthPolicy:      authPolicy,
-		AuthInterceptor: authInterceptor,
-		Sidecar:         sc,
-		DB:              pool,
-		Auth:            authHandler,
-		Member:          memberHandler,
-		Contact:         contactHandler,
-		Decision:        decisionHandler,
-		Admin:           adminHandler,
-		Activity:        activityHandler,
-		Jd:              jdHandler,
-		Meetings:        meetingsHandler,
-		Chat:            chatHandler,
-		Events:          eventsHandler,
-		DecisionTest:    decisionTestHandler,
+		AuthPolicy:       authPolicy,
+		AuthInterceptor:  authInterceptor,
+		AuditInterceptor: auditInterceptor,
+		Sidecar:          sc,
+		DB:               pool,
+		Auth:             authHandler,
+		Member:           memberHandler,
+		Contact:          contactHandler,
+		Decision:         decisionHandler,
+		Admin:            adminHandler,
+		Activity:         activityHandler,
+		Jd:               jdHandler,
+		Meetings:         meetingsHandler,
+		Chat:             chatHandler,
+		Events:           eventsHandler,
+		DecisionTest:     decisionTestHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})
@@ -623,4 +655,21 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("shutdown complete")
+}
+
+// auditSink adapts the user repository to auditpolicy.Writer. The two
+// packages are kept apart on purpose: auditpolicy knows about Connect
+// and nothing about SQL, the repository knows about SQL and nothing
+// about Connect, and this is the one place that knows both.
+type auditSink struct{ repo *users.Repo }
+
+func (a auditSink) WriteAudit(ctx context.Context, e auditpolicy.Entry) error {
+	return a.repo.WriteAuditEntry(ctx, users.AuditEntry{
+		ActorUserID: e.ActorUserID,
+		Action:      e.Action,
+		TargetType:  e.TargetType,
+		TargetID:    e.TargetID,
+		Payload:     e.Payload,
+		IPHash:      e.IPHash,
+	})
 }

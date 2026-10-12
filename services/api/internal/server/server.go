@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
+	"github.com/reh3376/career-site/services/api/internal/auditpolicy"
 	"github.com/reh3376/career-site/services/api/internal/authpolicy"
 	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/config"
@@ -23,25 +24,26 @@ import (
 )
 
 type Server struct {
-	cfg      config.Config
-	log      *slog.Logger
-	http     *http.Server
-	system   *handlers.System
-	auth     *handlers.Auth
-	member   *handlers.Member
-	contact  *handlers.Contact
-	decision *handlers.AdminDecision
-	admin    *handlers.Admin
-	activity *handlers.Activity
-	jd       *handlers.Jd
-	meetings *handlers.Meetings
-	chat     *handlers.Chat
-	events   *handlers.Events
-	dtest    *handlers.DecisionTest
-	sidecar  *sidecar.Client
-	db       *db.Pool
-	policy   authpolicy.Map
-	authIntc *authpolicy.Interceptor
+	cfg       config.Config
+	log       *slog.Logger
+	http      *http.Server
+	system    *handlers.System
+	auth      *handlers.Auth
+	member    *handlers.Member
+	contact   *handlers.Contact
+	decision  *handlers.AdminDecision
+	admin     *handlers.Admin
+	activity  *handlers.Activity
+	jd        *handlers.Jd
+	meetings  *handlers.Meetings
+	chat      *handlers.Chat
+	events    *handlers.Events
+	dtest     *handlers.DecisionTest
+	sidecar   *sidecar.Client
+	db        *db.Pool
+	policy    authpolicy.Map
+	authIntc  *authpolicy.Interceptor
+	auditIntc *auditpolicy.Interceptor
 }
 
 // Deps carries the process-level singletons the server wires into handlers.
@@ -83,28 +85,34 @@ type Deps struct {
 	// service mounted without it, which is the pre-S3 behaviour and is
 	// logged as such rather than passed over in silence.
 	AuthInterceptor *authpolicy.Interceptor
+	// AuditInterceptor writes one audit_log row per call to a procedure
+	// the contract declares AUDIT_LEVEL_RECORDED (FR-ADM-09). Nil
+	// records nothing, which is the state the service was in for a
+	// year, so it is logged as a warning rather than passed over.
+	AuditInterceptor *auditpolicy.Interceptor
 }
 
 func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 	s := &Server{
-		cfg:      cfg,
-		log:      log,
-		system:   handlers.NewSystem(),
-		auth:     deps.Auth,
-		member:   deps.Member,
-		contact:  deps.Contact,
-		decision: deps.Decision,
-		admin:    deps.Admin,
-		activity: deps.Activity,
-		jd:       deps.Jd,
-		meetings: deps.Meetings,
-		chat:     deps.Chat,
-		events:   deps.Events,
-		dtest:    deps.DecisionTest,
-		sidecar:  deps.Sidecar,
-		db:       deps.DB,
-		policy:   deps.AuthPolicy,
-		authIntc: deps.AuthInterceptor,
+		cfg:       cfg,
+		log:       log,
+		system:    handlers.NewSystem(),
+		auth:      deps.Auth,
+		member:    deps.Member,
+		contact:   deps.Contact,
+		decision:  deps.Decision,
+		admin:     deps.Admin,
+		activity:  deps.Activity,
+		jd:        deps.Jd,
+		meetings:  deps.Meetings,
+		chat:      deps.Chat,
+		events:    deps.Events,
+		dtest:     deps.DecisionTest,
+		sidecar:   deps.Sidecar,
+		db:        deps.DB,
+		policy:    deps.AuthPolicy,
+		authIntc:  deps.AuthInterceptor,
+		auditIntc: deps.AuditInterceptor,
 	}
 	if deps.Users != nil {
 		s.system.SetUsers(log, deps.Users)
@@ -158,6 +166,18 @@ func (s *Server) routes() http.Handler {
 	} else {
 		s.log.Warn("no auth interceptor: every procedure is enforced only " +
 			"by whatever check its own handler happens to make")
+	}
+	// After the auth interceptor, deliberately. Connect runs the first
+	// option's interceptor outermost, so auth resolves the caller and
+	// puts it in the context before this reads it back out; swapping the
+	// two would record every admin action with a null actor and nothing
+	// would look wrong.
+	if s.auditIntc != nil {
+		base = append(base, connect.WithInterceptors(s.auditIntc))
+		s.log.Info("audit interceptor installed, recording the declared procedures")
+	} else {
+		s.log.Warn("no audit interceptor: audit_log receives nothing, " +
+			"and FR-ADM-09 is a promise again")
 	}
 
 	// `Connect-Protocol-Version: 1` required, which is a second layer of

@@ -29,6 +29,7 @@ const NAV = [
   { href: "/admin/gate", label: "Gate" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/db", label: "DB query" },
+  { href: "/admin/audit", label: "Audit log" },
 ];
 
 // buildVersion reads the version the API reports. Web and api roll out

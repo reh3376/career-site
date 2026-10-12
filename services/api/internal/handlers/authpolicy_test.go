@@ -97,9 +97,11 @@ var declaredNotImplemented = map[string]bool{
 	"ContactService.GetContactOptions": true,
 
 	// Admin surfaces declared ahead of the console that would use them.
+	// GetAudit left this list on 2026-10-12: it was declared with the
+	// comment "Lists audit-log entries" and no handler, against a table
+	// holding zero rows, which is the whole of FR-ADM-09 in miniature.
 	"AdminService.AddMemberNote":         true,
 	"AdminService.GetAnalytics":          true,
-	"AdminService.GetAudit":              true,
 	"AdminService.GetCorpusStatus":       true,
 	"AdminService.GetMemberConversation": true,
 	"AdminService.GetPersona":            true,

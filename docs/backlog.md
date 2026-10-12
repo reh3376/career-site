@@ -1178,28 +1178,6 @@ Still open:
   from 501 to 401 when enforcement came on. That is the only evidence
   that distinguishes the interceptor working from it doing nothing.
 
-- **`audit_log` has never been written to.** Found 2026-10-12. The table
-  has existed since migration 00001, no code path inserts into it, and
-  production holds 0 rows.
-
-  FR-ADM-09 ("All admin actions shall be recorded in the audit log") is
-  marked partially shipped on the strength of registry events, which do
-  cover some actions. FR-ADM-11 promises every mutation on the access
-  surface is written to `audit_log`; none is. `ExtendAccess` accepts a
-  `reason` and discards it, which I relied on in conversation on
-  2026-10-12 before checking — the reactivation reason I said was "in the
-  audit log" went nowhere.
-
-  **Decided 2026-10-12 (D-31 / ADR 0031): write to it.** The reason
-  fields already exist on the mutating admin paths and are being
-  discarded, so the work is the insert and the read surface, not the
-  plumbing. The alternative — dropping the table and the three
-  requirements that promise it — was rejected because the admin surface
-  is where a wrong decision is least recoverable.
-
-  The easy way to do this badly is a log nobody reads. Whatever lands
-  should be reachable from the console, or it is another empty control.
-
 - **Registration still has no progressive delay, and both limiters die
   with the process.** Left open deliberately when Turnstile shipped
   2026-10-12 (FR-AUTH-09, FR-CNT-22 both closed). `Register` now has a
@@ -1268,6 +1246,31 @@ Still open:
   (lands with Phase 4).
 
 ## 6. Site and content
+
+- **Photos are not ingested into the corpus, and that is currently a
+  default rather than a decision.** Found 2026-10-12 while building the
+  content schema. `publicCorpusSubdirs`
+  (`services/api/internal/handlers/admin.go`) names `articles` and
+  `other`; the public reindex walks that map rather than the directory
+  listing, so `photos/` is never read. Each photo carries a `caption`
+  and a `context` line, which is real prose about Roger's work that Ask
+  Roger and the JD reviewer cannot currently see. Adding the entry is
+  one line. It is left out of the content-schema change deliberately,
+  because it changes what the assistant can retrieve, which is a
+  behaviour change and should be chosen rather than slipped in
+  alongside a validation pass. Three of the nine photos are
+  `visibility: member`, so the corpus visibility mapping needs deciding
+  with it.
+
+- **The content schema covers 8 of FR-CNT-17's 11 fields.** Shipped
+  2026-10-12. `tracks`, `related` and `summary` are deliberately not
+  added: nothing reads them. `tracks` in particular waits on FR-PROF-03,
+  which is the only requirement that would consume per-track weights and
+  is not built, so adding the field now would mean guessing its shape
+  (range, tie-breaking) with no consumer to check it against, and
+  repeating the `hero_tracks` pattern of a field parsed and typed on
+  every photo with nothing reading it. The FSD rows name all three as
+  deferred rather than leaving the gap implied.
 
 - **Anonymous access. SHIPPED 2026-09-22.** The policy is one list,
   `apps/web/src/lib/public-routes.ts`, shared by the proxy, robots.txt

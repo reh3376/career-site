@@ -9,8 +9,8 @@ shipped* is a row the FSD marks shipped with a hole in it, and those were
 invisible until the documentation audit on 2026-10-12 went looking:
 `FR-CNT-22` promised Turnstile on anonymous contact and enforced none,
 `FR-AUTH-09` promised it on registration and had no check at all (both
-closed 2026-10-12), `FR-ADM-09` promises an audit log whose table has
-never been written to.
+closed 2026-10-12), `FR-ADM-09` promised an audit log whose table had
+never been written to (closed 2026-10-12).
 A gap behind a "Shipped" marker is likelier to bite than something nobody
 started, because nobody is looking for it.
 
@@ -69,71 +69,62 @@ promise, so they are tracked in `docs/backlog.md` rather than held here.
 is gone; the anonymous path verifies the token through the same client as
 `Register`. Nothing else in the row changed.
 
-### 2. FR-ADM-09 · Must
+### 2. FR-ADM-09 · Must — CLOSED 2026-10-12
 
 > All admin actions shall be recorded in the audit log.
 
-**FSD status today:** Partially shipped, and the gap is wider than it reads. Admin actions emit registry events (`admin.decision_reviewed`, `admin.qa_entry_*`, `admin.rescore`, `admin.jd_limit_changed`), which is real coverage of *some* actions. The `audit_log` table has existed since migration 00001 and nothing in the…
+**Closed.** Every ADMIN method now declares whether it is recorded, the
+server refuses to start if one does not, and an interceptor writes the
+row. 42 of 81 admin procedures are recorded. The read surface at
+`/admin/audit` ships with it, because a write-only table would have been
+the next empty control. The lost-actor bug on approve/decline is fixed
+in the same change. Retention was decided rather than deferred:
+`audit_log` is never anonymised, unlike `events`.
 
-**Why here:** D-31 settled it: write the table. The reason fields already exist on the mutating paths and are discarded.
+### 3. FR-CNT-16 · Must — CLOSED 2026-10-12
 
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed.** The validation half of FR-CNT-16 now exists as
+`scripts/check_content.py`, wired into CI before the build, with a
+schema authored from the content that exists rather than from §7.2.
+`id` and `type` were added everywhere. `tracks`, `related` and
+`summary` are deliberately not added and are named as deferred in the
+FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 
-### 3. FR-CNT-16 · Must
+### 4. FR-CNT-17 · Must — CLOSED 2026-10-12
 
-> Content model. All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time.
+**Closed.** The validation half of FR-CNT-16 now exists as
+`scripts/check_content.py`, wired into CI before the build, with a
+schema authored from the content that exists rather than from §7.2.
+`id` and `type` were added everywhere. `tracks`, `related` and
+`summary` are deliberately not added and are named as deferred in the
+FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 
-**FSD status today:** Marked Shipped until 2026-10-02, which overstated it: the storage half is done, the validation half is not. All content is Markdown with front matter under `apps/web/content/`, but nothing validates that front matter at build time. `packages/schema/` was deleted on 2026-10-02 (§7.2) because it was…
+### 5. FR-HIST-02 · Must — CLOSED 2026-10-12
 
-**Why here:** Same shape as buf.validate: a schema nothing applies. packages/schema was deleted 2026-10-02 as unused.
+**Closed for two of the four elements.** Last-visit date and
+recently-viewed items now render on `/home`. The blocker was
+instrumentation: `/home` was the only page recording a view, so there
+was one distinct content id in the entire member history. Topics asked
+about and "new since last visit" are named as deferred in the FSD row,
+with what each needs.
 
-- **Keep / drop / defer:**
-- **Depends on:**
+### 6. FR-ADM-03 · Must — CLOSED 2026-10-12
 
-### 4. FR-CNT-17 · Must
+**Closed for three of the four signals.** `/admin/decisions?queue=1`
+filters to down-rated answers, refusals, no-support answers and failed
+calls, and the member's rating and comment show on the row. What was
+missing was the admin query, not the rating feature: production held 9
+ratings, 3 negative, that nothing read. Escalation stays out because
+`ChatService.Escalate` has no handler to produce anything to queue.
 
-> Each content item shall carry: `id`, `slug`, `type`, `title`, `summary`, dates, `tracks` (weights), `tags`, `visibility` (`landing` or `member`), `chatbot_include`, `assets`, and `related` links.
+### 7. FR-EVAL-06 · Must — CLOSED 2026-10-12
 
-**FSD status today:** Partially shipped. Articles carry title, subtitle, date, series, part and tags. No `id` or `type` field.
-
-**Why here:** Small, and blocks anything that needs stable content identity (related links, chatbot_include, tracks).
-
-- **Keep / drop / defer:**
-- **Depends on:**
-
-### 5. FR-HIST-02 · Must
-
-> Returning members shall see a welcome-back panel: last visit date, up to three items viewed, topics asked about, and items new since the last visit.
-
-**FSD status today:** Partially shipped. `/home` shows a RECENT ACTIVITY list and what is new since last time. No last-visit date and no three-item resume list.
-
-**Why here:** Half there: /home already shows recent activity and what is new. Missing the last-visit date and the three-item resume.
-
-- **Keep / drop / defer:**
-- **Depends on:**
-
-### 6. FR-ADM-03 · Must
-
-> The admin shall have a conversation-review queue: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals.
-
-**FSD status today:** Partially shipped. `/admin/decisions` reviews and grades `decision_log`, including chat answers. Not driven by negative feedback, because FR-CHAT-14 (member rating) is not built.
-
-**Why here:** Needs verifying before costing — not yet checked against the code.
-
-- **Keep / drop / defer:**
-- **Depends on:**
-
-### 7. FR-EVAL-06 · Must
-
-> An evaluation shall not be silently destroyed by a deploy.
-
-**FSD status today:** The job runner keeps jobs in memory, so recreating the api container kills a run. `/admin/ops` (FR-ADM-19) answers whether one is in flight, which is the control today. All three services share one `IMAGE_TAG`, so there is no partial deploy that avoids this; per-service tags are in the backlog.
-
-**Why here:** Real architectural work: the job runner is in-memory. /admin/ops is the mitigation and it is a control, not a fix.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed on the "silently" reading.** The deploy now refuses while an
+evaluation is in flight, naming `--only web` as the way to ship a
+front-end change anyway. A run still does not survive a deploy;
+checkpoint and resume is the stronger reading and is designed, not
+built, in the working document. 6 of the first 15 production runs died
+this way with nothing in the deploy path looking.
 
 ### 8. FR-CNT-19 · Should
 

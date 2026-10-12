@@ -253,3 +253,83 @@ func nullIfZero32(n int32) any {
 	}
 	return int(n)
 }
+
+// WelcomeBack is the summary /home shows a returning member
+// (FR-HIST-02).
+type WelcomeBack struct {
+	// LastVisitAt is when the previous visit ended, nil on a first
+	// visit or when the member has no earlier session.
+	LastVisitAt *time.Time
+	// PreviousVisits counts distinct sessions before this one.
+	PreviousVisits int32
+	// RecentlyViewed holds up to three content ids, most recent first.
+	// These are the `id` from each content file's front matter, so the
+	// web app resolves titles and links from its own content; the API
+	// deliberately does not learn what an article is called.
+	RecentlyViewed []string
+}
+
+// homeContentID is the beacon's id for the member home page itself.
+// It is excluded from "recently viewed" because telling somebody the
+// last thing they looked at was the page they are reading is noise, and
+// for a long time it was the only instrumented page, so including it
+// would have made the panel show nothing else.
+const homeContentID = "/home"
+
+// WelcomeBackFor computes the panel in one round trip.
+//
+// A "visit" is a session, not a login: session_id is already on every
+// activity row, and counting logins would double-count a member who
+// signs in twice on one device.
+func (r *Repo) WelcomeBackFor(ctx context.Context, userID int64) (WelcomeBack, error) {
+	var out WelcomeBack
+
+	// The current session is whichever one produced the most recent
+	// event, so "previous" is every distinct session except that one,
+	// and "last visit" is when the newest of those ended.
+	const visits = `
+    WITH sessions AS (
+      SELECT session_id, max(occurred_at) AS ended_at
+        FROM activity_events
+       WHERE user_id = $1 AND session_id IS NOT NULL
+       GROUP BY session_id
+    ), ranked AS (
+      SELECT session_id, ended_at,
+             row_number() OVER (ORDER BY ended_at DESC) AS rn
+        FROM sessions
+    )
+    SELECT
+      (SELECT count(*) FROM ranked WHERE rn > 1),
+      (SELECT ended_at FROM ranked WHERE rn = 2)`
+	if err := r.pool.QueryRow(ctx, visits, userID).
+		Scan(&out.PreviousVisits, &out.LastVisitAt); err != nil {
+		return WelcomeBack{}, fmt.Errorf("welcome back visits: %w", err)
+	}
+
+	// Most recent distinct content, newest first. Across all history
+	// rather than only the previous visit: a member who looked at one
+	// article a week ago and nothing since should still see it, and
+	// scoping to the last session alone makes the panel empty for
+	// exactly the people it is meant to greet.
+	const viewed = `
+    SELECT content_id
+      FROM activity_events
+     WHERE user_id = $1 AND kind = 'view'
+       AND content_id IS NOT NULL AND content_id <> '' AND content_id <> $2
+     GROUP BY content_id
+     ORDER BY max(occurred_at) DESC
+     LIMIT 3`
+	rows, err := r.pool.Query(ctx, viewed, userID, homeContentID)
+	if err != nil {
+		return WelcomeBack{}, fmt.Errorf("welcome back viewed: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return WelcomeBack{}, fmt.Errorf("scan viewed: %w", err)
+		}
+		out.RecentlyViewed = append(out.RecentlyViewed, id)
+	}
+	return out, rows.Err()
+}

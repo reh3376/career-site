@@ -1,4 +1,6 @@
 ---
+id: "twenty-hour-shift"
+type: "photo"
 title: "Hour twenty"
 caption: "End of a twenty-hour commissioning shift."
 context: "Startups are not nine to five."

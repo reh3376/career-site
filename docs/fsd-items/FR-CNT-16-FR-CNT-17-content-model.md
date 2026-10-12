@@ -1,6 +1,87 @@
 # FR-CNT-16 + FR-CNT-17: the content model
 
-**State as of 2026-10-12.** Both requirements describe one artifact — a content model with a shared, build-time-enforced schema (CNT-16) and a defined field set every item carries (CNT-17) — and neither exists as specified. Sixteen content items (6 articles, 1 site-guide document, 9 photos) live as Markdown files with hand-authored YAML frontmatter under `apps/web/content/`, read by two independent, minimal, hand-written TypeScript parsers that each type only the two or three fields their page needs and silently discard the rest. Nothing validates frontmatter against a schema, at build time or otherwise: the one artifact that tried, `packages/schema/`, was deleted on 2026-10-02 because nothing imported it and it required six fields (`id`, `slug`, `type`, `summary`, `visibility`, `chatbot_include`) that not one committed file carried. Of the eleven fields CNT-17 lists, roughly half exist today in some form, under inconsistent names, inconsistent types, and inconsistent presence across items of the same type; `id`, `type`, `summary`, and `related` exist nowhere, and `tracks` (per-item weights) exists nowhere, which is consistent with FR-PROF-03 — the only requirement that would consume `tracks` — also being unbuilt.
+**Built 2026-10-12.** The state this was written from is kept below the
+outcome, unedited.
+
+## Outcome
+
+Decision #1 was taken as "close the validation half, skip the fields
+nothing reads". Shipped 2026-10-12.
+
+**What was built.** `scripts/check_content.py` validates every file
+under `apps/web/content/` against a per-kind schema and runs in CI
+before the build. It fails on a missing required key, an unknown key (a
+typo), a value outside the kind's enum, a non-numeric value where a
+number belongs, a `type` that disagrees with the directory, and a
+duplicate `id`. All 16 files pass. The schema is authored from the
+front matter that exists, per the 2026-10-02 deletion commit's own
+guidance, not from §7.2.
+
+**`id` and `type` added to all 16 files** and to both readers' types.
+`id` is authored and survives a rename; the slug is derived, from
+`PUBLIC_ARTICLES` for articles and from the filename for photos. That
+is the distinction FR-CNT-17 draws by listing both.
+
+**Three fields deliberately not added**, and named as deferred in the
+FSD row rather than left implied: `tracks`, `related`, `summary`.
+Nothing reads any of them. `tracks` waits on FR-PROF-03, the only
+requirement that would consume per-track weights, which is not built, so
+its shape would be guessed now with no consumer to check it against.
+`hero_tracks` is already that mistake, parsed and typed on every photo
+and read by nothing.
+
+**The parsers had drifted, which is the finding this item turned up.**
+Decision #4 of the checklist asked for either one shared parsing layer
+or a test comparing them. Both, in the end:
+
+- The two TypeScript parsers were near-identical duplicates and are now
+  one, `apps/web/src/lib/frontmatter.ts`.
+- That one, the Go walker and this script's Python parser are asserted
+  against a single fixture, `testdata/frontmatter/`.
+
+Comparing them found two real differences, neither of which mattered for
+the content committed today, which is exactly why neither was noticed:
+`articles.ts` did not normalise CRLF, so a file saved with Windows line
+endings parsed to an empty map there and a full one everywhere else; and
+it stripped a lone `"` to an empty string where the other two left it
+alone. The Go parser's comment claimed the two were "kept in sync by
+convention".
+
+**Decision #3, the three `visibility` vocabularies**, was answered by
+enforcement rather than by collapsing them. `member`/`public` gates the
+gallery, `public`/`corpus_only` gates corpus retrieval, and the FSD's
+own row says `landing`/`member`. Collapsing them would change what the
+assistant retrieves and what the gallery shows, which is a behaviour
+change and does not belong in a validation pass. The checker now refuses
+a value that is not valid for that kind, so the three stay distinct by
+enforcement instead of by nobody noticing, and the reasoning is written
+at the top of the script.
+
+**Decision #5, photos in the corpus, was deliberately not taken here.**
+Adding `photos` to `publicCorpusSubdirs` is one line, but it changes
+what Ask Roger and the JD reviewer can see, and three of the nine photos
+are `visibility: member`. It is in `docs/backlog.md` with that
+reasoning rather than slipped in alongside a schema change.
+
+**Decision #6, normalising article front matter**, was answered by
+making `author`/`series`/`part`/`tags` optional for the kind. The
+five-part series carries them and the standalone teaser post does not;
+forcing a series name onto a standalone post would be inventing data to
+satisfy a schema.
+
+**Verified by mutation, not by assumption.** A typo'd key, a bad enum
+value and a non-numeric `order` each produce a named failure; removing
+the quote-length guard or the CRLF normalisation from the TypeScript
+parser fails the parity test, and weakening the Go parser's guard fails
+the Go half.
+
+**Also corrected:** `articles.ts` pointed at "backlog item #11", which
+does not match the backlog's structure; it now names the section and
+entry.
+
+---
+
+**State as of 2026-10-12, before the build.** Both requirements describe one artifact — a content model with a shared, build-time-enforced schema (CNT-16) and a defined field set every item carries (CNT-17) — and neither exists as specified. Sixteen content items (6 articles, 1 site-guide document, 9 photos) live as Markdown files with hand-authored YAML frontmatter under `apps/web/content/`, read by two independent, minimal, hand-written TypeScript parsers that each type only the two or three fields their page needs and silently discard the rest. Nothing validates frontmatter against a schema, at build time or otherwise: the one artifact that tried, `packages/schema/`, was deleted on 2026-10-02 because nothing imported it and it required six fields (`id`, `slug`, `type`, `summary`, `visibility`, `chatbot_include`) that not one committed file carried. Of the eleven fields CNT-17 lists, roughly half exist today in some form, under inconsistent names, inconsistent types, and inconsistent presence across items of the same type; `id`, `type`, `summary`, and `related` exist nowhere, and `tracks` (per-item weights) exists nowhere, which is consistent with FR-PROF-03 — the only requirement that would consume `tracks` — also being unbuilt.
 
 ## What the FSD requires
 

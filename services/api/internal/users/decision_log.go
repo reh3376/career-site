@@ -44,6 +44,18 @@ type Decision struct {
 	// failed to decode is the one worth reading, and it used to be the
 	// only one not kept.
 	Error string
+	// RatingUp is the member's thumbs up or down on the answer this row
+	// decided, nil when they have not rated it (FR-CHAT-14). It lives on
+	// chat_messages and is joined in here rather than copied, because the
+	// member can rate long after the decision was logged.
+	//
+	// This is the signal FR-ADM-03 asks the review queue to be driven by.
+	// Rating has been collected since 2026-09-30 and nothing admin-side
+	// read it until 2026-10-12: production held 9 ratings, 3 of them
+	// negative and 3 carrying a typed comment, that no surface showed.
+	RatingUp *bool
+	// RatingComment is the member's optional note with the rating.
+	RatingComment string
 
 	HumanVerdict string
 	HumanNote    string
@@ -118,16 +130,36 @@ type DecisionFilter struct {
 	// reading, so they need a way to be found that is not scrolling
 	// past two hundred successes.
 	FailedOnly bool
-	Limit      int
+	// NeedsAttention narrows to the rows FR-ADM-03 calls a review queue:
+	// an answer the member rated down, a refusal under persona rules 6
+	// or 7, an "I don't have anything in my records" answer, or a call
+	// that failed outright.
+	//
+	// The three chat signals were all visible before this, to an admin
+	// willing to open every row and read its path. That is not a queue.
+	// A filter is the difference between data being present and being
+	// found.
+	NeedsAttention bool
+	Limit          int
 }
 
 const decisionColumns = `
-    id, kind, ref_kind, ref_id, key, model, prompt_id, prompt_version, num_ctx,
-    input, output, prompt_text, response_text,
-    prompt_tokens, completion_tokens, latency_ms, first_token_ms, created_at,
-    coalesce(human_verdict, ''), coalesce(human_note, ''), coalesce(human_answer, ''),
-    coalesce(human_dimensions, '{}'::jsonb), reviewed_by, reviewed_at,
-    coalesce(error, '')`
+    d.id, d.kind, d.ref_kind, d.ref_id, d.key, d.model, d.prompt_id, d.prompt_version, d.num_ctx,
+    d.input, d.output, d.prompt_text, d.response_text,
+    d.prompt_tokens, d.completion_tokens, d.latency_ms, d.first_token_ms, d.created_at,
+    coalesce(d.human_verdict, ''), coalesce(d.human_note, ''), coalesce(d.human_answer, ''),
+    coalesce(d.human_dimensions, '{}'::jsonb), d.reviewed_by, d.reviewed_at,
+    coalesce(d.error, ''), m.rating_up, coalesce(m.rating_comment, '')`
+
+// decisionFrom joins the member's rating onto the row that produced the
+// answer. A chat decision records ref_kind='chat_message' and ref_id =
+// chat_messages.id, so the join is exact; every other kind of decision
+// (the JD pipeline, the gate) has no chat message and gets nulls, which
+// is what a LEFT JOIN is for.
+const decisionFrom = `
+    FROM decision_log d
+    LEFT JOIN chat_messages m
+           ON d.ref_kind = 'chat_message' AND m.id = d.ref_id`
 
 // ListDecisions returns rows newest first for the review surface.
 func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision, error) {
@@ -135,28 +167,35 @@ func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision,
 	var args []any
 	if f.Kind != "" {
 		args = append(args, f.Kind)
-		where = append(where, fmt.Sprintf("kind = $%d", len(args)))
+		where = append(where, fmt.Sprintf("d.kind = $%d", len(args)))
 	}
 	if f.RefID != 0 {
 		args = append(args, f.RefID)
-		where = append(where, fmt.Sprintf("ref_id = $%d", len(args)))
+		where = append(where, fmt.Sprintf("d.ref_id = $%d", len(args)))
 	}
 	if f.UnreviewedOnly {
-		where = append(where, "reviewed_at IS NULL")
+		where = append(where, "d.reviewed_at IS NULL")
 	}
 	if f.FailedOnly {
-		where = append(where, "error <> ''")
+		where = append(where, "d.error <> ''")
+	}
+	if f.NeedsAttention {
+		where = append(where, `(
+			m.rating_up IS FALSE
+			OR d.input->>'path' IN ('`+ChatPathOutOfScope+`', '`+ChatPathNoSupport+`')
+			OR d.error <> ''
+		)`)
 	}
 	limit := f.Limit
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
 	args = append(args, limit)
-	q := "SELECT " + decisionColumns + " FROM decision_log"
+	q := "SELECT " + decisionColumns + decisionFrom
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
-	q += fmt.Sprintf(" ORDER BY id DESC LIMIT $%d", len(args))
+	q += fmt.Sprintf(" ORDER BY d.id DESC LIMIT $%d", len(args))
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list decisions: %w", err)
@@ -171,6 +210,7 @@ func (r *Repo) ListDecisions(ctx context.Context, f DecisionFilter) ([]Decision,
 			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.FirstTokenMs, &d.CreatedAt,
 			&d.HumanVerdict, &d.HumanNote, &d.HumanAnswer, &d.HumanDimensions,
 			&d.ReviewedBy, &d.ReviewedAt, &d.Error,
+			&d.RatingUp, &d.RatingComment,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}
@@ -335,11 +375,16 @@ func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decisi
 	// The training export is verdicts the owner graded, so a failed
 	// call has nothing to teach and is excluded rather than exported
 	// with an empty verdict.
-	q := "SELECT " + decisionColumns + " FROM decision_log WHERE error = ''"
+	// Same FROM as the review surface, so the column list and the scan
+	// below cannot drift from it. Building this with a bare
+	// `FROM decision_log` while decisionColumns is alias-qualified is a
+	// runtime error the compiler cannot see, since the query is a
+	// concatenated string.
+	q := "SELECT " + decisionColumns + decisionFrom + " WHERE d.error = ''"
 	if reviewedOnly {
-		q += " AND reviewed_at IS NOT NULL"
+		q += " AND d.reviewed_at IS NOT NULL"
 	}
-	q += " ORDER BY id ASC"
+	q += " ORDER BY d.id ASC"
 	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("export decisions: %w", err)
@@ -354,6 +399,7 @@ func (r *Repo) ExportDecisions(ctx context.Context, reviewedOnly bool) ([]Decisi
 			&d.PromptTokens, &d.CompletionTok, &d.LatencyMs, &d.FirstTokenMs, &d.CreatedAt,
 			&d.HumanVerdict, &d.HumanNote, &d.HumanAnswer, &d.HumanDimensions,
 			&d.ReviewedBy, &d.ReviewedAt, &d.Error,
+			&d.RatingUp, &d.RatingComment,
 		); err != nil {
 			return nil, fmt.Errorf("scan decision: %w", err)
 		}

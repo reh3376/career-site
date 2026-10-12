@@ -1,4 +1,6 @@
 ---
+id: "better-business-decisions-part-5"
+type: "article"
 title: "Better Business Decisions Require Better Information — Part 5"
 subtitle: "The Decision Infrastructure Standard"
 author: "Roger E. Henley II"

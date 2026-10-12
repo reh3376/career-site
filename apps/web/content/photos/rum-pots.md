@@ -1,4 +1,6 @@
 ---
+id: "rum-pots"
+type: "photo"
 title: "Copper pot stills"
 caption: "A row of copper pot stills in a tropical distillery."
 context: "Site visit; comparing batch pot distillation with continuous column control."

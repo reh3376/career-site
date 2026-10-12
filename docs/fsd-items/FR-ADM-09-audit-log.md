@@ -1,6 +1,96 @@
 # FR-ADM-09: the audit log
 
-**State as of 2026-10-12.** The `audit_log` table has existed since the
+**Built 2026-10-12.** The state this was written from is kept below the
+outcome, unedited, so the before and after can be compared.
+
+## Outcome
+
+Shipped 2026-10-12. The decision in "Decisions the owner must make" #1
+was to write to the table; #2 was answered by counting rather than
+choosing.
+
+**It is a declaration plus an interceptor, not four inserts.** This
+document listed four call sites. The contract has 81 methods declaring
+`AUTH_LEVEL_ADMIN`, of which 42 change something or move member data.
+Four hand-written inserts would have left 38 admin actions unrecorded
+behind a row marked Shipped, which is the shape of the problem being
+fixed. So every ADMIN method must now declare `(career.v1.audit)`,
+`internal/auditpolicy` refuses to build the map when one does not, and
+the server exits at boot. A new admin RPC cannot ship without a decision
+about it. This is the same move as the auth interceptor, for the same
+reason.
+
+**What "recorded" covers**, since it is not exactly "the mutations":
+every mutation, plus four reads that take data off the system or across
+members: `RunDbQuery`, which runs arbitrary SELECTs, and the three
+`Export*` methods. `RunAdminQuery` was reclassified to NONE on reading
+its contract: it runs fixed statements returning counts, never rows
+about a person. The enum value is `AUDIT_LEVEL_RECORDED` rather than
+`MUTATION` so the name does not lie about those four.
+
+**Rows are written after the handler returns**, carrying the Connect
+code as `outcome`. A refused attempt is part of an audit trail; a row
+written beforehand would assert a change that may not have happened.
+Verified on both paths: a `SetMemberStatus` against a missing member is
+recorded with `not_found`.
+
+**A failed audit write does not fail the request.** The action has
+already happened, so erroring would tell the admin their change did not
+land when it did, and invite a retry that does it twice. The failure is
+logged at ERROR naming the action, because that is the one path that
+silently recreates an empty `audit_log`.
+
+**Payloads carry named fields only.** `reason` everywhere it exists,
+plus a short per-procedure list (`status`, `sql`, `extend_days`, and so
+on). Copying the whole request would have been easier and wrong:
+`ConnectCalendar` carries an OAuth code, and an audit log is the last
+place a credential should come to rest.
+
+**Decisions 3, 6 and 7, which this document left open, were taken:**
+
+- **3, relationship to the other two mechanisms.** Three tables, three
+  jobs, no consolidation and no migration. `events` stays product
+  analytics, `approval_decisions` stays the domain record of the
+  approval flow, `audit_log` becomes the record of admin action. The
+  overlap that mattered was the missing actor, and that is fixed
+  directly.
+- **6, the read surface.** `/admin/audit`, backed by
+  `AdminService.GetAudit`. That RPC turned out to already exist in the
+  contract, commented "Lists audit-log entries", with no handler: the
+  read half was declared-and-unbuilt exactly like the write half, and
+  neither was visible from the other. It is implemented in the same
+  change, because a read surface arriving later is how a write-only
+  table becomes the next thing nobody checks.
+- **7, retention.** `audit_log` is never anonymised. `events` has a
+  nightly job that blanks identity columns after
+  `EVENT_IDENTITY_RETENTION_DAYS`; applying that here would produce an
+  audit trail that forgets who acted, which does not answer the question
+  it exists for. Stated here so the divergence is a decision on the
+  record rather than an omission someone later reads as a bug.
+
+**Decision 4, the lost actor, is fixed and was independent as predicted.**
+`approval_decisions.decided_by` now carries the acting admin for console
+approve/decline. The one-click email path still records NULL, which is
+correct: there is no session to resolve, the signed token is the
+authorisation, and `decided_via = "email_link"` names that case.
+
+**Verified by observing behaviour, not by reading the code that causes
+it**, which is what ADR 0031 and this document both asked for. In the
+local stack against the real handlers: `RunDbQuery` recorded with its
+SQL while `ListMembers` recorded nothing; `SetMemberStatus` recorded
+target `member/76` with its reason and status; the same call against a
+missing member recorded `not_found`; `GetAudit` read all of it back with
+actor names resolved; the console reason box reached `audit_log` through
+the server action; and `approval_decisions.decided_by` came back as the
+admin's id where it had been NULL for five production decisions.
+
+**Still open and tracked in `docs/backlog.md`:** nothing from this item.
+The three `admin.*` event names that overlap with audit rows were left
+alone deliberately, since `events` serves a different purpose.
+
+---
+
+**State as of 2026-10-12, before the build.** The `audit_log` table has existed since the
 first migration, has the right shape to receive rows, and has never
 received one: no code path in the repository inserts into it, and
 production holds 0 rows (verified 2026-10-12). FR-ADM-09 and FR-ADM-11

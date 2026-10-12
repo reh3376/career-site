@@ -1359,6 +1359,12 @@ type SetMemberStatusRequest struct {
 	// New status: ACTIVE (approve or re-enable) or DISABLED.
 	Status MemberStatus `protobuf:"varint,2,opt,name=status,proto3,enum=career.v1.MemberStatus" json:"status,omitempty"`
 	// Reason, recorded in the audit log.
+	//
+	// True since 2026-10-12. This comment and the three like it on the
+	// other mutating requests described a control for a year while
+	// audit_log held zero rows and no handler read the field. The audit
+	// interceptor now writes it into the row's payload; see
+	// internal/auditpolicy.
 	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3423,7 +3429,19 @@ type AuditEntry struct {
 	// Details as JSON.
 	PayloadJson string `protobuf:"bytes,6,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
 	// When it happened.
-	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	OccurredAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	// Display name of the actor, resolved from `actor_id`. Empty for a
+	// system action, or for an actor whose user row has since been
+	// deleted: `audit_log.actor_user_id` is ON DELETE SET NULL, so the
+	// row survives the person. Carried here so the console does not have
+	// to join every page against the member list.
+	ActorName string `protobuf:"bytes,8,opt,name=actor_name,json=actorName,proto3" json:"actor_name,omitempty"`
+	// Connect status code of the call, e.g. `ok`, `permission_denied`.
+	//
+	// Rows are written after the handler returns, so a refused or failed
+	// attempt is recorded as well as a successful one. An audit log that
+	// only holds successes cannot answer "what did they try".
+	Outcome       string `protobuf:"bytes,9,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3505,6 +3523,20 @@ func (x *AuditEntry) GetOccurredAt() *timestamppb.Timestamp {
 		return x.OccurredAt
 	}
 	return nil
+}
+
+func (x *AuditEntry) GetActorName() string {
+	if x != nil {
+		return x.ActorName
+	}
+	return ""
+}
+
+func (x *AuditEntry) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
 }
 
 // Audit page.
@@ -3992,7 +4024,8 @@ type ApproveRegistrationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Member ID from MemberRecord.me.id.
 	MemberId string `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	// Optional free-text reason recorded in the audit log.
+	// Optional free-text reason, recorded in the audit log's payload by
+	// the audit interceptor. See SetMemberStatusRequest.reason.
 	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4093,7 +4126,8 @@ type DeclineRegistrationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Member ID from MemberRecord.me.id.
 	MemberId string `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	// Optional free-text reason recorded in the audit log.
+	// Optional free-text reason, recorded in the audit log's payload by
+	// the audit interceptor. See SetMemberStatusRequest.reason.
 	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4202,7 +4236,8 @@ type ExtendAccessRequest struct {
 	NewExpiresAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=new_expires_at,json=newExpiresAt,proto3" json:"new_expires_at,omitempty"`
 	// Make access permanent (clears expires_at).
 	Permanent bool `protobuf:"varint,4,opt,name=permanent,proto3" json:"permanent,omitempty"`
-	// Optional free-text reason recorded in the audit log.
+	// Optional free-text reason, recorded in the audit log's payload by
+	// the audit interceptor. See SetMemberStatusRequest.reason.
 	Reason        string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -9802,7 +9837,17 @@ type DecisionLogRow struct {
 	// retrieved while the total tracks how much was written, and one
 	// number cannot tell a retrieval regression from a verbose one. Zero
 	// where it does not apply.
-	FirstTokenMs  int64 `protobuf:"varint,25,opt,name=first_token_ms,json=firstTokenMs,proto3" json:"first_token_ms,omitempty"`
+	FirstTokenMs int64 `protobuf:"varint,25,opt,name=first_token_ms,json=firstTokenMs,proto3" json:"first_token_ms,omitempty"`
+	// The member's thumbs up or down on this answer (FR-CHAT-14), unset
+	// when they have not rated it. Joined from chat_messages, where it
+	// lives, because a member can rate long after the answer was logged.
+	//
+	// This is the signal FR-ADM-03 asks the review queue to be driven by.
+	// It was collected from 2026-09-30 and read by nothing admin-side
+	// until 2026-10-12.
+	RatingUp *bool `protobuf:"varint,26,opt,name=rating_up,json=ratingUp,proto3,oneof" json:"rating_up,omitempty"`
+	// The member's optional note left with the rating.
+	RatingComment string `protobuf:"bytes,27,opt,name=rating_comment,json=ratingComment,proto3" json:"rating_comment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10012,6 +10057,20 @@ func (x *DecisionLogRow) GetFirstTokenMs() int64 {
 	return 0
 }
 
+func (x *DecisionLogRow) GetRatingUp() bool {
+	if x != nil && x.RatingUp != nil {
+		return *x.RatingUp
+	}
+	return false
+}
+
+func (x *DecisionLogRow) GetRatingComment() string {
+	if x != nil {
+		return x.RatingComment
+	}
+	return ""
+}
+
 // Filters for the decision-review list.
 type ListDecisionLogRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -10026,9 +10085,17 @@ type ListDecisionLogRequest struct {
 	// Only calls that produced no usable verdict. They are rare by
 	// construction and are the rows most worth reading, so finding them
 	// should not mean scrolling past two hundred successes.
-	FailedOnly    bool `protobuf:"varint,5,opt,name=failed_only,json=failedOnly,proto3" json:"failed_only,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	FailedOnly bool `protobuf:"varint,5,opt,name=failed_only,json=failedOnly,proto3" json:"failed_only,omitempty"`
+	// Only the rows FR-ADM-03 calls a review queue: an answer the member
+	// rated down, a refusal under persona rule 6 or 7, an "I don't have
+	// anything in my records" answer, or a call that failed outright.
+	//
+	// All four were visible before this to an admin willing to open every
+	// row and read its path, which is not a queue. The filter is the
+	// difference between the signal being present and being found.
+	NeedsAttention bool `protobuf:"varint,6,opt,name=needs_attention,json=needsAttention,proto3" json:"needs_attention,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListDecisionLogRequest) Reset() {
@@ -10092,6 +10159,13 @@ func (x *ListDecisionLogRequest) GetLimit() int32 {
 func (x *ListDecisionLogRequest) GetFailedOnly() bool {
 	if x != nil {
 		return x.FailedOnly
+	}
+	return false
+}
+
+func (x *ListDecisionLogRequest) GetNeedsAttention() bool {
+	if x != nil {
+		return x.NeedsAttention
 	}
 	return false
 }
@@ -16573,7 +16647,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\raction_prefix\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\factionPrefix\x12.\n" +
 	"\x04from\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x04from\x12*\n" +
 	"\x02to\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x02to\x12*\n" +
-	"\x04page\x18\x05 \x01(\v2\x16.career.v1.PageRequestR\x04page\"\xed\x01\n" +
+	"\x04page\x18\x05 \x01(\v2\x16.career.v1.PageRequestR\x04page\"\xa6\x02\n" +
 	"\n" +
 	"AuditEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
@@ -16584,7 +16658,10 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12!\n" +
 	"\fpayload_json\x18\x06 \x01(\tR\vpayloadJson\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"p\n" +
+	"occurredAt\x12\x1d\n" +
+	"\n" +
+	"actor_name\x18\b \x01(\tR\tactorName\x12\x18\n" +
+	"\aoutcome\x18\t \x01(\tR\aoutcome\"p\n" +
 	"\x10GetAuditResponse\x12/\n" +
 	"\aentries\x18\x01 \x03(\v2\x15.career.v1.AuditEntryR\aentries\x12+\n" +
 	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\"\xda\x04\n" +
@@ -17109,7 +17186,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"readyCount\x122\n" +
 	"\x15below_threshold_count\x18\x03 \x01(\x05R\x13belowThresholdCount\x12!\n" +
 	"\ffailed_count\x18\x04 \x01(\x05R\vfailedCount\x12&\n" +
-	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\xbd\a\n" +
+	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\x94\b\n" +
 	"\x0eDecisionLogRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -17144,17 +17221,22 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x05error\x18\x16 \x01(\tR\x05error\x12!\n" +
 	"\fhuman_answer\x18\x17 \x01(\tR\vhumanAnswer\x12Y\n" +
 	"\x10human_dimensions\x18\x18 \x03(\v2..career.v1.DecisionLogRow.HumanDimensionsEntryR\x0fhumanDimensions\x12$\n" +
-	"\x0efirst_token_ms\x18\x19 \x01(\x03R\ffirstTokenMs\x1aB\n" +
+	"\x0efirst_token_ms\x18\x19 \x01(\x03R\ffirstTokenMs\x12 \n" +
+	"\trating_up\x18\x1a \x01(\bH\x00R\bratingUp\x88\x01\x01\x12%\n" +
+	"\x0erating_comment\x18\x1b \x01(\tR\rratingComment\x1aB\n" +
 	"\x14HumanDimensionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa3\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
+	"\n" +
+	"_rating_up\"\xcc\x01\n" +
 	"\x16ListDecisionLogRequest\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x15\n" +
 	"\x06ref_id\x18\x02 \x01(\tR\x05refId\x12'\n" +
 	"\x0funreviewed_only\x18\x03 \x01(\bR\x0eunreviewedOnly\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1f\n" +
 	"\vfailed_only\x18\x05 \x01(\bR\n" +
-	"failedOnly\"\x9a\x01\n" +
+	"failedOnly\x12'\n" +
+	"\x0fneeds_attention\x18\x06 \x01(\bR\x0eneedsAttention\"\x9a\x01\n" +
 	"\x17ListDecisionLogResponse\x127\n" +
 	"\tdecisions\x18\x01 \x03(\v2\x19.career.v1.DecisionLogRowR\tdecisions\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x03R\n" +
@@ -17703,91 +17785,91 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x1dACTIVITY_SORT_LAST_EVENT_DESC\x10\x01\x12\x1f\n" +
 	"\x1bACTIVITY_SORT_SESSIONS_DESC\x10\x02\x12\"\n" +
 	"\x1eACTIVITY_SORT_ACTIVE_TIME_DESC\x10\x03\x12 \n" +
-	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xa9<\n" +
-	"\fAdminService\x12R\n" +
-	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12ResendNotification\x12$.career.v1.ResendNotificationRequest\x1a%.career.v1.ResendNotificationResponse\"\x04\x80\xb5\x18\x03\x12L\n" +
-	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rAddMemberNote\x12\x1f.career.v1.AddMemberNoteRequest\x1a .career.v1.AddMemberNoteResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fSetMemberStatus\x12!.career.v1.SetMemberStatusRequest\x1a\".career.v1.SetMemberStatusResponse\"\x04\x80\xb5\x18\x03\x12[\n" +
-	"\x0eGetReviewQueue\x12 .career.v1.GetReviewQueueRequest\x1a!.career.v1.GetReviewQueueResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11ResolveReviewItem\x12#.career.v1.ResolveReviewItemRequest\x1a$.career.v1.ResolveReviewItemResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fReplyEscalation\x12!.career.v1.ReplyEscalationRequest\x1a\".career.v1.ReplyEscalationResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15GetMemberConversation\x12'.career.v1.GetMemberConversationRequest\x1a(.career.v1.GetMemberConversationResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fGetCorpusStatus\x12!.career.v1.GetCorpusStatusRequest\x1a\".career.v1.GetCorpusStatusResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rTestRetrieval\x12\x1f.career.v1.TestRetrievalRequest\x1a .career.v1.TestRetrievalResponse\"\x04\x80\xb5\x18\x03\x12C\n" +
-	"\x06RunJob\x12\x18.career.v1.RunJobRequest\x1a\x19.career.v1.RunJobResponse\"\x04\x80\xb5\x18\x03\x12C\n" +
-	"\x06GetJob\x12\x18.career.v1.GetJobRequest\x1a\x19.career.v1.GetJobResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
+	"\x1cACTIVITY_SORT_ASK_ROGER_DESC\x10\x042\xe5>\n" +
+	"\fAdminService\x12V\n" +
+	"\vListMembers\x12\x1d.career.v1.ListMembersRequest\x1a\x1e.career.v1.ListMembersResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12k\n" +
+	"\x12ResendNotification\x12$.career.v1.ResendNotificationRequest\x1a%.career.v1.ResendNotificationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12P\n" +
+	"\tGetMember\x12\x1b.career.v1.GetMemberRequest\x1a\x1c.career.v1.GetMemberResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rAddMemberNote\x12\x1f.career.v1.AddMemberNoteRequest\x1a .career.v1.AddMemberNoteResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12b\n" +
+	"\x0fSetMemberStatus\x12!.career.v1.SetMemberStatusRequest\x1a\".career.v1.SetMemberStatusResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12_\n" +
+	"\x0eGetReviewQueue\x12 .career.v1.GetReviewQueueRequest\x1a!.career.v1.GetReviewQueueResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
+	"\x11ResolveReviewItem\x12#.career.v1.ResolveReviewItemRequest\x1a$.career.v1.ResolveReviewItemResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12b\n" +
+	"\x0fReplyEscalation\x12!.career.v1.ReplyEscalationRequest\x1a\".career.v1.ReplyEscalationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12t\n" +
+	"\x15GetMemberConversation\x12'.career.v1.GetMemberConversationRequest\x1a(.career.v1.GetMemberConversationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12b\n" +
+	"\x0fGetCorpusStatus\x12!.career.v1.GetCorpusStatusRequest\x1a\".career.v1.GetCorpusStatusResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rTestRetrieval\x12\x1f.career.v1.TestRetrievalRequest\x1a .career.v1.TestRetrievalResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12G\n" +
+	"\x06RunJob\x12\x18.career.v1.RunJobRequest\x1a\x19.career.v1.RunJobResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12G\n" +
+	"\x06GetJob\x12\x18.career.v1.GetJobRequest\x1a\x19.career.v1.GetJobResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12S\n" +
 	"\n" +
-	"GetPersona\x12\x1c.career.v1.GetPersonaRequest\x1a\x1d.career.v1.GetPersonaResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fGetAnalytics\x12\x1e.career.v1.GetAnalyticsRequest\x1a\x1f.career.v1.GetAnalyticsResponse\"\x04\x80\xb5\x18\x03\x12I\n" +
-	"\bGetAudit\x12\x1a.career.v1.GetAuditRequest\x1a\x1b.career.v1.GetAuditResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
-	"\x13ListContactMessages\x12%.career.v1.ListContactMessagesRequest\x1a&.career.v1.ListContactMessagesResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15ResolveContactMessage\x12'.career.v1.ResolveContactMessageRequest\x1a(.career.v1.ResolveContactMessageResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
-	"\x13ApproveRegistration\x12%.career.v1.ApproveRegistrationRequest\x1a&.career.v1.ApproveRegistrationResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
-	"\x13DeclineRegistration\x12%.career.v1.DeclineRegistrationRequest\x1a&.career.v1.DeclineRegistrationResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fExtendAccess\x12\x1e.career.v1.ExtendAccessRequest\x1a\x1f.career.v1.ExtendAccessResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fListDbTables\x12\x1e.career.v1.ListDbTablesRequest\x1a\x1f.career.v1.ListDbTablesResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
+	"GetPersona\x12\x1c.career.v1.GetPersonaRequest\x1a\x1d.career.v1.GetPersonaResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12Y\n" +
+	"\fGetAnalytics\x12\x1e.career.v1.GetAnalyticsRequest\x1a\x1f.career.v1.GetAnalyticsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12M\n" +
+	"\bGetAudit\x12\x1a.career.v1.GetAuditRequest\x1a\x1b.career.v1.GetAuditResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12n\n" +
+	"\x13ListContactMessages\x12%.career.v1.ListContactMessagesRequest\x1a&.career.v1.ListContactMessagesResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12t\n" +
+	"\x15ResolveContactMessage\x12'.career.v1.ResolveContactMessageRequest\x1a(.career.v1.ResolveContactMessageResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
+	"\x13ApproveRegistration\x12%.career.v1.ApproveRegistrationRequest\x1a&.career.v1.ApproveRegistrationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
+	"\x13DeclineRegistration\x12%.career.v1.DeclineRegistrationRequest\x1a&.career.v1.DeclineRegistrationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12Y\n" +
+	"\fExtendAccess\x12\x1e.career.v1.ExtendAccessRequest\x1a\x1f.career.v1.ExtendAccessResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12Y\n" +
+	"\fListDbTables\x12\x1e.career.v1.ListDbTablesRequest\x1a\x1f.career.v1.ListDbTablesResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12S\n" +
 	"\n" +
-	"RunDbQuery\x12\x1c.career.v1.RunDbQueryRequest\x1a\x1d.career.v1.RunDbQueryResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10ListAccessGrants\x12\".career.v1.ListAccessGrantsRequest\x1a#.career.v1.ListAccessGrantsResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11UpsertAccessGrant\x12#.career.v1.UpsertAccessGrantRequest\x1a$.career.v1.UpsertAccessGrantResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11DeleteAccessGrant\x12#.career.v1.DeleteAccessGrantRequest\x1a$.career.v1.DeleteAccessGrantResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10ListSavedQueries\x12\".career.v1.ListSavedQueriesRequest\x1a#.career.v1.ListSavedQueriesResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10UpsertSavedQuery\x12\".career.v1.UpsertSavedQueryRequest\x1a#.career.v1.UpsertSavedQueryResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
-	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rReindexCorpus\x12\x1f.career.v1.ReindexCorpusRequest\x1a .career.v1.ReindexCorpusResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15SweepCorpusEmbeddings\x12'.career.v1.SweepCorpusEmbeddingsRequest\x1a(.career.v1.SweepCorpusEmbeddingsResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11ListJdSubmissions\x12#.career.v1.ListJdSubmissionsRequest\x1a$.career.v1.ListJdSubmissionsResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fGetJdSubmission\x12!.career.v1.GetJdSubmissionRequest\x1a\".career.v1.GetJdSubmissionResponse\"\x04\x80\xb5\x18\x03\x12L\n" +
-	"\tRescoreJd\x12\x1b.career.v1.RescoreJdRequest\x1a\x1c.career.v1.RescoreJdResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fSetJdOutcome\x12\x1e.career.v1.SetJdOutcomeRequest\x1a\x1f.career.v1.SetJdOutcomeResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10RecordJdFeedback\x12\".career.v1.RecordJdFeedbackRequest\x1a#.career.v1.RecordJdFeedbackResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12ListGoldenPostings\x12$.career.v1.ListGoldenPostingsRequest\x1a%.career.v1.ListGoldenPostingsResponse\"\x04\x80\xb5\x18\x03\x12j\n" +
-	"\x13UpsertGoldenPosting\x12%.career.v1.UpsertGoldenPostingRequest\x1a&.career.v1.UpsertGoldenPostingResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fSetGoldenActive\x12!.career.v1.SetGoldenActiveRequest\x1a\".career.v1.SetGoldenActiveResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12LabelGoldenPosting\x12$.career.v1.LabelGoldenPostingRequest\x1a%.career.v1.LabelGoldenPostingResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fListEvalRuns\x12\x1e.career.v1.ListEvalRunsRequest\x1a\x1f.career.v1.ListEvalRunsResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
+	"RunDbQuery\x12\x1c.career.v1.RunDbQueryRequest\x1a\x1d.career.v1.RunDbQueryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12e\n" +
+	"\x10ListAccessGrants\x12\".career.v1.ListAccessGrantsRequest\x1a#.career.v1.ListAccessGrantsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
+	"\x11UpsertAccessGrant\x12#.career.v1.UpsertAccessGrantRequest\x1a$.career.v1.UpsertAccessGrantResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11DeleteAccessGrant\x12#.career.v1.DeleteAccessGrantRequest\x1a$.career.v1.DeleteAccessGrantResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12e\n" +
+	"\x10ListSavedQueries\x12\".career.v1.ListSavedQueriesRequest\x1a#.career.v1.ListSavedQueriesResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12e\n" +
+	"\x10UpsertSavedQuery\x12\".career.v1.UpsertSavedQueryRequest\x1a#.career.v1.UpsertSavedQueryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12e\n" +
+	"\x10DeleteSavedQuery\x12\".career.v1.DeleteSavedQueryRequest\x1a#.career.v1.DeleteSavedQueryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12k\n" +
+	"\x12ListMemberActivity\x12$.career.v1.ListMemberActivityRequest\x1a%.career.v1.ListMemberActivityResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12e\n" +
+	"\x10IngestCorpusText\x12\".career.v1.IngestCorpusTextRequest\x1a#.career.v1.IngestCorpusTextResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
+	"\x13ListCorpusDocuments\x12%.career.v1.ListCorpusDocumentsRequest\x1a&.career.v1.ListCorpusDocumentsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rReindexCorpus\x12\x1f.career.v1.ReindexCorpusRequest\x1a .career.v1.ReindexCorpusResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12t\n" +
+	"\x15SweepCorpusEmbeddings\x12'.career.v1.SweepCorpusEmbeddingsRequest\x1a(.career.v1.SweepCorpusEmbeddingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11ListJdSubmissions\x12#.career.v1.ListJdSubmissionsRequest\x1a$.career.v1.ListJdSubmissionsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12b\n" +
+	"\x0fGetJdSubmission\x12!.career.v1.GetJdSubmissionRequest\x1a\".career.v1.GetJdSubmissionResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12P\n" +
+	"\tRescoreJd\x12\x1b.career.v1.RescoreJdRequest\x1a\x1c.career.v1.RescoreJdResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12Y\n" +
+	"\fSetJdOutcome\x12\x1e.career.v1.SetJdOutcomeRequest\x1a\x1f.career.v1.SetJdOutcomeResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12e\n" +
+	"\x10RecordJdFeedback\x12\".career.v1.RecordJdFeedbackRequest\x1a#.career.v1.RecordJdFeedbackResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12k\n" +
+	"\x12ListGoldenPostings\x12$.career.v1.ListGoldenPostingsRequest\x1a%.career.v1.ListGoldenPostingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12n\n" +
+	"\x13UpsertGoldenPosting\x12%.career.v1.UpsertGoldenPostingRequest\x1a&.career.v1.UpsertGoldenPostingResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12b\n" +
+	"\x0fSetGoldenActive\x12!.career.v1.SetGoldenActiveRequest\x1a\".career.v1.SetGoldenActiveResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12k\n" +
+	"\x12LabelGoldenPosting\x12$.career.v1.LabelGoldenPostingRequest\x1a%.career.v1.LabelGoldenPostingResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12Y\n" +
+	"\fListEvalRuns\x12\x1e.career.v1.ListEvalRunsRequest\x1a\x1f.career.v1.ListEvalRunsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12S\n" +
 	"\n" +
-	"GetEvalRun\x12\x1c.career.v1.GetEvalRunRequest\x1a\x1d.career.v1.GetEvalRunResponse\"\x04\x80\xb5\x18\x03\x12O\n" +
+	"GetEvalRun\x12\x1c.career.v1.GetEvalRunRequest\x1a\x1d.career.v1.GetEvalRunResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12S\n" +
 	"\n" +
-	"GetMetrics\x12\x1c.career.v1.GetMetricsRequest\x1a\x1d.career.v1.GetMetricsResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fGetOpsStatus\x12\x1e.career.v1.GetOpsStatusRequest\x1a\x1f.career.v1.GetOpsStatusResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fGetJobDetail\x12\x1e.career.v1.GetJobDetailRequest\x1a\x1f.career.v1.GetJobDetailResponse\"\x04\x80\xb5\x18\x03\x12F\n" +
-	"\aGetGate\x12\x19.career.v1.GetGateRequest\x1a\x1a.career.v1.GetGateResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fListDecisionLog\x12!.career.v1.ListDecisionLogRequest\x1a\".career.v1.ListDecisionLogResponse\"\x04\x80\xb5\x18\x03\x12[\n" +
-	"\x0eReviewDecision\x12 .career.v1.ReviewDecisionRequest\x1a!.career.v1.ReviewDecisionResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11ExportDecisionLog\x12#.career.v1.ExportDecisionLogRequest\x1a$.career.v1.ExportDecisionLogResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rGetJdFitBands\x12\x1f.career.v1.GetJdFitBandsRequest\x1a .career.v1.GetJdFitBandsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rSetJdFitBands\x12\x1f.career.v1.SetJdFitBandsRequest\x1a .career.v1.SetJdFitBandsResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
-	"\x17GetDecisionTestSettings\x12).career.v1.GetDecisionTestSettingsRequest\x1a*.career.v1.GetDecisionTestSettingsResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
-	"\x17SetDecisionTestSettings\x12).career.v1.SetDecisionTestSettingsRequest\x1a*.career.v1.SetDecisionTestSettingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14ListDecisionTestRuns\x12&.career.v1.ListDecisionTestRunsRequest\x1a'.career.v1.ListDecisionTestRunsResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12GetDecisionTestRun\x12$.career.v1.GetDecisionTestRunRequest\x1a%.career.v1.GetDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12s\n" +
-	"\x16ExportDecisionTestData\x12(.career.v1.ExportDecisionTestDataRequest\x1a).career.v1.ExportDecisionTestDataResponse\"\x04\x80\xb5\x18\x03\x12v\n" +
-	"\x17GetDecisionTestAnalysis\x12).career.v1.GetDecisionTestAnalysisRequest\x1a*.career.v1.GetDecisionTestAnalysisResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15ExportDecisionTestRun\x12'.career.v1.ExportDecisionTestRunRequest\x1a(.career.v1.ExportDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15ReviewDecisionTestRun\x12'.career.v1.ReviewDecisionTestRunRequest\x1a(.career.v1.ReviewDecisionTestRunResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14GetSchedulerSettings\x12&.career.v1.GetSchedulerSettingsRequest\x1a'.career.v1.GetSchedulerSettingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14SetSchedulerSettings\x12&.career.v1.SetSchedulerSettingsRequest\x1a'.career.v1.SetSchedulerSettingsResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rListQaEntries\x12\x1f.career.v1.ListQaEntriesRequest\x1a .career.v1.ListQaEntriesResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rCreateQaEntry\x12\x1f.career.v1.CreateQaEntryRequest\x1a .career.v1.CreateQaEntryResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rUpdateQaEntry\x12\x1f.career.v1.UpdateQaEntryRequest\x1a .career.v1.UpdateQaEntryResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11SetQaEntryEnabled\x12#.career.v1.SetQaEntryEnabledRequest\x1a$.career.v1.SetQaEntryEnabledResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rDeleteQaEntry\x12\x1f.career.v1.DeleteQaEntryRequest\x1a .career.v1.DeleteQaEntryResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rAddQaPhrasing\x12\x1f.career.v1.AddQaPhrasingRequest\x1a .career.v1.AddQaPhrasingResponse\"\x04\x80\xb5\x18\x03\x12a\n" +
-	"\x10DeleteQaPhrasing\x12\".career.v1.DeleteQaPhrasingRequest\x1a#.career.v1.DeleteQaPhrasingResponse\"\x04\x80\xb5\x18\x03\x12p\n" +
-	"\x15GetCalendarConnectURL\x12'.career.v1.GetCalendarConnectURLRequest\x1a(.career.v1.GetCalendarConnectURLResponse\"\x04\x80\xb5\x18\x03\x12^\n" +
-	"\x0fConnectCalendar\x12!.career.v1.ConnectCalendarRequest\x1a\".career.v1.ConnectCalendarResponse\"\x04\x80\xb5\x18\x03\x12d\n" +
-	"\x11GetCalendarStatus\x12#.career.v1.GetCalendarStatusRequest\x1a$.career.v1.GetCalendarStatusResponse\"\x04\x80\xb5\x18\x03\x12g\n" +
-	"\x12DisconnectCalendar\x12$.career.v1.DisconnectCalendarRequest\x1a%.career.v1.DisconnectCalendarResponse\"\x04\x80\xb5\x18\x03\x12U\n" +
-	"\fListMeetings\x12\x1e.career.v1.ListMeetingsRequest\x1a\x1f.career.v1.ListMeetingsResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14CancelMeetingAsAdmin\x12&.career.v1.CancelMeetingAsAdminRequest\x1a'.career.v1.CancelMeetingAsAdminResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14GetJdSubmissionLimit\x12&.career.v1.GetJdSubmissionLimitRequest\x1a'.career.v1.GetJdSubmissionLimitResponse\"\x04\x80\xb5\x18\x03\x12m\n" +
-	"\x14SetJdSubmissionLimit\x12&.career.v1.SetJdSubmissionLimitRequest\x1a'.career.v1.SetJdSubmissionLimitResponse\"\x04\x80\xb5\x18\x03B\xa4\x01\n" +
+	"GetMetrics\x12\x1c.career.v1.GetMetricsRequest\x1a\x1d.career.v1.GetMetricsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12Y\n" +
+	"\fGetOpsStatus\x12\x1e.career.v1.GetOpsStatusRequest\x1a\x1f.career.v1.GetOpsStatusResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12Y\n" +
+	"\fGetJobDetail\x12\x1e.career.v1.GetJobDetailRequest\x1a\x1f.career.v1.GetJobDetailResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12J\n" +
+	"\aGetGate\x12\x19.career.v1.GetGateRequest\x1a\x1a.career.v1.GetGateResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12b\n" +
+	"\x0fListDecisionLog\x12!.career.v1.ListDecisionLogRequest\x1a\".career.v1.ListDecisionLogResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12_\n" +
+	"\x0eReviewDecision\x12 .career.v1.ReviewDecisionRequest\x1a!.career.v1.ReviewDecisionResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11ExportDecisionLog\x12#.career.v1.ExportDecisionLogRequest\x1a$.career.v1.ExportDecisionLogResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\\\n" +
+	"\rGetJdFitBands\x12\x1f.career.v1.GetJdFitBandsRequest\x1a .career.v1.GetJdFitBandsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rSetJdFitBands\x12\x1f.career.v1.SetJdFitBandsRequest\x1a .career.v1.SetJdFitBandsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12z\n" +
+	"\x17GetDecisionTestSettings\x12).career.v1.GetDecisionTestSettingsRequest\x1a*.career.v1.GetDecisionTestSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12z\n" +
+	"\x17SetDecisionTestSettings\x12).career.v1.SetDecisionTestSettingsRequest\x1a*.career.v1.SetDecisionTestSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12q\n" +
+	"\x14ListDecisionTestRuns\x12&.career.v1.ListDecisionTestRunsRequest\x1a'.career.v1.ListDecisionTestRunsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12k\n" +
+	"\x12GetDecisionTestRun\x12$.career.v1.GetDecisionTestRunRequest\x1a%.career.v1.GetDecisionTestRunResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12w\n" +
+	"\x16ExportDecisionTestData\x12(.career.v1.ExportDecisionTestDataRequest\x1a).career.v1.ExportDecisionTestDataResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12z\n" +
+	"\x17GetDecisionTestAnalysis\x12).career.v1.GetDecisionTestAnalysisRequest\x1a*.career.v1.GetDecisionTestAnalysisResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12t\n" +
+	"\x15ExportDecisionTestRun\x12'.career.v1.ExportDecisionTestRunRequest\x1a(.career.v1.ExportDecisionTestRunResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12t\n" +
+	"\x15ReviewDecisionTestRun\x12'.career.v1.ReviewDecisionTestRunRequest\x1a(.career.v1.ReviewDecisionTestRunResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12q\n" +
+	"\x14GetSchedulerSettings\x12&.career.v1.GetSchedulerSettingsRequest\x1a'.career.v1.GetSchedulerSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12q\n" +
+	"\x14SetSchedulerSettings\x12&.career.v1.SetSchedulerSettingsRequest\x1a'.career.v1.SetSchedulerSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\\\n" +
+	"\rListQaEntries\x12\x1f.career.v1.ListQaEntriesRequest\x1a .career.v1.ListQaEntriesResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rCreateQaEntry\x12\x1f.career.v1.CreateQaEntryRequest\x1a .career.v1.CreateQaEntryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\\\n" +
+	"\rUpdateQaEntry\x12\x1f.career.v1.UpdateQaEntryRequest\x1a .career.v1.UpdateQaEntryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11SetQaEntryEnabled\x12#.career.v1.SetQaEntryEnabledRequest\x1a$.career.v1.SetQaEntryEnabledResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\\\n" +
+	"\rDeleteQaEntry\x12\x1f.career.v1.DeleteQaEntryRequest\x1a .career.v1.DeleteQaEntryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\\\n" +
+	"\rAddQaPhrasing\x12\x1f.career.v1.AddQaPhrasingRequest\x1a .career.v1.AddQaPhrasingResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12e\n" +
+	"\x10DeleteQaPhrasing\x12\".career.v1.DeleteQaPhrasingRequest\x1a#.career.v1.DeleteQaPhrasingResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12t\n" +
+	"\x15GetCalendarConnectURL\x12'.career.v1.GetCalendarConnectURLRequest\x1a(.career.v1.GetCalendarConnectURLResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12b\n" +
+	"\x0fConnectCalendar\x12!.career.v1.ConnectCalendarRequest\x1a\".career.v1.ConnectCalendarResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11GetCalendarStatus\x12#.career.v1.GetCalendarStatusRequest\x1a$.career.v1.GetCalendarStatusResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12k\n" +
+	"\x12DisconnectCalendar\x12$.career.v1.DisconnectCalendarRequest\x1a%.career.v1.DisconnectCalendarResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12Y\n" +
+	"\fListMeetings\x12\x1e.career.v1.ListMeetingsRequest\x1a\x1f.career.v1.ListMeetingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12q\n" +
+	"\x14CancelMeetingAsAdmin\x12&.career.v1.CancelMeetingAsAdminRequest\x1a'.career.v1.CancelMeetingAsAdminResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12q\n" +
+	"\x14GetJdSubmissionLimit\x12&.career.v1.GetJdSubmissionLimitRequest\x1a'.career.v1.GetJdSubmissionLimitResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12q\n" +
+	"\x14SetJdSubmissionLimit\x12&.career.v1.SetJdSubmissionLimitRequest\x1a'.career.v1.SetJdSubmissionLimitResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa4\x01\n" +
 	"\rcom.career.v1B\n" +
 	"AdminProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
@@ -18409,6 +18491,7 @@ func file_career_v1_admin_proto_init() {
 	file_career_v1_admin_proto_msgTypes[116].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[117].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[123].OneofWrappers = []any{}
+	file_career_v1_admin_proto_msgTypes[125].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[191].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
