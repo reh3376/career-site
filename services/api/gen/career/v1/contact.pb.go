@@ -340,7 +340,11 @@ type SubmitContactRequest struct {
 	// when the request has no session cookie; ignored when it does.
 	Email string `protobuf:"bytes,7,opt,name=email,proto3" json:"email,omitempty"`
 	// Cloudflare Turnstile response token. Required on anonymous
-	// submissions; ignored for members.
+	// submissions; ignored for members, who cleared the challenge when
+	// they registered. Verified server-side against siteverify
+	// (FR-CNT-22); a rejected or missing token fails the request with
+	// `failed_precondition`. A siteverify call that cannot be completed
+	// admits the submission and logs, matching Register.
 	TurnstileToken string `protobuf:"bytes,8,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
 	// The role the sender is considering Roger for. Populated by the
 	// form when category = HIRING_INQUIRY; ignored otherwise. Free

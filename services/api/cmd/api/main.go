@@ -28,6 +28,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/secrets"
 	"github.com/reh3376/career-site/services/api/internal/server"
 	"github.com/reh3376/career-site/services/api/internal/sidecar"
+	"github.com/reh3376/career-site/services/api/internal/turnstile"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -135,6 +136,19 @@ func main() {
 	if cfg.PwnedCheckEnabled {
 		pwned = auth.NewHIBPChecker()
 		log.Info("HIBP pwned-password check enabled")
+	}
+
+	// Turnstile (FR-AUTH-09, FR-CNT-22). The secret is the switch; it
+	// cannot be absent in production because config.Load refuses to
+	// return a Config without one, so the Noop branch is a dev-only
+	// path and the boot log says which one is live.
+	var bots turnstile.Verifier = turnstile.Noop{}
+	if cfg.TurnstileSecretKey != "" {
+		bots = turnstile.New(cfg.TurnstileSecretKey)
+		log.Info("turnstile enabled", slog.String("surfaces", "register,anonymous-contact"))
+	} else {
+		log.Warn("turnstile NOT enabled: no TURNSTILE_SECRET_KEY; " +
+			"registration and anonymous contact accept any token")
 	}
 
 	// Decision-token secret. Prod supplies a stable value in
@@ -459,6 +473,9 @@ func main() {
 	)
 
 	// Server-side emit points share the one writer.
+	authHandler.SetTurnstile(bots)
+	contactHandler.SetTurnstile(bots)
+
 	authHandler.SetEvents(eventWriter)
 	decisionHandler.SetEvents(eventWriter)
 	contactHandler.SetEvents(eventWriter)

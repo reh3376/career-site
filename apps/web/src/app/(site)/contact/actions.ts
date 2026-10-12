@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 
 import { SubmitContactRequestSchema, SupportCategory } from "@/gen/career/v1/contact_pb";
 import { callApi } from "@/lib/api-fetch";
+import { TURNSTILE_FIELD } from "@/lib/turnstile";
 import { SESSION_COOKIE } from "@/lib/session";
 
 export type ContactState = {
@@ -57,6 +58,9 @@ export async function submitContactAction(
   const message = String(formData.get("message") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
+  // Written into the form by the Turnstile widget on the anonymous
+  // path. A signed-in member sends no token and the API ignores it.
+  const turnstileToken = String(formData.get(TURNSTILE_FIELD) ?? "");
   const hiring_role = String(formData.get("hiring_role") ?? "").trim();
   const hiring_jd_url = String(formData.get("hiring_jd_url") ?? "").trim();
   const hiring_target_start = String(
@@ -99,6 +103,7 @@ export async function submitContactAction(
     hiringRole: hiring_role,
     hiringJdUrl: hiring_jd_url,
     hiringTargetStart: hiring_target_start,
+    turnstileToken,
   });
 
   // Serialize the message manually because callApi wants a JSON body.
@@ -113,6 +118,7 @@ export async function submitContactAction(
     hiringRole: req.hiringRole,
     hiringJdUrl: req.hiringJdUrl,
     hiringTargetStart: req.hiringTargetStart,
+    turnstileToken: req.turnstileToken,
   };
 
   const resp = await callApi({

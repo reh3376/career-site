@@ -108,6 +108,11 @@ type RegisterRequest struct {
 	// stored and visible to the owner. Must be true.
 	ConsentAccepted bool `protobuf:"varint,7,opt,name=consent_accepted,json=consentAccepted,proto3" json:"consent_accepted,omitempty"`
 	// Cloudflare Turnstile response token from the registration page.
+	// Verified server-side against Cloudflare's siteverify endpoint
+	// (FR-AUTH-09); a token Cloudflare rejects fails the request with
+	// `invalid_argument`. A siteverify call that cannot be completed
+	// admits the request and logs, so an outage at Cloudflare does not
+	// close registration; see services/api/internal/turnstile.
 	TurnstileToken string `protobuf:"bytes,8,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -497,9 +502,20 @@ type LoginRequest struct {
 	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	// Password.
 	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	// Turnstile token; required after repeated failures for the account or IP
-	// (the server responds `failed_precondition` with reason
-	// `turnstile_required` when it is missing but needed).
+	// Reserved. Login does not read this field.
+	//
+	// The comment here used to describe a step-up challenge: "required
+	// after repeated failures for the account or IP, the server responds
+	// failed_precondition with reason turnstile_required". None of that
+	// was ever built, and a comment describing a control that does not
+	// exist is the exact failure ADR 0031 was written about, so it is
+	// stated plainly instead. What actually slows credential stuffing on
+	// this endpoint is the per-(IP, email) rate limit in Login, 5
+	// attempts refilling over 15 minutes.
+	//
+	// Turnstile IS enforced on Register and on anonymous SubmitContact.
+	// If a step-up challenge on Login is built later, this field is the
+	// place for it, and the comment changes when the code does.
 	TurnstileToken string `protobuf:"bytes,3,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

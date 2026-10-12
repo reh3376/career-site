@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { OtPanel } from "@/components/ot-panel";
 import { getSessionCookie } from "@/lib/session";
+import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { getUiMode } from "@/lib/ui-mode";
 
 import { ContactForm } from "./form";
@@ -38,6 +39,7 @@ export default async function ContactPage({
     searchParams,
   ]);
   const signedIn = Boolean(cookie);
+  const turnstileSiteKey = getTurnstileSiteKey();
   const initialCategory = KNOWN_CATEGORIES.has(params.category ?? "")
     ? params.category
     : undefined;
@@ -45,7 +47,11 @@ export default async function ContactPage({
   if (mode === "ot") {
     return (
       <OtPanel tag="MSG-01" title="MSG.OUT · CONTACT" note="reply within 24h">
-        <ContactForm signedIn={signedIn} initialCategory={initialCategory} />
+        <ContactForm
+            signedIn={signedIn}
+            initialCategory={initialCategory}
+            turnstileSiteKey={turnstileSiteKey}
+          />
         <p className="mt-8 border-t border-line pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
           security · use{" "}
           <a
@@ -100,7 +106,11 @@ export default async function ContactPage({
         {/* Right column, the form itself, sitting on paper without a
             surrounding card. The inputs carry the visual weight. */}
         <div>
-          <ContactForm signedIn={signedIn} initialCategory={initialCategory} />
+          <ContactForm
+            signedIn={signedIn}
+            initialCategory={initialCategory}
+            turnstileSiteKey={turnstileSiteKey}
+          />
 
           <p className="mt-10 border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
             <span className="font-mono uppercase tracking-[0.14em] text-signal">

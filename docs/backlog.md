@@ -1200,32 +1200,30 @@ Still open:
   The easy way to do this badly is a log nobody reads. Whatever lands
   should be reachable from the console, or it is another empty control.
 
-- **Turnstile is declared on two surfaces and enforced on neither.**
-  Found 2026-10-12 during the docs audit, and it compounds with the
-  `buf.validate` gap below.
+- **Registration still has no progressive delay, and both limiters die
+  with the process.** Left open deliberately when Turnstile shipped
+  2026-10-12 (FR-AUTH-09, FR-CNT-22 both closed). `Register` now has a
+  per-IP bucket, 5 an hour, and `Login` keeps its (IP, email) bucket, 5
+  refilling over 15 minutes. Neither backs off progressively, and both
+  are `internal/ratelimit`, which is in-process: a second api container
+  would double every ceiling, and a restart clears them. FR-AUTH-09's
+  text asks for "progressive delays after failed attempts", so the row
+  is shipped on its Turnstile promise and thin on this one. Fixing it
+  properly means Redis or a table, which is a bigger call than the row
+  needs today.
 
-  `Contact.turnstileEnforced()` returns `false` unconditionally, so the
-  anonymous contact form's token check never runs. `Register` reads
-  `turnstile_token` nowhere at all; the only thing that would have
-  required one is `min_len: 1` on that field in `auth.proto`, which is a
-  `buf.validate` rule and therefore decorative. FSD FR-CNT-22 was marked
-  Shipped claiming "anonymous submissions require Turnstile", and
-  FR-AUTH-09 claims registration "shall be protected by Cloudflare
-  Turnstile"; both corrected.
-
-  **Decided 2026-10-12 (D-31 / ADR 0031): verify the token, or remove
-  both declarations.** Verifying needs a Cloudflare secret in
-  `.env.prod` and a decision about what happens when Cloudflare is
-  unreachable — failing closed locks out registration during their
-  outage, failing open is the state we are in now. That choice is the
-  work, not the API call.
-
-  **What the exposure actually is**, stated carefully: registration is
-  approval-gated and email-verified, so an automated signup cannot reach
-  member content. What it can do is make the service send a verification
-  email to any address someone supplies, and fill the users table. That
-  is an email-reputation and noise problem rather than an access one,
-  which is why this is worth fixing and is not an emergency.
+- **The web app can believe a visitor is signed in when the API does
+  not.** Found 2026-10-12 while testing the contact form: a session
+  cookie was present, the page rendered the member view, and
+  `MemberService/GetMe` answered `401 unauthenticated` for the same
+  request. `getSessionCookie()` asks only whether the cookie exists;
+  the API resolves it to a user. Any expired or revoked cookie puts the
+  two out of step, and the visitor gets the member view of `/contact`
+  with no name or email field while the API requires both, which is an
+  error they cannot act on. The Turnstile widget was made unconditional
+  so it does not add a second unrecoverable rejection, but that treats
+  the symptom. The fix is for the page to ask whether the session
+  resolves, not whether a cookie is present.
 
 - **`buf.validate` rules are declared and not enforced at runtime.**
   Found 2026-10-12 while auditing the docs. There is no `protovalidate`

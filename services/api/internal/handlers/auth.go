@@ -17,6 +17,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
+	"github.com/reh3376/career-site/services/api/internal/turnstile"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -38,8 +39,28 @@ type Auth struct {
 	// attempts per 15 minutes (single-instance API only; a
 	// horizontally-scaled deployment would need Redis).
 	loginLimiter *ratelimit.Limiter
+	// registerLimiter: per-IP bucket on Register. Turnstile is the
+	// primary control (FR-AUTH-09), but it is a third-party call that
+	// fails open, so the limiter is what still stands during a
+	// Cloudflare outage. Keyed on IP alone, not (ip, email): an
+	// attacker picks a fresh address every attempt, so including the
+	// email would hand out a fresh bucket each time and limit nothing.
+	registerLimiter *ratelimit.Limiter
+	// turnstile verifies the bot-challenge token on Register. Never
+	// nil: NewAuth defaults it to turnstile.Noop, and production cannot
+	// reach that default because config.Load refuses to boot without a
+	// secret.
+	turnstile turnstile.Verifier
 	// events is the product event stream; nil is silent.
 	events *events.Writer
+}
+
+// SetTurnstile replaces the bot-challenge verifier. main wires the real
+// Cloudflare client here when a secret is configured.
+func (h *Auth) SetTurnstile(v turnstile.Verifier) {
+	if v != nil {
+		h.turnstile = v
+	}
 }
 
 type AuthConfig struct {
@@ -97,6 +118,12 @@ func NewAuth(
 		pwned:        pwned,
 		cfg:          cfg,
 		loginLimiter: ratelimit.New(5, 5.0/(15*60)), // 5 attempts, refills to 5 over 15 min
+		// 5 registrations an hour from one address. A person registers
+		// once; the only legitimate caller near this ceiling is a NAT
+		// shared by several people signing up the same afternoon, which
+		// 5/hour still clears.
+		registerLimiter: ratelimit.New(5, 5.0/3600),
+		turnstile:       turnstile.Noop{},
 	}
 }
 
@@ -109,6 +136,42 @@ func (h *Auth) Register(
 	req *connect.Request[v1.RegisterRequest],
 ) (*connect.Response[v1.RegisterResponse], error) {
 	msg := req.Msg
+
+	// Rate limit first: it is the cheapest check and the one that still
+	// works when Cloudflare does not. Before any DB work, argon2, or
+	// outbound call.
+	if h.registerLimiter != nil {
+		key := "register:" + ClientIP(req)
+		if ok, retry := h.registerLimiter.Allow(key); !ok {
+			h.log.Warn("register rate limited",
+				slog.String("ip", ClientIP(req)),
+				slog.Duration("retry_after", retry))
+			return nil, connect.NewError(connect.CodeResourceExhausted,
+				errors.New("too many registration attempts; try again shortly"))
+		}
+	}
+
+	// Turnstile (FR-AUTH-09). A token Cloudflare rejects is refused; a
+	// Cloudflare we cannot reach admits the request with a loud log,
+	// matching the breach-check policy below. See internal/turnstile.
+	if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
+		Verify(ctx, msg.TurnstileToken, ClientIP(req)); err != nil {
+		h.log.Error("turnstile unreachable; admitting registration unverified",
+			slog.String("error", err.Error()))
+	} else if !verdict.OK {
+		if verdict.InvalidSecret() {
+			// Not the visitor's fault and not fixable by retrying:
+			// our secret is wrong, and every registration is failing.
+			h.log.Error("turnstile rejected our secret; registration is blocked for everyone",
+				slog.Any("error_codes", verdict.ErrorCodes))
+		} else {
+			h.log.Info("turnstile rejected a registration",
+				slog.Any("error_codes", verdict.ErrorCodes))
+		}
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("bot check failed; reload the page and try again"))
+	}
+
 	if !msg.ConsentAccepted {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			errors.New("consent_accepted must be true"))

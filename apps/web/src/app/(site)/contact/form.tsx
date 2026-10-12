@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Turnstile } from "@/components/turnstile";
+
 import { submitContactAction, type ContactState } from "./actions";
 
 const initial: ContactState = {};
@@ -36,9 +38,11 @@ const helpClass = "mt-2 text-xs text-ink-3";
 export function ContactForm({
   signedIn,
   initialCategory,
+  turnstileSiteKey,
 }: {
   signedIn: boolean;
   initialCategory?: string;
+  turnstileSiteKey: string;
 }) {
   const [state, action] = useActionState(submitContactAction, initial);
   const v = state.values ?? {};
@@ -234,6 +238,17 @@ export function ContactForm({
         />
         <p className={helpClass}>Up to 5,000 characters. Plain text is fine.</p>
       </div>
+
+      {/* Rendered whether or not the page thinks the visitor is
+          signed in. The API ignores the token for a member and
+          requires it for an anonymous sender (FR-CNT-22), and the
+          two sides can disagree: `signedIn` here only means a
+          session cookie exists, while the API resolves that cookie
+          to a user. An expired or revoked cookie therefore renders
+          the member view and submits down the anonymous path, and
+          hiding the widget in that state would reject the
+          submission with no way for the sender to fix it. */}
+      <Turnstile siteKey={turnstileSiteKey} action="contact" resetOn={state} />
 
       <Submit />
     </form>

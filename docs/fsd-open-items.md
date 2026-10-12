@@ -7,9 +7,10 @@ judgeable, and rank them.
 **Two kinds of item here.** *Not built* is what it says. *Partially
 shipped* is a row the FSD marks shipped with a hole in it, and those were
 invisible until the documentation audit on 2026-10-12 went looking:
-`FR-CNT-22` promises Turnstile on anonymous contact and enforces none,
-`FR-AUTH-09` promises it on registration and has no check at all,
-`FR-ADM-09` promises an audit log whose table has never been written to.
+`FR-CNT-22` promised Turnstile on anonymous contact and enforced none,
+`FR-AUTH-09` promised it on registration and had no check at all (both
+closed 2026-10-12), `FR-ADM-09` promises an audit log whose table has
+never been written to.
 A gap behind a "Shipped" marker is likelier to bite than something nobody
 started, because nobody is looking for it.
 
@@ -48,27 +49,25 @@ below is ranked as of 2026-10-12; the not-built section is not yet.
 
 Ranked 2026-10-12. Ranks 1 and 2 are decided by D-31 and need only costing.
 
-### 1. FR-AUTH-09 · Must
+### 1. FR-AUTH-09 · Must — CLOSED 2026-10-12
 
 > Authentication endpoints shall be rate-limited per IP and per account, with progressive delays after failed attempts, and registration shall be protected by Cloudflare Turnstile (or equivalent).
 
-**FSD status today:** Partially shipped. Login is rate-limited on (IP, email) jointly, 5 attempts then one token every three minutes (`ratelimit.New(5, 5.0/(15*60))`, `handlers/auth_session.go`), which counts successful logins as well as failures. In-process and single-instance only, and no progressive lockout.…
+**Closed.** Turnstile is verified on `Register` against Cloudflare's
+siteverify endpoint, and `Register` gained the per-IP rate limit it never
+had. Misconfiguration is a boot failure; an unreachable Cloudflare admits
+the request and logs, which is why the rate limit matters. Still open and
+deliberately out of scope: progressive delays, and a limiter that
+survives more than one process. Those are not this row's Turnstile
+promise, so they are tracked in `docs/backlog.md` rather than held here.
 
-**Why here:** Turnstile pair. D-31 settled the direction; the work is the Cloudflare-unreachable behaviour, not the API call.
+### 1. FR-CNT-22 · Must — CLOSED 2026-10-12
 
-- **Keep / drop / defer:**
-- **Depends on:**
+> Contact / support form (public + member views differ)…
 
-### 1. FR-CNT-22 · Must
-
-> Contact / support form (public + member views differ). Visitors and members shall be able to reach the owner through a typed form with category buckets — `general_question`, `bug_report`, `feature_request`, `contributor_access`,…
-
-**FSD status today:** `/contact` live; messages reach the admin console. Turnstile is not enforced: `Contact.turnstileEnforced()` returns false unconditionally, so the token check is skipped and an anonymous submission needs nothing. Found 2026-10-12.
-
-**Why here:** Same change as FR-AUTH-09 — one Turnstile implementation closes both.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed.** `turnstileEnforced()`, which returned false unconditionally,
+is gone; the anonymous path verifies the token through the same client as
+`Register`. Nothing else in the row changed.
 
 ### 2. FR-ADM-09 · Must
 

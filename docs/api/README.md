@@ -170,7 +170,7 @@ to prevent account enumeration; an existing verified account receives a
 | `statedRole` | `string` | string | `string: max_len: 120` | Stated role or title, optional. |
 | `consentVersion` | `string` | string | `string: min_len: 1 max_len: 32` | Version identifier of the consent text shown; must match the current version served on the registration page. |
 | `consentAccepted` | `bool` | boolean | `bool: const: true` | Explicit acknowledgement that activity and assistant conversations are stored and visible to the owner. Must be true. |
-| `turnstileToken` | `string` | string | `string: min_len: 1 max_len: 2048` | Cloudflare Turnstile response token from the registration page. |
+| `turnstileToken` | `string` | string | `string: min_len: 1 max_len: 2048` | Cloudflare Turnstile response token from the registration page. Verified server-side against Cloudflare's siteverify endpoint (FR-AUTH-09); a token Cloudflare rejects fails the request with `invalid_argument`. A siteverify call that cannot be completed admits the request and logs, so an outage at Cloudflare does not close registration; see services/api/internal/turnstile. |
 
 **Response** — [`RegisterResponse`](#registerresponse)
 
@@ -281,7 +281,7 @@ are available immediately on a successful admin sign-in.
 |---|---|---|---|---|
 | `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
-| `turnstileToken` | `string` | string | `string: max_len: 2048` | Turnstile token; required after repeated failures for the account or IP (the server responds `failed_precondition` with reason `turnstile_required` when it is missing but needed). |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Reserved. Login does not read this field. The comment here used to describe a step-up challenge: "required after repeated failures for the account or IP, the server responds failed_precondition with reason turnstile_required". None of that was ever built, and a comment describing a control that does not exist is the exact failure ADR 0031 was written about, so it is stated plainly instead. What actually slows credential stuffing on this endpoint is the per-(IP, email) rate limit in Login, 5 attempts refilling over 15 minutes. Turnstile IS enforced on Register and on anonymous SubmitContact. If a step-up challenge on Login is built later, this field is the place for it, and the comment changes when the code does. |
 
 **Response** — [`LoginResponse`](#loginresponse)
 
@@ -1241,7 +1241,7 @@ message with the sender's context and replies from their mailbox.
 | `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
 | `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
 | `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
-| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members, who cleared the challenge when they registered. Verified server-side against siteverify (FR-CNT-22); a rejected or missing token fails the request with `failed_precondition`. A siteverify call that cannot be completed admits the submission and logs, matching Register. |
 | `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
 | `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
 | `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
@@ -6214,7 +6214,7 @@ Contact form.
 | `category` | [`SupportCategory`](#supportcategory) | string (enum name) | `enum: defined_only: true not_in: 0` | Categorises the message so the owner can filter the support inbox (FR-CNT-22 / FR-ADM-14). Required. |
 | `name` | `string` | string | `string: max_len: 200` | Anonymous sender's display name. Required when the request has no session cookie; ignored when it does (the member's name wins). |
 | `email` | `string` | string | `string: max_len: 320` | Anonymous sender's email. Required + validated as an email address when the request has no session cookie; ignored when it does. |
-| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members. |
+| `turnstileToken` | `string` | string | `string: max_len: 4096` | Cloudflare Turnstile response token. Required on anonymous submissions; ignored for members, who cleared the challenge when they registered. Verified server-side against siteverify (FR-CNT-22); a rejected or missing token fails the request with `failed_precondition`. A siteverify call that cannot be completed admits the submission and logs, matching Register. |
 | `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
 | `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
 | `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
@@ -8744,7 +8744,7 @@ Registration form.
 | `statedRole` | `string` | string | `string: max_len: 120` | Stated role or title, optional. |
 | `consentVersion` | `string` | string | `string: min_len: 1 max_len: 32` | Version identifier of the consent text shown; must match the current version served on the registration page. |
 | `consentAccepted` | `bool` | boolean | `bool: const: true` | Explicit acknowledgement that activity and assistant conversations are stored and visible to the owner. Must be true. |
-| `turnstileToken` | `string` | string | `string: min_len: 1 max_len: 2048` | Cloudflare Turnstile response token from the registration page. |
+| `turnstileToken` | `string` | string | `string: min_len: 1 max_len: 2048` | Cloudflare Turnstile response token from the registration page. Verified server-side against Cloudflare's siteverify endpoint (FR-AUTH-09); a token Cloudflare rejects fails the request with `invalid_argument`. A siteverify call that cannot be completed admits the request and logs, so an outage at Cloudflare does not close registration; see services/api/internal/turnstile. |
 
 ### RegisterResponse
 
@@ -8797,7 +8797,7 @@ Sign-in form.
 |---|---|---|---|---|
 | `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
-| `turnstileToken` | `string` | string | `string: max_len: 2048` | Turnstile token; required after repeated failures for the account or IP (the server responds `failed_precondition` with reason `turnstile_required` when it is missing but needed). |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Reserved. Login does not read this field. The comment here used to describe a step-up challenge: "required after repeated failures for the account or IP, the server responds failed_precondition with reason turnstile_required". None of that was ever built, and a comment describing a control that does not exist is the exact failure ADR 0031 was written about, so it is stated plainly instead. What actually slows credential stuffing on this endpoint is the per-(IP, email) rate limit in Login, 5 attempts refilling over 15 minutes. Turnstile IS enforced on Register and on anonymous SubmitContact. If a step-up challenge on Login is built later, this field is the place for it, and the comment changes when the code does. |
 
 ### LoginResponse
 

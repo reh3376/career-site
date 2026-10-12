@@ -60,6 +60,12 @@ services:
       GITHUB_URL: ${GITHUB_URL:-https://github.com/reh3376}
       # Quoted on the JD pages; must match the api (same variable).
       JD_MATCH_THRESHOLD: ${JD_MATCH_THRESHOLD:-0.55}
+      # Public half of the Turnstile pair; the secret half goes to the
+      # api. Deliberately not NEXT_PUBLIC_*: those are inlined at image
+      # build time and the CI build has no Cloudflare keys, so the
+      # value would never reach the bundle. Read at request time by
+      # the register and contact pages instead.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
 
   api:
     image: ghcr.io/${GHCR_OWNER:-reh3376}/career-site-api:${API_IMAGE_TAG:-${IMAGE_TAG:-latest}}
@@ -94,6 +100,12 @@ services:
       EVENT_IDENTITY_RETENTION_DAYS: ${EVENT_IDENTITY_RETENTION_DAYS:-400}
       COOKIE_SECURE: "1"
       PWNED_CHECK_ENABLED: "1"
+      # Cloudflare Turnstile, guarding registration and anonymous
+      # contact. No `:-` default: the api refuses to boot in production
+      # without it (config.requireTurnstileInProduction), so an unset
+      # value should fail the rollout rather than quietly ship a site
+      # whose FSD says it is bot-protected and whose code does not check.
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       CAREER_SITE_ADMIN_PW: ${CAREER_SITE_ADMIN_PW}
       # Corpus reindex reads markdown from here. The bind-mount below

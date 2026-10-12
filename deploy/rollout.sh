@@ -124,6 +124,37 @@ would end them and there is no resume. Wait, or --force if you are certain"
 }
 quiet_check
 
+# Settings the new image needs in .env.prod before it is pulled.
+#
+# The api refuses to boot without TURNSTILE_SECRET_KEY, so a missing
+# value would otherwise be discovered by the readiness check, after the
+# containers have already been recreated. Catching it here costs one ssh
+# and leaves production untouched.
+#
+# TURNSTILE_SITE_KEY is the quieter half and the reason this check takes
+# a pair rather than a list: with the secret set and the site key empty,
+# everything boots, every page renders, no widget appears, and every
+# registration is rejected for a missing token. Nothing fails loudly, so
+# the script has to.
+env_preflight() {
+  say "checking .env.prod has what the new image needs"
+  local missing=""
+  for key in TURNSTILE_SECRET_KEY TURNSTILE_SITE_KEY; do
+    if ! S "cd $REMOTE && grep -qE '^${key}=.+' .env.prod"; then
+      missing="$missing $key"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    die "missing from .env.prod:$missing
+  The api will not boot without TURNSTILE_SECRET_KEY, and an empty
+  TURNSTILE_SITE_KEY hides the widget while the api still demands a
+  token. Create the widget at https://dash.cloudflare.com -> Turnstile,
+  put both values in $REMOTE/.env.prod, then re-run."
+  fi
+  echo "  ok, both Turnstile keys present"
+}
+env_preflight
+
 PREV_TAG=$(current_tag)
 say "deploying $TAG (currently $PREV_TAG)"
 [ "$TAG" != "$PREV_TAG" ] || say "note: already on $TAG, redeploying"

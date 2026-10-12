@@ -1,6 +1,91 @@
 # FR-AUTH-09 + FR-CNT-22: Turnstile
 
-**State as of 2026-10-12.** Both requirements describe Cloudflare Turnstile protecting a public endpoint against automated submission. Neither exists. There is no Turnstile verification code anywhere in the repository, no Cloudflare site key or secret in config, and no widget in the web app. The proto fields that carry a `turnstile_token` are declared with `buf.validate` rules, but `buf.validate` itself is not enforced at runtime anywhere in this service (no `protovalidate` interceptor, `protovalidate-go` is not a dependency), so those rules check nothing even on paper. The two requirements share one gap and will share one fix.
+**Built 2026-10-12.** What follows below the outcome is the state this
+document was written from, kept as written so the before and after can be
+compared. Where the build diverged from the plan, the outcome section
+says so.
+
+## Outcome
+
+Shipped on 2026-10-12. Both surfaces verify the token against
+Cloudflare's siteverify endpoint; the working parts are
+`services/api/internal/turnstile`, the gate in `handlers.Register` and in
+the anonymous branch of `handlers.SubmitContact`, and the widget in
+`apps/web/src/components/turnstile.tsx`.
+
+**The failure policy, which was the open decision.** Split, and the split
+is the point:
+
+- **Misconfiguration refuses to boot.** `config.requireTurnstileInProduction`
+  rejects a missing, truncated or quote-wrapped `TURNSTILE_SECRET_KEY`
+  when `API_ENV=production`. This is the ADR 0031 pattern: the way this
+  control dies quietly is not a Cloudflare outage, it is a variable that
+  never reaches the container, exactly as `AUTH_INTERCEPTOR_MODE` spent a
+  week doing. `deploy/rollout.sh` now checks `.env.prod` for both keys
+  before it pulls an image, so that failure lands before the containers
+  are recreated rather than at the readiness check.
+- **An unreachable siteverify admits the request and logs an error.**
+  `turnstile.FailOpen` mirrors `auth.FailOpen` around the HaveIBeenPwned
+  lookup, so this codebase has one answer to "the third party is
+  unreachable" rather than one per call site. The new per-IP registration
+  rate limit is what stands during that window, which is why it is not a
+  separate nice-to-have.
+- **Both surfaces get the same policy.** Decision 3 below asked whether
+  contact could differ; it does not, because two policies would mean two
+  things to remember and the lower-stakes surface is the one more likely
+  to be got wrong later.
+
+**Decision 4 (the `LoginRequest.turnstile_token` step-up) was descoped.**
+Neither FSD row asks for it. The proto comment that described it in the
+present tense now says plainly that `Login` does not read the field, and
+names the rate limit as what actually slows credential stuffing there.
+
+**One deliberate divergence from the checklist.** Item 2 below said to
+put the site key in the web app's environment and "confirm it reaches the
+client bundle". It does not reach the bundle, on purpose: `NEXT_PUBLIC_*`
+values are inlined at image build time and the CI build has no Cloudflare
+keys, so a value set only in `.env.prod` would never appear. That exact
+failure already happened once with the outbound social links. The site
+key is read by the server component at request time and handed to the
+form as a prop, so rotating it is a restart rather than a rebuild.
+
+**Two things the plan did not anticipate**, both found by running the
+flow end to end against Cloudflare's test keys before opening the PR
+rather than after:
+
+1. `TURNSTILE_FIELD` cannot live in the widget's module. The server
+   actions read `formData.get(TURNSTILE_FIELD)`, and importing that
+   constant from a `"use client"` module hands a server module a client
+   reference instead of the string. The lookup missed, the token read as
+   empty, and every submission failed the bot check with nothing in any
+   log to explain why. It lives in `lib/turnstile.ts` now. A unit test
+   would not have caught this; only a real submission did.
+2. `/contact` decides whether to show the anonymous fields from
+   "is there a session cookie", while the API decides from "does that
+   cookie resolve to a user". A stale cookie puts them out of step, so
+   the widget renders in both states rather than only the anonymous one.
+   The underlying mismatch predates this work and is in `docs/backlog.md`.
+
+**Verified, and how.** Not by a green suite:
+
+- Both gates exercised against the real siteverify endpoint using
+  Cloudflare's published test keys, in the local stack: the always-pass
+  secret admits, the always-fail secret rejects with
+  `invalid-input-response` in the log, and an absent token is refused
+  without a round trip.
+- Both forms submitted in a browser end to end: registration reached
+  "Check your email", anonymous contact returned a ticket id.
+- The removal mutation the completion gate requires was run. Deleting
+  the gate from `Register` and from `SubmitContact` fails four tests in
+  `handlers/turnstile_gate_test.go`; deleting the compose line fails
+  `TestEverySettingTheApiReadsReachesTheContainer`.
+
+**Still open, and tracked in `docs/backlog.md`**: no progressive delay on
+either limiter, and both are in-process.
+
+---
+
+**State as of 2026-10-12, before the build.** Both requirements describe Cloudflare Turnstile protecting a public endpoint against automated submission. Neither exists. There is no Turnstile verification code anywhere in the repository, no Cloudflare site key or secret in config, and no widget in the web app. The proto fields that carry a `turnstile_token` are declared with `buf.validate` rules, but `buf.validate` itself is not enforced at runtime anywhere in this service (no `protovalidate` interceptor, `protovalidate-go` is not a dependency), so those rules check nothing even on paper. The two requirements share one gap and will share one fix.
 
 ## What the FSD requires
 
@@ -54,16 +139,16 @@ It returns `false` unconditionally, so the check at line 104 is always skipped. 
 
 Each item is independently verifiable against the repo.
 
-1. Add `TURNSTILE_SECRET_KEY` (server) to `.env.prod.example`, `.env.prod`, and the config struct read in `services/api/internal/config/config.go`; verify with a settings/config test following the `compose_env_test.go` pattern (ADR 0031 calls out that exact prior failure mode — a setting the code reads but the container never receives).
-2. Add the Turnstile site key (public) to the web app's environment/config and confirm it reaches the client bundle.
-3. Implement a Cloudflare siteverify client (POST to `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret + token + remote IP) in `services/api` with an explicit timeout and the chosen fail-open/fail-closed behavior from the decision above.
-4. Wire that client into `Register()` (`auth.go`) so it actually reads and verifies `msg.TurnstileToken`, returning `invalid_argument` or `failed_precondition` on failure.
-5. Change `Contact.turnstileEnforced()` (`contact.go:167`) to return `true` and call the same siteverify client for the anonymous path at `contact.go:104`.
-6. Add the Turnstile widget to the registration form (`apps/web/src/app/(site)/register/form.tsx` and `actions.ts`), populating `turnstileToken` in the `RegisterRequest`.
-7. Add the Turnstile widget to the contact form's anonymous path (`apps/web/src/app/(site)/contact/form.tsx` and `actions.ts`), populating `turnstileToken` in `SubmitContactRequest`.
-8. Add or update tests: a unit test for the siteverify client (mocked HTTP), and handler-level tests for `Register` and `SubmitContact` covering token-missing, token-invalid, and siteverify-unreachable cases per the chosen failure mode.
-9. Update `docs/FSD.md` rows for `FR-AUTH-09` and `FR-CNT-22` from "partially shipped" to reflect the new state, and close the corresponding entries in `docs/fsd-open-items.md` and `docs/backlog.md`.
-10. If `LoginRequest.turnstile_token` "required after repeated failures" (per the owner's decision #4 above) is in scope, implement the failure-count tracking and the `turnstile_required` `failed_precondition` response in `Login()`; otherwise remove or correct the proto comment at `auth.proto:275-277` so it does not describe unbuilt behavior as a control (the exact failure mode ADR 0031 exists to prevent).
+1. **[done]** Add `TURNSTILE_SECRET_KEY` (server) to `.env.prod.example`, `.env.prod`, and the config struct read in `services/api/internal/config/config.go`; verify with a settings/config test following the `compose_env_test.go` pattern (ADR 0031 calls out that exact prior failure mode — a setting the code reads but the container never receives).
+2. **[done]** Add the Turnstile site key (public) to the web app's environment/config and confirm it reaches the client bundle.
+3. **[done]** Implement a Cloudflare siteverify client (POST to `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret + token + remote IP) in `services/api` with an explicit timeout and the chosen fail-open/fail-closed behavior from the decision above.
+4. **[done]** Wire that client into `Register()` (`auth.go`) so it actually reads and verifies `msg.TurnstileToken`, returning `invalid_argument` or `failed_precondition` on failure.
+5. **[done]** Change `Contact.turnstileEnforced()` (`contact.go:167`) to return `true` and call the same siteverify client for the anonymous path at `contact.go:104`.
+6. **[done]** Add the Turnstile widget to the registration form (`apps/web/src/app/(site)/register/form.tsx` and `actions.ts`), populating `turnstileToken` in the `RegisterRequest`.
+7. **[done]** Add the Turnstile widget to the contact form's anonymous path (`apps/web/src/app/(site)/contact/form.tsx` and `actions.ts`), populating `turnstileToken` in `SubmitContactRequest`.
+8. **[done]** Add or update tests: a unit test for the siteverify client (mocked HTTP), and handler-level tests for `Register` and `SubmitContact` covering token-missing, token-invalid, and siteverify-unreachable cases per the chosen failure mode.
+9. **[done]** Update `docs/FSD.md` rows for `FR-AUTH-09` and `FR-CNT-22` from "partially shipped" to reflect the new state, and close the corresponding entries in `docs/fsd-open-items.md` and `docs/backlog.md`.
+10. **[done]** If `LoginRequest.turnstile_token` "required after repeated failures" (per the owner's decision #4 above) is in scope, implement the failure-count tracking and the `turnstile_required` `failed_precondition` response in `Login()`; otherwise remove or correct the proto comment at `auth.proto:275-277` so it does not describe unbuilt behavior as a control (the exact failure mode ADR 0031 exists to prevent).
 
 ## What could not be verified
 
