@@ -146,9 +146,9 @@ Registration, verification, sign-in, and credential management.
 | [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
 | [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
 | [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | default | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
-| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | default | `ChangeEmailRequest` → `ChangeEmailResponse` | Starts an email change: a verification email goes to the new address and the change applies when it is confirmed via Verify. |
-| [`MfaEnroll`](#authservice-mfaenroll) | `/api/career.v1.AuthService/MfaEnroll` | Member | default | `MfaEnrollRequest` → `MfaEnrollResponse` | Enrols TOTP MFA for an admin account that has none. |
-| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | default | `MfaVerifyRequest` → `MfaVerifyResponse` | Verifies a TOTP code (or a recovery code) for the current admin session. |
+| [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | default | `ChangeEmailRequest` → `ChangeEmailResponse` | **Not implemented.** Declared with no handler, so the embedded UnimplementedAuthServiceHandler answers `unimplemented`. |
+| [`MfaEnroll`](#authservice-mfaenroll) | `/api/career.v1.AuthService/MfaEnroll` | Member | default | `MfaEnrollRequest` → `MfaEnrollResponse` | **Not implemented, and not planned.** Declared with no handler, so the embedded UnimplementedAuthServiceHandler answers `unimplemented`. |
+| [`MfaVerify`](#authservice-mfaverify) | `/api/career.v1.AuthService/MfaVerify` | Member | default | `MfaVerifyRequest` → `MfaVerifyResponse` | **Not implemented, and not planned.** See MfaEnroll. |
 
 ### AuthService.Register
 
@@ -262,9 +262,18 @@ response whether or not the address is known.
 
 `POST /api/career.v1.AuthService/Login` · **Auth:** Public · **Rate limit:** default/min
 
-Signs in with email and password and sets the session cookie. For an
-admin account the session is created but flagged `mfa_required`; admin
-methods stay unavailable until MfaVerify succeeds.
+Signs in with email and password and sets the session cookie.
+
+Refuses every non-active status: unverified and pending-approval get
+`failed_precondition`, declined, expired and disabled get
+`permission_denied`. So a session only exists for an account that
+was active when it was minted.
+
+This comment used to add: "For an admin account the session is
+created but flagged `mfa_required`; admin methods stay unavailable
+until MfaVerify succeeds." **None of that happens.** There is no
+second factor, `mfa_required` is hardcoded false, and admin methods
+are available immediately on a successful admin sign-in.
 
 **Request** — [`LoginRequest`](#loginrequest)
 
@@ -278,8 +287,8 @@ methods stay unavailable until MfaVerify succeeds.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `me` | [`Me`](#me) | object |  | The signed-in member. `status` is UNVERIFIED for an account that has not confirmed its email; such a session can only call verification methods. |
-| `mfaRequired` | `bool` | boolean |  | True for an admin session that must complete MfaVerify (or MfaEnroll then MfaVerify) before admin methods are available. |
+| `me` | [`Me`](#me) | object |  | The signed-in member, always active. The old comment said `status` may be UNVERIFIED here and that "such a session can only call verification methods". It cannot be: Login refuses an unverified account with `failed_precondition` and never reaches this response, so no session is ever minted in that state. |
+| `mfaRequired` | `bool` | boolean |  | Always false. It was meant to be true for an admin session awaiting MfaVerify, and nothing ever set it: the handler assigns `false` with a note deferring it to a task that was not done. The owner decided on 2026-10-09 not to build a second factor, so it stays false. Retained because career.v1 is additive-only and clients may read it. |
 | `questionnairePending` | `bool` | boolean |  | True when the first-visit questionnaire has not been completed. |
 
 <details><summary>Example request body</summary>
@@ -448,10 +457,15 @@ password. Other sessions are revoked.
 
 `POST /api/career.v1.AuthService/ChangeEmail` · **Auth:** Member · **Rate limit:** default/min
 
-Starts an email change: a verification email goes to the new address and
-the change applies when it is confirmed via Verify. Requires the current
-password (or, for social-only accounts, a fresh social sign-in within
-the last ten minutes).
+**Not implemented.** Declared with no handler, so the embedded
+UnimplementedAuthServiceHandler answers `unimplemented`.
+
+Intended: a verification email goes to the new address and the
+change applies when it is confirmed via Verify, requiring the
+current password. The old comment added "or, for social-only
+accounts, a fresh social sign-in within the last ten minutes";
+there are no social accounts, because social sign-in does not
+exist. See the note on OAuth at the top of this file.
 
 **Request** — [`ChangeEmailRequest`](#changeemailrequest)
 
@@ -481,9 +495,16 @@ the last ten minutes).
 
 `POST /api/career.v1.AuthService/MfaEnroll` · **Auth:** Member · **Rate limit:** default/min
 
-Enrols TOTP MFA for an admin account that has none. Returns the shared
-secret as an otpauth URI plus one-time recovery codes; enrolment
-completes with the first successful MfaVerify.
+**Not implemented, and not planned.** Declared with no handler, so
+the embedded UnimplementedAuthServiceHandler answers `unimplemented`.
+The owner decided on 2026-10-09 not to build a second factor; the
+`mfa_fresh` option was removed from the 79 methods that declared it
+on the same day.
+
+It was documented as enrolling TOTP and returning an otpauth URI
+with one-time recovery codes. No such code exists: nothing issues,
+stores or checks a secret, and the sessions table has no
+verification timestamp.
 
 **Request** — [`MfaEnrollRequest`](#mfaenrollrequest)
 
@@ -509,7 +530,8 @@ _No fields; send `{}`._
 
 `POST /api/career.v1.AuthService/MfaVerify` · **Auth:** Member · **Rate limit:** default/min
 
-Verifies a TOTP code (or a recovery code) for the current admin session.
+**Not implemented, and not planned.** See MfaEnroll. Answers
+`unimplemented`; there is no TOTP code or recovery code to verify.
 
 **Request** — [`MfaVerifyRequest`](#mfaverifyrequest)
 
@@ -8783,8 +8805,8 @@ Sign-in result; the session cookie is set on this response.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `me` | [`Me`](#me) | object |  | The signed-in member. `status` is UNVERIFIED for an account that has not confirmed its email; such a session can only call verification methods. |
-| `mfaRequired` | `bool` | boolean |  | True for an admin session that must complete MfaVerify (or MfaEnroll then MfaVerify) before admin methods are available. |
+| `me` | [`Me`](#me) | object |  | The signed-in member, always active. The old comment said `status` may be UNVERIFIED here and that "such a session can only call verification methods". It cannot be: Login refuses an unverified account with `failed_precondition` and never reaches this response, so no session is ever minted in that state. |
+| `mfaRequired` | `bool` | boolean |  | Always false. It was meant to be true for an admin session awaiting MfaVerify, and nothing ever set it: the handler assigns `false` with a note deferring it to a task that was not done. The owner decided on 2026-10-09 not to build a second factor, so it stays false. Retained because career.v1 is additive-only and clients may read it. |
 | `questionnairePending` | `bool` | boolean |  | True when the first-visit questionnaire has not been completed. |
 
 ### LogoutRequest
