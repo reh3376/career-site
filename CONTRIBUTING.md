@@ -28,7 +28,7 @@ Use the contact form at **https://rogerhenley.dev/contact?category=contributor_a
    scripts/dev-push.sh
    ```
    It mirrors what CI runs and refuses to push if anything fails.
-4. Push. For `feat/*`, `fix/*` and `claude_dev*` branches a draft PR opens automatically against `main` (see `.github/workflows/auto-pr.yml`); don't race it with a manual `gh pr create`.
+4. Push. A draft PR opens automatically against `main` for every branch except `main` itself and `backup/**` (see `.github/workflows/auto-pr.yml`); don't race it with a manual `gh pr create`. This used to be an allowlist of `feat/*`, `fix/*` and `claude_dev*`, and was inverted on 2026-09-29 after a `docs/` branch fell outside it and got no PR at all, silently. Opening one by hand was worse than the gap: a PR created with `gh pr create` is authored by whoever's token ran it, and GitHub does not let anyone approve their own pull request.
 5. Flip the PR to Ready-for-review when it's done. The owner reviews and merges.
 
 `main` is protected by the `protect-main` ruleset: a PR is required, the checks **api (go)**, **web (typescript)**, **sidecar (python)**, **proto (lint, breaking, drift)** and **gitleaks (secret scan)** must pass, and force-pushes and branch deletion are blocked. A red check is fixed in the PR, not skipped or excepted.

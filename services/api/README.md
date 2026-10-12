@@ -8,7 +8,7 @@ Go ConnectRPC API for career-site. Owns everything on the request path and every
 services/api/
 ├── cmd/api/            main — bootstrap, migrations, job registration, shutdown
 ├── internal/
-│   ├── auth/           sessions, password hashing, MFA, Turnstile
+│   ├── auth/           sessions, password hashing, breach check, decision tokens
 │   ├── build/          -ldflags-injected metadata (version, commit, built_at)
 │   ├── calendar/       Google Calendar OAuth + event writes
 │   ├── chat/           Ask Roger: retrieval, Q&A bank, answer assembly
@@ -36,7 +36,13 @@ services/api/
 └── Dockerfile          distroless multi-stage build
 ```
 
-Thirteen services are implemented: `System`, `Auth`, `Member`, `Content`, `Home`, `Activity`, `Chat`, `Jd`, `Meeting`, `Download`, `Contact`, `Event`, `Admin`.
+Eleven services are mounted in `internal/server/server.go`: `System`, `Auth`,
+`Member`, `Contact`, `Admin`, `Activity`, `DecisionTest`, `Jd`, `Meeting`,
+`Chat`, `Event`. `Content`, `Home` and `Download` are declared in the proto
+and generated, and are mounted nowhere, so their routes do not exist and
+every one of their procedures answers `unimplemented` — safe, but worth
+knowing, because the day one is mounted it arrives with whatever the
+contract says and nothing else.
 
 `internal/handlers` imports twelve other internal packages and holds the only file over 800 lines, which is why `docs/backlog.md` §4c wants a linter pointed here first.
 
