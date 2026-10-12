@@ -15,6 +15,15 @@ audit log whose table has never been written to. A gap behind a
 "Shipped" marker is likelier to bite than something nobody started,
 because nobody is looking for it.
 
+**One decision already collapses several of these.** On 2026-10-12 the
+owner settled D-31 (ADR 0031): a declared control is an enforced
+control. That fixes the direction on `FR-CNT-22` and `FR-AUTH-09`
+(Turnstile: verify it or drop both declarations), on `FR-ADM-09` and
+`FR-ADM-11` (`audit_log`: write to it), and on the `buf.validate` gap
+that sits behind several contract rows. Those items still need ranking
+and costing; what they no longer need is a decision about which way to
+go.
+
 **What this list is not.** It is not a plan, and the order below is the
 FSD's own, not a priority. Nothing here has been costed.
 
