@@ -117,16 +117,14 @@ missing was the admin query, not the rating feature: production held 9
 ratings, 3 negative, that nothing read. Escalation stays out because
 `ChatService.Escalate` has no handler to produce anything to queue.
 
-### 7. FR-EVAL-06 · Must
+### 7. FR-EVAL-06 · Must — CLOSED 2026-10-12
 
-> An evaluation shall not be silently destroyed by a deploy.
-
-**FSD status today:** The job runner keeps jobs in memory, so recreating the api container kills a run. `/admin/ops` (FR-ADM-19) answers whether one is in flight, which is the control today. All three services share one `IMAGE_TAG`, so there is no partial deploy that avoids this; per-service tags are in the backlog.
-
-**Why here:** Real architectural work: the job runner is in-memory. /admin/ops is the mitigation and it is a control, not a fix.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed on the "silently" reading.** The deploy now refuses while an
+evaluation is in flight, naming `--only web` as the way to ship a
+front-end change anyway. A run still does not survive a deploy;
+checkpoint and resume is the stronger reading and is designed, not
+built, in the working document. 6 of the first 15 production runs died
+this way with nothing in the deploy path looking.
 
 ### 8. FR-CNT-19 · Should
 

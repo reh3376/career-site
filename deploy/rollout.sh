@@ -96,26 +96,54 @@ quiet_check() {
   [ -n "$FORCE" ] && { say "skipping the quiet check (--force)"; return 0; }
   say "checking the site is quiet"
   local sql out
+  # The eval_runs clause is bounded by 8 hours on purpose: that is
+  # jobTimeout for an evaluation (handlers/admin_jobs.go), so a row
+  # older than that cannot still be running and must be a stranded one
+  # the next boot has not yet closed. Without the bound, one crashed run
+  # would block every deploy until somebody noticed why.
   sql="SELECT
          (SELECT count(*) FROM dt_sessions
            WHERE status = 'running'
              AND NOT is_synthetic
              AND started_at > now() - interval '25 minutes'),
          (SELECT count(*) FROM events
-           WHERE occurred_at > now() - interval '10 minutes');"
+           WHERE occurred_at > now() - interval '10 minutes'),
+         (SELECT count(*) FROM eval_runs
+           WHERE status = 'running'
+             AND started_at > now() - interval '8 hours');"
   out=$(S "cd $REMOTE && $CS exec -T postgres psql -U career -d career -Atc \"$sql\"" 2>/dev/null | tr -d '\r')
-  local in_test recent
+  local in_test recent evals
   in_test=$(echo "$out" | cut -d'|' -f1)
   recent=$(echo "$out" | cut -d'|' -f2)
+  evals=$(echo "$out" | cut -d'|' -f3)
   if [ -z "$in_test" ]; then
     say "could not read the database to check; treating that as not quiet"
     die "quiet check failed. Re-run with --force only if you know the site is idle"
   fi
   echo "  decision tests in flight: $in_test"
   echo "  events in the last 10 min: $recent"
+  echo "  evaluations in flight: $evals"
   if [ "$in_test" -gt 0 ]; then
     die "$in_test decision test run(s) started in the last 25 minutes. A rollout \
 would end them and there is no resume. Wait, or --force if you are certain"
+  fi
+  # FR-EVAL-06: an evaluation shall not be silently destroyed by a
+  # deploy. It was, repeatedly: 6 of the first 15 production runs ended
+  # at status 'failed' with partial scores, several of them hours in,
+  # because the job runner holds everything in memory and recreating the
+  # api container kills the goroutine. Nothing in this script looked.
+  #
+  # This does not make a run survive a deploy; it makes the deploy
+  # refuse. Resume is the stronger thing and is not built; see the FSD
+  # row and docs/fsd-items/FR-EVAL-06-eval-durability.md.
+  if [ "$evals" -gt 0 ]; then
+    die "$evals evaluation(s) in flight. A rollout recreates the api container, \
+which kills the run: the job runner holds it in memory and there is no resume, \
+so the hours already spent are lost and only the postings already scored survive.
+  Wait for it to finish (/admin/ops shows progress), or if this change only
+  touches the front end, deploy just that: deploy/rollout.sh --only web
+  leaves the api container, and the run, untouched.
+  --force overrides, and ends the run."
   fi
   if [ "$recent" -gt 20 ]; then
     die "$recent events in the last 10 minutes: the site is busy. Wait, or --force"

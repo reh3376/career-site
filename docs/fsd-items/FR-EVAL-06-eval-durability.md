@@ -1,6 +1,76 @@
 # FR-EVAL-06: an evaluation must survive a deploy
 
-**State as of 2026-10-12.** An evaluation runs entirely in the api process's memory (`services/api/internal/jobs/runner.go`), takes 30-50 minutes per posting and 5-6 hours for a ten-posting set (`docs/evaluation.md:54-55`), and is killed outright, with no resume, whenever that process exits. The only control in place is `/admin/ops`, which lets a human check whether a run is in flight before choosing to deploy; nothing in the deploy path itself checks, and nothing persists enough state to resume a killed run. What does survive is the per-posting results already written to Postgres, recovered into the run's summary counters at the next boot by `FailStrandedEvalRuns` - but that is a post-mortem accounting of a run that was still destroyed, not a run that kept going.
+**Built 2026-10-12**, on the narrow reading. The state this was written
+from is kept below.
+
+## Outcome
+
+**The deploy refuses. A run still does not survive one.** That split is
+the whole of what shipped, and the FSD row says it in those words.
+
+`deploy/rollout.sh`'s `quiet_check` now counts `eval_runs` at status
+`running` alongside the `dt_sessions` and `events` counts it already
+made, and dies when one is in flight. The message names `--only web`,
+because a front-end change can ship without touching the api container
+and that is the existing escape hatch.
+
+**The gap was wider than "no prevention".** The deploy path had never
+looked at evaluations at all. `quiet_check` queried decision tests and
+recent events; a five-hour evaluation was no obstacle to a rollout.
+Production bears that out: **6 of the first 15 runs ended at `failed`
+with partial scores**, several of them hours in, including run 14 at
+four scored and one errored.
+
+**The 8-hour bound is `jobTimeout`.** A row older than that cannot still
+be running, so it must be a stranded one `FailStrandedEvalRuns` has not
+yet closed. Without the bound, one crashed run would block every deploy
+until somebody worked out why, which is how a safety check gets
+`--force`d by habit and stops being a check.
+
+**Decisions taken:**
+
+- **Is a deploy-time check enough to call this Shipped?** On the row's
+  own word, "silently", yes: a loud refusal is not a silent
+  destruction. The row now states plainly that a run does not survive,
+  so nobody reads "Shipped" as "resumable". Resume is designed below and
+  not built.
+- **Auto-selecting `--only web` for a web-only diff: no.** The deploy
+  script choosing which services to recreate based on what it thinks a
+  diff touches is a cleverness that fails quietly in the direction of
+  shipping less than intended. The refusal names the flag instead and
+  the operator decides.
+- **Per-service `IMAGE_TAG`s: already built.** This document and the FSD
+  row both listed them as backlog. `WEB_IMAGE_TAG`, `API_IMAGE_TAG` and
+  `SIDECAR_IMAGE_TAG` each fall back to the shared tag and
+  `rollout.sh --only` drives them. The row understated the control that
+  existed, which is the same class of error as overstating one.
+- **SIGTERM and `stop_grace_period`: not pursued.** A graceful shutdown
+  that waits for an evaluation would hold a deploy for up to eight
+  hours, which is not a deploy. The refusal is the right place for the
+  wait, because a human is there to decide.
+- **Checkpoint and resume: not built, and the reason is scope, not
+  disagreement.** It needs an `eval_runs.status` that distinguishes
+  "stopped and closed" from "stopped and resumable", a query for the
+  goldens already scored against a run id, and a decision about whether
+  a resumed run starts automatically at boot or waits for an admin. Each
+  of those is a design question with a failure surface of its own, and
+  the checklist below still describes them.
+
+**Verified by driving the gate, not by reading it.** The three-part
+query was run against production (0|0|0, quiet) and against a local
+database with a `running` evaluation row inserted, where it returned
+`0|2|1`; the script's own branch, fed that output, refused with exit 1.
+The local row was removed.
+
+**Deliberately not tested against production data.** Inserting a
+synthetic `running` row there would have been closed as `failed` by
+`FailStrandedEvalRuns` at the next boot, adding a seventh fake failure
+to the fifteen-run history the owner tunes against. The gate's behaviour
+is worth proving; it is not worth corrupting the evidence to prove it.
+
+---
+
+**State as of 2026-10-12, before the build.** An evaluation runs entirely in the api process's memory (`services/api/internal/jobs/runner.go`), takes 30-50 minutes per posting and 5-6 hours for a ten-posting set (`docs/evaluation.md:54-55`), and is killed outright, with no resume, whenever that process exits. The only control in place is `/admin/ops`, which lets a human check whether a run is in flight before choosing to deploy; nothing in the deploy path itself checks, and nothing persists enough state to resume a killed run. What does survive is the per-posting results already written to Postgres, recovered into the run's summary counters at the next boot by `FailStrandedEvalRuns` - but that is a post-mortem accounting of a run that was still destroyed, not a run that kept going.
 
 ## What the FSD requires
 
