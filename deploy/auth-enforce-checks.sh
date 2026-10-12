@@ -33,10 +33,25 @@ bad() { printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); }
 
 code() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
 
-MODE=$(ssh -o ConnectTimeout=20 "$HOST" \
-  "cd /opt/career-site && grep '^AUTH_INTERCEPTOR_MODE=' .env.prod | cut -d= -f2" 2>/dev/null)
-MODE="${MODE:-observe}"
-echo "interceptor mode on the server: $MODE"
+# Read from the boot log, not from .env.prod.
+#
+# This used to print the value of AUTH_INTERCEPTOR_MODE. S5 removed that
+# variable along with observe mode, so reading it would report a setting
+# nothing consumes, which is the kind of reassuring-but-meaningless line
+# this script exists to avoid. The boot log is what the process actually
+# did.
+INSTALLED=$(ssh -o ConnectTimeout=20 "$HOST" \
+  "cd /opt/career-site && docker compose --env-file .env.prod \
+     -f docker-compose.yml -f docker-compose.prod.yml logs api </dev/null 2>/dev/null \
+   | grep -c 'auth interceptor installed'" 2>/dev/null | tr -d '\r')
+if [ "${INSTALLED:-0}" -gt 0 ]; then
+  echo "auth interceptor: installed and enforcing (from the boot log)"
+else
+  echo "auth interceptor: NOT found in the boot log. Nothing below proves"
+  echo "  enforcement, because the handlers no longer gate and the"
+  echo "  interceptor is the only thing left."
+  fail=$((fail+1))
+fi
 echo
 
 echo "-- public surfaces stay reachable (these must hold in either mode)"
@@ -61,17 +76,19 @@ esac
 
 echo
 echo "-- an admin procedure refuses an anonymous caller"
+# ListMembers has no access check of its own since S5: it goes straight
+# to the database. A 401 here can only have come from the interceptor.
 c=$(code -H 'Content-Type: application/json' -X POST \
   "$BASE/api/career.v1.AdminService/ListMembers" -d '{}')
-if [ "$MODE" = "enforce" ]; then
-  [ "$c" = "401" ] && ok "ListMembers anonymous -> 401 unauthenticated" \
-    || bad "ListMembers anonymous -> $c, expected 401"
-else
-  # In observe mode the handler's own requireAdmin denies, so 401 is
-  # still right; it just does not prove the interceptor did it.
-  [ "$c" = "401" ] && ok "ListMembers anonymous -> 401 (by the handler's gate; observe mode)" \
-    || bad "ListMembers anonymous -> $c, expected 401"
-fi
+[ "$c" = "401" ] && ok "ListMembers anonymous -> 401 unauthenticated" \
+  || bad "ListMembers anonymous -> $c, expected 401"
+
+# The handler that leaked 21,708 bytes of participant data on 2026-10-05
+# when its gate was missing. It has no gate again now, by design.
+c=$(code -H 'Content-Type: application/json' -X POST \
+  "$BASE/api/career.v1.AdminService/ExportDecisionTestData" -d '{}')
+[ "$c" = "401" ] && ok "ExportDecisionTestData anonymous -> 401" \
+  || bad "ExportDecisionTestData anonymous -> $c, expected 401 (this is the 2026-10-05 leak)"
 
 # A MEMBER procedure, same question.
 c=$(code -H 'Content-Type: application/json' -X POST \
@@ -139,5 +156,5 @@ ssh -o ConnectTimeout=20 "$HOST" "cd /opt/career-site && docker compose --env-fi
   | sed 's/^api-1  | /    /' || true
 
 echo
-echo "== result: $pass ok, $fail failed (mode=$MODE) =="
+echo "== result: $pass ok, $fail failed =="
 [ "$fail" -eq 0 ] || exit 1
