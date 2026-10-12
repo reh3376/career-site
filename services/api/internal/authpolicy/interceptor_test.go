@@ -45,24 +45,24 @@ const (
 )
 
 func testResolver(calls *int) ResolveFunc {
-	return func(_ context.Context, header http.Header) (Caller, error) {
+	return func(ctx context.Context, header http.Header) (Caller, context.Context, error) {
 		if calls != nil {
 			*calls++
 		}
 		switch sessionToken(header) {
 		case tokenAdmin:
-			return Caller{Authenticated: true, Active: true, Admin: true}, nil
+			return Caller{Authenticated: true, Active: true, Admin: true}, ctx, nil
 		case tokenMember:
-			return Caller{Authenticated: true, Active: true}, nil
+			return Caller{Authenticated: true, Active: true}, ctx, nil
 		case tokenSuspended:
-			return Caller{Authenticated: true}, nil
+			return Caller{Authenticated: true}, ctx, nil
 		case tokenSuspendedAd:
-			return Caller{Authenticated: true, Admin: true}, nil
+			return Caller{Authenticated: true, Admin: true}, ctx, nil
 		case tokenBroken:
-			return Caller{}, errors.New("database is down")
+			return Caller{}, ctx, errors.New("database is down")
 		default:
 			// No session. Not an error.
-			return Caller{}, nil
+			return Caller{}, ctx, nil
 		}
 	}
 }
@@ -88,17 +88,15 @@ type stack struct {
 	logs    func() string
 	served  func() int
 	resolls func() int
-	stats   func() Stats
-	summary func(string)
 }
 
 // handlerBehaviour lets a test say what the stub handler does, which is
 // how observe mode's comparison gets exercised: the interesting cases
 // are a handler that serves a request the policy would refuse, and a
 // handler that refuses one the policy allows.
-type handlerBehaviour func(procedure string) error
+type handlerBehaviour func(ctx context.Context, procedure string) error
 
-func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
+func newStack(t *testing.T, behave handlerBehaviour) *stack {
 	t.Helper()
 
 	policy, err := Build()
@@ -110,18 +108,33 @@ func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	resolls := 0
-	intc, err := NewInterceptor(policy, testResolver(&resolls), mode, log)
+	intc, err := NewInterceptor(policy, testResolver(&resolls), log)
 	if err != nil {
 		t.Fatalf("new interceptor: %v", err)
 	}
+	s := buildStack(t, intc, behave)
+	s.logs = buf.String
+	s.resolls = func() int { return resolls }
+	return s
+}
+
+// newStackWith mounts the services around an interceptor the caller
+// built, for tests that need a different resolver.
+func newStackWith(t *testing.T, intc *Interceptor, behave handlerBehaviour) *stack {
+	t.Helper()
+	return buildStack(t, intc, behave)
+}
+
+func buildStack(t *testing.T, intc *Interceptor, behave handlerBehaviour) *stack {
+	t.Helper()
 
 	if behave == nil {
-		behave = func(string) error { return nil }
+		behave = func(context.Context, string) error { return nil }
 	}
 	served := 0
-	count := func(procedure string) error {
+	count := func(ctx context.Context, procedure string) error {
 		served++
-		return behave(procedure)
+		return behave(ctx, procedure)
 	}
 
 	opts := connect.WithInterceptors(intc)
@@ -153,11 +166,9 @@ func newStack(t *testing.T, mode Mode, behave handlerBehaviour) *stack {
 		member:  careerv1connect.NewMemberServiceClient(c, srv.URL),
 		system:  careerv1connect.NewSystemServiceClient(c, srv.URL),
 		chat:    careerv1connect.NewChatServiceClient(c, srv.URL),
-		logs:    buf.String,
+		logs:    func() string { return "" },
 		served:  func() int { return served },
-		resolls: func() int { return resolls },
-		stats:   intc.Stats,
-		summary: intc.LogSummary,
+		resolls: func() int { return 0 },
 	}
 }
 
@@ -244,7 +255,7 @@ func TestEnforceModeDecisions(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			s := newStack(t, ModeEnforce, nil)
+			s := newStack(t, nil)
 			err := c.call(s, c.token)
 
 			if c.wantCode == 0 {
@@ -281,7 +292,7 @@ func TestEnforceModeDecisions(t *testing.T) {
 // is public and is the busiest surface on the site; resolving a session
 // it does not have would add a database round trip per answer.
 func TestPublicProceduresResolveNoSession(t *testing.T) {
-	s := newStack(t, ModeEnforce, nil)
+	s := newStack(t, nil)
 
 	if err := callPublic(s, ""); err != nil {
 		t.Fatalf("public call failed: %v", err)
@@ -306,152 +317,6 @@ func TestPublicProceduresResolveNoSession(t *testing.T) {
 	if s.resolls() == 0 {
 		t.Error("the resolver never ran for a member procedure either, so the " +
 			"previous assertions do not show that public skips it")
-	}
-}
-
-// ---------------------------------------------------------------
-// Observe mode
-// ---------------------------------------------------------------
-
-// Observe mode must change nothing. Every call that the enforce table
-// above refuses has to succeed here, or S3 is not the inert step the
-// plan says it is.
-func TestObserveModeEnforcesNothing(t *testing.T) {
-	for _, c := range []struct {
-		name  string
-		token string
-		call  func(*stack, string) error
-	}{
-		{"admin procedure, anonymous", "", callAdmin},
-		{"admin procedure, active member", tokenMember, callAdmin},
-		{"admin procedure, suspended admin", tokenSuspendedAd, callAdmin},
-		{"member procedure, anonymous", "", callMember},
-		{"member procedure, suspended", tokenSuspended, callMember},
-		{"member procedure, resolver fails", tokenBroken, callMember},
-		{"streaming, anonymous", "", callChat},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			s := newStack(t, ModeObserve, nil)
-			if err := c.call(s, c.token); err != nil {
-				t.Fatalf("observe mode denied the call: %v", err)
-			}
-			if s.served() != 1 {
-				t.Errorf("the handler ran %d times, expected 1", s.served())
-			}
-		})
-	}
-}
-
-// would_close: the handler served a request the interceptor would have
-// refused. This is the finding that matters most, because it is a real
-// behaviour change waiting at S4.
-func TestObserveLogsWouldClose(t *testing.T) {
-	s := newStack(t, ModeObserve, nil) // handler always succeeds
-
-	if err := callAdmin(s, ""); err != nil {
-		t.Fatalf("observe mode denied the call: %v", err)
-	}
-
-	out := s.logs()
-	for _, want := range []string{
-		"auth policy disagreement",
-		"would_close",
-		"/career.v1.AdminService/ListMembers",
-		"AUTH_LEVEL_ADMIN",
-		"served the request",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("the log is missing %q:\n%s", want, out)
-		}
-	}
-	if !strings.Contains(out, "level=WARN") {
-		t.Errorf("a would_close disagreement was not logged at warn:\n%s", out)
-	}
-}
-
-// would_open: the handler demanded a session the interceptor did not.
-// This is the dangerous direction and should never appear in production.
-func TestObserveLogsWouldOpen(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
-	})
-
-	// The interceptor allows this: an active member calling a member
-	// procedure. The handler refuses anyway.
-	_ = callMember(s, tokenMember)
-
-	out := s.logs()
-	for _, want := range []string{"would_open", "/career.v1.MemberService/GetMe"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("the log is missing %q:\n%s", want, out)
-		}
-	}
-	if !strings.Contains(out, "level=WARN") {
-		t.Errorf("a would_open disagreement was not logged at warn:\n%s", out)
-	}
-}
-
-// A handler refusing with permission_denied where the policy allows is
-// ambiguous: it may be authorisation the auth level does not describe,
-// such as "not your resource". Logged at info so it can be triaged
-// without burying the two findings that are unambiguous.
-func TestObserveSeparatesAmbiguousPermissionDenials(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
-		return connect.NewError(connect.CodePermissionDenied, errors.New("not your record"))
-	})
-
-	_ = callMember(s, tokenMember)
-
-	out := s.logs()
-	if !strings.Contains(out, "handler_denied_permission") {
-		t.Errorf("the ambiguous case was not logged:\n%s", out)
-	}
-	if strings.Contains(out, "would_open") {
-		t.Errorf("an ambiguous permission_denied was reported as would_open, "+
-			"which is the finding that is supposed to mean something:\n%s", out)
-	}
-	if strings.Contains(out, "level=WARN") {
-		t.Errorf("the ambiguous case was logged at warn, which is what makes "+
-			"the real findings hard to see:\n%s", out)
-	}
-}
-
-// A public procedure whose handler refuses is not a policy
-// disagreement. Login rejecting a declined account returns
-// permission_denied, and warning on every failed sign-in would make
-// this mode's output worthless.
-func TestObserveIgnoresDenialsOnPublicProcedures(t *testing.T) {
-	s := newStack(t, ModeObserve, func(procedure string) error {
-		return connect.NewError(connect.CodePermissionDenied,
-			errors.New("this account is not permitted to sign in"))
-	})
-
-	_ = callPublic(s, "")
-
-	if out := s.logs(); strings.Contains(out, "disagreement") ||
-		strings.Contains(out, "handler_denied_permission") {
-		t.Errorf("a denial on a public procedure was reported as a policy "+
-			"disagreement:\n%s", out)
-	}
-}
-
-// Agreement is silent. A mode that logged on every request would be
-// turned off long before the week of observation was up.
-func TestObserveIsQuietWhenTheTwoAgree(t *testing.T) {
-	s := newStack(t, ModeObserve, nil)
-
-	if err := callAdmin(s, tokenAdmin); err != nil {
-		t.Fatalf("admin call failed: %v", err)
-	}
-	if err := callMember(s, tokenMember); err != nil {
-		t.Fatalf("member call failed: %v", err)
-	}
-	if err := callPublic(s, ""); err != nil {
-		t.Fatalf("public call failed: %v", err)
-	}
-
-	if out := s.logs(); strings.Contains(out, "disagreement") {
-		t.Errorf("a disagreement was logged for three calls that agree:\n%s", out)
 	}
 }
 
@@ -482,7 +347,7 @@ func TestNewInterceptorRefusesAnUnusableConfiguration(t *testing.T) {
 		{"nil logger", policy, resolve, nil, "logger"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := NewInterceptor(c.policy, c.resolve, ModeEnforce, c.log)
+			got, err := NewInterceptor(c.policy, c.resolve, c.log)
 			if err == nil {
 				t.Fatalf("accepted %s and returned an interceptor", c.name)
 			}
@@ -493,44 +358,6 @@ func TestNewInterceptorRefusesAnUnusableConfiguration(t *testing.T) {
 				t.Errorf("error %q does not mention %q", err, c.want)
 			}
 		})
-	}
-}
-
-// An unrecognised mode is an error, never a default. A typo selecting
-// enforce would deny the admin console; a typo selecting observe would
-// leave enforcement off while the deploy meant to turn it on reported
-// success.
-func TestParseMode(t *testing.T) {
-	for _, c := range []struct {
-		in      string
-		want    Mode
-		wantErr bool
-	}{
-		{"observe", ModeObserve, false},
-		{"enforce", ModeEnforce, false},
-		{"", ModeObserve, true},
-		{"Enforce", ModeObserve, true},
-		{"on", ModeObserve, true},
-		{"true", ModeObserve, true},
-	} {
-		got, err := ParseMode(c.in)
-		if c.wantErr {
-			if err == nil {
-				t.Errorf("ParseMode(%q) accepted it, returning %s", c.in, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("ParseMode(%q): %v", c.in, err)
-			continue
-		}
-		if got != c.want {
-			t.Errorf("ParseMode(%q) = %s, want %s", c.in, got, c.want)
-		}
-	}
-	if ModeObserve.String() != "observe" || ModeEnforce.String() != "enforce" {
-		t.Errorf("mode names are %q and %q; they appear in the boot log",
-			ModeObserve, ModeEnforce)
 	}
 }
 
@@ -589,10 +416,10 @@ type stubAdmin struct {
 }
 
 func (s *stubAdmin) ListMembers(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.ListMembersRequest],
 ) (*connect.Response[v1.ListMembersResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.ListMembersResponse{}), nil
@@ -604,20 +431,20 @@ type stubMember struct {
 }
 
 func (s *stubMember) GetMe(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetMeRequest],
 ) (*connect.Response[v1.GetMeResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetMeResponse{}), nil
 }
 
 func (s *stubMember) GetHistory(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetHistoryRequest],
 ) (*connect.Response[v1.GetHistoryResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetHistoryResponse{}), nil
@@ -629,10 +456,10 @@ type stubSystem struct {
 }
 
 func (s *stubSystem) GetVersion(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.GetVersionRequest],
 ) (*connect.Response[v1.GetVersionResponse], error) {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetVersionResponse{}), nil
@@ -644,99 +471,12 @@ type stubChat struct {
 }
 
 func (s *stubChat) SendMessage(
-	_ context.Context,
+	ctx context.Context,
 	req *connect.Request[v1.SendMessageRequest],
 	stream *connect.ServerStream[v1.SendMessageResponse],
 ) error {
-	if err := s.on(req.Spec().Procedure); err != nil {
+	if err := s.on(ctx, req.Spec().Procedure); err != nil {
 		return err
 	}
 	return stream.Send(&v1.SendMessageResponse{})
-}
-
-// ---------------------------------------------------------------
-// Counters
-// ---------------------------------------------------------------
-
-// The counters are what make a quiet observation period mean anything.
-// Once Logout was declared PUBLIC on 2026-10-09 the interceptor has
-// nothing left to disagree about, so the expected log for the week is
-// empty, and an empty log is also what an interceptor installed on
-// nothing produces. "0 disagreements out of 0 comparisons" and "0 out of
-// 4,000" are very different claims and must not look the same.
-func TestStatsCountWhatWasActuallyCompared(t *testing.T) {
-	s := newStack(t, ModeObserve, nil)
-
-	// Public calls are allowed without a session and never compared.
-	for range 3 {
-		if err := callPublic(s, ""); err != nil {
-			t.Fatalf("public call: %v", err)
-		}
-	}
-	// Agreement: an active member on a member procedure.
-	if err := callMember(s, tokenMember); err != nil {
-		t.Fatalf("member call: %v", err)
-	}
-	// would_close: the stub serves an admin procedure the policy refuses.
-	if err := callAdmin(s, ""); err != nil {
-		t.Fatalf("admin call in observe mode: %v", err)
-	}
-
-	got := s.stats()
-	want := Stats{Public: 3, Compared: 2, WouldClose: 1}
-	if got != want {
-		t.Errorf("stats = %+v, want %+v", got, want)
-	}
-	if got.Disagreements() != 1 {
-		t.Errorf("Disagreements() = %d, want 1", got.Disagreements())
-	}
-}
-
-func TestStatsCountEachDisagreementKindSeparately(t *testing.T) {
-	// A handler that always refuses with unauthenticated gives would_open.
-	open := newStack(t, ModeObserve, func(string) error {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("nope"))
-	})
-	_ = callMember(open, tokenMember)
-	if st := open.stats(); st.WouldOpen != 1 || st.WouldClose != 0 || st.Ambiguous != 0 {
-		t.Errorf("would_open case: stats = %+v", st)
-	}
-
-	// permission_denied where the policy allows is ambiguous, not
-	// would_open, because it may be authorisation the level does not
-	// describe.
-	amb := newStack(t, ModeObserve, func(string) error {
-		return connect.NewError(connect.CodePermissionDenied, errors.New("not yours"))
-	})
-	_ = callMember(amb, tokenMember)
-	if st := amb.stats(); st.Ambiguous != 1 || st.WouldOpen != 0 {
-		t.Errorf("ambiguous case: stats = %+v", st)
-	}
-}
-
-// The summary line is what the observation period is judged on, so its
-// severity has to track whether there is anything to act on.
-func TestLogSummarySeverityTracksTheFindings(t *testing.T) {
-	clean := newStack(t, ModeObserve, nil)
-	if err := callMember(clean, tokenMember); err != nil {
-		t.Fatalf("member call: %v", err)
-	}
-	clean.summary("test")
-	out := clean.logs()
-	if !strings.Contains(out, "auth policy observation") {
-		t.Fatalf("no summary was logged:\n%s", out)
-	}
-	if !strings.Contains(out, "compared=1") {
-		t.Errorf("the summary does not report what was compared:\n%s", out)
-	}
-	if strings.Contains(out, "level=WARN") {
-		t.Errorf("a clean summary was logged at warn:\n%s", out)
-	}
-
-	dirty := newStack(t, ModeObserve, nil)
-	_ = callAdmin(dirty, "") // would_close
-	dirty.summary("test")
-	if out := dirty.logs(); !strings.Contains(out, "level=WARN") {
-		t.Errorf("a summary with a disagreement was not logged at warn:\n%s", out)
-	}
 }

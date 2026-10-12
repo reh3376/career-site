@@ -193,12 +193,6 @@ func main() {
 	// be compared against the handlers' own gates on real traffic.
 	// AUTH_INTERCEPTOR_MODE=enforce turns it on, which makes S4 a
 	// redeploy rather than a code change.
-	authMode, err := authpolicy.ParseMode(cfg.AuthInterceptorMode)
-	if err != nil {
-		log.Error("bad AUTH_INTERCEPTOR_MODE, refusing to start",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
 	// Maps a resolved session to the three questions the auth level
 	// turns on. Active and Admin are read here, in the one place that
 	// knows what a user record looks like, so internal/authpolicy stays
@@ -208,27 +202,31 @@ func main() {
 	// error: Login refuses every non-active status, so a session only
 	// exists for an account that was active when it was minted, and the
 	// Active check below is about suspension *after* that.
-	resolveCaller := func(ctx context.Context, header http.Header) (authpolicy.Caller, error) {
+	// It also attaches the account to the context. The lookup has
+	// already happened to answer the three questions below, and the
+	// handler is about to want the same record; S5 has handlers read it
+	// from the context instead of loading it a second time.
+	resolveCaller := func(ctx context.Context, header http.Header) (authpolicy.Caller, context.Context, error) {
 		u, err := authHandler.LookupSessionUserHeader(ctx, header)
 		if err != nil {
-			return authpolicy.Caller{}, err
+			return authpolicy.Caller{}, ctx, err
 		}
 		if u == nil {
-			return authpolicy.Caller{}, nil
+			return authpolicy.Caller{}, ctx, nil
 		}
 		return authpolicy.Caller{
 			Authenticated: true,
 			Active:        u.Status == users.StatusActive,
 			Admin:         u.Role == users.RoleAdmin,
-		}, nil
+		}, handlers.WithCaller(ctx, u), nil
 	}
-	authInterceptor, err := authpolicy.NewInterceptor(authPolicy, resolveCaller, authMode, log)
+	authInterceptor, err := authpolicy.NewInterceptor(authPolicy, resolveCaller, log)
 	if err != nil {
 		log.Error("auth interceptor init failed, refusing to start",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	log.Info("auth interceptor ready", slog.String("mode", authMode.String()))
+	log.Info("auth interceptor ready, enforcing the declared level")
 
 	memberHandler := handlers.NewMember(authHandler, userRepo)
 	contactHandler := handlers.NewContact(

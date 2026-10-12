@@ -44,9 +44,6 @@ const (
 func (a *Admin) ListQaEntries(
 	ctx context.Context, req *connect.Request[v1.ListQaEntriesRequest],
 ) (*connect.Response[v1.ListQaEntriesResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	entries, err := a.users.ListQAEntries(ctx, req.Msg.GetIncludeDisabled())
 	if err != nil {
 		a.log.Error("ListQaEntries failed", slog.String("error", err.Error()))
@@ -73,7 +70,7 @@ func (a *Admin) ListQaEntries(
 func (a *Admin) CreateQaEntry(
 	ctx context.Context, req *connect.Request[v1.CreateQaEntryRequest],
 ) (*connect.Response[v1.CreateQaEntryResponse], error) {
-	me, err := requireAdmin(a, ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +107,7 @@ func (a *Admin) CreateQaEntry(
 func (a *Admin) UpdateQaEntry(
 	ctx context.Context, req *connect.Request[v1.UpdateQaEntryRequest],
 ) (*connect.Response[v1.UpdateQaEntryResponse], error) {
-	me, err := requireAdmin(a, ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +142,7 @@ func (a *Admin) UpdateQaEntry(
 func (a *Admin) SetQaEntryEnabled(
 	ctx context.Context, req *connect.Request[v1.SetQaEntryEnabledRequest],
 ) (*connect.Response[v1.SetQaEntryEnabledResponse], error) {
-	me, err := requireAdmin(a, ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +167,7 @@ func (a *Admin) SetQaEntryEnabled(
 func (a *Admin) DeleteQaEntry(
 	ctx context.Context, req *connect.Request[v1.DeleteQaEntryRequest],
 ) (*connect.Response[v1.DeleteQaEntryResponse], error) {
-	me, err := requireAdmin(a, ctx, req)
+	me, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -193,9 +190,6 @@ func (a *Admin) DeleteQaEntry(
 func (a *Admin) AddQaPhrasing(
 	ctx context.Context, req *connect.Request[v1.AddQaPhrasingRequest],
 ) (*connect.Response[v1.AddQaPhrasingResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	entryID, err := parseID(req.Msg.GetEntryId())
 	if err != nil {
 		return nil, err
@@ -219,9 +213,6 @@ func (a *Admin) AddQaPhrasing(
 func (a *Admin) DeleteQaPhrasing(
 	ctx context.Context, req *connect.Request[v1.DeleteQaPhrasingRequest],
 ) (*connect.Response[v1.DeleteQaPhrasingResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	entryID, err := parseID(req.Msg.GetEntryId())
 	if err != nil {
 		return nil, err

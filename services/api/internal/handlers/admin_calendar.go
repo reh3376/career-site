@@ -36,7 +36,7 @@ func (a *Admin) GetCalendarConnectURL(
 	ctx context.Context,
 	req *connect.Request[v1.GetCalendarConnectURLRequest],
 ) (*connect.Response[v1.GetCalendarConnectURLResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (a *Admin) ConnectCalendar(
 	ctx context.Context,
 	req *connect.Request[v1.ConnectCalendarRequest],
 ) (*connect.Response[v1.ConnectCalendarResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +109,6 @@ func (a *Admin) GetCalendarStatus(
 	ctx context.Context,
 	req *connect.Request[v1.GetCalendarStatusRequest],
 ) (*connect.Response[v1.GetCalendarStatusResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	return connect.NewResponse(&v1.GetCalendarStatusResponse{Status: a.calendarStatus(ctx)}), nil
 }
 
@@ -119,7 +116,7 @@ func (a *Admin) DisconnectCalendar(
 	ctx context.Context,
 	req *connect.Request[v1.DisconnectCalendarRequest],
 ) (*connect.Response[v1.DisconnectCalendarResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -225,9 +222,6 @@ func (a *Admin) ListMeetings(
 	ctx context.Context,
 	req *connect.Request[v1.ListMeetingsRequest],
 ) (*connect.Response[v1.ListMeetingsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	rows, err := a.users.AllBookings(ctx, req.Msg.GetIncludePast())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("the meetings could not be read"))
@@ -243,7 +237,7 @@ func (a *Admin) CancelMeetingAsAdmin(
 	ctx context.Context,
 	req *connect.Request[v1.CancelMeetingAsAdminRequest],
 ) (*connect.Response[v1.CancelMeetingAsAdminResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

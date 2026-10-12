@@ -21,9 +21,6 @@ func (a *Admin) GetSchedulerSettings(
 	ctx context.Context,
 	req *connect.Request[v1.GetSchedulerSettingsRequest],
 ) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.scheduler == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("scheduler not wired"))
 	}
@@ -48,7 +45,7 @@ func (a *Admin) SetSchedulerSettings(
 	ctx context.Context,
 	req *connect.Request[v1.SetSchedulerSettingsRequest],
 ) (*connect.Response[v1.SetSchedulerSettingsResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

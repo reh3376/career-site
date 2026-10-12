@@ -3,64 +3,32 @@ package authpolicy
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"sync/atomic"
 
 	"connectrpc.com/connect"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 )
 
-// S3 and S4 of docs/sprint-auth-interceptor.md: one Connect interceptor
-// that reads the declared level and decides, replacing ~90 hand-written
-// gate calls.
+// One Connect interceptor reads the declared auth level and decides,
+// in place of the ~90 hand-written gate calls the handlers used to
+// carry. S3, S4 and S5 of docs/sprint-auth-interceptor.md.
 //
-// It arrives in **observe** mode, deciding and enforcing nothing, so its
-// decision can be compared against what the handlers already do on real
-// traffic before anything changes. S1 proved the two agree statically;
-// this is the only way to prove it on the session edge cases a source
-// parse cannot see. The mode is config, not code, so S4 is a flag flip
-// and a redeploy rather than a change to this file.
-
-// Mode decides whether the interceptor acts on its decision.
-type Mode int
-
-const (
-	// ModeObserve computes the decision, lets the request through
-	// regardless, and logs when the handler disagreed.
-	ModeObserve Mode = iota
-	// ModeEnforce denies before the handler runs.
-	ModeEnforce
-)
-
-func (m Mode) String() string {
-	if m == ModeEnforce {
-		return "enforce"
-	}
-	return "observe"
-}
-
-// ParseMode reads the mode from configuration.
+// **It always enforces, and there is no longer a mode.** It arrived in
+// S3 with an observe mode that computed the decision and acted on
+// nothing, so its answers could be compared against the handlers' own
+// gates on real traffic before anything changed. S4 turned enforcement
+// on after 1,205 comparisons produced no disagreement.
 //
-// Anything it does not recognise is an error rather than a default,
-// including the empty string, so the caller decides what "unset" means.
-// A typo in AUTH_INTERCEPTOR_MODE silently selecting enforce would deny
-// the admin console; silently selecting observe would leave enforcement
-// off while the deploy that was supposed to turn it on reported success.
-// Neither is acceptable as a guess.
-func ParseMode(s string) (Mode, error) {
-	switch s {
-	case "observe":
-		return ModeObserve, nil
-	case "enforce":
-		return ModeEnforce, nil
-	default:
-		return ModeObserve, fmt.Errorf(
-			"unknown auth interceptor mode %q, expected \"observe\" or \"enforce\"", s)
-	}
-}
+// S5 then removed the handler gates, and that is what removed the mode
+// with them. Observe mode compared the interceptor against those gates;
+// with the gates gone it compares nothing. Worse, 48 of the converted
+// handlers only ever used their gate to refuse, so they now contain no
+// check at all, and an interceptor that observes without acting would
+// leave them open. A mode whose only remaining effect is to disable the
+// sole enforcement is not a mode, it is a hole, so AUTH_INTERCEPTOR_MODE
+// is gone and the observation machinery with it.
 
 // Caller is everything the interceptor needs to know about who is
 // calling. Deliberately three booleans rather than a *users.User: this
@@ -87,101 +55,33 @@ type Caller struct {
 // has no request object, only a connection, and both expose
 // http.Header. One signature means one resolution path and no chance of
 // the two disagreeing.
-type ResolveFunc func(ctx context.Context, header http.Header) (Caller, error)
+//
+// **It returns a context, which is how S5 works.** The resolver has
+// already loaded the account in order to answer the three questions in
+// Caller, and the handler is about to need the same record. Returning a
+// context lets the resolver attach it, so the interceptor can hand it
+// down to the handler and the handler does not repeat the lookup. This
+// package stays free of the users package: it passes the context along
+// without knowing what was put in it.
+//
+// Implementations return the input context unchanged when there is no
+// session, and must never return a nil context.
+type ResolveFunc func(ctx context.Context, header http.Header) (Caller, context.Context, error)
 
 type Interceptor struct {
 	policy  Map
 	resolve ResolveFunc
-	mode    Mode
 	log     *slog.Logger
-	counts  counters
-}
-
-// counters make a quiet observation period mean something.
-//
-// Once Logout was declared PUBLIC on 2026-10-09, observe mode has
-// nothing left to disagree about, so the expected output for the week is
-// an empty log. That is a problem: an empty log is exactly what a
-// misconfigured interceptor produces, or one installed on no services,
-// or one whose policy lookups all miss. "No disagreements logged" is
-// only evidence if something was compared.
-//
-// So the interceptor counts what it did, and the server reports it
-// periodically. The exit criterion for S3 then reads as "N comparisons,
-// 0 disagreements" rather than as silence.
-type counters struct {
-	public     atomic.Int64
-	compared   atomic.Int64
-	wouldClose atomic.Int64
-	wouldOpen  atomic.Int64
-	ambiguous  atomic.Int64
-	unknown    atomic.Int64
-}
-
-// Stats is a snapshot of what the interceptor has seen.
-type Stats struct {
-	// Public procedures, which are allowed without resolving a session
-	// and are never compared.
-	Public int64
-	// Compared is MEMBER and ADMIN calls where the interceptor reached
-	// a decision and the handler then ran, so the two could be
-	// compared. This is the number that makes a clean run meaningful.
-	Compared int64
-	// Disagreements, by kind. See observe().
-	WouldClose int64
-	WouldOpen  int64
-	Ambiguous  int64
-	// Unknown procedures: served but absent from the policy map. Should
-	// always be zero.
-	Unknown int64
-}
-
-func (s Stats) Disagreements() int64 { return s.WouldClose + s.WouldOpen }
-
-func (i *Interceptor) Stats() Stats {
-	return Stats{
-		Public:     i.counts.public.Load(),
-		Compared:   i.counts.compared.Load(),
-		WouldClose: i.counts.wouldClose.Load(),
-		WouldOpen:  i.counts.wouldOpen.Load(),
-		Ambiguous:  i.counts.ambiguous.Load(),
-		Unknown:    i.counts.unknown.Load(),
-	}
-}
-
-// LogSummary reports the running totals. Called on a timer by the
-// server while in observe mode, and once at shutdown.
-//
-// Logged at warn when there is anything to act on, so the line that
-// matters is not the same severity as the routine one.
-func (i *Interceptor) LogSummary(reason string) {
-	st := i.Stats()
-	attrs := []any{
-		slog.String("reason", reason),
-		slog.String("mode", i.mode.String()),
-		slog.Int64("compared", st.Compared),
-		slog.Int64("public_allowed", st.Public),
-		slog.Int64("would_close", st.WouldClose),
-		slog.Int64("would_open", st.WouldOpen),
-		slog.Int64("ambiguous", st.Ambiguous),
-		slog.Int64("unknown_procedure", st.Unknown),
-	}
-	if st.Disagreements() > 0 || st.Unknown > 0 {
-		i.log.Warn("auth policy observation", attrs...)
-		return
-	}
-	i.log.Info("auth policy observation", attrs...)
 }
 
 // NewInterceptor fails rather than returning something that would allow
 // everything or deny everything by accident.
 //
-// An empty policy denies every MEMBER and ADMIN procedure once
-// enforcing, and a nil resolver cannot authenticate anybody. Both are
-// programming errors, and both would present as a total outage with no
-// obvious cause, so they are refused here where the message can say
-// which one it was.
-func NewInterceptor(policy Map, resolve ResolveFunc, mode Mode, log *slog.Logger) (*Interceptor, error) {
+// An empty policy denies every MEMBER and ADMIN procedure, and a nil
+// resolver cannot authenticate anybody. Both are programming errors, and
+// both would present as a total outage with no obvious cause, so they are
+// refused here where the message can say which one it was.
+func NewInterceptor(policy Map, resolve ResolveFunc, log *slog.Logger) (*Interceptor, error) {
 	if len(policy) == 0 {
 		return nil, errors.New("auth interceptor needs a non-empty policy map")
 	}
@@ -191,13 +91,11 @@ func NewInterceptor(policy Map, resolve ResolveFunc, mode Mode, log *slog.Logger
 	if log == nil {
 		return nil, errors.New("auth interceptor needs a logger")
 	}
-	return &Interceptor{policy: policy, resolve: resolve, mode: mode, log: log}, nil
+	return &Interceptor{policy: policy, resolve: resolve, log: log}, nil
 }
 
-func (i *Interceptor) Mode() Mode { return i.mode }
-
-// decision is what the interceptor concluded, kept whole so observe
-// mode can report the reasoning and not just the verdict.
+// decision is what the interceptor concluded, kept whole so a denial
+// can report its reason and not just its verdict.
 type decision struct {
 	level v1.AuthLevel
 	// known is false when the procedure is not in the policy map.
@@ -236,7 +134,10 @@ type decision struct {
 //
 // The role check still applies, so this cannot widen ADMIN; BuildFrom
 // refuses the option on any level but MEMBER.
-func (i *Interceptor) decide(ctx context.Context, procedure string, header http.Header) decision {
+// decide answers whether this caller may call this procedure, and
+// returns the context the handler should run with: the resolver's
+// enriched one where a session was resolved, the original otherwise.
+func (i *Interceptor) decide(ctx context.Context, procedure string, header http.Header) (decision, context.Context) {
 	policy, ok := i.policy.Lookup(procedure)
 	if !ok {
 		// D2: a procedure with no policy is denied. Build() makes this
@@ -248,7 +149,7 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 			allow: false,
 			code:  connect.CodePermissionDenied,
 			why:   "no auth policy for this procedure",
-		}
+		}, ctx
 	}
 
 	level := policy.Level
@@ -260,10 +161,13 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 		// busiest surface on the site, and resolving a session it does
 		// not have would add a database round trip to every answer.
 		d.allow = true
-		return d
+		return d, ctx
 	}
 
-	caller, err := i.resolve(ctx, header)
+	caller, next, err := i.resolve(ctx, header)
+	if next != nil {
+		ctx = next
+	}
 	switch {
 	case err != nil:
 		// Matches what every handler returns today when the lookup
@@ -278,23 +182,18 @@ func (i *Interceptor) decide(ctx context.Context, procedure string, header http.
 	default:
 		d.allow = true
 	}
-	return d
+	return d, ctx
 }
 
 func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		procedure := req.Spec().Procedure
-		d := i.decide(ctx, procedure, req.Header())
-
-		if i.mode == ModeEnforce && !d.allow {
+		d, ctx := i.decide(ctx, procedure, req.Header())
+		if !d.allow {
+			i.logIfUnknown(procedure, d)
 			return nil, connect.NewError(d.code, errors.New(d.why))
 		}
-
-		resp, err := next(ctx, req)
-		if i.mode == ModeObserve {
-			i.observe(procedure, d, err)
-		}
-		return resp, err
+		return next(ctx, req)
 	}
 }
 
@@ -304,17 +203,12 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		procedure := conn.Spec().Procedure
-		d := i.decide(ctx, procedure, conn.RequestHeader())
-
-		if i.mode == ModeEnforce && !d.allow {
+		d, ctx := i.decide(ctx, procedure, conn.RequestHeader())
+		if !d.allow {
+			i.logIfUnknown(procedure, d)
 			return connect.NewError(d.code, errors.New(d.why))
 		}
-
-		err := next(ctx, conn)
-		if i.mode == ModeObserve {
-			i.observe(procedure, d, err)
-		}
-		return err
+		return next(ctx, conn)
 	}
 }
 
@@ -325,84 +219,15 @@ func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) conn
 	return next
 }
 
-// observe compares the interceptor's decision with what the handler
-// actually did, and logs only where they disagree.
-//
-// **The signal has to stay clean or it will be ignored.** A handler
-// returning an error is not the same as a handler denying access: it
-// may be validating input, or reporting that the database is down. And
-// on a PUBLIC procedure a denial is never about the auth level, because
-// the interceptor always allows those; `Login` rejecting a declined
-// account with `permission_denied` is the handler's own business rule,
-// and logging it as a policy disagreement would put a warning in the
-// log on every failed sign-in. So:
-//
-//   - PUBLIC procedures are not compared at all. S1 already proved
-//     statically that no PUBLIC handler gates on a session.
-//   - `would_close` means the handler served a request the interceptor
-//     would have refused. This is a real behaviour change at S4 and the
-//     most important thing this mode can find.
-//   - `would_open` means the handler demanded a session the interceptor
-//     did not. This is the dangerous direction and should never appear.
-//   - `handler_denied_permission` is ambiguous: the interceptor allowed
-//     and the handler refused with `permission_denied`, which may be
-//     authorisation the auth level does not describe ("not your
-//     resource"). Logged at info so it can be triaged without drowning
-//     the two findings above.
-func (i *Interceptor) observe(procedure string, d decision, handlerErr error) {
-	if !d.known {
-		// Worth knowing regardless of mode: the routes are serving
-		// something the policy map does not cover.
-		i.counts.unknown.Add(1)
-		i.log.Error("auth policy: procedure is served but has no policy",
-			slog.String("procedure", procedure))
+// logIfUnknown reports a procedure that is served but carries no
+// policy. It cannot happen while Build validates the map against the
+// descriptors, and if it ever does, every call to that procedure is
+// denied and the reason should not have to be inferred from a wall of
+// permission_denied.
+func (i *Interceptor) logIfUnknown(procedure string, d decision) {
+	if d.known {
 		return
 	}
-	if d.level == v1.AuthLevel_AUTH_LEVEL_PUBLIC {
-		i.counts.public.Add(1)
-		return
-	}
-	i.counts.compared.Add(1)
-
-	handlerDenied := false
-	handlerCode := connect.Code(0)
-	if handlerErr != nil {
-		handlerCode = connect.CodeOf(handlerErr)
-		handlerDenied = handlerCode == connect.CodeUnauthenticated ||
-			handlerCode == connect.CodePermissionDenied
-	}
-
-	switch {
-	case !d.allow && !handlerDenied:
-		i.counts.wouldClose.Add(1)
-		i.log.Warn("auth policy disagreement",
-			slog.String("kind", "would_close"),
-			slog.String("procedure", procedure),
-			slog.String("level", d.level.String()),
-			slog.String("interceptor", d.code.String()+": "+d.why),
-			slog.String("handler", handlerOutcome(handlerErr, handlerCode)))
-
-	case d.allow && handlerCode == connect.CodeUnauthenticated:
-		i.counts.wouldOpen.Add(1)
-		i.log.Warn("auth policy disagreement",
-			slog.String("kind", "would_open"),
-			slog.String("procedure", procedure),
-			slog.String("level", d.level.String()),
-			slog.String("interceptor", "allowed"),
-			slog.String("handler", "unauthenticated"))
-
-	case d.allow && handlerCode == connect.CodePermissionDenied:
-		i.counts.ambiguous.Add(1)
-		i.log.Info("auth policy: handler refused a call the policy allows",
-			slog.String("kind", "handler_denied_permission"),
-			slog.String("procedure", procedure),
-			slog.String("level", d.level.String()))
-	}
-}
-
-func handlerOutcome(err error, code connect.Code) string {
-	if err == nil {
-		return "served the request"
-	}
-	return "failed with " + code.String()
+	i.log.Error("auth policy: procedure is served but has no policy",
+		slog.String("procedure", procedure))
 }

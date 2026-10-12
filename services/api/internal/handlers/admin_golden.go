@@ -24,9 +24,6 @@ func (a *Admin) ListGoldenPostings(
 	ctx context.Context,
 	req *connect.Request[v1.ListGoldenPostingsRequest],
 ) (*connect.Response[v1.ListGoldenPostingsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	set, err := a.users.ListGoldenPostings(ctx, req.Msg.GetActiveOnly())
 	if err != nil {
 		a.log.Error("ListGoldenPostings failed", slog.String("error", err.Error()))
@@ -64,9 +61,6 @@ func (a *Admin) UpsertGoldenPosting(
 	ctx context.Context,
 	req *connect.Request[v1.UpsertGoldenPostingRequest],
 ) (*connect.Response[v1.UpsertGoldenPostingResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	// An empty gate is legitimate: a posting drawn at random arrives
 	// unlabelled on purpose, and is labelled after someone reads it.
 	gate := strings.ToLower(strings.TrimSpace(req.Msg.GetExpectedGate()))
@@ -110,9 +104,6 @@ func (a *Admin) SetGoldenActive(
 	ctx context.Context,
 	req *connect.Request[v1.SetGoldenActiveRequest],
 ) (*connect.Response[v1.SetGoldenActiveResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if err := a.users.SetGoldenActive(ctx, req.Msg.GetId(), req.Msg.GetActive()); err != nil {
 		a.log.Error("SetGoldenActive failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("could not update the posting"))
@@ -125,9 +116,6 @@ func (a *Admin) LabelGoldenPosting(
 	ctx context.Context,
 	req *connect.Request[v1.LabelGoldenPostingRequest],
 ) (*connect.Response[v1.LabelGoldenPostingResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	gate := strings.ToLower(strings.TrimSpace(req.Msg.GetExpectedGate()))
 	if gate != "above" && gate != "below" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
@@ -144,9 +132,6 @@ func (a *Admin) ListEvalRuns(
 	ctx context.Context,
 	req *connect.Request[v1.ListEvalRunsRequest],
 ) (*connect.Response[v1.ListEvalRunsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	runs, err := a.users.ListEvalRuns(ctx, int(req.Msg.GetLimit()))
 	if err != nil {
 		a.log.Error("ListEvalRuns failed", slog.String("error", err.Error()))
@@ -164,9 +149,6 @@ func (a *Admin) GetEvalRun(
 	ctx context.Context,
 	req *connect.Request[v1.GetEvalRunRequest],
 ) (*connect.Response[v1.GetEvalRunResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	run, err := a.users.GetEvalRun(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("evaluation not found"))

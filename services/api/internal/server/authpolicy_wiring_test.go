@@ -9,9 +9,7 @@ import (
 	"net/http/httptest"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/authpolicy"
@@ -47,12 +45,12 @@ func TestTheInterceptorIsAttachedToEveryMountedService(t *testing.T) {
 
 	// Anonymous: no session resolves, so every non-public procedure must
 	// be refused with unauthenticated.
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	var logBuf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logBuf, nil))
-	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeEnforce, log)
+	intc, err := authpolicy.NewInterceptor(policy, resolve, log)
 	if err != nil {
 		t.Fatalf("new interceptor: %v", err)
 	}
@@ -141,11 +139,11 @@ func TestPublicProceduresStayReachableWithTheInterceptorEnforcing(t *testing.T) 
 	if err != nil {
 		t.Fatalf("build the policy: %v", err)
 	}
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeEnforce, log)
+	intc, err := authpolicy.NewInterceptor(policy, resolve, log)
 	if err != nil {
 		t.Fatalf("new interceptor: %v", err)
 	}
@@ -216,135 +214,69 @@ func unmountedService(svc string) bool {
 	return false
 }
 
-// The observation heartbeat.
+// The handlers that now have no check of their own at all.
 //
-// S3's success condition is the absence of something, and after Logout
-// was declared PUBLIC on 2026-10-09 there is nothing left for observe
-// mode to disagree about. So the expected output for the week is an
-// empty disagreement log, which is also what an interceptor installed on
-// nothing produces. The periodic summary is what separates those two,
-// and a goroutine on a 15-minute timer is not something to ship
-// unexercised, so observeInterval is a var and this drives it.
-func TestTheObservationHeartbeatReportsWhatWasCompared(t *testing.T) {
+// S5 removed the gates. For the 48 that only ever used theirs to refuse,
+// nothing replaced it: ListMembers goes straight to the database, and
+// ExportDecisionTestData straight to the CSV builder. The interceptor is
+// the only thing between an anonymous caller and that data, which makes
+// it load-bearing in a way it was not before S5.
+//
+// The generic probe above happens to pick AdminService/AddMemberNote,
+// which is alphabetically first and has no handler, so a 401 there only
+// proves the interceptor beat Connect's Unimplemented answer. These are
+// real, implemented handlers that would return real data if reached.
+//
+// ExportDecisionTestData is here deliberately. It is the handler that
+// shipped without a gate on 2026-10-05 and served 21,708 bytes of
+// participant data to anonymous callers for five hours. It has no gate
+// again now, by design, and this is what stands in for the one it lost.
+func TestImplementedAdminHandlersWithNoCheckAreStillRefused(t *testing.T) {
 	policy, err := authpolicy.Build()
 	if err != nil {
 		t.Fatalf("build the policy: %v", err)
 	}
-
-	// An active member, so a member procedure is allowed and compared.
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{Authenticated: true, Active: true}, nil
-	}
-	logBuf := &syncWriter{w: &bytes.Buffer{}}
-	log := slog.New(slog.NewTextHandler(logBuf, nil))
-	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeObserve, log)
-	if err != nil {
-		t.Fatalf("new interceptor: %v", err)
-	}
-
-	prev := observeInterval
-	observeInterval = 10 * time.Millisecond
-	defer func() { observeInterval = prev }()
-
-	s := New(config.Config{Addr: ":0", ShutdownTimeout: time.Second}, log, Deps{
-		AuthPolicy:      policy,
-		AuthInterceptor: intc,
-	})
-	handler := s.routes()
-	s.startPolicyObservation()
-	defer s.stopPolicyObservation()
-
-	// One public call, which is allowed and never compared.
-	callOnce(t, handler, "/api/career.v1.SystemService/GetVersion")
-
-	// Wait for a periodic summary rather than sleeping a fixed time.
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if strings.Contains(logBuf.String(), "reason=periodic") {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	out := logBuf.String()
-	if !strings.Contains(out, "reason=periodic") {
-		t.Fatalf("no periodic summary was logged within 3s, so a quiet week "+
-			"would be indistinguishable from a broken interceptor:\n%s", out)
-	}
-	for _, want := range []string{
-		"auth policy observation",
-		"mode=observe",
-		"public_allowed=1",
-		"would_close=0",
-		"would_open=0",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("the summary is missing %q:\n%s", want, out)
-		}
-	}
-	// A clean run is not a warning.
-	if strings.Contains(out, "level=WARN") {
-		t.Errorf("a clean observation was logged at warn:\n%s", out)
-	}
-}
-
-// Nothing starts in enforce mode: the summary exists to make observe
-// mode's silence legible, and enforce mode's evidence is the denials
-// themselves.
-func TestTheHeartbeatDoesNotRunWhenEnforcing(t *testing.T) {
-	policy, err := authpolicy.Build()
-	if err != nil {
-		t.Fatalf("build: %v", err)
-	}
-	resolve := func(_ context.Context, _ http.Header) (authpolicy.Caller, error) {
-		return authpolicy.Caller{}, nil
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	intc, err := authpolicy.NewInterceptor(policy, resolve, authpolicy.ModeEnforce, log)
+	intc, err := authpolicy.NewInterceptor(policy, resolve, log)
 	if err != nil {
 		t.Fatalf("new interceptor: %v", err)
 	}
 
-	s := New(config.Config{Addr: ":0"}, log, Deps{
+	handler := New(config.Config{Addr: ":0"}, log, Deps{
 		AuthPolicy:      policy,
 		AuthInterceptor: intc,
-	})
-	s.startPolicyObservation()
-	if s.observeStop != nil {
-		t.Error("the heartbeat started in enforce mode")
+		Admin:           &handlers.Admin{},
+	}).routes()
+
+	for _, procedure := range []string{
+		"/career.v1.AdminService/ListMembers",
+		"/career.v1.AdminService/ListCorpusDocuments",
+		"/career.v1.AdminService/ListJdSubmissions",
+		"/career.v1.AdminService/ExportDecisionTestData",
+		"/career.v1.AdminService/ListDecisionTestRuns",
+		"/career.v1.AdminService/GetMetrics",
+	} {
+		t.Run(procedure, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api"+procedure,
+				strings.NewReader("{}"))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			body, _ := io.ReadAll(rec.Body)
+
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("%s returned %d for an anonymous caller, expected 401.\n"+
+					"This handler has no access check of its own since S5, so "+
+					"anything but a refusal here means real data is being "+
+					"served to anyone.\nbody: %s", procedure, rec.Code, body)
+			}
+			if !strings.Contains(string(body), "not signed in") {
+				t.Errorf("%s was refused but not by the interceptor.\nbody: %s",
+					procedure, body)
+			}
+		})
 	}
-	// Stopping when nothing started must be safe: Shutdown calls it
-	// unconditionally.
-	s.stopPolicyObservation()
-}
-
-func callOnce(t *testing.T, h http.Handler, path string) {
-	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
-	req.Header.Set("Content-Type", "application/json")
-	h.ServeHTTP(httptest.NewRecorder(), req)
-}
-
-// syncWriter serialises writes so the test can read the buffer while the
-// heartbeat goroutine is still writing to it. Without it this test is a
-// data race that only -race reports.
-type syncWriter struct {
-	mu sync.Mutex
-	w  *bytes.Buffer
-}
-
-func (s *syncWriter) Write(p []byte) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.w.Write(p)
-}
-
-// String must take the same lock as Write. Reading the buffer directly
-// while the heartbeat goroutine is logging into it is a data race, and
-// one that only -race reports, so the first version of this test passed
-// locally and would have been caught in CI.
-func (s *syncWriter) String() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.w.String()
 }

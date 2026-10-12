@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -38,12 +37,9 @@ func (a *Activity) RecordEvents(
 	ctx context.Context,
 	req *connect.Request[v1.RecordEventsRequest],
 ) (*connect.Response[v1.RecordEventsResponse], error) {
-	u, err := a.auth.LookupSessionUser(ctx, req)
+	u, err := RequireCaller(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("session lookup failed"))
-	}
-	if u == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not signed in"))
+		return nil, err
 	}
 
 	var accepted, dups int32

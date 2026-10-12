@@ -30,9 +30,6 @@ import (
 func (a *Admin) GetDecisionTestSettings(
 	ctx context.Context, req *connect.Request[v1.GetDecisionTestSettingsRequest],
 ) (*connect.Response[v1.GetDecisionTestSettingsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	s := a.users.DTGetSettings(ctx)
 	version := s.InstrumentVersion()
 	n, err := a.users.DTSessionsOnVersion(ctx, version)
@@ -52,7 +49,7 @@ func (a *Admin) GetDecisionTestSettings(
 func (a *Admin) SetDecisionTestSettings(
 	ctx context.Context, req *connect.Request[v1.SetDecisionTestSettingsRequest],
 ) (*connect.Response[v1.SetDecisionTestSettingsResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +79,6 @@ func (a *Admin) SetDecisionTestSettings(
 func (a *Admin) ListDecisionTestRuns(
 	ctx context.Context, req *connect.Request[v1.ListDecisionTestRunsRequest],
 ) (*connect.Response[v1.ListDecisionTestRunsResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	runs, err := a.users.DTListRuns(ctx, req.Msg.GetIncludeSynthetic(), req.Msg.GetReviewStatus())
 	if err != nil {
 		a.log.Error("decision test: list runs", slog.String("error", err.Error()))
@@ -132,9 +126,6 @@ func (a *Admin) ListDecisionTestRuns(
 func (a *Admin) GetDecisionTestRun(
 	ctx context.Context, req *connect.Request[v1.GetDecisionTestRunRequest],
 ) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	run, blocks, answers, err := a.users.DTGetRun(ctx, req.Msg.GetSessionKey())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
@@ -228,9 +219,6 @@ func (a *Admin) GetDecisionTestRun(
 func (a *Admin) GetDecisionTestAnalysis(
 	ctx context.Context, req *connect.Request[v1.GetDecisionTestAnalysisRequest],
 ) (*connect.Response[v1.GetDecisionTestAnalysisResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	out := &v1.GetDecisionTestAnalysisResponse{}
 
 	if curve, err := a.users.DTLoadCurve(ctx); err != nil {
@@ -291,9 +279,6 @@ func (a *Admin) GetDecisionTestAnalysis(
 func (a *Admin) ExportDecisionTestRun(
 	ctx context.Context, req *connect.Request[v1.ExportDecisionTestRunRequest],
 ) (*connect.Response[v1.ExportDecisionTestRunResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	out, err := a.users.DTExportRun(ctx, req.Msg.GetSessionKey(), req.Msg.GetIncludeKey())
 	if err != nil {
 		a.log.Error("decision test: export run", slog.String("error", err.Error()))
@@ -320,15 +305,26 @@ func (a *Admin) ExportDecisionTestRun(
 func (a *Admin) ExportDecisionTestData(
 	ctx context.Context, req *connect.Request[v1.ExportDecisionTestDataRequest],
 ) (*connect.Response[v1.ExportDecisionTestDataResponse], error) {
-	// This call was shipped without it on 2026-10-05 and the entire
+	// **This handler has no access check, and that is now correct.**
+	//
+	// It shipped without one on 2026-10-05 and the entire decision test
 	// dataset was downloadable by anyone, with no session, for about
-	// five hours. The proto declares AUTH_LEVEL_ADMIN and that is not
-	// enforcement: the comment on the Admin type says so in as many
-	// words, because the auth interceptor has not landed and every
-	// method here gates itself.
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
+	// five hours: an unauthenticated POST returned 200 and 21,708 bytes
+	// of participant data. Back then the proto's AUTH_LEVEL_ADMIN was
+	// documentation and this handler was the only gate, so the missing
+	// line was the whole protection.
+	//
+	// Since S4 of docs/sprint-auth-interceptor.md the interceptor reads
+	// that declaration and refuses every caller below ADMIN before this
+	// function runs, and S5 removed the handler gates because a check
+	// that cannot fire can only disagree with the one in front of it. So
+	// the same omission is no longer possible: protection now follows
+	// from the declaration rather than from the author remembering a
+	// line.
+	//
+	// TestImplementedAdminHandlersWithNoCheckAreStillRefused probes this
+	// procedure anonymously and requires 401, because it is the handler
+	// that proves the point.
 	if a.users == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("not configured"))
 	}
@@ -356,7 +352,7 @@ func (a *Admin) ExportDecisionTestData(
 func (a *Admin) ReviewDecisionTestRun(
 	ctx context.Context, req *connect.Request[v1.ReviewDecisionTestRunRequest],
 ) (*connect.Response[v1.ReviewDecisionTestRunResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}

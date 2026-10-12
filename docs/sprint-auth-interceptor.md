@@ -818,7 +818,139 @@ returns `unauthenticated`; a member session calling an admin procedure
 returns `permission_denied`. Verified by actually making those calls,
 not by reading the code.
 
-### S5. Remove the handler checks
+### S5. Remove the handler checks — **done 2026-10-11**
+
+Measured before starting, because it decides whether this is mechanical
+or invasive. The 69 `requireAdmin` call sites are four shapes:
+
+| shape | sites |
+|---|---|
+| `if _, err := requireAdmin(...)` | 45 |
+| `admin, err := requireAdmin(...)` | 14 |
+| `u, err := requireAdmin(...)` | 5 |
+| `me, err := requireAdmin(...)` | 5 |
+
+plus `requireMember` at 3 discarding the user and 14 using it. So 48
+sites only need the gate deleted, and 38 need the account from somewhere
+else. 87 gated handlers in total.
+
+#### S5a: the caller travels on the request context
+
+D3's reason for not simply deleting the gates: `requireAdmin` did two
+jobs, deciding and returning the `*users.User` the handler then used.
+Only the deciding moved to the interceptor in S4.
+
+The resolver has already loaded the account to answer the interceptor's
+three questions, and the handler is about to want the same record. So
+`ResolveFunc` now returns a context as well, the resolver attaches the
+account with `handlers.WithCaller`, and the interceptor hands that
+context to the handler. `internal/authpolicy` still knows nothing about
+the `users` package: it passes a context along without knowing what is
+in it.
+
+Handlers read it with `RequireCaller(ctx)`. **That is an invariant
+check, not an authorisation decision** — the interceptor already refused
+every caller below the declared level, so the error path is unreachable
+in enforce mode. It exists because unreachable is not impossible: in
+observe mode a request the interceptor would have refused still reaches
+the handler, and a service mounted without the interceptor would resolve
+nothing. It returns `internal` rather than `unauthenticated`, because by
+that point the request has passed the policy and a missing caller means
+the server is misconfigured, not that the caller should sign in.
+
+**Converted first: the three bare-lookup handlers**, `MemberService.GetMe`,
+`MemberService.GetHistory` and `ActivityService.RecordEvents`. They were
+the simplest and they prove the mechanism end to end, each having
+previously resolved the session itself and checked only that it existed.
+
+#### The S1 test inverts per handler, not all at once
+
+`migratedToInterceptor` lists the handlers that no longer gate. For
+those, the comparison flips: a gate is now the failure. Two things are
+asserted.
+
+**No gate**, because the interceptor already refused everyone below the
+level, so a handler check cannot fire and can only disagree with it.
+**No session lookup of any shape**, not even an attribution one, because
+the resolver already loaded the account; a second lookup is the same
+query twice. PUBLIC handlers are not on the list and keep their
+attribution lookups, since nothing is resolved for them.
+
+The list shrinks the old comparison as it grows. When it covers all 87,
+the two halves swap over completely and `gateFuncs` can go.
+
+#### One test that nothing else would have caught
+
+The interceptor takes `ctx` as a parameter and passes it to `next`. A
+version that decided on the resolver's enriched context and then called
+`next` with the *original* would pass every other test in the file:
+every level, every code, every disagreement kind, unchanged. Handlers
+would silently see an empty context.
+
+So `TestTheResolvedCallerReachesTheHandler` drives a resolver that
+attaches a marker and asserts the handler sees it, on the unary and the
+streaming path, and asserts a public procedure sees nothing. Confirmed by
+mutation: dropping the enriched context fails that test and **only** that
+test.
+
+#### S5b: all 87 converted, and the gates deleted
+
+69 `requireAdmin` call sites, 15 `requireMember` and `requireChatAdmin`
+sites using the account, 4 gate-only, and then the five helper
+definitions: `requireAdmin`, `requireChatAdmin`, and the three separate
+`requireMember` copies in chat.go, jd.go and meetings.go. The 48 sites
+that only used their gate to refuse lost three lines each; the 38 that
+used the account now read it with `RequireCaller(ctx)`.
+
+**Both auth-gate tests inverted.** `admin_authgate_test.go` required all
+69 admin methods to call `requireAdmin`; it now requires that none of
+them do, and that none resolve a session either. The S1 comparison
+likewise: for a MEMBER or ADMIN handler a gate is now the failure.
+`TestTheGateHelpersAreGone` is separate, because a helper can exist while
+being called from nowhere, and a dead gate invites someone to start
+calling it again.
+
+#### Removing observe mode was part of S5, not optional
+
+Found while reviewing the diff, and it was nearly shipped as a hole.
+
+S5 takes away D4's overlap: the interceptor becomes the only thing
+enforcing. For the 48 handlers that only ever used their gate to refuse,
+**nothing replaced it** — `ListMembers` now goes straight to the
+database. And `AUTH_INTERCEPTOR_MODE` **defaulted to `observe`**, in
+which the interceptor computes a decision and acts on nothing. One
+missing line in `.env.prod` would have booted the server with 48 admin
+methods completely open.
+
+Observe mode existed to compare the interceptor against the handler
+gates. With the gates gone it compares nothing, and its only remaining
+effect is to disable the sole enforcement. That is not a mode, so it is
+gone: `Mode`, `ParseMode`, the counters, `LogSummary`, the 15-minute
+heartbeat, the config field and the compose variable. The interceptor
+always enforces.
+
+The observation machinery did its job first — 1,205 comparisons with no
+disagreement is what justified S4 — and keeping it afterwards would have
+left a switch whose only function was to turn protection off.
+
+#### The test that matters most after S5
+
+`TestImplementedAdminHandlersWithNoCheckAreStillRefused` probes six
+real, implemented, now-check-free admin handlers anonymously and
+requires 401. The generic wiring test picks `AddMemberNote`
+alphabetically, which has no handler, so a 401 there only proves the
+interceptor beat Connect's `Unimplemented` answer. These six would
+return real data if reached.
+
+`ExportDecisionTestData` is on that list deliberately. It is the handler
+that shipped without a gate on 2026-10-05 and served 21,708 bytes of
+participant data to anonymous callers for five hours. It has no gate
+again now, by design, and this test is what stands in for the one it
+lost. Its comment in `admin_decisiontest.go` was still telling readers
+that "the auth interceptor has not landed and every method here gates
+itself"; that is corrected.
+
+### S5 as originally planned
 
 81 `requireAdmin` calls and the member-side lookups come out, replaced
 by reading the user from context where the handler needs it.

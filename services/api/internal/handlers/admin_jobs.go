@@ -51,7 +51,7 @@ func (a *Admin) RunJob(
 	ctx context.Context,
 	req *connect.Request[v1.RunJobRequest],
 ) (*connect.Response[v1.RunJobResponse], error) {
-	admin, err := requireAdmin(a, ctx, req)
+	admin, err := RequireCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -158,9 +158,6 @@ func (a *Admin) GetJob(
 	ctx context.Context,
 	req *connect.Request[v1.GetJobRequest],
 ) (*connect.Response[v1.GetJobResponse], error) {
-	if _, err := requireAdmin(a, ctx, req); err != nil {
-		return nil, err
-	}
 	if a.jobs == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("job runner not wired"))
 	}
