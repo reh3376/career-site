@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { parseFrontMatter } from "./frontmatter";
+
 // Explicit allow-list of markdown files under
 // apps/web/content/articles/ that get exposed at /articles. The file
 // staging is deliberate: the repo's `docs/personal/` mixes public
@@ -8,7 +10,8 @@ import path from "node:path";
 // straight from there. Files listed here are copies committed to
 // this app.
 //
-// A future "admin content management UI" (backlog item #11) replaces
+// A future "admin content management UI" (docs/backlog.md, section 4
+// "Admin console", the Content management UI entry) replaces
 // this file-list with a database-backed CMS; keep the shape simple
 // until then.
 const PUBLIC_ARTICLES: readonly ArticleSpec[] = [
@@ -51,6 +54,13 @@ type ArticleSpec = {
 };
 
 export type ArticleSummary = {
+  // Authored in the file's front matter and stable across a rename,
+  // which is what separates it from `slug`: the slug is the URL and is
+  // derived (from PUBLIC_ARTICLES here, from the filename for photos),
+  // while the id names the item itself. FR-CNT-17 lists both for that
+  // reason. Validated by scripts/check_content.py, which also enforces
+  // that no two content files share one.
+  id: string;
   slug: string;
   title: string;
   subtitle?: string;
@@ -75,31 +85,6 @@ function contentRoot(): string {
 }
 
 // Parses YAML front matter of the form
-//   ---
-//   title: "..."
-//   subtitle: "..."
-//   ---
-// Minimal parser, only key: value (with optional quotes) at the top,
-// terminated by a `---` line. Anything more complex than that is out
-// of scope; front matter is authored by Roger, not user input.
-function parseFrontMatter(raw: string): { meta: Record<string, string>; body: string } {
-  if (!raw.startsWith("---\n")) return { meta: {}, body: raw };
-  const end = raw.indexOf("\n---\n", 4);
-  if (end < 0) return { meta: {}, body: raw };
-  const yaml = raw.slice(4, end);
-  const body = raw.slice(end + 5);
-  const meta: Record<string, string> = {};
-  for (const line of yaml.split("\n")) {
-    const m = line.match(/^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$/);
-    if (!m) continue;
-    let v = m[2].trim();
-    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-      v = v.slice(1, -1);
-    }
-    meta[m[1]] = v;
-  }
-  return { meta, body };
-}
 
 // Falls back to the first `# ...` heading in body when front matter
 // has no title. That covers files like manufacturing-hub-teaser-post.md.
@@ -120,6 +105,7 @@ async function readOne(spec: ArticleSpec): Promise<Article> {
     body = t.body;
   }
   return {
+    id: meta.id || spec.slug,
     slug: spec.slug,
     title,
     subtitle: meta.subtitle || undefined,
@@ -139,6 +125,7 @@ export async function listArticles(): Promise<ArticleSummary[]> {
     try {
       const a = await readOne(spec);
       summaries.push({
+        id: a.id,
         slug: a.slug,
         title: a.title,
         subtitle: a.subtitle,

@@ -1247,6 +1247,31 @@ Still open:
 
 ## 6. Site and content
 
+- **Photos are not ingested into the corpus, and that is currently a
+  default rather than a decision.** Found 2026-10-12 while building the
+  content schema. `publicCorpusSubdirs`
+  (`services/api/internal/handlers/admin.go`) names `articles` and
+  `other`; the public reindex walks that map rather than the directory
+  listing, so `photos/` is never read. Each photo carries a `caption`
+  and a `context` line, which is real prose about Roger's work that Ask
+  Roger and the JD reviewer cannot currently see. Adding the entry is
+  one line. It is left out of the content-schema change deliberately,
+  because it changes what the assistant can retrieve, which is a
+  behaviour change and should be chosen rather than slipped in
+  alongside a validation pass. Three of the nine photos are
+  `visibility: member`, so the corpus visibility mapping needs deciding
+  with it.
+
+- **The content schema covers 8 of FR-CNT-17's 11 fields.** Shipped
+  2026-10-12. `tracks`, `related` and `summary` are deliberately not
+  added: nothing reads them. `tracks` in particular waits on FR-PROF-03,
+  which is the only requirement that would consume per-track weights and
+  is not built, so adding the field now would mean guessing its shape
+  (range, tie-breaking) with no consumer to check it against, and
+  repeating the `hero_tracks` pattern of a field parsed and typed on
+  every photo with nothing reading it. The FSD rows name all three as
+  deferred rather than leaving the gap implied.
+
 - **Anonymous access. SHIPPED 2026-09-22.** The policy is one list,
   `apps/web/src/lib/public-routes.ts`, shared by the proxy, robots.txt
   and the new sitemap so the three cannot drift. Public: the landing,

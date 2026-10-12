@@ -1,4 +1,6 @@
 ---
+id: "home-office"
+type: "photo"
 title: "Where the writing happens"
 caption: "The home office: monitors, notes, and a dog."
 context: "Evenings and weekends: articles, MDEMG, this site."

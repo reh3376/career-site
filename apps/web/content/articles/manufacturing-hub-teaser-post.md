@@ -1,4 +1,6 @@
 ---
+id: "manufacturing-hub-teaser-post"
+type: "article"
 title: "From Data to Decisions: Why Your Manufacturing AI Keeps Dying in the Pilot"
 subtitle: "Ontology-driven manufacturing hub as the substrate under the AI layer"
 date: 2026

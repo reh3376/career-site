@@ -1,4 +1,6 @@
 ---
+id: "bootcamp-1987"
+type: "photo"
 title: "1987"
 caption: "Boot camp, 1987."
 context: "Where the discipline came from."

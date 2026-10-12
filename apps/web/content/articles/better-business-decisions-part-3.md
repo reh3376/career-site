@@ -1,4 +1,6 @@
 ---
+id: "better-business-decisions-part-3"
+type: "article"
 title: "Better Business Decisions Require Better Information — Part 3"
 subtitle: "When Being Right Is Not Enough"
 author: "Roger E. Henley II"

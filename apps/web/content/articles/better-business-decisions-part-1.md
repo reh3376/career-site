@@ -1,4 +1,6 @@
 ---
+id: "better-business-decisions-part-1"
+type: "article"
 title: "Better Business Decisions Require Better Information — Part 1"
 subtitle: "Why Acting on Partial Data Feels Right and Often Is Not"
 author: "Roger E. Henley II"

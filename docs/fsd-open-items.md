@@ -81,27 +81,23 @@ the next empty control. The lost-actor bug on approve/decline is fixed
 in the same change. Retention was decided rather than deferred:
 `audit_log` is never anonymised, unlike `events`.
 
-### 3. FR-CNT-16 · Must
+### 3. FR-CNT-16 · Must — CLOSED 2026-10-12
 
-> Content model. All content shall be stored under `content/` as Markdown/MDX or YAML with frontmatter validated against a shared schema at build time.
+**Closed.** The validation half of FR-CNT-16 now exists as
+`scripts/check_content.py`, wired into CI before the build, with a
+schema authored from the content that exists rather than from §7.2.
+`id` and `type` were added everywhere. `tracks`, `related` and
+`summary` are deliberately not added and are named as deferred in the
+FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 
-**FSD status today:** Marked Shipped until 2026-10-02, which overstated it: the storage half is done, the validation half is not. All content is Markdown with front matter under `apps/web/content/`, but nothing validates that front matter at build time. `packages/schema/` was deleted on 2026-10-02 (§7.2) because it was…
+### 4. FR-CNT-17 · Must — CLOSED 2026-10-12
 
-**Why here:** Same shape as buf.validate: a schema nothing applies. packages/schema was deleted 2026-10-02 as unused.
-
-- **Keep / drop / defer:**
-- **Depends on:**
-
-### 4. FR-CNT-17 · Must
-
-> Each content item shall carry: `id`, `slug`, `type`, `title`, `summary`, dates, `tracks` (weights), `tags`, `visibility` (`landing` or `member`), `chatbot_include`, `assets`, and `related` links.
-
-**FSD status today:** Partially shipped. Articles carry title, subtitle, date, series, part and tags. No `id` or `type` field.
-
-**Why here:** Small, and blocks anything that needs stable content identity (related links, chatbot_include, tracks).
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed.** The validation half of FR-CNT-16 now exists as
+`scripts/check_content.py`, wired into CI before the build, with a
+schema authored from the content that exists rather than from §7.2.
+`id` and `type` were added everywhere. `tracks`, `related` and
+`summary` are deliberately not added and are named as deferred in the
+FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 
 ### 5. FR-HIST-02 · Must
 

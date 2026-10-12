@@ -1,4 +1,6 @@
 ---
+id: "better-business-decisions-part-2"
+type: "article"
 title: "Better Business Decisions Require Better Information — Part 2"
 subtitle: "Why and How We Become Confidently Wrong"
 author: "Roger E. Henley II"

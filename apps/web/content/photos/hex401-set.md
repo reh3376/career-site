@@ -1,4 +1,6 @@
 ---
+id: "hex401-set"
+type: "photo"
 title: "Heat exchanger tube bank"
 caption: "A large stainless shell-and-tube exchanger set in place before piping."
 context: "Greenfield distillery build: mechanical installation ahead of controls commissioning."

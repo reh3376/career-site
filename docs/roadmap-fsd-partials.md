@@ -35,7 +35,7 @@ turned out to be controls that exist on paper and nowhere else.
 |---|---|---|---|
 | 1 | FR-AUTH-09 + FR-CNT-22 — Turnstile, and registration's missing rate limit | [FR-AUTH-09-FR-CNT-22-turnstile.md](fsd-items/FR-AUTH-09-FR-CNT-22-turnstile.md) | `[x]` |
 | 2 | FR-ADM-09 — write the audit log, and fix the lost approval actor | [FR-ADM-09-audit-log.md](fsd-items/FR-ADM-09-audit-log.md) | `[x]` |
-| 3 | FR-CNT-16 + FR-CNT-17 — content model and item fields | [FR-CNT-16-FR-CNT-17-content-model.md](fsd-items/FR-CNT-16-FR-CNT-17-content-model.md) | `[ ]` |
+| 3 | FR-CNT-16 + FR-CNT-17 — content model and item fields | [FR-CNT-16-FR-CNT-17-content-model.md](fsd-items/FR-CNT-16-FR-CNT-17-content-model.md) | `[x]` |
 | 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[ ]` |
 | 5 | FR-HIST-02 — the welcome-back panel | [FR-HIST-02-welcome-back.md](fsd-items/FR-HIST-02-welcome-back.md) | `[ ]` |
 | 6 | FR-EVAL-06 — an evaluation must survive a deploy | [FR-EVAL-06-eval-durability.md](fsd-items/FR-EVAL-06-eval-durability.md) | `[ ]` |
@@ -55,6 +55,15 @@ what closed it named.
 ---
 
 ## Findings that changed the shape of an item
+
+**The front-matter parsers had already drifted** (item 3). The Go
+walker's comment said it handled "the same shape the TypeScript articles
+library expects (kept in sync by convention)". Comparing them found two
+real differences: `articles.ts` did not normalise CRLF, and it stripped
+a lone `"` to an empty string where the other two left it alone. Neither
+mattered for the content committed today, which is exactly why neither
+was noticed. Two TypeScript parsers became one, and all three are now
+asserted against a shared fixture.
 
 **The audit log already had a read surface in the contract** (item 2).
 `AdminService.GetAudit` was declared from the first proto, commented

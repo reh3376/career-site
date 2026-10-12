@@ -392,6 +392,15 @@ jobs:
       - name: design tokens resolve
         run: python3 scripts/check_design_tokens.py
 
+      # Also before the build, and for the same reason: nothing else
+      # catches it. Three hand-rolled front-matter parsers read these
+      # files and each types only the keys its own page needs, so a
+      # typo'd key is not an error anywhere, it is a field that quietly
+      # stops being read. FR-CNT-16's "validated against a shared schema
+      # at build time" is this step.
+      - name: content front matter validates
+        run: python3 scripts/check_content.py
+
       - name: build
         working-directory: apps/web
         run: pnpm build

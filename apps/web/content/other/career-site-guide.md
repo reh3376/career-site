@@ -1,4 +1,6 @@
 ---
+id: "career-site-guide"
+type: "other"
 title: How this site works
 visibility: public
 ---

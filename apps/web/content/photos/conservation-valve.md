@@ -1,4 +1,6 @@
 ---
+id: "conservation-valve"
+type: "photo"
 title: "Conservation vent"
 caption: "A conservation vent valve on top of an outdoor distillate holding tank, with the piping around it."
 context: "Instrumentation and safeguarding detail on the distillate tank farm."
