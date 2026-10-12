@@ -124,6 +124,37 @@ would end them and there is no resume. Wait, or --force if you are certain"
 }
 quiet_check
 
+# Settings the new image needs in .env.prod before it is pulled.
+#
+# The api refuses to boot without TURNSTILE_SECRET_KEY, so a missing
+# value would otherwise be discovered by the readiness check, after the
+# containers have already been recreated. Catching it here costs one ssh
+# and leaves production untouched.
+#
+# TURNSTILE_SITE_KEY is the quieter half and the reason this check takes
+# a pair rather than a list: with the secret set and the site key empty,
+# everything boots, every page renders, no widget appears, and every
+# registration is rejected for a missing token. Nothing fails loudly, so
+# the script has to.
+env_preflight() {
+  say "checking .env.prod has what the new image needs"
+  local missing=""
+  for key in TURNSTILE_SECRET_KEY TURNSTILE_SITE_KEY; do
+    if ! S "cd $REMOTE && grep -qE '^${key}=.+' .env.prod"; then
+      missing="$missing $key"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    die "missing from .env.prod:$missing
+  The api will not boot without TURNSTILE_SECRET_KEY, and an empty
+  TURNSTILE_SITE_KEY hides the widget while the api still demands a
+  token. Create the widget at https://dash.cloudflare.com -> Turnstile,
+  put both values in $REMOTE/.env.prod, then re-run."
+  fi
+  echo "  ok, both Turnstile keys present"
+}
+env_preflight
+
 PREV_TAG=$(current_tag)
 say "deploying $TAG (currently $PREV_TAG)"
 [ "$TAG" != "$PREV_TAG" ] || say "note: already on $TAG, redeploying"
@@ -144,8 +175,17 @@ done
 
 # 2. The checkout matters: the Caddyfile, the public corpus and the
 #    backup scripts are read from it, not from the image.
+#
+#    The Caddyfile is bind-mounted, so the pull puts the new file on the
+#    box but caddy keeps serving the old one until it is restarted. That
+#    is silent: every page still renders, and only whatever the new
+#    config was for stops working. Hash it either side of the pull so
+#    the restart happens when, and only when, the file changed.
+CADDY_CONF="$REMOTE/deploy/caddy/Caddyfile.prod"
+CADDY_BEFORE=$(S "md5sum $CADDY_CONF 2>/dev/null | cut -d' ' -f1" || true)
 say "updating the checkout"
 S "cd $REMOTE && git pull -q --ff-only && git log -1 --format='%h %s'"
+CADDY_AFTER=$(S "md5sum $CADDY_CONF 2>/dev/null | cut -d' ' -f1" || true)
 
 if [ -n "$ONLY" ]; then
   VAR=$(echo "$ONLY" | tr '[:lower:]' '[:upper:]')_IMAGE_TAG
@@ -211,6 +251,26 @@ case "$ONLY" in
     [ "$got" = "$TAG" ] || echo "  warning: readyz reports version '$got', expected '$TAG'"
     ;;
 esac
+
+# Caddy last, and only if its config moved. Restarting it as part of a
+# whole-stack `up -d` is what strands web's DNS entry for `api`
+# (EAI_AGAIN), so web and api are already up and ready by this point and
+# caddy comes back on its own.
+if [ -n "$CADDY_AFTER" ] && [ "$CADDY_BEFORE" != "$CADDY_AFTER" ]; then
+  say "Caddyfile changed, restarting caddy"
+  S "cd $REMOTE && $CS restart caddy"
+  # A bad config takes the site off the internet, so prove it answers
+  # before the live check reports on anything else.
+  for attempt in $(seq 1 15); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/" 2>/dev/null || echo 000)
+    [ "$code" = "200" ] && { echo "  ok, caddy serving ($code)"; break; }
+    [ "$attempt" = 15 ] && die "caddy did not serve after restart (last $code); \
+check $CADDY_CONF and run: $CS logs caddy --tail 50"
+    sleep 2
+  done
+else
+  echo "  Caddyfile unchanged, leaving caddy alone"
+fi
 
 say "migrations"
 S "cd $REMOTE && $CS logs api --since 5m 2>&1 | grep -iE 'goose|migrat' | tail -5 || echo '  none run'"

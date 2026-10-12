@@ -122,6 +122,16 @@ type Config struct {
 	ResendAPIKey      string
 	PwnedCheckEnabled bool
 
+	// TurnstileSecretKey is the Cloudflare Turnstile server-side secret
+	// guarding registration (FR-AUTH-09) and anonymous contact
+	// (FR-CNT-22). Empty in dev, which wires turnstile.Noop so the forms
+	// work without a Cloudflare account. Production REQUIRES it: Load
+	// refuses to return a Config without it, so the API does not boot.
+	// That is deliberate, per ADR 0031 — the alternative is a declared
+	// control that is silently inert, which is exactly how
+	// AUTH_INTERCEPTOR_MODE spent a week in observe mode.
+	TurnstileSecretKey string
+
 	// Scheduler
 	ExpirySchedulerInterval time.Duration
 	// PendingApprovalTTL bounds how long a verified user may sit in
@@ -194,6 +204,7 @@ func Load() (Config, error) {
 		SMTPPass:           os.Getenv("SMTP_PASS"),
 		ResendAPIKey:       os.Getenv("RESEND_API_KEY"),
 		PwnedCheckEnabled:  os.Getenv("PWNED_CHECK_ENABLED") == "1",
+		TurnstileSecretKey: strings.TrimSpace(os.Getenv("TURNSTILE_SECRET_KEY")),
 
 		ExpirySchedulerInterval: time.Duration(envIntOr("EXPIRY_INTERVAL_SECONDS", 3600)) * time.Second,
 		PendingApprovalTTL:      time.Duration(envIntOr("PENDING_APPROVAL_TTL_HOURS", 24*7)) * time.Hour,
@@ -230,7 +241,43 @@ func Load() (Config, error) {
 		}
 		cfg.WriteTimeout = time.Duration(n) * time.Second
 	}
+	if err := cfg.requireTurnstileInProduction(); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+// requireTurnstileInProduction refuses to hand back a production Config
+// whose Turnstile secret is missing or obviously not a secret.
+//
+// The point is not to validate Cloudflare's key format — only Cloudflare
+// can do that, and it does, on the first siteverify call. The point is
+// that the two ways this control silently disappears are an unset
+// variable and a truncated paste, and both are catchable here, at boot,
+// where the failure is loud and attributable. A control that fails to
+// arrive should take the deploy down, not the protection.
+//
+// Dev and docker get Noop verification instead; see turnstile.Noop.
+func (c Config) requireTurnstileInProduction() error {
+	if c.Env != "production" {
+		return nil
+	}
+	const minSecretLen = 20 // Cloudflare's are ~35; a truncated paste is not
+	switch {
+	case c.TurnstileSecretKey == "":
+		return fmt.Errorf("TURNSTILE_SECRET_KEY is required when API_ENV=production: " +
+			"registration and anonymous contact are declared Turnstile-protected " +
+			"(FR-AUTH-09, FR-CNT-22) and will not run unprotected. Set it in " +
+			".env.prod and confirm docker-compose.prod.yml passes it through")
+	case len(c.TurnstileSecretKey) < minSecretLen:
+		return fmt.Errorf("TURNSTILE_SECRET_KEY is %d characters, shorter than any "+
+			"real Turnstile secret (%d minimum): it looks truncated",
+			len(c.TurnstileSecretKey), minSecretLen)
+	case strings.ContainsAny(c.TurnstileSecretKey, " \t\r\n\"'"):
+		return fmt.Errorf("TURNSTILE_SECRET_KEY contains whitespace or quote characters: " +
+			"check for stray quoting in .env.prod")
+	}
+	return nil
 }
 
 func envOr(key, fallback string) string {

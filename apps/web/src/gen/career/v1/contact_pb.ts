@@ -161,7 +161,11 @@ export type SubmitContactRequest = Message<"career.v1.SubmitContactRequest"> & {
 
   /**
    * Cloudflare Turnstile response token. Required on anonymous
-   * submissions; ignored for members.
+   * submissions; ignored for members, who cleared the challenge when
+   * they registered. Verified server-side against siteverify
+   * (FR-CNT-22); a rejected or missing token fails the request with
+   * `failed_precondition`. A siteverify call that cannot be completed
+   * admits the submission and logs, matching Register.
    *
    * @generated from field: string turnstile_token = 8;
    */

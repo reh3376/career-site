@@ -15,6 +15,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/turnstile"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -32,6 +33,17 @@ type Contact struct {
 	ownerAddr string
 	events    *events.Writer // product event stream; nil is silent
 	webBase   string
+	// turnstile guards the anonymous submission path (FR-CNT-22).
+	// Never nil: NewContact defaults it to turnstile.Noop.
+	turnstile turnstile.Verifier
+}
+
+// SetTurnstile replaces the bot-challenge verifier. main wires the real
+// Cloudflare client here when a secret is configured.
+func (h *Contact) SetTurnstile(v turnstile.Verifier) {
+	if v != nil {
+		h.turnstile = v
+	}
 }
 
 func NewContact(
@@ -49,6 +61,7 @@ func NewContact(
 		from:      from,
 		ownerAddr: ownerAddr,
 		webBase:   webBase,
+		turnstile: turnstile.Noop{},
 	}
 }
 
@@ -99,11 +112,22 @@ func (h *Contact) SubmitContact(
 			return nil, connect.NewError(connect.CodeInvalidArgument,
 				errors.New("email does not look valid"))
 		}
-		// Turnstile verification would go here (D-09 rate-limit follow-up);
-		// dev mode accepts anything. Prod flip lands with FR-AUTH-09.
-		if msg.TurnstileToken == "" && h.turnstileEnforced() {
+		// Turnstile (FR-CNT-22), anonymous path only: a signed-in
+		// member has already cleared the challenge at registration.
+		// Same policy as Register, from the same place: a token
+		// Cloudflare rejects is refused, a Cloudflare we cannot reach
+		// admits with a logged error.
+		if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
+			Verify(ctx, msg.TurnstileToken, ClientIP(req)); err != nil {
+			h.log.Error("turnstile unreachable; admitting anonymous contact unverified",
+				slog.String("error", err.Error()))
+		} else if !verdict.OK {
+			if verdict.InvalidSecret() {
+				h.log.Error("turnstile rejected our secret; anonymous contact is blocked for everyone",
+					slog.Any("error_codes", verdict.ErrorCodes))
+			}
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
-				errors.New("turnstile token is required for anonymous submissions"))
+				errors.New("bot check failed; reload the page and try again"))
 		}
 		senderName = name
 		senderEmail = addr
@@ -162,13 +186,6 @@ func (h *Contact) SubmitContact(
 	return connect.NewResponse(&v1.SubmitContactResponse{
 		TicketId: stored.TicketID,
 	}), nil
-}
-
-func (h *Contact) turnstileEnforced() bool {
-	// Turnstile hookup ships with the FR-AUTH-09 rate-limit pass.
-	// Anonymous submissions are still rate-limited by IP at the repo layer
-	// once that lands; for now the form is unprotected in dev.
-	return false
 }
 
 func (h *Contact) sendSupportNotification(ctx context.Context, m *users.SupportMessage, authNote string) error {

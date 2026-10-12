@@ -3,11 +3,13 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Turnstile } from "@/components/turnstile";
+
 import { registerAction, type RegisterState } from "./actions";
 
 const initialState: RegisterState = {};
 
-export function RegisterForm() {
+export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
   const [state, formAction] = useActionState(registerAction, initialState);
   const v = state.values ?? {};
 
@@ -99,6 +101,11 @@ export function RegisterForm() {
           .
         </span>
       </label>
+
+      {/* A rejected submission spends the token, so the widget issues
+          a fresh one before the retry. useActionState hands back a new
+          state object per submission, which is the signal. */}
+      <Turnstile siteKey={turnstileSiteKey} action="register" resetOn={state} />
 
       <SubmitButton />
 

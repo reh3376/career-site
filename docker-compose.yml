@@ -42,6 +42,9 @@ services:
       PORT: "3000"
       HOSTNAME: 0.0.0.0
       API_URL: http://api:8080
+      # Optional in dev: empty hides the widget, and the api runs
+      # turnstile.Noop in the same case, so the two halves agree.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       NEXT_TELEMETRY_DISABLED: "1"
       # Outbound links, read at request time (empty hides the link).
       LINKEDIN_URL: ${LINKEDIN_URL:-}
@@ -72,6 +75,13 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PWNED_CHECK_ENABLED: "0"
+      # Cloudflare Turnstile. Optional in dev: empty wires turnstile.Noop
+      # so registration and the contact form work without a Cloudflare
+      # account. Set it in the repo-root .env to exercise the real check
+      # locally (Cloudflare publishes always-pass and always-fail test
+      # keys for exactly this). Production requires it; see the prod
+      # compose file.
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       # Meeting scheduler, optional in dev. Without them the scheduler
       # pages render and report that booking is not switched on, which
       # is the same thing production shows before it is connected.

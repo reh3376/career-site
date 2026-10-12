@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { RegisterRequestSchema } from "@/gen/career/v1/auth_pb";
 import { authClient } from "@/lib/api";
+import { TURNSTILE_FIELD } from "@/lib/turnstile";
 
 // Fields the form collects. `state` is what useActionState works with.
 export type RegisterState = {
@@ -28,6 +29,10 @@ export async function registerAction(
   const organization = String(formData.get("organization") ?? "").trim();
   const statedRole = String(formData.get("statedRole") ?? "").trim();
   const consentAccepted = formData.get("consent") === "on";
+  // Written into the form by the Turnstile widget. Empty when the
+  // visitor has JavaScript off or the widget never loaded; the API
+  // decides what that means, not this action.
+  const turnstileToken = String(formData.get(TURNSTILE_FIELD) ?? "");
 
   const values = { name, email, organization, statedRole };
 
@@ -55,6 +60,7 @@ export async function registerAction(
         statedRole,
         consentVersion: "v1",
         consentAccepted: true,
+        turnstileToken,
       }),
     );
   } catch (err) {

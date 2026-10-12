@@ -141,6 +141,11 @@ export type RegisterRequest = Message<"career.v1.RegisterRequest"> & {
 
   /**
    * Cloudflare Turnstile response token from the registration page.
+   * Verified server-side against Cloudflare's siteverify endpoint
+   * (FR-AUTH-09); a token Cloudflare rejects fails the request with
+   * `invalid_argument`. A siteverify call that cannot be completed
+   * admits the request and logs, so an outage at Cloudflare does not
+   * close registration; see services/api/internal/turnstile.
    *
    * @generated from field: string turnstile_token = 8;
    */
@@ -312,9 +317,20 @@ export type LoginRequest = Message<"career.v1.LoginRequest"> & {
   password: string;
 
   /**
-   * Turnstile token; required after repeated failures for the account or IP
-   * (the server responds `failed_precondition` with reason
-   * `turnstile_required` when it is missing but needed).
+   * Reserved. Login does not read this field.
+   *
+   * The comment here used to describe a step-up challenge: "required
+   * after repeated failures for the account or IP, the server responds
+   * failed_precondition with reason turnstile_required". None of that
+   * was ever built, and a comment describing a control that does not
+   * exist is the exact failure ADR 0031 was written about, so it is
+   * stated plainly instead. What actually slows credential stuffing on
+   * this endpoint is the per-(IP, email) rate limit in Login, 5
+   * attempts refilling over 15 minutes.
+   *
+   * Turnstile IS enforced on Register and on anonymous SubmitContact.
+   * If a step-up challenge on Login is built later, this field is the
+   * place for it, and the comment changes when the code does.
    *
    * @generated from field: string turnstile_token = 3;
    */

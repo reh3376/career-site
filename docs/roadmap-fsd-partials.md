@@ -33,7 +33,7 @@ turned out to be controls that exist on paper and nowhere else.
 
 | # | item(s) | working document | state |
 |---|---|---|---|
-| 1 | FR-AUTH-09 + FR-CNT-22 — Turnstile, and registration's missing rate limit | [FR-AUTH-09-FR-CNT-22-turnstile.md](fsd-items/FR-AUTH-09-FR-CNT-22-turnstile.md) | `[ ]` |
+| 1 | FR-AUTH-09 + FR-CNT-22 — Turnstile, and registration's missing rate limit | [FR-AUTH-09-FR-CNT-22-turnstile.md](fsd-items/FR-AUTH-09-FR-CNT-22-turnstile.md) | `[x]` |
 | 2 | FR-ADM-09 — write the audit log, and fix the lost approval actor | [FR-ADM-09-audit-log.md](fsd-items/FR-ADM-09-audit-log.md) | `[ ]` |
 | 3 | FR-CNT-16 + FR-CNT-17 — content model and item fields | [FR-CNT-16-FR-CNT-17-content-model.md](fsd-items/FR-CNT-16-FR-CNT-17-content-model.md) | `[ ]` |
 | 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[ ]` |
@@ -58,6 +58,24 @@ what closed it named.
 
 These came out of establishing current state and were not visible from
 the FSD rows.
+
+**The page can believe you are signed in when the API does not**
+(item 1). `/contact` decides whether to show the anonymous name, email
+and Turnstile fields from `getSessionCookie()`, which only asks whether
+a session cookie exists. The API resolves that cookie to a user. An
+expired or revoked cookie therefore renders the member view and submits
+down the anonymous path. Before Turnstile this produced a confusing but
+recoverable error; with Turnstile it would have been an unrecoverable
+one, so the widget now renders in both states. The underlying mismatch
+is older than this item and is in `docs/backlog.md`.
+
+**The constant that names the hidden token field cannot live beside the
+widget** (item 1). The server actions read `formData.get(TURNSTILE_FIELD)`.
+Importing that constant from the `"use client"` component gave them a
+client reference rather than the string, so the lookup missed, the token
+read as empty, and every submission failed the bot check with nothing in
+any log to explain it. Caught only because the end-to-end run was done
+before the PR, not after. It now lives in `lib/turnstile.ts`.
 
 **Approval decisions have no actor** (item 2). `approval_decisions.decided_by`
 exists, the repo struct carries it, the INSERT names it, and nothing

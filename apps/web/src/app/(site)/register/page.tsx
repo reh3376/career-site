@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { OtPanel } from "@/components/ot-panel";
+import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { getUiMode } from "@/lib/ui-mode";
 
 import { RegisterForm } from "./form";
@@ -13,6 +14,9 @@ export const metadata: Metadata = {
 
 export default async function RegisterPage() {
   const mode = await getUiMode();
+  // Read per request from the container's environment, not inlined at
+  // build time; see lib/turnstile.ts.
+  const turnstileSiteKey = getTurnstileSiteKey();
 
   if (mode === "ot") {
     return (
@@ -21,7 +25,7 @@ export default async function RegisterPage() {
         title="ACCESS.REQ · REGISTER"
         note="reviewed by admin"
       >
-        <RegisterForm />
+        <RegisterForm turnstileSiteKey={turnstileSiteKey} />
         <p className="mt-8 border-t border-line pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           already registered?{" "}
           <Link
@@ -51,7 +55,7 @@ export default async function RegisterPage() {
         you submit; I&rsquo;ll usually reply within a day.
       </p>
       <div className="mt-12">
-        <RegisterForm />
+        <RegisterForm turnstileSiteKey={turnstileSiteKey} />
       </div>
       <p className="mt-10 border-t border-line pt-6 text-sm text-ink-3">
         Already registered?{" "}
