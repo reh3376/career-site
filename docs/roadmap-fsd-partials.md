@@ -109,6 +109,31 @@ in sync by convention". The articles themselves are already inconsistent:
 five of six carry author/series/part/tags, the teaser carries only
 title/subtitle/date.
 
+**FR-HIST-02 has no data for two of its four parts** (item 5). The FSD
+row claims `/home` shows "what is new since last time"; no such logic
+exists. `ActivityBeacon` is mounted only on `/home` and emits only
+`KIND_VIEW` for `/home` itself, and nothing emits `KIND_CHAT` anywhere.
+So "items viewed" and "topics asked about" need instrumentation before
+the panel can show anything true. The last-visit date is a cheap query.
+`HomeService.GetHome` and its `WelcomeBack` message are fully designed
+in the proto, on a service that is never mounted.
+
+**FR-DT-20 is blocked structurally, not by sample size** (item 9). I
+ranked it last as "waiting for participant data". That reasoning was
+wrong: failed tap attempts are scored client-side and never transmitted,
+so every stored session passed under the current cut and no amount of
+waiting yields a labelled mashing example. Calibrating requires changing
+what is recorded first. The rank stands; the reason does not.
+
+I then got the mechanism wrong twice in one day. The briefing renders
+Continue only when `(tap?.passed || synthetic)`, and the label
+"Continue without passing" appears only on the `synthetic` branch. I saw
+that label, concluded a real participant could proceed without passing,
+and said the check reports rather than gates. It gates: a real
+participant who fails can retry, and after two failures is offered the
+visual beat, but there is no path past it with a failing result. Which
+is precisely why no failing row can exist to calibrate against.
+
 **Four mutating admin RPCs accept a `reason` and discard it**
 (`ApproveRegistration`, `DeclineRegistration`, `ExtendAccess`,
 `SetMemberStatus`). The fields exist in the contract, no handler reads
