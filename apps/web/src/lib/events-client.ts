@@ -107,7 +107,13 @@ export function flush(): void {
     }
     void fetch(ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // EventService is exempt from the Connect-Protocol-Version
+      // requirement, because the sendBeacon path above cannot set
+      // headers. This fallback can, so it does.
+      headers: {
+        "Content-Type": "application/json",
+        "Connect-Protocol-Version": "1",
+      },
       body,
       keepalive: true,
       credentials: "same-origin",

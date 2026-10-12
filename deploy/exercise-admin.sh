@@ -144,7 +144,7 @@ declare -A SEEN
 CJ=$(mktemp)
 trap 'rm -f "$CJ"' EXIT
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" \
-  -H 'Content-Type: application/json' -X POST \
+  -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.AuthService/Login" \
   -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")
 if [ "$code" != "200" ]; then
@@ -161,7 +161,7 @@ echo "  signed in, reusing the session for $PASSES pass(es)"
 for pass in $(seq 1 "$PASSES"); do
   for rpc in $ADMIN_RPCS; do
     c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -b "$CJ" \
-      -H 'Content-Type: application/json' -X POST \
+      -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
       "$BASE/api/career.v1.AdminService/$rpc" -d '{}')
     total=$((total+1)); SEEN[$rpc]=$c
     case "$c" in
@@ -176,7 +176,7 @@ for pass in $(seq 1 "$PASSES"); do
   for sm in $OTHER_RPCS; do
     rpc="${sm#*/}"
     c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -b "$CJ" \
-      -H 'Content-Type: application/json' -X POST \
+      -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
       "$BASE/api/career.v1.${sm%%/*}/$rpc" -d '{}')
     total=$((total+1)); SEEN[$sm]=$c
     case "$c" in
@@ -193,7 +193,7 @@ done
 
 # One logout at the end, closing the session this run opened. Logout is
 # PUBLIC as of 2026-10-09, so it needs no session of its own.
-curl -s -o /dev/null -b "$CJ" -H 'Content-Type: application/json' \
+curl -s -o /dev/null -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
   -X POST "$BASE/api/career.v1.AuthService/Logout" -d '{}'
 
 echo "  calls: $total total, $ok ok, $unimpl unimplemented, $badreq needs-arguments, $other other"

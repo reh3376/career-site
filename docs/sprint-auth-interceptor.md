@@ -1043,20 +1043,46 @@ out of verifying the sentences around it.
 Each correction says what the old text claimed, not just what is true,
 so a reader who saw the old version can tell what changed.
 
-**One of these is worth more than a comment fix.** The CSRF claim is
-false about the mechanism and right about the outcome: these endpoints
-*are* protected from cross-site POSTs, by `SameSite=Lax` on the cookie,
-not by a required header. Setting
-`connect.WithRequireConnectProtocolHeader()` would add the second layer
-the comment described. It is a behaviour change rather than a comment
-fix, because `live-check.sh`, `exercise-admin.sh` and
-`auth-enforce-checks.sh` all call these RPCs with plain curl and would
-start failing, so it is left as a recommendation.
+**One of these was worth more than a comment fix, and was done.** The
+CSRF claim was false about the mechanism and right about the outcome:
+these endpoints are protected from cross-site POSTs by `SameSite=Lax` on
+the cookie, not by a required header.
+`connect.WithRequireConnectProtocolHeader()` is now set, so the claim is
+true, with one exception that was the whole difficulty.
+
+**`navigator.sendBeacon` cannot set request headers at all.** The web app
+beacons three procedures on `pagehide` so a closing tab does not lose
+data: `EventService/Record`, and the decision test's `SubmitAnswer` and
+`SubmitRecall` through `lib/decision-test-retry.ts`. Those exist
+precisely to survive the page going away. Requiring a header they cannot
+send would not have failed loudly; it would have discarded a
+participant's answers silently, which is the one outcome the decision
+test cannot absorb.
+
+So the requirement is applied to nine services and not to those two. The
+exemption costs nothing: all three beaconed procedures are PUBLIC, so
+there is no session privilege for a forged request to borrow, which is
+what this defends against.
+`TestOnlyBeaconReachableServicesAreExempt` fails if a MEMBER or ADMIN
+procedure ever appears behind the exemption, because then the exemption
+would start costing something.
+
+Callers updated: the three deploy scripts (18 curl call sites), and the
+one raw `fetch` in `jd-upload/result.tsx` that polls `GetJdResult`
+outside `lib/api-fetch.ts`, which is where every other web call picks the
+header up. `api-fetch.ts` had been sending it all along.
+
+Verified by mutation in both directions, and the second is the one that
+matters: applying the requirement to the beacon services too fails with
+"this procedure's writes would be silently lost when a tab closes
+mid-run". Two existing wiring tests also had to be updated, because
+without the header the strict services answer 400 for the protocol
+rather than 401 for the session, and those tests would have been
+measuring the wrong refusal.
 
 *Exit:* nothing in the contract claims an enforcement that does not
-exist. **Met**, for `auth.proto` and `options.proto`. The claim that is
-true but attributed to the wrong mechanism is now described accurately
-and flagged as worth strengthening.
+exist. **Met.** The one claim that was true but credited to an absent
+mechanism is now true of the mechanism it names.
 
 ### S6 as originally planned
 

@@ -148,17 +148,50 @@ func (s *Server) routes() http.Handler {
 		mux.Handle("/api"+path, http.StripPrefix("/api", h))
 	}
 
-	// One option set, applied to every service. Built here rather than
-	// per mount so a service cannot be added later without it: an
-	// unintercepted service is exactly the hole this sprint is closing.
-	var opts []connect.HandlerOption
+	// Handler options, applied to every service. Built here rather than
+	// per mount so a service cannot be added later without them: an
+	// unintercepted service is exactly the hole this sprint closed.
+	var base []connect.HandlerOption
 	if s.authIntc != nil {
-		opts = append(opts, connect.WithInterceptors(s.authIntc))
+		base = append(base, connect.WithInterceptors(s.authIntc))
 		s.log.Info("auth interceptor installed, enforcing the declared level")
 	} else {
 		s.log.Warn("no auth interceptor: every procedure is enforced only " +
 			"by whatever check its own handler happens to make")
 	}
+
+	// `Connect-Protocol-Version: 1` required, which is a second layer of
+	// cross-site request forgery defence behind SameSite=Lax on the
+	// session cookie. A browser will not attach a custom header to a
+	// cross-site form post, so a forged request cannot satisfy this.
+	//
+	// auth.proto claimed this was already the case and it was not: the
+	// option below was never set, and until 2026-10-11 a mutating POST
+	// carrying only Content-Type was accepted. The comment described the
+	// protection accurately and credited it to a mechanism that was
+	// absent.
+	opts := append(base, connect.WithRequireConnectProtocolHeader())
+
+	// Two services are deliberately exempt, and the reason is
+	// `navigator.sendBeacon`, which **cannot set request headers at
+	// all**.
+	//
+	// The web app beacons three procedures on `pagehide` so that a
+	// closing tab does not lose data: EventService/Record, and the
+	// decision test's SubmitAnswer and SubmitRecall through
+	// lib/decision-test-retry.ts. Those exist precisely to survive the
+	// page going away, and requiring a header they cannot send would
+	// silently discard the writes instead.
+	//
+	// It costs nothing to exempt them. All three procedures are PUBLIC,
+	// so there is no session privilege for a forged request to borrow,
+	// which is what CSRF protection is for. Requiring the header here
+	// would trade real participant data for no security.
+	//
+	// Any procedure on these two services inherits the exemption, which
+	// is why TestOnlyBeaconReachableServicesAreExempt pins the list and
+	// asserts every procedure on them is PUBLIC.
+	beaconOpts := base
 
 	systemPath, systemHandler := careerv1connect.NewSystemServiceHandler(s.system, opts...)
 	mount(systemPath, systemHandler)
@@ -189,7 +222,7 @@ func (s *Server) routes() http.Handler {
 	}
 
 	if s.dtest != nil {
-		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest, opts...)
+		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest, beaconOpts...)
 		mount(dtPath, dtHandler)
 	}
 
@@ -209,7 +242,7 @@ func (s *Server) routes() http.Handler {
 	}
 
 	if s.events != nil {
-		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events, opts...)
+		eventsPath, eventsHandler := careerv1connect.NewEventServiceHandler(s.events, beaconOpts...)
 		mount(eventsPath, eventsHandler)
 	}
 

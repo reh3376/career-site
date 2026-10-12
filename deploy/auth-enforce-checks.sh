@@ -59,13 +59,13 @@ for p in / /decision-test /login; do
   c=$(code "$BASE$p")
   [ "$c" = "200" ] && ok "$p -> 200" || bad "$p -> $c, expected 200"
 done
-c=$(code -H 'Content-Type: application/json' -X POST \
+c=$(code -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.SystemService/GetVersion" -d '{}')
 [ "$c" = "200" ] && ok "GetVersion anonymous -> 200" || bad "GetVersion anonymous -> $c"
 
 # The decision test is the busiest public surface and the one with real
 # participants. StartSession is PUBLIC, and it must not need a session.
-c=$(code -H 'Content-Type: application/json' -X POST \
+c=$(code -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.DecisionTestService/StartSession" \
   -d '{"synthetic":true,"intake":{}}')
 case "$c" in
@@ -78,20 +78,20 @@ echo
 echo "-- an admin procedure refuses an anonymous caller"
 # ListMembers has no access check of its own since S5: it goes straight
 # to the database. A 401 here can only have come from the interceptor.
-c=$(code -H 'Content-Type: application/json' -X POST \
+c=$(code -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.AdminService/ListMembers" -d '{}')
 [ "$c" = "401" ] && ok "ListMembers anonymous -> 401 unauthenticated" \
   || bad "ListMembers anonymous -> $c, expected 401"
 
 # The handler that leaked 21,708 bytes of participant data on 2026-10-05
 # when its gate was missing. It has no gate again now, by design.
-c=$(code -H 'Content-Type: application/json' -X POST \
+c=$(code -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.AdminService/ExportDecisionTestData" -d '{}')
 [ "$c" = "401" ] && ok "ExportDecisionTestData anonymous -> 401" \
   || bad "ExportDecisionTestData anonymous -> $c, expected 401 (this is the 2026-10-05 leak)"
 
 # A MEMBER procedure, same question.
-c=$(code -H 'Content-Type: application/json' -X POST \
+c=$(code -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST \
   "$BASE/api/career.v1.MemberService/GetHistory" -d '{}')
 [ "$c" = "401" ] && ok "GetHistory anonymous -> 401" || bad "GetHistory anonymous -> $c, expected 401"
 
@@ -102,21 +102,21 @@ cd /opt/career-site || exit 1
 U=$(grep ^ADMIN_USERNAME .env.prod | cut -d= -f2)
 P=$(grep ^CAREER_SITE_ADMIN_PW .env.prod | cut -d= -f2)
 CJ=$(mktemp); trap 'rm -f "$CJ"' EXIT
-lc=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' \
+lc=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
   -X POST "$BASE/api/career.v1.AuthService/Login" \
   -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")
 echo "login:$lc"
 [ "$lc" = "200" ] || exit 0
 for rpc in AdminService/ListMembers AdminService/ListCorpusDocuments AdminService/GetOpsStatus; do
-  echo "$rpc:$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' \
+  echo "$rpc:$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
     -X POST "$BASE/api/career.v1.$rpc" -d '{}')"
 done
 # The admin is also an active member, so the member surface answers too.
 for rpc in MemberService/GetMe MemberService/GetHistory; do
-  echo "$rpc:$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' \
+  echo "$rpc:$(curl -s -o /dev/null -w '%{http_code}' -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
     -X POST "$BASE/api/career.v1.$rpc" -d '{}')"
 done
-curl -s -o /dev/null -b "$CJ" -H 'Content-Type: application/json' \
+curl -s -o /dev/null -b "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' \
   -X POST "$BASE/api/career.v1.AuthService/Logout" -d '{}'
 REMOTE
 )

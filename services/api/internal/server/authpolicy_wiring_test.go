@@ -110,6 +110,11 @@ func TestTheInterceptorIsAttachedToEveryMountedService(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api"+procedure,
 				strings.NewReader("{}"))
 			req.Header.Set("Content-Type", "application/json")
+			// Required since 2026-10-11. Without it these services
+			// answer 400 for the protocol rather than 401 for the
+			// session, and this test would be measuring the wrong
+			// refusal.
+			req.Header.Set("Connect-Protocol-Version", "1")
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 
@@ -158,6 +163,7 @@ func TestPublicProceduresStayReachableWithTheInterceptorEnforcing(t *testing.T) 
 	req := httptest.NewRequest(http.MethodPost,
 		"/api/career.v1.SystemService/GetVersion", strings.NewReader("{}"))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Connect-Protocol-Version", "1")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -263,6 +269,7 @@ func TestImplementedAdminHandlersWithNoCheckAreStillRefused(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api"+procedure,
 				strings.NewReader("{}"))
 			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Connect-Protocol-Version", "1")
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 			body, _ := io.ReadAll(rec.Body)
@@ -278,5 +285,129 @@ func TestImplementedAdminHandlersWithNoCheckAreStillRefused(t *testing.T) {
 					procedure, body)
 			}
 		})
+	}
+}
+
+// `Connect-Protocol-Version: 1` is required, except where sendBeacon
+// makes that impossible.
+//
+// The header is a second layer of CSRF defence behind SameSite=Lax: a
+// browser will not attach a custom header to a cross-site form post, so
+// a forged request cannot satisfy it. auth.proto claimed this was
+// already true and it was not, because
+// connect.WithRequireConnectProtocolHeader() was never set.
+//
+// The exemption is the interesting half. `navigator.sendBeacon` cannot
+// set request headers at all, and the web app beacons three procedures
+// on pagehide so a closing tab does not lose data. Requiring a header
+// they cannot send would discard those writes silently, which is worse
+// than the risk it would remove: all three are PUBLIC, so there is no
+// session privilege for a forged request to borrow.
+func TestConnectProtocolHeaderIsRequiredExceptOnBeaconServices(t *testing.T) {
+	policy, err := authpolicy.Build()
+	if err != nil {
+		t.Fatalf("build the policy: %v", err)
+	}
+	resolve := func(ctx context.Context, _ http.Header) (authpolicy.Caller, context.Context, error) {
+		return authpolicy.Caller{}, ctx, nil
+	}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	intc, err := authpolicy.NewInterceptor(policy, resolve, log)
+	if err != nil {
+		t.Fatalf("new interceptor: %v", err)
+	}
+	handler := New(config.Config{Addr: ":0"}, log, Deps{
+		AuthPolicy:      policy,
+		AuthInterceptor: intc,
+		DecisionTest:    &handlers.DecisionTest{},
+		Events:          &handlers.Events{},
+	}).routes()
+
+	post := func(procedure string, withHeader bool) int {
+		req := httptest.NewRequest(http.MethodPost, "/api"+procedure,
+			strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "application/json")
+		if withHeader {
+			req.Header.Set("Connect-Protocol-Version", "1")
+		}
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	// A public procedure on a strict service: reachable with the header,
+	// refused without it. GetVersion needs no dependencies, so the only
+	// thing that can turn it away is the requirement itself.
+	const strict = "/career.v1.SystemService/GetVersion"
+	if got := post(strict, true); got != http.StatusOK {
+		t.Errorf("%s with the header returned %d, want 200", strict, got)
+	}
+	if got := post(strict, false); got == http.StatusOK {
+		t.Errorf("%s without the header returned 200; the requirement is "+
+			"not in effect, so the CSRF claim in auth.proto is false again",
+			strict)
+	}
+
+	// The beacon-reachable services must answer without it, because
+	// sendBeacon cannot send it. These reach zero-value handlers, so
+	// anything other than a protocol rejection is a pass here: what is
+	// being tested is that the request was *accepted* for dispatch.
+	for _, procedure := range []string{
+		"/career.v1.EventService/Record",
+		"/career.v1.DecisionTestService/SubmitAnswer",
+		"/career.v1.DecisionTestService/SubmitRecall",
+	} {
+		code := post(procedure, false)
+		if code == http.StatusBadRequest {
+			t.Errorf("%s was rejected with 400 for a missing "+
+				"Connect-Protocol-Version. sendBeacon cannot set that "+
+				"header, so this procedure's writes would be silently lost "+
+				"when a tab closes mid-run.", procedure)
+		}
+	}
+}
+
+// The exemption is only acceptable because nothing privileged sits
+// behind it. A MEMBER or ADMIN procedure on an exempt service would
+// weaken CSRF defence on exactly the calls that matter, so the levels
+// are asserted rather than assumed.
+func TestOnlyBeaconReachableServicesAreExempt(t *testing.T) {
+	policy, err := authpolicy.Build()
+	if err != nil {
+		t.Fatalf("build the policy: %v", err)
+	}
+
+	exempt := map[string]bool{
+		"career.v1.EventService":        true,
+		"career.v1.DecisionTestService": true,
+	}
+
+	seen := map[string]int{}
+	for procedure, pol := range policy {
+		cut := strings.LastIndex(procedure, "/")
+		if cut <= 0 {
+			continue
+		}
+		svc := strings.TrimPrefix(procedure[:cut], "/")
+		if !exempt[svc] {
+			continue
+		}
+		seen[svc]++
+		if pol.Level != v1.AuthLevel_AUTH_LEVEL_PUBLIC {
+			t.Errorf("%s declares %s on a service exempt from the "+
+				"Connect-Protocol-Version requirement. The exemption exists "+
+				"because sendBeacon cannot set headers, and it is only safe "+
+				"while every procedure behind it is PUBLIC: a privileged one "+
+				"would lose a layer of CSRF defence. Either gate it "+
+				"elsewhere or stop exempting this service.",
+				procedure, pol.Level)
+		}
+	}
+
+	for svc := range exempt {
+		if seen[svc] == 0 {
+			t.Errorf("no procedures found for exempt service %s; the name is "+
+				"wrong and this test is checking nothing", svc)
+		}
 	}
 }
