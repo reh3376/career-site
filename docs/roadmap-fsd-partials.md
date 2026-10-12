@@ -36,7 +36,7 @@ turned out to be controls that exist on paper and nowhere else.
 | 1 | FR-AUTH-09 + FR-CNT-22 — Turnstile, and registration's missing rate limit | [FR-AUTH-09-FR-CNT-22-turnstile.md](fsd-items/FR-AUTH-09-FR-CNT-22-turnstile.md) | `[x]` |
 | 2 | FR-ADM-09 — write the audit log, and fix the lost approval actor | [FR-ADM-09-audit-log.md](fsd-items/FR-ADM-09-audit-log.md) | `[x]` |
 | 3 | FR-CNT-16 + FR-CNT-17 — content model and item fields | [FR-CNT-16-FR-CNT-17-content-model.md](fsd-items/FR-CNT-16-FR-CNT-17-content-model.md) | `[x]` |
-| 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[ ]` |
+| 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[x]` |
 | 5 | FR-HIST-02 — the welcome-back panel | [FR-HIST-02-welcome-back.md](fsd-items/FR-HIST-02-welcome-back.md) | `[ ]` |
 | 6 | FR-EVAL-06 — an evaluation must survive a deploy | [FR-EVAL-06-eval-durability.md](fsd-items/FR-EVAL-06-eval-durability.md) | `[ ]` |
 | 7 | FR-CNT-19 — CI link health | [FR-CNT-19-link-health.md](fsd-items/FR-CNT-19-link-health.md) | `[ ]` |
@@ -55,6 +55,19 @@ what closed it named.
 ---
 
 ## Findings that changed the shape of an item
+
+**The "failed calls only" filter had never worked** (item 4). The link on
+`/admin/decisions` computed its own query parameter and then never wrote
+it to the URL, so clicking it produced an unfiltered page. Found while
+adding the queue filter beside it. The same class as everything else in
+this roadmap: a control that is present, looks like it works, and does
+nothing.
+
+**Three of FR-ADM-03's four signals already had data** (item 4).
+Production held 9 ratings, 3 negative and 3 with a typed comment, and
+the refusal and no-support paths were recorded on every row. What was
+missing was a query, not a feature. The row had blamed FR-CHAT-14 for
+not being built; it shipped 2026-09-30.
 
 **The front-matter parsers had already drifted** (item 3). The Go
 walker's comment said it handled "the same shape the TypeScript articles

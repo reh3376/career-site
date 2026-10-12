@@ -9837,7 +9837,17 @@ type DecisionLogRow struct {
 	// retrieved while the total tracks how much was written, and one
 	// number cannot tell a retrieval regression from a verbose one. Zero
 	// where it does not apply.
-	FirstTokenMs  int64 `protobuf:"varint,25,opt,name=first_token_ms,json=firstTokenMs,proto3" json:"first_token_ms,omitempty"`
+	FirstTokenMs int64 `protobuf:"varint,25,opt,name=first_token_ms,json=firstTokenMs,proto3" json:"first_token_ms,omitempty"`
+	// The member's thumbs up or down on this answer (FR-CHAT-14), unset
+	// when they have not rated it. Joined from chat_messages, where it
+	// lives, because a member can rate long after the answer was logged.
+	//
+	// This is the signal FR-ADM-03 asks the review queue to be driven by.
+	// It was collected from 2026-09-30 and read by nothing admin-side
+	// until 2026-10-12.
+	RatingUp *bool `protobuf:"varint,26,opt,name=rating_up,json=ratingUp,proto3,oneof" json:"rating_up,omitempty"`
+	// The member's optional note left with the rating.
+	RatingComment string `protobuf:"bytes,27,opt,name=rating_comment,json=ratingComment,proto3" json:"rating_comment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10047,6 +10057,20 @@ func (x *DecisionLogRow) GetFirstTokenMs() int64 {
 	return 0
 }
 
+func (x *DecisionLogRow) GetRatingUp() bool {
+	if x != nil && x.RatingUp != nil {
+		return *x.RatingUp
+	}
+	return false
+}
+
+func (x *DecisionLogRow) GetRatingComment() string {
+	if x != nil {
+		return x.RatingComment
+	}
+	return ""
+}
+
 // Filters for the decision-review list.
 type ListDecisionLogRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -10061,9 +10085,17 @@ type ListDecisionLogRequest struct {
 	// Only calls that produced no usable verdict. They are rare by
 	// construction and are the rows most worth reading, so finding them
 	// should not mean scrolling past two hundred successes.
-	FailedOnly    bool `protobuf:"varint,5,opt,name=failed_only,json=failedOnly,proto3" json:"failed_only,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	FailedOnly bool `protobuf:"varint,5,opt,name=failed_only,json=failedOnly,proto3" json:"failed_only,omitempty"`
+	// Only the rows FR-ADM-03 calls a review queue: an answer the member
+	// rated down, a refusal under persona rule 6 or 7, an "I don't have
+	// anything in my records" answer, or a call that failed outright.
+	//
+	// All four were visible before this to an admin willing to open every
+	// row and read its path, which is not a queue. The filter is the
+	// difference between the signal being present and being found.
+	NeedsAttention bool `protobuf:"varint,6,opt,name=needs_attention,json=needsAttention,proto3" json:"needs_attention,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListDecisionLogRequest) Reset() {
@@ -10127,6 +10159,13 @@ func (x *ListDecisionLogRequest) GetLimit() int32 {
 func (x *ListDecisionLogRequest) GetFailedOnly() bool {
 	if x != nil {
 		return x.FailedOnly
+	}
+	return false
+}
+
+func (x *ListDecisionLogRequest) GetNeedsAttention() bool {
+	if x != nil {
+		return x.NeedsAttention
 	}
 	return false
 }
@@ -17147,7 +17186,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"readyCount\x122\n" +
 	"\x15below_threshold_count\x18\x03 \x01(\x05R\x13belowThresholdCount\x12!\n" +
 	"\ffailed_count\x18\x04 \x01(\x05R\vfailedCount\x12&\n" +
-	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\xbd\a\n" +
+	"\x0fin_flight_count\x18\x05 \x01(\x05R\rinFlightCount\"\x94\b\n" +
 	"\x0eDecisionLogRow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -17182,17 +17221,22 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x05error\x18\x16 \x01(\tR\x05error\x12!\n" +
 	"\fhuman_answer\x18\x17 \x01(\tR\vhumanAnswer\x12Y\n" +
 	"\x10human_dimensions\x18\x18 \x03(\v2..career.v1.DecisionLogRow.HumanDimensionsEntryR\x0fhumanDimensions\x12$\n" +
-	"\x0efirst_token_ms\x18\x19 \x01(\x03R\ffirstTokenMs\x1aB\n" +
+	"\x0efirst_token_ms\x18\x19 \x01(\x03R\ffirstTokenMs\x12 \n" +
+	"\trating_up\x18\x1a \x01(\bH\x00R\bratingUp\x88\x01\x01\x12%\n" +
+	"\x0erating_comment\x18\x1b \x01(\tR\rratingComment\x1aB\n" +
 	"\x14HumanDimensionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa3\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
+	"\n" +
+	"_rating_up\"\xcc\x01\n" +
 	"\x16ListDecisionLogRequest\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x15\n" +
 	"\x06ref_id\x18\x02 \x01(\tR\x05refId\x12'\n" +
 	"\x0funreviewed_only\x18\x03 \x01(\bR\x0eunreviewedOnly\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1f\n" +
 	"\vfailed_only\x18\x05 \x01(\bR\n" +
-	"failedOnly\"\x9a\x01\n" +
+	"failedOnly\x12'\n" +
+	"\x0fneeds_attention\x18\x06 \x01(\bR\x0eneedsAttention\"\x9a\x01\n" +
 	"\x17ListDecisionLogResponse\x127\n" +
 	"\tdecisions\x18\x01 \x03(\v2\x19.career.v1.DecisionLogRowR\tdecisions\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x03R\n" +
@@ -18447,6 +18491,7 @@ func file_career_v1_admin_proto_init() {
 	file_career_v1_admin_proto_msgTypes[116].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[117].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[123].OneofWrappers = []any{}
+	file_career_v1_admin_proto_msgTypes[125].OneofWrappers = []any{}
 	file_career_v1_admin_proto_msgTypes[191].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

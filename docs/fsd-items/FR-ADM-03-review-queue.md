@@ -1,6 +1,65 @@
 # FR-ADM-03: the conversation-review queue
 
-**State as of 2026-10-12.** The FSD's one-line verdict on FR-ADM-03 ("not
+**Built 2026-10-12.** The state this was written from is kept below.
+
+## Outcome
+
+Shipped for three of the four signals.
+
+**The production figures this document could not verify, verified.** It
+asked for an independent check of the 9 ratings and could not tell
+whether any were negative. Queried on 2026-10-12: **9 ratings, 6 up and
+3 down, and 3 carrying a typed comment**, on 19 assistant messages. All
+of it invisible to the admin until now. The answer paths in production
+are `model` (9) and `qa_bank` (7); no refusal or no-support row has been
+produced yet, so those two filters are correct and currently empty.
+
+**Decision #2, where the rating surfaces: joined into `/admin/decisions`,
+not a second list.** The join is exact, since a chat decision records
+`ref_kind='chat_message'` and `ref_id = chat_messages.id`, so one
+`LEFT JOIN` does it and every other decision kind gets nulls. A separate
+surface would have been a second place to check and a second thing to
+remember.
+
+**Decision #3, a dedicated filter: yes.** `?queue=1` narrows to
+down-rated answers, `out_of_scope`, `no_support`, and failed calls. The
+three chat signals were all visible before, to an admin willing to open
+every row and read its path, which is not a queue. The rating and the
+member's comment now show on the row itself, so it can be scanned.
+
+**Decision #4, escalation: out of scope, named rather than silent.**
+`ChatService.Escalate` has no handler, so there is nothing to queue. The
+FSD row says so and says what unblocks it.
+
+**Decision #5, clearable ratings: left as it is**, deliberately. The
+handler refuses `RATING_UNSPECIFIED` because the store cannot represent
+a path back to unrated. That is a conscious limitation rather than a
+silent one now that it is written down here; changing it would mean a
+nullable column and a migration, for a case nobody has hit.
+
+**A bug found while building it.** The "failed calls only" link on
+`/admin/decisions` computed its query parameter and never wrote it to
+the URL, so clicking it produced an unfiltered page. That filter had
+never worked. Fixed in the same change, and the new one is checked
+against the same mistake.
+
+**Verified by creating each signal and watching the filter find it**, in
+the local stack: a down-rated message with a comment, an `out_of_scope`
+row and a `no_support` row. The filter returned exactly those three, the
+member's comment came through the API, the console rendered
+`member: not helpful` on the row with the comment beneath it, and the
+repaired link carried `failed=1`. The synthetic rows were removed
+afterwards.
+
+**One thing the compiler could not catch.** `ExportDecisions` builds its
+SQL by string concatenation from the same column list. Alias-qualifying
+the columns for the join would have broken it at runtime only; it was
+updated to use the same `FROM` clause and the reason is written at the
+call site.
+
+---
+
+**State as of 2026-10-12, before the build.** The FSD's one-line verdict on FR-ADM-03 ("not
 driven by negative feedback, because FR-CHAT-14 is not built") is wrong
 about the reason, even though the surface-level conclusion (admin review is
 not driven by negative feedback today) is correct. FR-CHAT-14 (member

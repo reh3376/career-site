@@ -110,16 +110,14 @@ FSD row: nothing reads them, and `tracks` waits on FR-PROF-03.
 - **Keep / drop / defer:**
 - **Depends on:**
 
-### 6. FR-ADM-03 · Must
+### 6. FR-ADM-03 · Must — CLOSED 2026-10-12
 
-> The admin shall have a conversation-review queue: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals.
-
-**FSD status today:** Partially shipped. `/admin/decisions` reviews and grades `decision_log`, including chat answers. Not driven by negative feedback, because FR-CHAT-14 (member rating) is not built.
-
-**Why here:** Needs verifying before costing — not yet checked against the code.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed for three of the four signals.** `/admin/decisions?queue=1`
+filters to down-rated answers, refusals, no-support answers and failed
+calls, and the member's rating and comment show on the row. What was
+missing was the admin query, not the rating feature: production held 9
+ratings, 3 negative, that nothing read. Escalation stays out because
+`ChatService.Escalate` has no handler to produce anything to queue.
 
 ### 7. FR-EVAL-06 · Must
 

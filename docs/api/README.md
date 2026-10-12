@@ -3882,6 +3882,7 @@ human-in-the-loop review. Backs /admin/decisions.
 | `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
 | `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
 | `failedOnly` | `bool` | boolean |  | Only calls that produced no usable verdict. They are rare by construction and are the rows most worth reading, so finding them should not mean scrolling past two hundred successes. |
+| `needsAttention` | `bool` | boolean |  | Only the rows FR-ADM-03 calls a review queue: an answer the member rated down, a refusal under persona rule 6 or 7, an "I don't have anything in my records" answer, or a call that failed outright. All four were visible before this to an admin willing to open every row and read its path, which is not a queue. The filter is the difference between the signal being present and being found. |
 
 **Response** — [`ListDecisionLogResponse`](#listdecisionlogresponse)
 
@@ -3899,7 +3900,8 @@ human-in-the-loop review. Backs /admin/decisions.
   "refId": "string",
   "unreviewedOnly": true,
   "limit": 0,
-  "failedOnly": true
+  "failedOnly": true,
+  "needsAttention": true
 }
 ```
 
@@ -7793,6 +7795,8 @@ what, and the owner's review of it. See docs/decision-log.md.
 | `humanAnswer` | `string` | string |  | The wording the owner would have given, for a decision whose output is prose rather than a label. This is what an adapter is trained on: with response_text it forms a preference pair, and on its own it is a supervised target. Empty for a classification decision, where human_verdict is already the gold output, and empty for an answer the owner thought was right. |
 | `humanDimensions` | map<`string`, `string`> | object of string |  | Per-rubric grades, e.g. grounded / citations / voice / scope / length, each marked yes, partial, no or n/a. One overall verdict cannot express an answer that is factually right and in the wrong voice, and cannot produce the grounding and citation-validity rates the chat acceptance criteria are stated in. |
 | `firstTokenMs` | `int64` | string (decimal) |  | Milliseconds to the first token. Separate from latency_ms because on a CPU-only box the first-token wait tracks how much context was retrieved while the total tracks how much was written, and one number cannot tell a retrieval regression from a verbose one. Zero where it does not apply. |
+| `ratingUp` | `bool` | boolean |  | _(oneof `_rating_up`)_ The member's thumbs up or down on this answer (FR-CHAT-14), unset when they have not rated it. Joined from chat_messages, where it lives, because a member can rate long after the answer was logged. This is the signal FR-ADM-03 asks the review queue to be driven by. It was collected from 2026-09-30 and read by nothing admin-side until 2026-10-12. |
+| `ratingComment` | `string` | string |  | The member's optional note left with the rating. |
 
 ### ListDecisionLogRequest
 
@@ -7805,6 +7809,7 @@ Filters for the decision-review list.
 | `unreviewedOnly` | `bool` | boolean |  | Only rows the owner has not reviewed yet. |
 | `limit` | `int32` | number |  | Page size, newest first; server caps at 500 (default 200). |
 | `failedOnly` | `bool` | boolean |  | Only calls that produced no usable verdict. They are rare by construction and are the rows most worth reading, so finding them should not mean scrolling past two hundred successes. |
+| `needsAttention` | `bool` | boolean |  | Only the rows FR-ADM-03 calls a review queue: an answer the member rated down, a refusal under persona rule 6 or 7, an "I don't have anything in my records" answer, or a call that failed outright. All four were visible before this to an admin willing to open every row and read its path, which is not a queue. The filter is the difference between the signal being present and being found. |
 
 ### ListDecisionLogResponse
 

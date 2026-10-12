@@ -2532,6 +2532,16 @@ message DecisionLogRow {
   // number cannot tell a retrieval regression from a verbose one. Zero
   // where it does not apply.
   int64 first_token_ms = 25;
+  // The member's thumbs up or down on this answer (FR-CHAT-14), unset
+  // when they have not rated it. Joined from chat_messages, where it
+  // lives, because a member can rate long after the answer was logged.
+  //
+  // This is the signal FR-ADM-03 asks the review queue to be driven by.
+  // It was collected from 2026-09-30 and read by nothing admin-side
+  // until 2026-10-12.
+  optional bool rating_up = 26;
+  // The member's optional note left with the rating.
+  string rating_comment = 27;
 }
 
 // Filters for the decision-review list.
@@ -2548,6 +2558,14 @@ message ListDecisionLogRequest {
   // construction and are the rows most worth reading, so finding them
   // should not mean scrolling past two hundred successes.
   bool failed_only = 5;
+  // Only the rows FR-ADM-03 calls a review queue: an answer the member
+  // rated down, a refusal under persona rule 6 or 7, an "I don't have
+  // anything in my records" answer, or a call that failed outright.
+  //
+  // All four were visible before this to an admin willing to open every
+  // row and read its path, which is not a queue. The filter is the
+  // difference between the signal being present and being found.
+  bool needs_attention = 6;
 }
 // A page of logged decisions plus table-wide counts.
 message ListDecisionLogResponse {

@@ -56,6 +56,12 @@ type Row = {
   firstTokenMs?: number | string;
   reviewed_at?: string;
   reviewedAt?: string;
+  // The member's thumbs up or down on this answer (FR-CHAT-14).
+  // Undefined when unrated. Joined from chat_messages by the API.
+  rating_up?: boolean;
+  ratingUp?: boolean;
+  rating_comment?: string;
+  ratingComment?: string;
 };
 
 type ListResp = {
@@ -223,6 +229,7 @@ type Search = {
   ref?: string;
   all?: string;
   failed?: string;
+  queue?: string;
 };
 
 export default async function DecisionsPage({
@@ -237,6 +244,11 @@ export default async function DecisionsPage({
   // Failures are rare by construction, so they need a way to be found
   // that is not scrolling past two hundred successes.
   const failedOnly = sp.failed === "1";
+  // The review queue FR-ADM-03 asks for: answers a member rated down,
+  // refusals, "I don't have anything in my records" answers, and failed
+  // calls. All four were visible before this to anyone willing to open
+  // every row; a filter is what makes them findable.
+  const needsAttention = sp.queue === "1";
 
   const cookie = await getSessionCookie();
   let rows: Row[] = [];
@@ -248,7 +260,14 @@ export default async function DecisionsPage({
   } else {
     const resp = await callApi({
       path: "/api/career.v1.AdminService/ListDecisionLog",
-      body: { kind, refId: ref, unreviewedOnly, failedOnly, limit: 200 },
+      body: {
+        kind,
+        refId: ref,
+        unreviewedOnly,
+        failedOnly,
+        needsAttention,
+        limit: 200,
+      },
       cookie,
     });
     if (!resp.ok) {
@@ -276,11 +295,18 @@ export default async function DecisionsPage({
       ref,
       all: unreviewedOnly ? "" : "1",
       failed: failedOnly ? "1" : "",
+      queue: needsAttention ? "1" : "",
       ...next,
     };
     if (merged.kind) q.set("kind", merged.kind);
     if (merged.ref) q.set("ref", merged.ref);
     if (merged.all) q.set("all", merged.all);
+    // `failed` was computed here and never written, so the "failed
+    // calls only" link had never applied its own filter: clicking it
+    // produced a URL without the parameter and the page came back
+    // unfiltered. Found 2026-10-12 while adding the queue filter below.
+    if (merged.failed) q.set("failed", merged.failed);
+    if (merged.queue) q.set("queue", merged.queue);
     const s = q.toString();
     return s ? `/admin/decisions?${s}` : "/admin/decisions";
   };
@@ -329,6 +355,13 @@ export default async function DecisionsPage({
           className={failedOnly ? "text-danger" : "text-accent"}
         >
           {failedOnly ? "all calls" : "failed calls only"}
+        </Link>
+        <span className="text-ink-3">·</span>
+        <Link
+          href={filterHref({ queue: needsAttention ? "" : "1" })}
+          className={needsAttention ? "text-danger" : "text-accent"}
+        >
+          {needsAttention ? "all decisions" : "needs attention"}
         </Link>
         {ref ? (
           <>
@@ -444,8 +477,8 @@ function ChatAnswerCard({
       {output?.truncated ? (
         <p className="mt-2 text-sm text-danger">
           Cut off at the token limit, so it stops mid sentence. That is the cap
-          doing its job, not the model losing the thread; grade the part that
-          is there.
+          doing its job, not the model losing the thread; grade the part that is
+          there.
         </p>
       ) : null}
 
@@ -468,9 +501,8 @@ function ChatAnswerCard({
       {dropped > 0 ? (
         <p className="mt-2 text-sm text-danger">
           {dropped} citation {dropped === 1 ? "marker" : "markers"} pointed at
-          nothing and{" "}
-          {dropped === 1 ? "was removed" : "were removed"} before this was
-          shown. The answer claimed support it did not have.
+          nothing and {dropped === 1 ? "was removed" : "were removed"} before
+          this was shown. The answer claimed support it did not have.
         </p>
       ) : null}
 
@@ -555,15 +587,51 @@ function DecisionCard({ row }: { row: Row }) {
   const latency = Number(row.latency_ms ?? row.latencyMs ?? 0);
   const created = row.created_at ?? row.createdAt ?? "";
 
-  const meta = (
-    <p className="mt-1 font-mono text-[11px] text-ink-3">
-      #{row.id} · {model}
-      {promptId ? ` · ${promptId} v${promptVersion}` : ""}
-      {numCtx ? ` · ctx ${numCtx}` : ""}
-      {latency ? ` · ${(latency / 1000).toFixed(1)} s` : ""}
-      {created ? ` · ${created.slice(0, 16).replace("T", " ")}` : ""}
-      {reviewedAt ? " · reviewed" : ""}
+  const ratingUp = row.rating_up ?? row.ratingUp;
+  const ratingComment = row.rating_comment ?? row.ratingComment ?? "";
+
+  // The member's verdict, shown on the row rather than only inside it.
+  // The point of FR-ADM-03 is a queue that can be scanned; a signal that
+  // requires opening every row to see is the state this replaced.
+  const ratingBadge =
+    ratingUp === undefined ? null : (
+      <span
+        className={
+          "ml-2 font-mono text-[11px] " +
+          (ratingUp ? "text-success" : "text-danger")
+        }
+      >
+        {ratingUp ? "member: helpful" : "member: not helpful"}
+      </span>
+    );
+
+  const memberComment = ratingComment ? (
+    <p className="mt-3 border-l-2 border-signal bg-paper-2 px-4 py-3 text-sm leading-relaxed text-ink">
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+        what the member said
+      </span>
+      <br />
+      {ratingComment}
     </p>
+  ) : null;
+
+  // meta is a fragment, not a single <p>, so the member's comment rides
+  // along to every row shape. There are five render sites and the chat
+  // card takes it as a prop; threading the comment separately would have
+  // meant five edits and a sixth place to forget.
+  const meta = (
+    <>
+      <p className="mt-1 font-mono text-[11px] text-ink-3">
+        #{row.id} · {model}
+        {promptId ? ` · ${promptId} v${promptVersion}` : ""}
+        {numCtx ? ` · ctx ${numCtx}` : ""}
+        {latency ? ` · ${(latency / 1000).toFixed(1)} s` : ""}
+        {created ? ` · ${created.slice(0, 16).replace("T", " ")}` : ""}
+        {reviewedAt ? " · reviewed" : ""}
+        {ratingBadge}
+      </p>
+      {memberComment}
+    </>
   );
 
   // A call that produced no usable verdict. There is nothing to grade,
