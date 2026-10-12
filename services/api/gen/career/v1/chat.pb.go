@@ -2590,7 +2590,7 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\x06Rating\x12\x16\n" +
 	"\x12RATING_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tRATING_UP\x10\x01\x12\x0f\n" +
-	"\vRATING_DOWN\x10\x022\xff\a\n" +
+	"\vRATING_DOWN\x10\x022\x87\b\n" +
 	"\vChatService\x12g\n" +
 	"\x12CreateConversation\x12$.career.v1.CreateConversationRequest\x1a%.career.v1.CreateConversationResponse\"\x04\x80\xb5\x18\x02\x12d\n" +
 	"\x11ListConversations\x12#.career.v1.ListConversationsRequest\x1a$.career.v1.ListConversationsResponse\"\x04\x80\xb5\x18\x02\x12^\n" +
@@ -2600,9 +2600,9 @@ const file_career_v1_chat_proto_rawDesc = "" +
 	"\vRateMessage\x12\x1d.career.v1.RateMessageRequest\x1a\x1e.career.v1.RateMessageResponse\"\x04\x80\xb5\x18\x02\x12I\n" +
 	"\bEscalate\x12\x1a.career.v1.EscalateRequest\x1a\x1b.career.v1.EscalateResponse\"\x04\x80\xb5\x18\x02\x12[\n" +
 	"\x0eGetSuggestions\x12 .career.v1.GetSuggestionsRequest\x1a!.career.v1.GetSuggestionsResponse\"\x04\x80\xb5\x18\x02\x12I\n" +
-	"\bGetQuota\x12\x1a.career.v1.GetQuotaRequest\x1a\x1b.career.v1.GetQuotaResponse\"\x04\x80\xb5\x18\x02\x12a\n" +
-	"\x10ListAdminQueries\x12\".career.v1.ListAdminQueriesRequest\x1a#.career.v1.ListAdminQueriesResponse\"\x04\x80\xb5\x18\x03\x12X\n" +
-	"\rRunAdminQuery\x12\x1f.career.v1.RunAdminQueryRequest\x1a .career.v1.RunAdminQueryResponse\"\x04\x80\xb5\x18\x03B\xa3\x01\n" +
+	"\bGetQuota\x12\x1a.career.v1.GetQuotaRequest\x1a\x1b.career.v1.GetQuotaResponse\"\x04\x80\xb5\x18\x02\x12e\n" +
+	"\x10ListAdminQueries\x12\".career.v1.ListAdminQueriesRequest\x1a#.career.v1.ListAdminQueriesResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12\\\n" +
+	"\rRunAdminQuery\x12\x1f.career.v1.RunAdminQueryRequest\x1a .career.v1.RunAdminQueryResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01B\xa3\x01\n" +
 	"\rcom.career.v1B\tChatProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 

@@ -1,23 +1,25 @@
 // Method-level options that make the API's access policy machine-readable.
 //
-// **What is enforced today, stated plainly, because this comment used to
-// overstate it.** It read: "The Go server reads these options from the
-// method descriptor in a Connect interceptor and enforces them uniformly,
-// so no handler carries its own auth check." Every clause of that was
-// false. There are no Connect interceptors in the service; `auth` is
-// enforced by hand, once per handler, and the other options are not
-// enforced at all.
+// **What is enforced today, stated plainly, because this comment has
+// been wrong in both directions.** It once claimed interceptor
+// enforcement that did not exist. It was corrected to say `auth` was
+// enforced per handler, and then the auth sprint landed and left that
+// correction stale in turn. The current state:
 //
-//   auth                  declared on every method; enforced per handler
+//   auth                  declared on every method; enforced by the
+//                         interceptor since 2026-10-11, and the server
+//                         refuses to start on an unspecified level
 //   allow_unverified      declared on 2; enforced by the interceptor
+//   audit                 required on every ADMIN method; enforced by
+//                         the audit interceptor, which writes audit_log
 //   rate_limit_per_minute deprecated, declared on none. Rate limiting
 //                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
 //
-// Making `auth` interceptor-enforced is planned in
-// docs/sprint-auth-interceptor.md. Until that lands, treat this file as
-// a contract the code is checked against (see the auth-gate tests) and
-// not as a description of a mechanism.
+// The lesson this header keeps re-learning is ADR 0031's: a comment
+// describing enforcement is not enforcement. Each line above is now
+// backed by a boot check or a test that fails when it stops being true,
+// which is the only reason it is safe to write it down.
 //
 // The API reference generator (scripts/gen_api_docs.py) reads the same
 // options, so documentation stays derived from one declaration.
@@ -35,7 +37,7 @@ import { file_google_protobuf_descriptor } from "@bufbuild/protobuf/wkt";
  * Describes the file career/v1/options.proto.
  */
 export const file_career_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("ChdjYXJlZXIvdjEvb3B0aW9ucy5wcm90bxIJY2FyZWVyLnYxKmsKCUF1dGhMZXZlbBIaChZBVVRIX0xFVkVMX1VOU1BFQ0lGSUVEEAASFQoRQVVUSF9MRVZFTF9QVUJMSUMQARIVChFBVVRIX0xFVkVMX01FTUJFUhACEhQKEEFVVEhfTEVWRUxfQURNSU4QAzpKCgRhdXRoEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY0IYDIAEoDjIULmNhcmVlci52MS5BdXRoTGV2ZWxSBGF1dGg6SwoQYWxsb3dfdW52ZXJpZmllZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNGGAyABKAhSD2FsbG93VW52ZXJpZmllZDpXChVyYXRlX2xpbWl0X3Blcl9taW51dGUSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjShgMgASgNQgIYAVIScmF0ZUxpbWl0UGVyTWludXRlOkEKCW1mYV9mcmVzaBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNOGAyABKAhCAhgBUghtZmFGcmVzaEKmAQoNY29tLmNhcmVlci52MUIMT3B0aW9uc1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_google_protobuf_descriptor]);
+  fileDesc("ChdjYXJlZXIvdjEvb3B0aW9ucy5wcm90bxIJY2FyZWVyLnYxKmsKCUF1dGhMZXZlbBIaChZBVVRIX0xFVkVMX1VOU1BFQ0lGSUVEEAASFQoRQVVUSF9MRVZFTF9QVUJMSUMQARIVChFBVVRIX0xFVkVMX01FTUJFUhACEhQKEEFVVEhfTEVWRUxfQURNSU4QAypZCgpBdWRpdExldmVsEhsKF0FVRElUX0xFVkVMX1VOU1BFQ0lGSUVEEAASFAoQQVVESVRfTEVWRUxfTk9ORRABEhgKFEFVRElUX0xFVkVMX1JFQ09SREVEEAI6SgoEYXV0aBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGNCGAyABKA4yFC5jYXJlZXIudjEuQXV0aExldmVsUgRhdXRoOksKEGFsbG93X3VudmVyaWZpZWQSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjRhgMgASgIUg9hbGxvd1VudmVyaWZpZWQ6VwoVcmF0ZV9saW1pdF9wZXJfbWludXRlEh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMY0oYDIAEoDUICGAFSEnJhdGVMaW1pdFBlck1pbnV0ZTpBCgltZmFfZnJlc2gSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjThgMgASgIQgIYAVIIbWZhRnJlc2g6TQoFYXVkaXQSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxjUhgMgASgOMhUuY2FyZWVyLnYxLkF1ZGl0TGV2ZWxSBWF1ZGl0QqYBCg1jb20uY2FyZWVyLnYxQgxPcHRpb25zUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_google_protobuf_descriptor]);
 
 /**
  * Who may call a method.
@@ -95,6 +97,62 @@ export enum AuthLevel {
  */
 export const AuthLevelSchema: GenEnum<AuthLevel> = /*@__PURE__*/
   enumDesc(file_career_v1_options, 0);
+
+/**
+ * Whether a call is recorded in `audit_log`.
+ *
+ * Read at boot by internal/auditpolicy, which builds the map of
+ * procedures to levels from these declarations and refuses to start if
+ * an admin method declares nothing. Enforced by an interceptor, so a
+ * handler cannot forget to record itself and a new admin RPC cannot be
+ * added without a decision being made about it.
+ *
+ * @generated from enum career.v1.AuditLevel
+ */
+export enum AuditLevel {
+  /**
+   * Not set. Legal on a PUBLIC or MEMBER method, where it means the same
+   * as AUDIT_LEVEL_NONE. On an ADMIN method the server will not start:
+   * "every admin action is recorded" cannot be true if a method can
+   * decline to say.
+   *
+   * @generated from enum value: AUDIT_LEVEL_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Not recorded. Correct for reads, which are the majority of the admin
+   * surface, and this is a positive declaration rather than an absence:
+   * somebody decided this call does not change anything.
+   *
+   * @generated from enum value: AUDIT_LEVEL_NONE = 1;
+   */
+  NONE = 1,
+
+  /**
+   * Recorded. One row per call, written after the handler returns so the
+   * row carries the outcome: an attempt that failed is as much a part of
+   * an audit trail as one that succeeded, and a row written beforehand
+   * would claim a change that may not have happened.
+   *
+   * Named for what happens rather than for why, because the set is not
+   * exactly "the mutations". Every mutation is here, and so are four
+   * reads: RunDbQuery, which runs arbitrary SELECTs across member data,
+   * and the three Export methods, which take participant and decision
+   * data off the system in bulk. Those change nothing and are among the
+   * most audit-worthy things an admin can do. Reads that return a fixed
+   * count, or a setting, or a list the console already shows, are NONE.
+   *
+   * @generated from enum value: AUDIT_LEVEL_RECORDED = 2;
+   */
+  RECORDED = 2,
+}
+
+/**
+ * Describes the enum career.v1.AuditLevel.
+ */
+export const AuditLevelSchema: GenEnum<AuditLevel> = /*@__PURE__*/
+  enumDesc(file_career_v1_options, 1);
 
 /**
  * Required access level for the method.
@@ -177,4 +235,27 @@ export const rate_limit_per_minute: GenExtension<MethodOptions, number> = /*@__P
  */
 export const mfa_fresh: GenExtension<MethodOptions, boolean> = /*@__PURE__*/
   extDesc(file_career_v1_options, 3);
+
+/**
+ * Whether a call to this method is written to `audit_log`.
+ *
+ * Required on every method declaring `auth = AUTH_LEVEL_ADMIN`, and
+ * the server refuses to start if one of them leaves it unspecified.
+ * That rule is deliberate, and so is its shape: it derives the set of
+ * methods that need a decision from another declaration rather than
+ * from a guess about the method's name, so adding an admin RPC called
+ * `PurgeEverything` cannot slip past a heuristic that was looking for
+ * a `Set` or `Delete` prefix.
+ *
+ * FR-ADM-09 says "all admin actions shall be recorded in the audit
+ * log". It was marked partially shipped for a year while `audit_log`
+ * held zero rows and no code path inserted into one. Declaring the
+ * level here, and failing the boot when it is missing, is what makes
+ * the requirement a property of the contract instead of a promise
+ * somebody has to remember at every new RPC.
+ *
+ * @generated from extension: career.v1.AuditLevel audit = 50004;
+ */
+export const audit: GenExtension<MethodOptions, AuditLevel> = /*@__PURE__*/
+  extDesc(file_career_v1_options, 4);
 

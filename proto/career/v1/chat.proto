@@ -71,6 +71,7 @@ service ChatService {
   // server.
   rpc ListAdminQueries(ListAdminQueriesRequest) returns (ListAdminQueriesResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
   }
   // Runs one named query and returns its result.
   //
@@ -79,6 +80,7 @@ service ChatService {
   // refused. Results are counts, never rows about a person.
   rpc RunAdminQuery(RunAdminQueryRequest) returns (RunAdminQueryResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
   }
 }
 

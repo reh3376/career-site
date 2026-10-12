@@ -141,9 +141,16 @@ func (h *AdminDecision) Handle(w http.ResponseWriter, r *http.Request) {
 // ApproveUser flips a pending user to ACTIVE with the default TTL,
 // records the decision, and fires the approval email. Shared by both
 // the one-click email HTTP handler and the AdminService.ApproveRegistration
-// RPC — `via` distinguishes them in the audit log ("email_link" vs
-// "console") and `tokenHash` is nil for console-initiated approvals.
+// RPC: `via` distinguishes them ("email_link" vs "console") and
+// `tokenHash` is nil for console-initiated approvals.
 // Mutates u.ExpiresAt so the caller can render it back.
+//
+// This comment used to say `via` "distinguishes them in the audit log".
+// It was written before anyone checked, and audit_log held zero rows
+// until 2026-10-12. The console path is now genuinely audited, by the
+// interceptor, one row per RPC. The email-link path is an HTTP GET from
+// a mailbox and not an RPC, so it has no audit row and never will;
+// `approval_decisions.decided_via` is what records it.
 func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via string, tokenHash []byte) (users.GrantTTL, error) {
 	ttl := h.AcceptDefaultTTL
 	d := ttl.Duration()
@@ -157,6 +164,7 @@ func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via stri
 		UserID:     u.ID,
 		Decision:   "approve",
 		DecidedVia: via,
+		DecidedBy:  decidingAdmin(ctx),
 		GrantedTTL: &d,
 		TokenHash:  tokenHash,
 	}); err != nil {
@@ -173,9 +181,9 @@ func (h *AdminDecision) ApproveUser(ctx context.Context, u *users.User, via stri
 
 // DeclineUser flips a pending user to DECLINED, records the decision,
 // and fires the decline email. Shared by both the one-click email
-// HTTP handler and the AdminService.DeclineRegistration RPC — `via`
-// distinguishes them in the audit log and `tokenHash` is nil for
-// console-initiated declines.
+// HTTP handler and the AdminService.DeclineRegistration RPC: `via`
+// distinguishes them and `tokenHash` is nil for console-initiated
+// declines. See ApproveUser on what is and is not audited.
 func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via string, tokenHash []byte) error {
 	if err := h.users.DeclinePending(ctx, u.ID); err != nil {
 		h.log.Error("decline failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
@@ -185,6 +193,7 @@ func (h *AdminDecision) DeclineUser(ctx context.Context, u *users.User, via stri
 		UserID:     u.ID,
 		Decision:   "decline",
 		DecidedVia: via,
+		DecidedBy:  decidingAdmin(ctx),
 		TokenHash:  tokenHash,
 	}); err != nil {
 		h.log.Warn("record decision failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
@@ -343,4 +352,26 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// decidingAdmin returns the admin making this decision, or nil.
+//
+// `approval_decisions.decided_by` has existed since the first migration
+// and was never once populated: production held 5 decisions and 0
+// actors on 2026-10-12. The column was there, the repo struct carried
+// it, the INSERT named it, and the two call sites that matter simply
+// did not pass it, so "who approved this member" had no answer anywhere
+// in the system. The `approval.decided` event could not stand in
+// either: it emits the *target member's* id as its actor.
+//
+// Nil is correct and expected for the one-click email path, where the
+// signed token is the authorisation and there is no session to resolve;
+// `decided_via = "email_link"` records that case.
+func decidingAdmin(ctx context.Context) *int64 {
+	u := CallerFromContext(ctx)
+	if u == nil {
+		return nil
+	}
+	id := u.ID
+	return &id
 }

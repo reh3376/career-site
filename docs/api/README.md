@@ -2334,7 +2334,7 @@ mode only), or disables/re-enables an account.
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
 | `status` | [`MemberStatus`](#memberstatus) | string (enum name) | `enum: in: 2 in: 4` | New status: ACTIVE (approve or re-enable) or DISABLED. |
-| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. True since 2026-10-12. This comment and the three like it on the other mutating requests described a control for a year while audit_log held zero rows and no handler read the field. The audit interceptor now writes it into the row's payload; see internal/auditpolicy. |
 
 **Response** — [`SetMemberStatusResponse`](#setmemberstatusresponse)
 
@@ -2815,7 +2815,7 @@ as decided_via="console" in the audit trail.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 **Response** — [`ApproveRegistrationResponse`](#approveregistrationresponse)
 
@@ -2847,7 +2847,7 @@ as decided_via="console" in the audit trail.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 **Response** — [`DeclineRegistrationResponse`](#declineregistrationresponse)
 
@@ -2882,7 +2882,7 @@ and relative are exclusive; passing both is InvalidArgument.
 | `extendDays` | `int32` | number | `int32: lte: 3650 gte: 0` | Add this many days to the current expires_at (or, if the member has no expires_at set, from now). 1..3650. |
 | `newExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set expires_at to this exact moment. |
 | `permanent` | `bool` | boolean |  | Make access permanent (clears expires_at). |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 **Response** — [`ExtendAccessResponse`](#extendaccessresponse)
 
@@ -6509,7 +6509,7 @@ Status change.
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
 | `status` | [`MemberStatus`](#memberstatus) | string (enum name) | `enum: in: 2 in: 4` | New status: ACTIVE (approve or re-enable) or DISABLED. |
-| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. True since 2026-10-12. This comment and the three like it on the other mutating requests described a control for a year while audit_log held zero rows and no handler read the field. The audit interceptor now writes it into the row's payload; see internal/auditpolicy. |
 
 ### SetMemberStatusResponse
 
@@ -6826,6 +6826,8 @@ An audit-log entry.
 | `targetId` | `string` | string |  | Target ID. |
 | `payloadJson` | `string` | string |  | Details as JSON. |
 | `occurredAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it happened. |
+| `actorName` | `string` | string |  | Display name of the actor, resolved from `actor_id`. Empty for a system action, or for an actor whose user row has since been deleted: `audit_log.actor_user_id` is ON DELETE SET NULL, so the row survives the person. Carried here so the console does not have to join every page against the member list. |
+| `outcome` | `string` | string |  | Connect status code of the call, e.g. `ok`, `permission_denied`. Rows are written after the handler returns, so a refused or failed attempt is recorded as well as a successful one. An audit log that only holds successes cannot answer "what did they try". |
 
 ### GetAuditResponse
 
@@ -6904,7 +6906,7 @@ Approve-registration request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 ### ApproveRegistrationResponse
 
@@ -6921,7 +6923,7 @@ Decline-registration request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID from MemberRecord.me.id. |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 ### DeclineRegistrationResponse
 
@@ -6942,7 +6944,7 @@ new_expires_at / permanent to specify the new expiry.
 | `extendDays` | `int32` | number | `int32: lte: 3650 gte: 0` | Add this many days to the current expires_at (or, if the member has no expires_at set, from now). 1..3650. |
 | `newExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | Set expires_at to this exact moment. |
 | `permanent` | `bool` | boolean |  | Make access permanent (clears expires_at). |
-| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason recorded in the audit log. |
+| `reason` | `string` | string | `string: max_len: 1000` | Optional free-text reason, recorded in the audit log's payload by the audit interceptor. See SetMemberStatusRequest.reason. |
 
 ### ExtendAccessResponse
 
@@ -10115,6 +10117,22 @@ decision out of them.
 | `AUTH_LEVEL_PUBLIC` | 1 | No session required. |
 | `AUTH_LEVEL_MEMBER` | 2 | A verified member session is required (status ACTIVE). Methods that an unverified member may call additionally set `allow_unverified`. |
 | `AUTH_LEVEL_ADMIN` | 3 | An admin session with a recent TOTP verification is required. |
+
+### AuditLevel
+
+Whether a call is recorded in `audit_log`.
+
+Read at boot by internal/auditpolicy, which builds the map of
+procedures to levels from these declarations and refuses to start if
+an admin method declares nothing. Enforced by an interceptor, so a
+handler cannot forget to record itself and a new admin RPC cannot be
+added without a decision being made about it.
+
+| Value | Number | Description |
+|---|---|---|
+| `AUDIT_LEVEL_UNSPECIFIED` | 0 | Not set. Legal on a PUBLIC or MEMBER method, where it means the same as AUDIT_LEVEL_NONE. On an ADMIN method the server will not start: "every admin action is recorded" cannot be true if a method can decline to say. |
+| `AUDIT_LEVEL_NONE` | 1 | Not recorded. Correct for reads, which are the majority of the admin surface, and this is a positive declaration rather than an absence: somebody decided this call does not change anything. |
+| `AUDIT_LEVEL_RECORDED` | 2 | Recorded. One row per call, written after the handler returns so the row carries the outcome: an attempt that failed is as much a part of an audit trail as one that succeeded, and a row written beforehand would claim a change that may not have happened. Named for what happens rather than for why, because the set is not exactly "the mutations". Every mutation is here, and so are four reads: RunDbQuery, which runs arbitrary SELECTs across member data, and the three Export methods, which take participant and decision data off the system in bulk. Those change nothing and are among the most audit-worthy things an admin can do. Reads that return a fixed count, or a setting, or a list the console already shows, are NONE. |
 
 ### Message.Role
 

@@ -34,7 +34,7 @@ turned out to be controls that exist on paper and nowhere else.
 | # | item(s) | working document | state |
 |---|---|---|---|
 | 1 | FR-AUTH-09 + FR-CNT-22 — Turnstile, and registration's missing rate limit | [FR-AUTH-09-FR-CNT-22-turnstile.md](fsd-items/FR-AUTH-09-FR-CNT-22-turnstile.md) | `[x]` |
-| 2 | FR-ADM-09 — write the audit log, and fix the lost approval actor | [FR-ADM-09-audit-log.md](fsd-items/FR-ADM-09-audit-log.md) | `[ ]` |
+| 2 | FR-ADM-09 — write the audit log, and fix the lost approval actor | [FR-ADM-09-audit-log.md](fsd-items/FR-ADM-09-audit-log.md) | `[x]` |
 | 3 | FR-CNT-16 + FR-CNT-17 — content model and item fields | [FR-CNT-16-FR-CNT-17-content-model.md](fsd-items/FR-CNT-16-FR-CNT-17-content-model.md) | `[ ]` |
 | 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[ ]` |
 | 5 | FR-HIST-02 — the welcome-back panel | [FR-HIST-02-welcome-back.md](fsd-items/FR-HIST-02-welcome-back.md) | `[ ]` |
@@ -55,6 +55,21 @@ what closed it named.
 ---
 
 ## Findings that changed the shape of an item
+
+**The audit log already had a read surface in the contract** (item 2).
+`AdminService.GetAudit` was declared from the first proto, commented
+"Lists audit-log entries", and had no handler, so it answered
+UNIMPLEMENTED against a table holding no rows. Two declared-and-unbuilt
+halves of the same requirement, neither visible from the other. The item
+got smaller as a result: the read surface needed implementing, not
+designing.
+
+**"All admin actions" is 42 procedures, not 4** (item 2). The working
+document listed four call sites. Counting the contract found 81 methods
+declaring ADMIN, of which 42 change something or move member data. Four
+hand-written inserts would have left 38 actions unrecorded behind a row
+marked Shipped, which is the exact shape of the problem being fixed, so
+this went in as a declaration plus an interceptor instead.
 
 These came out of establishing current state and were not visible from
 the FSD rows.

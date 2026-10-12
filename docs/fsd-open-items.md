@@ -9,8 +9,8 @@ shipped* is a row the FSD marks shipped with a hole in it, and those were
 invisible until the documentation audit on 2026-10-12 went looking:
 `FR-CNT-22` promised Turnstile on anonymous contact and enforced none,
 `FR-AUTH-09` promised it on registration and had no check at all (both
-closed 2026-10-12), `FR-ADM-09` promises an audit log whose table has
-never been written to.
+closed 2026-10-12), `FR-ADM-09` promised an audit log whose table had
+never been written to (closed 2026-10-12).
 A gap behind a "Shipped" marker is likelier to bite than something nobody
 started, because nobody is looking for it.
 
@@ -69,16 +69,17 @@ promise, so they are tracked in `docs/backlog.md` rather than held here.
 is gone; the anonymous path verifies the token through the same client as
 `Register`. Nothing else in the row changed.
 
-### 2. FR-ADM-09 · Must
+### 2. FR-ADM-09 · Must — CLOSED 2026-10-12
 
 > All admin actions shall be recorded in the audit log.
 
-**FSD status today:** Partially shipped, and the gap is wider than it reads. Admin actions emit registry events (`admin.decision_reviewed`, `admin.qa_entry_*`, `admin.rescore`, `admin.jd_limit_changed`), which is real coverage of *some* actions. The `audit_log` table has existed since migration 00001 and nothing in the…
-
-**Why here:** D-31 settled it: write the table. The reason fields already exist on the mutating paths and are discarded.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed.** Every ADMIN method now declares whether it is recorded, the
+server refuses to start if one does not, and an interceptor writes the
+row. 42 of 81 admin procedures are recorded. The read surface at
+`/admin/audit` ships with it, because a write-only table would have been
+the next empty control. The lost-actor bug on approve/decline is fixed
+in the same change. Retention was decided rather than deferred:
+`audit_log` is never anonymised, unlike `events`.
 
 ### 3. FR-CNT-16 · Must
 

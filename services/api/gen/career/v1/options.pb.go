@@ -1,23 +1,25 @@
 // Method-level options that make the API's access policy machine-readable.
 //
-// **What is enforced today, stated plainly, because this comment used to
-// overstate it.** It read: "The Go server reads these options from the
-// method descriptor in a Connect interceptor and enforces them uniformly,
-// so no handler carries its own auth check." Every clause of that was
-// false. There are no Connect interceptors in the service; `auth` is
-// enforced by hand, once per handler, and the other options are not
-// enforced at all.
+// **What is enforced today, stated plainly, because this comment has
+// been wrong in both directions.** It once claimed interceptor
+// enforcement that did not exist. It was corrected to say `auth` was
+// enforced per handler, and then the auth sprint landed and left that
+// correction stale in turn. The current state:
 //
-//   auth                  declared on every method; enforced per handler
+//   auth                  declared on every method; enforced by the
+//                         interceptor since 2026-10-11, and the server
+//                         refuses to start on an unspecified level
 //   allow_unverified      declared on 2; enforced by the interceptor
+//   audit                 required on every ADMIN method; enforced by
+//                         the audit interceptor, which writes audit_log
 //   rate_limit_per_minute deprecated, declared on none. Rate limiting
 //                         is real but hand-wired in internal/ratelimit
 //   mfa_fresh             deprecated, declared on none, unenforceable
 //
-// Making `auth` interceptor-enforced is planned in
-// docs/sprint-auth-interceptor.md. Until that lands, treat this file as
-// a contract the code is checked against (see the auth-gate tests) and
-// not as a description of a mechanism.
+// The lesson this header keeps re-learning is ADR 0031's: a comment
+// describing enforcement is not enforcement. Each line above is now
+// backed by a boot check or a test that fails when it stops being true,
+// which is the only reason it is safe to write it down.
 //
 // The API reference generator (scripts/gen_api_docs.py) reads the same
 // options, so documentation stays derived from one declaration.
@@ -121,6 +123,81 @@ func (AuthLevel) EnumDescriptor() ([]byte, []int) {
 	return file_career_v1_options_proto_rawDescGZIP(), []int{0}
 }
 
+// Whether a call is recorded in `audit_log`.
+//
+// Read at boot by internal/auditpolicy, which builds the map of
+// procedures to levels from these declarations and refuses to start if
+// an admin method declares nothing. Enforced by an interceptor, so a
+// handler cannot forget to record itself and a new admin RPC cannot be
+// added without a decision being made about it.
+type AuditLevel int32
+
+const (
+	// Not set. Legal on a PUBLIC or MEMBER method, where it means the same
+	// as AUDIT_LEVEL_NONE. On an ADMIN method the server will not start:
+	// "every admin action is recorded" cannot be true if a method can
+	// decline to say.
+	AuditLevel_AUDIT_LEVEL_UNSPECIFIED AuditLevel = 0
+	// Not recorded. Correct for reads, which are the majority of the admin
+	// surface, and this is a positive declaration rather than an absence:
+	// somebody decided this call does not change anything.
+	AuditLevel_AUDIT_LEVEL_NONE AuditLevel = 1
+	// Recorded. One row per call, written after the handler returns so the
+	// row carries the outcome: an attempt that failed is as much a part of
+	// an audit trail as one that succeeded, and a row written beforehand
+	// would claim a change that may not have happened.
+	//
+	// Named for what happens rather than for why, because the set is not
+	// exactly "the mutations". Every mutation is here, and so are four
+	// reads: RunDbQuery, which runs arbitrary SELECTs across member data,
+	// and the three Export methods, which take participant and decision
+	// data off the system in bulk. Those change nothing and are among the
+	// most audit-worthy things an admin can do. Reads that return a fixed
+	// count, or a setting, or a list the console already shows, are NONE.
+	AuditLevel_AUDIT_LEVEL_RECORDED AuditLevel = 2
+)
+
+// Enum value maps for AuditLevel.
+var (
+	AuditLevel_name = map[int32]string{
+		0: "AUDIT_LEVEL_UNSPECIFIED",
+		1: "AUDIT_LEVEL_NONE",
+		2: "AUDIT_LEVEL_RECORDED",
+	}
+	AuditLevel_value = map[string]int32{
+		"AUDIT_LEVEL_UNSPECIFIED": 0,
+		"AUDIT_LEVEL_NONE":        1,
+		"AUDIT_LEVEL_RECORDED":    2,
+	}
+)
+
+func (x AuditLevel) Enum() *AuditLevel {
+	p := new(AuditLevel)
+	*p = x
+	return p
+}
+
+func (x AuditLevel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AuditLevel) Descriptor() protoreflect.EnumDescriptor {
+	return file_career_v1_options_proto_enumTypes[1].Descriptor()
+}
+
+func (AuditLevel) Type() protoreflect.EnumType {
+	return &file_career_v1_options_proto_enumTypes[1]
+}
+
+func (x AuditLevel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AuditLevel.Descriptor instead.
+func (AuditLevel) EnumDescriptor() ([]byte, []int) {
+	return file_career_v1_options_proto_rawDescGZIP(), []int{1}
+}
+
 var file_career_v1_options_proto_extTypes = []protoimpl.ExtensionInfo{
 	{
 		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
@@ -152,6 +229,14 @@ var file_career_v1_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		Field:         50003,
 		Name:          "career.v1.mfa_fresh",
 		Tag:           "varint,50003,opt,name=mfa_fresh",
+		Filename:      "career/v1/options.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*AuditLevel)(nil),
+		Field:         50004,
+		Name:          "career.v1.audit",
+		Tag:           "varint,50004,opt,name=audit,enum=career.v1.AuditLevel",
 		Filename:      "career/v1/options.proto",
 	},
 }
@@ -226,6 +311,25 @@ var (
 	//
 	// Deprecated: Marked as deprecated in career/v1/options.proto.
 	E_MfaFresh = &file_career_v1_options_proto_extTypes[3]
+	// Whether a call to this method is written to `audit_log`.
+	//
+	// Required on every method declaring `auth = AUTH_LEVEL_ADMIN`, and
+	// the server refuses to start if one of them leaves it unspecified.
+	// That rule is deliberate, and so is its shape: it derives the set of
+	// methods that need a decision from another declaration rather than
+	// from a guess about the method's name, so adding an admin RPC called
+	// `PurgeEverything` cannot slip past a heuristic that was looking for
+	// a `Set` or `Delete` prefix.
+	//
+	// FR-ADM-09 says "all admin actions shall be recorded in the audit
+	// log". It was marked partially shipped for a year while `audit_log`
+	// held zero rows and no code path inserted into one. Declaring the
+	// level here, and failing the boot when it is missing, is what makes
+	// the requirement a property of the contract instead of a promise
+	// somebody has to remember at every new RPC.
+	//
+	// optional career.v1.AuditLevel audit = 50004;
+	E_Audit = &file_career_v1_options_proto_extTypes[4]
 )
 
 var File_career_v1_options_proto protoreflect.FileDescriptor
@@ -237,11 +341,17 @@ const file_career_v1_options_proto_rawDesc = "" +
 	"\x16AUTH_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AUTH_LEVEL_PUBLIC\x10\x01\x12\x15\n" +
 	"\x11AUTH_LEVEL_MEMBER\x10\x02\x12\x14\n" +
-	"\x10AUTH_LEVEL_ADMIN\x10\x03:J\n" +
+	"\x10AUTH_LEVEL_ADMIN\x10\x03*Y\n" +
+	"\n" +
+	"AuditLevel\x12\x1b\n" +
+	"\x17AUDIT_LEVEL_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10AUDIT_LEVEL_NONE\x10\x01\x12\x18\n" +
+	"\x14AUDIT_LEVEL_RECORDED\x10\x02:J\n" +
 	"\x04auth\x12\x1e.google.protobuf.MethodOptions\x18І\x03 \x01(\x0e2\x14.career.v1.AuthLevelR\x04auth:K\n" +
 	"\x10allow_unverified\x12\x1e.google.protobuf.MethodOptions\x18ц\x03 \x01(\bR\x0fallowUnverified:W\n" +
 	"\x15rate_limit_per_minute\x12\x1e.google.protobuf.MethodOptions\x18҆\x03 \x01(\rB\x02\x18\x01R\x12rateLimitPerMinute:A\n" +
-	"\tmfa_fresh\x12\x1e.google.protobuf.MethodOptions\x18ӆ\x03 \x01(\bB\x02\x18\x01R\bmfaFreshB\xa6\x01\n" +
+	"\tmfa_fresh\x12\x1e.google.protobuf.MethodOptions\x18ӆ\x03 \x01(\bB\x02\x18\x01R\bmfaFresh:M\n" +
+	"\x05audit\x12\x1e.google.protobuf.MethodOptions\x18Ԇ\x03 \x01(\x0e2\x15.career.v1.AuditLevelR\x05auditB\xa6\x01\n" +
 	"\rcom.career.v1B\fOptionsProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -257,21 +367,24 @@ func file_career_v1_options_proto_rawDescGZIP() []byte {
 	return file_career_v1_options_proto_rawDescData
 }
 
-var file_career_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_career_v1_options_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_career_v1_options_proto_goTypes = []any{
 	(AuthLevel)(0),                     // 0: career.v1.AuthLevel
-	(*descriptorpb.MethodOptions)(nil), // 1: google.protobuf.MethodOptions
+	(AuditLevel)(0),                    // 1: career.v1.AuditLevel
+	(*descriptorpb.MethodOptions)(nil), // 2: google.protobuf.MethodOptions
 }
 var file_career_v1_options_proto_depIdxs = []int32{
-	1, // 0: career.v1.auth:extendee -> google.protobuf.MethodOptions
-	1, // 1: career.v1.allow_unverified:extendee -> google.protobuf.MethodOptions
-	1, // 2: career.v1.rate_limit_per_minute:extendee -> google.protobuf.MethodOptions
-	1, // 3: career.v1.mfa_fresh:extendee -> google.protobuf.MethodOptions
-	0, // 4: career.v1.auth:type_name -> career.v1.AuthLevel
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	4, // [4:5] is the sub-list for extension type_name
-	0, // [0:4] is the sub-list for extension extendee
+	2, // 0: career.v1.auth:extendee -> google.protobuf.MethodOptions
+	2, // 1: career.v1.allow_unverified:extendee -> google.protobuf.MethodOptions
+	2, // 2: career.v1.rate_limit_per_minute:extendee -> google.protobuf.MethodOptions
+	2, // 3: career.v1.mfa_fresh:extendee -> google.protobuf.MethodOptions
+	2, // 4: career.v1.audit:extendee -> google.protobuf.MethodOptions
+	0, // 5: career.v1.auth:type_name -> career.v1.AuthLevel
+	1, // 6: career.v1.audit:type_name -> career.v1.AuditLevel
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	5, // [5:7] is the sub-list for extension type_name
+	0, // [0:5] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
@@ -285,9 +398,9 @@ func file_career_v1_options_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_options_proto_rawDesc), len(file_career_v1_options_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   0,
-			NumExtensions: 4,
+			NumExtensions: 5,
 			NumServices:   0,
 		},
 		GoTypes:           file_career_v1_options_proto_goTypes,

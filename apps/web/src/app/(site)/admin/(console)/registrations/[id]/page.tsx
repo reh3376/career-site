@@ -13,7 +13,7 @@ import {
   setMemberStatusAction,
 } from "../actions";
 
-import { ActionButton } from "./action-button";
+import { ActionButton, ReasonScope } from "./action-button";
 
 export const metadata: Metadata = { title: "Admin · Member detail" };
 export const dynamic = "force-dynamic";
@@ -186,7 +186,9 @@ export default async function AdminMemberDetailPage({
           <dt className="text-ink-3">organization</dt>
           <dd className="m-0 text-ink">{me.organization || "-"}</dd>
           <dt className="text-ink-3">stated role</dt>
-          <dd className="m-0 text-ink">{me.stated_role || me.statedRole || "-"}</dd>
+          <dd className="m-0 text-ink">
+            {me.stated_role || me.statedRole || "-"}
+          </dd>
           <dt className="text-ink-3">status</dt>
           <dd className={"m-0 " + tone}>
             <span className="pilot mr-2 align-middle" aria-hidden="true" />
@@ -252,10 +254,7 @@ export default async function AdminMemberDetailPage({
         >
           last notification email
         </p>
-        <DeliveryBlock
-          me={me}
-          deliveries={data?.deliveries ?? []}
-        />
+        <DeliveryBlock me={me} deliveries={data?.deliveries ?? []} />
       </section>
 
       <section
@@ -298,8 +297,8 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
   if (isAdmin) {
     return (
       <p className="mt-4 text-sm text-ink-3">
-        This member has the admin role. Status transitions on admin
-        users aren&rsquo;t available from this surface.
+        This member has the admin role. Status transitions on admin users
+        aren&rsquo;t available from this surface.
       </p>
     );
   }
@@ -307,94 +306,99 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
   switch (status) {
     case "MEMBER_STATUS_PENDING_APPROVAL":
       return (
-        <div className="mt-4 flex flex-wrap gap-3">
-          <ActionButton
-            action={approveRegistrationAction}
-            memberId={memberId}
-            tone="accent"
-            label="Approve"
-          />
-          <ActionButton
-            action={declineRegistrationAction}
-            memberId={memberId}
-            tone="signal"
-            label="Decline"
-          />
-        </div>
+        <ReasonScope hint="e.g. known contact at an OEM, or why this is being declined">
+          <div className="mt-4 flex flex-wrap gap-3">
+            <ActionButton
+              action={approveRegistrationAction}
+              memberId={memberId}
+              tone="accent"
+              label="Approve"
+            />
+            <ActionButton
+              action={declineRegistrationAction}
+              memberId={memberId}
+              tone="signal"
+              label="Decline"
+            />
+          </div>
+        </ReasonScope>
       );
     case "MEMBER_STATUS_ACTIVE":
       return (
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              extend access
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <ActionButton
-                action={extendAccessAction}
-                memberId={memberId}
-                extra={{ mode: "days", days: "30" }}
-                tone="accent"
-                label="+30 days"
-              />
-              <ActionButton
-                action={extendAccessAction}
-                memberId={memberId}
-                extra={{ mode: "days", days: "90" }}
-                tone="accent"
-                label="+90 days"
-              />
-              <ActionButton
-                action={extendAccessAction}
-                memberId={memberId}
-                extra={{ mode: "days", days: "365" }}
-                tone="accent"
-                label="+1 year"
-              />
-              <ActionButton
-                action={extendAccessAction}
-                memberId={memberId}
-                extra={{ mode: "permanent" }}
-                tone="accent"
-                label="Make permanent"
-              />
+        <ReasonScope hint="e.g. extending through the interview process">
+          <div className="mt-4 space-y-4">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                extend access
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <ActionButton
+                  action={extendAccessAction}
+                  memberId={memberId}
+                  extra={{ mode: "days", days: "30" }}
+                  tone="accent"
+                  label="+30 days"
+                />
+                <ActionButton
+                  action={extendAccessAction}
+                  memberId={memberId}
+                  extra={{ mode: "days", days: "90" }}
+                  tone="accent"
+                  label="+90 days"
+                />
+                <ActionButton
+                  action={extendAccessAction}
+                  memberId={memberId}
+                  extra={{ mode: "days", days: "365" }}
+                  tone="accent"
+                  label="+1 year"
+                />
+                <ActionButton
+                  action={extendAccessAction}
+                  memberId={memberId}
+                  extra={{ mode: "permanent" }}
+                  tone="accent"
+                  label="Make permanent"
+                />
+              </div>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                suspend / disable
+              </p>
+              <div className="mt-2">
+                <ActionButton
+                  action={setMemberStatusAction}
+                  memberId={memberId}
+                  extra={{ status: "MEMBER_STATUS_DISABLED" }}
+                  tone="signal"
+                  label="Disable account"
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              suspend / disable
-            </p>
-            <div className="mt-2">
-              <ActionButton
-                action={setMemberStatusAction}
-                memberId={memberId}
-                extra={{ status: "MEMBER_STATUS_DISABLED" }}
-                tone="signal"
-                label="Disable account"
-              />
-            </div>
-          </div>
-        </div>
+        </ReasonScope>
       );
     case "MEMBER_STATUS_DISABLED":
       return (
-        <div className="mt-4 flex flex-wrap gap-3">
-          <ActionButton
-            action={setMemberStatusAction}
-            memberId={memberId}
-            extra={{ status: "MEMBER_STATUS_ACTIVE" }}
-            tone="accent"
-            label="Re-enable"
-          />
-        </div>
+        <ReasonScope hint="e.g. why this account is being re-enabled">
+          <div className="mt-4 flex flex-wrap gap-3">
+            <ActionButton
+              action={setMemberStatusAction}
+              memberId={memberId}
+              extra={{ status: "MEMBER_STATUS_ACTIVE" }}
+              tone="accent"
+              label="Re-enable"
+            />
+          </div>
+        </ReasonScope>
       );
     case "MEMBER_STATUS_EXPIRED":
       return (
         <div className="mt-4 space-y-4">
           <p className="text-sm text-ink-3">
-            Access expired. Extend below to reactivate, a new
-            expires_at in the future flips the account back to active
-            automatically.
+            Access expired. Extend below to reactivate, a new expires_at in the
+            future flips the account back to active automatically.
           </p>
           <div className="flex flex-wrap gap-2">
             <ActionButton
@@ -432,8 +436,8 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
       return (
         <div className="mt-4">
           <p className="text-sm text-ink-3">
-            Applicant was declined. If they should be given access,
-            ask them to register again at{" "}
+            Applicant was declined. If they should be given access, ask them to
+            register again at{" "}
             <a
               href="/register"
               className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
@@ -448,8 +452,8 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
       return (
         <div className="mt-4">
           <p className="text-sm text-ink-3">
-            Applicant hasn&rsquo;t verified their email yet. No admin
-            action needed, the account moves to{" "}
+            Applicant hasn&rsquo;t verified their email yet. No admin action
+            needed, the account moves to{" "}
             <span className="font-mono text-ink">pending_approval</span>{" "}
             automatically once they click the verification link.
           </p>
@@ -505,13 +509,7 @@ function resendKindFor(status: string): string | null {
 // Email delivery history for the member: the latest attempt as a
 // verdict line, the rest as a compact list, and a resend button when
 // the member's status has a resendable mail.
-function DeliveryBlock({
-  me,
-  deliveries,
-}: {
-  me: Me;
-  deliveries: Delivery[];
-}) {
+function DeliveryBlock({ me, deliveries }: { me: Me; deliveries: Delivery[] }) {
   const resendKind = resendKindFor(me.status);
   const latest = deliveries[0];
 
@@ -521,8 +519,8 @@ function DeliveryBlock({
         <Verdict d={latest} />
       ) : (
         <p className="text-sm text-ink-3">
-          No notification email has been sent to this member yet. Approve
-          / decline / extend actions dispatch one automatically.
+          No notification email has been sent to this member yet. Approve /
+          decline / extend actions dispatch one automatically.
         </p>
       )}
 
@@ -580,8 +578,8 @@ function Verdict({ d }: { d: Delivery }) {
       <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-success">
         sent
       </span>{" "}
-      , {label} email, {when}. If the member reports not receiving it,
-      check their spam folder and the provider dashboard.
+      , {label} email, {when}. If the member reports not receiving it, check
+      their spam folder and the provider dashboard.
     </p>
   );
 }
@@ -641,8 +639,8 @@ function ActivityBlock({
   if (!anyCount && events.length === 0) {
     return (
       <p className="mt-4 text-sm text-ink-3">
-        No activity recorded yet. Events land here on sign-in, page
-        view, download, or Ask Roger interaction.
+        No activity recorded yet. Events land here on sign-in, page view,
+        download, or Ask Roger interaction.
       </p>
     );
   }
