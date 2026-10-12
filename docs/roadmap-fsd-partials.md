@@ -123,9 +123,16 @@ ranked it last as "waiting for participant data". That reasoning was
 wrong: failed tap attempts are scored client-side and never transmitted,
 so every stored session passed under the current cut and no amount of
 waiting yields a labelled mashing example. Calibrating requires changing
-what is recorded first. The rank stands; the reason does not. The
-briefing also offers "Continue without passing", so the check reports
-rather than gates — which I had read as a gate.
+what is recorded first. The rank stands; the reason does not.
+
+I then got the mechanism wrong twice in one day. The briefing renders
+Continue only when `(tap?.passed || synthetic)`, and the label
+"Continue without passing" appears only on the `synthetic` branch. I saw
+that label, concluded a real participant could proceed without passing,
+and said the check reports rather than gates. It gates: a real
+participant who fails can retry, and after two failures is offered the
+visual beat, but there is no path past it with a failing result. Which
+is precisely why no failing row can exist to calibrate against.
 
 **Four mutating admin RPCs accept a `reason` and discard it**
 (`ApproveRegistration`, `DeclineRegistration`, `ExtendAccess`,
