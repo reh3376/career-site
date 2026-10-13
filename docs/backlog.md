@@ -937,6 +937,54 @@ CSV export, the privacy section and the product events (migrations
 [`fsd-decision-test.md`](fsd-decision-test.md); delivery is
 [`roadmap-decision-test.md`](roadmap-decision-test.md). What is left:
 
+- **A visible per-item countdown, as a randomised condition rather than
+  a change to the test.** Proposed by Roger 2026-10-13: a prominent
+  countdown showing seconds and milliseconds, reset at each question,
+  on the reasoning that visible time pressure raises the effort a
+  participant must spend and so raises the lure rate. Deferred after
+  discussion, with the reasoning kept because the idea is a good one
+  and the objection is specific.
+
+  **Why not as a global change.** The instrument measures whether
+  somebody notices they should check an answer that already feels
+  right. A visible countdown gives them a legitimate reason not to
+  check: a participant with three seconds left who takes the fluent
+  answer is doing rational triage under a deadline, which is sensible
+  and is a different phenomenon. Today a wrong answer is evidence of
+  the bias; with a countdown it is ambiguous between the bias and sane
+  time management, and nothing in the data separates them afterwards.
+
+  Three further objections, in order. The finding is the *difference*
+  between blocks 3 and 4 and blocks 1 and 5, and a countdown is
+  constant across all five, so it adds an offset rather than
+  interacting with load and compresses the gradient toward a floor.
+  Watching a millisecond counter competes directly with rehearsing the
+  digits, and the cheapest way for a participant to cope is to drop the
+  number, which is the independent variable. And the limits are not
+  tight (25 s per question, 20 s recall, 6 s memorise): this does not
+  add time pressure, it makes an existing and fairly generous limit
+  visible, which the design hides on purpose.
+
+  **If it is built, build it as an experiment.** Show the countdown to
+  a random half and record `timer_visible` on `dt_sessions` beside
+  `audio_mode` and `device_class`, which is the idiom already there for
+  conditions that split the sample. Then it answers whether visible
+  time pressure raises lure rates and what it does to calibration,
+  which is a finding. Done globally it is a guess that can never be
+  checked.
+
+  **Timing matters more than usual.** `dt_sessions.instrument_version`
+  exists because, in its own words, the first reworded item turns one
+  dataset into two wearing the same name. Added during collection this
+  splits the sample into incomparable halves, and `InstrumentVersion()`
+  is derived from the timings alone, so a visible-timer change would
+  not even appear there without new plumbing. Before a recruitment
+  round or not at all.
+
+  Nothing is lost by waiting: per-question latency is already recorded,
+  so what time pressure does to this sample can be asked of the runs
+  being collected now without touching the instrument.
+
 - **Two answers of one participant's run have no row at all, and the
   retry queue may not be the whole explanation.** Opened 2026-10-07. A
   participant on a phone reported answering eight questions; three had
