@@ -149,16 +149,19 @@ is not mistaken for coverage.
 - **Keep / drop / defer:**
 - **Depends on:**
 
-### 10. FR-PUB-05 · Could
+### 10. FR-PUB-05 · Could — CLOSED 2026-10-13
 
-> The site shall render acceptably with JavaScript disabled for the landing and legal pages.
-
-**FSD status today:** Partially shipped. Pages are server-rendered so the landing and legal pages read without JavaScript; the mode toggle, the assistant panel and the action modals need it.
-
-**Why here:** Arguably already acceptable: the landing and legal pages read without JS. Only the toggle, assistant and modals need it.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed, and it was not already acceptable.** Reading worked; being
+offered controls that do nothing did not. Against live production the
+new check named twelve dead controls across four page variants, not
+the three the survey found, because `/` is two different pages behind
+the `ui_mode` cookie and the HMI one was never loaded. The explainers
+are now `<details>` disclosures carrying text that exists nowhere else
+on the page, the mode toggle is a real form posting to the server
+action it already called, and anything genuinely needing JavaScript is
+hidden by one `<noscript>` rule instead of rendering dead.
+`scripts/check_nojs.py` holds it in CI and against production, and was
+mutation-tested three ways.
 
 ---
 

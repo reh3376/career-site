@@ -155,3 +155,30 @@ Each item is independently verifiable against the repo.
 - Whether a Turnstile account, site key, or secret key already exists for this domain outside the repository (e.g., in the Cloudflare dashboard or a password manager) — nothing in the repo indicates either way.
 - Whether any infrastructure-level bot mitigation (e.g., Cloudflare's own WAF/bot-management rules at the edge, if the site is proxied through Cloudflare at all) provides any de facto protection independent of this application-level Turnstile gap. This document covers only the application code and config in this repository.
 - Whether `docker-compose.prod.yml`'s actual deployed state (versus the repo file) differs in any way relevant to secret injection — only the repo file was read.
+
+---
+
+## Live verification of the one surface no check can reach, 2026-10-13
+
+`deploy/live-check.sh` asserts that all four protected pages carry a
+Turnstile site key and that three of them load the Turnstile script, but
+it cannot assert that the widget **works** on `/decision-test`. The tap
+check guarding that test is deliberately agent-proof, and the
+`synthetic` flag that lets a script past it also suppresses the widget,
+so the only honest way to confirm that surface is a person doing it.
+
+Roger did, on 2026-10-13, on production at `8394b2af2e16`: the widget
+renders above "Start the test" after the briefing, and the test starts.
+Confirmed working.
+
+The login surface was confirmed the same day in a browser on
+production: the widget renders between the password field and the Sign
+in button and resolves to a pass. That one is reachable because login's
+challenge is step-up (after two failures within fifteen minutes) rather
+than a tap check.
+
+**Why this is written down rather than left as a passing check:** a
+requirement whose verification depends on a person is one that quietly
+stops being verified. Naming the surface, the reason no script can
+reach it, and the date it was last confirmed by hand is the most a
+repository can do about that.

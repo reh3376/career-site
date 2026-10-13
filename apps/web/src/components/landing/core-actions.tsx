@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { useEnhanced } from "@/lib/use-enhanced";
+
 // The three things an account is for, with an explanation behind each.
 //
 // Roger's review of the live page: the two buttons were well placed,
@@ -84,9 +86,37 @@ function hrefFor(action: Action, signedIn: boolean): string {
   return `/login?next=${encodeURIComponent(action.href)}`;
 }
 
+// The explanation, inline, for a visitor whose browser is not running
+// the modal. Same text from the same array, so the two paths cannot
+// describe the site differently.
+function ExplainerBody({
+  action,
+  signedIn,
+}: {
+  action: Action;
+  signedIn: boolean;
+}) {
+  return (
+    <div className="mt-3 space-y-3 border-l-2 border-line pl-4">
+      {action.body.map((p) => (
+        <p key={p.slice(0, 24)} className="text-sm leading-relaxed text-ink-2">
+          {p}
+        </p>
+      ))}
+      <Link
+        href={hrefFor(action, signedIn)}
+        className="inline-flex items-center text-sm font-medium text-accent"
+      >
+        {signedIn ? action.label : `Sign in for ${action.label.toLowerCase()}`}
+      </Link>
+    </div>
+  );
+}
+
 export function CoreActions({ signedIn = false }: { signedIn?: boolean }) {
   const [open, setOpen] = useState<ActionKey | null>(null);
   const action = ACTIONS.find((a) => a.key === open) ?? null;
+  const enhanced = useEnhanced();
 
   return (
     <>
@@ -106,14 +136,26 @@ export function CoreActions({ signedIn = false }: { signedIn?: boolean }) {
             >
               {a.label}
             </Link>
-            <button
-              type="button"
-              onClick={() => setOpen(a.key)}
-              aria-haspopup="dialog"
-              className="text-xs text-ink-3 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
-            >
-              What is this?
-            </button>
+            {/* A disclosure, upgraded to a modal when there is
+                JavaScript to run it. Without JavaScript the summary
+                toggles natively and the same text appears inline,
+                which is the whole point: this explainer is the only
+                place that text exists on the page, so a dead button
+                here loses content rather than polish. FR-PUB-05. */}
+            <details className="w-full">
+              <summary
+                onClick={(e) => {
+                  if (!enhanced) return;
+                  e.preventDefault();
+                  setOpen(a.key);
+                }}
+                aria-haspopup={enhanced ? "dialog" : undefined}
+                className="inline-block cursor-pointer list-none text-xs text-ink-3 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent [&::-webkit-details-marker]:hidden"
+              >
+                What is this?
+              </summary>
+              <ExplainerBody action={a} signedIn={signedIn} />
+            </details>
           </div>
         ))}
       </div>
@@ -222,6 +264,7 @@ function AboutPanel({
 export function CoreActionsOt({ signedIn = false }: { signedIn?: boolean }) {
   const [open, setOpen] = useState<ActionKey | null>(null);
   const action = ACTIONS.find((a) => a.key === open) ?? null;
+  const enhanced = useEnhanced();
 
   return (
     <>
@@ -243,14 +286,22 @@ export function CoreActionsOt({ signedIn = false }: { signedIn?: boolean }) {
                 <span className="text-ink-3"> · members</span>
               )}
             </p>
-            <button
-              type="button"
-              onClick={() => setOpen(a.key)}
-              aria-haspopup="dialog"
-              className="mt-2 font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase underline underline-offset-4 transition-colors hover:text-accent"
-            >
-              What is this?
-            </button>
+            {/* Same disclosure-upgraded-to-modal as the editorial
+                skin, in this one's idiom. FR-PUB-05. */}
+            <details>
+              <summary
+                onClick={(e) => {
+                  if (!enhanced) return;
+                  e.preventDefault();
+                  setOpen(a.key);
+                }}
+                aria-haspopup={enhanced ? "dialog" : undefined}
+                className="mt-2 inline-block cursor-pointer list-none font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase underline underline-offset-4 transition-colors hover:text-accent [&::-webkit-details-marker]:hidden"
+              >
+                What is this?
+              </summary>
+              <ExplainerBody action={a} signedIn={signedIn} />
+            </details>
           </div>
         ))}
       </div>

@@ -415,6 +415,32 @@ jobs:
         working-directory: apps/web
         run: pnpm build
 
+      # After the build, because this one reads what the build actually
+      # emits rather than the source. A component can look right in JSX
+      # and still render a bare button through three layers of
+      # composition, and FR-PUB-05 is about what reaches the browser.
+      #
+      # The server needs no API: the pages checked are server-rendered
+      # and the session lookup already degrades to "signed out" when the
+      # API is unreachable, which is what an unroutable address gives
+      # it here.
+      - name: pages work without javascript
+        working-directory: apps/web
+        env:
+          API_URL: http://127.0.0.1:9
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:9/api
+        run: |
+          # `pnpm start` carries its own --port, so run next directly
+          # rather than appending a second one.
+          pnpm exec next start --port 3100 &
+          server=$!
+          trap 'kill $server 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:3100/privacy && break
+            sleep 2
+          done
+          python3 ../../scripts/check_nojs.py http://127.0.0.1:3100
+
   changes:
     name: detect changed paths
     runs-on: ubuntu-latest

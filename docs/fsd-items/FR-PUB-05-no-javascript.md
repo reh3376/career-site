@@ -240,3 +240,108 @@ difference from a working button until the click fails to do anything.
   "What is this?" and mode-toggle buttons without JS (e.g., whether
   `aria-haspopup="dialog"` on a button that does nothing is actively
   misleading versus merely inert) was not evaluated.
+
+---
+
+## Outcome, 2026-10-13
+
+**Decision 1, the one everything else hung on: not already acceptable.**
+Reading was fine. Being *offered things that do not work* was not. The
+page handed a no-JavaScript visitor controls that render exactly like
+working ones and do nothing when pressed, and a visitor cannot tell the
+difference until they press one. That is worse than the control being
+absent, which is why this was built rather than redefined as shipped.
+
+**What the real number turned out to be: 12, not 3.** The survey above
+counted from the component tree and named three gaps. Running the new
+check against live production, before any of this shipped, named
+twelve dead controls across four page variants:
+
+```
+4 pages, 12 buttons outside a form examined, 20 problems
+```
+
+The gap was the HMI mode. `/` is two different pages behind the
+`ui_mode` cookie, rendered by two separate component trees, and the
+HMI one carries six dead controls the editorial one does not. A survey
+that loads the default sees two thirds of the problem.
+
+**What was built, one mechanism and two conversions.**
+
+*The mechanism:* one rule in the root layout's `<head>`,
+`<noscript><style>[data-requires-js]{display:none !important}</style></noscript>`.
+Anything that genuinely needs JavaScript carries that attribute and is
+hidden when there is none, so what remains on the page is only what
+works. Marking a control is then one attribute rather than a second
+code path per component, and `<style>` inside `<noscript>` in `<head>`
+is valid and applies before first paint.
+
+*The explainers became real disclosures.* The three "What is this?"
+buttons are now `<details>`/`<summary>`, upgraded to the existing modal
+when there is JavaScript to run it (the summary's click handler calls
+`preventDefault` only when enhanced, so the native toggle is what
+happens otherwise). This one mattered most: that explainer text exists
+nowhere else on the page, so a dead button there lost content, not
+polish. A no-JavaScript visitor now gets all three explanations inline,
+from the same `ACTIONS` array, so the two paths cannot drift.
+
+*The mode toggle became a real form.* `<form action={setUiModeAction}>`
+with the two buttons as submits, which posts and sets the cookie
+server-side without JavaScript; the click handler takes over when
+there is. The server action was already being called with `FormData`,
+so this is the same action reached two ways rather than a second code
+path.
+
+*The hamburger trigger is marked.* The drawer is built and animated in
+the browser and a fallback would mean rebuilding it; every destination
+inside it is also a plain link in the footer, which is a server
+component, so hiding the trigger removes a dead control without making
+anything unreachable.
+
+**The check: `scripts/check_nojs.py`, in CI after the build and in
+`deploy/live-check.sh` against production.** Every `<button>` in the
+served markup must be a submit inside a form or marked
+`data-requires-js`; a `<summary>` needs nothing, being a native
+disclosure. It reads what the build emits rather than the JSX, because
+a component can look right in source and still render a bare button
+through three layers of composition. It runs against production too,
+because a build that passed in CI can still be the wrong build to be
+deployed.
+
+**Mutation-tested three ways before being trusted**, since a check that
+has never failed on purpose is one nobody knows works:
+
+- unmark the hamburger trigger: 7 problems, each named;
+- turn the disclosures back into buttons: the three "What is this?"
+  controls reported by label;
+- delete the `<noscript>` rule: 4 problems, one per page variant.
+
+That third one is why the rule is asserted separately. Without it,
+`data-requires-js` is an attribute nothing reads, every marked control
+is visible and dead again, and the button check still passes. The
+mechanism and its marking have to be checked together or the mechanism
+can be deleted silently.
+
+**Deliberately not done, and why.**
+
+*No mode switch on the editorial landing page for a no-JavaScript
+visitor.* The toggle lives in the hamburger drawer and in the HMI
+landing page; the editorial one has never had one. Adding it to the
+footer would fix that in one line, but it is a visible design change to
+every page, which is Roger's call rather than a requirement this row
+makes. The HMI landing page's toggle now works without JavaScript,
+which is the one that was rendering and lying.
+
+*No `<noscript>` notice telling the visitor anything is degraded.*
+There is nothing left to warn about on these pages: what remains is
+what works. A notice would describe a state the page is no longer in.
+
+*No shared `<ExternalLink>`-style component for this.* One attribute
+and one CSS rule is the whole mechanism; a component would be more
+indirection than the problem has.
+
+**What this does not claim.** The pages checked are the ones FR-PUB-05
+names: the landing page in both modes, `/privacy`, `/terms`. Member
+pages, the decision test and the assistant were not brought into
+scope, and the assistant panel is still client-only, which for an
+anonymous visitor is moot since it never mounts for them.

@@ -89,6 +89,21 @@ for url in $(grep -rhoE 'href="https?://[^"]+"' "$REPO_DIR"/apps/web/src --inclu
   check "outbound $url -> ${code:-000}" "[ \"${code:-000}\" -lt 400 ]"
 done
 
+# Does the live site work for a visitor with JavaScript off? FR-PUB-05.
+#
+# scripts/check_nojs.py holds the assertions and CI runs it against its
+# own build. Running the same script here is what proves it for real
+# visitors rather than for a build artifact: production serves through
+# Caddy, from an image, with the real cookie behaviour, and a build that
+# passed in CI can still be the wrong build to be deployed.
+if [ -x "$(command -v python3)" ]; then
+  nojs=$(python3 "$REPO_DIR/scripts/check_nojs.py" "$BASE" 2>&1 || true)
+  nojs_problems=$(printf '%s' "$nojs" | sed -n 's/.*, \([0-9][0-9]*\) problems$/\1/p' | tail -1)
+  check "landing and legal pages work without javascript -> ${nojs_problems:-?} problems" \
+    "[ \"${nojs_problems:-1}\" = '0' ]"
+  [ "${nojs_problems:-1}" = "0" ] || printf '%s\n' "$nojs" | sed 's/^/      /'
+fi
+
 check "robots allows /articles" "echo '$robots' | grep -q 'Allow: /articles'"
 check "robots disallows /jd-upload" "echo '$robots' | grep -q 'Disallow: /jd-upload'"
 smap=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/sitemap.xml")

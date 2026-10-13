@@ -110,6 +110,22 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       data-mode={mode}
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        {/* A control that does nothing is worse than no control: the
+            visitor cannot tell the difference until they press it and
+            nothing happens. Anything that genuinely needs JavaScript
+            carries data-requires-js and is hidden when there is none,
+            so a no-JS visitor is offered only things that work.
+            FR-PUB-05.
+
+            This is the whole mechanism, in one rule, in <head>, where
+            <style> inside <noscript> is valid and applies before first
+            paint. Marking an element is then one attribute rather than
+            a second code path per component. */}
+        <noscript>
+          <style>{`[data-requires-js]{display:none !important}`}</style>
+        </noscript>
+      </head>
       <body className="flex min-h-screen flex-col bg-paper text-ink">
         {children}
         <EventBeacon />
