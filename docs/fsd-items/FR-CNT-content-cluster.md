@@ -323,3 +323,58 @@ rather than hunting for the flag that hides it.
 **Availability is the row's "eligibility statement".** It carries what
 the landing page already says, that he is open to relocation for the
 right role, so the two cannot drift.
+
+### FR-CNT-08 — deferred, 2026-10-13
+
+Asked directly which papers should be public, Roger's answer was that
+what he wants public is already available from the UI: the six articles
+at `/articles`.
+
+So the row is deferred on content, not on code. The unpublished
+material exists under the private `docs/personal/corpus` (data-centre
+cooling, dual-loop liquid cooling, the SST 3MW summary, the US spirits
+structural-decline study), and publishing any of it is his decision.
+
+**Building the surface anyway would be this FSD's recurring mistake in
+reverse.** An in-page PDF viewer, a route, a content kind and a nav
+link, all pointing at nothing, is a declared capability with nothing
+behind it. A reader who clicks "Presentations" and finds an empty page
+has been told something false about the site, which is worse than not
+being offered the link.
+
+It becomes a day's work the moment there is a first paper, and the four
+content kinds shipped in this cluster are the pattern to follow.
+
+---
+
+## The cluster, closed 2026-10-13
+
+| row | outcome |
+|---|---|
+| FR-CNT-01 Timeline | Shipped, links deferred until their targets exist |
+| FR-CNT-03 Projects | Shipped |
+| FR-CNT-05 Project detail | Shipped |
+| FR-CNT-09 Skills | Shipped, evidence condition enforced |
+| FR-CNT-10 Awards and credentials | Shipped |
+| FR-CNT-08 Presentations | Deferred, no material to publish |
+| FR-CNT-13 Downloads | Dropped, already decided 2026-10-01 |
+
+Five rows built in one day, one dropped as already decided, one
+deferred on content.
+
+**What changed, in one line:** the site went from arguing for itself to
+showing the record it argues from.
+
+**What carried across all five.** Content is files somebody wrote, not
+data derived at build time. Every kind is validated in CI by the same
+schema mechanism. Every kind was mutation-tested, because a check that
+has never failed on purpose is a check nobody knows works. And every
+kind is registered in the corpus, so the assistant can answer from the
+same record a reader sees: 38 documents this morning, 66 by the
+evening, 78 once credentials deploys.
+
+**The one thing I got wrong**, worth keeping because it cost a CI
+failure: I checked that the corpus walker *tolerated* an unregistered
+content directory and concluded that meant it was safe, when a test was
+holding the opposite position. Checking a mechanism is not the same as
+checking a decision.
