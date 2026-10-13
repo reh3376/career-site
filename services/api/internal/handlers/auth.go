@@ -536,15 +536,35 @@ var _ careerv1connect.AuthServiceHandler = (*Auth)(nil)
 
 // ClientIP extracts a best-effort client IP from a Connect request for
 // logging. Kept here in case future handlers need it.
+// ClientIP is the address every per-visitor control is keyed on: the
+// registration rate limit, the sign-in challenge counter, and the
+// address hash stored on audit_log and events.
+//
+// **X-Real-IP first, and deliberately.** Caddy sets it from the actual
+// remote host and `header_up` replaces whatever arrived, so it is the
+// one value a caller cannot choose for itself. X-Forwarded-For is
+// client-supplied until a proxy rewrites it; reading that first let
+// anyone pick their own rate-limit bucket by sending a header.
+//
+// It was worse than that in production. Neither header was reaching the
+// handler, so this fell through to the peer address, which through
+// Caddy is one constant (172.18.0.1, the docker gateway). Every
+// "per-IP" limit was global: two failed sign-ins from any visitor
+// challenged every subsequent sign-in site-wide, including the scripts
+// that verify production, which cannot solve a challenge. Found
+// 2026-10-13 by causing it.
+//
+// The X-Forwarded-For branch stays for local development, where there
+// is no proxy to set X-Real-IP and nothing to spoof it to.
 func ClientIP(req connect.AnyRequest) string {
+	if xri := strings.TrimSpace(req.Header().Get("X-Real-IP")); xri != "" {
+		return xri
+	}
 	if xff := req.Header().Get("X-Forwarded-For"); xff != "" {
 		if i := strings.Index(xff, ","); i > 0 {
 			return strings.TrimSpace(xff[:i])
 		}
 		return strings.TrimSpace(xff)
-	}
-	if xri := req.Header().Get("X-Real-IP"); xri != "" {
-		return xri
 	}
 	return req.Peer().Addr
 }
