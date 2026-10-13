@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
@@ -38,6 +39,8 @@ type SupportMessage = {
   hiring_jd_url?: string;
   hiringJdUrl?: string;
   hiring_target_start?: string;
+  dt_session_public_id?: string;
+  dtSessionPublicId?: string;
   hiringTargetStart?: string;
 };
 
@@ -54,6 +57,7 @@ type FetchResult =
 
 async function fetchMessages(
   status?: "SUPPORT_STATUS_OPEN" | "SUPPORT_STATUS_RESOLVED",
+  category?: string,
 ): Promise<FetchResult> {
   const cookie = await getSessionCookie();
   if (!cookie) return { ok: false, status: 401, message: "Not signed in" };
@@ -61,6 +65,7 @@ async function fetchMessages(
     path: "/api/career.v1.AdminService/ListContactMessages",
     body: {
       status,
+      category,
       page: { pageSize: 50 },
     },
     cookie,
@@ -86,27 +91,38 @@ const CATEGORY_LABEL: Record<string, string> = {
   SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS: "Contributor access",
   SUPPORT_CATEGORY_PRESS_INQUIRY: "Press / interview",
   SUPPORT_CATEGORY_OTHER: "Other",
+  SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK: "Decision test feedback",
 };
 
 export default async function AdminContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; category?: string }>;
 }) {
   const params = await searchParams;
-  const filter =
-    params.status === "resolved"
+  // The decision-test view shows every note from a participant,
+  // answered or not, because the question it answers is "what did
+  // people say about the test", not "what is still in my inbox".
+  const feedbackOnly = params.category === "decision-test";
+  const filter = feedbackOnly
+    ? undefined
+    : params.status === "resolved"
       ? "SUPPORT_STATUS_RESOLVED"
       : params.status === "all"
         ? undefined
         : "SUPPORT_STATUS_OPEN";
-  const view = params.status === "resolved"
-    ? "resolved"
-    : params.status === "all"
-      ? "all"
-      : "open";
+  const view = feedbackOnly
+    ? "decision-test"
+    : params.status === "resolved"
+      ? "resolved"
+      : params.status === "all"
+        ? "all"
+        : "open";
 
-  const result = await fetchMessages(filter);
+  const result = await fetchMessages(
+    filter,
+    feedbackOnly ? "SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK" : undefined,
+  );
 
   if (!result.ok) {
     return (
@@ -173,6 +189,15 @@ export default async function AdminContactsPage({
         <FilterTab href="/admin/contacts?status=all" active={view === "all"}>
           All
         </FilterTab>
+        {/* Its own tab rather than a line in the general inbox: this is
+            research material, read in a batch while looking at the
+            runs, not correspondence to work through and clear. */}
+        <FilterTab
+          href="/admin/contacts?category=decision-test"
+          active={view === "decision-test"}
+        >
+          Decision test
+        </FilterTab>
       </nav>
 
       {messages.length === 0 ? (
@@ -226,11 +251,16 @@ function MessageRow({ m }: { m: SupportMessage }) {
   const hiringUrl = m.hiring_jd_url ?? m.hiringJdUrl ?? "";
   const hiringStart = m.hiring_target_start ?? m.hiringTargetStart ?? "";
   const isHiring = m.category === "SUPPORT_CATEGORY_HIRING_INQUIRY";
+  // Written from the decision test's thanks page. The run id is only
+  // ever set when the server confirmed it named a run that finished,
+  // so its presence is evidence, not a claim by the sender.
+  const dtRun = m.dt_session_public_id ?? m.dtSessionPublicId ?? "";
+  const isFeedback = m.category === "SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK";
   return (
     <li className="py-5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <span className="text-ink">{ticket}</span>
-        <span className={isHiring ? "text-accent" : ""}>
+        <span className={isHiring || isFeedback ? "text-accent" : ""}>
           {CATEGORY_LABEL[m.category] ?? m.category}
         </span>
         <span>{when}</span>
@@ -247,15 +277,27 @@ function MessageRow({ m }: { m: SupportMessage }) {
         {m.subject}
       </p>
       <p className="mt-1 text-sm text-ink-2">
-        <span className="text-ink">{senderName}</span>{" "}
-        <a
-          href={`mailto:${senderEmail}?subject=Re%3A%20${encodeURIComponent(
-            m.subject,
-          )}%20%5B${ticket}%5D`}
-          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-        >
-          &lt;{senderEmail}&gt;
-        </a>
+        {senderEmail ? (
+          <>
+            <span className="text-ink">{senderName}</span>{" "}
+            <a
+              href={`mailto:${senderEmail}?subject=Re%3A%20${encodeURIComponent(
+                m.subject,
+              )}%20%5B${ticket}%5D`}
+              className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+            >
+              &lt;{senderEmail}&gt;
+            </a>
+          </>
+        ) : (
+          /* Decision-test feedback may be unsigned by design: the test
+             tells participants the measurement does not need their
+             name. Saying so beats rendering an empty mailto link that
+             looks like a bug and goes nowhere. */
+          <span className="text-ink-3">
+            {senderName || "No name or address given, so no reply is possible"}
+          </span>
+        )}
       </p>
       {isHiring && (hiringRole || hiringUrl || hiringStart) ? (
         <dl className="mt-3 grid gap-1 border-l-2 border-accent bg-accent-soft/30 py-2 pl-3 pr-2 font-mono text-[11px] text-ink-2 sm:grid-cols-[7rem_1fr]">
@@ -289,6 +331,19 @@ function MessageRow({ m }: { m: SupportMessage }) {
             </>
           ) : null}
         </dl>
+      ) : null}
+      {dtRun ? (
+        <p className="mt-3 border-l-2 border-accent bg-accent-soft/30 py-2 pl-3 pr-2 font-mono text-[11px] text-ink-2">
+          <span className="uppercase tracking-[0.14em] text-ink-3">
+            finished run
+          </span>{" "}
+          <Link
+            href={`/admin/decision-test/${dtRun}`}
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
+          >
+            {dtRun}
+          </Link>
+        </p>
       ) : null}
       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-2">
         {m.body}

@@ -226,6 +226,25 @@ export function Briefing({ turnstileSiteKey }: { turnstileSiteKey: string }) {
         synthetic,
         turnstileToken,
       });
+      // What they already told us, for the feedback box on the thanks
+      // page fifteen minutes from now. Asking a second time for
+      // details somebody typed a moment ago is how a short form stops
+      // being short.
+      //
+      // sessionStorage for the same reason the handoff below uses it:
+      // it dies with the tab, which is the lifetime of a run, and it
+      // never travels to the server or into the address bar. Wrapped
+      // because a private window throws here, and losing a prefill is
+      // not worth failing a run over.
+      try {
+        sessionStorage.setItem(
+          "dt-who",
+          JSON.stringify({ name: form.displayName, email: form.email }),
+        );
+      } catch {
+        // No prefill. The box still works, it just starts empty.
+      }
+
       const p = res.practice;
       sessionStorage.setItem(
         "dt",

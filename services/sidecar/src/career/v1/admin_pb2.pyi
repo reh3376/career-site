@@ -628,7 +628,7 @@ class GetAuditResponse(_message.Message):
     def __init__(self, entries: _Optional[_Iterable[_Union[AuditEntry, _Mapping]]] = ..., page: _Optional[_Union[_common_pb2.PageResponse, _Mapping]] = ...) -> None: ...
 
 class SupportMessage(_message.Message):
-    __slots__ = ("id", "ticket_id", "category", "status", "subject", "body", "sender_name", "sender_email", "user_id", "created_at", "updated_at", "resolved_at", "hiring_role", "hiring_jd_url", "hiring_target_start")
+    __slots__ = ("id", "ticket_id", "category", "status", "subject", "body", "sender_name", "sender_email", "user_id", "created_at", "updated_at", "resolved_at", "hiring_role", "hiring_jd_url", "hiring_target_start", "dt_session_public_id")
     ID_FIELD_NUMBER: _ClassVar[int]
     TICKET_ID_FIELD_NUMBER: _ClassVar[int]
     CATEGORY_FIELD_NUMBER: _ClassVar[int]
@@ -644,6 +644,7 @@ class SupportMessage(_message.Message):
     HIRING_ROLE_FIELD_NUMBER: _ClassVar[int]
     HIRING_JD_URL_FIELD_NUMBER: _ClassVar[int]
     HIRING_TARGET_START_FIELD_NUMBER: _ClassVar[int]
+    DT_SESSION_PUBLIC_ID_FIELD_NUMBER: _ClassVar[int]
     id: str
     ticket_id: str
     category: _contact_pb2.SupportCategory
@@ -659,7 +660,8 @@ class SupportMessage(_message.Message):
     hiring_role: str
     hiring_jd_url: str
     hiring_target_start: str
-    def __init__(self, id: _Optional[str] = ..., ticket_id: _Optional[str] = ..., category: _Optional[_Union[_contact_pb2.SupportCategory, str]] = ..., status: _Optional[_Union[SupportStatus, str]] = ..., subject: _Optional[str] = ..., body: _Optional[str] = ..., sender_name: _Optional[str] = ..., sender_email: _Optional[str] = ..., user_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resolved_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., hiring_role: _Optional[str] = ..., hiring_jd_url: _Optional[str] = ..., hiring_target_start: _Optional[str] = ...) -> None: ...
+    dt_session_public_id: str
+    def __init__(self, id: _Optional[str] = ..., ticket_id: _Optional[str] = ..., category: _Optional[_Union[_contact_pb2.SupportCategory, str]] = ..., status: _Optional[_Union[SupportStatus, str]] = ..., subject: _Optional[str] = ..., body: _Optional[str] = ..., sender_name: _Optional[str] = ..., sender_email: _Optional[str] = ..., user_id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., resolved_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., hiring_role: _Optional[str] = ..., hiring_jd_url: _Optional[str] = ..., hiring_target_start: _Optional[str] = ..., dt_session_public_id: _Optional[str] = ...) -> None: ...
 
 class ListContactMessagesRequest(_message.Message):
     __slots__ = ("query", "status", "category", "page")

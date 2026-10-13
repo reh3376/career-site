@@ -16,6 +16,9 @@ const (
 	SupportCategoryPressInquiry      SupportCategory = "press_inquiry"
 	SupportCategoryOther             SupportCategory = "other"
 	SupportCategoryHiringInquiry     SupportCategory = "hiring_inquiry"
+	// Written from the decision test's thanks page. The only
+	// category that may arrive with no sender name or address.
+	SupportCategoryDecisionTestFeedback SupportCategory = "decision_test_feedback"
 )
 
 type SupportMessage struct {
@@ -37,6 +40,10 @@ type SupportMessage struct {
 	HiringRole        string
 	HiringJDURL       string
 	HiringTargetStart string
+	// DTSessionPublicID is set only for feedback written from the
+	// decision test's thanks page, and is what proves the sender
+	// finished a run rather than merely says so. Empty everywhere else.
+	DTSessionPublicID string
 }
 
 // ListSupportFilter narrows a ListSupport call. Zero values mean "no
@@ -75,6 +82,9 @@ type CreateSupportInput struct {
 	HiringRole        string
 	HiringJDURL       string
 	HiringTargetStart string
+	// Verified by the handler against dt_sessions before it gets here;
+	// an id that names no finished run arrives empty.
+	DTSessionPublicID string
 }
 
 // CreateSupport inserts a support-message row and returns it with the
@@ -84,9 +94,11 @@ func (r *Repo) CreateSupport(ctx context.Context, in CreateSupportInput) (*Suppo
     INSERT INTO support_messages
       (category, subject, body, user_id, sender_name, sender_email,
        reply_channel, ip_hash, user_agent, ticket_id,
-       hiring_role, hiring_jd_url, hiring_target_start)
+       hiring_role, hiring_jd_url, hiring_target_start,
+       dt_session_public_id)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending',
-       NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''))
+       NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''),
+       NULLIF($13, '')::uuid)
     RETURNING id, created_at
   `
 	m := &SupportMessage{
@@ -101,6 +113,7 @@ func (r *Repo) CreateSupport(ctx context.Context, in CreateSupportInput) (*Suppo
 		HiringRole:        in.HiringRole,
 		HiringJDURL:       in.HiringJDURL,
 		HiringTargetStart: in.HiringTargetStart,
+		DTSessionPublicID: in.DTSessionPublicID,
 	}
 	// Ticket id ($10 in the INSERT is unused; goose sets ticket_id to
 	// 'pending' inline and the UPDATE below rewrites it). The bind
@@ -110,6 +123,7 @@ func (r *Repo) CreateSupport(ctx context.Context, in CreateSupportInput) (*Suppo
 		string(in.Category), in.Subject, in.Body, in.UserID, in.SenderName,
 		in.SenderEmail, in.ReplyChannel, in.IPHash, in.UserAgent,
 		in.HiringRole, in.HiringJDURL, in.HiringTargetStart,
+		in.DTSessionPublicID,
 	).Scan(&m.ID, &m.CreatedAt); err != nil {
 		return nil, fmt.Errorf("insert support: %w", err)
 	}
@@ -177,7 +191,8 @@ func (r *Repo) ListSupport(ctx context.Context, f ListSupportFilter) (*ListSuppo
            sender_name, sender_email, reply_channel, ticket_id,
            created_at, updated_at, resolved_at,
            COALESCE(hiring_role, ''), COALESCE(hiring_jd_url, ''),
-           COALESCE(hiring_target_start, '')
+           COALESCE(hiring_target_start, ''),
+           COALESCE(dt_session_public_id::text, '')
     FROM support_messages
   ` + where + " ORDER BY created_at DESC LIMIT " + limArg + " OFFSET " + offArg
 
@@ -196,6 +211,7 @@ func (r *Repo) ListSupport(ctx context.Context, f ListSupportFilter) (*ListSuppo
 			&m.SenderName, &m.SenderEmail, &m.ReplyChannel, &m.TicketID,
 			&m.CreatedAt, &m.UpdatedAt, &m.ResolvedAt,
 			&m.HiringRole, &m.HiringJDURL, &m.HiringTargetStart,
+			&m.DTSessionPublicID,
 		); err != nil {
 			return nil, fmt.Errorf("scan support row: %w", err)
 		}
@@ -235,7 +251,8 @@ func (r *Repo) SetSupportStatus(ctx context.Context, id int64, status string) (*
               sender_name, sender_email, reply_channel, ticket_id,
               created_at, updated_at, resolved_at,
               COALESCE(hiring_role, ''), COALESCE(hiring_jd_url, ''),
-              COALESCE(hiring_target_start, '')
+              COALESCE(hiring_target_start, ''),
+              COALESCE(dt_session_public_id::text, '')
   `
 	var m SupportMessage
 	var cat, st string
@@ -244,6 +261,7 @@ func (r *Repo) SetSupportStatus(ctx context.Context, id int64, status string) (*
 		&m.SenderName, &m.SenderEmail, &m.ReplyChannel, &m.TicketID,
 		&m.CreatedAt, &m.UpdatedAt, &m.ResolvedAt,
 		&m.HiringRole, &m.HiringJDURL, &m.HiringTargetStart,
+		&m.DTSessionPublicID,
 	); err != nil {
 		return nil, fmt.Errorf("set support status: %w", err)
 	}

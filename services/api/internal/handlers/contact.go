@@ -101,16 +101,34 @@ func (h *Contact) SubmitContact(
 		senderEmail = u.Email
 		authNote = fmt.Sprintf("user id %d", u.ID)
 	} else {
-		// Anonymous: name + email required + valid.
+		// Anonymous: name + email required + valid, with one exception.
 		name := strings.TrimSpace(msg.Name)
 		addr := strings.ToLower(strings.TrimSpace(msg.Email))
-		if name == "" || addr == "" {
+
+		// A decision-test participant may write without identifying
+		// themselves. The test tells them every field is optional and
+		// that the measurement does not need their name, and the page
+		// this arrives from repeats it one paragraph above the box.
+		// Requiring a name there would mean a participant who took
+		// that at its word has to invent one before they can say the
+		// test was hard, which is a worse outcome than an unsigned
+		// note in the inbox.
+		//
+		// Turnstile below still applies, so this relaxes who may
+		// write, never whether a bot may.
+		anon := msg.Category == v1.SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK
+		if !anon && (name == "" || addr == "") {
 			return nil, connect.NewError(connect.CodeInvalidArgument,
 				errors.New("name and email are required when not signed in"))
 		}
-		if _, err := mail.ParseAddress(addr); err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument,
-				errors.New("email does not look valid"))
+		// An address that is given is still checked. Feedback with a
+		// typo'd address is worse than feedback with none: it reads as
+		// a reply the sender is waiting for, and the reply bounces.
+		if addr != "" {
+			if _, err := mail.ParseAddress(addr); err != nil {
+				return nil, connect.NewError(connect.CodeInvalidArgument,
+					errors.New("email does not look valid"))
+			}
 		}
 		// Turnstile (FR-CNT-22), anonymous path only: a signed-in
 		// member has already cleared the challenge at registration.
@@ -148,8 +166,36 @@ func (h *Contact) SubmitContact(
 		hiringTargetStart = strings.TrimSpace(msg.HiringTargetStart)
 	}
 
+	// The decision-test run this came from, kept only when it names a
+	// run that actually finished.
+	//
+	// Verified rather than trusted, because the whole value of the
+	// field to the admin console is that it distinguishes somebody who
+	// took the test from somebody who says they did. An id that names
+	// nothing, or names a run still in progress, is dropped and the
+	// message is stored without it: feedback is worth keeping either
+	// way, and silently storing an unverified claim as though it were
+	// checked is the failure this is meant to avoid.
+	var dtSession string
+	if msg.Category == v1.SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK {
+		if key := strings.TrimSpace(msg.DtSessionPublicId); key != "" {
+			sess, err := h.users.DTSessionByKey(ctx, key)
+			switch {
+			case err != nil:
+				h.log.Warn("decision-test feedback names a session that could not be read",
+					slog.String("error", err.Error()))
+			case sess.Status != "completed":
+				h.log.Warn("decision-test feedback names a run that did not finish",
+					slog.String("status", sess.Status))
+			default:
+				dtSession = sess.PublicID
+			}
+		}
+	}
+
 	stored, err := h.users.CreateSupport(ctx, users.CreateSupportInput{
 		Category:          categoryFromProto(msg.Category),
+		DTSessionPublicID: dtSession,
 		Subject:           subject,
 		Body:              body,
 		UserID:            userID,
@@ -189,12 +235,31 @@ func (h *Contact) SubmitContact(
 }
 
 func (h *Contact) sendSupportNotification(ctx context.Context, m *users.SupportMessage, authNote string) error {
+	// Decision-test feedback may be unsigned by design, so the template
+	// is given something to print rather than two empty strings, which
+	// read as a bug in the mail rather than as a deliberate choice by
+	// the sender.
+	senderName, senderEmail := m.SenderName, m.SenderEmail
+	if senderName == "" {
+		senderName = "(not given)"
+	}
+	if senderEmail == "" {
+		senderEmail = "(not given, no reply possible)"
+	}
+	// The run, when there is one, so a remark can be read beside its
+	// own numbers without first going to the console to find out
+	// whether there is a run at all.
+	if m.DTSessionPublicID != "" {
+		authNote = strings.TrimSpace(authNote + " · finished decision-test run " +
+			m.DTSessionPublicID)
+	}
+
 	text, html, err := email.SupportNotificationTemplate.Render(map[string]any{
 		"Category":    categoryDisplay(m.Category),
 		"Subject":     m.Subject,
 		"Body":        m.Body,
-		"SenderName":  m.SenderName,
-		"SenderEmail": m.SenderEmail,
+		"SenderName":  senderName,
+		"SenderEmail": senderEmail,
 		"Auth":        authNote,
 		"TicketID":    m.TicketID,
 		"SubmittedAt": m.CreatedAt.UTC().Format(time.RFC1123),
@@ -227,6 +292,8 @@ func categoryFromProto(c v1.SupportCategory) users.SupportCategory {
 		return users.SupportCategoryPressInquiry
 	case v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY:
 		return users.SupportCategoryHiringInquiry
+	case v1.SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK:
+		return users.SupportCategoryDecisionTestFeedback
 	default:
 		return users.SupportCategoryOther
 	}
@@ -247,6 +314,8 @@ func categoryDisplay(c users.SupportCategory) string {
 		return "Hiring inquiry"
 	case users.SupportCategoryPressInquiry:
 		return "Press / interview inquiry"
+	case users.SupportCategoryDecisionTestFeedback:
+		return "Decision test feedback"
 	default:
 		return "Other"
 	}
@@ -265,6 +334,8 @@ func categoryShort(c users.SupportCategory) string {
 		return "press"
 	case users.SupportCategoryGeneralQuestion:
 		return "question"
+	case users.SupportCategoryDecisionTestFeedback:
+		return "decision test"
 	default:
 		return "support"
 	}

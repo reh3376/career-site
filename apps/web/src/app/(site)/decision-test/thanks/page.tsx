@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getTurnstileSiteKey } from "@/lib/turnstile";
+
+import { Feedback } from "./feedback";
+
 export const metadata: Metadata = {
   title: "Thank you",
   robots: { index: false, follow: false },
@@ -68,6 +72,7 @@ export default function ThanksPage() {
           Back to the site
         </Link>
       </div>
+      <Feedback turnstileSiteKey={getTurnstileSiteKey()} />
     </div>
   );
 }

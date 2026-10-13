@@ -3633,6 +3633,12 @@ type SupportMessage struct {
 	// Free-text target start date; populated only when category is
 	// HIRING_INQUIRY.
 	HiringTargetStart string `protobuf:"bytes,15,opt,name=hiring_target_start,json=hiringTargetStart,proto3" json:"hiring_target_start,omitempty"`
+	// The decision-test run this feedback came from, when the sender
+	// wrote from the thanks page and the id named a run that actually
+	// finished. Empty for every other message, and empty for a claimed
+	// run the server could not confirm, so a value here means the
+	// sender demonstrably took the test rather than said they did.
+	DtSessionPublicId string `protobuf:"bytes,16,opt,name=dt_session_public_id,json=dtSessionPublicId,proto3" json:"dt_session_public_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -3768,6 +3774,13 @@ func (x *SupportMessage) GetHiringJdUrl() string {
 func (x *SupportMessage) GetHiringTargetStart() string {
 	if x != nil {
 		return x.HiringTargetStart
+	}
+	return ""
+}
+
+func (x *SupportMessage) GetDtSessionPublicId() string {
+	if x != nil {
+		return x.DtSessionPublicId
 	}
 	return ""
 }
@@ -16690,7 +16703,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\aoutcome\x18\t \x01(\tR\aoutcome\"p\n" +
 	"\x10GetAuditResponse\x12/\n" +
 	"\aentries\x18\x01 \x03(\v2\x15.career.v1.AuditEntryR\aentries\x12+\n" +
-	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\"\xda\x04\n" +
+	"\x04page\x18\x02 \x01(\v2\x17.career.v1.PageResponseR\x04page\"\x8b\x05\n" +
 	"\x0eSupportMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tticket_id\x18\x02 \x01(\tR\bticketId\x126\n" +
@@ -16712,7 +16725,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\vhiring_role\x18\r \x01(\tR\n" +
 	"hiringRole\x12\"\n" +
 	"\rhiring_jd_url\x18\x0e \x01(\tR\vhiringJdUrl\x12.\n" +
-	"\x13hiring_target_start\x18\x0f \x01(\tR\x11hiringTargetStart\"\xe6\x01\n" +
+	"\x13hiring_target_start\x18\x0f \x01(\tR\x11hiringTargetStart\x12/\n" +
+	"\x14dt_session_public_id\x18\x10 \x01(\tR\x11dtSessionPublicId\"\xe6\x01\n" +
 	"\x1aListContactMessagesRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12:\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x18.career.v1.SupportStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x12@\n" +
