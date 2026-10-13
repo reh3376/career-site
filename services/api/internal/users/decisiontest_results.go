@@ -369,7 +369,21 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(i.options ->> a.chosen_index, ''),
 		       coalesce(i.options ->> i.correct_index, ''),
 		       coalesce(a.chosen_index, -1), v.position_in_block, v.item_version,
-		       v.is_lure, v.confidently_wrong, v.confidently_lured,
+		       -- Coalesced because the view returns NULL for all three
+		       -- when an answer has no confidence recorded, and these
+		       -- scan into plain bools. One such answer made the whole
+		       -- run's page report that the run did not exist: pgx
+		       -- refuses NULL into a bool, DTGetRun returned the error,
+		       -- and the handler turned every error into "no such run".
+		       -- Two of forty-six production runs were unreachable that
+		       -- way, including the only real anonymous completed one.
+		       --
+		       -- NULL here means "not determinable", and false is the
+		       -- right reading of it: an answer with no confidence
+		       -- cannot have been answered confidently.
+		       coalesce(v.is_lure, false),
+		       coalesce(v.confidently_wrong, false),
+		       coalesce(v.confidently_lured, false),
 		       coalesce(v.latency_vs_baseline, 0), coalesce(v.brier, -1)
 		  FROM v_dt_answers v
 		  JOIN dt_sessions s ON s.public_id::text = v.session_key::text

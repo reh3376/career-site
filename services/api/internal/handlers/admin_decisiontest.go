@@ -128,6 +128,14 @@ func (a *Admin) GetDecisionTestRun(
 ) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
 	run, blocks, answers, err := a.users.DTGetRun(ctx, req.Msg.GetSessionKey())
 	if err != nil {
+		// Logged, because the caller gets "no such run" either way and
+		// that sentence is a lie for every cause except a wrong key. A
+		// scan error on one column made two runs report themselves
+		// missing, and the reason was unavailable to anyone: the error
+		// was discarded here and the page simply rendered a 404.
+		a.log.Error("decision test run lookup failed",
+			slog.String("session_key", req.Msg.GetSessionKey()),
+			slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
 	}
 	// Per-block judgements, keyed by block. A missing entry is a block
