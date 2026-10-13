@@ -439,3 +439,46 @@ func TestOnlyTheStartOfTheDecisionTestIsChallenged(t *testing.T) {
 			strings.Count(body, "turnstile.FailOpen{"))
 	}
 }
+
+// --- the address every per-visitor control is keyed on ---
+
+// X-Real-IP wins, because Caddy sets it from the actual remote host and
+// replaces whatever arrived. X-Forwarded-For is client-supplied until a
+// proxy rewrites it, so reading that first let a caller choose its own
+// rate-limit bucket by sending a header.
+func TestClientIPPrefersTheHeaderTheProxySets(t *testing.T) {
+	req := connect.NewRequest(&v1.LoginRequest{})
+	req.Header().Set("X-Real-IP", "198.51.100.7")
+	req.Header().Set("X-Forwarded-For", "203.0.113.1")
+	if got := ClientIP(req); got != "198.51.100.7" {
+		t.Fatalf("ClientIP = %q, want the X-Real-IP value: a caller must not be "+
+			"able to pick its own bucket by sending X-Forwarded-For", got)
+	}
+}
+
+// Without a proxy there is no X-Real-IP and nothing to spoof it to, so
+// the forwarded header is still read. This is the local-development
+// path.
+func TestClientIPFallsBackToForwardedFor(t *testing.T) {
+	req := connect.NewRequest(&v1.LoginRequest{})
+	req.Header().Set("X-Forwarded-For", "203.0.113.1, 10.0.0.1")
+	if got := ClientIP(req); got != "203.0.113.1" {
+		t.Fatalf("ClientIP = %q, want the first forwarded address", got)
+	}
+}
+
+// The production Caddyfile must set the header this now depends on. A
+// deploy that drops the directive puts every per-visitor control back on
+// one constant, which is how two failed sign-ins locked out the admin
+// scripts site-wide.
+func TestTheProductionProxySetsTheRealIPHeader(t *testing.T) {
+	conf, err := os.ReadFile("../../../../deploy/caddy/Caddyfile.prod")
+	if err != nil {
+		t.Fatalf("read Caddyfile.prod: %v", err)
+	}
+	if !strings.Contains(string(conf), "header_up X-Real-IP {remote_host}") {
+		t.Fatal("Caddyfile.prod no longer sets X-Real-IP on the api proxy. " +
+			"Without it ClientIP falls through to the peer address, which is " +
+			"one constant for all traffic, and every per-IP limit becomes global.")
+	}
+}

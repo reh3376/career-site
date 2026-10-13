@@ -45,20 +45,30 @@ check "gallery shows the public subset to anonymous -> $shown photos" "[ '$shown
 # Crawlers are invited to the public surface and kept off the rest.
 robots=$(curl -s --max-time 10 "$BASE/robots.txt")
 # The Turnstile widget has to actually reach the page. The api refuses
-# every sign-in, registration, contact and decision-test start whose
-# token is missing, so a site key that does not make it into the HTML
-# does not degrade the site, it closes it. Login is the one that locks
-# the owner out of his own admin surface, which is why this is checked
-# from outside rather than trusted.
+# a registration, an anonymous contact, a decision-test start, or a
+# challenged sign-in whose token is missing, so a site key that does not
+# make it into the HTML does not degrade the site, it closes it.
 #
-# Two things are asserted per page, because either alone can be true
-# while the widget is dead: the loader script (blocked by CSP if
-# script-src is wrong) and the site key (absent if TURNSTILE_SITE_KEY
-# never reached the web container).
+# The site key is asserted on all four, because that is the failure that
+# closes a surface: TURNSTILE_SITE_KEY not reaching the web container.
+#
+# The loader script is asserted on the three that render the widget in
+# the first paint. /decision-test is a multi-step client flow and the
+# widget lives on its last step, so the script is not in the initial
+# HTML and looking for it there would fail forever for the wrong reason.
+#
+# Counted with grep -c against curl directly rather than stashed in a
+# variable and interpolated into the check command: an HTML document
+# contains apostrophes, and embedding one inside a single-quoted shell
+# string broke four of these on the 2026-10-13 rollout. The pages were
+# fine; the check was not.
 for page in login register contact decision-test; do
-  html=$(curl -s --max-time 20 "$BASE/$page")
-  check "/$page loads the Turnstile script" "echo '$html' | grep -q 'challenges.cloudflare.com/turnstile'"
-  check "/$page carries a Turnstile site key" "echo '$html' | grep -qE '0x[A-Za-z0-9_-]{10,}'"
+  key=$(curl -s --max-time 20 "$BASE/$page" | grep -cE '0x[A-Za-z0-9_-]{10,}' || true)
+  check "/$page carries a Turnstile site key -> ${key:-0}" "[ \"${key:-0}\" -gt 0 ]"
+done
+for page in login register contact; do
+  js=$(curl -s --max-time 20 "$BASE/$page" | grep -c 'challenges.cloudflare.com/turnstile' || true)
+  check "/$page loads the Turnstile script -> ${js:-0}" "[ \"${js:-0}\" -gt 0 ]"
 done
 
 check "robots allows /articles" "echo '$robots' | grep -q 'Allow: /articles'"

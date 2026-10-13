@@ -56,7 +56,22 @@
     # /api/* -> Go API. Same-origin, so session cookies stay first-party
     # and no CORS is needed.
     handle /api/* {
-        reverse_proxy api:8080
+        reverse_proxy api:8080 {
+            # The api sees only the proxy otherwise. Every per-address
+            # control was keyed on a single constant in production
+            # (172.18.0.1, the docker gateway): the registration rate
+            # limit, the sign-in challenge counter, and the address hash
+            # on audit_log and events. Two failed sign-ins from anyone
+            # challenged everyone, which took the admin scripts out for
+            # fifteen minutes at a time, and the rate limits were
+            # effectively global rather than per-visitor.
+            #
+            # header_up replaces rather than appends, which is the point:
+            # a client can send its own X-Forwarded-For, so the api must
+            # read an address this proxy set and nothing else. See
+            # handlers.ClientIP.
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     # Everything else -> Next.js.
