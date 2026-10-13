@@ -40,7 +40,7 @@ turned out to be controls that exist on paper and nowhere else.
 | 5 | FR-HIST-02 — the welcome-back panel | [FR-HIST-02-welcome-back.md](fsd-items/FR-HIST-02-welcome-back.md) | `[x]` |
 | 6 | FR-EVAL-06 — an evaluation must survive a deploy | [FR-EVAL-06-eval-durability.md](fsd-items/FR-EVAL-06-eval-durability.md) | `[x]` |
 | 7 | FR-CNT-19 — CI link health | [FR-CNT-19-link-health.md](fsd-items/FR-CNT-19-link-health.md) | `[x]` |
-| 8 | FR-PUB-05 — rendering without JavaScript | [FR-PUB-05-no-javascript.md](fsd-items/FR-PUB-05-no-javascript.md) | `[ ]` |
+| 8 | FR-PUB-05 — rendering without JavaScript | [FR-PUB-05-no-javascript.md](fsd-items/FR-PUB-05-no-javascript.md) | `[x]` |
 | 9 | FR-DT-20 — tap-check thresholds from pilot data | [FR-DT-20-tap-check.md](fsd-items/FR-DT-20-tap-check.md) | `[ ]` |
 
 Nine rows for eleven requirements: `FR-AUTH-09`/`FR-CNT-22` and
@@ -55,6 +55,16 @@ what closed it named.
 ---
 
 ## Findings that changed the shape of an item
+
+**The landing page is two pages, and the survey loaded one** (item 8).
+FR-PUB-05's working document counted three controls that do nothing
+without JavaScript, read off the component tree. Checking the live site
+found twelve, across four page variants. `/` renders from two separate
+component trees depending on the `ui_mode` cookie, and the HMI one
+carries six dead controls the editorial one does not. Reading the code
+found the shape of the problem; only loading both modes found its size.
+The check that now holds this requests `/` twice, with and without the
+cookie, for that reason.
 
 **The deploy path had never looked at evaluations** (item 6). The quiet
 check counted decision tests and recent events and stopped there, so a

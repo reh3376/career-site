@@ -139,9 +139,16 @@ export function HamburgerMenu({
 
   return (
     <>
+      {/* The drawer is built and animated in the browser, so without
+          JavaScript this trigger cannot open anything. It is hidden in
+          that case rather than left as a control that does nothing:
+          every destination inside it is also a plain link in the
+          footer, which is a server component, so nothing becomes
+          unreachable by hiding it. FR-PUB-05. */}
       <button
         ref={buttonRef}
         type="button"
+        data-requires-js=""
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
         aria-controls="site-menu-panel"
