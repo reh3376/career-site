@@ -16,6 +16,9 @@ export type Run = {
   education?: string;
   occupation?: string;
   gaveEmail?: boolean;
+  // The address itself. Only the run detail renders it; the list keeps
+  // showing presence, because a list is the easiest thing to screenshot.
+  participantEmail?: string;
   audioMode?: string;
   deviceClass?: string;
   tapCheckPassed?: boolean;

@@ -138,7 +138,11 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           run.occupation,
           run.deviceClass,
           run.audioMode,
-          run.gaveEmail ? "email given" : "no email",
+          // The address itself, not just that one exists. Admin-only,
+          // and the reason is written at the proto field: a deletion
+          // request has no other handle on a run. The answer key is a
+          // different promise and stays closed by default below.
+          run.participantEmail || (run.gaveEmail ? "email given" : "no email"),
           run.instrumentVersion,
           run.itemSetVersion,
           run.keyVersion,

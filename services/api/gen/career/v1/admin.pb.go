@@ -13998,7 +13998,8 @@ type DecisionTestRun struct {
 	Education string `protobuf:"bytes,5,opt,name=education,proto3" json:"education,omitempty"`
 	// Free-text occupation.
 	Occupation string `protobuf:"bytes,6,opt,name=occupation,proto3" json:"occupation,omitempty"`
-	// Whether an address was left, rather than the address itself.
+	// Whether an address was left. Kept alongside `participant_email`
+	// because the list surface shows presence without needing the value.
 	GaveEmail bool `protobuf:"varint,7,opt,name=gave_email,json=gaveEmail,proto3" json:"gave_email,omitempty"`
 	// sound or visual.
 	AudioMode string `protobuf:"bytes,8,opt,name=audio_mode,json=audioMode,proto3" json:"audio_mode,omitempty"`
@@ -14112,8 +14113,26 @@ type DecisionTestRun struct {
 	// nothing" from "there was no such link", which is the entire reason
 	// three observations are stored instead of one derived number.
 	PriorSittings *DecisionTestPriorSittings `protobuf:"bytes,41,opt,name=prior_sittings,json=priorSittings,proto3" json:"prior_sittings,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The participant's email address, or empty when none was given.
+	//
+	// Admin-only, like every field on this message. Withheld until
+	// 2026-10-13, when the owner asked why the console could say an
+	// address existed but not what it was.
+	//
+	// The reason to show it is that he is the data controller: a deletion
+	// request, or any question about which run belongs to whom, has no
+	// other handle. The privacy notice already tells participants the
+	// address is an identifier used to recognise a repeat run and the
+	// only way results reach them; it does not promise the owner cannot
+	// see it, so showing it here contradicts nothing published.
+	//
+	// This is a different promise from the answer key, which FR-DT-04
+	// says is never shown to a participant and which the console keeps
+	// closed by default. That one protects the instrument; this one is
+	// ordinary PII on an authenticated surface.
+	ParticipantEmail string `protobuf:"bytes,42,opt,name=participant_email,json=participantEmail,proto3" json:"participant_email,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *DecisionTestRun) Reset() {
@@ -14434,6 +14453,13 @@ func (x *DecisionTestRun) GetPriorSittings() *DecisionTestPriorSittings {
 		return x.PriorSittings
 	}
 	return nil
+}
+
+func (x *DecisionTestRun) GetParticipantEmail() string {
+	if x != nil {
+		return x.ParticipantEmail
+	}
+	return ""
 }
 
 // Prior sittings each identity could see at the moment a run started.
@@ -17492,7 +17518,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06counts\x18\x02 \x01(\v2#.career.v1.DecisionTestReviewCountsR\x06counts\x12.\n" +
 	"\x04runs\x18\x01 \x03(\v2\x1a.career.v1.DecisionTestRunR\x04runs\x12>\n" +
 	"\n" +
-	"item_pools\x18\x03 \x03(\v2\x1f.career.v1.DecisionTestItemPoolR\titemPools\"\x92\f\n" +
+	"item_pools\x18\x03 \x03(\v2\x1f.career.v1.DecisionTestItemPoolR\titemPools\"\xbf\f\n" +
 	"\x0fDecisionTestRun\x12\x1f\n" +
 	"\vsession_key\x18\x01 \x01(\tR\n" +
 	"sessionKey\x12\x16\n" +
@@ -17547,7 +17573,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\vfinished_at\x18' \x01(\tR\n" +
 	"finishedAt\x12(\n" +
 	"\x10reviewed_by_name\x18( \x01(\tR\x0ereviewedByName\x12K\n" +
-	"\x0eprior_sittings\x18) \x01(\v2$.career.v1.DecisionTestPriorSittingsR\rpriorSittings\"\xab\x01\n" +
+	"\x0eprior_sittings\x18) \x01(\v2$.career.v1.DecisionTestPriorSittingsR\rpriorSittings\x12+\n" +
+	"\x11participant_email\x18* \x01(\tR\x10participantEmail\"\xab\x01\n" +
 	"\x19DecisionTestPriorSittings\x12\"\n" +
 	"\n" +
 	"by_account\x18\x01 \x01(\x05H\x00R\tbyAccount\x88\x01\x01\x12\x1e\n" +
