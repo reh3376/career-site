@@ -8421,7 +8421,7 @@ One run, summarised for a list.
 | `ageRange` | `string` | string |  | Banded age, education and occupation, each empty where not given. |
 | `education` | `string` | string |  | Highest level of education completed. |
 | `occupation` | `string` | string |  | Free-text occupation. |
-| `gaveEmail` | `bool` | boolean |  | Whether an address was left, rather than the address itself. |
+| `gaveEmail` | `bool` | boolean |  | Whether an address was left. Kept alongside `participant_email` because the list surface shows presence without needing the value. |
 | `audioMode` | `string` | string |  | sound or visual. |
 | `deviceClass` | `string` | string |  | desktop, tablet or phone. |
 | `tapCheckPassed` | `bool` | boolean |  | Whether the tap-along check was passed. |
@@ -8456,6 +8456,7 @@ One run, summarised for a list.
 | `finishedAt` | `string` | string |  | When it ended, RFC3339, empty while still running. |
 | `reviewedByName` | `string` | string |  | Who signed the current verdict. A curated dataset whose exclusions cannot be attributed has anonymous decisions in it. |
 | `priorSittings` | [`DecisionTestPriorSittings`](#decisiontestpriorsittings) | object |  | What each identity could see when the run started, as recorded. A message rather than three scalars, because a message has natural presence: each field can distinguish "this link existed and saw nothing" from "there was no such link", which is the entire reason three observations are stored instead of one derived number. |
+| `participantEmail` | `string` | string |  | The participant's email address, or empty when none was given. Admin-only, like every field on this message. Withheld until 2026-10-13, when the owner asked why the console could say an address existed but not what it was. The reason to show it is that he is the data controller: a deletion request, or any question about which run belongs to whom, has no other handle. The privacy notice already tells participants the address is an identifier used to recognise a repeat run and the only way results reach them; it does not promise the owner cannot see it, so showing it here contradicts nothing published. This is a different promise from the answer key, which FR-DT-04 says is never shown to a participant and which the console keeps closed by default. That one protects the instrument; this one is ordinary PII on an authenticated surface. |
 
 ### DecisionTestPriorSittings
 

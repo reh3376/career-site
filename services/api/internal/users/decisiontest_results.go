@@ -15,13 +15,17 @@ import (
 
 // DTRun is one run, summarised.
 type DTRun struct {
-	SessionKey        string
-	Status            string
-	DisplayName       string
-	AgeRange          string
-	Education         string
-	Occupation        string
-	GaveEmail         bool
+	SessionKey  string
+	Status      string
+	DisplayName string
+	AgeRange    string
+	Education   string
+	Occupation  string
+	GaveEmail   bool
+	// ParticipantEmail is the address itself, empty when none was
+	// given. Admin surfaces only; see the proto field for why it is
+	// carried at all.
+	ParticipantEmail  string
 	AudioMode         string
 	DeviceClass       string
 	TapCheckPassed    bool
@@ -208,7 +212,7 @@ const dtRunSelect = `
 		SELECT s.public_id::text, s.status,
 		       coalesce(p.display_name,''), coalesce(p.age_range,''),
 		       coalesce(p.education,''), coalesce(p.occupation,''),
-		       coalesce(p.email,'') <> '',
+		       coalesce(p.email,'') <> '', coalesce(p.email,''),
 		       s.audio_mode, s.device_class, s.tap_check_passed,
 		       coalesce(s.baseline_rt_ms,0), s.is_repeat, s.is_synthetic,
 		       s.instrument_version, s.item_set_version,
@@ -246,7 +250,8 @@ const dtRunSelect = `
 func dtScanRun(rows interface{ Scan(...any) error }) (DTRun, error) {
 	var v DTRun
 	err := rows.Scan(&v.SessionKey, &v.Status, &v.DisplayName, &v.AgeRange,
-		&v.Education, &v.Occupation, &v.GaveEmail, &v.AudioMode, &v.DeviceClass,
+		&v.Education, &v.Occupation, &v.GaveEmail, &v.ParticipantEmail,
+		&v.AudioMode, &v.DeviceClass,
 		&v.TapCheckPassed, &v.BaselineRTMs, &v.IsRepeat, &v.IsSynthetic,
 		&v.InstrumentVersion, &v.ItemSetVersion, &v.Correct, &v.Answered,
 		&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt,
@@ -369,7 +374,21 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(i.options ->> a.chosen_index, ''),
 		       coalesce(i.options ->> i.correct_index, ''),
 		       coalesce(a.chosen_index, -1), v.position_in_block, v.item_version,
-		       v.is_lure, v.confidently_wrong, v.confidently_lured,
+		       -- Coalesced because the view returns NULL for all three
+		       -- when an answer has no confidence recorded, and these
+		       -- scan into plain bools. One such answer made the whole
+		       -- run's page report that the run did not exist: pgx
+		       -- refuses NULL into a bool, DTGetRun returned the error,
+		       -- and the handler turned every error into "no such run".
+		       -- Two of forty-six production runs were unreachable that
+		       -- way, including the only real anonymous completed one.
+		       --
+		       -- NULL here means "not determinable", and false is the
+		       -- right reading of it: an answer with no confidence
+		       -- cannot have been answered confidently.
+		       coalesce(v.is_lure, false),
+		       coalesce(v.confidently_wrong, false),
+		       coalesce(v.confidently_lured, false),
 		       coalesce(v.latency_vs_baseline, 0), coalesce(v.brier, -1)
 		  FROM v_dt_answers v
 		  JOIN dt_sessions s ON s.public_id::text = v.session_key::text

@@ -128,6 +128,14 @@ func (a *Admin) GetDecisionTestRun(
 ) (*connect.Response[v1.GetDecisionTestRunResponse], error) {
 	run, blocks, answers, err := a.users.DTGetRun(ctx, req.Msg.GetSessionKey())
 	if err != nil {
+		// Logged, because the caller gets "no such run" either way and
+		// that sentence is a lie for every cause except a wrong key. A
+		// scan error on one column made two runs report themselves
+		// missing, and the reason was unavailable to anyone: the error
+		// was discarded here and the page simply rendered a 404.
+		a.log.Error("decision test run lookup failed",
+			slog.String("session_key", req.Msg.GetSessionKey()),
+			slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no such run"))
 	}
 	// Per-block judgements, keyed by block. A missing entry is a block
@@ -406,7 +414,8 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		SessionKey: r.SessionKey, Status: r.Status,
 		DisplayName: r.DisplayName, AgeRange: r.AgeRange,
 		Education: r.Education, Occupation: r.Occupation, GaveEmail: r.GaveEmail,
-		AudioMode: r.AudioMode, DeviceClass: r.DeviceClass,
+		ParticipantEmail: r.ParticipantEmail,
+		AudioMode:        r.AudioMode, DeviceClass: r.DeviceClass,
 		TapCheckPassed: r.TapCheckPassed, BaselineRtMs: int32(r.BaselineRTMs),
 		IsRepeat: r.IsRepeat, IsSynthetic: r.IsSynthetic,
 		InstrumentVersion: r.InstrumentVersion, ItemSetVersion: r.ItemSetVersion,
