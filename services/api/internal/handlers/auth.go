@@ -51,6 +51,9 @@ type Auth struct {
 	// reach that default because config.Load refuses to boot without a
 	// secret.
 	turnstile turnstile.Verifier
+	// loginFailures decides when a sign-in needs a Turnstile token. See
+	// login_challenge.go.
+	loginFailures *failureCounter
 	// events is the product event stream; nil is silent.
 	events *events.Writer
 }
@@ -124,6 +127,7 @@ func NewAuth(
 		// 5/hour still clears.
 		registerLimiter: ratelimit.New(5, 5.0/3600),
 		turnstile:       turnstile.Noop{},
+		loginFailures:   newFailureCounter(),
 	}
 }
 

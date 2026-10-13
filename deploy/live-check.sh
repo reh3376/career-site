@@ -115,7 +115,7 @@ echo "  deliveries: $(cs exec -T postgres psql -U career -d career -At -c "selec
 # window for the same reason: a window would start passing on its own in
 # a few weeks, which looks like the problem went away.
 unlogged=$(cs exec -T postgres psql -U career -d career -At -c "select count(*) from chat_messages m left join decision_log d on d.ref_kind='chat_message' and d.ref_id=m.id where m.role='assistant' and d.id is null and m.created_at > timestamptz '2026-10-01 12:52:00+00'" 2>/dev/null)
-check "every recent assistant answer has a decision row -> ${unlogged:-?} unlogged" "[ \"${unlogged:-1}\" = '0' ]"
+echo "RESULT_UNLOGGED: ${unlogged:-?}"
 U=$(grep ^ADMIN_USERNAME .env.prod | cut -d= -f2); P=$(grep ^CAREER_SITE_ADMIN_PW .env.prod | cut -d= -f2)
 CJ=$(mktemp)
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.AuthService/Login" -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")
@@ -153,6 +153,15 @@ if [[ $SUBMIT = 1 ]]; then
   jd=$(grep -o 'RESULT_JD: .*' "$REMOTE_OUT" | cut -d' ' -f2-)
   check "JD pipeline finished: ${jd:-no result}" "echo '$jd' | grep -qE 'READY|BELOW_THRESHOLD'"
 fi
+
+# The count comes from the remote block because it needs psql; the
+# judgement is made here because `check` is a local function. Calling it
+# inside the heredoc is what produced "check: command not found" on the
+# 2026-10-13 rollout, which failed the live check without saying
+# anything useful about the thing it was meant to measure.
+unlogged=$(grep -o 'RESULT_UNLOGGED: .*' "$REMOTE_OUT" | cut -d' ' -f2-)
+check "every recent assistant answer has a decision row -> ${unlogged:-?} unlogged" \
+  "[ \"${unlogged:-1}\" = '0' ]"
 rm -f "$REMOTE_OUT"
 
 echo "== result: $pass ok, $fail failed =="
