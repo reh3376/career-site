@@ -1246,6 +1246,7 @@ message with the sender's context and replies from their mailbox.
 | `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
 | `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
 | `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
+| `dtSessionPublicId` | `string` | string | `string: max_len: 64` | The decision-test run this feedback came from, as the session's public id. Set only by the thanks page, with SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK; ignored for every other category. It is what lets the admin console show that a note came from somebody who actually finished the test, rather than from somebody who says they did. |
 
 **Response** — [`SubmitContactResponse`](#submitcontactresponse)
 
@@ -1267,7 +1268,8 @@ message with the sender's context and replies from their mailbox.
   "turnstileToken": "string",
   "hiringRole": "string",
   "hiringJdUrl": "string",
-  "hiringTargetStart": "string"
+  "hiringTargetStart": "string",
+  "dtSessionPublicId": "string"
 }
 ```
 
@@ -6223,6 +6225,7 @@ Contact form.
 | `hiringRole` | `string` | string | `string: max_len: 200` | The role the sender is considering Roger for. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Free text; used for admin triage. |
 | `hiringJdUrl` | `string` | string | `string: max_len: 2000` | Absolute URL of the job posting. Populated by the form when category = HIRING_INQUIRY; ignored otherwise. Not validated beyond length so recruiters can drop URLs from ATS systems that include tokens / query strings. |
 | `hiringTargetStart` | `string` | string | `string: max_len: 100` | Free-text "target start" the sender's hiring cycle is aiming at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form when category = HIRING_INQUIRY; ignored otherwise. |
+| `dtSessionPublicId` | `string` | string | `string: max_len: 64` | The decision-test run this feedback came from, as the session's public id. Set only by the thanks page, with SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK; ignored for every other category. It is what lets the admin console show that a note came from somebody who actually finished the test, rather than from somebody who says they did. |
 
 ### SubmitContactResponse
 
@@ -6864,6 +6867,7 @@ One row of the support_messages table, as the owner sees it.
 | `hiringRole` | `string` | string |  | Role the sender is considering Roger for; populated only when category is HIRING_INQUIRY. |
 | `hiringJdUrl` | `string` | string |  | URL of the job posting; populated only when category is HIRING_INQUIRY. |
 | `hiringTargetStart` | `string` | string |  | Free-text target start date; populated only when category is HIRING_INQUIRY. |
+| `dtSessionPublicId` | `string` | string |  | The decision-test run this feedback came from, when the sender wrote from the thanks page and the id named a run that actually finished. Empty for every other message, and empty for a claimed run the server could not confirm, so a value here means the sender demonstrably took the test rather than said they did. |
 
 ### ListContactMessagesRequest
 
@@ -10212,6 +10216,7 @@ Category buckets for the support inbox (FR-CNT-22).
 | `SUPPORT_CATEGORY_PRESS_INQUIRY` | 5 | Press, interview, or podcast inquiry. |
 | `SUPPORT_CATEGORY_OTHER` | 6 | Anything not covered above. |
 | `SUPPORT_CATEGORY_HIRING_INQUIRY` | 7 | Hiring manager reaching out about a specific role. The web form reveals dedicated fields (role, JD URL, target start) when this is selected; those land on SubmitContactRequest.hiring_*. |
+| `SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK` | 8 | A decision-test participant writing from the thanks page, while the fifteen minutes are still fresh. The only category that may arrive without a name or an email. The test tells participants every field is optional and that the measurement does not need their name; demanding both before they can say the test was hard would contradict that, from the page that just said it. Enforced in the handler, not here. |
 
 ### JdSource
 

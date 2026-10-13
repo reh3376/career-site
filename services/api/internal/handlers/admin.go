@@ -1036,6 +1036,8 @@ func supportCategoryProtoToRepo(c v1.SupportCategory) users.SupportCategory {
 		return users.SupportCategoryOther
 	case v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY:
 		return users.SupportCategoryHiringInquiry
+	case v1.SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK:
+		return users.SupportCategoryDecisionTestFeedback
 	default:
 		return "" // unspecified = "any"
 	}
@@ -1057,6 +1059,8 @@ func supportCategoryRepoToProto(c users.SupportCategory) v1.SupportCategory {
 		return v1.SupportCategory_SUPPORT_CATEGORY_OTHER
 	case users.SupportCategoryHiringInquiry:
 		return v1.SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY
+	case users.SupportCategoryDecisionTestFeedback:
+		return v1.SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK
 	default:
 		return v1.SupportCategory_SUPPORT_CATEGORY_UNSPECIFIED
 	}
@@ -1430,6 +1434,7 @@ func supportMessageRepoToProto(m *users.SupportMessage) *v1.SupportMessage {
 		HiringRole:        m.HiringRole,
 		HiringJdUrl:       m.HiringJDURL,
 		HiringTargetStart: m.HiringTargetStart,
+		DtSessionPublicId: m.DTSessionPublicID,
 	}
 	if m.UserID != nil {
 		out.UserId = strconv.FormatInt(*m.UserID, 10)

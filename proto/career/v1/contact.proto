@@ -99,6 +99,14 @@ message SubmitContactRequest {
   // when category = HIRING_INQUIRY; ignored otherwise.
   string hiring_target_start = 11 [(buf.validate.field).string.max_len = 100];
 
+  // The decision-test run this feedback came from, as the session's
+  // public id. Set only by the thanks page, with
+  // SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK; ignored for every other
+  // category. It is what lets the admin console show that a note came
+  // from somebody who actually finished the test, rather than from
+  // somebody who says they did.
+  string dt_session_public_id = 12 [(buf.validate.field).string.max_len = 64];
+
   // How the member wants a reply.
   enum ReplyChannel {
     // Not set.
@@ -132,6 +140,15 @@ enum SupportCategory {
   // form reveals dedicated fields (role, JD URL, target start) when
   // this is selected; those land on SubmitContactRequest.hiring_*.
   SUPPORT_CATEGORY_HIRING_INQUIRY = 7;
+  // A decision-test participant writing from the thanks page, while
+  // the fifteen minutes are still fresh.
+  //
+  // The only category that may arrive without a name or an email. The
+  // test tells participants every field is optional and that the
+  // measurement does not need their name; demanding both before they
+  // can say the test was hard would contradict that, from the page
+  // that just said it. Enforced in the handler, not here.
+  SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK = 8;
 }
 
 // Submission receipt.

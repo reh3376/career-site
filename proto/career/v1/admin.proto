@@ -1274,6 +1274,12 @@ message SupportMessage {
   // Free-text target start date; populated only when category is
   // HIRING_INQUIRY.
   string hiring_target_start = 15;
+  // The decision-test run this feedback came from, when the sender
+  // wrote from the thanks page and the id named a run that actually
+  // finished. Empty for every other message, and empty for a claimed
+  // run the server could not confirm, so a value here means the
+  // sender demonstrably took the test rather than said they did.
+  string dt_session_public_id = 16;
 }
 
 // Contact-message list request.

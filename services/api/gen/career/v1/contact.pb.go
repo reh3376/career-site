@@ -47,6 +47,15 @@ const (
 	// form reveals dedicated fields (role, JD URL, target start) when
 	// this is selected; those land on SubmitContactRequest.hiring_*.
 	SupportCategory_SUPPORT_CATEGORY_HIRING_INQUIRY SupportCategory = 7
+	// A decision-test participant writing from the thanks page, while
+	// the fifteen minutes are still fresh.
+	//
+	// The only category that may arrive without a name or an email. The
+	// test tells participants every field is optional and that the
+	// measurement does not need their name; demanding both before they
+	// can say the test was hard would contradict that, from the page
+	// that just said it. Enforced in the handler, not here.
+	SupportCategory_SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK SupportCategory = 8
 )
 
 // Enum value maps for SupportCategory.
@@ -60,16 +69,18 @@ var (
 		5: "SUPPORT_CATEGORY_PRESS_INQUIRY",
 		6: "SUPPORT_CATEGORY_OTHER",
 		7: "SUPPORT_CATEGORY_HIRING_INQUIRY",
+		8: "SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK",
 	}
 	SupportCategory_value = map[string]int32{
-		"SUPPORT_CATEGORY_UNSPECIFIED":        0,
-		"SUPPORT_CATEGORY_GENERAL_QUESTION":   1,
-		"SUPPORT_CATEGORY_BUG_REPORT":         2,
-		"SUPPORT_CATEGORY_FEATURE_REQUEST":    3,
-		"SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS": 4,
-		"SUPPORT_CATEGORY_PRESS_INQUIRY":      5,
-		"SUPPORT_CATEGORY_OTHER":              6,
-		"SUPPORT_CATEGORY_HIRING_INQUIRY":     7,
+		"SUPPORT_CATEGORY_UNSPECIFIED":            0,
+		"SUPPORT_CATEGORY_GENERAL_QUESTION":       1,
+		"SUPPORT_CATEGORY_BUG_REPORT":             2,
+		"SUPPORT_CATEGORY_FEATURE_REQUEST":        3,
+		"SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS":     4,
+		"SUPPORT_CATEGORY_PRESS_INQUIRY":          5,
+		"SUPPORT_CATEGORY_OTHER":                  6,
+		"SUPPORT_CATEGORY_HIRING_INQUIRY":         7,
+		"SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK": 8,
 	}
 )
 
@@ -359,6 +370,13 @@ type SubmitContactRequest struct {
 	// at, e.g. "ASAP", "Q1 2027", "flexible". Populated by the form
 	// when category = HIRING_INQUIRY; ignored otherwise.
 	HiringTargetStart string `protobuf:"bytes,11,opt,name=hiring_target_start,json=hiringTargetStart,proto3" json:"hiring_target_start,omitempty"`
+	// The decision-test run this feedback came from, as the session's
+	// public id. Set only by the thanks page, with
+	// SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK; ignored for every other
+	// category. It is what lets the admin console show that a note came
+	// from somebody who actually finished the test, rather than from
+	// somebody who says they did.
+	DtSessionPublicId string `protobuf:"bytes,12,opt,name=dt_session_public_id,json=dtSessionPublicId,proto3" json:"dt_session_public_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -470,6 +488,13 @@ func (x *SubmitContactRequest) GetHiringTargetStart() string {
 	return ""
 }
 
+func (x *SubmitContactRequest) GetDtSessionPublicId() string {
+	if x != nil {
+		return x.DtSessionPublicId
+	}
+	return ""
+}
+
 // Submission receipt.
 type SubmitContactResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -529,7 +554,7 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"\x19GetContactOptionsResponse\x12\"\n" +
 	"\favailability\x18\x01 \x01(\tR\favailability\x121\n" +
 	"\x14location_preferences\x18\x02 \x01(\tR\x13locationPreferences\x125\n" +
-	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\x9e\x05\n" +
+	"\bchannels\x18\x03 \x03(\v2\x19.career.v1.ContactChannelR\bchannels\"\xd8\x05\n" +
 	"\x14SubmitContactRequest\x12$\n" +
 	"\asubject\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\asubject\x12$\n" +
@@ -547,13 +572,14 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"hiringRole\x12,\n" +
 	"\rhiring_jd_url\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vhiringJdUrl\x127\n" +
-	"\x13hiring_target_start\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dR\x11hiringTargetStart\"b\n" +
+	"\x13hiring_target_start\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dR\x11hiringTargetStart\x128\n" +
+	"\x14dt_session_public_id\x18\f \x01(\tB\a\xbaH\x04r\x02\x18@R\x11dtSessionPublicId\"b\n" +
 	"\fReplyChannel\x12\x1d\n" +
 	"\x19REPLY_CHANNEL_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13REPLY_CHANNEL_EMAIL\x10\x01\x12\x1a\n" +
 	"\x16REPLY_CHANNEL_LINKEDIN\x10\x02\"4\n" +
 	"\x15SubmitContactResponse\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId*\xaf\x02\n" +
+	"\tticket_id\x18\x01 \x01(\tR\bticketId*\xdc\x02\n" +
 	"\x0fSupportCategory\x12 \n" +
 	"\x1cSUPPORT_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
 	"!SUPPORT_CATEGORY_GENERAL_QUESTION\x10\x01\x12\x1f\n" +
@@ -562,7 +588,8 @@ const file_career_v1_contact_proto_rawDesc = "" +
 	"#SUPPORT_CATEGORY_CONTRIBUTOR_ACCESS\x10\x04\x12\"\n" +
 	"\x1eSUPPORT_CATEGORY_PRESS_INQUIRY\x10\x05\x12\x1a\n" +
 	"\x16SUPPORT_CATEGORY_OTHER\x10\x06\x12#\n" +
-	"\x1fSUPPORT_CATEGORY_HIRING_INQUIRY\x10\a2\xd0\x01\n" +
+	"\x1fSUPPORT_CATEGORY_HIRING_INQUIRY\x10\a\x12+\n" +
+	"'SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK\x10\b2\xd0\x01\n" +
 	"\x0eContactService\x12d\n" +
 	"\x11GetContactOptions\x12#.career.v1.GetContactOptionsRequest\x1a$.career.v1.GetContactOptionsResponse\"\x04\x80\xb5\x18\x02\x12X\n" +
 	"\rSubmitContact\x12\x1f.career.v1.SubmitContactRequest\x1a .career.v1.SubmitContactResponse\"\x04\x80\xb5\x18\x01B\xa6\x01\n" +

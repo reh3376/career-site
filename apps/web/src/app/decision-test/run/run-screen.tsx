@@ -390,6 +390,17 @@ export function RunScreen() {
         // needed and did not have.
         console.error("decision test: the debrief answer was not stored", e);
       }
+      // The run that just finished, for the feedback box on the thanks
+      // page. Written as its own key rather than left in "dt", which is
+      // cleared here on purpose: the run is over, and nothing on the
+      // thanks page should be able to act as though it were still in
+      // progress.
+      try {
+        sessionStorage.setItem("dt-done", sessionKey);
+      } catch {
+        // Feedback can still be sent, it just arrives without the run
+        // attached, which the server treats as unverified.
+      }
       sessionStorage.removeItem("dt");
       router.replace("/decision-test/thanks");
     },
