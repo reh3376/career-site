@@ -611,6 +611,12 @@ type CorpusRoots struct {
 // it keeps its own layout here; the private root uses kind = directory.
 var publicCorpusSubdirs = map[string]string{
 	"article": "articles",
+	// The career timeline. Every public content directory belongs in
+	// this map or in the named exemption in
+	// TestEveryPublicContentDirectoryIsReindexable; content the corpus
+	// never reads is the failure that test exists to catch, and the
+	// first version of the timeline walked straight into it.
+	"role": "roles",
 	// The site's own documentation: what each page does, what a member
 	// can do, what the assistant will not discuss. Public because it
 	// describes public behaviour, and kind "other" because it is not an

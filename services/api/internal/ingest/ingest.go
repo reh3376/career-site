@@ -87,6 +87,13 @@ var KnownKinds = []string{
 	// retrieval is unreliable for tenure / title / credential facts.
 	// Keep it short: it is added to every judge call.
 	"profile",
+	// role: one file per job on the public timeline (FR-CNT-01).
+	// Prose written for a reader, where `profile` is a terse sheet
+	// written for a judge, and both are derived from the same source,
+	// docs/personal/career-facts.md. Retrievable so the assistant can
+	// answer "what did he do at Joy Global" in sentences rather than
+	// from a bullet list.
+	"role",
 }
 
 // IsKnownKind reports whether k is in KnownKinds.

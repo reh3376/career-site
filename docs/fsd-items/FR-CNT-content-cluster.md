@@ -50,38 +50,49 @@ JD-reviewer judge call.
 That is the authority for dates and sequence, and it is the only one.
 Nothing in this cluster should restate a date from memory.
 
-**A new content directory cannot break the reindex.** The public corpus
-walk iterates `publicCorpusSubdirs`, an explicit map in
-`handlers/admin.go`, rather than listing the directory. A new
-`content/roles/` is therefore invisible to the corpus until somebody
-adds an entry on purpose. (The private walk does use `WalkKinds` and
-*does* reject unknown subdirectories, which is why this distinction is
-worth stating rather than discovering.)
+**A new content directory must be registered, and a test enforces it.**
+The public corpus walk iterates `publicCorpusSubdirs`, an explicit map
+in `handlers/admin.go`, rather than listing the directory, so a new
+directory is invisible to the corpus at runtime. But
+`TestEveryPublicContentDirectoryIsReindexable` fails on any directory
+under `content/` that has no entry in that map, with one named
+exemption (`photos`, which holds images the walker does not read).
+
+That test is the repo taking a position: content the corpus never reads
+is a failure, not a default. A new kind therefore needs an entry in
+`publicCorpusSubdirs` **and** in `ingest.KnownKinds`, because the
+second is what lets a single kind be reindexed on its own rather than
+only in bulk.
 
 **Some of the material is already on the landing page.** Three awards
 appear there, and the curated GitHub cards cover part of FR-CNT-03's
 intent (the row says so, pointing at FR-CNT-25). Neither is a surface,
 and neither is linkable.
 
-## The decision this cluster turns on
+## The decision this cluster turns on, and the answer
 
 **Should the public role and project content also enter the corpus?**
 
-The case for: Ask Roger could answer "what did he do at Joy Global"
-from text written for a reader rather than from a facts sheet written
-for a judge.
+**Yes. This document first argued no, and that was wrong.**
 
-The case against, which is the stronger one: `career-facts.md` already
-covers these facts for retrieval, and two descriptions of one career
-drift apart. The codebase already names this failure in
-`components/landing/core-actions.tsx`: *"Two descriptions of one feature
-drift apart; if one changes, change both."* A corpus that holds both a
-public timeline and a private facts sheet can answer the same question
-two ways, and the reviewer would have no way to prefer one.
+The argument against was drift: `career-facts.md` already covers these
+facts, and two descriptions of one career can disagree, which
+`components/landing/core-actions.tsx` names as a failure in a different
+context. The argument for was that the assistant could answer "what did
+he do at Joy Global" in sentences rather than from a bullet list.
 
-**Recommendation: public content stays out of the corpus to begin
-with.** It costs nothing to add later, and the allow-list means the
-decision is explicit either way.
+What settled it was `TestEveryPublicContentDirectoryIsReindexable`,
+which the first version of the timeline failed. The repo has already
+decided this: a content directory the corpus never reads is a defect,
+and the only exemption is `photos`, which holds images. Weighed against
+that, the drift concern is weaker than it looked, because the role
+files are *derived from* the facts sheet and say so, and a judge seeing
+both a terse sheet and a prose description of the same job is reading
+corroboration rather than contradiction.
+
+So `role` is in `KnownKinds` and `publicCorpusSubdirs`, and the same
+will be true of `project`. Drift is managed by the content naming its
+source, not by withholding the content.
 
 ## Order, and why
 
@@ -162,12 +173,19 @@ different reason: the published series is about decision quality, not
 about any particular role, so a link would assert a relationship that
 does not exist. The links become a small change once their targets do.
 
-**A new content directory was confirmed safe before it was created.**
-The public corpus walk iterates an explicit allow-list in
-`handlers/admin.go` rather than listing the directory, so `content/roles/`
-is invisible to the corpus until somebody adds an entry deliberately.
-The private walk does reject unknown subdirectories, which is why this
-was checked rather than assumed.
+**The corpus registration was got wrong first, and CI caught it.**
+Before creating the directory I checked that the public walk iterates
+an explicit allow-list rather than listing the directory, concluded a
+new directory could not break the reindex, and shipped it unregistered.
+That was true of the runtime and false of the repo's intent:
+`TestEveryPublicContentDirectoryIsReindexable` fails on exactly that,
+because content the corpus never reads is the failure this codebase
+keeps finding. `role` is now in `publicCorpusSubdirs` and in
+`ingest.KnownKinds`, the second because that is what allows a single
+kind to be reindexed rather than only the whole corpus.
+
+Checking the mechanism was not the same as checking the decision, and
+the test held the decision.
 
 **Not done, and worth knowing:** the page is a server component with no
 client JavaScript, so it would pass FR-PUB-05's check, but `/timeline`
