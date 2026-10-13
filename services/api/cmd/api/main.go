@@ -506,6 +506,7 @@ func main() {
 	// Server-side emit points share the one writer.
 	authHandler.SetTurnstile(bots)
 	contactHandler.SetTurnstile(bots)
+	decisionTestHandler.SetTurnstile(bots)
 
 	authHandler.SetEvents(eventWriter)
 	decisionHandler.SetEvents(eventWriter)

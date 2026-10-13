@@ -230,9 +230,24 @@ type StartSessionRequest struct {
 	// rows are excluded from analysis by filter. Separate from the
 	// instrument version because the most useful agent run is against the
 	// exact version production serves.
-	Synthetic     bool `protobuf:"varint,3,opt,name=synthetic,proto3" json:"synthetic,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Synthetic bool `protobuf:"varint,3,opt,name=synthetic,proto3" json:"synthetic,omitempty"`
+	// Cloudflare Turnstile response token from the briefing page.
+	//
+	// Checked on StartSession only, deliberately. The other four
+	// decision-test RPCs are public too, but they run inside a timed
+	// fifteen-minute sitting that has no resume; putting a challenge in
+	// front of SubmitAnswer would end a volunteer's run to stop a bot
+	// that already got past the start.
+	//
+	// This is the public endpoint that creates state: a dt_sessions row,
+	// a draw from the item bank, and a slot in a sample whose size is the
+	// whole point of the exercise. Volunteers are the scarce resource
+	// here, so padding the sample with machine runs costs more than the
+	// rows do. A synthetic run is the owner's own fixture draw, never
+	// comes from a browser, and is not challenged.
+	TurnstileToken string `protobuf:"bytes,4,opt,name=turnstile_token,json=turnstileToken,proto3" json:"turnstile_token,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *StartSessionRequest) Reset() {
@@ -284,6 +299,13 @@ func (x *StartSessionRequest) GetSynthetic() bool {
 		return x.Synthetic
 	}
 	return false
+}
+
+func (x *StartSessionRequest) GetTurnstileToken() string {
+	if x != nil {
+		return x.TurnstileToken
+	}
+	return ""
 }
 
 // The timings this run is bound by, served to the client rather than
@@ -1119,13 +1141,14 @@ const file_career_v1_decision_test_proto_rawDesc = "" +
 	"\fdevice_class\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\vdeviceClass\x12(\n" +
 	"\x10tap_check_passed\x18\x03 \x01(\bR\x0etapCheckPassed\x12-\n" +
 	"\x0ebaseline_rt_ms\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fbaselineRtMs\x122\n" +
-	"\x11baseline_rt_sd_ms\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0ebaselineRtSdMs\"\x95\x01\n" +
+	"\x11baseline_rt_sd_ms\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0ebaselineRtSdMs\"\xc8\x01\n" +
 	"\x13StartSessionRequest\x12)\n" +
 	"\x06intake\x18\x01 \x01(\v2\x11.career.v1.IntakeR\x06intake\x125\n" +
 	"\n" +
 	"conditions\x18\x02 \x01(\v2\x15.career.v1.ConditionsR\n" +
 	"conditions\x12\x1c\n" +
-	"\tsynthetic\x18\x03 \x01(\bR\tsynthetic\"h\n" +
+	"\tsynthetic\x18\x03 \x01(\bR\tsynthetic\x121\n" +
+	"\x0fturnstile_token\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\x0eturnstileToken\"h\n" +
 	"\aTimings\x12\x1f\n" +
 	"\vmemorise_ms\x18\x01 \x01(\x05R\n" +
 	"memoriseMs\x12\x1f\n" +

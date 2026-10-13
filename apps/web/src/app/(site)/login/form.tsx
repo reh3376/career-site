@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Turnstile } from "@/components/turnstile";
+
 import { loginAction, type LoginState } from "./actions";
 
 const initial: LoginState = {};
@@ -13,7 +15,13 @@ const fieldInputClass =
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function LoginForm({ next }: { next?: string } = {}) {
+export function LoginForm({
+  next,
+  turnstileSiteKey,
+}: {
+  next?: string;
+  turnstileSiteKey: string;
+}) {
   const [state, formAction] = useActionState(loginAction, initial);
   const v = state.values ?? {};
 
@@ -68,6 +76,12 @@ export function LoginForm({ next }: { next?: string } = {}) {
           className={fieldInputClass}
         />
       </div>
+
+      {/* A rejected sign-in spends the token, so the widget issues a
+          fresh one before the retry. A wrong password is the common
+          case here, which makes the reset matter more than it does on
+          registration. */}
+      <Turnstile siteKey={turnstileSiteKey} action="login" resetOn={state} />
 
       <Submit />
     </form>

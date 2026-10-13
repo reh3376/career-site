@@ -4,6 +4,8 @@ import Link from "next/link";
 import { OtPanel } from "@/components/ot-panel";
 import { getUiMode } from "@/lib/ui-mode";
 
+import { getTurnstileSiteKey } from "@/lib/turnstile";
+
 import { LoginForm } from "./form";
 
 export const metadata: Metadata = {
@@ -16,12 +18,13 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
+  const turnstileSiteKey = getTurnstileSiteKey();
   const [{ next }, mode] = await Promise.all([searchParams, getUiMode()]);
 
   if (mode === "ot") {
     return (
       <OtPanel tag="AUTH-01" title="SESSION.NEW · SIGN IN" note="30-day cookie">
-        <LoginForm next={next} />
+        <LoginForm next={next} turnstileSiteKey={turnstileSiteKey} />
         <p className="mt-8 border-t border-line pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
           no account?{" "}
           <Link
@@ -57,7 +60,7 @@ export default async function LoginPage({
         .
       </p>
       <div className="mt-12">
-        <LoginForm next={next} />
+        <LoginForm next={next} turnstileSiteKey={turnstileSiteKey} />
       </div>
     </div>
   );

@@ -54,12 +54,32 @@ surface built on `decision_log` can show, the adapter's training labels
 included. It is in `docs/backlog.md` to be traced rather than guessed
 at here.
 
-The one that does surface is worth reading: a member on 2026-09-30
-asked how to upload a JD, got "I don't have anything in my records about
-that", and wrote back "you state that you can help with questions about
-this site, but my prompt was a question specifically about how to use
-the site and you didnt answer it". The site guide is in the corpus, so
-that is a retrieval miss, and it sat unread for two weeks.
+The one that does surface is worth reading, and chasing it down is the
+first thing the queue has actually been used for. A member on
+2026-09-30 asked how to upload a JD, got "I don't have anything in my
+records about that", and wrote back: "you state that you can help with
+questions about this site, but my prompt was a question specifically
+about how to use the site and you didnt answer it".
+
+**It was already fixed, the next day, and the queue is how anyone found
+that out.** Checked on 2026-10-13:
+
+- The complaint landed at 2026-09-30 21:48:30.
+- "How this site works" entered the corpus at 2026-10-01 14:48, seventeen
+  hours later. Its chunks are 372 onward; every candidate the failing
+  retrieval considered was chunk 20 to 52. The document was not there to
+  retrieve, so the assistant's "I don't have anything in my records" was
+  literally true rather than a retrieval failure.
+- A Q&A bank entry was written for it as well. Asked the member's exact
+  wording today, the live assistant answers "Go to /jd-upload and paste
+  the posting…", labelled "Roger wrote this answer himself, word for
+  word", which is the bank path rather than retrieval.
+
+So there is nothing to build here. Recorded because the opposite
+conclusion was the obvious one: the guide is in the corpus *now*, which
+reads as a retrieval bug until the ingestion timestamps are compared
+against the question's. The dates are the evidence, not the presence of
+the file.
 
 **Verified by creating each signal and watching the filter find it**, in
 the local stack: a down-rated message with a comment, an `out_of_scope`
