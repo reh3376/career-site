@@ -206,6 +206,19 @@ DIR_KIND = {
     "credentials": "credential",
 }
 
+# Kinds the corpus ingests, which is every kind with a directory in
+# `publicCorpusSubdirs` on the Go side. A file of one of these with an
+# empty body is dropped by the ingest with "body is empty", so it
+# renders on its page and is missing from everything the assistant can
+# answer from. That is a silent half-publish, and it happened: two
+# degrees rendered on /credentials and were absent from the corpus,
+# found only by reading a reindex summary nobody has to read.
+#
+# `photo` is not here for the same reason it is exempt from
+# TestEveryPublicContentDirectoryIsReindexable: its content is an
+# image, its words live in frontmatter, and the walker does not read it.
+INGESTED_KINDS = {"article", "other", "role", "project", "skill", "credential"}
+
 # Matches `key: value`, the same shape all three parsers accept. Kept
 # identical to frontMatterKV in services/api/internal/ingest/walker.go
 # on purpose; the parity fixture test is what keeps them that way.
@@ -245,6 +258,20 @@ def check_file(path: Path, kind: str) -> list[str]:
 
     problems: list[str] = []
     present = set(meta)
+
+    # A kind the corpus ingests must have something to ingest. An empty
+    # body renders fine on its own page and is dropped by the ingest
+    # with "body is empty", so the file is published and unanswerable at
+    # the same time. Only the reindex summary says so, and nobody has to
+    # read a reindex summary.
+    if kind in INGESTED_KINDS:
+        end = raw.replace("\r\n", "\n").find("\n---\n", 4)
+        body = raw.replace("\r\n", "\n")[end + 5 :] if end >= 0 else ""
+        if not body.strip():
+            problems.append(
+                "body is empty, so the corpus ingest drops it and the page "
+                "publishes something the assistant cannot answer from"
+            )
 
     for key in sorted(spec["required"] - present):
         problems.append(f"missing required key `{key}`")
