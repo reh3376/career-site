@@ -667,6 +667,18 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 4b. Server operations
 
+- **Nothing in this repository guards `userland-proxy: false` on the
+  host.** Set 2026-10-13 in `/etc/docker/daemon.json` so containers see
+  real client addresses; before it, Docker's userland proxy rewrote
+  every visitor's source address to the bridge gateway and every
+  "per-IP" control in the service was global. A rebuilt box, or a
+  daemon.json lost to some other change, silently returns the service to
+  that state: the rate limits keep running, the numbers keep being
+  reported, and they apply to everyone at once. The app-side half is
+  covered by a test; this half is a host setting the repo cannot see.
+  Worth either a line in the server build notes or a check in
+  live-check.sh that reads an address back out of the api log.
+
 - **`quay.io/minio/minio:latest` is unpinned, and the registry refused
   us twice on 2026-09-30.** Both rollouts logged
   `401 Unauthorized` from `quay.io` on the MinIO manifest. Neither
