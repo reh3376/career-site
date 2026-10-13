@@ -26,6 +26,7 @@ export const PUBLIC_PATHS = [
   "/articles",
   "/gallery",
   "/timeline",
+  "/projects",
   "/contact",
   "/how-ask-roger-works",
   "/register",
@@ -63,6 +64,7 @@ export const PUBLIC_PATHS = [
 // carry their token as a path segment.
 const PUBLIC_PREFIXES = [
   "/articles/",
+  "/projects/",
   "/verify/",
   "/reset-password/",
   "/admin/decision/",
@@ -123,6 +125,7 @@ export const INDEXABLE_PATHS = [
   // makes, so it is the one page a sceptical reader most wants to
   // find, and the one a search engine should be able to reach.
   "/timeline",
+  "/projects",
   "/contact",
   "/how-ask-roger-works",
   "/register",

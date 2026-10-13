@@ -94,6 +94,11 @@ var KnownKinds = []string{
 	// answer "what did he do at Joy Global" in sentences rather than
 	// from a bullet list.
 	"role",
+	// project: one file per published project (FR-CNT-03 / FR-CNT-05),
+	// carrying the problem it solves and the approach taken. Worth
+	// retrieving: "has he built anything with vector search" is a
+	// question the corpus could not answer from a job history.
+	"project",
 }
 
 // IsKnownKind reports whether k is in KnownKinds.
