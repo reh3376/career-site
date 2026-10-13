@@ -243,3 +243,48 @@ may want to say more, or to hold it back until there is more to say.
 **Not done:** diagrams, which is the row's "where available" clause
 rather than a hidden gap, and links to related writing, left out for
 the same reason as on the timeline.
+
+### FR-CNT-09 — skills, 2026-10-13
+
+`/skills`, 15 skills in 5 categories, each with depth, years and its
+evidence as links.
+
+**The row's condition is the only interesting thing about it**, and it
+is now enforced rather than asserted. Evidence is `kind:id` refs,
+resolved at render time against the published timeline, projects and
+articles. A ref naming nothing is dropped rather than rendered as a
+dead link; a skill with no surviving evidence is not rendered at all.
+
+**Three tests, because the obvious one is not enough.** "Every
+published skill has evidence" can never fail on its own, since the
+loader drops an unsupported skill before the page sees it: a broken ref
+makes a skill *disappear*, not appear unsupported. So there is also a
+test that every individual ref resolves, and one that the published
+count matches the file count. Mutation-tested both ways: renaming a
+project slug fails with `skill-go -> project:mdemg-renamed`, and
+orphaning every ref on one skill fails with `expected 14 to be 15`.
+
+That matters because this promise can be broken by content alone, with
+nobody touching code. Rename a project slug six months from now and the
+test says which skill just lost its support.
+
+**Depth is three levels** (`working`, `deep`, `owned`) with labels that
+say what each claims. Five would invite a self-assessment nobody can
+check, and the difference between a self-scored 7 and 8 is not
+evidenceable.
+
+**Role evidence links to `/timeline#role-id`**, so the timeline's list
+items gained ids and `scroll-mt` to clear the sticky header.
+
+**The ordering argument held.** This was third in the cluster because
+the row requires evidence and, until the timeline and the projects
+shipped, there was nothing to link to. Built first it would have been a
+table of adjectives.
+
+**One thing I was wrong about.** I expected skills like NFPA 70E
+ownership to have no linkable evidence and need leaving off. They do
+have evidence: the Whiskey House role body already describes owning
+electrical safety and directing the arc-flash studies. Writing the
+roles properly in the first piece of work is what made the third piece
+honest, which was the argument for the order but not one I expected to
+be able to check.
