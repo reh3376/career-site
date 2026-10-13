@@ -28,13 +28,24 @@ export async function submitFeedbackAction(
     return { error: `That is ${body.length} characters, and the limit is 5,000.` };
   }
 
+  // The subject is the start of the note, not the category again.
+  //
+  // It was a fixed "Decision test feedback", which is also what the
+  // category renders as, so the notification email printed the same
+  // five words twice, one above the other, and every row in the inbox
+  // looked identical to every other. The first line of what somebody
+  // wrote is the one string that distinguishes these from each other.
+  const firstLine = body.split("\n")[0].trim();
+  const subject =
+    firstLine.length > 72 ? `${firstLine.slice(0, 69)}...` : firstLine;
+
   const jar = await cookies();
   const cookie = jar.get(SESSION_COOKIE)?.value ?? null;
 
   const resp = await callApi({
     path: "/api/career.v1.ContactService/SubmitContact",
     body: {
-      subject: "Decision test feedback",
+      subject,
       message: body,
       category: "SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK",
       // Both may be empty, and the API allows that for this category

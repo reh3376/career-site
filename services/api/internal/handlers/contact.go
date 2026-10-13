@@ -246,13 +246,15 @@ func (h *Contact) sendSupportNotification(ctx context.Context, m *users.SupportM
 	if senderEmail == "" {
 		senderEmail = "(not given, no reply possible)"
 	}
-	// The run, when there is one, so a remark can be read beside its
-	// own numbers without first going to the console to find out
-	// whether there is a run at all.
-	if m.DTSessionPublicID != "" {
-		authNote = strings.TrimSpace(authNote + " · finished decision-test run " +
-			m.DTSessionPublicID)
-	}
+	// The run goes in its own field, never appended to authNote.
+	//
+	// authNote answers "was this sender signed in", and the template
+	// reads any non-empty value as yes. Folding the run into it made
+	// every anonymous decision-test note report "Signed in: yes",
+	// which is the opposite of true and exactly the kind of wrong
+	// detail that stops a console being trusted. Caught on the first
+	// real email, not by any test, because both halves were correct in
+	// isolation.
 
 	text, html, err := email.SupportNotificationTemplate.Render(map[string]any{
 		"Category":    categoryDisplay(m.Category),
@@ -261,6 +263,7 @@ func (h *Contact) sendSupportNotification(ctx context.Context, m *users.SupportM
 		"SenderName":  senderName,
 		"SenderEmail": senderEmail,
 		"Auth":        authNote,
+		"Run":         m.DTSessionPublicID,
 		"TicketID":    m.TicketID,
 		"SubmittedAt": m.CreatedAt.UTC().Format(time.RFC1123),
 		"ReviewURL":   h.webBase + "/admin/support",
