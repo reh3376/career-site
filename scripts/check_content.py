@@ -140,6 +140,26 @@ SCHEMA: dict[str, dict] = {
         },
         "ints": {"order", "started", "ended"},
     },
+    "skill": {
+        # `evidence` is required, and required to be non-empty, because
+        # FR-CNT-09's whole condition is that every entry links to at
+        # least one piece of evidence. A skills matrix without that is
+        # a list of assertions in a table, which is the thing a reader
+        # already discounts on a CV.
+        "required": COMMON_REQUIRED
+        | {"category", "depth", "years", "evidence", "order", "visibility"},
+        "optional": set(),
+        "enums": {
+            "type": {"skill"},
+            "visibility": {"member", "public"},
+            # Three levels, not five. A finer scale invites a
+            # self-assessment nobody can check, and the difference
+            # between "7/10" and "8/10" is not a claim anybody can
+            # evidence.
+            "depth": {"working", "deep", "owned"},
+        },
+        "ints": {"years", "order"},
+    },
     "other": {
         "required": COMMON_REQUIRED | {"visibility"},
         "optional": set(),
@@ -158,6 +178,7 @@ DIR_KIND = {
     "other": "other",
     "roles": "role",
     "projects": "project",
+    "skills": "skill",
 }
 
 # Matches `key: value`, the same shape all three parsers accept. Kept

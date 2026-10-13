@@ -618,6 +618,7 @@ var publicCorpusSubdirs = map[string]string{
 	// first version of the timeline walked straight into it.
 	"role":    "roles",
 	"project": "projects",
+	"skill":   "skills",
 	// The site's own documentation: what each page does, what a member
 	// can do, what the assistant will not discuss. Public because it
 	// describes public behaviour, and kind "other" because it is not an

@@ -99,6 +99,11 @@ var KnownKinds = []string{
 	// retrieving: "has he built anything with vector search" is a
 	// question the corpus could not answer from a job history.
 	"project",
+	// skill: one file per entry in the matrix (FR-CNT-09), each
+	// carrying its years and the evidence behind it. Retrievable so
+	// "how long has he written Go" has an answer that is not a guess
+	// from a job history.
+	"skill",
 }
 
 // IsKnownKind reports whether k is in KnownKinds.

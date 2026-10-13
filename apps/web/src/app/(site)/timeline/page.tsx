@@ -52,7 +52,10 @@ export default async function TimelinePage() {
       ) : (
         <ol className="mt-16 space-y-14 border-l border-line pl-6 sm:pl-8">
           {roles.map((r) => (
-            <li key={r.id} className="relative">
+            /* The id is the anchor a skill's evidence links to
+               (/timeline#role-joy-global). scroll-mt keeps the heading
+               clear of the sticky header when somebody arrives on it. */
+            <li key={r.id} id={r.id} className="relative scroll-mt-24">
               {/* The marker sits on the rule rather than beside it, so
                   the eye follows one line down the page. */}
               <span

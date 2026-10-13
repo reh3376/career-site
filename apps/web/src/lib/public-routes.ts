@@ -27,6 +27,7 @@ export const PUBLIC_PATHS = [
   "/gallery",
   "/timeline",
   "/projects",
+  "/skills",
   "/contact",
   "/how-ask-roger-works",
   "/register",
