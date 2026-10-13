@@ -160,6 +160,30 @@ SCHEMA: dict[str, dict] = {
         },
         "ints": {"years", "order"},
     },
+    "credential": {
+        # One kind for awards, degrees, certifications, service and
+        # eligibility, rather than five directories, because they are
+        # read together on one page and the only thing that differs is
+        # which fields apply.
+        "required": COMMON_REQUIRED | {"category", "order", "visibility"},
+        # `status` exists so a lapsed certification can be published as
+        # lapsed. Omitting it and listing only current credentials is
+        # the CV behaviour this site argues against.
+        "optional": {"issuer", "awarded", "status", "note"},
+        "enums": {
+            "type": {"credential"},
+            "visibility": {"member", "public"},
+            "category": {
+                "award",
+                "education",
+                "certification",
+                "service",
+                "eligibility",
+            },
+            "status": {"current", "lapsed", "completed"},
+        },
+        "ints": {"awarded", "order"},
+    },
     "other": {
         "required": COMMON_REQUIRED | {"visibility"},
         "optional": set(),
@@ -179,6 +203,7 @@ DIR_KIND = {
     "roles": "role",
     "projects": "project",
     "skills": "skill",
+    "credentials": "credential",
 }
 
 # Matches `key: value`, the same shape all three parsers accept. Kept

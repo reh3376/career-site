@@ -288,3 +288,38 @@ electrical safety and directing the arc-flash studies. Writing the
 roles properly in the first piece of work is what made the third piece
 honest, which was the argument for the order but not one I expected to
 be able to check.
+
+### FR-CNT-10 — awards and credentials, 2026-10-13
+
+`/credentials`, 12 entries in five sections: Recognition, Education,
+Certifications, Service and Availability. All four things the row names
+are present.
+
+**The lapsed certifications are published as lapsed.** This is the only
+decision on the page worth arguing about, and it was Roger's to make
+rather than mine, so it is recorded here with the reasoning rather than
+buried. Listing only current credentials is the CV convention, and the
+convention is exactly what lets a reader assume the omissions are
+flattering. BICSI, the FCC licence, A+, Networking Essentials and LCTE
+all appear with when they were held and that they were not renewed,
+using the facts sheet's own framing: *the certification lapsed; the
+work did not stop.*
+
+A test asserts every certification carries a status, because one that
+silently loses it reads as current. That turns an omission into a
+claim, which is the opposite of what this page is for.
+
+**One kind, not five directories.** Awards, degrees, certifications,
+service and eligibility are read together on one page and differ only
+in which fields apply: an award has a year and no status, a
+certification has a status and often no year, an eligibility statement
+has neither. Five directories would be five schemas for one table.
+
+**"As the owner chooses to publish them" is taken literally.** Nothing
+is derived from the résumé or the facts sheet at build time. Every
+entry is a file written on purpose, and removing one is deleting a file
+rather than hunting for the flag that hides it.
+
+**Availability is the row's "eligibility statement".** It carries what
+the landing page already says, that he is open to relocation for the
+right role, so the two cannot drift.

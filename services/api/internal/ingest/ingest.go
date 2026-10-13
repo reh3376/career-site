@@ -104,6 +104,12 @@ var KnownKinds = []string{
 	// "how long has he written Go" has an answer that is not a guess
 	// from a job history.
 	"skill",
+	// credential: awards, degrees, certifications, service and
+	// eligibility (FR-CNT-10). Retrievable because "what degree does
+	// he hold" and "is that certification current" are questions the
+	// assistant should answer from a record rather than from a résumé
+	// paraphrase.
+	"credential",
 }
 
 // IsKnownKind reports whether k is in KnownKinds.
