@@ -259,17 +259,41 @@ func loginReq(token, ip string) *connect.Request[v1.LoginRequest] {
 	return r
 }
 
-// Login is the credential-stuffing target, and before this the only
-// thing in front of it was a per-(IP, email) limiter held in one
-// process. A botnet spreading attempts across addresses was bounded
-// only by how many addresses it had.
-func TestLoginRefusesATokenCloudflareRejected(t *testing.T) {
+// A first sign-in is not challenged, whatever the verifier would say.
+//
+// This is the case that matters most and the one that was wrong for a
+// few hours: always-on broke every non-browser sign-in, including the
+// three scripts that verify production. The proof here is that the
+// verifier is never called.
+func TestAFirstSignInIsNotChallenged(t *testing.T) {
+	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false}}
+	h := newGateAuth(fake)
+	defer func() { _ = recover() }() // reaches the nil repo, which is the point
+
+	_, err := h.Login(context.Background(), loginReq("", "203.0.113.20"))
+	if err != nil && strings.Contains(err.Error(), "bot check failed") {
+		t.Fatal("a first sign-in was challenged; non-browser callers cannot solve one")
+	}
+	if fake.calls != 0 {
+		t.Fatalf("a first sign-in cost %d siteverify calls, want 0", fake.calls)
+	}
+}
+
+// After enough failures from one address, a token is required.
+func TestSignInIsChallengedAfterRepeatedFailures(t *testing.T) {
 	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false, ErrorCodes: []string{"invalid-input-response"}}}
 	h := newGateAuth(fake)
+	const ip = "203.0.113.21"
 
-	_, err := h.Login(context.Background(), loginReq("bad-token", "203.0.113.20"))
+	// Record the failures directly: the handler's own failure path needs
+	// a repository, and what is under test is the decision to challenge.
+	for i := 0; i < challengeAfterFailures; i++ {
+		h.loginFailures.record(ip)
+	}
+
+	_, err := h.Login(context.Background(), loginReq("bad-token", ip))
 	if err == nil {
-		t.Fatal("a rejected Turnstile token was allowed to attempt a sign-in")
+		t.Fatal("a challenged sign-in with a rejected token was allowed")
 	}
 	if !strings.Contains(err.Error(), "bot check failed") {
 		t.Fatalf("error does not name the bot check: %v", err)
@@ -279,45 +303,55 @@ func TestLoginRefusesATokenCloudflareRejected(t *testing.T) {
 	}
 }
 
-func TestLoginRefusesAMissingToken(t *testing.T) {
-	h := newGateAuth(turnstile.New("0xTESTSECRET"))
-	_, err := h.Login(context.Background(), loginReq("", "203.0.113.21"))
-	if err == nil {
-		t.Fatal("a sign-in with no Turnstile token was accepted")
+// The challenge is keyed on the address alone. Credential stuffing is
+// many accounts from one source, so keying it on the email as well would
+// hand an attacker a fresh allowance per guess.
+func TestTheChallengeFollowsTheAddressNotTheAccount(t *testing.T) {
+	h := newGateAuth(&fakeVerifier{verdict: turnstile.Verdict{OK: false}})
+	for i := 0; i < challengeAfterFailures; i++ {
+		h.loginFailures.record("203.0.113.22")
 	}
-	if !strings.Contains(err.Error(), "bot check failed") {
-		t.Fatalf("a missing token did not fail the bot check: %v", err)
+	if h.loginFailures.count("203.0.113.22") < challengeAfterFailures {
+		t.Fatal("failures were not recorded against the address")
+	}
+	if h.loginFailures.count("198.51.100.5") != 0 {
+		t.Fatal("a different address inherited the first one's failures")
 	}
 }
 
-// Failing closed here would lock every member out of their own account
-// during a Cloudflare outage, which is worse than the thing the check
-// prevents. The proof it got past the gate is that it reached the
-// credential lookup and panicked on the nil repo.
-func TestLoginFailsOpenWhenCloudflareIsUnreachable(t *testing.T) {
+// Proving the password clears the counter, so one mistyped password
+// does not leave a challenge waiting for the next sign-in.
+func TestASuccessfulPasswordClearsTheChallenge(t *testing.T) {
+	h := newGateAuth(&fakeVerifier{verdict: turnstile.Verdict{OK: true}})
+	const ip = "203.0.113.23"
+	h.loginFailures.record(ip)
+	h.loginFailures.record(ip)
+	if h.loginFailures.count(ip) != 2 {
+		t.Fatalf("count = %d, want 2", h.loginFailures.count(ip))
+	}
+	h.loginFailures.clear(ip)
+	if h.loginFailures.count(ip) != 0 {
+		t.Fatal("clear did not reset the counter")
+	}
+}
+
+// Failing closed would lock every member out of their own account
+// during an outage at a third party, which is worse than the thing the
+// check prevents.
+func TestAChallengedSignInFailsOpenWhenCloudflareIsUnreachable(t *testing.T) {
 	h := newGateAuth(&fakeVerifier{err: errors.New("dial tcp: i/o timeout")})
+	const ip = "203.0.113.24"
+	for i := 0; i < challengeAfterFailures; i++ {
+		h.loginFailures.record(ip)
+	}
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("sign-in did not reach the credential check; it was blocked at the gate")
 		}
 	}()
-	_, err := h.Login(context.Background(), loginReq("tok", "203.0.113.22"))
+	_, err := h.Login(context.Background(), loginReq("tok", ip))
 	if err != nil && strings.Contains(err.Error(), "bot check failed") {
-		t.Fatalf("an unreachable Cloudflare blocked sign-in: %v", err)
-	}
-}
-
-// The limiter runs first, so a flood costs no outbound siteverify quota.
-func TestLoginRateLimitRunsBeforeTheTurnstileCall(t *testing.T) {
-	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: true}}
-	h := newGateAuth(fake)
-	defer func() { _ = recover() }()
-	for i := 0; i < 30; i++ {
-		_, _ = h.Login(context.Background(), loginReq("tok", "203.0.113.23"))
-	}
-	if fake.calls >= 30 {
-		t.Fatalf("every one of 30 attempts reached siteverify (%d calls); "+
-			"the rate limit is not ahead of the outbound call", fake.calls)
+		t.Fatalf("an unreachable Cloudflare blocked a challenged sign-in: %v", err)
 	}
 }
 
@@ -342,6 +376,10 @@ func newGateDecisionTest(v turnstile.Verifier) *DecisionTest {
 // dt_sessions row, a draw from the item bank, and a slot in a sample
 // whose size is the whole point. Volunteers are the scarce resource, so
 // machine runs cost more than the rows do.
+//
+// Challenged on the first call, unlike sign-in: there is no password to
+// get wrong here, so there are no failures to count, and nothing
+// legitimate starts a test without a browser.
 func TestDecisionTestStartRefusesARejectedToken(t *testing.T) {
 	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false, ErrorCodes: []string{"invalid-input-response"}}}
 	h := newGateDecisionTest(fake)
@@ -376,8 +414,6 @@ func TestDecisionTestSyntheticRunIsNotChallenged(t *testing.T) {
 	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false}}
 	h := newGateDecisionTest(fake)
 
-	// It will fail later for want of a repository; what matters is that
-	// it was not refused by the bot gate and never called out.
 	_, err := h.StartSession(context.Background(), startReq("", true))
 	if err != nil && connect.CodeOf(err) == connect.CodeFailedPrecondition {
 		t.Fatal("a synthetic run was refused by the bot check")

@@ -47,27 +47,35 @@ func (h *Auth) Login(
 		}
 	}
 
-	// Turnstile (FR-AUTH-09). Login is the credential-stuffing target,
-	// and the limiter above is keyed on (IP, email) and held in this
-	// process, so a botnet spreading attempts across addresses was
-	// bounded only by how many addresses it had.
+	// Turnstile (FR-AUTH-09), after repeated failures from this address
+	// rather than on every sign-in. See failureCounter for why: always-on
+	// broke every non-browser sign-in, including the three scripts that
+	// verify production, and the browser sees no difference either way
+	// because the widget is on the page and solved before the button is
+	// pressed.
 	//
-	// Same policy as Register: a token Cloudflare rejects is refused, a
-	// Cloudflare we cannot reach admits the request and logs, so an
-	// outage at Cloudflare cannot lock every member out of their own
-	// account. That failure mode matters more here than on registration,
-	// which is why the policy is the same rather than stricter.
-	if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
-		Verify(ctx, msg.TurnstileToken, ClientIP(req)); err != nil {
-		h.log.Error("turnstile unreachable; admitting sign-in unverified",
-			slog.String("error", err.Error()))
-	} else if !verdict.OK {
-		if verdict.InvalidSecret() {
-			h.log.Error("turnstile rejected our secret; sign-in is blocked for everyone",
+	// Same policy as Register once it does fire: a token Cloudflare
+	// rejects is refused, a Cloudflare we cannot reach admits and logs.
+	// Failing closed here would lock every member out of their own
+	// account during an outage at a third party, which is worse than the
+	// thing the check prevents.
+	challengeKey := ClientIP(req)
+	if h.loginFailures.count(challengeKey) >= challengeAfterFailures {
+		if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
+			Verify(ctx, msg.TurnstileToken, ClientIP(req)); err != nil {
+			h.log.Error("turnstile unreachable; admitting sign-in unverified",
+				slog.String("error", err.Error()))
+		} else if !verdict.OK {
+			if verdict.InvalidSecret() {
+				h.log.Error("turnstile rejected our secret; challenged sign-ins are blocked",
+					slog.Any("error_codes", verdict.ErrorCodes))
+			}
+			h.log.Info("sign-in challenged and refused",
+				slog.String("ip", challengeKey),
 				slog.Any("error_codes", verdict.ErrorCodes))
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				errors.New("bot check failed; reload the page and try again"))
 		}
-		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("bot check failed; reload the page and try again"))
 	}
 
 	u, err := h.users.GetByEmail(ctx, addr)
@@ -76,14 +84,22 @@ func (h *Auth) Login(
 		// endpoint does not distinguish. Constant-time argon2 still runs so
 		// there is no timing side-channel either.
 		_ = auth.VerifyPassword(msg.Password, dummyArgonHash)
+		h.loginFailures.record(challengeKey)
 		h.events.Emit(ctx, requestEvent(req, "login.failed", 0, map[string]any{"reason": "bad_credentials"}))
 		return nil, badCredentials
 	}
 
 	if hashErr := auth.VerifyPassword(msg.Password, currentPasswordHash(ctx, h.users, u.ID)); hashErr != nil {
+		h.loginFailures.record(challengeKey)
 		h.events.Emit(ctx, requestEvent(req, "login.failed", 0, map[string]any{"reason": "bad_credentials"}))
 		return nil, badCredentials
 	}
+
+	// Past the password, so this address is not guessing. Cleared here
+	// rather than at the end so a status refusal below (expired,
+	// declined) does not leave a counter behind for someone who proved
+	// they know the password.
+	h.loginFailures.clear(challengeKey)
 
 	if err := statusToLoginError(u.Status); err != nil {
 		h.events.Emit(ctx, requestEvent(req, "login.failed", u.ID, map[string]any{"reason": string(u.Status)}))
