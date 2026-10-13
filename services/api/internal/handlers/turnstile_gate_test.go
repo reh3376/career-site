@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 
@@ -243,5 +244,162 @@ func TestAnonymousContactFailsOpenWhenCloudflareIsUnreachable(t *testing.T) {
 	_, err := h.SubmitContact(context.Background(), contactReq("tok"))
 	if err != nil {
 		t.Fatalf("an unreachable Cloudflare blocked anonymous contact; the decision was to fail open: %v", err)
+	}
+}
+
+// --- login ---
+
+func loginReq(token, ip string) *connect.Request[v1.LoginRequest] {
+	r := connect.NewRequest(&v1.LoginRequest{
+		Email:          "someone@example.com",
+		Password:       "whatever-it-does-not-get-that-far",
+		TurnstileToken: token,
+	})
+	r.Header().Set("X-Forwarded-For", ip)
+	return r
+}
+
+// Login is the credential-stuffing target, and before this the only
+// thing in front of it was a per-(IP, email) limiter held in one
+// process. A botnet spreading attempts across addresses was bounded
+// only by how many addresses it had.
+func TestLoginRefusesATokenCloudflareRejected(t *testing.T) {
+	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false, ErrorCodes: []string{"invalid-input-response"}}}
+	h := newGateAuth(fake)
+
+	_, err := h.Login(context.Background(), loginReq("bad-token", "203.0.113.20"))
+	if err == nil {
+		t.Fatal("a rejected Turnstile token was allowed to attempt a sign-in")
+	}
+	if !strings.Contains(err.Error(), "bot check failed") {
+		t.Fatalf("error does not name the bot check: %v", err)
+	}
+	if fake.calls != 1 {
+		t.Fatalf("verifier called %d times, want 1", fake.calls)
+	}
+}
+
+func TestLoginRefusesAMissingToken(t *testing.T) {
+	h := newGateAuth(turnstile.New("0xTESTSECRET"))
+	_, err := h.Login(context.Background(), loginReq("", "203.0.113.21"))
+	if err == nil {
+		t.Fatal("a sign-in with no Turnstile token was accepted")
+	}
+	if !strings.Contains(err.Error(), "bot check failed") {
+		t.Fatalf("a missing token did not fail the bot check: %v", err)
+	}
+}
+
+// Failing closed here would lock every member out of their own account
+// during a Cloudflare outage, which is worse than the thing the check
+// prevents. The proof it got past the gate is that it reached the
+// credential lookup and panicked on the nil repo.
+func TestLoginFailsOpenWhenCloudflareIsUnreachable(t *testing.T) {
+	h := newGateAuth(&fakeVerifier{err: errors.New("dial tcp: i/o timeout")})
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("sign-in did not reach the credential check; it was blocked at the gate")
+		}
+	}()
+	_, err := h.Login(context.Background(), loginReq("tok", "203.0.113.22"))
+	if err != nil && strings.Contains(err.Error(), "bot check failed") {
+		t.Fatalf("an unreachable Cloudflare blocked sign-in: %v", err)
+	}
+}
+
+// The limiter runs first, so a flood costs no outbound siteverify quota.
+func TestLoginRateLimitRunsBeforeTheTurnstileCall(t *testing.T) {
+	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: true}}
+	h := newGateAuth(fake)
+	defer func() { _ = recover() }()
+	for i := 0; i < 30; i++ {
+		_, _ = h.Login(context.Background(), loginReq("tok", "203.0.113.23"))
+	}
+	if fake.calls >= 30 {
+		t.Fatalf("every one of 30 attempts reached siteverify (%d calls); "+
+			"the rate limit is not ahead of the outbound call", fake.calls)
+	}
+}
+
+// --- the decision test ---
+
+func startReq(token string, synthetic bool) *connect.Request[v1.StartSessionRequest] {
+	r := connect.NewRequest(&v1.StartSessionRequest{
+		TurnstileToken: token,
+		Synthetic:      synthetic,
+	})
+	r.Header().Set("X-Forwarded-For", "203.0.113.30")
+	return r
+}
+
+func newGateDecisionTest(v turnstile.Verifier) *DecisionTest {
+	h := NewDecisionTest(quietLog(), nil, newGateAuth(turnstile.Noop{}))
+	h.SetTurnstile(v)
+	return h
+}
+
+// StartSession is the public decision-test RPC that creates state: a
+// dt_sessions row, a draw from the item bank, and a slot in a sample
+// whose size is the whole point. Volunteers are the scarce resource, so
+// machine runs cost more than the rows do.
+func TestDecisionTestStartRefusesARejectedToken(t *testing.T) {
+	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false, ErrorCodes: []string{"invalid-input-response"}}}
+	h := newGateDecisionTest(fake)
+
+	_, err := h.StartSession(context.Background(), startReq("bad-token", false))
+	if err == nil {
+		t.Fatal("a rejected token was allowed to start a decision test")
+	}
+	if got := connect.CodeOf(err); got != connect.CodeFailedPrecondition {
+		t.Fatalf("code = %v, want failed_precondition", got)
+	}
+	if fake.calls != 1 {
+		t.Fatalf("verifier called %d times, want 1", fake.calls)
+	}
+}
+
+func TestDecisionTestStartRefusesAMissingToken(t *testing.T) {
+	h := newGateDecisionTest(turnstile.New("0xTESTSECRET"))
+	_, err := h.StartSession(context.Background(), startReq("", false))
+	if err == nil {
+		t.Fatal("a start with no token was accepted")
+	}
+	if got := connect.CodeOf(err); got != connect.CodeFailedPrecondition {
+		t.Fatalf("code = %v, want failed_precondition", got)
+	}
+}
+
+// A synthetic run is the owner's own agent driving the UI, never a
+// browser. Challenging it would mean the agent has a widget to get
+// stuck on, and the rows are excluded from analysis anyway.
+func TestDecisionTestSyntheticRunIsNotChallenged(t *testing.T) {
+	fake := &fakeVerifier{verdict: turnstile.Verdict{OK: false}}
+	h := newGateDecisionTest(fake)
+
+	// It will fail later for want of a repository; what matters is that
+	// it was not refused by the bot gate and never called out.
+	_, err := h.StartSession(context.Background(), startReq("", true))
+	if err != nil && connect.CodeOf(err) == connect.CodeFailedPrecondition {
+		t.Fatal("a synthetic run was refused by the bot check")
+	}
+	if fake.calls != 0 {
+		t.Fatalf("a synthetic run cost %d siteverify calls, want 0", fake.calls)
+	}
+}
+
+// Only the start is challenged. The other four decision-test RPCs run
+// inside a timed fifteen-minute sitting with no resume, so a challenge
+// in front of SubmitAnswer would end a volunteer's run to stop a bot
+// that already got past the start.
+func TestOnlyTheStartOfTheDecisionTestIsChallenged(t *testing.T) {
+	src, err := os.ReadFile("decisiontest.go")
+	if err != nil {
+		t.Fatalf("read decisiontest.go: %v", err)
+	}
+	body := string(src)
+	if strings.Count(body, "turnstile.FailOpen{") != 1 {
+		t.Errorf("decisiontest.go has %d Turnstile checks, want exactly 1 (StartSession). "+
+			"A check on SubmitAnswer or SubmitRecall would interrupt a timed run.",
+			strings.Count(body, "turnstile.FailOpen{"))
 	}
 }

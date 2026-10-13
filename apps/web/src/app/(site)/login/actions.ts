@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
 import { relaySetCookies } from "@/lib/session";
+import { TURNSTILE_FIELD } from "@/lib/turnstile";
 
 export type LoginState = {
   error?: string;
@@ -16,6 +17,8 @@ export async function loginAction(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  // Written into the form by the Turnstile widget (FR-AUTH-09).
+  const turnstileToken = String(formData.get(TURNSTILE_FIELD) ?? "");
   const values = { email };
 
   if (!email || !password) {
@@ -24,7 +27,7 @@ export async function loginAction(
 
   const resp = await callApi({
     path: "/api/career.v1.AuthService/Login",
-    body: { email, password },
+    body: { email, password, turnstileToken },
   });
 
   if (!resp.ok) {

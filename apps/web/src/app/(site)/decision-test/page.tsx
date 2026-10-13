@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
+import { getTurnstileSiteKey } from "@/lib/turnstile";
+
 import { Briefing } from "./briefing";
 
 export const metadata: Metadata = {
@@ -20,7 +22,7 @@ export const metadata: Metadata = {
 export default function DecisionTestPage() {
   return (
     <Suspense>
-      <Briefing />
+      <Briefing turnstileSiteKey={getTurnstileSiteKey()} />
     </Suspense>
   );
 }

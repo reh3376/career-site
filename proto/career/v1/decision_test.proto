@@ -103,6 +103,21 @@ message StartSessionRequest {
   // instrument version because the most useful agent run is against the
   // exact version production serves.
   bool synthetic = 3;
+  // Cloudflare Turnstile response token from the briefing page.
+  //
+  // Checked on StartSession only, deliberately. The other four
+  // decision-test RPCs are public too, but they run inside a timed
+  // fifteen-minute sitting that has no resume; putting a challenge in
+  // front of SubmitAnswer would end a volunteer's run to stop a bot
+  // that already got past the start.
+  //
+  // This is the public endpoint that creates state: a dt_sessions row,
+  // a draw from the item bank, and a slot in a sample whose size is the
+  // whole point of the exercise. Volunteers are the scarce resource
+  // here, so padding the sample with machine runs costs more than the
+  // rows do. A synthetic run is the owner's own fixture draw, never
+  // comes from a browser, and is not challenged.
+  string turnstile_token = 4 [(buf.validate.field).string.max_len = 2048];
 }
 
 // The timings this run is bound by, served to the client rather than

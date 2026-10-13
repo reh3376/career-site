@@ -48,6 +48,7 @@ export function Turnstile({
   siteKey,
   action,
   resetOn,
+  onToken,
 }: {
   siteKey: string;
   // Labels the surface in Cloudflare's analytics, so a spike on
@@ -57,9 +58,25 @@ export function Turnstile({
   // token. The forms pass their action state, which useActionState
   // replaces on every submission. The first render never resets.
   resetOn?: unknown;
+  // Called with the token each time the widget solves, and with "" when
+  // it expires.
+  //
+  // The hidden input the widget writes into the enclosing <form> covers
+  // every caller that submits a form. The decision test does not: its
+  // briefing calls decisionTestClient.startSession straight from the
+  // browser, so it needs the value in hand rather than in the DOM.
+  onToken?: (token: string) => void;
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const widgetId = useRef<string | undefined>(undefined);
+  // Held in a ref so a caller passing an inline arrow does not
+  // re-render the widget on every parent render. Assigned in an effect
+  // rather than during render, because a render may be discarded and
+  // writing a ref from one is not safe.
+  const onTokenRef = useRef(onToken);
+  useEffect(() => {
+    onTokenRef.current = onToken;
+  }, [onToken]);
 
   useEffect(() => {
     if (!siteKey) return;
@@ -84,6 +101,9 @@ export function Turnstile({
         // fills a long form in another tab comes back to a dead widget
         // and a rejection they cannot explain.
         "refresh-expired": "auto",
+        callback: (token: string) => onTokenRef.current?.(token),
+        "expired-callback": () => onTokenRef.current?.(""),
+        "error-callback": () => onTokenRef.current?.(""),
       });
     };
     attempt();

@@ -14,6 +14,7 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/auth"
+	"github.com/reh3376/career-site/services/api/internal/turnstile"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -44,6 +45,29 @@ func (h *Auth) Login(
 			return nil, connect.NewError(connect.CodeResourceExhausted,
 				errors.New("too many attempts; try again shortly"))
 		}
+	}
+
+	// Turnstile (FR-AUTH-09). Login is the credential-stuffing target,
+	// and the limiter above is keyed on (IP, email) and held in this
+	// process, so a botnet spreading attempts across addresses was
+	// bounded only by how many addresses it had.
+	//
+	// Same policy as Register: a token Cloudflare rejects is refused, a
+	// Cloudflare we cannot reach admits the request and logs, so an
+	// outage at Cloudflare cannot lock every member out of their own
+	// account. That failure mode matters more here than on registration,
+	// which is why the policy is the same rather than stricter.
+	if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
+		Verify(ctx, msg.TurnstileToken, ClientIP(req)); err != nil {
+		h.log.Error("turnstile unreachable; admitting sign-in unverified",
+			slog.String("error", err.Error()))
+	} else if !verdict.OK {
+		if verdict.InvalidSecret() {
+			h.log.Error("turnstile rejected our secret; sign-in is blocked for everyone",
+				slog.Any("error_codes", verdict.ErrorCodes))
+		}
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			errors.New("bot check failed; reload the page and try again"))
 	}
 
 	u, err := h.users.GetByEmail(ctx, addr)

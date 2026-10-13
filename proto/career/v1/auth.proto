@@ -277,20 +277,23 @@ message LoginRequest {
     min_len: 1
     max_len: 256
   }];
-  // Reserved. Login does not read this field.
+  // Cloudflare Turnstile response token from the sign-in page.
   //
-  // The comment here used to describe a step-up challenge: "required
-  // after repeated failures for the account or IP, the server responds
-  // failed_precondition with reason turnstile_required". None of that
-  // was ever built, and a comment describing a control that does not
-  // exist is the exact failure ADR 0031 was written about, so it is
-  // stated plainly instead. What actually slows credential stuffing on
-  // this endpoint is the per-(IP, email) rate limit in Login, 5
-  // attempts refilling over 15 minutes.
+  // Verified server-side on every sign-in (FR-AUTH-09). Login is the
+  // credential-stuffing target, and the rate limiter that guarded it
+  // alone is per-(IP, email) and in-process, so a botnet spreading
+  // attempts across addresses was bounded only by how many addresses it
+  // had.
   //
-  // Turnstile IS enforced on Register and on anonymous SubmitContact.
-  // If a step-up challenge on Login is built later, this field is the
-  // place for it, and the comment changes when the code does.
+  // This comment has been wrong twice and the history is worth keeping.
+  // It first described a step-up challenge ("required after repeated
+  // failures... the server responds failed_precondition with reason
+  // turnstile_required") that was never built. On 2026-10-12 it was
+  // corrected to say the field was unread, which was true that morning.
+  // It is read now. A step-up would still be the gentler design, asking
+  // only after a few failures rather than on every sign-in; it is not
+  // what shipped, and that is a trade of member friction against a
+  // simpler control, not an oversight.
   string turnstile_token = 3 [(buf.validate.field).string.max_len = 2048];
 }
 

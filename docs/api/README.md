@@ -281,7 +281,7 @@ are available immediately on a successful admin sign-in.
 |---|---|---|---|---|
 | `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
-| `turnstileToken` | `string` | string | `string: max_len: 2048` | Reserved. Login does not read this field. The comment here used to describe a step-up challenge: "required after repeated failures for the account or IP, the server responds failed_precondition with reason turnstile_required". None of that was ever built, and a comment describing a control that does not exist is the exact failure ADR 0031 was written about, so it is stated plainly instead. What actually slows credential stuffing on this endpoint is the per-(IP, email) rate limit in Login, 5 attempts refilling over 15 minutes. Turnstile IS enforced on Register and on anonymous SubmitContact. If a step-up challenge on Login is built later, this field is the place for it, and the comment changes when the code does. |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the sign-in page. Verified server-side on every sign-in (FR-AUTH-09). Login is the credential-stuffing target, and the rate limiter that guarded it alone is per-(IP, email) and in-process, so a botnet spreading attempts across addresses was bounded only by how many addresses it had. This comment has been wrong twice and the history is worth keeping. It first described a step-up challenge ("required after repeated failures... the server responds failed_precondition with reason turnstile_required") that was never built. On 2026-10-12 it was corrected to say the field was unread, which was true that morning. It is read now. A step-up would still be the gentler design, asking only after a few failures rather than on every sign-in; it is not what shipped, and that is a trade of member friction against a simpler control, not an oversight. |
 
 **Response** — [`LoginResponse`](#loginresponse)
 
@@ -5006,6 +5006,7 @@ audio in the browser.
 | `intake` | [`Intake`](#intake) | object |  | Demographics, every field optional. |
 | `conditions` | [`Conditions`](#conditions) | object |  | Device and setup, measured before the first question. |
 | `synthetic` | `bool` | boolean |  | True when an agent is driving the UI rather than a person, so the rows are excluded from analysis by filter. Separate from the instrument version because the most useful agent run is against the exact version production serves. |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the briefing page. Checked on StartSession only, deliberately. The other four decision-test RPCs are public too, but they run inside a timed fifteen-minute sitting that has no resume; putting a challenge in front of SubmitAnswer would end a volunteer's run to stop a bot that already got past the start. This is the public endpoint that creates state: a dt_sessions row, a draw from the item bank, and a slot in a sample whose size is the whole point of the exercise. Volunteers are the scarce resource here, so padding the sample with machine runs costs more than the rows do. A synthetic run is the owner's own fixture draw, never comes from a browser, and is not challenged. |
 
 **Response** — [`StartSessionResponse`](#startsessionresponse)
 
@@ -5036,7 +5037,8 @@ audio in the browser.
     "baselineRtMs": 0,
     "baselineRtSdMs": 0
   },
-  "synthetic": true
+  "synthetic": true,
+  "turnstileToken": "string"
 }
 ```
 
@@ -8805,7 +8807,7 @@ Sign-in form.
 |---|---|---|---|---|
 | `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
-| `turnstileToken` | `string` | string | `string: max_len: 2048` | Reserved. Login does not read this field. The comment here used to describe a step-up challenge: "required after repeated failures for the account or IP, the server responds failed_precondition with reason turnstile_required". None of that was ever built, and a comment describing a control that does not exist is the exact failure ADR 0031 was written about, so it is stated plainly instead. What actually slows credential stuffing on this endpoint is the per-(IP, email) rate limit in Login, 5 attempts refilling over 15 minutes. Turnstile IS enforced on Register and on anonymous SubmitContact. If a step-up challenge on Login is built later, this field is the place for it, and the comment changes when the code does. |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the sign-in page. Verified server-side on every sign-in (FR-AUTH-09). Login is the credential-stuffing target, and the rate limiter that guarded it alone is per-(IP, email) and in-process, so a botnet spreading attempts across addresses was bounded only by how many addresses it had. This comment has been wrong twice and the history is worth keeping. It first described a step-up challenge ("required after repeated failures... the server responds failed_precondition with reason turnstile_required") that was never built. On 2026-10-12 it was corrected to say the field was unread, which was true that morning. It is read now. A step-up would still be the gentler design, asking only after a few failures rather than on every sign-in; it is not what shipped, and that is a trade of member friction against a simpler control, not an oversight. |
 
 ### LoginResponse
 
@@ -9273,6 +9275,7 @@ Opens a session.
 | `intake` | [`Intake`](#intake) | object |  | Demographics, every field optional. |
 | `conditions` | [`Conditions`](#conditions) | object |  | Device and setup, measured before the first question. |
 | `synthetic` | `bool` | boolean |  | True when an agent is driving the UI rather than a person, so the rows are excluded from analysis by filter. Separate from the instrument version because the most useful agent run is against the exact version production serves. |
+| `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the briefing page. Checked on StartSession only, deliberately. The other four decision-test RPCs are public too, but they run inside a timed fifteen-minute sitting that has no resume; putting a challenge in front of SubmitAnswer would end a volunteer's run to stop a bot that already got past the start. This is the public endpoint that creates state: a dt_sessions row, a draw from the item bank, and a slot in a sample whose size is the whole point of the exercise. Volunteers are the scarce resource here, so padding the sample with machine runs costs more than the rows do. A synthetic run is the owner's own fixture draw, never comes from a browser, and is not challenged. |
 
 ### Timings
 

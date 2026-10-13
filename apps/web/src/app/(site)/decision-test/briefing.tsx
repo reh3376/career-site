@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { decisionTestClient } from "@/lib/decision-test-client";
+import { Turnstile } from "@/components/turnstile";
 import { createMetronome, scoreTapCheck, type Signal } from "@/lib/metronome";
 
 // The briefing.
@@ -40,7 +41,11 @@ const EDUCATION = [
 
 type Step = "warning" | "sound" | "tap" | "form";
 
-export function Briefing() {
+export function Briefing({ turnstileSiteKey }: { turnstileSiteKey: string }) {
+  // The Turnstile token for StartSession. The briefing calls the RPC
+  // directly rather than submitting a form, so the widget hands the
+  // value over through onToken instead of a hidden input.
+  const [turnstileToken, setTurnstileToken] = useState("");
   const router = useRouter();
   const [step, setStep] = useState<Step>("warning");
   const [audioMode, setAudioMode] = useState<"sound" | "visual">("sound");
@@ -219,6 +224,7 @@ export function Briefing() {
           baselineRtSdMs: tap?.sd ?? 0,
         },
         synthetic,
+        turnstileToken,
       });
       const p = res.practice;
       sessionStorage.setItem(
@@ -261,7 +267,7 @@ export function Briefing() {
       setError("The test could not be started. Try again in a moment.");
       setStarting(false);
     }
-  }, [audioMode, form, router, synthetic, tap]);
+  }, [audioMode, form, router, synthetic, tap, turnstileToken]);
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
@@ -633,6 +639,18 @@ export function Briefing() {
           </p>
 
           {error ? <p className="text-sm text-signal">{error}</p> : null}
+
+          {/* Not shown for a synthetic run: that is the owner's own
+              agent driving the UI, the server does not challenge it,
+              and a widget there would be something for the agent to
+              get stuck on. */}
+          {!synthetic ? (
+            <Turnstile
+              siteKey={turnstileSiteKey}
+              action="decision-test"
+              onToken={setTurnstileToken}
+            />
+          ) : null}
 
           <button
             type="button"

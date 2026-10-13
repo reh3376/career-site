@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/turnstile"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -33,6 +35,10 @@ type DecisionTest struct {
 	log   *slog.Logger
 	users *users.Repo
 	auth  *Auth
+	// turnstile guards StartSession, the one public decision-test RPC
+	// that creates state. Never nil: the constructor defaults it to
+	// turnstile.Noop.
+	turnstile turnstile.Verifier
 
 	events *events.Writer // product event stream; nil is silent
 
@@ -51,7 +57,15 @@ type DecisionTest struct {
 // NewDecisionTest wires the handler. auth may be nil: the test is
 // public and a signed-in member is simply recognised when present.
 func NewDecisionTest(log *slog.Logger, repo *users.Repo, auth *Auth) *DecisionTest {
-	return &DecisionTest{log: log, users: repo, auth: auth}
+	return &DecisionTest{log: log, users: repo, auth: auth, turnstile: turnstile.Noop{}}
+}
+
+// SetTurnstile replaces the bot-challenge verifier. main wires the real
+// Cloudflare client here when a secret is configured.
+func (h *DecisionTest) SetTurnstile(v turnstile.Verifier) {
+	if v != nil {
+		h.turnstile = v
+	}
 }
 
 // SetMailer wires result emails. Optional: without it the test runs and
@@ -94,10 +108,39 @@ const (
 func (h *DecisionTest) StartSession(
 	ctx context.Context, req *connect.Request[v1.StartSessionRequest],
 ) (*connect.Response[v1.StartSessionResponse], error) {
+	m := req.Msg
+
+	// Turnstile (FR-AUTH-09's "or equivalent" applied to the one other
+	// public endpoint that creates state). A synthetic run is the
+	// owner's own fixture draw and never comes from a browser, so it is
+	// not challenged; everything else is.
+	//
+	// Checked here and on none of the other four decision-test RPCs:
+	// they run inside a timed fifteen-minute sitting with no resume, and
+	// a challenge in front of SubmitAnswer would end a volunteer's run
+	// to stop a bot that already got past the start.
+	if !m.GetSynthetic() {
+		if verdict, err := (turnstile.FailOpen{Inner: h.turnstile}).
+			Verify(ctx, m.GetTurnstileToken(), ClientIP(req)); err != nil {
+			h.log.Error("turnstile unreachable; admitting decision test start unverified",
+				slog.String("error", err.Error()))
+		} else if !verdict.OK {
+			if verdict.InvalidSecret() {
+				h.log.Error("turnstile rejected our secret; the decision test is closed to everyone",
+					slog.Any("error_codes", verdict.ErrorCodes))
+			}
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.New("bot check failed; reload the page and try again"))
+		}
+	}
+
+	// After the bot check, deliberately. This is a public endpoint, and
+	// telling an unverified caller whether the service is configured is
+	// a small thing to give away for free. The check above needs nothing
+	// but the request, so there is no cost to doing it first.
 	if h.users == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("decision test is not configured"))
 	}
-	m := req.Msg
 
 	intake := users.DTIntake{}
 	if in := m.GetIntake(); in != nil {

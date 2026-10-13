@@ -44,6 +44,23 @@ shown=$(curl -s --max-time 20 "$BASE/gallery" | grep -o 'images/gallery/[a-z0-9-
 check "gallery shows the public subset to anonymous -> $shown photos" "[ '$shown' -gt 0 ] && [ '$shown' -le 8 ]"
 # Crawlers are invited to the public surface and kept off the rest.
 robots=$(curl -s --max-time 10 "$BASE/robots.txt")
+# The Turnstile widget has to actually reach the page. The api refuses
+# every sign-in, registration, contact and decision-test start whose
+# token is missing, so a site key that does not make it into the HTML
+# does not degrade the site, it closes it. Login is the one that locks
+# the owner out of his own admin surface, which is why this is checked
+# from outside rather than trusted.
+#
+# Two things are asserted per page, because either alone can be true
+# while the widget is dead: the loader script (blocked by CSP if
+# script-src is wrong) and the site key (absent if TURNSTILE_SITE_KEY
+# never reached the web container).
+for page in login register contact decision-test; do
+  html=$(curl -s --max-time 20 "$BASE/$page")
+  check "/$page loads the Turnstile script" "echo '$html' | grep -q 'challenges.cloudflare.com/turnstile'"
+  check "/$page carries a Turnstile site key" "echo '$html' | grep -qE '0x[A-Za-z0-9_-]{10,}'"
+done
+
 check "robots allows /articles" "echo '$robots' | grep -q 'Allow: /articles'"
 check "robots disallows /jd-upload" "echo '$robots' | grep -q 'Disallow: /jd-upload'"
 smap=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/sitemap.xml")
@@ -76,6 +93,29 @@ echo "  corpus: $(cs exec -T postgres psql -U career -d career -At -c "select co
 echo "  users: $(cs exec -T postgres psql -U career -d career -At -c "select count(*)||' total, '||count(*) filter (where status='active')||' active' from users" 2>/dev/null)"
 echo "  jd: $(cs exec -T postgres psql -U career -d career -At -c "select count(*)||' submissions, last status '||coalesce((select status from jd_submissions order by id desc limit 1),'-') from jd_submissions" 2>/dev/null)"
 echo "  deliveries: $(cs exec -T postgres psql -U career -d career -At -c "select count(*)||' total, '||count(*) filter (where error is not null)||' failed' from notification_deliveries" 2>/dev/null)"
+
+# Every assistant answer should have a decision_log row. That row is the
+# adapter's training label, and losing one is silent by design: the
+# insert is best-effort so a failure cannot cost the member their
+# answer.
+#
+# It has happened. On 2026-10-01 a run_id I added to chat answers was a
+# foreign key to jd_runs, matched no row, and failed both the decision
+# and usage inserts; the failure surfaced as a log line nobody was
+# reading, and four answers were served unlogged over eleven hours
+# before anyone noticed by eye (0e03dff). The fix raised those logs from
+# WARN to ERROR, which helps only if somebody is watching the log.
+#
+# This is the same question asked where it gets answered every rollout.
+#
+# Scoped to answers served after that fix landed (0e03dff, 2026-10-01
+# 12:51:34 UTC). The four answers lost before it cannot be recovered,
+# and a check that fails every run for a reason nobody can fix is a
+# check people learn to skip. The cutoff is a date rather than a rolling
+# window for the same reason: a window would start passing on its own in
+# a few weeks, which looks like the problem went away.
+unlogged=$(cs exec -T postgres psql -U career -d career -At -c "select count(*) from chat_messages m left join decision_log d on d.ref_kind='chat_message' and d.ref_id=m.id where m.role='assistant' and d.id is null and m.created_at > timestamptz '2026-10-01 12:52:00+00'" 2>/dev/null)
+check "every recent assistant answer has a decision row -> ${unlogged:-?} unlogged" "[ \"${unlogged:-1}\" = '0' ]"
 U=$(grep ^ADMIN_USERNAME .env.prod | cut -d= -f2); P=$(grep ^CAREER_SITE_ADMIN_PW .env.prod | cut -d= -f2)
 CJ=$(mktemp)
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1' -X POST "$BASE/api/career.v1.AuthService/Login" -d "$(python3 -c "import json;print(json.dumps({'email':'$U','password':'$P'}))")")

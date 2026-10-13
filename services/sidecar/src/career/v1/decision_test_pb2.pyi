@@ -39,14 +39,16 @@ class Conditions(_message.Message):
     def __init__(self, audio_mode: _Optional[str] = ..., device_class: _Optional[str] = ..., tap_check_passed: _Optional[bool] = ..., baseline_rt_ms: _Optional[int] = ..., baseline_rt_sd_ms: _Optional[int] = ...) -> None: ...
 
 class StartSessionRequest(_message.Message):
-    __slots__ = ("intake", "conditions", "synthetic")
+    __slots__ = ("intake", "conditions", "synthetic", "turnstile_token")
     INTAKE_FIELD_NUMBER: _ClassVar[int]
     CONDITIONS_FIELD_NUMBER: _ClassVar[int]
     SYNTHETIC_FIELD_NUMBER: _ClassVar[int]
+    TURNSTILE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     intake: Intake
     conditions: Conditions
     synthetic: bool
-    def __init__(self, intake: _Optional[_Union[Intake, _Mapping]] = ..., conditions: _Optional[_Union[Conditions, _Mapping]] = ..., synthetic: _Optional[bool] = ...) -> None: ...
+    turnstile_token: str
+    def __init__(self, intake: _Optional[_Union[Intake, _Mapping]] = ..., conditions: _Optional[_Union[Conditions, _Mapping]] = ..., synthetic: _Optional[bool] = ..., turnstile_token: _Optional[str] = ...) -> None: ...
 
 class Timings(_message.Message):
     __slots__ = ("memorise_ms", "question_ms", "recall_ms")
