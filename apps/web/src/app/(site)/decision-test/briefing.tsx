@@ -324,7 +324,7 @@ export function Briefing({ turnstileSiteKey }: { turnstileSiteKey: string }) {
             <strong>This is deliberately demanding.</strong> It asks for
             fifteen unbroken minutes of full attention. If you cannot give
             that right now, please come back when you can. A distracted run
-            is worse than no run, for you and for the data.
+            is worse for the data than no run at all.
           </p>
           <p className="rounded-md border border-accent bg-accent-soft/60 px-5 py-4 text-base text-accent">
             <strong>
