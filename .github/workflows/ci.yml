@@ -401,6 +401,16 @@ jobs:
       - name: content front matter validates
         run: python3 scripts/check_content.py
 
+      # Also before the build, same reason as the two above: Next.js
+      # does not check that a href has a page behind it, so a renamed
+      # route leaves every link to it returning 404 and nothing fails.
+      # FR-CNT-19. Reachability of outbound URLs is deliberately not
+      # here: it needs the network, and a job that fails because GitHub
+      # rate-limited a runner is one people re-run until it passes.
+      # deploy/live-check.sh does that half against the real site.
+      - name: links resolve
+        run: python3 scripts/check_links.py
+
       - name: build
         working-directory: apps/web
         run: pnpm build

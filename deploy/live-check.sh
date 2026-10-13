@@ -15,6 +15,9 @@ set -uo pipefail
 
 SUBMIT=0
 if [[ "${1:-}" == "--submit" ]]; then SUBMIT=1; shift; fi
+# This script is run from the repo root by rollout.sh and by hand from
+# anywhere, so the root is derived from the script rather than assumed.
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:-https://rogerhenley.dev}"
 HOST="${2:-career@5.161.62.205}"
 pass=0; fail=0
@@ -69,6 +72,21 @@ done
 for page in login register contact; do
   js=$(curl -s --max-time 20 "$BASE/$page" | grep -c 'challenges.cloudflare.com/turnstile' || true)
   check "/$page loads the Turnstile script -> ${js:-0}" "[ \"${js:-0}\" -gt 0 ]"
+done
+
+# Outbound links, against the real internet, from the one script that
+# already depends on it. scripts/check_links.py holds the deterministic
+# half (does the route exist, is rel/noopener present) and deliberately
+# does not do this: a CI job that fails because GitHub rate-limited a
+# runner is a job people learn to re-run until it passes.
+#
+# Here a failure is actionable and nothing is blocked by it being slow.
+# Checked with a real user agent because GitHub answers 403 to an
+# unadorned curl, which would be a false alarm every time.
+for url in $(grep -rhoE 'href="https?://[^"]+"' "$REPO_DIR"/apps/web/src --include='*.tsx' 2>/dev/null | sed 's/href="//; s/"$//' | sort -u); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 20 \
+    -A 'Mozilla/5.0 (compatible; career-site-linkcheck/1.0)' "$url" || echo 000)
+  check "outbound $url -> ${code:-000}" "[ \"${code:-000}\" -lt 400 ]"
 done
 
 check "robots allows /articles" "echo '$robots' | grep -q 'Allow: /articles'"

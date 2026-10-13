@@ -126,16 +126,17 @@ checkpoint and resume is the stronger reading and is designed, not
 built, in the working document. 6 of the first 15 production runs died
 this way with nothing in the deploy path looking.
 
-### 8. FR-CNT-19 · Should
+### 8. FR-CNT-19 · Should — CLOSED 2026-10-13
 
-> External links shall open in a new tab with `rel="noopener"`, and CI shall check link health on content changes.
-
-**FSD status today:** Partially shipped. External links carry `rel="noopener noreferrer"` and `target="_blank"`. No CI link checker.
-
-**Why here:** Mechanical. rel="noopener" is done; the CI link checker is not.
-
-- **Keep / drop / defer:**
-- **Depends on:**
+**Closed in full.** `scripts/check_links.py` runs in CI before the
+build: internal links must resolve to a route, every `target="_blank"`
+must carry `rel` with `noopener`. Outbound reachability sits in
+`deploy/live-check.sh` instead of CI, because a job that fails on a
+rate-limited runner is a job people re-run until it passes. First run
+found nothing broken: 50 routes, 163 internal links, 0 problems. The
+`rel` half really was done, but by convention; it is now by mechanism.
+Content holds no links at all, which is recorded so the check's silence
+is not mistaken for coverage.
 
 ### 9. FR-DT-20 · Should
 

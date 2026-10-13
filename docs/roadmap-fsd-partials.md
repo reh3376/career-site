@@ -39,7 +39,7 @@ turned out to be controls that exist on paper and nowhere else.
 | 4 | FR-ADM-03 — surface the ratings that already exist | [FR-ADM-03-review-queue.md](fsd-items/FR-ADM-03-review-queue.md) | `[x]` |
 | 5 | FR-HIST-02 — the welcome-back panel | [FR-HIST-02-welcome-back.md](fsd-items/FR-HIST-02-welcome-back.md) | `[x]` |
 | 6 | FR-EVAL-06 — an evaluation must survive a deploy | [FR-EVAL-06-eval-durability.md](fsd-items/FR-EVAL-06-eval-durability.md) | `[x]` |
-| 7 | FR-CNT-19 — CI link health | [FR-CNT-19-link-health.md](fsd-items/FR-CNT-19-link-health.md) | `[ ]` |
+| 7 | FR-CNT-19 — CI link health | [FR-CNT-19-link-health.md](fsd-items/FR-CNT-19-link-health.md) | `[x]` |
 | 8 | FR-PUB-05 — rendering without JavaScript | [FR-PUB-05-no-javascript.md](fsd-items/FR-PUB-05-no-javascript.md) | `[ ]` |
 | 9 | FR-DT-20 — tap-check thresholds from pilot data | [FR-DT-20-tap-check.md](fsd-items/FR-DT-20-tap-check.md) | `[ ]` |
 
