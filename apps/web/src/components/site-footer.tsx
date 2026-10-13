@@ -61,6 +61,14 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/credentials"
+                  className="text-ink-2 no-underline hover:text-accent"
+                >
+                  Awards
+                </Link>
+              </li>
+              <li>
                 {/* Before "request access", because it is what tells a
                     visitor whether access is worth asking for. */}
                 <Link
