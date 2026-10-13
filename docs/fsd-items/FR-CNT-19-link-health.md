@@ -222,3 +222,83 @@ outbound links either, only `pnpm typecheck` / `lint` / `test` / `build`
   enabled, would produce any findings against the current codebase
   (it should not, since every occurrence already carries `rel`) was
   not tested by actually enabling it.
+
+---
+
+## Outcome, 2026-10-13
+
+**Shipped: `scripts/check_links.py`, run by CI's `web` job before the
+build, alongside `check_design_tokens.py` and `check_content.py`.** It
+holds both halves of the requirement that can be held deterministically
+and names the half that cannot.
+
+**The scope decision (Decisions 3 and 4, checklist 1 and 4): both kinds
+of link, every push, no path filter.** "Link health" here means
+internal links resolve and the `rel`/`target` pairing holds, checked
+across `apps/web/src/**/*.tsx` and `apps/web/content/**/*.md` on every
+push. A path filter was considered and rejected: the requirement says
+"on content changes", but a renamed *route* breaks links from content
+without the content file changing, so a filter keyed on
+`apps/web/content/` would miss the common case. The check takes well
+under a second, which removes the only argument for scoping it.
+
+**Reachability of outbound URLs is deliberately not in CI.** It needs
+the network, and a job that fails because GitHub rate-limited a runner
+is a job people learn to re-run until it passes, which is worse than
+not having the check. It lives in `deploy/live-check.sh`, which already
+talks to the network, runs against the real site, and reports to a
+person doing a deploy rather than blocking a merge. That is also the
+honest reading of the private FSD's "broken links warn, not fail":
+the thing that can break through nobody's fault warns, and the thing
+that is always our own bug fails.
+
+**Fails the build, for the deterministic half (Decision 5).** An
+internal link with no route behind it is a 404 the author did not
+intend, and `ci.yml`'s stated philosophy is loud failure over silent
+skip.
+
+**Both halves were mutation-tested before being trusted.** Renaming a
+route produces `links to /x, which no page.tsx serves`; stripping a
+`rel` from one anchor produces `target="_blank" without rel="noopener"`.
+A checker that has never failed on purpose is a checker nobody knows
+works. It also refuses to run if the route walk finds fewer than 20
+routes, because a broken walk and a clean pass are otherwise the same
+output.
+
+**The first finding was a false positive, and that is recorded here on
+purpose.** The first version looked only for `page.tsx` and reported
+`/admin/decisions/export` as broken; it is a `route.ts` returning a
+CSV. Fixed by walking both. A checker's first finding being wrong is
+how a checker gets switched off.
+
+**What the run found: nothing broken.** 50 routes, 163 internal links,
+12 external, 0 links in content, 0 problems; all four outbound URLs
+answered under 400 on the live pass. The `rel="noopener"` half of the
+requirement really was correct by convention. What changed is that it
+is now correct by mechanism.
+
+**Content contains no links at all.** Not one markdown link, internal
+or external, across all 16 files. Stated explicitly because a checker
+that silently matches nothing looks identical to one that passes, and
+"link health on content changes" sounds like it is doing more work than
+it is today.
+
+**Decision 1 (shared component or lint rule): resolved as the
+checker, not a lint rule.** `eslint-plugin-react` is not installed and
+`eslint-config-next` does not carry `jsx-no-target-blank`; adding a
+plugin for one rule, when the pairing check is fifteen lines inside a
+script that was being written anyway, is more dependency than the
+problem is worth. The tradeoff accepted is that the feedback arrives at
+`check_links.py` rather than in the editor.
+
+**Decision 2 (the chat surface): intended, now documented.**
+`components/ask/message.tsx:80-88` already carries the reasoning in
+code: a retrieved passage is untrusted data, so an external link in
+generated text would let corpus content put a destination in front of a
+reader under Roger's name. The FSD row now says so too, so a future
+reader does not read it as an oversight in this requirement.
+
+**Not done:** a shared `<ExternalLink>` component. The checker makes
+the pairing enforced rather than remembered, which was the actual
+exposure; consolidating 15 call sites is a refactor with no behaviour
+change behind it.
