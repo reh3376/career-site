@@ -59,9 +59,25 @@ model does not carry, since articles date to a bare year;
 `resume_conversation_id` is a separate feature. Each is left unset
 rather than filled with a guess, and the proto says why at the field.
 
-**A visit is a session, not a login.** `session_id` is already on every
-activity row, and counting logins would double-count a member who signs
-in twice on one device.
+**A visit is a run of activity with no gap over 30 minutes**, derived
+from `occurred_at`.
+
+This was wrong when it shipped, and the live pass on 2026-10-12 caught
+it within the hour. The first version counted distinct
+`activity_events.session_id`, on the reasoning that the column was
+"already on every activity row". It is on every row and it is NULL on
+every row: nothing in the write path has ever set it. The panel
+rendered nothing on production.
+
+The local check passed because it inserted rows with `session_id`
+populated. The data was shaped to match the assumption rather than the
+assumption tested against the data, which is the same mistake this whole
+roadmap keeps finding, made by me, in the middle of fixing it. A column
+being present is not evidence that it is written.
+
+`users/welcome_back_test.go` now seeds activity the way the application
+does, with `session_id` untouched, and restoring the old query fails two
+of its four cases. The unwritten column is in `docs/backlog.md`.
 
 **Verified by rendering it.** Three prior sessions and two article views
 were created in the local stack; the API returned `previousVisits: 2`,

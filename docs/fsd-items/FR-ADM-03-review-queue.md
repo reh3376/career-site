@@ -43,6 +43,24 @@ the URL, so clicking it produced an unfiltered page. That filter had
 never worked. Fixed in the same change, and the new one is checked
 against the same mistake.
 
+**Live on production 2026-10-12, and the queue shows one of the three
+negative ratings, not three.** The two others have no `decision_log`
+row, and the queue reads `decision_log`. On 2026-10-01, 15 assistant
+messages produced 11 rows; the missing ones all carry the "I don't have
+anything in my records" text while their `no_support` column reads
+false, which points at a path that answers without going through
+`chat.finish`'s logging. That gap predates this item and bounds what any
+surface built on `decision_log` can show, the adapter's training labels
+included. It is in `docs/backlog.md` to be traced rather than guessed
+at here.
+
+The one that does surface is worth reading: a member on 2026-09-30
+asked how to upload a JD, got "I don't have anything in my records about
+that", and wrote back "you state that you can help with questions about
+this site, but my prompt was a question specifically about how to use
+the site and you didnt answer it". The site guide is in the corpus, so
+that is a retrieval miss, and it sat unread for two weeks.
+
 **Verified by creating each signal and watching the filter find it**, in
 the local stack: a down-rated message with a comment, an `out_of_scope`
 row and a `no_support` row. The filter returned exactly those three, the
