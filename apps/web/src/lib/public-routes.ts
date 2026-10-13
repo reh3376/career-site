@@ -25,6 +25,7 @@ export const PUBLIC_PATHS = [
   "/",
   "/articles",
   "/gallery",
+  "/timeline",
   "/contact",
   "/how-ask-roger-works",
   "/register",
@@ -118,6 +119,10 @@ export const INDEXABLE_PATHS = [
   "/",
   "/articles",
   "/gallery",
+  // The timeline is the record behind the argument the landing page
+  // makes, so it is the one page a sceptical reader most wants to
+  // find, and the one a search engine should be able to reach.
+  "/timeline",
   "/contact",
   "/how-ask-roger-works",
   "/register",
