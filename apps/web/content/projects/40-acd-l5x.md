@@ -33,3 +33,6 @@ review and CI/CD practice that IT has had for twenty years.
 Maintained. The round-trip validation is the part that matters: a
 one-way export would be a reporting tool, and this has to be safe
 enough to put the result back on the controller.
+
+The public repository has not moved since 2025; the work has
+continued outside it.

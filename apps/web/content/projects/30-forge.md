@@ -7,7 +7,7 @@ summary: An industrial data hub that collects, governs, stores, curates and serv
 role: Sole developer
 status: active
 technologies: Python, industrial data governance, plugin architecture
-started: 2025
+started: 2026
 repo: https://github.com/reh3376/forge
 order: 30
 visibility: public
@@ -30,3 +30,7 @@ than in the shape it happened to arrive in.
 
 Active development. The architecture is the argument: governance in the
 middle rather than at every edge.
+
+Active, though the public repository lags the work: development has
+continued outside it, so the last push date is not the last day spent
+on this.

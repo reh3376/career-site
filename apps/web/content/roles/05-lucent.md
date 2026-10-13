@@ -15,7 +15,5 @@ Power distribution for telecom infrastructure, then systems
 integration across Lucent platforms: the 5ESS switch and the APX-8000,
 MaxTNT and Stinger remote-access concentrators.
 
-Worked to NEBS and Telcordia standards. Held BICSI Technician
-certification during these years, covering distribution frames,
-structured cabling, pathways and spaces, and grounding and bonding. The
-certification has since lapsed; the work did not stop.
+Worked to NEBS and Telcordia standards, and held BICSI Technician
+certification through these years.
