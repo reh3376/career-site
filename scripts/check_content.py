@@ -113,6 +113,33 @@ SCHEMA: dict[str, dict] = {
         "enums": {"type": {"role"}, "visibility": {"member", "public"}},
         "ints": {"start", "end", "order"},
     },
+    "project": {
+        # `summary` is the one line the catalog shows; the body is the
+        # detail page. `status` and `role` are required because a
+        # catalog that does not say what state a thing is in, or what
+        # the owner actually did on it, is a list of names.
+        "required": COMMON_REQUIRED
+        | {
+            "slug",
+            "summary",
+            "role",
+            "status",
+            "technologies",
+            "order",
+            "visibility",
+        },
+        # `repo` is optional: not every project is a repository, and a
+        # project without one must not be unpublishable.
+        "optional": {"repo", "started", "ended"},
+        "enums": {
+            "type": {"project"},
+            "visibility": {"member", "public"},
+            # Named states rather than free text, so the catalog can be
+            # read down the column and a typo cannot invent a state.
+            "status": {"active", "maintained", "paused", "complete"},
+        },
+        "ints": {"order", "started", "ended"},
+    },
     "other": {
         "required": COMMON_REQUIRED | {"visibility"},
         "optional": set(),
@@ -130,6 +157,7 @@ DIR_KIND = {
     "photos": "photo",
     "other": "other",
     "roles": "role",
+    "projects": "project",
 }
 
 # Matches `key: value`, the same shape all three parsers accept. Kept

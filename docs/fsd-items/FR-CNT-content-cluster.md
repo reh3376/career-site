@@ -191,3 +191,55 @@ the test held the decision.
 client JavaScript, so it would pass FR-PUB-05's check, but `/timeline`
 is not in that check's page list. Worth adding when the cluster's other
 surfaces land, as one change rather than four.
+
+### FR-CNT-03 + FR-CNT-05 — projects and detail pages, 2026-10-13
+
+`/projects` and `/projects/[slug]`, six published projects, all backed
+by public repositories so every entry is checkable: `career-site`,
+`mdemg`, `forge`, `acd-l5x-tool-lib`, `plc-workflows-mpc` and
+`ann-research`.
+
+**The source material is Roger's own repository descriptions**, read
+from the GitHub API, plus the spans in `career-facts.md` for the dates
+and the fifteen-year MPC/APC history. Nothing in the bodies describes
+work from inference.
+
+**Status is a closed set with reader-facing labels.** `active`,
+`maintained`, `paused`, `complete` in the schema; "Maintained, not
+actively extended" on the page, because `maintained` and `paused` are
+words a visitor can read as the same thing. An unrecognised value falls
+back to `paused` rather than rendering a raw token, though CI rejects
+one first.
+
+**The catalog deliberately does not call GitHub.** Live repository
+metadata is FR-CNT-25's job, served by the landing cards. A catalog
+that fails to render when `api.github.com` is slow is a catalog that is
+sometimes missing, and this one is the page a reader lands on from a
+CV. `repo` is optional for the same kind of reason: the day a project
+cannot be published without a repository is the day the catalog is
+describing GitHub rather than the work.
+
+**The detail body is markdown with its own headings, not four fixed
+fields.** FR-CNT-05 names problem, approach, architecture and outcomes.
+Fixed fields would render an empty "Architecture" for every project
+without a diagram, and an empty heading claims more than an absent one.
+A test asserts each body carries headings and runs to more than twice
+its summary, because a detail page that restates the catalog entry is a
+catalog entry in a bigger font.
+
+**Registered as a corpus kind in the same change as the content**,
+rather than discovered by CI as `role` was. `project` is in
+`ingest.KnownKinds` and in `publicCorpusSubdirs`, so "has he built
+anything with vector search" becomes answerable from something other
+than a job history.
+
+**`ann-research` is thinner than the others and says so in its own
+body.** Its repository description is one line, "Phase 2 of ANN
+topological feature build out", and writing a confident problem and
+outcomes section from that would be invention. It is published with
+what is known and an honest note that the work is in progress. Roger
+may want to say more, or to hold it back until there is more to say.
+
+**Not done:** diagrams, which is the row's "where available" clause
+rather than a hidden gap, and links to related writing, left out for
+the same reason as on the timeline.
