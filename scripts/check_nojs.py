@@ -64,11 +64,18 @@ PAGES = [
     ("/terms", None),
 ]
 
-BUTTON = re.compile(r"(?is)<button\b([^>]*)>(.*?)</button>")
-FORM = re.compile(r"(?is)<form\b.*?</form>")
+# Closing tags are written `</button >` as legitimately as `</button>`:
+# HTML allows whitespace before the `>`. Every one of these patterns
+# therefore ends `\s*>` rather than `>`. Without that, a tag written
+# the second way is not matched, the element is never closed as far as
+# this script is concerned, and what follows is silently mis-scanned.
+# CodeQL's `js/bad-tag-filter` caught exactly this on the first push.
+BUTTON = re.compile(r"(?is)<button\b([^>]*)>(.*?)</button\s*>")
+FORM = re.compile(r"(?is)<form\b.*?</form\s*>")
+SCRIPT = re.compile(r"(?is)<script\b[^>]*>.*?</script\s*>")
 # The rule in the root layout that makes the marking mean anything.
 NOSCRIPT_RULE = re.compile(
-    r"(?is)<noscript>.*?\[data-requires-js\].*?display\s*:\s*none.*?</noscript>"
+    r"(?is)<noscript\s*>.*?\[data-requires-js\].*?display\s*:\s*none.*?</noscript\s*>"
 )
 
 
@@ -105,7 +112,7 @@ def check(base: str) -> int:
             return 1
 
         # Scripts hold template strings that look like markup.
-        doc = re.sub(r"(?is)<script.*?</script>", " ", doc)
+        doc = SCRIPT.sub(" ", doc)
 
         # The marking only does anything because of one CSS rule in the
         # root layout. Without it, `data-requires-js` is an attribute
@@ -165,5 +172,38 @@ def check(base: str) -> int:
     return 0
 
 
+def self_test() -> int:
+    """Guard the tag patterns against the whitespace they must tolerate.
+
+    CodeQL flagged the first version of this file: the script filter
+    ended `</script>` and so did not match `</script >`, which HTML
+    allows. An unstripped script then had its string contents scanned
+    as markup, which invents controls that are not on the page. A
+    checker that reports a control nobody can see is a checker that
+    gets switched off, so the shape is pinned here rather than left to
+    the next person to rediscover.
+    """
+    doc = (
+        '<script >var x = "<button>ghost</button>";</script >'
+        '<form><button name="mode">IT</button ></form >'
+        "<button>loose</button >"
+    )
+    labels = [label for _, label in buttons_outside_forms(SCRIPT.sub(" ", doc))]
+    if labels != ["loose"]:
+        print(f"self-test failed: expected ['loose'], got {labels}")
+        return 1
+
+    if not NOSCRIPT_RULE.search(
+        "<noscript ><style>[data-requires-js]{display:none}</style></noscript >"
+    ):
+        print("self-test failed: the noscript rule is not matched with spaced tags")
+        return 1
+
+    print("self-test ok: spaced closing tags are handled")
+    return 0
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--self-test":
+        sys.exit(self_test())
     sys.exit(check(sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:3000"))

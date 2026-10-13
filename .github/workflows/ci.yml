@@ -439,6 +439,7 @@ jobs:
             curl -sf -o /dev/null http://127.0.0.1:3100/privacy && break
             sleep 2
           done
+          python3 ../../scripts/check_nojs.py --self-test
           python3 ../../scripts/check_nojs.py http://127.0.0.1:3100
 
   changes:
