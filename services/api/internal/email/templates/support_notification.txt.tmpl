@@ -2,7 +2,8 @@
 
 From:     {{.SenderName}} <{{.SenderEmail}}>
 {{if .Auth}}Signed in: yes ({{.Auth}}){{else}}Signed in: no (anonymous form submission){{end}}
-Ticket:   {{.TicketID}}
+{{if .Run}}Run:      finished decision-test run {{.Run}}
+{{end}}Ticket:   {{.TicketID}}
 Received: {{.SubmittedAt}}
 
 ---

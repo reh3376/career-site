@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -101,4 +103,35 @@ func TestDecisionTestFeedbackStillPassesTheBotGate(t *testing.T) {
 	if fake.calls != 1 {
 		t.Fatalf("verifier called %d times, want 1", fake.calls)
 	}
+}
+
+// The run must never be folded into the auth note.
+//
+// It was, for one deploy. The template renders any non-empty `Auth` as
+// "Signed in: yes (...)", so appending the run to it made every
+// anonymous decision-test note report the sender as signed in, which is
+// the opposite of true. Both halves were right in isolation and the
+// first real email was what found it, so the shape is pinned here.
+func TestTheRunIsNotFoldedIntoTheSignedInNote(t *testing.T) {
+	tmpl := mustReadTemplate(t)
+	if !strings.Contains(tmpl, "{{if .Run}}") {
+		t.Fatal("the notification template has no separate Run field, so the " +
+			"run can only be carried by overloading another one")
+	}
+	// The row the run belongs in must not be the row that answers
+	// "was this sender signed in".
+	auth := strings.Index(tmpl, "Signed in")
+	run := strings.Index(tmpl, "{{if .Run}}")
+	if auth == -1 || run == -1 || auth == run {
+		t.Fatalf("Signed in at %d, Run at %d: expected two distinct rows", auth, run)
+	}
+}
+
+func mustReadTemplate(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile("../email/templates/support_notification.txt.tmpl")
+	if err != nil {
+		t.Fatalf("read template: %v", err)
+	}
+	return string(b)
 }
