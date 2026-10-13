@@ -260,7 +260,9 @@ type WelcomeBack struct {
 	// LastVisitAt is when the previous visit ended, nil on a first
 	// visit or when the member has no earlier session.
 	LastVisitAt *time.Time
-	// PreviousVisits counts distinct sessions before this one.
+	// PreviousVisits counts visits before this one, where a visit is a
+	// run of activity with no gap longer than 30 minutes. See
+	// WelcomeBackFor on why this is not activity_events.session_id.
 	PreviousVisits int32
 	// RecentlyViewed holds up to three content ids, most recent first.
 	// These are the `id` from each content file's front matter, so the
@@ -278,25 +280,48 @@ const homeContentID = "/home"
 
 // WelcomeBackFor computes the panel in one round trip.
 //
-// A "visit" is a session, not a login: session_id is already on every
-// activity row, and counting logins would double-count a member who
-// signs in twice on one device.
+// A visit is a run of activity with no gap longer than visitGap, worked
+// out from occurred_at. It is NOT activity_events.session_id, which was
+// the obvious choice and the wrong one: that column exists on the table
+// and **nothing has ever written to it**. All 272 production rows carry
+// NULL, so counting distinct session_id returned zero visits and the
+// panel rendered nothing at all.
+//
+// That bug shipped on 2026-10-12 and was caught the same day by looking
+// at the live surface. It passed its own test because the test inserted
+// rows with session_id set, which is to say it was verified against
+// data shaped to match the assumption rather than against the data that
+// exists. Recording it here because the mistake is easy to repeat: a
+// column being present is not evidence that it is populated.
+//
+// Counting login events instead would over-count anyone who signs in
+// twice in one sitting. The gap rule treats that as one visit, which is
+// what a person means by the word.
 func (r *Repo) WelcomeBackFor(ctx context.Context, userID int64) (WelcomeBack, error) {
 	var out WelcomeBack
 
-	// The current session is whichever one produced the most recent
-	// event, so "previous" is every distinct session except that one,
-	// and "last visit" is when the newest of those ended.
+	// 30 minutes is the usual sessionisation window and matches how the
+	// quiet check already reasons about a decision test being "in
+	// flight". The current visit is the newest run; "previous" is every
+	// other one, and "last visit" is when the newest of those ended.
 	const visits = `
-    WITH sessions AS (
-      SELECT session_id, max(occurred_at) AS ended_at
+    WITH e AS (
+      SELECT occurred_at,
+             lag(occurred_at) OVER (ORDER BY occurred_at) AS prev
         FROM activity_events
-       WHERE user_id = $1 AND session_id IS NOT NULL
-       GROUP BY session_id
+       WHERE user_id = $1
+    ), marked AS (
+      SELECT occurred_at,
+             CASE WHEN prev IS NULL OR occurred_at - prev > interval '30 minutes'
+                  THEN 1 ELSE 0 END AS is_start
+        FROM e
+    ), grouped AS (
+      SELECT occurred_at, sum(is_start) OVER (ORDER BY occurred_at) AS visit_no
+        FROM marked
+    ), visits AS (
+      SELECT visit_no, max(occurred_at) AS ended_at FROM grouped GROUP BY visit_no
     ), ranked AS (
-      SELECT session_id, ended_at,
-             row_number() OVER (ORDER BY ended_at DESC) AS rn
-        FROM sessions
+      SELECT ended_at, row_number() OVER (ORDER BY ended_at DESC) AS rn FROM visits
     )
     SELECT
       (SELECT count(*) FROM ranked WHERE rn > 1),
@@ -306,11 +331,6 @@ func (r *Repo) WelcomeBackFor(ctx context.Context, userID int64) (WelcomeBack, e
 		return WelcomeBack{}, fmt.Errorf("welcome back visits: %w", err)
 	}
 
-	// Most recent distinct content, newest first. Across all history
-	// rather than only the previous visit: a member who looked at one
-	// article a week ago and nothing since should still see it, and
-	// scoping to the last session alone makes the panel empty for
-	// exactly the people it is meant to greet.
 	const viewed = `
     SELECT content_id
       FROM activity_events

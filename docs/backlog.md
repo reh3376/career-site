@@ -1247,6 +1247,29 @@ Still open:
 
 ## 6. Site and content
 
+- **`activity_events.session_id` is never written.** Found 2026-10-12
+  while the welcome-back panel shipped and rendered nothing. The column
+  has existed since the table did; all 272 production rows carry NULL.
+  Nothing in the write path sets it. The panel was rebuilt to derive a
+  visit from gaps in `occurred_at` instead, which needs no new data, so
+  this is no longer blocking anything. It is still worth either
+  populating the column or dropping it, because a column that looks like
+  it carries the session and does not is a trap the next reader walks
+  into, as this one did.
+
+- **`decision_log` does not have a row for every assistant answer.**
+  Found 2026-10-12 while verifying the review queue on production. On
+  2026-10-01, 15 assistant messages produced only 11 `decision_log`
+  rows. Two of the three down-rated answers are among the missing, so
+  the review queue, which reads `decision_log`, can surface one of the
+  three pieces of negative feedback that exist. The messages that are
+  missing a row all carry the "I don't have anything in my records"
+  text while their `no_support` column reads false, which suggests a
+  path that returns that answer without going through the logging in
+  `chat.finish`. Worth tracing, because `decision_log` is also the
+  training and evaluation set for the Ask Roger adapter: a gap here is a
+  gap in the labels, not only in the admin surface.
+
 - **Photos are not ingested into the corpus, and that is currently a
   default rather than a decision.** Found 2026-10-12 while building the
   content schema. `publicCorpusSubdirs`
