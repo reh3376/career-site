@@ -90,6 +90,29 @@ SCHEMA: dict[str, dict] = {
         "enums": {"type": {"photo"}, "visibility": {"member", "public"}},
         "ints": {"order"},
     },
+    "role": {
+        # `title` is the job title and `organization` is who it was
+        # for, kept as two keys because a timeline is read down the
+        # organisation column and across the title.
+        #
+        # `end` is required rather than optional, including for a role
+        # that has ended this year: a missing end date renders as
+        # "present", and a timeline that silently promotes an old role
+        # to current is worse than one that is blank.
+        "required": COMMON_REQUIRED
+        | {
+            "organization",
+            "location",
+            "start",
+            "end",
+            "order",
+            "visibility",
+            "technologies",
+        },
+        "optional": set(),
+        "enums": {"type": {"role"}, "visibility": {"member", "public"}},
+        "ints": {"start", "end", "order"},
+    },
     "other": {
         "required": COMMON_REQUIRED | {"visibility"},
         "optional": set(),
@@ -102,7 +125,12 @@ SCHEMA: dict[str, dict] = {
 # the Go ingest walker already decide what a file is; the `type` key now
 # says the same thing in the file, and this check fails when the two
 # disagree.
-DIR_KIND = {"articles": "article", "photos": "photo", "other": "other"}
+DIR_KIND = {
+    "articles": "article",
+    "photos": "photo",
+    "other": "other",
+    "roles": "role",
+}
 
 # Matches `key: value`, the same shape all three parsers accept. Kept
 # identical to frontMatterKV in services/api/internal/ingest/walker.go

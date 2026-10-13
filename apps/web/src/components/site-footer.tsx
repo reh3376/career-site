@@ -34,6 +34,17 @@ export function SiteFooter() {
             </p>
             <ul className="space-y-2">
               <li>
+                {/* First in the list: it is the record the rest of the
+                    site argues from, and the thing a sceptical reader
+                    looks for before anything else. */}
+                <Link
+                  href="/timeline"
+                  className="text-ink-2 no-underline hover:text-accent"
+                >
+                  Timeline
+                </Link>
+              </li>
+              <li>
                 {/* Before "request access", because it is what tells a
                     visitor whether access is worth asking for. */}
                 <Link
