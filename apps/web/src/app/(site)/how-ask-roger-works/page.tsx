@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BuildStats } from "@/components/build-stats";
 import { getJdBands } from "@/lib/jd-bands";
 import { getReviewerStatus } from "@/lib/reviewer-status";
 import { getSessionCookie } from "@/lib/session";
@@ -502,6 +503,8 @@ export default async function HowAskRogerWorksPage() {
           </div>
         ) : null}
       </section>
+
+      <BuildStats />
     </div>
   );
 }
