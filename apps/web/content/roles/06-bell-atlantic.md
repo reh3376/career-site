@@ -10,7 +10,10 @@ order: 60
 visibility: public
 technologies: Central-office power, structured cabling, grounding and bonding
 ---
+Central-office power, structured cabling, grounding and bonding: the
+ordinary infrastructure work that everything else in telecom sat on.
 
-Electrical and telecommunications infrastructure engineering, in the
-period when central-office plant and structured cabling were the
-foundation everything else in telecom sat on.
+Short on purpose. The work here was foundational rather than novel, and
+the six years at Lucent that followed covered the same ground at
+greater scale and with harder problems. That is the entry worth
+reading.

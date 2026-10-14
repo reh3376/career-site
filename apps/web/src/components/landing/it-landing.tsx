@@ -102,7 +102,17 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             read as a consultancy soliciting engagements and he is
             looking for a role. */}
         <p className="mt-10 max-w-2xl text-lg leading-relaxed text-ink-2">
-          Thirty years running regulated 24/7 industrial systems, the last
+          {/* The link sits on the claim it is evidence for. Until now
+              the timeline was reachable only from the footer, which is
+              the bottom of a long page, so the record behind the
+              argument was the hardest thing on the site to find. */}
+          <Link
+            href="/timeline"
+            className="text-ink-2 underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+          >
+            Thirty years
+          </Link>{" "}
+          running regulated 24/7 industrial systems, the last
           eleven in distilled spirits, commissioning distilleries from
           concrete pour to steady-state in the kind of shifts you
           don&rsquo;t brag about.{" "}

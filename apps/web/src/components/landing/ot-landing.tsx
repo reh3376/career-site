@@ -130,10 +130,17 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
                 id="op-note-heading"
                 className="font-mono text-[15px] leading-snug text-ink sm:text-[17px]"
               >
-                Roger Henley. Thirty years running regulated 24/7 industrial
-                systems; the last eleven commissioning distilleries from
-                concrete pour to steady-state. Controls, plant systems,
-                industrial data, applied AI.
+                Roger Henley.{" "}
+                <Link
+                  href="/timeline"
+                  className="text-ink underline decoration-line-strong decoration-1 underline-offset-4 hover:text-accent"
+                >
+                  Thirty years
+                </Link>{" "}
+                running regulated 24/7 industrial systems; the last eleven
+                commissioning distilleries from concrete pour to
+                steady-state. Controls, plant systems, industrial data,
+                applied AI.
               </h1>
               <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-2">
                 Hiring managers: request access, then upload a job description.

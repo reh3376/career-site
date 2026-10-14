@@ -306,6 +306,13 @@ function buildGroups({
   // carries the daily quota.
   const browse: MenuItem[] = [
     { kind: "link", label: "Home", href: "/" },
+    // The record, before the writing about it. These four were in
+    // the footer and nowhere else, which made the career overview
+    // the hardest thing on the site to reach.
+    { kind: "link", label: "Timeline", href: "/timeline" },
+    { kind: "link", label: "Projects", href: "/projects" },
+    { kind: "link", label: "Skills", href: "/skills" },
+    { kind: "link", label: "Awards & credentials", href: "/credentials" },
     { kind: "link", label: "Articles", href: "/articles" },
     { kind: "link", label: "Gallery", href: "/gallery" },
     // Anchors into the landing page, so it works from every page the
