@@ -16,11 +16,15 @@ line count headed "code" inflates it by a third, which is the kind of
 thing a reviewer catches in one glance at the repo and then discounts
 everything else for.
 
-**What is deliberately not measured: commits and pull requests.** The
-velocity of this repository is unusual and reads, correctly, as
-AI-assisted work. Published bare next to a line count it invites an
-inference the page has not earned, and the page's argument is about
-breadth and discipline rather than speed.
+**Commits are measured, and split by author on purpose.** The velocity
+of this repository is unusual and reads, correctly, as AI-assisted.
+Published bare next to a line count that invites an inference the page
+has not earned; published with the authorship split it becomes the same
+kind of evidence as everything else here, because
+`git log --format=%an | sort | uniq -c` returns the same numbers for
+anyone who clones it. An author whose name begins "Claude" is the
+assistant; merges are the owner, since a pull request is merged by the
+person who reviewed it.
 
 Run it with `make build-stats`, or directly:
 
@@ -136,6 +140,56 @@ def count_matches(pattern: str, paths: list[Path]) -> int:
     return total
 
 
+def git_lines(args: list[str]) -> list[str]:
+    try:
+        out = subprocess.run(
+            ["git", *args], cwd=REPO, capture_output=True, text=True, check=True
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return []
+    return [l for l in out.stdout.splitlines() if l.strip()]
+
+
+def history() -> dict:
+    """Commits, split by who wrote them.
+
+    Returns zeros on a shallow clone rather than wrong numbers, and the
+    page renders nothing when the total is zero. CI checks this file
+    against a full checkout (`fetch-depth: 0` on the web job), so a
+    shallow run cannot quietly commit a smaller count.
+    """
+    authors = git_lines(["log", "--format=%an"])
+    if not authors:
+        return {"commits": 0}
+
+    merges = len(git_lines(["log", "--merges", "--format=%h"]))
+    ai = sum(1 for a in authors if a.startswith("Claude"))
+    bots = sum(1 for a in authors if a.endswith("[bot]"))
+    dates = git_lines(["log", "--format=%ad", "--date=short"])
+    first, last = (dates[-1], dates[0]) if dates else ("", "")
+    days = 0
+    if first and last:
+        from datetime import date
+
+        f = date.fromisoformat(first)
+        t = date.fromisoformat(last)
+        days = (t - f).days + 1
+
+    return {
+        "commits": len(authors),
+        "merges": merges,
+        "nonMerge": len(authors) - merges,
+        # Merges are excluded from both: a merge commit records who
+        # pressed the button, not who wrote the change.
+        "byAssistant": ai,
+        "byBot": bots,
+        "byOwner": len(authors) - merges - ai - bots,
+        "firstCommit": first,
+        "lastCommit": last,
+        "days": days,
+    }
+
+
 def structure(files: list[str]) -> dict:
     """The counts that are decisions rather than volume."""
     protos = [REPO / f for f in files if f.endswith(".proto")]
@@ -229,6 +283,7 @@ def main() -> int:
         ),
         "lines": count_lines(files),
         "structure": structure(files),
+        "history": history(),
     }
 
     rendered = json.dumps(stats, indent=2, sort_keys=True) + "\n"

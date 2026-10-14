@@ -14,6 +14,16 @@ import stats from "@/lib/build-stats.json";
 // claimed, and are shown precisely so a reader can see they were
 // excluded rather than wonder.
 
+type History = {
+  commits: number;
+  merges: number;
+  nonMerge: number;
+  byAssistant: number;
+  byBot: number;
+  byOwner: number;
+  days: number;
+};
+
 type Category = {
   files: number;
   lines: number;
@@ -42,6 +52,7 @@ const ORDER: { key: keyof typeof stats.lines; label: string; note: string }[] = 
 export function BuildStats() {
   const lines = stats.lines as Record<string, Category>;
   const s = stats.structure;
+  const h = stats.history as History;
   const code = lines.code?.lines ?? 0;
   const tests = lines.tests?.lines ?? 0;
   const docs = lines.documentation?.lines ?? 0;
@@ -154,6 +165,42 @@ export function BuildStats() {
           </li>
         ))}
       </ul>
+
+      {h.commits ? (
+        <>
+          <h3 className="mt-10 font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+            Who wrote it
+          </h3>
+          <p className="mt-4 text-base leading-relaxed text-ink-2">
+            {n(h.commits)} commits in {h.days} days. That pace is not a
+            person typing, and saying so here is better than leaving a
+            reader to work it out and wonder what else the page is
+            quiet about.
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-ink-2">
+            Of the {n(h.nonMerge)} commits that changed something,{" "}
+            <strong className="text-ink">
+              {n(h.byAssistant)} were written by an AI assistant
+            </strong>{" "}
+            working to a specification, {n(h.byOwner)} by Roger directly,
+            and {n(h.byBot)} by a dependency bot. He wrote the
+            specification, reviewed every change, and merged{" "}
+            {n(h.merges)} pull requests. None of that is a claim you have
+            to take: clone the repo and run{" "}
+            <code className="bg-paper-2 px-1 py-0.5 font-mono text-[0.9em] text-ink">
+              git log --format=%an | sort | uniq -c
+            </code>
+            .
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-ink-2">
+            The skill being demonstrated is not typing speed. It is
+            knowing what to specify, what to check, and which failures
+            matter: the 186 tracked requirements, the twenty checks that
+            run on every push, and the decision records below are the
+            part a model cannot supply.
+          </p>
+        </>
+      ) : null}
 
       <h3 className="mt-10 font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
         Decisions, not volume
