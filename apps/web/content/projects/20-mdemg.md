@@ -33,3 +33,5 @@ Two years of work and still active, with runners and clients across
 several platforms: a self-contained sidecar runner, a Linux installer,
 a macOS menu-bar app, a Windows build, an observability sidebar and a
 Neovim plugin.
+
+The public repository dates from 2026; the work began in 2024.

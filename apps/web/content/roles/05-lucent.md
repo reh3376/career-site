@@ -8,14 +8,28 @@ start: 2000
 end: 2006
 order: 50
 visibility: public
-technologies: 5ESS, APX-8000, MaxTNT, Stinger, NEBS/Telcordia, BICSI
+technologies: -48 VDC power plants, UPS to 1 MW, standby generation, 5ESS, APX-8000, MaxTNT, Stinger, Bell System Practices, Bellcore/Telcordia, BICSI
 ---
 
-Power distribution for telecom infrastructure, then systems
-integration across Lucent platforms: the 5ESS switch and the APX-8000,
-MaxTNT and Stinger remote-access concentrators.
+Started on power distribution for carrier telecom facilities: -48 VDC
+rectifier plants, battery strings and DC distribution, UPS systems up
+to 1 MW, standby generators and transfer switches, built for
+mission-critical network sites where an outage is measured in dropped
+calls and lost circuits.
 
-Worked to NEBS and Telcordia standards. Held BICSI Technician
-certification during these years, covering distribution frames,
-structured cabling, pathways and spaces, and grounding and bonding. The
-certification has since lapsed; the work did not stop.
+Moved into systems integration in 2002, building out voice and data
+systems for local exchange carriers and the competitive carriers that
+entered the market after the Telecommunications Act of 1996. The work
+ran across Lucent platforms, the 5ESS switch and the APX-8000, MaxTNT
+and Stinger remote-access concentrators, taking designs through
+installation, turn-up and commissioned service, with power, telecom and
+network systems integrated end to end.
+
+The standout project was expanding voice and data capacity to carry the
+bandwidth needed to televise and support the 2002 Salt Lake City Winter
+Olympics. The opening ceremony date was fixed and the world was
+watching, so the deadline could not move.
+
+Worked to Bell System Practices, Bellcore and Telcordia
+specifications, and the National Electrical Code, and held BICSI
+Technician certification through these years.

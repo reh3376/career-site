@@ -7,7 +7,7 @@ summary: Model predictive and advanced process control running as containers on 
 role: Sole developer
 status: active
 technologies: Python, MPC/APC, Docker, CI/CD, site infrastructure servers
-started: 2025
+started: 2026
 repo: https://github.com/reh3376/plc-workflows-mpc
 order: 50
 visibility: public
@@ -31,3 +31,6 @@ developed, reviewed and promoted the way any other software is.
 Active. The thinking behind it is over fifteen years of building MPC
 and APC models, including the layer that sat above PLC PID control in
 the three-layer control system at Whiskey House.
+
+Active, though the public repository lags the work, which has
+continued outside it.
