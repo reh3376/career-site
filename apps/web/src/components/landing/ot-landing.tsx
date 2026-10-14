@@ -94,7 +94,14 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
           >
             <NavPill active>OVERVIEW</NavPill>
             <NavPill href="#practice">PRACTICE</NavPill>
-            <NavPill href="#timeline">TIMELINE</NavPill>
+            {/* TIMELINE used to point at #timeline, the event log on this
+                page, which is a site activity feed and not a career
+                timeline. Once /timeline existed the label promised one
+                thing and delivered another, so the anchor is named for
+                what it is and TIMELINE goes to the page a reader
+                clicking it expects. */}
+            <NavPill href="/timeline">TIMELINE</NavPill>
+            <NavPill href="#event-log">EVENT LOG</NavPill>
             <NavPill href="/contact">CONTACT</NavPill>
             <NavPill href="/register" primary>
               REQUEST ACCESS
@@ -358,7 +365,7 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
         </section>
 
         {/* EVENT LOG panel ------------------------------------------ */}
-        <section id="timeline" aria-label="Event log" className="scroll-mt-4 md:col-span-4">
+        <section id="event-log" aria-label="Event log" className="scroll-mt-4 md:col-span-4">
           <PanelHeader tag="EL-1" title="EVENT LOG" />
           <div className="border border-line-strong bg-paper-2 p-4 font-mono text-[12px]">
             <ul className="space-y-2">
