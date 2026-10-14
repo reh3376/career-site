@@ -1,7 +1,7 @@
 ---
 id: role-columbia-gas
 type: role
-title: Electrical Engineering, Infrastructure
+title: Electrical Engineering Technician, Infrastructure
 organization: Columbia Gas Transmission
 location: West Virginia
 start: 1996
