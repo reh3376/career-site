@@ -51,6 +51,11 @@ OUT = REPO / "apps" / "web" / "src" / "lib" / "build-stats.json"
 # Anything whose contents a tool produced. Never counted, never claimed.
 GENERATED = re.compile(
     r"(^|/)(gen|\.next)(/|$)|_pb\.ts$|\.pb\.go$|_pb2\.pyi?$|_grpc\.py$|pnpm-lock"
+    # This file's own output. Without it the artifact counts itself as
+    # configuration, so writing it changes a number inside it, and the
+    # count has to reach a fixed point to settle. It does not have to:
+    # a one-line change to the JSON changes the JSON's own line count.
+    r"|build-stats\.json$"
 )
 
 # extension -> (category, language). An extension absent here is not
@@ -288,8 +293,31 @@ def main() -> int:
 
     rendered = json.dumps(stats, indent=2, sort_keys=True) + "\n"
     if "--check" in sys.argv:
-        current = OUT.read_text(encoding="utf-8") if OUT.exists() else ""
-        if current != rendered:
+        # `history` is excluded from the comparison, and this is the
+        # one place in the repo where a check is deliberately partial,
+        # so the reason belongs here rather than in a commit message.
+        #
+        # It records a commit count. Committing it is a commit. So the
+        # committed file is always stale by at least the commit that
+        # wrote it, and no amount of regenerating fixes that: it is
+        # self-referential, not merely out of date. CI failed on
+        # exactly this, one commit behind, the first time it ran.
+        #
+        # Everything derived from the tree is still compared strictly,
+        # which is the part that can actually be kept true. The commit
+        # figures are published with the date they were taken, the same
+        # way the gate rows above them on that page carry an `asOf`,
+        # so a stale number reads as a dated snapshot rather than as a
+        # current claim.
+        current_raw = OUT.read_text(encoding="utf-8") if OUT.exists() else "{}"
+        try:
+            current_obj = json.loads(current_raw)
+        except json.JSONDecodeError:
+            current_obj = {}
+        fresh_obj = json.loads(rendered)
+        current_obj.pop("history", None)
+        fresh_obj.pop("history", None)
+        if current_obj != fresh_obj:
             print(
                 f"{OUT.relative_to(REPO)} is out of date.\n"
                 "Run `python3 scripts/build_stats.py` and commit the result.",
