@@ -418,6 +418,15 @@ jobs:
       - name: links resolve
         run: python3 scripts/check_links.py
 
+      # The docs-discipline rules from AGENTS.md that can be checked
+      # mechanically. An audit on 2026-10-14 found SERVICES.md's public
+      # route list four routes behind and a migration with no row, both
+      # added by someone who had read the rule the same morning. A rule
+      # kept by memory is a rule until somebody is busy.
+      - name: documentation tracks the code
+        run: python3 ../../scripts/check_docs.py
+        working-directory: apps/web
+
       # The build statistics on /how-ask-roger-works are generated from
       # the tracked tree, so the committed JSON has to be current or the
       # page publishes a number that was true last week. Same contract
