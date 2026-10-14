@@ -326,13 +326,20 @@ function buildGroups({
     { kind: "link", label: "Contact", href: "/contact" },
   ];
   if (signedIn) {
-    // Both in one splice so the second index does not have to account
-    // for the first insertion. They sit before Contact because both are
-    // things an account buys, and Contact is the route that was always
-    // open. Booking is members-only for the same reason the reviewer is,
-    // though a stronger one: it writes to Roger's own calendar.
+    // Located by label, not by index. This was `splice(4, ...)`, chosen
+    // when the list was seven items long, and adding the timeline,
+    // projects, skills and credentials above it moved what sat at 4: the
+    // member items landed between Skills and Awards, splitting the
+    // record group in half. A literal index into a list other people
+    // edit is a bug waiting for the next edit.
+    //
+    // They sit before "How it works", as they did, because both are
+    // things an account buys and the pages after them are open to
+    // everyone. Booking is members-only for the same reason the reviewer
+    // is, though a stronger one: it writes to Roger's own calendar.
+    const at = browse.findIndex((i) => i.label === "How it works");
     browse.splice(
-      4,
+      at === -1 ? browse.length : at,
       0,
       { kind: "link", label: "Ask Roger", href: "/ask" },
       { kind: "link", label: "JD upload", href: "/jd-upload" },
