@@ -4,7 +4,7 @@ type: role
 title: Senior Electrical Engineer, Control Systems
 organization: Joy Global (Joy Mining Machinery)
 location: West Virginia
-start: 2006
+start: 2007
 end: 2015
 order: 40
 visibility: public

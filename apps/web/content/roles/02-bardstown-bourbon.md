@@ -4,7 +4,7 @@ type: role
 title: Director of Engineering
 organization: Bardstown Bourbon Company
 location: Bardstown, Kentucky
-start: 2017
+start: 2018
 end: 2022
 order: 20
 visibility: public
