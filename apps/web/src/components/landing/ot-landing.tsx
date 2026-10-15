@@ -67,7 +67,7 @@ const PRACTICE_TAGS = [
 
 const EVENT_LOG = [
   { ts: "2026-09-19", src: "SITE.WEB", msg: "career-site.OT surface online" },
-  { ts: "2026-09-15", src: "PRACTICE", msg: "11 yrs distillery startups → steady-state" },
+  { ts: "2026-09-15", src: "PRACTICE", msg: "11 yrs distilled spirits, 8 in startups" },
   { ts: "2020-06-01", src: "PRACTICE", msg: "distillery commissioning cycle 4/n" },
   { ts: "2018-04-01", src: "PRACTICE", msg: "distillery commissioning cycle 1/n" },
   { ts: "1996-01-01", src: "PRACTICE", msg: "career start · regulated 24/7 systems" },
@@ -145,9 +145,9 @@ export function OtLanding({ signedIn = false }: { signedIn?: boolean }) {
                   Thirty years
                 </Link>{" "}
                 running regulated 24/7 industrial systems; the last eleven
-                commissioning distilleries from concrete pour to
-                steady-state. Controls, plant systems, industrial data,
-                applied AI.
+                in distilled spirits, eight of them commissioning two
+                startups from concrete pour to steady-state. Controls,
+                plant systems, industrial data, applied AI.
               </h1>
               <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-2">
                 Hiring managers: request access, then upload a job description.

@@ -15,7 +15,7 @@ Led capital projects, process engineering and automation, and
 ISO-certified quality systems. Built and grew cross-functional
 engineering teams, and managed vendors and integrators.
 
-Expanded capacity by 200%, delivered during a live-plant controls
+Doubled plant capacity, delivered during a live-plant controls
 migration from Allen-Bradley L82 to a new Ignition build, with
 production continuing throughout. Recognised by the Ignition Discovery
 Award at ICC 2019.

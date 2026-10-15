@@ -9,4 +9,4 @@ order: 30
 visibility: public
 ---
 
-For the 200% capacity expansion at Bardstown Bourbon, delivered during a live-plant controls migration.
+For doubling capacity at Bardstown Bourbon, delivered during a live-plant controls migration.

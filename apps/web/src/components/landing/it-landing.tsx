@@ -112,10 +112,10 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           >
             Thirty years
           </Link>{" "}
-          running regulated 24/7 industrial systems, the last
-          eleven in distilled spirits, commissioning distilleries from
-          concrete pour to steady-state in the kind of shifts you
-          don&rsquo;t brag about.{" "}
+          running regulated 24/7 industrial systems, the last eleven in
+          distilled spirits and the last eight commissioning two startup
+          distilleries from concrete pour to steady-state, in the kind of
+          shifts you don&rsquo;t brag about.{" "}
           <span className="text-ink">
             I am looking for a senior engineering or technology leadership
             role, including Principal and Senior Principal positions. Open
@@ -145,7 +145,7 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
             <span aria-hidden="true" className="text-accent">
               &middot;
             </span>
-            Delivered a 200% capacity expansion at Bardstown Bourbon during
+            Doubled capacity at Bardstown Bourbon during
             a live-plant controls migration. Ignition Discovery Award,
             ICC 2019.
           </li>
@@ -303,7 +303,7 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
           </div>
           <div>
             <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-              distillery startups
+              distilled spirits
             </dt>
             <dd className="mt-3">
               <span
@@ -313,8 +313,9 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
                 11<span className="text-ink-4">yr</span>
               </span>
               <span className="mt-3 block max-w-[22ch] text-sm leading-relaxed text-ink-2">
-                Sazerac, Bardstown Bourbon Company, then Whiskey House of
-                Kentucky. Concrete pour to steady-state.
+                Sazerac, then eight years in two startups: Bardstown
+                Bourbon Company and Whiskey House of Kentucky. Concrete
+                pour to steady-state.
               </span>
             </dd>
           </div>
@@ -578,7 +579,7 @@ export function ItLanding({ signedIn = false }: { signedIn?: boolean }) {
 
       {/* -----------------------------------------------------------------
        * TEAM IMAGE + LEADERSHIP NOTE
-       * Whiskey House team meeting, makes the "distillery startups"
+       * Whiskey House team meeting, makes the startup-distillery
        * claim tangible with a real leadership scene.
        * ----------------------------------------------------------------- */}
       <section aria-label="Leadership" className="bg-paper-2/60">
