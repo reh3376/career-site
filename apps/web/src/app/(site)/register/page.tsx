@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { OtPanel } from "@/components/ot-panel";
+import { pageMetadata } from "@/lib/site";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { getUiMode } from "@/lib/ui-mode";
 
 import { RegisterForm } from "./form";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Request access",
-  description: "Register to request access to Roger Henley's career portfolio.",
-};
+  description:
+    "Register to request access to Roger Henley's career portfolio.",
+  path: "/register",
+});
 
 export default async function RegisterPage() {
   const mode = await getUiMode();

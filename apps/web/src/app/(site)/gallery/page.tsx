@@ -5,11 +5,14 @@ import { AccessNote } from "@/components/access-note";
 import { ActivityBeacon } from "@/components/activity-beacon";
 import { listPhotos } from "@/lib/photos";
 import { getSessionUser } from "@/lib/session-user";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Gallery",
-  description: "Professional portraits and on-the-floor work photos, with context.",
-};
+  description:
+    "Professional portraits and on-the-floor work photos, with context.",
+  path: "/gallery",
+});
 // Branches on the session, so it is rendered per request.
 export const dynamic = "force-dynamic";
 

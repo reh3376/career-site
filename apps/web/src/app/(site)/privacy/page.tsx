@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
+import { pageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = pageMetadata({
   title: "Privacy",
   description:
     "What this site collects, why, how long it is kept, and how to ask for it to be removed.",
-};
+  path: "/privacy",
+});
 
 const UPDATED = "5 October 2026";
 

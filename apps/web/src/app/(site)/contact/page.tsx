@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 
 import { OtPanel } from "@/components/ot-panel";
 import { getSessionCookie } from "@/lib/session";
+import { pageMetadata } from "@/lib/site";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { getUiMode } from "@/lib/ui-mode";
 
 import { ContactForm } from "./form";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contact",
-  description: "Reach Roger Henley about the site, a bug, a feature idea, or an interview.",
-};
+  description:
+    "Reach Roger Henley about the site, a bug, a feature idea, or an interview.",
+  path: "/contact",
+});
 
 export const dynamic = "force-dynamic";
 

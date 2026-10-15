@@ -5,12 +5,14 @@ import { BuildStats } from "@/components/build-stats";
 import { getJdBands } from "@/lib/jd-bands";
 import { getReviewerStatus } from "@/lib/reviewer-status";
 import { getSessionCookie } from "@/lib/session";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "How Ask Roger works",
   description:
     "How the assistant answers a question and the reviewer scores a posting: which model, why it is not trained on Roger's career, what each one is allowed to read, and how both are made better.",
-};
+  path: "/how-ask-roger-works",
+});
 export const dynamic = "force-dynamic";
 
 export default async function HowAskRogerWorksPage() {

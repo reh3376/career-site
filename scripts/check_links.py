@@ -97,6 +97,63 @@ EXTERNAL = re.compile(r"""href\s*[:=]\s*["'](https?://[^"']+)["']""")
 ANCHOR = re.compile(r"<a\s[^>]*>", re.S)
 
 
+ROUTES_TS = SRC / "lib" / "public-routes.ts"
+
+
+def indexable() -> list[str]:
+    src = ROUTES_TS.read_text(encoding="utf-8")
+    block = re.search(r"export const INDEXABLE_PATHS = \[(.*?)\] as const;", src, re.S)
+    return re.findall(r'"([^"]+)"', block.group(1)) if block else []
+
+
+def page_for(route: str) -> Path | None:
+    """The page.tsx behind a route, looking through (group) directories."""
+    want = route.strip("/")
+    for p in APP.rglob("page.tsx"):
+        parts = [x for x in p.parent.relative_to(APP).parts
+                 if not (x.startswith("(") and x.endswith(")"))]
+        if "/".join(parts) == want:
+            return p
+    return None
+
+
+def canonicals_declared() -> list[str]:
+    """Every indexable page must declare its own canonical and card.
+
+    Next merges `metadata` shallowly, so a page that sets only a title
+    and description inherits the root layout's `openGraph` object whole
+    and its `alternates.canonical` of "/". Both failures are silent and
+    invisible from inside the app: the page renders correctly, and only
+    a crawler or a pasted link shows it. An audit on 2026-10-14 found
+    six indexable pages in that state, each one asking Google to treat
+    it as a duplicate of the homepage and each one previewing in
+    LinkedIn with the homepage's thirty-year-career headline.
+
+    `lib/site.ts` has `pageMetadata()` for this; the rule is here so
+    that forgetting it fails a push rather than quietly costing the
+    page its place in the index.
+    """
+    problems = []
+    for route in indexable():
+        if route == "/":
+            continue  # the homepage, where the inherited canonical is right
+        page = page_for(route)
+        if page is None:
+            problems.append(f"{route} is in INDEXABLE_PATHS but no page.tsx serves it")
+            continue
+        text = page.read_text(encoding="utf-8")
+        if "pageMetadata(" in text or "generateMetadata" in text or "alternates" in text:
+            continue
+        problems.append(
+            f"{page.relative_to(REPO)} serves {route}, which is in "
+            "INDEXABLE_PATHS, but declares no canonical. It inherits the "
+            'root layout\'s canonical of "/" and the homepage\'s share '
+            "card. Wrap its metadata in pageMetadata({ ..., path: "
+            f'"{route}" }}) from @/lib/site.'
+        )
+    return problems
+
+
 def main() -> int:
     known = routes()
     if len(known) < 20:
@@ -143,8 +200,14 @@ def main() -> int:
                 print(f"{path.relative_to(REPO)}: links to {target}, which no page serves")
                 problems += 1
 
+    for msg in canonicals_declared():
+        print(msg)
+        problems += 1
+
     print(f"\n{len(known)} routes, {internal_seen} internal links, "
-          f"{external_seen} external, {content_links} in content, {problems} problems")
+          f"{external_seen} external, {content_links} in content, "
+          f"{len(indexable())} indexable pages checked for a canonical, "
+          f"{problems} problems")
     if problems:
         print("\nNext.js does not check that a href has a page behind it, so a\n"
               "renamed route leaves every link to it returning 404 with nothing\n"
