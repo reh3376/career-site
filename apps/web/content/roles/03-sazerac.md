@@ -5,7 +5,7 @@ title: Senior Process Engineer
 organization: Sazerac Company
 location: Bardstown, Kentucky
 start: 2015
-end: 2017
+end: 2018
 order: 30
 visibility: public
 technologies: Allen-Bradley, Siemens PLCs, GE PLCs, Citect SCADA, PowerFlex VFDs, Emerson instrumentation, OEE, TTB regulated manufacturing

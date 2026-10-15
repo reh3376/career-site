@@ -3,7 +3,7 @@ id: role-whiskey-house
 type: role
 title: VP of Engineering & Technology
 organization: Whiskey House
-location: Bardstown, Kentucky
+location: Elizabethtown, Kentucky
 start: 2022
 end: 2026
 order: 10
