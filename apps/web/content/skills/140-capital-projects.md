@@ -10,4 +10,4 @@ order: 140
 visibility: public
 ---
 
-Stage-gate delivery of plant capital projects, including a 200% capacity expansion and a greenfield distillery.
+Stage-gate delivery of plant capital projects, including a doubling of plant capacity and a greenfield distillery.

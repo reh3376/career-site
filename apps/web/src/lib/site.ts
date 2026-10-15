@@ -51,3 +51,52 @@ export function personJsonLd(socials: { linkedin?: string; github?: string }) {
     ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
+
+// Per-page share card and canonical URL.
+//
+// Next merges `metadata` shallowly: a page that sets only `title` and
+// `description` inherits the root layout's `openGraph` *object whole*,
+// including its title, description and `url`. So every page that did
+// not spell out a card pasted into LinkedIn or iMessage as the
+// homepage: the same thirty-year-career headline and the same `og:url`,
+// whatever page the link actually pointed at.
+//
+// The canonical is the sharper half of the bug. The root layout
+// declares `canonical: "/"`, and inheriting it means each of those
+// pages told a crawler it was a duplicate of the homepage, asking to
+// have itself dropped from the index. A page nobody can find is a page
+// that may as well not have shipped.
+//
+// Overriding `openGraph` replaces the parent entirely, so the image has
+// to be named again or the card silently degrades to text-only; that is
+// the kind of detail a helper should carry once rather than four
+// callsites remember.
+export function pageMetadata(opts: {
+  title: string;
+  description: string;
+  path: `/${string}`;
+  /** Pages still being recruited for or not meant to be found by search. */
+  noindex?: boolean;
+}) {
+  const { title, description, path, noindex } = opts;
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    ...(noindex ? { robots: { index: false, follow: false } } : {}),
+    openGraph: {
+      type: "website" as const,
+      siteName: SITE_NAME,
+      title,
+      description,
+      url: path,
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: [OG_IMAGE.url],
+    },
+  };
+}

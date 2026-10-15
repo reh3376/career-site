@@ -3,11 +3,14 @@ import Link from "next/link";
 
 import { AccessNote } from "@/components/access-note";
 import { listArticles } from "@/lib/articles";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Articles",
-  description: "Roger Henley's writing on industrial digital transformation, decision-making, and manufacturing AI.",
-};
+  description:
+    "Roger Henley's writing on industrial digital transformation, decision-making, and manufacturing AI.",
+  path: "/articles",
+});
 
 // Public since 2026-09-22: most of these were posted on LinkedIn
 // already, so gating them cost discovery and bought nothing. The

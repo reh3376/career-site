@@ -128,6 +128,12 @@ export const INDEXABLE_PATHS = [
   // find, and the one a search engine should be able to reach.
   "/timeline",
   "/projects",
+  // Added 2026-10-14. Both shipped public in the content cluster and
+  // neither reached this list, so they were crawlable but never
+  // invited: the two pages that lay out the skills and the
+  // certifications behind every claim elsewhere on the site.
+  "/skills",
+  "/credentials",
   "/contact",
   "/how-ask-roger-works",
   "/register",

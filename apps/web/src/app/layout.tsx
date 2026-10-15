@@ -51,7 +51,7 @@ const jetbrainsMono = localFont({
 const DEFAULT_TITLE =
   "Roger Henley · Industrial automation, plant operations, applied AI";
 const DEFAULT_DESCRIPTION =
-  "Thirty years running regulated 24/7 industrial systems. Last eleven in distilled-spirits startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.";
+  "Thirty years running regulated 24/7 industrial systems. Last eleven in distilled spirits, the last eight in two startups. Digital transformation, process optimization, automation & control, IT/OT convergence, applied AI.";
 
 // This URL mostly reaches people as a link: in a résumé header, a
 // LinkedIn post, a recruiter's email. Without these tags it rendered as

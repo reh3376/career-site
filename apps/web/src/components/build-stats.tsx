@@ -113,9 +113,9 @@ export function BuildStats() {
       </dl>
 
       <p className="mt-6 text-base leading-relaxed text-ink-2">
-        Twenty-seven direct dependencies covers a ConnectRPC API, vector
-        retrieval, local model inference, PDF generation and a timed
-        psychometric instrument. The documentation is{" "}
+        {n(s.directDependencies)} direct dependencies covers a ConnectRPC
+        API, vector retrieval, local model inference, PDF generation and
+        a timed psychometric instrument. The documentation is{" "}
         <strong className="text-ink">{docRatio}% of the code volume</strong>,
         which is the number least likely to be matched elsewhere and the
         one this site would rather be judged on.
@@ -188,16 +188,19 @@ export function BuildStats() {
             {n(h.merges)} pull requests. None of that is a claim you have
             to take: clone the repo and run{" "}
             <code className="bg-paper-2 px-1 py-0.5 font-mono text-[0.9em] text-ink">
-              git log --format=%an | sort | uniq -c
+              git log --no-merges --format=%an | sort | uniq -c
             </code>
-            .
+            . The <code className="bg-paper-2 px-1 py-0.5 font-mono text-[0.9em] text-ink">--no-merges</code>{" "}
+            matters: a merge commit records who pressed the button, so
+            without it Roger&rsquo;s {n(h.merges)} merges count as
+            authorship and the split looks close to even.
           </p>
           <p className="mt-4 text-base leading-relaxed text-ink-2">
             The skill being demonstrated is not typing speed. It is
             knowing what to specify, what to check, and which failures
-            matter: the 186 tracked requirements, the twenty checks that
-            run on every push, and the decision records below are the
-            part a model cannot supply.
+            matter: the {n(s.requirements)} tracked requirements, the{" "}
+            {n(s.ciChecks)} checks that run on every push, and the
+            decision records below are the part a model cannot supply.
           </p>
         </>
       ) : null}

@@ -195,6 +195,35 @@ def history() -> dict:
     }
 
 
+def ci_checks() -> int:
+    """Jobs that gate a push, counted from the workflow files.
+
+    The page used to say "the twenty checks that run on every push",
+    from memory, on a page whose whole argument is that its numbers are
+    counted rather than claimed. The real figure was fifteen. Counting
+    it is the only version of that sentence worth printing.
+
+    Only the `jobs:` block is counted: the keys under `on:` sit at the
+    same indentation, so a naive two-space scan reports `push` and
+    `schedule` as jobs. auto-pr.yml is excluded because opening a pull
+    request is plumbing, not a check.
+    """
+    wf = REPO / ".github" / "workflows"
+    if not wf.is_dir():
+        return 0
+    total = 0
+    for f in sorted(wf.glob("*.y*ml")):
+        if f.name == "auto-pr.yml":
+            continue
+        src = f.read_text(encoding="utf-8")
+        head, sep, tail = src.partition("\njobs:\n")
+        # Runs on a push at all? The triggers live above `jobs:`.
+        if not sep or not re.search(r"^\s{2,}push:", head, re.M):
+            continue
+        total += len(re.findall(r"^  ([a-zA-Z0-9_-]+):$", tail, re.M))
+    return total
+
+
 def structure(files: list[str]) -> dict:
     """The counts that are decisions rather than volume."""
     protos = [REPO / f for f in files if f.endswith(".proto")]
@@ -255,7 +284,17 @@ def structure(files: list[str]) -> dict:
         "migrations": len(
             [f for f in files if f.startswith("services/api/internal/db/migrations/")]
         ),
-        "adrs": len([f for f in files if f.startswith("docs/adr/") and f.endswith(".md")]),
+        # Numbered records only. docs/adr also holds a README index,
+        # which is not a decision and was being counted as one, so the
+        # page said eleven where there are ten.
+        "adrs": len(
+            [
+                f
+                for f in files
+                if f.startswith("docs/adr/")
+                and re.match(r"^\d{4}-", Path(f).name)
+            ]
+        ),
         "requirements": requirements,
         "requirementsShipped": states["shipped"],
         "requirementsPartial": states["partial"],
@@ -267,6 +306,12 @@ def structure(files: list[str]) -> dict:
         "pythonTests": count_matches(r"^def test_", py_tests),
         "directDependencies": go_direct + deps + devdeps,
         "customChecks": len(list((REPO / "scripts").glob("check_*.py"))),
+        # Jobs that actually gate a push. The page used to say "twenty
+        # checks" from memory, on a page whose entire argument is that
+        # its numbers are counted rather than claimed; the real figure
+        # was fifteen. auto-pr.yml is excluded because opening a pull
+        # request is plumbing, not a check.
+        "ciChecks": ci_checks(),
         "runtimeServices": len(
             [
                 line

@@ -4,14 +4,16 @@ import Link from "next/link";
 import { OtPanel } from "@/components/ot-panel";
 import { getUiMode } from "@/lib/ui-mode";
 
+import { pageMetadata } from "@/lib/site";
 import { getTurnstileSiteKey } from "@/lib/turnstile";
 
 import { LoginForm } from "./form";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Sign in",
   description: "Sign in to Roger Henley's career portfolio.",
-};
+  path: "/login",
+});
 
 export default async function LoginPage({
   searchParams,
