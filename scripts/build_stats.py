@@ -168,8 +168,37 @@ def history() -> dict:
         return {"commits": 0}
 
     merges = len(git_lines(["log", "--merges", "--format=%h"]))
-    ai = sum(1 for a in authors if a.startswith("Claude"))
-    bots = sum(1 for a in authors if a.endswith("[bot]"))
+
+    # Classify the NON-merge commits, not all of them.
+    #
+    # This counted `authors`, the whole log, while `nonMerge` below
+    # subtracted the merges, so two merge commits that happen to carry
+    # the assistant as author were counted as authorship and then
+    # subtracted from the owner's share. The page said 490 of 544 where
+    # its own printed command yields 488, and the error ran in the
+    # assistant's favour. Exactly the defect the --no-merges fix was
+    # for, one layer down: the page has to agree with the command it
+    # tells a reader to run.
+    changed = git_lines(["log", "--no-merges", "--format=%an"])
+    ai = sum(1 for a in changed if a.startswith("Claude"))
+    bots = sum(1 for a in changed if a.endswith("[bot]"))
+
+    # The author strings themselves, because the page tells a reader to
+    # run `git log --no-merges --format=%an | sort | uniq -c` and check
+    # it. That command prints one line per name, and the assistant has
+    # committed under several as the model changed, while the owner has
+    # two spellings. So the six lines a reader actually sees have to be
+    # summed to reach the four figures the page quotes, and nothing on
+    # the page said so. Naming them is the same fix as adding
+    # --no-merges: the instruction has to produce the number.
+    def names(pred):
+        return sorted({a for a in changed if pred(a)})
+
+    assistant_names = names(lambda a: a.startswith("Claude"))
+    bot_names = names(lambda a: a.endswith("[bot]"))
+    owner_names = names(
+        lambda a: not a.startswith("Claude") and not a.endswith("[bot]")
+    )
     dates = git_lines(["log", "--format=%ad", "--date=short"])
     first, last = (dates[-1], dates[0]) if dates else ("", "")
     days = 0
@@ -183,12 +212,15 @@ def history() -> dict:
     return {
         "commits": len(authors),
         "merges": merges,
-        "nonMerge": len(authors) - merges,
+        "nonMerge": len(changed),
         # Merges are excluded from both: a merge commit records who
         # pressed the button, not who wrote the change.
         "byAssistant": ai,
+        "assistantNames": assistant_names,
+        "ownerNames": owner_names,
+        "botNames": bot_names,
         "byBot": bots,
-        "byOwner": len(authors) - merges - ai - bots,
+        "byOwner": len(changed) - ai - bots,
         "firstCommit": first,
         "lastCommit": last,
         "days": days,
@@ -324,6 +356,64 @@ def structure(files: list[str]) -> dict:
     }
 
 
+def verify_history(h: dict) -> list[str]:
+    """The page's figures must equal what its own printed command gives.
+
+    /how-ask-roger-works tells a reader to run
+
+        git log --no-merges --format=%an | sort | uniq -c
+
+    and check the authorship split against the page. Twice now the page
+    has disagreed with that instruction: once because the command lacked
+    --no-merges, and once because this script classified every commit
+    including merges, which moved two commits from the owner's column to
+    the assistant's. Both errors ran in the direction that flattered the
+    claim, and neither was visible from inside the app.
+
+    So the equality is asserted here rather than trusted: run the exact
+    command, group its output the way the page tells a reader to, and
+    fail if the totals differ.
+    """
+    out = git_lines(["log", "--no-merges", "--format=%an"])
+    if not out:
+        return []
+    groups = {"assistant": 0, "owner": 0, "bot": 0}
+    for a in out:
+        key = (
+            "assistant"
+            if a.startswith("Claude")
+            else "bot"
+            if a.endswith("[bot]")
+            else "owner"
+        )
+        groups[key] += 1
+    want = {
+        "byAssistant": groups["assistant"],
+        "byOwner": groups["owner"],
+        "byBot": groups["bot"],
+        "nonMerge": len(out),
+    }
+    problems = []
+    for key, actual in want.items():
+        if h.get(key) != actual:
+            problems.append(
+                f"history.{key} is {h.get(key)}, but `git log --no-merges "
+                f"--format=%an | sort | uniq -c` grouped as the page "
+                f"describes gives {actual}. The page invites a reader to "
+                "run that command, so it has to agree with it."
+            )
+    named = set(h.get("assistantNames", [])) | set(h.get("ownerNames", [])) | set(
+        h.get("botNames", [])
+    )
+    unnamed = sorted(set(out) - named)
+    if unnamed:
+        problems.append(
+            "the page names the commit authors so a reader can group the "
+            f"command's output, and these are missing: {', '.join(unnamed)}"
+        )
+    return problems
+
+
 def main() -> int:
     files = tracked_files()
     stats = {
@@ -335,6 +425,13 @@ def main() -> int:
         "structure": structure(files),
         "history": history(),
     }
+
+    # The authorship figures must match the command the page prints.
+    # Checked on every run, including --check, so CI catches a drift
+    # even though `history` is excluded from the JSON comparison below.
+    for msg in verify_history(stats["history"]):
+        print(msg, file=sys.stderr)
+        return 1
 
     rendered = json.dumps(stats, indent=2, sort_keys=True) + "\n"
     if "--check" in sys.argv:

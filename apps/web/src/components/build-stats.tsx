@@ -22,6 +22,9 @@ type History = {
   byBot: number;
   byOwner: number;
   days: number;
+  assistantNames: string[];
+  ownerNames: string[];
+  botNames: string[];
 };
 
 type Category = {
@@ -31,6 +34,12 @@ type Category = {
 };
 
 const n = (v: number) => v.toLocaleString("en-US");
+
+// "A", "A and B", "A, B and C". Used for the commit-author names, which
+// a reader has to recognise in the output of the command this page
+// prints, so they are listed rather than summarised.
+const list = (xs: string[]) =>
+  xs.length < 2 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
 const ORDER: { key: keyof typeof stats.lines; label: string; note: string }[] = [
   { key: "code", label: "Code", note: "Written by hand, tests excluded" },
@@ -194,6 +203,16 @@ export function BuildStats() {
             matters: a merge commit records who pressed the button, so
             without it Roger&rsquo;s {n(h.merges)} merges count as
             authorship and the split looks close to even.
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-ink-2">
+            It prints one line per name, and there are more names than
+            there are people. The assistant has committed as{" "}
+            <span className="text-ink">{list(h.assistantNames)}</span> as
+            the model changed, Roger as{" "}
+            <span className="text-ink">{list(h.ownerNames)}</span>, and the
+            bot as{" "}
+            <span className="text-ink">{list(h.botNames)}</span>. Add those
+            groups up and you get the three figures above.
           </p>
           <p className="mt-4 text-base leading-relaxed text-ink-2">
             The skill being demonstrated is not typing speed. It is
