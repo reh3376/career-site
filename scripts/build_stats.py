@@ -91,6 +91,31 @@ def tracked_files() -> list[str]:
     return out.stdout.split()
 
 
+def untracked_files() -> list[str]:
+    """Files git does not know about, which this script cannot count.
+
+    The counts come from `git ls-files`, so a file written but not yet
+    staged is invisible to them. Generate before `git add` and the
+    committed JSON describes the tree as it was one commit ago: locally
+    `--check` agrees with it, because it is reading the same stale
+    answer, and CI fails on the clean checkout where the file does
+    exist. That happened on 2026-10-15, after a local run of every
+    gate passed.
+
+    So the asymmetry is named at the moment it matters. Not a failure:
+    a working tree with something unstaged in it is ordinary, and
+    refusing to run would make the script useless mid-change.
+    """
+    out = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return out.stdout.split()
+
+
 def line_count(path: Path) -> int:
     try:
         with path.open(encoding="utf-8", errors="replace") as fh:
@@ -432,6 +457,20 @@ def main() -> int:
     for msg in verify_history(stats["history"]):
         print(msg, file=sys.stderr)
         return 1
+
+    if "--check" not in sys.argv:
+        loose = untracked_files()
+        if loose:
+            print(
+                f"warning: {len(loose)} file(s) are not staged, so they are "
+                "not counted. Run `git add` first or CI will fail on the "
+                "clean checkout:",
+                file=sys.stderr,
+            )
+            for f in loose[:10]:
+                print(f"  {f}", file=sys.stderr)
+            if len(loose) > 10:
+                print(f"  ... and {len(loose) - 10} more", file=sys.stderr)
 
     rendered = json.dumps(stats, indent=2, sort_keys=True) + "\n"
     if "--check" in sys.argv:

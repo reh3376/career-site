@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { abbreviate } from "./abbreviate";
 import { statusLabel } from "./review";
 
 // The run list.
@@ -180,6 +181,7 @@ export function RunTable({ runs }: { runs: Run[] }) {
       </p>
     );
   }
+  const short = abbreviate(runs.map((r) => r.sessionKey));
   return (
     <ul className="mt-10 divide-y divide-line border-y border-line">
       {runs.map((r) => (
@@ -208,6 +210,10 @@ export function RunTable({ runs }: { runs: Run[] }) {
                 {r.tapCheckPassed === false ? <Tag>tap failed</Tag> : null}
               </p>
               <p className="mt-1 font-mono text-[11px] tracking-[0.1em] text-ink-3">
+                {/* First, and in the darker ink, because this is the
+                    run's name. Everything after it is description. */}
+                <span className="text-ink-2">{short.get(r.sessionKey)}</span>
+                <span className="px-2 text-ink-4">·</span>
                 {[
                   r.startedAt?.slice(0, 16).replace("T", " "),
                   r.ageRange || null,

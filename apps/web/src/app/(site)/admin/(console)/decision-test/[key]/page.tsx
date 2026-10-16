@@ -9,6 +9,7 @@ import type { Run } from "../runs";
 import { attemptEvidence, attemptLabel } from "../runs";
 import { BlockReview, SessionReview } from "../review";
 import { RunExport } from "../run-export";
+import { CopyRunId } from "../run-id";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
 
@@ -129,6 +130,18 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
       >
         {run.displayName || "Anonymous"}.
       </h1>
+      {/* The run id, full, directly under the name.
+          A display name is not an identifier: most runs are anonymous,
+          several participants have taken the test more than once, and
+          two of them share a first name. This is the only handle that
+          names one sitting and no other, and it was previously visible
+          only in the address bar. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
+          run id
+        </span>
+        <CopyRunId id={key} />
+      </div>
       <p className="mt-4 font-mono text-[11px] tracking-[0.1em] text-ink-3">
         {[
           run.startedAt?.slice(0, 16).replace("T", " "),
