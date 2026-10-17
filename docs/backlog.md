@@ -1021,15 +1021,46 @@ CSV export, the privacy section and the product events (migrations
   distribution sits. Set it from data, in
   `DTSettings`/`scoreTapCheck`, not in a document.
 
-- **Two real runs exist and neither can speak to load.** Both were
-  taken on item set `items-2026-10-04`, when the blocks were
-  family-blocked: block 1 was six arithmetic items and block 4 was
-  conjunctions and syllogisms, so item family swamped load entirely and
-  accuracy *rose* to 100% at the hardest block. Migration 00052
-  interleaved the families and `v_dt_load_curve` keeps the two item
-  sets apart, so nothing is corrupted, but the usable sample is zero
-  until the next run completes. Not a work item; a statement of where
-  the data actually stands.
+- **Where the data actually stands.** Re-counted 2026-10-17 by
+  `deploy/dt-governance.sh`; the previous version of this entry said
+  the usable sample was zero, which stopped being true on 2026-10-07.
+  63 sessions, 37 of them synthetic, so 26 real:
+
+  | Instrument | Item set | Completed | Abandoned | Excluded |
+  |---|---|---|---|---|
+  | v1 | items-2026-10-04 | 2 | 0 | 0 |
+  | v2-m6000-q25000-r20000 | items-2026-10-05 | 3 | 1 | 1 |
+  | v2-m6000-q25000-r20000 | pool-2026-10-07 | 12 | 6 | 1 |
+
+  **The analysis-grade sample is the 12 completed runs on
+  `pool-2026-10-07`.** The two v1 runs are the family-blocked ones
+  described before, where item family swamped load and accuracy rose to
+  100% at the hardest block; they stay queryable and
+  `v_dt_load_curve` keeps every item set and instrument version apart,
+  so nothing pools. The three on `items-2026-10-05` are sound but on a
+  superseded set.
+
+  Two things visible in that table are worth naming rather than
+  averaging away:
+
+  - **Abandonment is a third of starts** on the current set, 6 of 18,
+    and it is concentrated on phones. One participant started three
+    times in six minutes before a run stuck (`a84aa572`, `bb074310`,
+    then `f9753e2f`).
+  - **Phone and desktop are not the same measurement.** Among completed
+    non-owner runs the phone mean is about 9/30 against about 14/30 on
+    desktop. That gap is larger than the load effect the instrument is
+    built to detect, so device has to be a reported condition before any
+    pooled claim is made about people.
+
+- **Three runs have never been reviewed** and are therefore inside every
+  figure, vouched for by nobody. `v_dt_load_curve.sessions_unreviewed`
+  exists to make exactly this visible and currently reads 3.
+
+- **The block-level exclusion has never been used.** Zero blocks are
+  marked `do_not_use` across the whole dataset. The control is wired and
+  checked; either no block has warranted it or per-block judgement is
+  not yet part of the review habit, and it is worth knowing which.
 
 - **The graph projection**, deferred by
   [ADR 0030](adr/0030-relational-collection-graph-analysis.md) until
