@@ -9274,7 +9274,10 @@ export type DecisionTestAnswer = Message<"career.v1.DecisionTestAnswer"> & {
   outcome: string;
 
   /**
-   * The participant's own rating, 0 to 100.
+   * The participant's own rating, 0 to 100, or -1 when they never gave
+   * one. Zero is a real rating and must not stand in for its absence:
+   * the clock can run out while the participant is still on the rating
+   * step, and that answer has an outcome but no confidence.
    *
    * @generated from field: int32 confidence = 6;
    */

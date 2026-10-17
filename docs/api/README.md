@@ -8715,7 +8715,7 @@ One answer.
 | `itemCode` | `string` | string |  | Stable item code, e.g. A1 or D4. |
 | `itemFamily` | `string` | string |  | arithmetic, base_rate, conjunction or syllogism. |
 | `outcome` | `string` | string |  | correct, lure, other or expired. |
-| `confidence` | `int32` | number |  | The participant's own rating, 0 to 100. |
+| `confidence` | `int32` | number |  | The participant's own rating, 0 to 100, or -1 when they never gave one. Zero is a real rating and must not stand in for its absence: the clock can run out while the participant is still on the rating step, and that answer has an outcome but no confidence. |
 | `latencyMs` | `int32` | number |  | Time to answer, in milliseconds. |
 | `prompt` | `string` | string |  | The question as it was put. |
 | `chosenText` | `string` | string |  | The option the participant chose, as text. Empty on an expiry, where nothing was chosen at all. |

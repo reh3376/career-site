@@ -16163,7 +16163,10 @@ type DecisionTestAnswer struct {
 	ItemFamily string `protobuf:"bytes,4,opt,name=item_family,json=itemFamily,proto3" json:"item_family,omitempty"`
 	// correct, lure, other or expired.
 	Outcome string `protobuf:"bytes,5,opt,name=outcome,proto3" json:"outcome,omitempty"`
-	// The participant's own rating, 0 to 100.
+	// The participant's own rating, 0 to 100, or -1 when they never gave
+	// one. Zero is a real rating and must not stand in for its absence:
+	// the clock can run out while the participant is still on the rating
+	// step, and that answer has an outcome but no confidence.
 	Confidence int32 `protobuf:"varint,6,opt,name=confidence,proto3" json:"confidence,omitempty"`
 	// Time to answer, in milliseconds.
 	LatencyMs int32 `protobuf:"varint,7,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`

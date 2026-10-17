@@ -364,7 +364,25 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 	// it deliberately withholds: the chosen option and the prompt.
 	arows, err := r.pool.Query(ctx, `
 		SELECT v.position_overall, v.block_no, v.item_code, v.item_family, v.outcome,
-		       coalesce(v.confidence,0), coalesce(v.latency_ms,0),
+		       -- -1, not 0, for a confidence that was never given.
+		       --
+		       -- Zero is a rating. It sits below "Guessing" at 10 on the
+		       -- scale the participant sees, so coalescing to it turned
+		       -- "did not rate" into "rated as certainly wrong", and
+		       -- every consumer downstream believed it: the console
+		       -- printed "0%" and the CSV wrote 0 into the column an
+		       -- analysis averages. Run c7cbd814 answered item 8
+		       -- correctly at 24.7s of a 25s limit, never reached the
+		       -- rating step, and was displayed as the worst-calibrated
+		       -- answer in the run.
+		       --
+		       -- The stored column is already NULL for this, on purpose
+		       -- (see DTRecordAnswer), and the views already skip it, so
+		       -- the aggregates were never wrong. Only this projection
+		       -- lost it. -1 is the sentinel the sibling columns below
+		       -- already use for absent, and the readers already test
+		       -- for it.
+		       coalesce(v.confidence,-1), coalesce(v.latency_ms,0),
 		       coalesce(i.prompt,''),
 		       -- options is jsonb, so ->> with a zero-based integer
 		       -- subscript, not array subscripting. An out-of-range or

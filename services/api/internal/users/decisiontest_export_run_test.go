@@ -2,6 +2,7 @@ package users
 
 import (
 	"encoding/csv"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -142,4 +143,21 @@ func contains(header []string, name string) bool {
 		}
 	}
 	return false
+}
+
+// Zero is a rating; absent is not. The export column feeds whatever
+// somebody averages later, so an unrated answer has to arrive empty
+// rather than as a confident claim of zero.
+func TestCSVConfidenceDistinguishesUnratedFromZero(t *testing.T) {
+	if got := csvConfidence(-1); got != "" {
+		t.Fatalf("unrated confidence should be an empty cell, got %q", got)
+	}
+	if got := csvConfidence(0); got != "0" {
+		t.Fatalf("a rating of zero is a rating and must survive, got %q", got)
+	}
+	for _, c := range []int{10, 50, 70, 100} {
+		if got := csvConfidence(c); got != strconv.Itoa(c) {
+			t.Fatalf("csvConfidence(%d) = %q", c, got)
+		}
+	}
 }
