@@ -9,6 +9,8 @@ import type { Run } from "../runs";
 import { attemptEvidence, attemptLabel } from "../runs";
 import { BlockReview, SessionReview } from "../review";
 import { RunExport } from "../run-export";
+import { unratedCount, unratedNote } from "../confidence";
+import { describeMove, moveText } from "../move";
 import { CopyRunId } from "../run-id";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
@@ -227,17 +229,34 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
             sub={`${hard?.meanConfidence ?? 0}% confident`}
           />
         </dl>
+        {/* Named, not signed. This sentence used to print
+            early minus hardest beside the word "moved", so the
+            expected finding, accuracy falling as load rises, came out
+            positive and read as an improvement. See ../move.ts. */}
         <p className="mt-5 text-sm leading-relaxed text-ink-2">
-          Accuracy moved{" "}
+          From the early blocks to the hardest one, accuracy{" "}
           <strong className="text-ink">
-            {earlyAcc - pct(hard?.correct, hard?.total)} points
-          </strong>
-          , confidence moved{" "}
+            {moveText(describeMove(earlyAcc, pct(hard?.correct, hard?.total)))}
+          </strong>{" "}
+          and confidence{" "}
           <strong className="text-ink">
-            {earlyConf - (hard?.meanConfidence ?? 0)} points
+            {moveText(describeMove(earlyConf, hard?.meanConfidence ?? 0))}
           </strong>
           . The gap is the result.
         </p>
+        {/* Said on the page rather than left to be noticed. A figure
+            that excludes some of its own rows should say how many. */}
+        {unratedNote(
+          unratedCount(answers),
+          answers.filter((a) => a.outcome !== "expired").length,
+        ) ? (
+          <p className="mt-3 text-sm leading-relaxed text-ink-3">
+            {unratedNote(
+              unratedCount(answers),
+              answers.filter((a) => a.outcome !== "expired").length,
+            )}
+          </p>
+        ) : null}
       </section>
 
       {/* Block 5 against block 1 is the only thing that separates load
@@ -442,7 +461,15 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                   ) : null}
                 </td>
                 <td className="py-2 pr-4 tabular-nums text-ink-2">
-                  {a.outcome === "expired" ? "" : `${a.confidence ?? 0}%`}
+                  {a.outcome === "expired"
+                    ? ""
+                    : (a.confidence ?? -1) < 0
+                      ? // Not the same as rating zero, and it used to
+                        // render as "0%", which is the one reading that
+                        // makes a correct answer look like the worst
+                        // calibrated one in the run.
+                        <span className="text-ink-4">not rated</span>
+                      : `${a.confidence}%`}
                 </td>
                 <td className="py-2 pr-4 tabular-nums text-ink-2">
                   {a.outcome === "expired"

@@ -3747,7 +3747,10 @@ message DecisionTestAnswer {
   string item_family = 4;
   // correct, lure, other or expired.
   string outcome = 5;
-  // The participant's own rating, 0 to 100.
+  // The participant's own rating, 0 to 100, or -1 when they never gave
+  // one. Zero is a real rating and must not stand in for its absence:
+  // the clock can run out while the participant is still on the rating
+  // step, and that answer has an outcome but no confidence.
   int32 confidence = 6;
   // Time to answer, in milliseconds.
   int32 latency_ms = 7;

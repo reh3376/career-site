@@ -175,7 +175,7 @@ func BuildDTRunCSV(run DTRun, blocks []DTBlockSummary, answers []DTAnswerRow, in
 				csvValue(a.IsLure),
 				csvValue(a.ConfidentlyWrong),
 				csvValue(a.ConfidentlyLured),
-				strconv.Itoa(a.Confidence),
+				csvConfidence(a.Confidence),
 				strconv.Itoa(a.LatencyMs),
 				strconv.FormatFloat(a.LatencyVsBaseline, 'f', 2, 64),
 				csvBrier(a.Brier),
@@ -245,6 +245,17 @@ func csvChosenIndex(i int) string {
 		return ""
 	}
 	return strconv.Itoa(i)
+}
+
+// An empty cell, not a zero, when the participant never rated the
+// answer. Zero is a real rating on this scale and averaging it as one
+// drags every calibration figure down by however many answers ran out
+// of clock on the rating step.
+func csvConfidence(c int) string {
+	if c < 0 {
+		return ""
+	}
+	return strconv.Itoa(c)
 }
 
 func csvBrier(b float64) string {
