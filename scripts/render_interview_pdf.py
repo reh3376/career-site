@@ -320,6 +320,12 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--title", default=None)
     ap.add_argument("--subtitle", default=None)
+    ap.add_argument("--header", default=None, help="running header text; defaults to the title")
+    ap.add_argument(
+        "--no-toc",
+        action="store_true",
+        help="short document: no contents page, no page break per section",
+    )
     ap.add_argument("--keep-typst", action="store_true", help="keep the .typ for debugging")
     args = ap.parse_args()
 
@@ -332,10 +338,18 @@ def main() -> int:
 
     lines = args.src.read_text(encoding="utf-8").split("\n")
     anchors = collect_anchors(lines)
-    if len(anchors) < 5:
+    # The guard exists because a silently broken heading scan would drop
+    # every cross-reference without failing. It only means something for
+    # a document that *has* cross-references: a short piece of prose with
+    # no numbered sections legitimately has no anchors, and refusing to
+    # render it would be the check inventing a problem.
+    body_text = "\n".join(lines)
+    wants_links = bool(SEC_REF.search(body_text) or STORY_REF.search(body_text))
+    if wants_links and len(anchors) < 5:
         print(
-            f"only {len(anchors)} anchors found in {args.src}; the heading scan "
-            "is broken and every cross-reference would silently drop",
+            f"{args.src} makes section or story references but only "
+            f"{len(anchors)} anchors were found; the heading scan is broken "
+            "and every cross-reference would silently drop",
             file=sys.stderr,
         )
         return 1
@@ -352,15 +366,22 @@ def main() -> int:
     anchors.update({a: "case" for a in case_anchors})
     body, stats = link_refs(body, anchors)
 
-    acronyms = acronyms_from_table(lines)
-    if len(acronyms) < 20:
+    # Same reasoning as the anchor guard: it is worth failing when a
+    # glossary is present and the scan of it came back empty, and it is
+    # not worth failing on a document that simply has no glossary.
+    has_glossary = "Acronyms used in these notes" in body_text
+    acronyms = acronyms_from_table(lines) if has_glossary else []
+    if has_glossary and len(acronyms) < 20:
         print(
-            f"only {len(acronyms)} acronyms parsed from the glossary; the table "
-            "scan is broken and the expansions would not be linked",
+            f"{args.src} has a glossary but only {len(acronyms)} acronyms "
+            "parsed from it; the table scan is broken and the expansions "
+            "would not be linked",
             file=sys.stderr,
         )
         return 1
-    body, n_acr = link_acronyms(body, acronyms, 0)
+    n_acr = 0
+    if acronyms:
+        body, n_acr = link_acronyms(body, acronyms, 0)
     stats["acronyms"] = n_acr
     stats["acronym_terms"] = len(acronyms)
 
@@ -394,8 +415,7 @@ def main() -> int:
             "typst",
             "--template",
             str(TEMPLATE),
-            "--toc",
-            "--toc-depth=2",
+            *([] if args.no_toc else ["--toc", "--toc-depth=2"]),
             # The document's sections are "## 1." through "## 13.", so
             # without this they arrive as level 2 and the template's
             # section styling, which is the page-break and the rule,
@@ -408,6 +428,8 @@ def main() -> int:
             cmd += ["-M", f"title={title}"]
         if args.subtitle:
             cmd += ["-M", f"subtitle={args.subtitle}"]
+        if args.header:
+            cmd += ["-M", f"header={args.header}"]
 
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode != 0:
