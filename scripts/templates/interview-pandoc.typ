@@ -66,8 +66,8 @@
     grid(
       columns: (1fr, auto),
       align: (left, right),
-      if current.len() > 0 { current.last().body } else { [Contents] },
-      [Blue Origin · interview notes],
+      if current.len() > 0 { current.last().body } else { [] },
+      [$if(header)$$header$$else$$if(title)$$title$$endif$$endif$],
     )
     v(-0.4em)
     line(length: 100%, stroke: 0.4pt + rgb("#d4d4d4"))
@@ -106,7 +106,9 @@ $endif$
 // Headings carry their own weight and spacing. Level 1 is a section
 // (§0 to §13), level 2 a subsection, level 3 a story or a case.
 #show heading.where(level: 1): it => {
+$if(toc)$
   pagebreak(weak: true)
+$endif$
   block(above: 0em, below: 0.7em)[
     #grid(
       columns: (1fr, auto),
@@ -116,7 +118,7 @@ $endif$
       // by following a cross-reference has no back button in a printed
       // or a full-screen PDF, and jumping twice through the contents
       // page is the whole navigation loop.
-      text(size: 8pt, fill: rgb("#0b4f9e"))[#link(<contents>)[Contents]],
+$if(toc)$      text(size: 8pt, fill: rgb("#0b4f9e"))[#link(<contents>)[Contents]],$else$      [],$endif$
     )
     #v(-0.45em)
     #line(length: 100%, stroke: 0.9pt + rgb("#1a1a1a"))
