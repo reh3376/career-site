@@ -46,12 +46,39 @@ func DTDefaultSettings() DTSettings {
 	return DTSettings{MemoriseMs: 6000, QuestionMs: 25000, RecallMs: 20000}
 }
 
+// dtGeneration names the instrument itself, as opposed to the timings
+// it is currently run at.
+//
+// The derived version covers every change expressible as a number, and
+// it covered them well. What it could not see was a change to what the
+// participant is asked to do, because nothing in the struct moves when
+// the screens change. On 2026-10-18 three such changes landed together:
+//
+//   - The memorise screen had been printing the worked answer beside
+//     the number to hold ("So you will type 0350"), so blocks 3 and 4
+//     measured storage where they were specified to measure storage
+//     plus executive processing. Live since 2026-10-04, which is every
+//     run in the v2 sample.
+//   - The rule is now taught before the number appears, with the clock
+//     stopped and an example worked on digits the block will not ask
+//     for, including a digit that wraps to zero. The modulo-ten rule
+//     was never stated anywhere and participants met it for the first
+//     time while holding four digits.
+//   - The practice block no longer shows an empty memorise screen.
+//
+// None of that moves a millisecond, so without a generation the new
+// runs would have pooled with the old ones under the same version
+// string. Bump this whenever the instrument changes in a way a
+// participant would notice; the timings keep covering the rest.
+const dtGeneration = "v3"
+
 // InstrumentVersion identifies the instrument these timings describe.
 //
 // Derived rather than stored, so a timing change cannot be made without
-// the data recording that it happened.
+// the data recording that it happened. The generation prefix covers the
+// changes a timing cannot express.
 func (s DTSettings) InstrumentVersion() string {
-	return fmt.Sprintf("v2-m%d-q%d-r%d", s.MemoriseMs, s.QuestionMs, s.RecallMs)
+	return fmt.Sprintf("%s-m%d-q%d-r%d", dtGeneration, s.MemoriseMs, s.QuestionMs, s.RecallMs)
 }
 
 // sane clamps values that would break the instrument rather than tune
