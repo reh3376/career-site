@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { ruleExample } from "./rule-example";
 import { useRouter } from "next/navigation";
 
 import { decisionTestClient } from "@/lib/decision-test-client";
@@ -59,7 +61,17 @@ type Block = {
   transform: string;
   questions: Question[];
 };
-type Phase = "memorise" | "question" | "confidence" | "recall" | "debrief" | "finishing";
+// "rule" precedes "memorise" on a transformation block: the rule is
+// explained and demonstrated with the clock stopped, then the number
+// appears. Teaching under a running timer is not teaching.
+type Phase =
+  | "rule"
+  | "memorise"
+  | "question"
+  | "confidence"
+  | "recall"
+  | "debrief"
+  | "finishing";
 
 type Timings = { memoriseMs: number; questionMs: number; recallMs: number };
 type Handoff = {
@@ -112,7 +124,12 @@ export function RunScreen() {
   const [block, setBlock] = useState<Block>(practice);
   const [blockNo, setBlockNo] = useState(0); // 0 is the unscored practice block
   const [qi, setQi] = useState(0);
-  const [phase, setPhase] = useState<Phase>("memorise");
+  // Practice carries no number (see briefing.tsx) and is never asked to
+  // give one back, so it starts at the questions. It used to start at
+  // "memorise", which showed "Hold this number" over an empty space for
+  // the full memorise window: six seconds of nothing as the first thing
+  // anybody saw, with a third of starts already being abandoned.
+  const [phase, setPhase] = useState<Phase>("question");
   const [chosen, setChosen] = useState<number | null>(null);
   const [recall, setRecall] = useState("");
   const [beat, setBeat] = useState(false);
@@ -224,7 +241,7 @@ export function RunScreen() {
       setBlockNo(n);
       setQi(0);
       setRecall("");
-      setPhase("memorise");
+      setPhase(b.transform && b.transform !== "none" ? "rule" : "memorise");
     },
     // No router here any more: the redirect moved to answerDebrief when
     // the debrief step was added between the last recall and finishing.
@@ -315,6 +332,12 @@ export function RunScreen() {
       return () => window.clearTimeout(t);
     }
     if (phase === "question" || phase === "confidence") {
+      // The practice block now opens straight on a question, because it
+      // has no number to memorise. Nothing had set shownAt by then: the
+      // memorise timer used to do it on its way out, so the first
+      // practice question would have been docked however long the page
+      // took to load, and a slow load would have expired it on arrival.
+      if (shownAt.current === 0) shownAt.current = performance.now();
       const left = timings.questionMs - (performance.now() - shownAt.current);
       const t = window.setTimeout(() => {
         // An answer that was given is kept.
@@ -424,11 +447,10 @@ export function RunScreen() {
   const transform = useMemo(() => {
     const add = block.transform === "plus1" ? 1 : block.transform === "plus3" ? 3 : 0;
     if (!add) return null;
-    const example = block.digits
-      .split("")
-      .map((d) => String((Number(d) + add) % 10))
-      .join("");
-    return { add, example };
+    // Worked on digits this block will never ask for. Computing it from
+    // block.digits put the answer on the memorise screen; see
+    // ../rule-example.ts.
+    return { add, example: ruleExample(add, block.digits) };
   }, [block.transform, block.digits]);
 
   if (!handoff) return null;
@@ -464,6 +486,75 @@ export function RunScreen() {
       </header>
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 pb-24 sm:px-10">
+        {/* The rule, taught with the clock stopped.
+            Nothing is timed in this phase: the phase timer below only
+            arms for "memorise", "question" and "confidence", so the
+            participant reads at their own pace and starts the block
+            when they press Continue. A rule met for the first time
+            while four digits are decaying is a comprehension test, not
+            a load test. */}
+        {phase === "rule" && transform?.example ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dt-rule-title"
+            className="mx-auto max-w-lg rounded-md border border-accent bg-paper-2 px-6 py-7 text-center"
+          >
+            <p
+              id="dt-rule-title"
+              className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase"
+            >
+              the rule changes for this block
+            </p>
+            <p className="font-display mt-4 text-3xl leading-snug text-ink">
+              Add {transform.add} to every digit.
+            </p>
+            <p className="mt-5 text-base leading-relaxed text-ink-2">
+              You will see a four digit number, hold it, answer six
+              questions, then type it back with {transform.add} added to{" "}
+              <em>each digit separately</em>. There is no carrying between
+              digits.
+            </p>
+
+            <div className="mt-6 border-t border-line pt-5">
+              <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
+                for example
+              </p>
+              <p className="font-display mt-4 text-4xl tracking-[0.2em] text-ink tabular-nums">
+                {transform.example.shown}
+              </p>
+              <p className="mt-2 text-sm text-ink-3">becomes</p>
+              <p className="font-display mt-2 text-4xl tracking-[0.2em] text-accent tabular-nums">
+                {transform.example.typed}
+              </p>
+              {transform.example.wrapped ? (
+                <p className="mt-5 text-base leading-relaxed text-ink-2">
+                  Note the {transform.example.wrapped}:{" "}
+                  {transform.example.wrapped} plus {transform.add} is{" "}
+                  {Number(transform.example.wrapped) + transform.add}, so you
+                  write{" "}
+                  <strong className="text-ink">
+                    {(Number(transform.example.wrapped) + transform.add) % 10}
+                  </strong>{" "}
+                  and nothing carries into the digit beside it.
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setPhase("memorise")}
+              className="mt-7 rounded-md bg-accent px-8 py-3 font-mono text-[11px] tracking-[0.14em] text-canvas uppercase"
+            >
+              Continue
+            </button>
+            <p className="mt-4 text-xs text-ink-3">
+              Nothing is timed until you press Continue.
+            </p>
+          </div>
+        ) : null}
+
         {phase === "memorise" ? (
           <div className="text-center">
             {transform ? (
@@ -478,14 +569,13 @@ export function RunScreen() {
             <p className="font-display mt-6 text-7xl tracking-[0.2em] text-ink tabular-nums">
               {block.digits}
             </p>
+            {/* The rule, restated. Not the answer: that was here until
+                2026-10-18 and it removed the processing these blocks
+                exist to impose. It is taught in the "rule" phase above
+                instead, on digits that are not these. */}
             {transform ? (
-              <p className="mt-6 text-base text-ink-2">
-                So you will type{" "}
-                <span className="font-display tracking-[0.1em] text-ink tabular-nums">
-                  {transform.example}
-                </span>
-                . Digits wrap, so 9 plus {transform.add} is{" "}
-                {(9 + transform.add) % 10}.
+              <p className="mt-6 text-sm text-ink-2">
+                Add {transform.add} to each digit. Digits wrap.
               </p>
             ) : (
               <p className="mt-6 text-sm text-ink-2">Give it back exactly as shown.</p>
