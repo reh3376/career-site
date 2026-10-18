@@ -335,6 +335,27 @@ export function Briefing({ turnstileSiteKey }: { turnstileSiteKey: string }) {
             at the end of the block. The questions matter less than that
             number does.
           </p>
+          {/* The device note.
+              Observed, not assumed, and it says which. Device is
+              self-selected here, so the figures cannot separate the
+              screen from the situation somebody is in when they reach
+              for a phone. Stating the numbers and declining to explain
+              them is the honest version, and it is also the more
+              persuasive one: a reader who is told why the evidence is
+              limited is likelier to believe the part that is not. */}
+          <p className="rounded-md border border-line-strong bg-paper-2 px-5 py-4">
+            <strong className="text-ink">
+              Please use a laptop or a desktop if you can.
+            </strong>{" "}
+            Of the first seventeen people to take this, those on a phone
+            finished 64% of the time against 91% on a computer, and the
+            ones who did finish scored about five points lower out of
+            thirty. They also spent longer on each question, so it does
+            not look like haste. We cannot yet tell how much of that is
+            the small screen and how much is where people happen to be
+            when they pick up a phone. Either way it costs you a fair
+            reading and it costs the study a data point.
+          </p>
           <ul className="list-disc space-y-2 pl-5">
             <li>Fifteen minutes, timed. There is no pause.</li>
             <li>
