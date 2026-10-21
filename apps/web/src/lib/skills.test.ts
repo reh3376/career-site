@@ -1,3 +1,6 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { listArticles } from "./articles";
@@ -32,11 +35,19 @@ describe("the skills matrix", () => {
   // can never fail on its own: a broken ref makes a skill disappear
   // rather than appear unsupported. This is the test that notices.
   it("publishes every skill file, so none was dropped for unresolvable evidence", async () => {
+    // Counted from disk rather than hardcoded. The literal that used to
+    // be here said 15, which meant adding a skill failed this test for
+    // the wrong reason and taught whoever hit it to bump the number.
+    // Worse, it would have passed while hiding a drop: add one file and
+    // orphan another on the same day and the count still matches.
+    const files = readdirSync(join(process.cwd(), "content", "skills")).filter(
+      (f) => f.endsWith(".md"),
+    );
     const skills = await listSkills();
     expect(
       skills.length,
       "a skill file exists that resolved to nothing and was dropped from the page",
-    ).toBe(15);
+    ).toBe(files.length);
   });
 
   it("resolves every single ref, not merely one per skill", async () => {
