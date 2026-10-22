@@ -1047,15 +1047,36 @@ CSV export, the privacy section and the product events (migrations
     and it is concentrated on phones. One participant started three
     times in six minutes before a run stuck (`a84aa572`, `bb074310`,
     then `f9753e2f`).
-  - **Phone and desktop are not the same measurement.** Among completed
-    non-owner runs the phone mean is about 9/30 against about 14/30 on
-    desktop. That gap is larger than the load effect the instrument is
-    built to detect, so device has to be a reported condition before any
-    pooled claim is made about people.
+  - **Phone and desktop differ, and the gap is shrinking.** Re-counted
+    2026-10-22. This entry previously said about 9/30 against about
+    14/30, which was true of the sample it was written from and is not
+    true now:
 
-- **Three runs have never been reviewed** and are therefore inside every
-  figure, vouched for by nobody. `v_dt_load_curve.sessions_unreviewed`
-  exists to make exactly this visible and currently reads 3.
+    | Volunteers only | n | completion | mean score |
+    |---|---|---|---|
+    | 2026-10-18 | 5 desktop, 7 phone | 91% / 64% | 13.4 / 8.3 |
+    | 2026-10-22 | 8 desktop, 8 phone | 80% / 67% | 11.6 / 8.2 |
+
+    The score gap went 5.1 to 3.4, Mann-Whitney U from 3 to 13 against
+    a critical value of 13, and Cohen's d from 1.61 to 0.90. It was
+    comfortably significant and is now sitting on the p = 0.05 line.
+    Direction unchanged; confidence much lower. The ordinary shape of
+    an early result regressing as n grows, and the reason the LinkedIn
+    update built on it is on hold.
+
+    One run carries a lot of this: `176bc9a5`, desktop, 3/30 with 16 of
+    30 expired, currently marked good. Excluding it moves the desktop
+    mean to 12.9 and the gap back to 4.6. **It should be looked at on
+    its merits, before and separately from any decision about what the
+    device numbers say**, because deciding its status while watching
+    what it does to a headline is how curation stops being curation.
+
+    Device is recorded on every session either way, so nothing is lost
+    by waiting for a larger sample.
+
+- ~~Three runs have never been reviewed.~~ Closed 2026-10-22: every real
+  run now carries a judgement (23 good, 4 incomplete, 4 do-not-use, 0
+  unreviewed).
 
 - **The block-level exclusion has never been used.** Zero blocks are
   marked `do_not_use` across the whole dataset. The control is wired and
