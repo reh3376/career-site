@@ -154,6 +154,10 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           run.occupation,
           run.deviceClass,
           run.audioMode,
+          // Randomised, so it is a condition of the run rather than a
+          // property of the participant, and it is stated either way:
+          // "no timer" is as much a fact about the run as "timer".
+          run.timerVisible ? "countdown shown" : "no countdown",
           // The address itself, not just that one exists. Admin-only,
           // and the reason is written at the proto field: a deletion
           // request has no other handle on a run. The answer key is a

@@ -61,18 +61,20 @@ class Timings(_message.Message):
     def __init__(self, memorise_ms: _Optional[int] = ..., question_ms: _Optional[int] = ..., recall_ms: _Optional[int] = ...) -> None: ...
 
 class StartSessionResponse(_message.Message):
-    __slots__ = ("session_key", "practice", "block_count", "question_count", "timings")
+    __slots__ = ("session_key", "practice", "block_count", "question_count", "timings", "timer_visible")
     SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
     PRACTICE_FIELD_NUMBER: _ClassVar[int]
     BLOCK_COUNT_FIELD_NUMBER: _ClassVar[int]
     QUESTION_COUNT_FIELD_NUMBER: _ClassVar[int]
     TIMINGS_FIELD_NUMBER: _ClassVar[int]
+    TIMER_VISIBLE_FIELD_NUMBER: _ClassVar[int]
     session_key: str
     practice: Block
     block_count: int
     question_count: int
     timings: Timings
-    def __init__(self, session_key: _Optional[str] = ..., practice: _Optional[_Union[Block, _Mapping]] = ..., block_count: _Optional[int] = ..., question_count: _Optional[int] = ..., timings: _Optional[_Union[Timings, _Mapping]] = ...) -> None: ...
+    timer_visible: bool
+    def __init__(self, session_key: _Optional[str] = ..., practice: _Optional[_Union[Block, _Mapping]] = ..., block_count: _Optional[int] = ..., question_count: _Optional[int] = ..., timings: _Optional[_Union[Timings, _Mapping]] = ..., timer_visible: _Optional[bool] = ...) -> None: ...
 
 class GetBlockRequest(_message.Message):
     __slots__ = ("session_key", "block_no")

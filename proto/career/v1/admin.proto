@@ -3258,6 +3258,9 @@ message DecisionTestRun {
   string audio_mode = 8;
   // desktop, tablet or phone.
   string device_class = 9;
+  // Whether this run showed a per-question countdown. A randomised
+  // condition, so it splits the sample and belongs beside audio_mode.
+  bool timer_visible = 43;
   // Whether the tap-along check was passed.
   bool tap_check_passed = 10;
   // Unloaded synchronisation offset from the tap check, in ms.

@@ -45,7 +45,7 @@ func dtRunContextHeader() []string {
 		"prior_by_account", "prior_by_email", "prior_by_cookie",
 		"is_repeat", "repeat_matched_by",
 		"instrument_version", "item_set_version", "key_version",
-		"audio_mode", "device_class", "tap_check_passed",
+		"audio_mode", "device_class", "timer_visible", "tap_check_passed",
 		"baseline_rt_ms", "baseline_rt_sd_ms", "recall_strategy",
 		"age_range", "education", "occupation", "gave_email", "wants_results",
 		"session_review_status", "session_review_reason", "session_review_note",
@@ -74,6 +74,10 @@ func dtRunContextRow(r DTRun) []string {
 		r.KeyVersion,
 		r.AudioMode,
 		r.DeviceClass,
+		// The randomised condition. In the export because an analysis
+		// that cannot see which arm a run was in cannot use the fact
+		// that it was randomised, which is the only reason to randomise.
+		csvValue(r.TimerVisible),
 		csvValue(r.TapCheckPassed),
 		strconv.Itoa(r.BaselineRTMs),
 		strconv.Itoa(r.BaselineRTSDMs),

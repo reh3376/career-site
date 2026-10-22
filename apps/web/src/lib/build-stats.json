@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 500,
-    "byBot": 19,
+    "byAssistant": 501,
+    "byBot": 20,
     "byOwner": 39,
-    "commits": 924,
+    "commits": 928,
     "days": 35,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-10-22",
-    "merges": 366,
-    "nonMerge": 558,
+    "merges": 368,
+    "nonMerge": 560,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,22 +25,22 @@
   },
   "lines": {
     "code": {
-      "files": 468,
+      "files": 470,
       "languages": [
         {
           "files": 134,
           "language": "Go",
-          "lines": 33496
+          "lines": 33542
         },
         {
-          "files": 126,
+          "files": 127,
           "language": "TSX",
-          "lines": 25897
+          "lines": 26004
         },
         {
-          "files": 65,
+          "files": 66,
           "language": "SQL",
-          "lines": 7446
+          "lines": 7484
         },
         {
           "files": 29,
@@ -68,7 +68,7 @@
           "lines": 248
         }
       ],
-      "lines": 82014
+      "lines": 82205
     },
     "config": {
       "files": 30,
@@ -92,10 +92,10 @@
         {
           "files": 17,
           "language": "Protobuf",
-          "lines": 7762
+          "lines": 7770
         }
       ],
-      "lines": 7762
+      "lines": 7770
     },
     "documentation": {
       "files": 125,
@@ -103,10 +103,10 @@
         {
           "files": 125,
           "language": "Markdown",
-          "lines": 33017
+          "lines": 33021
         }
       ],
-      "lines": 33017
+      "lines": 33021
     },
     "generated": {
       "files": 70,
@@ -114,12 +114,12 @@
         {
           "files": 32,
           "language": "Go",
-          "lines": 44351
+          "lines": 44375
         },
         {
           "files": 17,
           "language": "TypeScript",
-          "lines": 25444
+          "lines": 25462
         },
         {
           "files": 1,
@@ -137,7 +137,7 @@
           "lines": 183
         }
       ],
-      "lines": 79071
+      "lines": 79113
     },
     "tests": {
       "files": 95,
@@ -145,7 +145,7 @@
         {
           "files": 76,
           "language": "Go",
-          "lines": 14557
+          "lines": 14588
         },
         {
           "files": 14,
@@ -158,7 +158,7 @@
           "lines": 456
         }
       ],
-      "lines": 16111
+      "lines": 16142
     }
   },
   "structure": {
@@ -166,8 +166,8 @@
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
-    "goTests": 438,
-    "migrations": 62,
+    "goTests": 439,
+    "migrations": 63,
     "pythonTests": 30,
     "requirements": 186,
     "requirementsDeferred": 1,

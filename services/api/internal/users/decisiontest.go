@@ -155,14 +155,14 @@ func (r *Repo) StartDecisionTest(
 		  (participant_id, instrument_version, item_set_version, key_version,
 		   audio_mode, device_class, tap_check_passed, baseline_rt_ms, baseline_rt_sd_ms,
 		   is_repeat, repeat_matched_by, visitor_key, is_synthetic,
-		   prior_by_account, prior_by_email, prior_by_cookie)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+		   prior_by_account, prior_by_email, prior_by_cookie, timer_visible)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 		RETURNING id, public_id::text`,
 		participantID, instrumentVersion, itemSetVersion, keyVersion,
 		cond.AudioMode, cond.DeviceClass, cond.TapCheckPassed,
 		nullableInt(cond.BaselineRTMs), nullableInt(cond.BaselineRTSDMs),
 		isRepeat, matchedBy, visitorKey, synthetic,
-		byAccount, byEmail, byCookie,
+		byAccount, byEmail, byCookie, cond.TimerVisible,
 	).Scan(&s.ID, &s.PublicID)
 	if err != nil {
 		return nil, fmt.Errorf("decision test: session: %w", err)
@@ -217,6 +217,11 @@ type DTConditions struct {
 	TapCheckPassed         bool
 	BaselineRTMs           int
 	BaselineRTSDMs         int
+	// Assigned here rather than sent by the client: a condition the
+	// participant's browser could choose is a condition the participant
+	// could choose, and the whole point of randomising is that nobody
+	// does.
+	TimerVisible bool
 }
 
 func nullableInt(v int) *int {

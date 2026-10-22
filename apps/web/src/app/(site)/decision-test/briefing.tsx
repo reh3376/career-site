@@ -252,6 +252,10 @@ export function Briefing({ turnstileSiteKey }: { turnstileSiteKey: string }) {
           sessionKey: res.sessionKey,
           audioMode,
           questionCount: res.questionCount,
+          // The countdown condition, decided by the server as a coin
+          // flip. Carried rather than re-derived: the client must not
+          // get a vote on which arm it is in.
+          timerVisible: res.timerVisible,
           // Carried over so the run screen can keep saying it. The
           // warning has to survive the navigation: the briefing is a
           // minute, the run is fifteen.

@@ -416,6 +416,7 @@ func toProtoRun(r users.DTRun) *v1.DecisionTestRun {
 		Education: r.Education, Occupation: r.Occupation, GaveEmail: r.GaveEmail,
 		ParticipantEmail: r.ParticipantEmail,
 		AudioMode:        r.AudioMode, DeviceClass: r.DeviceClass,
+		TimerVisible:   r.TimerVisible,
 		TapCheckPassed: r.TapCheckPassed, BaselineRtMs: int32(r.BaselineRTMs),
 		IsRepeat: r.IsRepeat, IsSynthetic: r.IsSynthetic,
 		InstrumentVersion: r.InstrumentVersion, ItemSetVersion: r.ItemSetVersion,

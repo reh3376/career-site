@@ -27,6 +27,7 @@ type DTRun struct {
 	// carried at all.
 	ParticipantEmail  string
 	AudioMode         string
+	TimerVisible      bool
 	DeviceClass       string
 	TapCheckPassed    bool
 	BaselineRTMs      int
@@ -213,7 +214,7 @@ const dtRunSelect = `
 		       coalesce(p.display_name,''), coalesce(p.age_range,''),
 		       coalesce(p.education,''), coalesce(p.occupation,''),
 		       coalesce(p.email,'') <> '', coalesce(p.email,''),
-		       s.audio_mode, s.device_class, s.tap_check_passed,
+		       s.audio_mode, s.device_class, s.timer_visible, s.tap_check_passed,
 		       coalesce(s.baseline_rt_ms,0), s.is_repeat, s.is_synthetic,
 		       s.instrument_version, s.item_set_version,
 		       (SELECT count(*) FROM dt_answers a WHERE a.session_id=s.id AND a.outcome='correct'),
@@ -251,7 +252,7 @@ func dtScanRun(rows interface{ Scan(...any) error }) (DTRun, error) {
 	var v DTRun
 	err := rows.Scan(&v.SessionKey, &v.Status, &v.DisplayName, &v.AgeRange,
 		&v.Education, &v.Occupation, &v.GaveEmail, &v.ParticipantEmail,
-		&v.AudioMode, &v.DeviceClass,
+		&v.AudioMode, &v.DeviceClass, &v.TimerVisible,
 		&v.TapCheckPassed, &v.BaselineRTMs, &v.IsRepeat, &v.IsSynthetic,
 		&v.InstrumentVersion, &v.ItemSetVersion, &v.Correct, &v.Answered,
 		&v.Expired, &v.MeanConfidence, &v.DurationS, &v.StartedAt,
