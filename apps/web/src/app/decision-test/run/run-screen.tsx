@@ -596,7 +596,7 @@ export function RunScreen() {
             {timerVisible ? (
               <Countdown
                 key={question.positionOverall}
-                deadline={shownAt.current + timings.questionMs}
+                startedAt={shownAt}
                 totalMs={timings.questionMs}
               />
             ) : null}

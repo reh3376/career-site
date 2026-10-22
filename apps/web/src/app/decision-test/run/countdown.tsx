@@ -25,17 +25,31 @@ import { useEffect, useRef } from "react";
 // same manipulation and would make a null result uninterpretable.
 
 export function Countdown({
-  deadline,
+  startedAt,
   totalMs,
 }: {
-  /** performance.now() value the question expires at. */
-  deadline: number;
+  /**
+   * The ref the phase timer writes the question's start into, passed
+   * rather than dereferenced by the caller.
+   *
+   * It used to take a `deadline` computed as `shownAt.current + budget`
+   * in the parent's JSX, which eslint's react-hooks/refs caught and was
+   * right to: a ref read during render is a value React never promised
+   * to have updated by then. It happened to hold the right number
+   * because every path that changes the phase writes it first, but
+   * "happens to" is the whole problem. Read here, inside the effect,
+   * which is where a ref is meant to be read.
+   */
+  startedAt: { current: number };
   totalMs: number;
 }) {
   const out = useRef<HTMLSpanElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
+    // Mounted fresh per question by the caller's key, so this reads the
+    // start of the question now on screen.
+    const deadline = startedAt.current + totalMs;
     let raf = 0;
     const paint = () => {
       const left = Math.max(0, deadline - performance.now());
@@ -51,7 +65,7 @@ export function Countdown({
     };
     paint();
     return () => cancelAnimationFrame(raf);
-  }, [deadline, totalMs]);
+  }, [startedAt, totalMs]);
 
   return (
     <div
