@@ -21,6 +21,7 @@ export type Run = {
   // showing presence, because a list is the easiest thing to screenshot.
   participantEmail?: string;
   audioMode?: string;
+  timerVisible?: boolean;
   deviceClass?: string;
   tapCheckPassed?: boolean;
   isRepeat?: boolean;
@@ -207,6 +208,10 @@ export function RunTable({ runs }: { runs: Run[] }) {
                 {r.reviewStatus ? <Tag>{statusLabel(r.reviewStatus)}</Tag> : null}
                 {r.blocksExcluded ? <Tag>{r.blocksExcluded} block excluded</Tag> : null}
                 {r.audioMode === "visual" ? <Tag>visual</Tag> : null}
+                {/* The randomised condition. Tagged only when on,
+                    like `visual`, so the list stays readable and
+                    the arm that differs is the one that shows. */}
+                {r.timerVisible ? <Tag>timer</Tag> : null}
                 {r.tapCheckPassed === false ? <Tag>tap failed</Tag> : null}
               </p>
               <p className="mt-1 font-mono text-[11px] tracking-[0.1em] text-ink-3">

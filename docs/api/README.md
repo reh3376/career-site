@@ -5019,6 +5019,7 @@ audio in the browser.
 | `blockCount` | `int32` | number |  | How many scored blocks follow. |
 | `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
 | `timings` | [`Timings`](#timings) | object |  | The timings in force for this run. |
+| `timerVisible` | `bool` | boolean |  | Whether this run shows a per-question countdown. Assigned by the server as a coin flip, never chosen by the client, because a condition the browser could pick is a condition the participant could pick. |
 
 <details><summary>Example request body</summary>
 
@@ -8428,6 +8429,7 @@ One run, summarised for a list.
 | `gaveEmail` | `bool` | boolean |  | Whether an address was left. Kept alongside `participant_email` because the list surface shows presence without needing the value. |
 | `audioMode` | `string` | string |  | sound or visual. |
 | `deviceClass` | `string` | string |  | desktop, tablet or phone. |
+| `timerVisible` | `bool` | boolean |  | Whether this run showed a per-question countdown. A randomised condition, so it splits the sample and belongs beside audio_mode. |
 | `tapCheckPassed` | `bool` | boolean |  | Whether the tap-along check was passed. |
 | `baselineRtMs` | `int32` | number |  | Unloaded synchronisation offset from the tap check, in ms. |
 | `isRepeat` | `bool` | boolean |  | A second or later run by the same person, flagged not blocked. |
@@ -9309,6 +9311,7 @@ The opened session.
 | `blockCount` | `int32` | number |  | How many scored blocks follow. |
 | `questionCount` | `int32` | number |  | How many scored questions in total, for the progress counter. |
 | `timings` | [`Timings`](#timings) | object |  | The timings in force for this run. |
+| `timerVisible` | `bool` | boolean |  | Whether this run shows a per-question countdown. Assigned by the server as a coin flip, never chosen by the client, because a condition the browser could pick is a condition the participant could pick. |
 
 ### GetBlockRequest
 

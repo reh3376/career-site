@@ -14018,6 +14018,9 @@ type DecisionTestRun struct {
 	AudioMode string `protobuf:"bytes,8,opt,name=audio_mode,json=audioMode,proto3" json:"audio_mode,omitempty"`
 	// desktop, tablet or phone.
 	DeviceClass string `protobuf:"bytes,9,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"`
+	// Whether this run showed a per-question countdown. A randomised
+	// condition, so it splits the sample and belongs beside audio_mode.
+	TimerVisible bool `protobuf:"varint,43,opt,name=timer_visible,json=timerVisible,proto3" json:"timer_visible,omitempty"`
 	// Whether the tap-along check was passed.
 	TapCheckPassed bool `protobuf:"varint,10,opt,name=tap_check_passed,json=tapCheckPassed,proto3" json:"tap_check_passed,omitempty"`
 	// Unloaded synchronisation offset from the tap check, in ms.
@@ -14239,6 +14242,13 @@ func (x *DecisionTestRun) GetDeviceClass() string {
 		return x.DeviceClass
 	}
 	return ""
+}
+
+func (x *DecisionTestRun) GetTimerVisible() bool {
+	if x != nil {
+		return x.TimerVisible
+	}
+	return false
 }
 
 func (x *DecisionTestRun) GetTapCheckPassed() bool {
@@ -17535,7 +17545,7 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x06counts\x18\x02 \x01(\v2#.career.v1.DecisionTestReviewCountsR\x06counts\x12.\n" +
 	"\x04runs\x18\x01 \x03(\v2\x1a.career.v1.DecisionTestRunR\x04runs\x12>\n" +
 	"\n" +
-	"item_pools\x18\x03 \x03(\v2\x1f.career.v1.DecisionTestItemPoolR\titemPools\"\xbf\f\n" +
+	"item_pools\x18\x03 \x03(\v2\x1f.career.v1.DecisionTestItemPoolR\titemPools\"\xe4\f\n" +
 	"\x0fDecisionTestRun\x12\x1f\n" +
 	"\vsession_key\x18\x01 \x01(\tR\n" +
 	"sessionKey\x12\x16\n" +
@@ -17550,7 +17560,8 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"gave_email\x18\a \x01(\bR\tgaveEmail\x12\x1d\n" +
 	"\n" +
 	"audio_mode\x18\b \x01(\tR\taudioMode\x12!\n" +
-	"\fdevice_class\x18\t \x01(\tR\vdeviceClass\x12(\n" +
+	"\fdevice_class\x18\t \x01(\tR\vdeviceClass\x12#\n" +
+	"\rtimer_visible\x18+ \x01(\bR\ftimerVisible\x12(\n" +
 	"\x10tap_check_passed\x18\n" +
 	" \x01(\bR\x0etapCheckPassed\x12$\n" +
 	"\x0ebaseline_rt_ms\x18\v \x01(\x05R\fbaselineRtMs\x12\x1b\n" +

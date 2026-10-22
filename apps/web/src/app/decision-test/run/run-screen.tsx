@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Countdown } from "./countdown";
 import { ruleExample } from "./rule-example";
 import { useRouter } from "next/navigation";
 
@@ -80,6 +81,7 @@ type Handoff = {
   practice: Block;
   questionCount: number;
   timings?: Timings;
+  timerVisible?: boolean;
   // Set by ?synthetic=1 on the briefing. Carried through the handoff so
   // the run screen can keep saying so, rather than the warning
   // disappearing at the navigation and leaving somebody fifteen minutes
@@ -114,6 +116,7 @@ export function RunScreen() {
   const audioMode = handoff?.audioMode ?? "sound";
   const questionCount = handoff?.questionCount ?? 30;
   const timings = handoff?.timings ?? FALLBACK;
+  const timerVisible = handoff?.timerVisible ?? false;
   const practice: Block = handoff?.practice ?? {
     blockNo: 0,
     load: "practice",
@@ -585,6 +588,18 @@ export function RunScreen() {
 
         {phase === "question" && question ? (
           <div>
+            {/* Shown to half of all runs, assigned server-side (see
+                migration 00063). Keyed on the question's position so it
+                remounts and restarts per question; the deadline comes
+                from the same shownAt the phase timer uses, so what the
+                participant sees and what the clock does cannot drift. */}
+            {timerVisible ? (
+              <Countdown
+                key={question.positionOverall}
+                startedAt={shownAt}
+                totalMs={timings.questionMs}
+              />
+            ) : null}
             {question.reminder ? (
               <p className="font-mono text-[11px] tracking-[0.14em] text-ink-3 uppercase">
                 {question.reminder}

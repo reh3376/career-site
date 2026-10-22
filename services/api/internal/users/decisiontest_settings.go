@@ -70,7 +70,14 @@ func DTDefaultSettings() DTSettings {
 // runs would have pooled with the old ones under the same version
 // string. Bump this whenever the instrument changes in a way a
 // participant would notice; the timings keep covering the rest.
-const dtGeneration = "v3"
+//
+// v4, 2026-10-22: half of all runs now show a per-question countdown,
+// assigned by a coin flip and recorded on dt_sessions.timer_visible.
+// Both arms are the same instrument in every other respect, and a v3
+// run is experientially identical to a v4 run with the timer off, but
+// the population changed and the data should say so rather than
+// leaving somebody to work it out from a date.
+const dtGeneration = "v4"
 
 // InstrumentVersion identifies the instrument these timings describe.
 //

@@ -391,7 +391,12 @@ type StartSessionResponse struct {
 	// How many scored questions in total, for the progress counter.
 	QuestionCount int32 `protobuf:"varint,4,opt,name=question_count,json=questionCount,proto3" json:"question_count,omitempty"`
 	// The timings in force for this run.
-	Timings       *Timings `protobuf:"bytes,5,opt,name=timings,proto3" json:"timings,omitempty"`
+	Timings *Timings `protobuf:"bytes,5,opt,name=timings,proto3" json:"timings,omitempty"`
+	// Whether this run shows a per-question countdown. Assigned by the
+	// server as a coin flip, never chosen by the client, because a
+	// condition the browser could pick is a condition the participant
+	// could pick.
+	TimerVisible  bool `protobuf:"varint,6,opt,name=timer_visible,json=timerVisible,proto3" json:"timer_visible,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -459,6 +464,13 @@ func (x *StartSessionResponse) GetTimings() *Timings {
 		return x.Timings
 	}
 	return nil
+}
+
+func (x *StartSessionResponse) GetTimerVisible() bool {
+	if x != nil {
+		return x.TimerVisible
+	}
+	return false
 }
 
 // Asks for a block by number.
@@ -1154,7 +1166,7 @@ const file_career_v1_decision_test_proto_rawDesc = "" +
 	"memoriseMs\x12\x1f\n" +
 	"\vquestion_ms\x18\x02 \x01(\x05R\n" +
 	"questionMs\x12\x1b\n" +
-	"\trecall_ms\x18\x03 \x01(\x05R\brecallMs\"\xdb\x01\n" +
+	"\trecall_ms\x18\x03 \x01(\x05R\brecallMs\"\x80\x02\n" +
 	"\x14StartSessionResponse\x12\x1f\n" +
 	"\vsession_key\x18\x01 \x01(\tR\n" +
 	"sessionKey\x12,\n" +
@@ -1162,7 +1174,8 @@ const file_career_v1_decision_test_proto_rawDesc = "" +
 	"\vblock_count\x18\x03 \x01(\x05R\n" +
 	"blockCount\x12%\n" +
 	"\x0equestion_count\x18\x04 \x01(\x05R\rquestionCount\x12,\n" +
-	"\atimings\x18\x05 \x01(\v2\x12.career.v1.TimingsR\atimings\"a\n" +
+	"\atimings\x18\x05 \x01(\v2\x12.career.v1.TimingsR\atimings\x12#\n" +
+	"\rtimer_visible\x18\x06 \x01(\bR\ftimerVisible\"a\n" +
 	"\x0fGetBlockRequest\x12(\n" +
 	"\vsession_key\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18@R\n" +
 	"sessionKey\x12$\n" +

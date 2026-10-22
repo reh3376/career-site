@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	crand "crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -168,6 +169,18 @@ func (h *DecisionTest) StartSession(
 		cond.BaselineRTSDMs = int(c.GetBaselineRtSdMs())
 	}
 
+	// The countdown condition, decided here and never sent by the
+	// client. A coin flip per session: half the runs see a per-question
+	// timer and half do not, so the question "does visible time
+	// pressure raise the lure rate" has an answer in the data instead
+	// of an opinion about it.
+	//
+	// crypto/rand rather than math/rand, not for secrecy but because
+	// the default source is seeded per process: a restarted api would
+	// deal the same sequence of conditions again, and a condition that
+	// correlates with a deploy is not randomised.
+	cond.TimerVisible = coinFlip()
+
 	// A member is recognised when signed in; nobody is required to be,
 	// and a lookup failure is not an error here. An anonymous run is the
 	// normal case, so this degrades to anonymous rather than refusing.
@@ -205,7 +218,8 @@ func (h *DecisionTest) StartSession(
 	h.log.Info("decision test started",
 		slog.String("session", sess.PublicID),
 		slog.Bool("synthetic", sess.Synthetic),
-		slog.String("audio_mode", cond.AudioMode))
+		slog.String("audio_mode", cond.AudioMode),
+		slog.Bool("timer_visible", cond.TimerVisible))
 
 	var eventUser int64
 	if userID != nil {
@@ -224,6 +238,7 @@ func (h *DecisionTest) StartSession(
 		Practice:      practice,
 		BlockCount:    users.DTBlockCount,
 		QuestionCount: users.DTQuestionCount,
+		TimerVisible:  cond.TimerVisible,
 		Timings: &v1.Timings{
 			MemoriseMs: int32(timings.MemoriseMs),
 			QuestionMs: int32(timings.QuestionMs),
@@ -612,4 +627,17 @@ func emailDomain(addr string) string {
 		return addr[i+1:]
 	}
 	return "unknown"
+}
+
+// coinFlip is a fair, unseeded bit for assigning a randomised
+// condition. An error from the system source is not something this
+// request can usefully recover from, and defaulting to false would
+// quietly bias the split toward one arm, so it falls back to the
+// cheapest unbiased alternative available.
+func coinFlip() bool {
+	var b [1]byte
+	if _, err := crand.Read(b[:]); err != nil {
+		return time.Now().UnixNano()%2 == 0
+	}
+	return b[0]%2 == 0
 }

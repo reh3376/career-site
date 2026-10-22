@@ -149,6 +149,11 @@ message StartSessionResponse {
   int32 question_count = 4;
   // The timings in force for this run.
   Timings timings = 5;
+  // Whether this run shows a per-question countdown. Assigned by the
+  // server as a coin flip, never chosen by the client, because a
+  // condition the browser could pick is a condition the participant
+  // could pick.
+  bool timer_visible = 6;
 }
 
 // Asks for a block by number.

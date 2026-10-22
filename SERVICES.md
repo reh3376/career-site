@@ -182,6 +182,7 @@ the version running in production on every rollout.
 | 00060 | `decision_test_private_bank.sql` | retires the published items and seeds the 90-item private bank, so the answer key is not readable in a public repo |
 | 00061 | `decision_test_regrade_misaligned.sql` | re-grades answers scored against the wrong item after the draw landed and `SubmitAnswer` kept resolving by bank position |
 | 00062 | `decision_test_feedback.sql` | adds `support_messages.dt_session_public_id` and the `decision_test_feedback` category, so a participant can write from the thanks page without a name and the note can be read beside its own run |
+| 00063 | `decision_test_timer_condition.sql` | adds `dt_sessions.timer_visible`, the randomised per-question countdown condition, assigned server-side as a coin flip and recorded beside `audio_mode` and `device_class` because it splits the sample |
 
 Roles: `career` (app owner, full DML), `career_admin_readonly` (SELECT-only; bounds the `/admin/db` blast radius).
 

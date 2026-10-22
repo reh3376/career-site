@@ -161,3 +161,34 @@ func TestCSVConfidenceDistinguishesUnratedFromZero(t *testing.T) {
 		}
 	}
 }
+
+// The randomised condition has to reach the export, in both arms.
+//
+// A condition that is assigned but not exported is a condition nobody
+// can analyse: the split exists in the database and the artifact an
+// analysis actually opens cannot see it, so the randomisation buys
+// nothing. Header and row are checked together because they are
+// positional, and a column added to one and not the other shifts every
+// value after it.
+func TestExportCarriesTheTimerCondition(t *testing.T) {
+	head := dtRunContextHeader()
+	idx := -1
+	for i, h := range head {
+		if h == "timer_visible" {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		t.Fatal("timer_visible is missing from the export header")
+	}
+	for _, on := range []bool{true, false} {
+		row := dtRunContextRow(DTRun{TimerVisible: on})
+		if len(row) != len(head) {
+			t.Fatalf("row has %d cells, header has %d", len(row), len(head))
+		}
+		want := csvValue(on)
+		if row[idx] != want {
+			t.Fatalf("timer_visible=%v exported as %q, want %q", on, row[idx], want)
+		}
+	}
+}
