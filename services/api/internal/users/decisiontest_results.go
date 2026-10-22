@@ -324,7 +324,14 @@ func (r *Repo) DTGetRun(ctx context.Context, key string) (*DTRun, []DTBlockSumma
 		       coalesce(max(rc.outcome),''),
 		       coalesce(max(v.memory_failure), -1),
 		       coalesce(max(rc.digits_correct),0), coalesce(max(rc.digits_held),0),
-		       coalesce(max(rc.latency_ms),0),
+		       -- -1, not 0, for a recall that was never reached.
+		       -- dt_recalls rows are written when a block is served,
+		       -- with outcome 'expired' as the starting state, so every
+		       -- block an abandoned run never got to looks exactly like
+		       -- a recall somebody tried and timed out on. The latency
+		       -- is what separates them, and coalescing it to zero
+		       -- threw that away. Same sentinel as memory_failure above.
+		       coalesce(max(rc.latency_ms),-1),
 		       coalesce(max(br.status),''), coalesce(max(br.note),''),
 		       -- Averaged in the view, not here. avg() over the ratio is
 		       -- the definition v_dt_blocks publishes, and recomputing it

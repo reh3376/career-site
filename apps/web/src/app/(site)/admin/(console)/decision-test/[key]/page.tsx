@@ -11,6 +11,7 @@ import { BlockReview, SessionReview } from "../review";
 import { RunExport } from "../run-export";
 import { unratedCount, unratedNote } from "../confidence";
 import { describeMove, moveText } from "../move";
+import { recallLabel, recallState } from "../recall-state";
 import { CopyRunId } from "../run-id";
 
 export const metadata: Metadata = { title: "Admin · Decision test run" };
@@ -316,7 +317,7 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                   {b.responseDigits ? `, gave ${b.responseDigits}` : ""}
                 </td>
                 <td className="py-3 pr-4">
-                  <RecallTag outcome={b.recallOutcome} />
+                  <RecallTag outcome={b.recallOutcome} latencyMs={b.recallLatencyMs} />
                 </td>
                 {/* Severity rather than cause. A typo, a transposition
                     and a genuine lapse are indistinguishable at the
@@ -345,13 +346,19 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
                       response is closer to, so it is the retention
                       reading rather than the length; the length comes
                       from the number that was actually shown. */}
-                  {b.presentedDigits ? (
+                  {/* Suppressed when the block was never reached.
+                      "held 0/3, 0 correct" on a recall nobody saw reads
+                      as a participant who could not hold three digits,
+                      which is the opposite of what happened. */}
+                  {b.presentedDigits &&
+                  recallState(b.recallOutcome, b.recallLatencyMs).kind !==
+                    "not-reached" ? (
                     <span className="block font-mono text-[10px] text-ink-3">
                       held {b.digitsHeld ?? 0}/{b.presentedDigits.length}
                       {", "}
                       {b.digitsCorrect ?? 0} correct
-                      {b.recallLatencyMs
-                        ? `, ${Math.round(b.recallLatencyMs / 100) / 10}s`
+                      {(b.recallLatencyMs ?? -1) > 0
+                        ? `, ${Math.round(b.recallLatencyMs! / 100) / 10}s`
                         : ""}
                     </span>
                   ) : null}
@@ -655,16 +662,33 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
 
 // untransformed is the one worth spotting: the number survived and the
 // operation did not, which is storage holding while the executive fails.
-function RecallTag({ outcome }: { outcome?: string }) {
-  if (!outcome) return <span className="text-ink-4">,</span>;
-  const strong = outcome === "untransformed";
+function RecallTag({
+  outcome,
+  latencyMs,
+}: {
+  outcome?: string;
+  latencyMs?: number;
+}) {
+  const state = recallState(outcome, latencyMs);
+  if (state.kind === "none") return <span className="text-ink-4">,</span>;
+  // "not reached" is not a result, so it is set back rather than
+  // tagged. A block the participant never got to should not look like
+  // a measurement that came out badly.
+  if (state.kind === "not-reached") {
+    return (
+      <span className="font-mono text-[10px] tracking-[0.14em] text-ink-4 uppercase">
+        {recallLabel(state)}
+      </span>
+    );
+  }
+  const strong = state.outcome === "untransformed";
   return (
     <span
       className={`rounded-sm px-2 py-0.5 font-mono text-[10px] tracking-[0.14em] uppercase ${
         strong ? "bg-accent-soft/60 text-accent" : "bg-paper-3 text-ink-3"
       }`}
     >
-      {outcome.replace("_", " ")}
+      {recallLabel(state)}
     </span>
   );
 }
