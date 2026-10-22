@@ -15,7 +15,13 @@ dependencies = [
   "grpcio>=1.66",
   # buf's protoc-gen-python currently emits gencode v7.36.x; runtime must match.
   "protobuf>=7,<8",
-  "pypdf[crypto]>=6.19.0",
+  # Floor raised to 6.21.1 on 2026-10-22: five advisories landed against
+  # 6.19.0 overnight (CVE-2026-113786, -113792, -113793, -113794,
+  # -113795), fixed across 6.20.0, 6.20.1 and 6.21.1, so 6.21.1 is the
+  # first version clear of all five. Raising the floor rather than only
+  # relocking, so a future resolve cannot quietly land back on an
+  # affected version.
+  "pypdf[crypto]>=6.21.1",
   "typst>=0.15.0",
 ]
 
