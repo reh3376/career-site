@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 504,
-    "byBot": 21,
+    "byAssistant": 505,
+    "byBot": 24,
     "byOwner": 39,
-    "commits": 935,
-    "days": 39,
+    "commits": 943,
+    "days": 47,
     "firstCommit": "2026-09-18",
-    "lastCommit": "2026-10-26",
-    "merges": 371,
-    "nonMerge": 564,
+    "lastCommit": "2026-11-03",
+    "merges": 375,
+    "nonMerge": 568,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -98,15 +98,15 @@
       "lines": 7770
     },
     "documentation": {
-      "files": 125,
+      "files": 127,
       "languages": [
         {
-          "files": 125,
+          "files": 127,
           "language": "Markdown",
-          "lines": 33042
+          "lines": 33158
         }
       ],
-      "lines": 33042
+      "lines": 33158
     },
     "generated": {
       "files": 70,
