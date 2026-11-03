@@ -25,6 +25,15 @@ export type Role = {
   start: number;
   end: number;
   technologies: string[];
+  /**
+   * Independent coverage of this work, as {label, href}.
+   *
+   * A separate field rather than links in the body because the
+   * timeline renders a role body as plain text paragraphs, by design:
+   * `{p.replace(/\n/g, " ")}` inside a <p>. A markdown link written
+   * there would have shown literally as [text](url) on the page.
+   */
+  coverage: { label: string; href: string }[];
   body: string;
 };
 
@@ -67,6 +76,21 @@ export async function listRoles(): Promise<Role[]> {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        // "Label | https://url" per entry, separated by " ;; ". Commas
+        // are not usable as the separator here: every headline has
+        // them, and technologies already owns comma-splitting.
+        coverage: (meta.coverage ?? "")
+          .split(";;")
+          .map((e) => e.trim())
+          .filter(Boolean)
+          .map((e) => {
+            const i = e.lastIndexOf("|");
+            return {
+              label: e.slice(0, i).trim(),
+              href: e.slice(i + 1).trim(),
+            };
+          })
+          .filter((c) => c.label && c.href.startsWith("http")),
         body: body.trim(),
       },
     });

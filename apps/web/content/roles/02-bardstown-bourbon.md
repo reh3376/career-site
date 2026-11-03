@@ -9,6 +9,7 @@ end: 2022
 order: 20
 visibility: public
 technologies: Ignition, Allen-Bradley ControlLogix, ISO 9001, stage-gate capital delivery
+coverage: Automation World, 2020: Bardstown Bourbon upgrades HMI for strategic connectivity | https://www.automationworld.com/control/article/21123207/bardstown-bourbon-upgrades-hmi-for-strategic-connectivity
 ---
 
 Led capital projects, process engineering and automation, and
@@ -21,5 +22,9 @@ production continuing throughout. Recognised by the Ignition Discovery
 Award at ICC 2019.
 
 Cut natural-gas use by more than 40%. The energy project was recognised
-by the EPA / ENERGY STAR Project of the Year and the Douglas C. Griffen
-Environmental Award, both in 2021.
+by the EPA / ENERGY STAR Project of the Year and the Douglas C. Griffin
+Environmental Sustainability Award, both in 2021.
+
+The Ignition migration was covered by Automation World in March 2020,
+which reported the plant as the first US distillery to implement the
+platform this way.
