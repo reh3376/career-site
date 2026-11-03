@@ -15,13 +15,18 @@ dependencies = [
   "grpcio>=1.66",
   # buf's protoc-gen-python currently emits gencode v7.36.x; runtime must match.
   "protobuf>=7,<8",
-  # Floor raised to 6.21.1 on 2026-10-22: five advisories landed against
-  # 6.19.0 overnight (CVE-2026-113786, -113792, -113793, -113794,
-  # -113795), fixed across 6.20.0, 6.20.1 and 6.21.1, so 6.21.1 is the
-  # first version clear of all five. Raising the floor rather than only
-  # relocking, so a future resolve cannot quietly land back on an
-  # affected version.
-  "pypdf[crypto]>=6.21.1",
+  # Floor raised twice in two weeks, both times for the same reason.
+  # 2026-10-22: five advisories against 6.19.0 (CVE-2026-113786,
+  # -113792, -113793, -113794, -113795), clear at 6.21.1.
+  # 2026-11-02: seven more against 6.21.2 (CVE-2026-119203 through
+  # -119209), all denial of service on a crafted PDF, clear at 6.21.4.
+  #
+  # The floor moves rather than only the lock, so a future resolve
+  # cannot quietly land back on an affected version. Worth knowing when
+  # judging urgency: every one of these is a parser attack, and this
+  # service only ever parses a PDF typst produced seconds earlier from
+  # its own template. See render.py.
+  "pypdf[crypto]>=6.21.4",
   "typst>=0.15.0",
 ]
 

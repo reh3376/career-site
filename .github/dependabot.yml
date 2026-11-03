@@ -52,8 +52,19 @@ updates:
     open-pull-requests-limit: 3
     commit-message: { prefix: "deps(ci)" }
 
-  # Docker base images. Node stays pinned at 22 (current LTS); ignore
-  # any major bump until we deliberately move to the next LTS.
+  # Docker base images. Two runtimes are held deliberately rather than
+  # taken automatically, for the same reason: a language runtime is not
+  # a dependency you drift onto, it is one you choose a date for.
+  #
+  # Node stays at 22, the current LTS; ignore any major bump until we
+  # deliberately move to the next one.
+  #
+  # Python stays at 3.14. CPython ships a feature release every October
+  # and dependabot offered `python:3.15-slim-bookworm` on 2026-11-02,
+  # five days after that tag first appeared. 3.15 was then at 3.15.0a6:
+  # the proposal was to run the sidecar on an alpha interpreter in
+  # production. Minor bumps are ignored here so the next one is a
+  # decision with a date on it rather than a Monday pull request.
   - package-ecosystem: docker
     directory: /services/api
     schedule: { interval: weekly, day: monday }
@@ -62,6 +73,10 @@ updates:
     directory: /services/sidecar
     schedule: { interval: weekly, day: monday }
     commit-message: { prefix: "deps(sidecar)" }
+    ignore:
+      - dependency-name: "python"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: docker
     directory: /apps/web
     schedule: { interval: weekly, day: monday }
