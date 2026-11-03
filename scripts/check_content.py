@@ -109,7 +109,11 @@ SCHEMA: dict[str, dict] = {
             "visibility",
             "technologies",
         },
-        "optional": set(),
+        # `coverage` is optional and is independent press about the
+        # work: "Label | https://url", entries separated by ";;". Not
+        # required, because most roles have none and a role without
+        # coverage must stay publishable.
+        "optional": {"coverage"},
         "enums": {"type": {"role"}, "visibility": {"member", "public"}},
         "ints": {"start", "end", "order"},
     },

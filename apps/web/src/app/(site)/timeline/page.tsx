@@ -82,6 +82,33 @@ export default async function TimelinePage() {
                 ))}
               </div>
 
+              {/* Independent coverage. Below the prose and above the
+                  technology tags, because it is evidence for what the
+                  prose claims rather than a claim of its own. External,
+                  so each carries rel=noopener; check_links.py enforces
+                  that pairing repo-wide. */}
+              {r.coverage.length ? (
+                <div className="mt-5">
+                  <p className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
+                    in the press
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {r.coverage.map((c) => (
+                      <li key={c.href} className="text-sm leading-relaxed">
+                        <a
+                          href={c.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 transition-colors hover:decoration-accent"
+                        >
+                          {c.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {r.technologies.length ? (
                 <ul className="mt-5 flex flex-wrap gap-x-2 gap-y-2">
                   {r.technologies.map((t) => (
