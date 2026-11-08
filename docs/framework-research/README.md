@@ -12,6 +12,8 @@ it to serve employers and many candidates rather than one owner. Nothing
 here is a commitment for this repository; where a document proposes a
 change to the reviewer, it still goes through the FSD and an ADR.
 
+**Picking this up as a new agent or contributor? Start with [`agent-handoff.md`](agent-handoff.md).**
+
 | Document | What it is |
 |---|---|
 | `00-todo.md` | The prioritised to-do list for the design effort; the working order of everything below. |
