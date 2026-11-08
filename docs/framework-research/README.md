@@ -21,6 +21,7 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | `05-equivalence-catalog-and-evidence-standards.md` | The equivalence catalog entity and evidence-standard templates per requirement type, with starter content for the manufacturing/controls/software domain. |
 | `06-employer-side-discovery-research-plan.md` | Survey instrument, interview guide and analysis plan for recruiters/HR and hiring managers. |
 | `07-pilot-plan-and-recruitment-post.md` | The 10-person wording pilot and the LinkedIn recruitment posts. |
+| `08-pilot-participant-experience.md` | The pilot from the participant's seat: each touchpoint, what they see, what they can change, and how it is captured. |
 
 The mocked match record used as the interview stimulus is a published
 artifact rather than a file; its link is recorded in `07-…` and in the
