@@ -17,7 +17,7 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | Document | What it is |
 |---|---|
 | `00-todo.md` | The prioritised to-do list for the design effort; the working order of everything below. |
-| `01-problem-definition-and-framework.md` | The founding document: the problem, symptoms from both sides, root causes, what a proper solution looks like, build framework and phases. Written by the owner. |
+| `01-problem-definition-and-framework.md` | The founding document: the problem, symptoms from both sides, root causes, what a proper solution looks like, build framework and phases, and (§5.6) the process model mapping components to the approved workflows. Written by the owner. |
 | `02-career-site-gap-analysis.md` | What this repository already implements against that framework's data model (§5.1) and component list (§5.2), with status and gaps. |
 | `03-verdict-taxonomy-and-clarification-loop.md` | Why met / partial / unmet is not enough; the determination + basis + uncertainty structure; the candidate clarification loop the schema must leave room for. |
 | `04-schemas-v1-requirement-and-judgment.md` | Draft v1 schemas (field tables and JSON Schema) for Requirement, Equivalency Judgment, Evidence Item, Clarification Item and Match Record, with the versioning policy. |

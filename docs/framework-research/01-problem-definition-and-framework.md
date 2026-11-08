@@ -4,7 +4,7 @@
 This document defines the core problem in corporate hiring, the most common symptoms and complaints from both sides, the root causes (with special emphasis on keyword-based screening and the lack of domain expertise among initial reviewers), what a proper solution looks like, and a practical framework for building software that improves decisions and manages expectations for candidates, hiring managers, and HR. The design treats continuous, data-driven improvement as a first-class property rather than an afterthought.
 
 **Status**  
-Starting document for design and implementation. First iteration is not expected to solve the full problem; the system is designed so that measurement and feedback produce measurable improvement over successive cycles.
+Starting document for design and implementation. First iteration is not expected to solve the full problem; the system is designed so that measurement and feedback produce measurable improvement over successive cycles. §5.6 (process model) added 2026-11-08 from the approved hiring workflows.
 
 ---
 
@@ -142,6 +142,35 @@ The first iteration is not expected to solve the problem. The design goal is tha
 - **Phase 1 – Match record as primary screening artifact.** Deploy for a hiring team or for candidates applying to specific roles. Measure reduction in expertise-dependent and keyword-driven false negatives and improvement in requirement coverage visibility. Begin collecting outcome data.
 - **Phase 2 – Bidirectional matching and process layer.** Mutual visibility of fit, controlled volume based on match quality, working-style indicators expressed in the same framework, and outcome feedback.
 - **Phase 3 – Calibration and expansion.** Use accumulated data to refine weights, surface systematic biases, expand the behavioral taxonomy, and offer self-hosted or privacy-preserving deployment options.
+
+### 5.6 Process model: where each component sits
+
+*Added 2026-11-08 from the approved hiring workflows (company perspective C-01–C-26, candidate perspective K-01–K-16; node lists and review record in `09-hiring-workflows-draft.md`, project copy `hiring-workflows-draft.md`; diagrams in `10-hiring-workflow-diagrams.md`).*
+
+The two workflows are the physical process the system operates within. Every entity in §5.1 and every component in §5.2 attaches to specific nodes, which is how the framework's sections are classified and how gaps in either direction are made visible: a node with no system support, or a component with no node.
+
+**Decisions from the workflow review that shape the components.** Manpower requests are reviewed by a committee and *deferred* is a formal outcome with a resubmission date (C-03/C-04). HR owns the structure of role definition through a standing template (C-05); the hiring manager is solely responsible for drafting the content and the structured requirements to it (C-06); HR's sign-off is a conformance and compensation check, not a substance review (C-07). Clarification runs in two stages: system-driven for high-volume early screening (C-11c), then recruiter-asked live from system-generated questions once a shortlist exists (C-13). Hold states are a framework requirement: every hold carries a revisit date the candidate can see, and an unreviewed hold past its date is an escalation, not a reminder; its priority among the components is set after the employer-side pilot.
+
+| Framework element | Company nodes | Candidate nodes | Status / gap |
+|---|---|---|---|
+| HR role-definition template | C-05 | — | New artifact; makes HR's structural ownership explicit |
+| Requirement entity, type taxonomy, thresholds, evidence standards (§5.1) | C-06 (HM authors), C-07 (HR checks conformance) | K-03 read-only | The system's HM-assist at C-06 is the first employer-side surface to build |
+| Equivalence catalog | C-06 (seeding equivalence notes), C-11b, C-14 (HM overrides feed it) | K-04 (if a pre-application gap view is built) | Curator role unassigned |
+| Evidence item; candidate control of depth and audience (§5.1) | C-11a, C-21 (verification) | K-02, K-05, K-08, K-14, K-16 | `verified_external` evidence is owned at C-21 |
+| Equivalency judgment (§5.1) | C-11b | K-07 | — |
+| Clarification, system stage | C-11c | K-08 | Trigger policy open |
+| Clarification, recruiter stage | C-13 | K-10 | Same question templates; answers carry `asked_by=recruiter` |
+| Match record with three coverage numbers (§5.1) | C-12, C-14, C-17 | K-07, K-09, K-11 | Employer ranking view across candidates does not exist in the prototype |
+| Override | C-12 (recruiter escalates to HM), C-14 (HM cuts from slate) | K-09 (candidate dispute: open) | C-14's weight and K-09's existence are decided by the pilot |
+| Outcome link (§5.1) | C-17, C-19, C-23, C-24, C-25 | K-15 | Employer-side outcomes absent in the prototype |
+| Calibration and analysis layer (§5.2, §5.3) | C-26, and across C-23–C-25 | — | — |
+| Hold states with revisit date and escalation | C-04, C-07, C-12, C-17, C-19 | K-09 wait, K-13 ask-for-time | Requirement decided; priority after pilot |
+| Process and communication layer (§5.2) | C-20 (substantive reason on rejection), every dated hold | K-05, K-06, K-09, K-12 (what happens next and by when) | Dated, escalating holds are the concrete form of "no ghosting" |
+| Working-style and behavioral indicators (Phase 2) | C-06 (stated conditions), C-15, C-23 | K-13, K-15 | Not scored in v1 |
+
+**Nodes the first version does not touch:** C-01–C-04 (need and approval), C-09 (sourcing), C-18 (offer construction), C-22 (onboarding). These are declared out of scope rather than ignored. The employer-side survey's problem list includes items that live in them (internal delays, salary mismatch discovered late); if those rank in the measured top ten, this section is where the scope statement must say why the match record does not address them.
+
+**Open items the pilot closes:** whether hiring managers cut individuals from a slate before interviewing often enough for C-14 to be a decision point; whether a rejected candidate can dispute a specific judgment in v1 (K-09); whether a pre-application gap view for candidates is worth building (K-04); and the priority of the hold-state requirement.
 
 ---
 

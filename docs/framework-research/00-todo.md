@@ -2,7 +2,7 @@
 
 Open work items for the design effort, in the order they will be worked. Each item names what "done" looks like and which doc it feeds. Items are removed when done; decisions made along the way go into the doc they affect, not here.
 
-Last updated 2026-11-08 (workflows approved).
+Last updated 2026-11-08 (P1 complete; handoff point).
 
 ---
 
@@ -16,15 +16,13 @@ Last updated 2026-11-08 (workflows approved).
 
 ---
 
-## P1 — Hiring workflows, both perspectives — **approved 2026-11-08**
+## P1 — Hiring workflows, both perspectives — **complete 2026-11-08**
 
-Done: node lists for both perspectives (`09-hiring-workflows-draft.md` rev 2), seven review questions answered and recorded (§4), pilot additions applied to the research plan, two diagrams drawn and approved (`10-hiring-workflow-diagrams.md`, rendered viewer in `diagrams/`).
+Done: node lists (`09-hiring-workflows-draft.md`), review record, pilot additions applied to `06`, diagrams (`10`, `diagrams/`), and §5.6 process model folded into `01-problem-definition-and-framework.md`. Approved by the owner.
 
-Remaining:
-- Fold §3 (framework attachment table) into `01-problem-definition-and-framework.md` as a process-model section.
-- After the pilot: close C-14 (slate cuts), K-04 (pre-application gap view), K-09 (dispute), and set the priority of the hold-state requirement.
+Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pre-application gap view), K-09 (dispute), and set the priority of the hold-state requirement; then update `01` §5.6 and `09` §4.
 
-## P2 — Pilot materials (from `08-pilot-participant-experience.md` §4) — **next**
+## P2 — Pilot materials (from `08-pilot-participant-experience.md` §4) — **next; handoff starts here**
 
 - Consent / landing screen text.
 - One-page interviewer note template (prompt blocks, quote column), including the [WF] probes.

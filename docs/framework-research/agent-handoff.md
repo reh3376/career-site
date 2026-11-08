@@ -1,6 +1,6 @@
 # Agent Handoff: Hiring_prod framework research
 
-**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08.
+**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08, at the handoff point: P1 complete, P2 next.
 
 ---
 
@@ -30,7 +30,7 @@ If you cannot reach the claude.ai project, work from this directory and say so i
 | File | What it is | Read it when |
 |---|---|---|
 | [`00-todo.md`](00-todo.md) | The prioritised to-do list (P1–P6) with the reasoning for the order. The working agenda. | Always, first |
-| [`01-problem-definition-and-framework.md`](01-problem-definition-and-framework.md) | The owner's founding document: the problem (keyword false negatives, screener expertise gap), symptoms from both sides, root causes, what a proper solution looks like, the data model (§5.1), components (§5.2), recursive-improvement layer (§5.3), phases (§5.5). | Before anything else of substance |
+| [`01-problem-definition-and-framework.md`](01-problem-definition-and-framework.md) | The owner's founding document: the problem (keyword false negatives, screener expertise gap), symptoms from both sides, root causes, what a proper solution looks like, the data model (§5.1), components (§5.2), recursive-improvement layer (§5.3), phases (§5.5), and the process model attaching each component to the approved workflow nodes (§5.6). | Before anything else of substance |
 | [`02-career-site-gap-analysis.md`](02-career-site-gap-analysis.md) | What this repository already implements against §5.1/§5.2, with status (exists / partial / missing) and the design principles worth carrying forward. | Before touching code or proposing a schema |
 | [`03-verdict-taxonomy-and-clarification-loop.md`](03-verdict-taxonomy-and-clarification-loop.md) | Why met/partial/unmet is replaced by **determination + basis + uncertainty**, and the candidate clarification loop the schema must leave room for. | Before reading the schemas |
 | [`04-schemas-v1-requirement-and-judgment.md`](04-schemas-v1-requirement-and-judgment.md) | Draft v1 schemas (field tables + JSON Schema) for Requirement, Equivalency Judgment, Evidence Item, Clarification Item, Match Record; the **versioning policy** (§0); controlled answer types (§4). | Before any data-model or prompt work |
@@ -71,8 +71,8 @@ Other open design items are listed in `00-todo.md` P4 and P5 and in each documen
 
 Work **from `00-todo.md`, in order**. As of this handoff:
 
-- **P1** has one remaining step: fold `09` §3 into `01` as a process-model section.
-- **P2** (pilot materials) is next: consent/landing text, one-page interviewer note template including the `[WF]` probes, instrument change log starting at `survey v0.1`, survey platform decision, stimulus check at phone and laptop widths. Specs are in `08` §4.
+- **P1** is complete: the workflows are approved and their framework-attachment table is now `01` §5.6.
+- **P2** (pilot materials) is where you start: consent/landing text, one-page interviewer note template including the `[WF]` probes, instrument change log starting at `survey v0.1`, survey platform decision, stimulus check at phone and laptop widths. Specs are in `08` §4.
 - **P3** is the owner's (recruiting ten names, posting).
 - **P4** schema follow-through runs in parallel with P3.
 
