@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hiring Workflows — Company and Candidate Perspectives</title>
+<style>
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#1C1F26;background:#F7F7F5;display:flex;flex-direction:column}
+header{padding:12px 16px 8px;border-bottom:1px solid #E2E2DE;background:#fff}
+h1{font-size:17px;margin:0 0 6px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs button,.ctl button{font:inherit;font-size:13px;padding:8px 12px;min-height:40px;border:1px solid #C9C9C4;background:#fff;border-radius:6px;color:#1C1F26;cursor:pointer}
+.tabs button[aria-selected=true]{background:#1F4E8C;border-color:#1F4E8C;color:#fff}
+.ctl{margin-left:auto}
+.ctl button{min-width:40px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#3A3D45;margin-top:8px}
+.sw{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:4px;border:1.5px solid}
+.stage{flex:1;position:relative;overflow:hidden;background:#fff;touch-action:none;cursor:grab}
+.stage.dragging{cursor:grabbing}
+.layer{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.layer svg{display:block}
+.hint{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:#5C606B;background:#fff;border:1px solid #E2E2DE;border-radius:6px;padding:4px 8px;pointer-events:none}
+.hidden{visibility:hidden;pointer-events:none}
+</style></head><body>
+<header>
+<h1>Hiring workflows — revision 2 (2026-11-08)</h1>
+<div class="row">
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="company">Company perspective</button>
+    <button role="tab" aria-selected="false" data-tab="candidate">Candidate perspective</button>
+  </div>
+  <div class="ctl row">
+    <button type="button" data-act="out" aria-label="Zoom out">−</button>
+    <button type="button" data-act="in" aria-label="Zoom in">+</button>
+    <button type="button" data-act="fit">Fit</button>
+    <button type="button" data-act="width">Fit width</button>
+    <button type="button" data-act="one">100%</button>
+  </div>
+</div>
+<div class="legend">
+<span><span class="sw" style="background:#FFF3D6;border-color:#8A5A00"></span>Decision</span>
+<span><span class="sw" style="background:#F3F3F0;border-color:#8A5A00;border-style:dashed"></span>Hold (dated, escalates)</span>
+<span><span class="sw" style="background:#fff;border-color:#6B6B6B;border-style:dashed"></span>Open — pilot</span>
+<span><span class="sw" style="background:#E6EEF9;border-color:#1F4E8C"></span>System</span>
+<span><span class="sw" style="background:#E7F2EB;border-color:#1E5A3A"></span>Outcome data</span>
+</div>
+</header>
+<div class="stage" id="stage">
+  <div class="layer" id="layer-company"><pre class="mermaid">flowchart TB
+  classDef decision fill:#FFF3D6,stroke:#8A5A00,stroke-width:2px
+  classDef hold fill:#F3F3F0,stroke:#8A5A00,stroke-dasharray:5 3
+  classDef open fill:#fff,stroke:#6B6B6B,stroke-dasharray:6 4
+  classDef sys fill:#E6EEF9,stroke:#1F4E8C
+  classDef outcome fill:#E7F2EB,stroke:#1E5A3A
+
+  subgraph HM[Hiring manager]
+    C01[C-01 Need identified] --&gt; C02[C-02 Manpower request]
+    C06[C-06 HM drafts role document&lt;br/&gt;+ structured requirements]
+    C15[C-15 Interviews]
+    C16[C-16 Assessment / work sample]
+    C17{C-17 Hire decision}
+    C23[C-23 30-day check-in]
+    C24[C-24 90-day review]
+  end
+
+  subgraph CMT[Committee / budget owner]
+    C03[C-03 Request review&lt;br/&gt;finance · HR · dept head · HM mgr]
+    C04{C-04 Approval decision}
+    H04[Deferred: resubmission date&lt;br/&gt;past date → escalate]
+  end
+
+  subgraph HR[HR]
+    C05[(C-05 Role-definition template)]
+    C07{C-07 Conformance + comp check}
+    H07[Hold with revisit date]
+    C18[C-18 Offer prepared]
+    C21[C-21 Pre-boarding + verification]
+    C22[C-22 Start / onboarding]
+  end
+
+  subgraph REC[Recruiter]
+    C08[C-08 JD rendered + posted]
+    C09[C-09 Applications / sourcing]
+    C10[C-10 Knockout filter&lt;br/&gt;hard constraints only]
+    C12{C-12 Screen decision}
+    H12[Hold with revisit date&lt;br/&gt;past date → escalate]
+    C13[C-13 Screen call&lt;br/&gt;+ remaining clarifications]
+    C14{C-14 Slate to HM}
+    C19{C-19 Offer outcome}
+    C20[C-20 Notify non-selected&lt;br/&gt;with substantive reason]
+    C26[C-26 Requisition closed&lt;br/&gt;lessons captured]
+  end
+
+  subgraph SYS[System]
+    C11a[C-11a Evidence gathered]
+    C11b[C-11b Requirements judged&lt;br/&gt;three-number coverage]
+    C11c[C-11c System clarification round]
+  end
+
+  subgraph OUT[Outcome data]
+    C25[C-25 6–12 month retention / performance]
+  end
+
+  C02 --&gt; C03 --&gt; C04
+  C04 -- Approved --&gt; C06
+  C04 -- Rejected --&gt; X04((end))
+  C04 -- Deferred --&gt; H04 --&gt; C03
+  C05 -.template.-&gt; C06
+  C06 --&gt; C07
+  C07 -- Conforms --&gt; C08
+  C07 -- Non-conforming --&gt; C06
+  C07 -- Hold --&gt; H07 --&gt; C07
+  C08 --&gt; C09 --&gt; C10 --&gt; C11a --&gt; C11b
+  C11b -- &quot;unresolved weight&quot; --&gt; C11c --&gt; C11b
+  C11b --&gt; C12
+  C12 -- Advance --&gt; C13
+  C12 -- Reject --&gt; C20
+  C12 -- Hold --&gt; H12 --&gt; C12
+  C12 -- &quot;Needs HM input&quot; --&gt; C06x[HM audits flagged judgments] --&gt; C12
+  C13 --&gt; C14
+  C14 -- Accept slate --&gt; C15
+  C14 -- Reject individuals --&gt; C20
+  C14 -- Reject slate --&gt; C09
+  C15 --&gt; C16 --&gt; C17
+  C17 -- Select --&gt; C18
+  C17 -- Re-source --&gt; C09
+  C17 -- Redefine --&gt; C06
+  C17 -- Defer --&gt; H17[Defer with revisit date] --&gt; C17
+  C18 --&gt; C19
+  C19 -- Accepted --&gt; C21
+  C19 -- Negotiate --&gt; C18
+  C19 -- &quot;Declined or no response by date&quot; --&gt; C17
+  C21 --&gt; C22 --&gt; C23 --&gt; C24 --&gt; C25 --&gt; C26
+  C20 --&gt; C26
+
+  class C04,C07,C12,C14,C17,C19 decision
+  class H04,H07,H12,H17 hold
+  class C14 open
+  class C11a,C11b,C11c sys
+  class C23,C24,C25 outcome
+</pre></div>
+  <div class="layer hidden" id="layer-candidate"><pre class="mermaid">flowchart TB
+  classDef decision fill:#FFF3D6,stroke:#8A5A00,stroke-width:2px
+  classDef open fill:#fff,stroke:#6B6B6B,stroke-dasharray:6 4
+  classDef touch fill:#E6EEF9,stroke:#1F4E8C
+  classDef outcome fill:#E7F2EB,stroke:#1E5A3A
+
+  K01[K-01 Trigger, decide to look] --&gt; K02[K-02 Evidence preparation&lt;br/&gt;depth + audience chosen]
+  K02 --&gt; K03[K-03 Role discovery]
+  K03 --&gt; K04{K-04 Apply or not}
+  K04 -- Skip --&gt; K03
+  K04 -- Apply --&gt; K05[K-05 Application submitted]
+  K05 --&gt; K06[K-06 Knockout filter · C-10]
+  K06 -- &quot;fails hard constraint&quot; --&gt; K06x[Told which constraint, where policy allows]
+  K06 --&gt; K07[K-07 Initial screen · C-11&lt;br/&gt;candidate sees own match record]
+  K07 -- &quot;unresolved items&quot; --&gt; K08{K-08 Clarification questions · C-11c}
+  K08 -- &quot;Answer / not applicable&quot; --&gt; K07
+  K08 -- Decline --&gt; K09
+  K08 -- Withdraw --&gt; KW((withdrawn))
+  K07 --&gt; K09{K-09 Screen outcome · C-12}
+  K09 -- &quot;Rejected, reason given&quot; --&gt; K09d[Request feedback&lt;br/&gt;Dispute a judgment: OPEN]
+  K09 -- &quot;Hold, revisit date shown&quot; --&gt; K09h[Wait or withdraw]
+  K09h -- &quot;date passes&quot; --&gt; K09s[Status change / escalation visible]
+  K09 -- Advanced --&gt; K10[K-10 Recruiter call · C-13&lt;br/&gt;remaining clarifications asked live]
+  K10 -- misaligned --&gt; KW
+  K10 --&gt; K11[K-11 Interviews · C-15/16&lt;br/&gt;knows which requirements will be probed]
+  K11 -- withdraw --&gt; KW
+  K11 --&gt; K12{K-12 Decision outcome · C-17}
+  K12 -- &quot;Rejected, reason given&quot; --&gt; K12d[Request feedback]
+  K12 -- Selected --&gt; K13{K-13 Offer · C-18/19}
+  K13 -- Negotiate --&gt; K13
+  K13 -- &quot;Ask for time until DATE&quot; --&gt; K13
+  K13 -- Decline --&gt; K03
+  K13 -- Accept --&gt; K14[K-14 Pre-boarding + start · C-21/22&lt;br/&gt;self-attested items verified]
+  K14 --&gt; K15[K-15 30/90-day check-in · C-23/24&lt;br/&gt;own fit rating recorded against pre-hire record]
+  K16[K-16 Parallel applications&lt;br/&gt;one evidence record, many roles] -. &quot;runs alongside K-04 to K-13&quot; .-&gt; K04
+  K13 -- Accept --&gt; K16x[Withdraw other applications]
+
+  class K04,K08,K09,K12,K13 decision
+  class K04,K09d open
+  class K06,K07,K10,K11,K14 touch
+  class K15 outcome
+</pre></div>
+  <div class="hint">Drag to pan · wheel or pinch to zoom</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var layers={company:document.getElementById('layer-company'),candidate:document.getElementById('layer-candidate')};
+  var state={company:{x:0,y:0,s:1},candidate:{x:0,y:0,s:1}};
+  var cur='company';
+  function apply(){var t=state[cur];layers[cur].style.transform='translate('+t.x+'px,'+t.y+'px) scale('+t.s+')';}
+  function size(){var svg=layers[cur].querySelector('svg');if(!svg)return null;var w=parseFloat(svg.getAttribute('width'))||svg.getBoundingClientRect().width/state[cur].s;var h=parseFloat(svg.getAttribute('height'))||svg.getBoundingClientRect().height/state[cur].s;return {w:w,h:h};}
+  function fit(mode){var d=size();if(!d)return;var W=stage.clientWidth,H=stage.clientHeight;var s=mode==='width'?(W-24)/d.w:Math.min((W-24)/d.w,(H-24)/d.h);if(mode==='one')s=1;s=Math.max(0.05,Math.min(8,s));var t=state[cur];t.s=s;t.x=Math.max(12,(W-d.w*s)/2);t.y=12;apply();}
+  function zoomAt(f,cx,cy){var t=state[cur];var ns=Math.max(0.05,Math.min(8,t.s*f));var k=ns/t.s;t.x=cx-(cx-t.x)*k;t.y=cy-(cy-t.y)*k;t.s=ns;apply();}
+  document.querySelectorAll('[data-act]').forEach(function(b){b.addEventListener('click',function(){var a=b.dataset.act;var r=stage.getBoundingClientRect();if(a==='in')zoomAt(1.25,r.width/2,r.height/2);else if(a==='out')zoomAt(0.8,r.width/2,r.height/2);else fit(a);});});
+  document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){cur=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false');});Object.keys(layers).forEach(function(k){layers[k].classList.toggle('hidden',k!==cur);});if(!state[cur].fitted){fit('fit');state[cur].fitted=true;}else apply();});});
+  stage.addEventListener('wheel',function(e){e.preventDefault();var r=stage.getBoundingClientRect();zoomAt(e.deltaY<0?1.1:0.9,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  var ptrs=new Map(),last=null,pinch=null;
+  stage.addEventListener('pointerdown',function(e){stage.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===1){last={x:e.clientX,y:e.clientY};stage.classList.add('dragging');}else if(ptrs.size===2){var p=Array.from(ptrs.values());pinch={d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};}});
+  stage.addEventListener('pointermove',function(e){if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===1&&last){var t=state[cur];t.x+=e.clientX-last.x;t.y+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};apply();}else if(ptrs.size===2&&pinch){var p=Array.from(ptrs.values());var d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);var r=stage.getBoundingClientRect();zoomAt(d/pinch.d,(p[0].x+p[1].x)/2-r.left,(p[0].y+p[1].y)/2-r.top);pinch.d=d;}});
+  function up(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(ptrs.size===0){last=null;stage.classList.remove('dragging');}else if(ptrs.size===1){var p=Array.from(ptrs.values())[0];last={x:p.x,y:p.y};}}
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+  mermaid.initialize({startOnLoad:false,theme:'neutral',flowchart:{useMaxWidth:false,htmlLabels:true,nodeSpacing:40,rankSpacing:50}});
+  mermaid.run({querySelector:'.mermaid'}).then(function(){
+    document.querySelectorAll('.layer svg').forEach(function(svg){svg.style.maxWidth='none';});
+    fit('fit');state.company.fitted=true;
+    window.addEventListener('resize',function(){fit('fit');});
+  });
+})();
+</script>
+</body></html>

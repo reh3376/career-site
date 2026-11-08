@@ -2,7 +2,7 @@
 
 **Purpose.** The problem definition is well grounded on the applicant side and inferred on the employer side. Before Phase 0 locks scope, collect direct input from recruiters/HR and from hiring managers on which problems they most need fixed, so the system is positioned against their top ten rather than our assumptions about them.
 
-**Status.** Draft instrument, 2026-11-08. Not yet fielded.
+**Status.** Draft instrument v0.1, 2026-11-08. Revised the same day with additions from the workflow review (`09-hiring-workflows-draft.md` §5), marked **[WF]** below. Not yet fielded.
 
 ---
 
@@ -13,6 +13,8 @@
 3. Does the employer side perceive keyword-driven false negatives and the screener-expertise gap as problems at all — and if not, is that because they don't occur or because they are invisible from that seat?
 4. What would make a non-expert screener trust and act on a per-requirement match record, and what would make a hiring manager override one?
 5. What outcome data do employers actually have (quality of hire, early attrition), since the recursive-improvement loop depends on it?
+6. **[WF]** How do holds and deferrals actually behave — do they resurface, and what would make them? (Sets the priority of the framework's hold-state requirement.)
+7. **[WF]** Do hiring managers cut individuals from a slate before interviewing, and would employers accept a candidate contesting a specific judgment?
 
 **A design caution that shapes the whole instrument.** False negatives are invisible to the people who cause them: a recruiter never meets the candidate the filter dropped. If the ranked list alone is used, our central thesis will likely score low on the HR side *regardless of whether it is true*. So the survey asks about it indirectly (confidence, discovery-after-the-fact, HM disagreement rates) and the interviews probe it directly. A low ranking should change **positioning** (sell on the pain they feel; deliver false-negative reduction as the mechanism), not the thesis — unless the indirect items also come back negative.
 
@@ -94,13 +96,15 @@ D2. Does your process use required keywords, knockout questions or auto-reject r
 
 D3. Typical applications per role: <25 / 25–100 / 100–300 / 300+
 
-D4. Of candidates the first screen passes, roughly what share does the hiring manager decline *without an interview*? (<10% / 10–30% / 30–60% / >60% / Don't know)
+D4. **[WF — required, both branches]** Of candidates the first screen passes, roughly what share does the hiring manager decline *without an interview*? (<10% / 10–30% / 30–60% / >60% / Don't know)
 
 D5. Do you track whether hires are performing or still employed at 90 days or 1 year, and link it back to how they were screened? Yes, systematically / Informally / No
 
 D6. *(HM branch)* How often have you later learned that a strong person was screened out before you saw them? Never / Once or twice / Several times / Regularly / No way to know
 
 D7. *(Recruiter branch)* How confident are you that your first screen does not eliminate people who could do the job? (1–5) What gives you that confidence? (free text)
+
+D8. **[WF]** When a requisition or a candidate is put "on hold", what usually happens to it? ☐ Comes back on a planned date ☐ Comes back only if someone pushes ☐ Quietly dies ☐ Don't know
 
 ### Section E — Reaction to the concept
 
@@ -133,6 +137,7 @@ F2. Would you like the summarised results? (email, optional)
 - Who looked at applications first, and what were they looking for?
 - *(Recruiter)* For a technical role, how do you decide whether experience described differently from the posting counts?
 - *(HM)* When a shortlist reaches you, what share is usable? What's wrong with the rest?
+- **[WF] *(HM)*** Think of the last slate a recruiter sent you. How many did you decline before interviewing, and why?
 
 **Problems deep dive (12 min).**
 - What is the most expensive mistake your hiring process makes? Expensive in time, money, or lost people.
@@ -140,6 +145,7 @@ F2. Would you like the summarised results? (email, optional)
 - *(Probe expertise gap, recruiter)* When a posting asks for something you don't personally understand, what do you do?
 - *(Probe expertise gap, HM)* How well does your recruiter understand what your role needs? What gets lost?
 - Do you know how your hires from a year ago are doing? Does anything about that feed back into screening?
+- **[WF] *(Both)*** Tell me about a requisition or a candidate that was put on hold. What happened to it, and how did you find out? What would have had to exist for it to come back on its own?
 
 **Concept reaction (10 min).** Show a mocked match record (one candidate, 8–10 requirements, mixed verdicts including an `unresolved` with a pending question and a `met_equivalent` with the equivalency named).
 - Read it as you would at work. Talk aloud.
@@ -148,6 +154,8 @@ F2. Would you like the summarised results? (email, optional)
 - *(Recruiter)* Could you rank ten of these without knowing the domain?
 - *(HM)* Would you spend time overriding verdicts, or would you ignore it and read the résumé?
 - Reaction to asking the candidate a structured follow-up question when evidence is missing.
+- **[WF] *(Both)*** If a rejected candidate could contest one specific judgment with new evidence, would you want to see it? Under what conditions would you re-open the decision?
+- **[WF] *(Recruiter)*** If applicants could see, before applying, which of your requirements their background does and doesn't cover, would that change the quality or quantity of applications you receive?
 
 **Wrap (3 min).** What did we not ask that we should have? Who else should we talk to?
 
@@ -161,6 +169,9 @@ F2. Would you like the summarised results? (email, optional)
    - *Keyword false negatives (item 6):* its direct ranking, **plus** D6 (HM discovery rate) and D7 (recruiter confidence and its basis). Thesis is supported if D6 ≥ "several times" for a majority of HMs even when item 6 ranks low with recruiters.
    - *Expertise gap (item 4):* ranking by group, plus D4 (HM decline-without-interview rate — a proxy for screen quality) and the interview probes.
    - *Outcome data exists (item 13, D5):* determines how much of the recursive loop can run on employer data in Phase 1 versus being built from scratch.
+   - **[WF]** *Holds rarely resurface (D8, hold probe):* if "quietly dies" or "only if someone pushes" dominates, the hold-state requirement moves up the framework priority list; the probe's "what would have had to exist" answers shape its mechanics.
+   - **[WF]** *HM slate cuts (D4, slate probe):* if the median D4 is ≥30%, C-14 stays a decision point in the workflow and the HM audit view is Phase 0 scope; if <10%, C-14 folds into interviews.
+   - **[WF]** *Candidate disputes (dispute probe):* qualitative; decides whether K-09 dispute is v1, Phase 2, or feedback-only.
 4. **Acceptance.** E2/E3/E4 define the viewer's requirements: what must be visible per verdict, how fast the record must read, and what override affordances are needed.
 5. **Decision rules for scope.**
    - Phase 0/1 scope must address the combined top 10. Problems in the top 10 that the match record does not touch (e.g. internal delays, scheduling) are explicitly declared out of scope in the framework doc rather than silently ignored.
@@ -171,7 +182,7 @@ F2. Would you like the summarised results? (email, optional)
 
 ## 6. Outputs
 
-- A synthesis doc in this project: ranked lists by group, divergence, new problems, hypothesis results, viewer requirements derived from Section E.
+- A synthesis doc: ranked lists by group, divergence, new problems, hypothesis results, viewer requirements derived from Section E, and the three workflow decisions (C-14, K-04 employer angle, K-09).
 - An update to `01-problem-definition-and-framework.md` §2 and §3 citing the data, replacing inferred employer complaints with measured ones.
 - A revised success-metric list (§4) weighted toward the measured top problems.
 
@@ -179,7 +190,8 @@ F2. Would you like the summarised results? (email, optional)
 
 ## 7. Open items
 
-- Survey platform and anonymity mechanics.
-- Whether to field one wave or a short pilot (n≈10) first to fix wording — see `07-pilot-plan-and-recruitment-post.md`.
-- The mocked match record for interviews — built from the prototype's documented runs, anonymised.
+- Survey platform and anonymity mechanics (see `08-pilot-participant-experience.md` §4).
+- Pilot first (`07-pilot-plan-and-recruitment-post.md`), then wide.
+- The mocked match record for interviews — built; see `07-pilot-plan-and-recruitment-post.md` §3.
 - Incentive for participation (summary report is the default; consider nothing else so the sample isn't skewed toward people who want the incentive).
+- Length: the **[WF]** additions add roughly one minute to the survey and three to the interview; the pilot's time check decides whether anything is cut.

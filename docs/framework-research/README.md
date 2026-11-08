@@ -14,6 +14,7 @@ change to the reviewer, it still goes through the FSD and an ADR.
 
 | Document | What it is |
 |---|---|
+| `00-todo.md` | The prioritised to-do list for the design effort; the working order of everything below. |
 | `01-problem-definition-and-framework.md` | The founding document: the problem, symptoms from both sides, root causes, what a proper solution looks like, build framework and phases. Written by the owner. |
 | `02-career-site-gap-analysis.md` | What this repository already implements against that framework's data model (§5.1) and component list (§5.2), with status and gaps. |
 | `03-verdict-taxonomy-and-clarification-loop.md` | Why met / partial / unmet is not enough; the determination + basis + uncertainty structure; the candidate clarification loop the schema must leave room for. |
@@ -22,6 +23,8 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | `06-employer-side-discovery-research-plan.md` | Survey instrument, interview guide and analysis plan for recruiters/HR and hiring managers. |
 | `07-pilot-plan-and-recruitment-post.md` | The 10-person wording pilot and the LinkedIn recruitment posts. |
 | `08-pilot-participant-experience.md` | The pilot from the participant's seat: each touchpoint, what they see, what they can change, and how it is captured. |
+| `09-hiring-workflows-draft.md` | The two hiring workflows as numbered node lists (company and candidate), decision points with owners, the owner's review record, and the table attaching each framework element to the nodes it serves. Approved 2026-11-08. |
+| `10-hiring-workflow-diagrams.md` | Mermaid source for both workflow diagrams; GitHub renders it. `diagrams/` holds the `.mmd` files and a self-contained pan-and-zoom viewer (`workflow-viewer.html`). |
 
 The mocked match record used as the interview stimulus is a published
 artifact rather than a file; its link is recorded in `07-…` and in the

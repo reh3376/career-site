@@ -1,0 +1,41 @@
+flowchart TB
+  classDef decision fill:#FFF3D6,stroke:#8A5A00,stroke-width:2px
+  classDef open fill:#fff,stroke:#6B6B6B,stroke-dasharray:6 4
+  classDef touch fill:#E6EEF9,stroke:#1F4E8C
+  classDef outcome fill:#E7F2EB,stroke:#1E5A3A
+
+  K01[K-01 Trigger, decide to look] --> K02[K-02 Evidence preparation<br/>depth + audience chosen]
+  K02 --> K03[K-03 Role discovery]
+  K03 --> K04{K-04 Apply or not}
+  K04 -- Skip --> K03
+  K04 -- Apply --> K05[K-05 Application submitted]
+  K05 --> K06[K-06 Knockout filter · C-10]
+  K06 -- "fails hard constraint" --> K06x[Told which constraint, where policy allows]
+  K06 --> K07[K-07 Initial screen · C-11<br/>candidate sees own match record]
+  K07 -- "unresolved items" --> K08{K-08 Clarification questions · C-11c}
+  K08 -- "Answer / not applicable" --> K07
+  K08 -- Decline --> K09
+  K08 -- Withdraw --> KW((withdrawn))
+  K07 --> K09{K-09 Screen outcome · C-12}
+  K09 -- "Rejected, reason given" --> K09d[Request feedback<br/>Dispute a judgment: OPEN]
+  K09 -- "Hold, revisit date shown" --> K09h[Wait or withdraw]
+  K09h -- "date passes" --> K09s[Status change / escalation visible]
+  K09 -- Advanced --> K10[K-10 Recruiter call · C-13<br/>remaining clarifications asked live]
+  K10 -- misaligned --> KW
+  K10 --> K11[K-11 Interviews · C-15/16<br/>knows which requirements will be probed]
+  K11 -- withdraw --> KW
+  K11 --> K12{K-12 Decision outcome · C-17}
+  K12 -- "Rejected, reason given" --> K12d[Request feedback]
+  K12 -- Selected --> K13{K-13 Offer · C-18/19}
+  K13 -- Negotiate --> K13
+  K13 -- "Ask for time until DATE" --> K13
+  K13 -- Decline --> K03
+  K13 -- Accept --> K14[K-14 Pre-boarding + start · C-21/22<br/>self-attested items verified]
+  K14 --> K15[K-15 30/90-day check-in · C-23/24<br/>own fit rating recorded against pre-hire record]
+  K16[K-16 Parallel applications<br/>one evidence record, many roles] -. "runs alongside K-04 to K-13" .-> K04
+  K13 -- Accept --> K16x[Withdraw other applications]
+
+  class K04,K08,K09,K12,K13 decision
+  class K04,K09d open
+  class K06,K07,K10,K11,K14 touch
+  class K15 outcome
