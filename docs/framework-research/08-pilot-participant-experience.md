@@ -13,7 +13,7 @@ Companion to `06-employer-side-discovery-research-plan.md` and `07-pilot-plan-an
 | # | Piece | Participant's time | Channel | What it tests |
 |---|---|---|---|---|
 | 1 | Invitation and consent | 2 min | LinkedIn post or direct message → link | Whether the ask is clear and the anonymity promise is believed |
-| 2 | Survey v0.1 | ≤10 min | Survey form, phone or desktop | Wording, length, option fit, whether the concept paragraph communicates without a picture |
+| 2 | Survey v0.1 | ≤10 min | The pilot area on rogerhenley.dev, phone or desktop (`15`) | Wording, length, option fit, whether the concept paragraph communicates without a picture |
 | 3 | Cognitive-interview call | About 30 min: 15 on the survey, 5 on the stimulus, 8 to 10 on the company workflow | Video or phone, screen-share for the stimulus and the workflow chart | Where the survey failed them; then, separately, first reaction to the mocked match record; then where the company hiring workflow matches their own and where it does not |
 | 4 | Close-out | 1 min, then async | Email | Whether they want the summary; what changed because of them |
 

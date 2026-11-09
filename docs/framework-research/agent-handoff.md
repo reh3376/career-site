@@ -45,6 +45,7 @@ If you cannot reach the claude.ai project, work from this directory and say so i
 | [`12-instrument-change-log.md`](12-instrument-change-log.md) | Every change to the survey or interview guide, with its signal, from `survey v0.1`. | Before changing the instrument |
 | [`13-phase-0-build-plan.md`](13-phase-0-build-plan.md) | The delegated decisions with reasoning (§0), Phase 0 scope and exclusions (§1), the nine-step build sequence (§2). | **Before any work after P2; it is the working order** |
 | [`14-schema-rendering.md`](14-schema-rendering.md) | SQL (four migrations) and proto (`hiring.proto`, `HiringService`) for the Phase 0 entities; the dual-write hand-over; the Go package shape. | Before step 3 (migrations) and before any RPC in steps 5 to 8 |
+| [`15-pilot-on-site.md`](15-pilot-on-site.md) | The owner's 2026-11-08 decisions moving the pilot onto the site: accounts and whitelist flag, the instrument as data, stimulus and workflow pages with comments, reset by emailed code, admin surface, PL-1 to PL-4. | **Before any pilot work; it is the current pilot design and runs before Phase 0 step 3** |
 | [`README.md`](README.md) | One-paragraph index of the directory. | Optional |
 
 ## 4. Decisions already made (do not re-open without the owner)
@@ -79,7 +80,8 @@ Work **from `00-todo.md`, in order**, and from the sequence in `13-phase-0-build
 - **P1** is complete: the workflows are approved and their framework-attachment table is now `01` §5.6.
 - **P2** is complete: pilot materials in `11-pilot-materials.md`, the instrument change log in `12-instrument-change-log.md`, and the private folder for participant material created.
 - **P3** is the owner's (recruiting ten names, posting).
-- **P4** and the build run as steps 1 to 9 of `13` §2, in that order. Steps 1 (FSD 0.5.0, ADR 0032) and 2 (`14`) are done; the next step is the first one in `13` §2 whose exit has not been met, which is step 3 once the owner has had `14` §6 in front of him.
+- **P2b**, the pilot on-site (`15`, PL-1 to PL-4), runs next, because it blocks P3. It was decided on the evening of 2026-11-08 after P2 closed, and it supersedes the Google Forms decision in `11` §3.
+- **P4** and the build run as steps 1 to 9 of `13` §2, in that order. Steps 1 (FSD 0.5.0, ADR 0032) and 2 (`14`) are done; step 3 resumes after PL-3.
 
 The owner delegated the build order and the open operational decisions on 2026-11-08; `13` §0 records each with its reasoning. The earlier rule that nothing is built before the pilot is narrowed, not dropped: the four pilot-dependent surfaces (C-14, K-04, K-09, hold-state priority) stay out of Phase 0 by name, and every change to this repository's reviewer still goes through the FSD and an ADR first.
 

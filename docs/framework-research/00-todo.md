@@ -26,9 +26,16 @@ Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pr
 
 Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewer note template with the [WF] probes, the platform decision, the stimulus check), `12-instrument-change-log.md` started at `survey v0.1`, and the private folder `docs/personal/framework-research/` for anything a participant says.
 
+## P2b — Pilot on-site build (`15-pilot-on-site.md` §8) — **next; before P3 and before Phase 0 step 3**
+
+- PL-1: pilot flag on whitelist entries and members, `Me.pilot_approved`, the admin toggle, forgot-password by 5-digit emailed code replacing the link; migration 00064.
+- PL-2: pilot tables (00065), `PilotService`, instrument v0.1 and the stimulus as embedded JSON, events.
+- PL-3: the `/pilot` pages (consent, survey, record, workflow, done), the company-workflow SVG, `/admin/pilot`, whitelist checkbox and member toggle in the web; live pass.
+- PL-4: field it (owner whitelists the ten; exports to the private folder after week 2).
+
 ## P3 — Pilot recruiting and fielding (owner)
 
-- Ten names: five recruiters/HR, five hiring managers, ≥3 technical/manufacturing hirers, none from current employers.
+- Ten names: five recruiters/HR, five hiring managers, ≥3 technical/manufacturing hirers, none from current employers. Confirm each one's email address and add it to the whitelist with the pilot flag (`15` §0 decision 1).
 - Post the pilot version of the recruitment post; schedule calls.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 

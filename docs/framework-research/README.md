@@ -31,6 +31,7 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | `12-instrument-change-log.md` | One row per change to the survey or interview guide, starting at `survey v0.1`; the signal behind each change. |
 | `13-phase-0-build-plan.md` | The decisions the owner delegated on 2026-11-08, with reasoning, and the nine-step sequence from the prototype to the framework's first running version. The working order for everything after P2. |
 | `14-schema-rendering.md` | Step 2: the v1 schemas rendered as goose migrations (seven entities plus the vocabulary registry and catalog events) and as `career.v1` proto (messages and a `HiringService`), the column-or-jsonb rule, the dual-write hand-over, and six points for the owner's review before step 3. |
+| `15-pilot-on-site.md` | The pilot moves onto rogerhenley.dev: whitelisted accounts, a per-participant flag, the survey as versioned data, the match-record stimulus and the company workflow with comments, forgot-password by emailed code, the admin surface, and the four-PR build that runs before Phase 0 step 3. Supersedes the Google Forms decision. |
 
 The mocked match record used as the interview stimulus is a published
 artifact rather than a file; its link is recorded in `07-…` and in the

@@ -15,7 +15,7 @@ The owner delegated the order of work and the open operational questions. Each d
 5. **A keyword baseline ships with Phase 0.** Every match record also records, per requirement, whether a plain term-overlap filter over the same evidence would have found it. In code, no model, cheap. Reason: without it the false-negative claim has nothing to compare against (P5 item 2), and the comparison is the product's argument.
 6. **Throughput is not Phase 0's problem.** One candidate, a handful of postings, and the CPX41 is the ceiling: the owner has said no further server spend. The pipeline stays one judge call per (requirement, candidate), which is the shape that batches across candidates later. Pool ranking waits for a second candidate and a funding decision (P5 item 3).
 7. **Reviewer changes go through the FSD and an ADR**, as the handoff requires. One ADR records the generalisation decision; a new FSD section carries the framework's requirements, each row **Not built** until it lands; the open questions become `D-` rows.
-8. **Survey platform.** Google Forms for the pilot (section per screen, role branching from A1, per-item flag as a checkbox, fixed C1 order), Tally for the main wave (randomised option order, branching, CSV export, free tier). The pilot reads C1 only for item confusion (`08` §5), so randomisation is not needed there.
+8. **Survey platform.** ~~Google Forms for the pilot, Tally for the main wave.~~ **Superseded the same evening by the owner (`15-pilot-on-site.md` §0): the pilot runs on rogerhenley.dev behind a per-participant flag, with the instrument as versioned data.** The reasoning that survives: C1 stays in fixed order for the pilot because the pilot reads C1 only for item confusion (`08` §5).
 
 Answered by the owner on 2026-11-08, in reply to the questions in §5:
 
@@ -47,6 +47,8 @@ Each step is one pull request or a short series. Each carries its tests, its doc
 | 9 | Phase 0 exit: the golden set plus three new technical postings; the owner dry-runs the reading, then one pilot participant (recruiter or HR) identifies strong coverage from three records alone (decision 11); the exit note written here | `01` §5.5's validation criterion | Exit note at the next numbered slot |
 
 Steps 0 to 2 are documents and need no quiet window. Steps 4 and 5 each need a golden-set evaluation, 5 to 6 hours on the box, which refuses to run while the site is busy; those are scheduled overnight.
+
+**Inserted 2026-11-08 (late), before step 3:** the pilot on-site build, PL-1 to PL-4 in `15-pilot-on-site.md` §8. It blocks the owner's recruiting; step 3 blocks nothing outside the repository. The hiring migrations in `14` §2 renumber from 00066.
 
 ## 3. What stays out of the public repository
 

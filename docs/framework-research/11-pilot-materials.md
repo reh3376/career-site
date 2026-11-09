@@ -1,6 +1,6 @@
 # Pilot Materials: Consent Text, Interviewer Template, Platform, Stimulus Check
 
-**Status.** Written 2026-11-08; closes P2 in `00-todo.md`. Extended the same day at the owner's instruction: the company hiring workflow is shown to every participant for review and comment (§7), which lengthens the call to about thirty minutes. Everything the participant sees or the interviewer holds, ready to field. The instrument itself stays in `06-employer-side-discovery-research-plan.md`; its version history is `12-instrument-change-log.md`. Repository copy ahead of project (2026-11-08): new document.
+**Status.** Written 2026-11-08; closes P2 in `00-todo.md`. Extended the same day at the owner's instruction: the company hiring workflow is shown to every participant for review and comment (§7). **Later the same evening the owner moved the whole pilot onto the site** (`15-pilot-on-site.md`): §1 is now the first screen of `/pilot`, §3 is superseded, §4's check is replaced by the site page, and Parts B and C of the call discuss what the participant wrote on-site rather than show the material for the first time. Everything the participant sees or the interviewer holds, ready to field. The instrument itself stays in `06-employer-side-discovery-research-plan.md`; its version history is `12-instrument-change-log.md`. Repository copy ahead of project (2026-11-08): new document.
 
 Specs these satisfy: `08-pilot-participant-experience.md` §4, items 1 to 5. Item 6, the ten names, is the owner's (P3).
 
@@ -114,7 +114,9 @@ Rules for filling it (from `08` §2.3): the stimulus is never explained before t
 
 ## 3. Survey platform
 
-**Pilot: Google Forms. Main wave: Tally.** Decision taken 2026-11-08 (`13` §0 decision 8).
+**Superseded 2026-11-08 (late): the pilot runs on rogerhenley.dev** (`15-pilot-on-site.md`). The table below is kept as the record of what Google Forms could and could not render, which is why the on-site instrument carries a true per-item flag and a per-selection C3 grid.
+
+~~**Pilot: Google Forms. Main wave: Tally.** Decision taken 2026-11-08 (`13` §0 decision 8).~~
 
 Why two tools: the pilot reads C1 only for item confusion, so option order does not matter there, and Google Forms is already in the owner's hands. The main wave needs randomised option order on C1, role branching and a clean CSV export, which Tally's free tier provides.
 
@@ -156,7 +158,7 @@ The private folder exists with a README stating these rules (`13` §0 decision 1
 ## 6. Left for the owner (P3)
 
 - Ten names: five recruiters or HR, five hiring managers, at least three who hire for technical or manufacturing roles, none from current employers.
-- Build the Google Form from §3 (about an hour), or ask the agent to draft every question's text as a paste-ready list.
+- Add each confirmed email address to the whitelist at `/admin/access` with the pilot flag (`15` §0 decision 1); registration then approves itself.
 - Post the pilot version of the recruitment post (`07` §2.1), link in the first comment.
 - Open the stimulus on a phone once (§4).
 - Schedule the ten calls for week 2, at thirty minutes each.
