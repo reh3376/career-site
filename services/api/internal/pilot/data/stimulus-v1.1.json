@@ -1,0 +1,280 @@
+{
+  "version": "v1.1",
+  "source": "v1 transcribed 2026-11-08 from the design artifact named in docs/framework-research/07-pilot-plan-and-recruitment-post.md §3, reconstructed from documented runs and anonymised, recast in the v1 verdict vocabulary. v1.1 rewritten 2026-11-09 from the owner's comments after his third run (docs/framework-research/15-pilot-on-site.md §14): labels on every part of a row, a definitions panel, a specific basis on every row, the two-run story on r1, follow-up and inclusion lines, human judgement required on r10, the record's status inconclusive while a question is open.",
+  "header": {
+    "run_label": "Match record · second run · 2026-11-06",
+    "role_title": "Senior Manager, Capital Projects Engineering",
+    "subtitle": "Beverage manufacturer (anonymised) · Posting #A-0412 · Candidate A",
+    "intro": "Ten requirements extracted from the posting and confirmed by the hiring manager. Each one was judged against the candidate's own documents. Every row below shows the requirement, the posting's own words, the verdict, the basis for the verdict, the reasoning and the documents it rests on. A person can overrule any verdict.",
+    "run_note": "This is the second run on this candidate. After the first run, the hiring manager corrected the wording of one requirement, r1, and the record was judged again. What changed on that row, and why, is set out on the row itself.",
+    "status_label": "Status of this record",
+    "status": "Inconclusive · awaiting the candidate",
+    "status_note": "Two required items and one preferred item are waiting on the candidate's answers to follow-up questions. No fit classification is issued while any question is open. What follows is the state so far, not a verdict on the candidate.",
+    "summary": "Of the 7 required items, 4 are met, 1 is met through an equivalency, 2 await the candidate's answers and none is unmet. Of the 3 preferred items, 1 awaits an answer, 1 is not included because no equivalency was defined for it, and 1 is left to human judgement.",
+    "coverage_label": "Required items so far (by weight)",
+    "evidenced_pct": 75,
+    "unresolved_pct": 25,
+    "unresolved_note": "2 questions out",
+    "unmet_pct": 0,
+    "equivalency_line": "Of the evidenced weight, 17% rests on an equivalency (1 item, flagged for expert audit).",
+    "self_attested_line": "0% rests on the candidate's own answers to follow-up questions."
+  },
+  "definitions": {
+    "title": "What the words on this record mean",
+    "intro": "Every term used on the rows is defined here, so that nothing on the record has to be guessed at.",
+    "groups": [
+      {
+        "title": "How items are classed",
+        "terms": [
+          { "term": "Required", "meaning": "The posting requires it. Counts at its full weight." },
+          { "term": "Preferred", "meaning": "The posting prefers it. Counts at a quarter of its weight; the fraction is a setting the system's owner can change." },
+          { "term": "Ideal", "meaning": "Good to have. Earns bonus credit only and never counts against a candidate. This posting has none." },
+          { "term": "Weight", "meaning": "How much the hiring manager said the item matters, 1 to 3. The figures add up weights, not items." },
+          { "term": "Included in the evaluation", "meaning": "A years-of-experience or credential item counts only when the hiring manager has defined what is equivalent to it. Without that definition the item is shown but not counted." }
+        ]
+      },
+      {
+        "title": "What a verdict means",
+        "terms": [
+          { "term": "Met", "meaning": "The documents show the requirement satisfied as the posting worded it, or by an alternative the posting itself offered." },
+          { "term": "Met via equivalency", "meaning": "The documents show something different in name that does the same job, and a catalogue of such equivalences, confirmed by experts, says so. Counts as met and is marked for an expert to audit." },
+          { "term": "Unresolved", "meaning": "The documents suggest the requirement may be met, but one nameable fact is missing. A question goes to the candidate; the row is not counted for or against until it is answered." },
+          { "term": "Not met", "meaning": "The documents address the requirement and fall short, or do not address it at all." },
+          { "term": "Human judgement required", "meaning": "A working-style or personality requirement. Not judged from documents and not counted; left to the people who interview." }
+        ]
+      },
+      {
+        "title": "What a basis means (the reason behind a verdict)",
+        "terms": [
+          { "term": "Direct", "meaning": "The documents say the same thing in the same or trivially the same words." },
+          { "term": "Experience in lieu of education", "meaning": "The posting named a credential; the documents show the work that credential certifies, and the posting allowed the substitution." },
+          { "term": "Adjacent domain", "meaning": "The same work in a neighbouring field or under different words. Whether it transfers is the open question." },
+          { "term": "Relationship unproven", "meaning": "The posting named organisations; the documents show their products in use, which is not the same as a working relationship with them." },
+          { "term": "Not addressed", "meaning": "Nothing in the documents speaks to the requirement." },
+          { "term": "Not scored", "meaning": "Behavioral requirements are not judged from documents." }
+        ]
+      },
+      {
+        "title": "Kinds of requirement",
+        "terms": [
+          { "term": "Outcome", "meaning": "Something the person must have done or delivered." },
+          { "term": "Experience", "meaning": "A length of time in a kind of work." },
+          { "term": "Credential", "meaning": "A degree, licence or certification." },
+          { "term": "Skill", "meaning": "A named ability or method." },
+          { "term": "Relationship", "meaning": "Work with a named organisation or kind of partner." },
+          { "term": "Behavioral", "meaning": "A working-style or personality trait." }
+        ]
+      },
+      {
+        "title": "Marks on a row",
+        "terms": [
+          { "term": "Checked in code", "meaning": "A number the posting stated (years, dollars) was compared by the software against the number the documents state, not judged by the model." },
+          { "term": "Flagged for expert audit", "meaning": "The verdict rests on an equivalency; someone who knows the field is asked to confirm it." },
+          { "term": "Follow-up", "meaning": "A question sent, or queued to be sent, to the candidate about one missing fact. The candidate sees the posting's words and the question, never the verdict or the figures." }
+        ]
+      }
+    ]
+  },
+  "rows": [
+    {
+      "id": "r1",
+      "requirement": "Lead front-end loading of major capital investments: scope definition, alternatives analysis, basis of design",
+      "source_quote": "…the front-end development of future major investments, including scope definition, alternatives analysis, and basis of design.",
+      "category": "must",
+      "type": "outcome",
+      "weight": 3,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · the documents describe scope definition, alternatives analysis and basis of design for a capital programme, in those words",
+      "basis_code": "direct",
+      "callout": {
+        "title": "What happened on this row between the two runs",
+        "lines": [
+          "Run 1 verdict: Unresolved. The posting said \"front-end development\" of major investments. The first run read that as software user-interface work, found no such work in the candidate's documents, and could not decide.",
+          "Between the runs: the hiring manager edited the requirement to what the posting meant. In capital projects, front-end development means front-end loading, the early definition phase of a project: scope, alternatives, basis of design.",
+          "Run 2 verdict: Met. The row was judged again against the corrected wording and is met on the candidate's capital-project definition work. Nothing in this verdict rests on software work."
+        ]
+      },
+      "rationale": "Led problem definition, alternatives analysis, basis of design, cost estimate, integrated schedule and risk register for a greenfield plant programme; authored the business case through capital approval.",
+      "evidence": "capital-project-delivery.md · chunks 212, 214"
+    },
+    {
+      "id": "r2",
+      "requirement": "Develop total installed cost estimates and capital authorization requests",
+      "source_quote": "…responsible for TIC estimates and preparation of Capital Authorization Requests (CAR).",
+      "category": "must",
+      "type": "outcome",
+      "weight": 2,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · the documents name TIC estimates and capital authorization requests in those words",
+      "basis_code": "direct",
+      "rationale": "Prepared capital authorization packages including TIC, contingency and schedule for a >$100M build and two expansion phases.",
+      "evidence": "capital-project-delivery.md · chunk 218; résumé-2026.md · chunk 41"
+    },
+    {
+      "id": "r3",
+      "requirement": "10+ years of engineering experience in manufacturing environments",
+      "source_quote": "10+ years of progressive engineering experience in a manufacturing environment.",
+      "category": "must",
+      "type": "experience",
+      "weight": 2,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · 28 years stated against a threshold of 10 (checked in code)",
+      "basis_code": "direct",
+      "inclusion": {
+        "status": "Included in the evaluation",
+        "reason": "The hiring manager defined the equivalency for this years item: a graduate engineering degree counts as two of the ten years. It is not needed here; 28 years are stated directly."
+      },
+      "rationale": "Engineering roles in process manufacturing from 1998 to present across three employers; dates stated on each role.",
+      "evidence": "career-facts.md · chunk 3; résumé-2026.md · chunks 12 to 19"
+    },
+    {
+      "id": "r4",
+      "requirement": "Master's degree in Engineering, or equivalent experience",
+      "source_quote": "Master's degree in Engineering or a related field, or equivalent experience.",
+      "category": "must",
+      "type": "credential",
+      "weight": 2,
+      "determination": "met_equivalent",
+      "determination_label": "Met via equivalency",
+      "basis": "Experience in lieu of education · catalogue entry EQ-114 (B.S. plus 5 or more years in the field counts as an M.S.) · 7 expert confirmations, 1 rejection",
+      "basis_code": "experience_for_education",
+      "inclusion": {
+        "status": "Included in the evaluation",
+        "reason": "The posting itself offers the experience alternative, and the catalogue entry defines what counts."
+      },
+      "rationale": "B.S. in Applied Mathematics; 28 years of engineering practice in the field. The posting itself offers the experience alternative; the catalogue entry has 7 expert confirmations and 1 rejection.",
+      "evidence": "career-facts.md · chunk 2 · flagged for expert audit",
+      "flagged_for_audit": true
+    },
+    {
+      "id": "r5",
+      "requirement": "Deliver large capital projects ($50M+) through stage-gate process to turnover",
+      "source_quote": "…large capital projects ($50M+) from concept through stage gates to asset turnover.",
+      "category": "must",
+      "type": "outcome",
+      "weight": 3,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · scale of more than $100M stated against a threshold of $50M (checked in code)",
+      "basis_code": "direct",
+      "rationale": "Owned delivery of a >$100M greenfield production facility from FEL through commissioning and turnover to operations.",
+      "evidence": "capital-project-delivery.md · chunk 220; project-greenfield.md · chunk 7"
+    },
+    {
+      "id": "r6",
+      "requirement": "Experience with commissioning, qualification and validation (CQV)",
+      "source_quote": "Experience with commissioning, qualification, and validation (CQV) of process equipment.",
+      "category": "must",
+      "type": "skill",
+      "weight": 2,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Adjacent domain · the commissioning work is evidenced; the depth of qualification and validation work is unknown",
+      "basis_code": "adjacent_domain",
+      "rationale": "Commissioning of controls and process systems is well evidenced. \"Qualification\" and \"validation\" in the GMP sense are not stated; the evidence may describe the same work under different words, or may not.",
+      "evidence": "project-greenfield.md · chunk 9; controls-commissioning.md · chunk 3",
+      "followup": {
+        "status": "Question sent to the candidate · awaiting answer",
+        "next": "When the answer arrives, this row is judged again, the figures at the top are recomputed, and the recruiter and the hiring manager are told that new information exists for this candidate. The record stays inconclusive until every open question is answered."
+      },
+      "question": {
+        "label": "The question the candidate received",
+        "text": "For the plant commissioning work described in your documents, which best describes your involvement in qualification and validation activities, and on which project?",
+        "fields": [
+          {
+            "label": "Your involvement",
+            "options": ["Aware of it, not involved", "Participated / executed protocols", "Configured or wrote protocols", "Designed the approach", "Owned or led it", "Trained others in it"]
+          },
+          {
+            "label": "Which of your projects",
+            "options": ["Greenfield production facility (2022 to 2025)", "Expansion phase 2 (2019 to 2021)", "Line 4 controls upgrade (2016)", "Other"]
+          }
+        ],
+        "footnote": "Options come from the candidate's own documents and a fixed involvement ladder. The candidate does not see the verdict, the threshold, or this record. \"I have not done this\" and \"Prefer not to answer\" are always offered."
+      }
+    },
+    {
+      "id": "r7",
+      "requirement": "Project Management Professional (PMP) certification",
+      "source_quote": "PMP certification preferred.",
+      "category": "nice",
+      "type": "credential",
+      "weight": 1,
+      "determination": "not_met",
+      "determination_label": "Not met",
+      "basis": "Not addressed · no certification of this kind appears in any document",
+      "basis_code": "not_addressed",
+      "inclusion": {
+        "status": "Not included in the evaluation",
+        "reason": "The hiring manager defined no equivalency for this certificate, for example years spent leading projects in lieu of it. A credential item counts only once its equivalency is defined. As a preferred item it would not count against the candidate in any case."
+      },
+      "rationale": "No certification of this kind appears in any document, and nothing equivalent to it has been defined, so there is nothing to judge the documents against.",
+      "evidence": "none"
+    },
+    {
+      "id": "r8",
+      "requirement": "Partner with HR on workforce planning and organisational design for the engineering function",
+      "source_quote": "Partner with HR on workforce planning, organizational design and engagement.",
+      "category": "nice",
+      "type": "outcome",
+      "weight": 1,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Adjacent domain · building and leading teams is evidenced; a formal partnership with HR on workforce planning is not stated",
+      "basis_code": "adjacent_domain",
+      "rationale": "Built and led engineering teams of up to 14; hiring and role design are evidenced. Formal partnership with HR on workforce planning is not stated.",
+      "evidence": "leadership.md · chunk 5",
+      "followup": {
+        "status": "Question queued · preferred items are asked after the required ones are answered",
+        "next": "When the answer arrives, this row is judged again, the figures at the top are recomputed, and the recruiter and the hiring manager are told that new information exists for this candidate. The record stays inconclusive until every open question is answered."
+      }
+    },
+    {
+      "id": "r9",
+      "requirement": "Work directly with external engineering firms and equipment OEMs (named: two process-equipment vendors)",
+      "source_quote": "…manage relationships with external engineering firms and OEM partners including [Vendor 1] and [Vendor 2].",
+      "category": "must",
+      "type": "relationship",
+      "weight": 2,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Relationship unproven · both vendors' equipment appears in the evidence; a working relationship with the vendors is not stated",
+      "basis_code": "relationship_unproven",
+      "rationale": "Both named vendors' equipment appears in the evidence. Using a vendor's equipment is not a working relationship with the vendor (a rule applied in code); whether the candidate managed those relationships is not stated.",
+      "evidence": "project-greenfield.md · chunks 11, 14",
+      "followup": {
+        "status": "Question sent to the candidate · relationship type per vendor · awaiting answer",
+        "next": "When the answer arrives, this row is judged again, the figures at the top are recomputed, and the recruiter and the hiring manager are told that new information exists for this candidate. The record stays inconclusive until every open question is answered."
+      }
+    },
+    {
+      "id": "r10",
+      "requirement": "Strong communicator; comfortable with ambiguity",
+      "source_quote": "Excellent communication skills and the ability to thrive in ambiguous, fast-moving environments.",
+      "category": "nice",
+      "type": "behavioral",
+      "weight": 0,
+      "determination": "not_assessed",
+      "determination_label": "Human judgement required",
+      "basis": "Not scored · working-style requirements are not judged from documents",
+      "basis_code": "not_scored",
+      "rationale": "Working-style requirements are listed so the hiring manager sees them, and excluded from the arithmetic. Assessing them from a résumé would be exactly the kind of opaque judgement this record is meant to replace.",
+      "evidence": "not applicable",
+      "note": "No bearing on the figures above or on the fit. Listed so the hiring manager sees it and an interview can address it.",
+      "no_override": true
+    }
+  ],
+  "footer": {
+    "how_title": "How this was produced",
+    "how": "Requirements extracted by model, then confirmed by the hiring manager, who edited one (r1). Each requirement judged in one model call against retrieved passages from the candidate's documents. Duration, scale and vendor-relationship comparisons recomputed in code from facts the model reported. The fit is computed only when no question is open: required items at full weight, preferred items at a quarter, ideal items as bonus only. Every judgment stores its prompt, response and evidence ids for audit.",
+    "versions": [
+      "requirement_schema 1.0 · judgment_schema 1.0 · vocab 1.0 · classes required / preferred / ideal",
+      "formula v3-three-number · rules 1.0 (duration, scope, relationship)",
+      "prompts extractor v5:9b2e · judge v13:4a71 · model qwen3:4b-q8_0",
+      "corpus a41c… (14 documents) · run 2 supersedes run 1"
+    ]
+  }
+}

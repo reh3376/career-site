@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 541,
+    "byAssistant": 542,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 1006,
+    "commits": 1008,
     "days": 53,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-09",
-    "merges": 396,
-    "nonMerge": 610,
+    "merges": 397,
+    "nonMerge": 611,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -35,7 +35,7 @@
         {
           "files": 153,
           "language": "TSX",
-          "lines": 29182
+          "lines": 29295
         },
         {
           "files": 74,
@@ -68,15 +68,15 @@
           "lines": 268
         }
       ],
-      "lines": 91810
+      "lines": 91923
     },
     "config": {
-      "files": 33,
+      "files": 34,
       "languages": [
         {
-          "files": 16,
+          "files": 17,
           "language": "JSON",
-          "lines": 3900
+          "lines": 4180
         },
         {
           "files": 17,
@@ -84,7 +84,7 @@
           "lines": 1984
         }
       ],
-      "lines": 5884
+      "lines": 6164
     },
     "contract": {
       "files": 18,
@@ -103,10 +103,10 @@
         {
           "files": 146,
           "language": "Markdown",
-          "lines": 37657
+          "lines": 37681
         }
       ],
-      "lines": 37657
+      "lines": 37681
     },
     "generated": {
       "files": 74,
@@ -169,10 +169,10 @@
     "goTests": 466,
     "migrations": 71,
     "pythonTests": 30,
-    "requirements": 229,
+    "requirements": 232,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
-    "requirementsNotBuilt": 60,
+    "requirementsNotBuilt": 63,
     "requirementsPartial": 7,
     "requirementsShipped": 160,
     "rpcs": 170,

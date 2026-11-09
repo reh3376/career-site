@@ -44,8 +44,9 @@ export default async function PilotRecordPage() {
       </h1>
       <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-2">
         One candidate against one posting, as a screener would see it. The names are made up; the shape is
-        real. Read it as if it had arrived at work this morning. Under every row there is a box for whatever
-        you would say about that row, and at the end one for the record as a whole. Nothing you write changes
+        real. Read it as if it had arrived at work this morning. A panel under the header defines every word that
+        appears on the rows. Under every row there is a box for whatever you would say about that row, and at the
+        end one for the record as a whole. Nothing you write changes
         the record.
       </p>
 
@@ -58,7 +59,7 @@ export default async function PilotRecordPage() {
               targetId={id}
               initialBody={comments.get(`record_row:${id}`)?.body ?? ""}
               label={`your comment on ${id}`}
-              placeholder="Would you trust this verdict? What would you check? What is missing?"
+              placeholder="Would you rely on this verdict as written? What would you check yourself? Is anything here unclear?"
             />
           )}
         />
@@ -70,9 +71,14 @@ export default async function PilotRecordPage() {
 
       <section className="mt-14 border-t border-line pt-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the record as a whole</p>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-ink">
-          Which row would you check first, and why? Anything else about the record goes here too.
-        </p>
+        <div className="mt-3 max-w-2xl space-y-2 text-base leading-relaxed text-ink">
+          <p>Three questions. Answer any or all of them in the one box below.</p>
+          <ol className="list-decimal space-y-1 pl-6 text-ink-2">
+            <li>Which rows would you want to verify yourself before relying on this record, and why those?</li>
+            <li>Was there anything on it you could not understand without someone explaining it?</li>
+            <li>Would you use Audit or Override on any row? Which, and what would you do with it?</li>
+          </ol>
+        </div>
         <CommentBox
           targetKind="record_general"
           targetId=""
