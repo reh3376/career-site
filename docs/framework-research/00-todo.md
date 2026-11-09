@@ -39,7 +39,7 @@ Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewe
 - Post the pilot version of the recruitment post (rewritten for the on-site pilot 2026-11-09, `07` §2.1, first comment names the site); schedule calls.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 
-## P4 — Schema follow-through (parallel with P3) — **runs as steps 2 and 3 of `13-phase-0-build-plan.md` §2**
+## P4 — Schema follow-through (parallel with P3) — **steps 2 and 3 of `13-phase-0-build-plan.md` §2, built 2026-11-08 and 2026-11-09 (migrations 00066 to 00069, package `hiring`, the dual write); items 1, 2 and 4 landed as columns and tables, 3, 5 and 6 stay open**
 
 - Proto and SQL rendering of the v1 entities; column vs jsonb decisions.
 - Add `asked_by` (system / recruiter) to the clarification item (workflow Q3).

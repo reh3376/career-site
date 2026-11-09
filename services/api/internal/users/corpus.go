@@ -32,6 +32,12 @@ const (
 	VisibilityCorpusOnly = "corpus_only"
 )
 
+// OwnerCandidateID is the one candidate of Phase 0 (FSD FR-HF-19),
+// seeded by migration 00066; corpus_documents.candidate_id defaults to
+// it and retrieval filters on it. The same constant as hiring's, kept
+// here so users does not import hiring.
+const OwnerCandidateID = "00000000-0000-0000-0000-000000000001"
+
 // ValidVisibility reports whether v is one of the accepted values.
 func ValidVisibility(v string) bool {
 	return v == VisibilityPublic || v == VisibilityCorpusOnly
@@ -298,6 +304,14 @@ func (r *Repo) searchCorpus(
 	}
 	// $3 = '' means any kind; the index is still used for the ordering.
 	//
+	// $5 is the candidate boundary (FSD FR-HF-19). Phase 0 holds one
+	// candidate, the owner, and every document defaults to them; the
+	// clause is here so the boundary is enforced where evidence is
+	// retrieved rather than asserted in copy, and so a second
+	// candidate's documents, when they exist, cannot be drawn into a
+	// judgment about the first. The id is a constant until the caller
+	// has a candidate to pass (Phase 1).
+	//
 	// $4 is the visibility gate. Most of the corpus is private, and
 	// retrieved text reaches the judge's context and the résumé
 	// generator, so a submitted posting must not be able to steer
@@ -315,11 +329,12 @@ func (r *Repo) searchCorpus(
     WHERE c.embedding IS NOT NULL
       AND ($3 = '' OR d.source_kind = $3)
       AND ($4 = true OR d.visibility = 'public')
+      AND d.candidate_id = $5::uuid
     ORDER BY c.embedding <=> $1
     LIMIT $2
   `
 	rows, err := r.pool.Query(ctx, q,
-		vectorLiteral(embedding), topK, sourceKind, corpusscope.AllowsPrivate(ctx))
+		vectorLiteral(embedding), topK, sourceKind, corpusscope.AllowsPrivate(ctx), OwnerCandidateID)
 	if err != nil {
 		return nil, fmt.Errorf("search corpus: %w", err)
 	}
@@ -355,10 +370,15 @@ func (r *Repo) ListChunksByKind(ctx context.Context, sourceKind string, limit in
     FROM corpus_chunks c
     JOIN corpus_documents d ON d.id = c.document_id
     WHERE d.source_kind = $1
+      AND d.candidate_id = $3::uuid
     ORDER BY d.id, c.chunk_index
     LIMIT $2
   `
-	rows, err := r.pool.Query(ctx, q, sourceKind, limit)
+	// The same candidate boundary as searchCorpus (FSD FR-HF-19): the
+	// profile sheet and the master résumé this hands the judge and the
+	// résumé writer must be the one candidate's, not whichever document
+	// of that kind is in the table.
+	rows, err := r.pool.Query(ctx, q, sourceKind, limit, OwnerCandidateID)
 	if err != nil {
 		return nil, fmt.Errorf("list chunks by kind: %w", err)
 	}

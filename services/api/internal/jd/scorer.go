@@ -21,6 +21,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/build"
 	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/runid"
@@ -61,6 +62,11 @@ type Scorer struct {
 	host string
 	// events is the product event stream (jd.finished); nil is silent.
 	events *events.Writer
+	// hiring is the dual write of Phase 0 step 3: the same run written
+	// as roles, requirements, evidence items and a match record beside
+	// the jsonb assessment (docs/framework-research/14 §4). nil writes
+	// nothing; a failure is logged and never fails the review.
+	hiring *hiring.Writer
 	// slots serialises pipelines. On the CPX31 two concurrent JDs made
 	// the embedder and the LLM swap in and out (one resident model at a
 	// time) until an embed call timed out; one JD at a time is also
@@ -433,6 +439,9 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 				s.log.Warn("jd: failed to store assessment", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 			}
 		}
+		if runOpen {
+			s.recordHiring(persist, submissionID, jdText, hints, run, assessment)
+		}
 	} else if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, nil); uErr != nil {
 		s.log.Warn("jd: failed to store retrieval score", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
 	}
@@ -576,4 +585,80 @@ func scopeName(ctx context.Context) string {
 		return "all"
 	}
 	return "public"
+}
+
+// SetHiring wires the dual write (Phase 0 step 3). Optional: without
+// it the pipeline behaves as before.
+func (s *Scorer) SetHiring(w *hiring.Writer) { s.hiring = w }
+
+// recordHiring writes the run as framework rows after the jsonb
+// assessment has been stored. Best-effort and after the fact: the
+// member's review is already persisted, so a failure here is a logged
+// gap in the new tables, visible in v_dual_write_agreement, and never
+// a failed submission. The chunk texts are read back because the
+// assessment keeps only their ids.
+func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, run users.JdRun, a *Assessment) {
+	if s.hiring == nil || a == nil {
+		return
+	}
+	in := hiring.RunInput{
+		SubmissionID:      submissionID,
+		Title:             hints.Role,
+		RunID:             run.RunID,
+		Attempt:           run.Attempt,
+		Score:             a.Score,
+		Model:             a.Model,
+		Prompts:           run.Prompts,
+		ExtractorPromptID: prompts.JDRequirements.ID,
+		Embedder:          run.EmbedderModel,
+		CorpusFingerprint: run.CorpusFingerprint,
+		Offered:           map[string][]hiring.Chunk{},
+	}
+	if in.Title == "" {
+		in.Title = jdText
+	}
+	for _, r := range a.Requirements {
+		in.Requirements = append(in.Requirements, hiring.RequirementInput{
+			LocalID: r.ID, Text: r.Text, SourceQuote: r.SourceQuote,
+			Category: r.Category, Weight: r.Weight, NamedParties: r.NamedParties,
+		})
+	}
+	for _, j := range a.Judgments {
+		in.Judgments = append(in.Judgments, hiring.JudgmentInput{LocalID: j.RequirementID, Verdict: j.Verdict, EvidenceChunkIDs: j.EvidenceIDs})
+	}
+	// Every chunk offered to any requirement, read once.
+	var ids []int64
+	seen := map[int64]bool{}
+	for _, list := range a.EvidenceIDs {
+		for _, id := range list {
+			if !seen[id] {
+				seen[id] = true
+				ids = append(ids, id)
+			}
+		}
+	}
+	text := map[int64]string{}
+	if len(ids) > 0 {
+		hits, err := s.users.GetCorpusChunks(ctx, ids)
+		if err != nil {
+			// The rows are still written; the baseline is marked skipped
+			// rather than computed over empty text, which would record a
+			// complete keyword miss that never happened.
+			s.log.Warn("jd: hiring dual write could not read the offered chunks", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			in.KeywordSkipped = "offered chunks could not be read: " + truncErr(err.Error())
+		}
+		for _, h := range hits {
+			text[h.Chunk.ID] = h.Chunk.Text
+		}
+	}
+	for localID, list := range a.EvidenceIDs {
+		for _, id := range list {
+			in.Offered[localID] = append(in.Offered[localID], hiring.Chunk{ID: id, Text: text[id]})
+		}
+	}
+	if err := s.hiring.Record(ctx, in); err != nil {
+		s.log.Warn("jd: hiring dual write failed", slog.Int64("id", submissionID), slog.String("run", run.RunID), slog.String("error", err.Error()))
+		return
+	}
+	s.log.Info("jd: hiring rows written", slog.Int64("id", submissionID), slog.String("run", run.RunID), slog.Int("requirements", len(in.Requirements)))
 }

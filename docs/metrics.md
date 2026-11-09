@@ -25,6 +25,11 @@ to go and read what it means.
 | `v_eval_history` | Golden-set evaluations with their pass rate, for before-and-after comparison. |
 | `v_outcome_by_fit` | The fit band a run assigned against what actually happened afterwards. |
 | `v_gate` | The seven criteria as pass, not met, or unanswered, with the target each is judged against. Defined in migration 00031, one view per criterion. |
+| `v_dual_write_agreement` | Per finished pipeline run, whether a match record was written and agrees with `jd_runs` on the score and the requirement count: the production half of the step 3 dual write (`docs/framework-research/14` §4). A false row is a gap in the new tables, not a failed review. |
+| `v_keyword_baseline` | Per run and requirement, whether a plain term-overlap filter over the evidence offered to the judge would have found it, beside what the judge found (FSD FR-HF-12). The judge column is null until judgments are written at step 4. |
+| `v_determination_agreement` | Owner override against the model's determination, by prompt version and model; empty until step 4. Successor to `v_judge_agreement` for the four-way vocabulary. |
+| `v_basis_agreement` | Owner override basis against the model's basis: which kind of equivalency the model misjudges; empty until step 4. |
+| `v_catalog_counts` | Confirmations, rejections and proposals per equivalence-catalog entry, counted from `catalog_events`; the promotion rule reads this rather than a stored count. |
 
 ## Where the time went
 
