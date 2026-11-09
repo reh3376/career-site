@@ -62,6 +62,29 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           ? "Register with the email address you confirmed with Roger. Once you verify it, the pilot opens: about twenty minutes, in three parts, at your own pace, then a call of about thirty minutes."
           : "A short intake so I know who\u2019s reaching out. I get an email when you submit; I\u2019ll usually reply within a day."}
       </p>
+      {/* The two forms are one form with two intros; a visitor who
+          arrived by the header's button has to be able to find the
+          pilot one, and a participant who was sent the pilot link has
+          to be able to leave it (live review, 2026-11-09). */}
+      <p className="mt-4 border-l-2 border-accent bg-accent/10 px-4 py-3 text-sm text-ink-2">
+        {forPilot ? (
+          <>
+            Not part of the hiring pilot?{" "}
+            <Link href="/register" className="text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
+              Request ordinary access instead
+            </Link>
+            .
+          </>
+        ) : (
+          <>
+            Here for the hiring pilot Roger invited you to?{" "}
+            <Link href="/register?pilot=1" className="text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
+              Register for the pilot instead
+            </Link>
+            .
+          </>
+        )}
+      </p>
       <div className="mt-12">
         <RegisterForm turnstileSiteKey={turnstileSiteKey} forPilot={forPilot} />
       </div>
