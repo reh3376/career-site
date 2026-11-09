@@ -21,6 +21,7 @@ import (
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/events"
 	"github.com/reh3376/career-site/services/api/internal/handlers"
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/llm"
@@ -430,6 +431,10 @@ func main() {
 		} else {
 			jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
 			jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
+			// Phase 0 step 3: every run is also written as framework rows
+			// (docs/framework-research/14 §4), beside the jsonb that
+			// stays authoritative until step 4.
+			jdScorer.SetHiring(hiring.NewWriter(log, hiring.NewRepo(pool.Pool)))
 			// Recorded on every run so a change in latency or in verdicts can
 			// be attributed to the machine rather than guessed at. One host
 			// today; the provider string is what distinguishes them.
