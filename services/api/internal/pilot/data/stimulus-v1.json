@@ -1,0 +1,186 @@
+{
+  "version": "v1",
+  "source": "Transcribed 2026-11-08 from the design artifact named in docs/framework-research/07-pilot-plan-and-recruitment-post.md §3. Reconstructed from documented runs and anonymised; recast in the v1 verdict vocabulary.",
+  "header": {
+    "run_label": "Match record · run 2 of 2 · 2026-11-06",
+    "role_title": "Senior Manager, Capital Projects Engineering",
+    "subtitle": "Beverage manufacturer (anonymised) · Posting #A-0412 · Candidate A",
+    "intro": "Ten requirements extracted from the posting and confirmed by the hiring manager. Each one was judged against the candidate's own documents. Every verdict below shows the evidence it rests on and can be overruled.",
+    "coverage_label": "Coverage of required items (by weight)",
+    "evidenced_pct": 75,
+    "unresolved_pct": 25,
+    "unresolved_note": "2 questions out",
+    "unmet_pct": 0,
+    "equivalency_line": "Of the evidenced weight, 17% rests on an equivalency (1 item, flagged for expert audit).",
+    "self_attested_line": "0% rests on candidate self-attestation. 1 preferred item unmet, 1 preferred item awaiting an answer."
+  },
+  "legend": {
+    "determinations": ["Met", "Met via equivalency", "Unresolved", "Not met", "Not assessed"],
+    "must": "required by the posting",
+    "nice": "preferred",
+    "weight": "w3 means weight 3"
+  },
+  "rows": [
+    {
+      "id": "r1",
+      "requirement": "Lead front-end loading of major capital investments: scope definition, alternatives analysis, basis of design",
+      "source_quote": "…the front-end development of future major investments, including scope definition, alternatives analysis, and basis of design.",
+      "category": "must",
+      "type": "outcome",
+      "weight": 3,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct",
+      "history": "Run 1: unresolved, wording ambiguous (read as software UI work). Hiring manager edited the requirement text; run 2 re-judged.",
+      "rationale": "Led problem definition, alternatives analysis, basis of design, cost estimate, integrated schedule and risk register for a greenfield plant programme; authored the business case through capital approval.",
+      "evidence": "capital-project-delivery.md · chunks 212, 214"
+    },
+    {
+      "id": "r2",
+      "requirement": "Develop total installed cost estimates and capital authorization requests",
+      "source_quote": "…responsible for TIC estimates and preparation of Capital Authorization Requests (CAR).",
+      "category": "must",
+      "type": "outcome",
+      "weight": 2,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct",
+      "rationale": "Prepared capital authorization packages including TIC, contingency and schedule for a >$100M build and two expansion phases.",
+      "evidence": "capital-project-delivery.md · chunk 218; résumé-2026.md · chunk 41"
+    },
+    {
+      "id": "r3",
+      "requirement": "10+ years of engineering experience in manufacturing environments",
+      "source_quote": "10+ years of progressive engineering experience in a manufacturing environment.",
+      "category": "must",
+      "type": "experience",
+      "weight": 2,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · 28 years stated, threshold 10 (checked in code)",
+      "rationale": "Engineering roles in process manufacturing from 1998 to present across three employers; dates stated on each role.",
+      "evidence": "career-facts.md · chunk 3; résumé-2026.md · chunks 12 to 19"
+    },
+    {
+      "id": "r4",
+      "requirement": "Master's degree in Engineering, or equivalent experience",
+      "source_quote": "Master's degree in Engineering or a related field, or equivalent experience.",
+      "category": "must",
+      "type": "credential",
+      "weight": 2,
+      "determination": "met_equivalent",
+      "determination_label": "Met via equivalency",
+      "basis": "Experience in lieu of education · catalog entry EQ-114 (B.S. + 5 or more years in field → M.S.)",
+      "rationale": "B.S. in Applied Mathematics; 28 years of engineering practice in the field. The posting itself offers the experience alternative; the catalog entry has 7 expert confirmations, 1 rejection.",
+      "evidence": "career-facts.md · chunk 2 · flagged for expert audit",
+      "flagged_for_audit": true
+    },
+    {
+      "id": "r5",
+      "requirement": "Deliver large capital projects ($50M+) through stage-gate process to turnover",
+      "source_quote": "…large capital projects ($50M+) from concept through stage gates to asset turnover.",
+      "category": "must",
+      "type": "outcome",
+      "weight": 3,
+      "determination": "met",
+      "determination_label": "Met",
+      "basis": "Direct · scale >$100M stated, threshold $50M (checked in code)",
+      "rationale": "Owned delivery of a >$100M greenfield production facility from FEL through commissioning and turnover to operations.",
+      "evidence": "capital-project-delivery.md · chunk 220; project-greenfield.md · chunk 7"
+    },
+    {
+      "id": "r6",
+      "requirement": "Experience with commissioning, qualification and validation (CQV)",
+      "source_quote": "Experience with commissioning, qualification, and validation (CQV) of process equipment.",
+      "category": "must",
+      "type": "skill",
+      "weight": 2,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Adjacent domain · depth unknown",
+      "basis_label": "Basis · what's missing",
+      "rationale": "Commissioning of controls and process systems is well evidenced. \"Qualification\" and \"validation\" in the GMP sense are not stated; the evidence may describe the same work under different words, or may not.",
+      "evidence": "project-greenfield.md · chunk 9; controls-commissioning.md · chunk 3",
+      "question": {
+        "label": "Question sent to candidate · awaiting answer · generated from r6",
+        "text": "For the plant commissioning work described in your documents, which best describes your involvement in qualification and validation activities, and on which project?",
+        "fields": [
+          {
+            "label": "Your involvement",
+            "options": ["Aware of it, not involved", "Participated / executed protocols", "Configured or wrote protocols", "Designed the approach", "Owned or led it", "Trained others in it"]
+          },
+          {
+            "label": "Which of your projects",
+            "options": ["Greenfield production facility (2022 to 2025)", "Expansion phase 2 (2019 to 2021)", "Line 4 controls upgrade (2016)", "Other"]
+          }
+        ],
+        "footnote": "Options come from the candidate's own documents and a fixed involvement ladder. The candidate does not see the verdict, the threshold, or this record. \"I have not done this\" and \"Prefer not to answer\" are always offered."
+      }
+    },
+    {
+      "id": "r7",
+      "requirement": "Project Management Professional (PMP) certification",
+      "source_quote": "PMP certification preferred.",
+      "category": "nice",
+      "type": "credential",
+      "weight": 1,
+      "determination": "not_met",
+      "determination_label": "Not met",
+      "basis": "Not addressed in evidence",
+      "rationale": "No certification of this kind appears in any document. Preferred item: it does not count against the required-items coverage.",
+      "evidence": "none"
+    },
+    {
+      "id": "r8",
+      "requirement": "Partner with HR on workforce planning and organisational design for the engineering function",
+      "source_quote": "Partner with HR on workforce planning, organizational design and engagement.",
+      "category": "nice",
+      "type": "outcome",
+      "weight": 1,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Adjacent domain · depth unknown",
+      "basis_label": "Basis · what's missing",
+      "rationale": "Built and led engineering teams of up to 14; hiring and role design are evidenced. Formal partnership with HR on workforce planning is not stated.",
+      "evidence": "leadership.md · chunk 5 · question queued (preferred item, asked after required ones)"
+    },
+    {
+      "id": "r9",
+      "requirement": "Work directly with external engineering firms and equipment OEMs (named: two process-equipment vendors)",
+      "source_quote": "…manage relationships with external engineering firms and OEM partners including [Vendor 1] and [Vendor 2].",
+      "category": "must",
+      "type": "relationship",
+      "weight": 2,
+      "determination": "unresolved",
+      "determination_label": "Unresolved",
+      "basis": "Relationship unproven · party unknown",
+      "basis_label": "Basis · what's missing",
+      "rationale": "Both named vendors' equipment appears in the evidence. Using a vendor's equipment is not a working relationship with the vendor (rule applied in code); whether the candidate managed those relationships is not stated.",
+      "evidence": "project-greenfield.md · chunks 11, 14 · question sent: relationship type per vendor"
+    },
+    {
+      "id": "r10",
+      "requirement": "Strong communicator; comfortable with ambiguity",
+      "source_quote": "Excellent communication skills and the ability to thrive in ambiguous, fast-moving environments.",
+      "category": "nice",
+      "type": "behavioral",
+      "weight": 0,
+      "determination": "not_assessed",
+      "determination_label": "Not assessed",
+      "basis": "Behavioral items are not scored from documents",
+      "rationale": "Working-style requirements are listed so the hiring manager sees them, and excluded from the arithmetic. Assessing them from a résumé would be exactly the kind of opaque judgment this record is meant to replace.",
+      "evidence": "not applicable",
+      "no_override": true
+    }
+  ],
+  "footer": {
+    "how_title": "How this was produced",
+    "how": "Requirements extracted by model, then confirmed and one edited by the hiring manager (r1). Each requirement judged in one model call against retrieved passages from the candidate's documents. Duration, scale and vendor-relationship comparisons recomputed in code from facts the model reported. Score: evidenced weight divided by total required weight. Every judgment stores its prompt, response and evidence ids for audit.",
+    "versions": [
+      "requirement_schema 1.0 · judgment_schema 1.0 · vocab 1.0",
+      "formula v3-three-number · rules 1.0 (duration, scope, relationship)",
+      "prompts extractor v5:9b2e · judge v13:4a71 · model qwen3:4b-q8_0",
+      "corpus a41c… (14 documents) · run 2 supersedes run 1"
+    ]
+  }
+}

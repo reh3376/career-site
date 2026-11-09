@@ -528,6 +528,21 @@ func main() {
 	chatHandler.SetEvents(eventWriter)
 	meetingsHandler.SetEvents(eventWriter)
 	decisionTestHandler.SetEvents(eventWriter)
+
+	// The employer-side pilot (FSD §5.16). The instrument, the record and
+	// the workflow are embedded data validated here, so a broken edit
+	// stops the server rather than a participant; the current instrument
+	// version is copied into pilot_instruments at boot.
+	pilotHandler, err := handlers.NewPilot(log, userRepo)
+	if err != nil {
+		log.Error("pilot data invalid", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := pilotHandler.EnsureInstrument(ctx); err != nil {
+		log.Error("pilot instrument record failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	pilotHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
@@ -573,6 +588,7 @@ func main() {
 		Chat:             chatHandler,
 		Events:           eventsHandler,
 		DecisionTest:     decisionTestHandler,
+		Pilot:            pilotHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})

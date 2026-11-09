@@ -53,8 +53,14 @@ var Registry = map[string]struct {
 	"agent.password_created": {Props: []string{"password_id"}},
 	"agent.password_revoked": {Props: []string{"password_id"}},
 	"agent.sessions_revoked": {Props: []string{"count"}},
-	"logout":                 {},
-	"access.expired":         {Props: []string{"user_id"}},
+	// The employer-side pilot (FSD §5.16)
+	"pilot.consent":           {Props: []string{"user_id"}},
+	"pilot.section_submitted": {Props: []string{"section"}},
+	"pilot.comment":           {Props: []string{"target_kind"}},
+	"pilot.part_done":         {Props: []string{"part"}},
+	"pilot.finished":          {Props: []string{"user_id"}},
+	"logout":                  {},
+	"access.expired":          {Props: []string{"user_id"}},
 	// Content
 	"article.view":       {Browser: true, Props: []string{"slug"}},
 	"gallery.view":       {Browser: true, Props: []string{}},

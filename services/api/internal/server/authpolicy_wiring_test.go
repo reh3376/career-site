@@ -68,6 +68,7 @@ func TestTheInterceptorIsAttachedToEveryMountedService(t *testing.T) {
 		Chat:            &handlers.Chat{},
 		Events:          &handlers.Events{},
 		DecisionTest:    &handlers.DecisionTest{},
+		Pilot:           &handlers.Pilot{},
 	}).routes()
 
 	srv := httptest.NewServer(handler)
@@ -320,6 +321,7 @@ func TestConnectProtocolHeaderIsRequiredExceptOnBeaconServices(t *testing.T) {
 		AuthPolicy:      policy,
 		AuthInterceptor: intc,
 		DecisionTest:    &handlers.DecisionTest{},
+		Pilot:           &handlers.Pilot{},
 		Events:          &handlers.Events{},
 	}).routes()
 

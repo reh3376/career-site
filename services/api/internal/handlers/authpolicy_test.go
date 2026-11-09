@@ -28,7 +28,7 @@ import (
 // that cannot fire can only disagree with the thing in front of it.
 //
 // **Why this comes before the interceptor.** Today `career.v1.auth` is
-// documentation: 146 methods declare a level and nothing reads it, while
+// documentation: 158 methods declare a level and nothing reads it, while
 // enforcement is ~93 hand-written gate calls. Moving enforcement into an
 // interceptor only preserves behaviour where the two already agree. Each
 // way they can disagree is a different kind of surprise:
@@ -406,7 +406,7 @@ func receiverType(fn *ast.FuncDecl) string {
 }
 
 // receiverService maps a handler struct to the service it is registered
-// as in internal/server/server.go. These eleven are every service the
+// as in internal/server/server.go. These twelve are every service the
 // server actually mounts.
 //
 // Explicit rather than inferred from the name, because the names do not
@@ -415,6 +415,7 @@ func receiverType(fn *ast.FuncDecl) string {
 // service from the comparison. The implemented-count floor in the test
 // is what stops that going unnoticed.
 var receiverService = map[string]string{
+	"Pilot":        "PilotService",
 	"Activity":     "ActivityService",
 	"Admin":        "AdminService",
 	"Auth":         "AuthService",

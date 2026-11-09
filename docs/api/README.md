@@ -129,6 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 84 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
+| [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 12 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -5352,6 +5353,392 @@ stop measures the fifteen-minute burden.
 
 </details>
 
+## PilotService
+
+The pilot: one sitting per participant per instrument version.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`GetPilot`](#pilotservice-getpilot) | `/api/career.v1.PilotService/GetPilot` | Member | default | `GetPilotRequest` → `GetPilotResponse` | Says whether the caller may enter the pilot, and where they are in it. |
+| [`StartPilot`](#pilotservice-startpilot) | `/api/career.v1.PilotService/StartPilot` | Member | default | `StartPilotRequest` → `StartPilotResponse` | Records consent and the recording preference and opens the session, or resumes the one the caller already has for the current instrument version. |
+| [`GetPilotSection`](#pilotservice-getpilotsection) | `/api/career.v1.PilotService/GetPilotSection` | Member | default | `GetPilotSectionRequest` → `GetPilotSectionResponse` | Returns one survey section with the caller's branch applied and any answers already saved for it, and records that it was opened. |
+| [`SubmitPilotSection`](#pilotservice-submitpilotsection) | `/api/career.v1.PilotService/SubmitPilotSection` | Member | default | `SubmitPilotSectionRequest` → `SubmitPilotSectionResponse` | Saves a section's answers and flags, records the submit instant, and says which section is next. |
+| [`GetPilotRecord`](#pilotservice-getpilotrecord) | `/api/career.v1.PilotService/GetPilotRecord` | Member | default | `GetPilotRecordRequest` → `GetPilotRecordResponse` | Returns the mocked match record and the caller's comments on it. |
+| [`GetPilotWorkflow`](#pilotservice-getpilotworkflow) | `/api/career.v1.PilotService/GetPilotWorkflow` | Member | default | `GetPilotWorkflowRequest` → `GetPilotWorkflowResponse` | Returns the company hiring workflow and the caller's comments on it. |
+| [`UpsertPilotComment`](#pilotservice-upsertpilotcomment) | `/api/career.v1.PilotService/UpsertPilotComment` | Member | default | `UpsertPilotCommentRequest` → `UpsertPilotCommentResponse` | Saves or replaces one comment on a record row or a workflow node. |
+| [`MarkPilotPart`](#pilotservice-markpilotpart) | `/api/career.v1.PilotService/MarkPilotPart` | Member | default | `MarkPilotPartRequest` → `MarkPilotPartResponse` | Marks the record or the workflow part done, so the pilot home can show progress. |
+| [`FinishPilot`](#pilotservice-finishpilot) | `/api/career.v1.PilotService/FinishPilot` | Member | default | `FinishPilotRequest` → `FinishPilotResponse` | Closes the session. |
+| [`ListPilotSessions`](#pilotservice-listpilotsessions) | `/api/career.v1.PilotService/ListPilotSessions` | Admin | default | `ListPilotSessionsRequest` → `ListPilotSessionsResponse` | Lists every pilot session with its participant, branch, status and timings, for /admin/pilot. |
+| [`GetPilotSession`](#pilotservice-getpilotsession) | `/api/career.v1.PilotService/GetPilotSession` | Admin | default | `GetPilotSessionRequest` → `GetPilotSessionResponse` | One session in full: answers with flags, comments by target, and the section open and submit instants. |
+| [`ExportPilot`](#pilotservice-exportpilot) | `/api/career.v1.PilotService/ExportPilot` | Admin | default | `ExportPilotRequest` → `ExportPilotResponse` | Exports one table as CSV, keyed by the participant code the admin assigns rather than by name or address, for the private folder. |
+
+### PilotService.GetPilot
+
+`POST /api/career.v1.PilotService/GetPilot` · **Auth:** Member · **Rate limit:** default/min
+
+Says whether the caller may enter the pilot, and where they are in
+it. Safe to call before starting; returns allowed=false for a
+member without the flag rather than an error, so the page can
+render a plain 404.
+
+**Request** — [`GetPilotRequest`](#getpilotrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetPilotResponse`](#getpilotresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `allowed` | `bool` | boolean |  | False for a member without the pilot flag who is not an admin. |
+| `admin` | `bool` | boolean |  | True when the caller is an admin, who passes the gate regardless. |
+| `instrumentVersion` | `string` | string |  | The instrument version a new session would answer. |
+| `session` | [`PilotSession`](#pilotsession) | object |  | The caller's session, unset until StartPilot. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### PilotService.StartPilot
+
+`POST /api/career.v1.PilotService/StartPilot` · **Auth:** Member · **Rate limit:** default/min
+
+Records consent and the recording preference and opens the
+session, or resumes the one the caller already has for the current
+instrument version.
+
+**Request** — [`StartPilotRequest`](#startpilotrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `consent` | `bool` | boolean |  | Required: the participant ticked the consent box. |
+| `recordingOk` | `bool` | boolean |  | Optional: the call may be recorded. |
+
+**Response** — [`StartPilotResponse`](#startpilotresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "consent": true,
+  "recordingOk": true
+}
+```
+
+</details>
+
+### PilotService.GetPilotSection
+
+`POST /api/career.v1.PilotService/GetPilotSection` · **Auth:** Member · **Rate limit:** default/min
+
+Returns one survey section with the caller's branch applied and any
+answers already saved for it, and records that it was opened.
+
+**Request** — [`GetPilotSectionRequest`](#getpilotsectionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sectionId` | `string` | string | `string: min_len: 1 max_len: 2` | Section id (A to F, P). |
+
+**Response** — [`GetPilotSectionResponse`](#getpilotsectionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Section id. |
+| `title` | `string` | string |  | Section title. |
+| `intro` | `string` | string |  | Text shown above the items; the concept paragraph for section E. |
+| `items` | [`PilotItem`](#pilotitem)[] | array of object |  | The items, filtered by the caller's branch, with resolved rows. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Answers already saved for this section. |
+| `index` | `int32` | number |  | One-based position of this section among those the caller will see. |
+| `total` | `int32` | number |  | How many sections the caller will see. |
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session, so the page can show progress without a second call. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sectionId": "string"
+}
+```
+
+</details>
+
+### PilotService.SubmitPilotSection
+
+`POST /api/career.v1.PilotService/SubmitPilotSection` · **Auth:** Member · **Rate limit:** default/min
+
+Saves a section's answers and flags, records the submit instant,
+and says which section is next. Resubmitting a section replaces
+its answers.
+
+**Request** — [`SubmitPilotSectionRequest`](#submitpilotsectionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sectionId` | `string` | string | `string: min_len: 1 max_len: 2` | Section id. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object | `repeated: max_items: 60` | Every answered item in the section. A required item left unanswered is refused with the item id in the message. |
+
+**Response** — [`SubmitPilotSectionResponse`](#submitpilotsectionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands, with sections_done and next_section. |
+| `ended` | `bool` | boolean |  | True when A1 routed the caller out of the survey ("none of these"). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sectionId": "string",
+  "answers": [
+    {
+      "itemId": "string",
+      "valueJson": "string",
+      "flagged": true
+    }
+  ]
+}
+```
+
+</details>
+
+### PilotService.GetPilotRecord
+
+`POST /api/career.v1.PilotService/GetPilotRecord` · **Auth:** Member · **Rate limit:** default/min
+
+Returns the mocked match record and the caller's comments on it.
+
+**Request** — [`GetPilotRecordRequest`](#getpilotrecordrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetPilotRecordResponse`](#getpilotrecordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `recordJson` | `string` | string |  | The record as JSON: header, legend, ten rows and footer, in the shape documented in services/api/internal/pilot/data. Rendered by the site; never edited by a participant. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments on the record, by target. |
+| `recordVersion` | `string` | string |  | The record version, for the export. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### PilotService.GetPilotWorkflow
+
+`POST /api/career.v1.PilotService/GetPilotWorkflow` · **Auth:** Member · **Rate limit:** default/min
+
+Returns the company hiring workflow and the caller's comments on it.
+
+**Request** — [`GetPilotWorkflowRequest`](#getpilotworkflowrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetPilotWorkflowResponse`](#getpilotworkflowresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `intro` | `string` | string |  | Text shown above the chart. |
+| `prompts` | `string`[] | array of string |  | The six prompts, shown as guidance for what kind of comment helps. |
+| `phases` | [`PilotWorkflowPhase`](#pilotworkflowphase)[] | array of object |  | The five phases. |
+| `nodes` | [`PilotWorkflowNode`](#pilotworkflownode)[] | array of object |  | The nodes, in order. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments, by target. |
+| `workflowVersion` | `string` | string |  | The workflow revision, for the export. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### PilotService.UpsertPilotComment
+
+`POST /api/career.v1.PilotService/UpsertPilotComment` · **Auth:** Member · **Rate limit:** default/min
+
+Saves or replaces one comment on a record row or a workflow node.
+An empty body removes it.
+
+**Request** — [`UpsertPilotCommentRequest`](#upsertpilotcommentrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
+| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the general kinds. |
+| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty removes an existing comment. |
+
+**Response** — [`UpsertPilotCommentResponse`](#upsertpilotcommentresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `comment` | [`PilotComment`](#pilotcomment) | object |  | The comment as stored; unset when removed. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "targetKind": "string",
+  "targetId": "string",
+  "body": "string"
+}
+```
+
+</details>
+
+### PilotService.MarkPilotPart
+
+`POST /api/career.v1.PilotService/MarkPilotPart` · **Auth:** Member · **Rate limit:** default/min
+
+Marks the record or the workflow part done, so the pilot home can
+show progress. Comments can still be edited afterwards.
+
+**Request** — [`MarkPilotPartRequest`](#markpilotpartrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `part` | `string` | string | `string: in: "record" in: "workflow"` | record or workflow. |
+
+**Response** — [`MarkPilotPartResponse`](#markpilotpartresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "part": "string"
+}
+```
+
+</details>
+
+### PilotService.FinishPilot
+
+`POST /api/career.v1.PilotService/FinishPilot` · **Auth:** Member · **Rate limit:** default/min
+
+Closes the session. Allowed once the survey is submitted; the two
+reading parts may be finished or not, and the session says which.
+
+**Request** — [`FinishPilotRequest`](#finishpilotrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`FinishPilotResponse`](#finishpilotresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### PilotService.ListPilotSessions
+
+`POST /api/career.v1.PilotService/ListPilotSessions` · **Auth:** Admin · **Rate limit:** default/min
+
+Lists every pilot session with its participant, branch, status and
+timings, for /admin/pilot.
+
+**Request** — [`ListPilotSessionsRequest`](#listpilotsessionsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListPilotSessionsResponse`](#listpilotsessionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessions` | [`PilotSessionSummary`](#pilotsessionsummary)[] | array of object |  | The sessions. |
+| `instrumentVersion` | `string` | string |  | The instrument version currently fielded. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### PilotService.GetPilotSession
+
+`POST /api/career.v1.PilotService/GetPilotSession` · **Auth:** Admin · **Rate limit:** default/min
+
+One session in full: answers with flags, comments by target, and
+the section open and submit instants.
+
+**Request** — [`GetPilotSessionRequest`](#getpilotsessionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id. |
+
+**Response** — [`GetPilotSessionResponse`](#getpilotsessionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `summary` | [`PilotSessionSummary`](#pilotsessionsummary) | object |  | The summary row. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Every answer with its flag, in instrument order. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | Every comment, by target. |
+| `events` | [`PilotSectionEvent`](#pilotsectionevent)[] | array of object |  | Section open and submit instants, oldest first. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionId": "string"
+}
+```
+
+</details>
+
+### PilotService.ExportPilot
+
+`POST /api/career.v1.PilotService/ExportPilot` · **Auth:** Admin · **Rate limit:** default/min
+
+Exports one table as CSV, keyed by the participant code the admin
+assigns rather than by name or address, for the private folder.
+
+**Request** — [`ExportPilotRequest`](#exportpilotrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments"` | sessions, answers or comments. |
+
+**Response** — [`ExportPilotResponse`](#exportpilotresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `csv` | `string` | string |  | CSV with a header row. Participants appear as P-NN codes assigned by session order, never by name or address. |
+| `rowCount` | `int32` | number |  | Rows in csv, excluding the header. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "table": "string"
+}
+```
+
+</details>
+
 ## SidecarService
 
 Embedding, reranking, classification, and batch jobs.
@@ -10132,6 +10519,341 @@ Deletion schedule.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `purgeBy` | `Timestamp` | string (RFC 3339, UTC) |  | Latest time by which personal data is purged. |
+
+### PilotSession
+
+One pilot sitting.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Session id (UUID). |
+| `status` | `string` | string |  | consented or finished. |
+| `roleBranch` | `string` | string |  | recruiter, hm, both, or empty until A1 is answered. |
+| `instrumentVersion` | `string` | string |  | The instrument version this session answers. |
+| `consentAt` | `Timestamp` | string (RFC 3339, UTC) |  | When consent was recorded. |
+| `recordingOk` | `bool` | boolean |  | Whether the participant allowed the call to be recorded. |
+| `surveyFinishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the last survey section was submitted; unset until then. |
+| `recordFinishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the record part was marked done; unset until then. |
+| `workflowFinishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the workflow part was marked done; unset until then. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the session was closed; unset until then. |
+| `sectionsDone` | `string`[] | array of string |  | Section ids already submitted, in instrument order. |
+| `nextSection` | `string` | string |  | The next section to show, or empty when the survey is complete. |
+
+### GetPilotRequest
+
+Request for the caller's pilot status; takes nothing.
+
+_No fields._
+
+### GetPilotResponse
+
+Whether the caller may enter, and where they are.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `allowed` | `bool` | boolean |  | False for a member without the pilot flag who is not an admin. |
+| `admin` | `bool` | boolean |  | True when the caller is an admin, who passes the gate regardless. |
+| `instrumentVersion` | `string` | string |  | The instrument version a new session would answer. |
+| `session` | [`PilotSession`](#pilotsession) | object |  | The caller's session, unset until StartPilot. |
+
+### StartPilotRequest
+
+Consent and the recording preference.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `consent` | `bool` | boolean |  | Required: the participant ticked the consent box. |
+| `recordingOk` | `bool` | boolean |  | Optional: the call may be recorded. |
+
+### StartPilotResponse
+
+The opened or resumed session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+### PilotScale
+
+A labelled scale for a scale item.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `min` | `int32` | number |  | Lowest value offered. |
+| `max` | `int32` | number |  | Highest value offered. |
+| `minLabel` | `string` | string |  | Label under the lowest value. |
+| `maxLabel` | `string` | string |  | Label under the highest value. |
+
+### PilotDimension
+
+One rating dimension of a rating_per_selected item.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Dimension id, the key used in the answer. |
+| `label` | `string` | string |  | What the dimension asks. |
+| `options` | `string`[] | array of string |  | The options offered. |
+
+### PilotItem
+
+One survey item as the participant sees it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Item id (A1, C1, D7b). |
+| `type` | `string` | string |  | single, multi, text, number, scale, single_from, rating_per_selected. |
+| `prompt` | `string` | string |  | The question. |
+| `help` | `string` | string |  | Help text under the question; empty when none. |
+| `options` | `string`[] | array of string |  | Options for single and multi items. For single_from and rating_per_selected, the rows resolved from the source item's saved answer, in the order they were selected. |
+| `maxSelect` | `int32` | number |  | Maximum selections for a multi item; 0 means no limit. |
+| `required` | `bool` | boolean |  | Whether an answer is required to submit the section. |
+| `scale` | [`PilotScale`](#pilotscale) | object |  | The scale for a scale item. |
+| `dimensions` | [`PilotDimension`](#pilotdimension)[] | array of object |  | The dimensions for a rating_per_selected item. |
+| `pilotOnly` | `bool` | boolean |  | True for the pilot-only closing items. |
+
+### PilotAnswer
+
+One answer, with the per-item flag.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `itemId` | `string` | string | `string: min_len: 1 max_len: 8` | Item id. |
+| `valueJson` | `string` | string | `string: max_len: 20000` | The answer as JSON, shaped by the item type: a string for single and single_from, an array of strings for multi, a string for text, a number for number and scale, and an object keyed by selected option with one value per dimension for rating_per_selected. The server validates the shape against the instrument. |
+| `flagged` | `bool` | boolean |  | "This was unclear or didn't fit me." |
+
+### GetPilotSectionRequest
+
+Request for one section.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sectionId` | `string` | string | `string: min_len: 1 max_len: 2` | Section id (A to F, P). |
+
+### GetPilotSectionResponse
+
+One section with the caller's saved answers.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Section id. |
+| `title` | `string` | string |  | Section title. |
+| `intro` | `string` | string |  | Text shown above the items; the concept paragraph for section E. |
+| `items` | [`PilotItem`](#pilotitem)[] | array of object |  | The items, filtered by the caller's branch, with resolved rows. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Answers already saved for this section. |
+| `index` | `int32` | number |  | One-based position of this section among those the caller will see. |
+| `total` | `int32` | number |  | How many sections the caller will see. |
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session, so the page can show progress without a second call. |
+
+### SubmitPilotSectionRequest
+
+A section's answers.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sectionId` | `string` | string | `string: min_len: 1 max_len: 2` | Section id. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object | `repeated: max_items: 60` | Every answered item in the section. A required item left unanswered is refused with the item id in the message. |
+
+### SubmitPilotSectionResponse
+
+What to show next.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands, with sections_done and next_section. |
+| `ended` | `bool` | boolean |  | True when A1 routed the caller out of the survey ("none of these"). |
+
+### GetPilotRecordRequest
+
+Request for the match record; takes nothing.
+
+_No fields._
+
+### GetPilotRecordResponse
+
+The mocked match record and the caller's comments.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `recordJson` | `string` | string |  | The record as JSON: header, legend, ten rows and footer, in the shape documented in services/api/internal/pilot/data. Rendered by the site; never edited by a participant. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments on the record, by target. |
+| `recordVersion` | `string` | string |  | The record version, for the export. |
+
+### GetPilotWorkflowRequest
+
+Request for the workflow; takes nothing.
+
+_No fields._
+
+### PilotWorkflowNode
+
+One node of the company hiring workflow.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Node id (C-01 to C-26). |
+| `phase` | `string` | string |  | Phase id (A to E). |
+| `name` | `string` | string |  | Node name. |
+| `owner` | `string` | string |  | Who owns the node. |
+| `summary` | `string` | string |  | One or two sentences on what happens there. |
+| `decision` | `bool` | boolean |  | True for a decision point. |
+| `open` | `bool` | boolean |  | True when the node's existence is open pending the pilot. |
+
+### PilotWorkflowPhase
+
+One phase of the workflow.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Phase id. |
+| `title` | `string` | string |  | Phase title. |
+
+### GetPilotWorkflowResponse
+
+The company workflow and the caller's comments.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `intro` | `string` | string |  | Text shown above the chart. |
+| `prompts` | `string`[] | array of string |  | The six prompts, shown as guidance for what kind of comment helps. |
+| `phases` | [`PilotWorkflowPhase`](#pilotworkflowphase)[] | array of object |  | The five phases. |
+| `nodes` | [`PilotWorkflowNode`](#pilotworkflownode)[] | array of object |  | The nodes, in order. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments, by target. |
+| `workflowVersion` | `string` | string |  | The workflow revision, for the export. |
+
+### PilotComment
+
+One comment on a target.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `targetKind` | `string` | string |  | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
+| `targetId` | `string` | string |  | r1..r10, C-01..C-26, a sequence number for missing steps, or empty. |
+| `body` | `string` | string |  | The comment. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was last saved. |
+
+### UpsertPilotCommentRequest
+
+A comment to save or replace.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
+| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the general kinds. |
+| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty removes an existing comment. |
+
+### UpsertPilotCommentResponse
+
+The saved comment, or empty when it was removed.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `comment` | [`PilotComment`](#pilotcomment) | object |  | The comment as stored; unset when removed. |
+
+### MarkPilotPartRequest
+
+Which reading part is done.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `part` | `string` | string | `string: in: "record" in: "workflow"` | record or workflow. |
+
+### MarkPilotPartResponse
+
+The session after the mark.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+### FinishPilotRequest
+
+Request to close the session; takes nothing.
+
+_No fields._
+
+### FinishPilotResponse
+
+The closed session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session as it now stands. |
+
+### ListPilotSessionsRequest
+
+Request for the session list; takes nothing.
+
+_No fields._
+
+### PilotSessionSummary
+
+One row of the admin session list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `session` | [`PilotSession`](#pilotsession) | object |  | The session. |
+| `memberId` | `string` | string |  | Participant's member id. |
+| `name` | `string` | string |  | Participant's display name. |
+| `email` | `string` | string |  | Participant's email. |
+| `measuredMinutes` | `int32` | number |  | Minutes between the first section opened and the last submitted, measured server-side; 0 until the survey is complete. |
+| `selfReportedMinutes` | `int32` | number |  | What the participant said it took; 0 until answered. |
+| `commentCount` | `int32` | number |  | How many comments the participant left. |
+| `flagCount` | `int32` | number |  | How many items the participant flagged. |
+
+### ListPilotSessionsResponse
+
+Every pilot session, newest first.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessions` | [`PilotSessionSummary`](#pilotsessionsummary)[] | array of object |  | The sessions. |
+| `instrumentVersion` | `string` | string |  | The instrument version currently fielded. |
+
+### GetPilotSessionRequest
+
+Request for one session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id. |
+
+### PilotSectionEvent
+
+One section open or submit instant.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `section` | `string` | string |  | Section id. |
+| `event` | `string` | string |  | opened or submitted. |
+| `at` | `Timestamp` | string (RFC 3339, UTC) |  | When. |
+
+### GetPilotSessionResponse
+
+One session in full.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `summary` | [`PilotSessionSummary`](#pilotsessionsummary) | object |  | The summary row. |
+| `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Every answer with its flag, in instrument order. |
+| `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | Every comment, by target. |
+| `events` | [`PilotSectionEvent`](#pilotsectionevent)[] | array of object |  | Section open and submit instants, oldest first. |
+
+### ExportPilotRequest
+
+Which table to export.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments"` | sessions, answers or comments. |
+
+### ExportPilotResponse
+
+A CSV export.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `csv` | `string` | string |  | CSV with a header row. Participants appear as P-NN codes assigned by session order, never by name or address. |
+| `rowCount` | `int32` | number |  | Rows in csv, excluding the header. |
 
 ### GetVersionRequest
 

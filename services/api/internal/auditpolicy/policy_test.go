@@ -145,6 +145,8 @@ var noTarget = map[string]bool{
 	// reason text is in the payload either way.
 	"/career.v1.AdminService/CreateAgentPassword": true,
 	"/career.v1.AdminService/RevokeAgentSessions": true,
+	// Exports the whole pilot dataset; the table name is in the payload.
+	"/career.v1.PilotService/ExportPilot": true,
 }
 
 func TestEveryRecordedProcedureResolvesATarget(t *testing.T) {

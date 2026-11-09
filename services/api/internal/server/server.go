@@ -39,6 +39,7 @@ type Server struct {
 	chat      *handlers.Chat
 	events    *handlers.Events
 	dtest     *handlers.DecisionTest
+	pilot     *handlers.Pilot
 	sidecar   *sidecar.Client
 	db        *db.Pool
 	policy    authpolicy.Map
@@ -69,6 +70,10 @@ type Deps struct {
 	// Public, because its participants are recruited volunteers rather
 	// than members. Nil leaves it unmounted.
 	DecisionTest *handlers.DecisionTest
+	// Pilot runs the employer-side pilot for whitelisted participants
+	// (FSD §5.16). Members only; the handler gates on the pilot flag.
+	// Nil leaves it unmounted.
+	Pilot *handlers.Pilot
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
 	Users *users.Repo
@@ -108,6 +113,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		chat:      deps.Chat,
 		events:    deps.Events,
 		dtest:     deps.DecisionTest,
+		pilot:     deps.Pilot,
 		sidecar:   deps.Sidecar,
 		db:        deps.DB,
 		policy:    deps.AuthPolicy,
@@ -244,6 +250,11 @@ func (s *Server) routes() http.Handler {
 	if s.dtest != nil {
 		dtPath, dtHandler := careerv1connect.NewDecisionTestServiceHandler(s.dtest, beaconOpts...)
 		mount(dtPath, dtHandler)
+	}
+
+	if s.pilot != nil {
+		pilotPath, pilotHandler := careerv1connect.NewPilotServiceHandler(s.pilot, opts...)
+		mount(pilotPath, pilotHandler)
 	}
 
 	if s.jd != nil {
