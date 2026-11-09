@@ -17,6 +17,12 @@ The owner delegated the order of work and the open operational questions. Each d
 7. **Reviewer changes go through the FSD and an ADR**, as the handoff requires. One ADR records the generalisation decision; a new FSD section carries the framework's requirements, each row **Not built** until it lands; the open questions become `D-` rows.
 8. **Survey platform.** Google Forms for the pilot (section per screen, role branching from A1, per-item flag as a checkbox, fixed C1 order), Tally for the main wave (randomised option order, branching, CSV export, free tier). The pilot reads C1 only for item confusion (`08` §5), so randomisation is not needed there.
 
+Answered by the owner on 2026-11-08, in reply to the questions in §5:
+
+9. **The agreement history is a closed series.** The 31 owner-graded met/partial/unmet verdicts are kept as they are. Step 4 derives the three-way verdict from the new `determination` in code (`met` and `met_equivalent` → met; `unresolved` → partial; `not_met` → unmet) so the historical agreement rate stays comparable across the change, and basis agreement starts fresh from step 4. No re-grading.
+10. **`candidate_response` evidence counts at full weight in Phase 0.** A judgment resting on a clarification answer counts the same as one resting on a document; the match record reports `self_attested_share` so a reader sees how much of the coverage rests on self-attestation. Whether to discount is decided later from calibration data, as `04` §7 proposed.
+11. **The Phase 0 exit reader.** The owner reads the golden-set records first as a dry run, to catch anything unreadable; then one recruiter or HR participant from the pilot's ten reads three records for fifteen minutes and says which candidate-role pairs look strong and why. The exit claim rests on the participant's reading; the owner's is the rehearsal.
+
 ## 1. What Phase 0 delivers, and what it does not
 
 **Delivers**, per `01` §5.5: the Requirement and Equivalency Judgment schemas as data rather than JSON in a submission row; a minimal extractor, judge and readable match record under the new vocabulary; run against the owner's corpus and the golden set with the calibration layer still working; a keyword baseline beside every record.
@@ -38,7 +44,7 @@ Each step is one pull request or a short series. Each carries its tests, its doc
 | 6 | Match record viewer v2: three numbers, basis label per row, `coverage_equivalent_share`, `self_attested_share`, the keyword-baseline column, gap classification (lexical vs substantive from basis); member view and admin view; an override that changes the effective value while the model's stays logged | Makes the new vocabulary legible; it is what the pilot stimulus mocks | The owner reads a real record in the new form and the pilot stimulus is regenerated from it |
 | 7 | Clarification loop, system stage, with the owner as the candidate: question templates keyed by `(answer_type, requirement.type)`; options drawn from own corpus and generic ladders only; `candidate_response` evidence; re-judge scoped to the affected requirements; one round in Phase 0 | Proves the data model end to end on one person before anyone else is asked anything | One `unresolved` judgment resolved by an answer, visible in the record with its provenance |
 | 8 | Catalog write-back: an override confirms or rejects the cited entry; an override reason naming an unknown equivalence creates a `proposed` entry; the promotion rule as configuration under `rule_version` | The first feedback path from judgments into reusable knowledge (`05` §1.3) | A `met_equivalent` names its entry and the counts move |
-| 9 | Phase 0 exit: the golden set plus three new technical postings; the owner, reading as a non-expert would, identifies strong coverage from the record alone; the exit note written here | `01` §5.5's validation criterion | Exit note at the next numbered slot |
+| 9 | Phase 0 exit: the golden set plus three new technical postings; the owner dry-runs the reading, then one pilot participant (recruiter or HR) identifies strong coverage from three records alone (decision 11); the exit note written here | `01` §5.5's validation criterion | Exit note at the next numbered slot |
 
 Steps 0 to 2 are documents and need no quiet window. Steps 4 and 5 each need a golden-set evaluation, 5 to 6 hours on the box, which refuses to run while the site is busy; those are scheduled overnight.
 
@@ -55,6 +61,6 @@ Participant material (decision 1); the owner's private corpus (already excluded)
 
 ## 5. Questions for the owner, not blocking steps 0 to 3
 
-- Whether the existing agreement history (owner vs judge on met/partial/unmet, 31 graded of about 1,700 rows) should be re-graded under the new vocabulary or closed as a series and compared only through the derived verdict.
-- Whether `candidate_response` evidence counts at full weight in Phase 0, as `04` §7 proposes, reported through `self_attested_share`. Needed before step 7.
-- Whether the owner wants to be the non-expert reader at the Phase 0 exit, or to recruit one reader from the pilot's ten for it.
+Answered questions move to §0 with their answer; what remains is open.
+
+Nothing open as of 2026-11-08 (late); all three questions were answered the same day.
