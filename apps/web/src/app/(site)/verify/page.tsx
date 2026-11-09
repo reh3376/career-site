@@ -6,18 +6,20 @@ import { ConnectError } from "@connectrpc/connect";
 import { VerifyRequestSchema } from "@/gen/career/v1/auth_pb";
 import { authClient } from "@/lib/api";
 
+import { CodeForm } from "./code-form";
+import { Verified } from "./verified";
+
 export const metadata: Metadata = {
   title: "Verify your email",
 };
 
-// Server-rendered so the verify call runs on the server (no token in the
-// browser tab's fetch tree). On success we show the pending-approval message
-// inline; on failure we render an actionable error.
+// Two ways in, as the email says: the link, which carries a token and
+// is verified here on the server; or the six-digit code, entered on
+// this page with the address, which a server action verifies. Without
+// a token the page is the code form, not an error.
 export const dynamic = "force-dynamic";
 
-type VerifyResult =
-  | { ok: true; name: string }
-  | { ok: false; error: string };
+type VerifyResult = { ok: true; name: string; status: string } | { ok: false; error: string };
 
 async function verify(token: string): Promise<VerifyResult> {
   try {
@@ -26,32 +28,41 @@ async function verify(token: string): Promise<VerifyResult> {
         credential: { case: "token", value: token },
       }),
     );
-    return { ok: true, name: resp.me?.name ?? "" };
+    return { ok: true, name: resp.me?.name ?? "", status: statusName(resp.me?.status) };
   } catch (err) {
     const message =
-      err instanceof ConnectError
-        ? err.rawMessage
-        : err instanceof Error
-          ? err.message
-          : "Verification failed.";
+      err instanceof ConnectError ? err.rawMessage : err instanceof Error ? err.message : "Verification failed.";
     return { ok: false, error: message };
+  }
+}
+
+// The generated client gives the enum as a number; the code path gets
+// the JSON name. Verified compares the name.
+function statusName(v: number | undefined): string {
+  switch (v) {
+    case 2:
+      return "MEMBER_STATUS_ACTIVE";
+    case 3:
+      return "MEMBER_STATUS_PENDING_APPROVAL";
+    default:
+      return "";
   }
 }
 
 export default async function VerifyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; email?: string }>;
 }) {
-  const { token } = await searchParams;
+  const { token, email } = await searchParams;
+
   if (!token) {
     return (
       <Wrapper>
-        <Kicker tone="signal">missing token</Kicker>
-        <Heading>Nothing to verify.</Heading>
-        <p className="mt-6 text-base leading-relaxed text-ink-2">
-          This page needs a verification token in the URL. Use the link from
-          the email you were sent, or{" "}
+        <Kicker tone="accent">verify your email</Kicker>
+        <Heading>Enter the code from your email.</Heading>
+        <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
+          The email has a link and a six-digit code; either one works. If you did not get it, check your spam folder or{" "}
           <Link
             href="/register"
             className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
@@ -60,6 +71,7 @@ export default async function VerifyPage({
           </Link>
           .
         </p>
+        <CodeForm initialEmail={email ?? ""} />
       </Wrapper>
     );
   }
@@ -71,63 +83,36 @@ export default async function VerifyPage({
       <Wrapper>
         <Kicker tone="signal">verification failed</Kicker>
         <Heading>That link didn&rsquo;t work.</Heading>
-        <p className="mt-6 text-base leading-relaxed text-ink-2">{result.error}</p>
-        <p className="mt-8">
+        <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">{result.error}</p>
+        <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
+          If you still have the email, the six-digit code in it works here. Otherwise{" "}
           <Link
             href="/register"
-            className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+            className="text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
           >
-            Register again
+            register again
           </Link>
+          .
         </p>
+        <CodeForm initialEmail={email ?? ""} />
       </Wrapper>
     );
   }
 
   return (
     <Wrapper>
-      <Kicker tone="accent">email verified</Kicker>
-      <Heading>
-        {result.name ? `Thanks, ${result.name.split(" ")[0]}.` : "Thanks."}
-      </Heading>
-      <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
-        Your email is verified. Roger has been notified and will review your
-        request, usually within a day.
-      </p>
-      <p className="mt-3 text-sm text-ink-3">
-        You&rsquo;ll receive an email either way. Nothing else you need to do
-        right now.
-      </p>
-      <p className="mt-10">
-        <Link
-          href="/"
-          className="text-sm text-accent underline decoration-accent/40 decoration-1 underline-offset-4 hover:decoration-accent"
-        >
-          Back to home
-        </Link>
-      </p>
+      <Verified name={result.name} status={result.status} />
     </Wrapper>
   );
 }
 
 function Wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
-      {children}
-    </div>
-  );
+  return <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">{children}</div>;
 }
 
-function Kicker({
-  tone,
-  children,
-}: {
-  tone: "accent" | "signal";
-  children: React.ReactNode;
-}) {
-  const color = tone === "signal" ? "text-signal" : "text-accent";
+function Kicker({ tone, children }: { tone: "accent" | "signal"; children: React.ReactNode }) {
   return (
-    <p className={`font-mono text-[11px] uppercase tracking-[0.14em] ${color}`}>
+    <p className={`font-mono text-[11px] uppercase tracking-[0.14em] ${tone === "signal" ? "text-signal" : "text-accent"}`}>
       {children}
     </p>
   );
@@ -136,7 +121,7 @@ function Kicker({
 function Heading({ children }: { children: React.ReactNode }) {
   return (
     <h1
-      className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
+      className="font-display mt-3 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
       style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
     >
       {children}

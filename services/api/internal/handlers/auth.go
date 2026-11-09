@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -260,7 +261,7 @@ func (h *Auth) Register(
 	}
 
 	return connect.NewResponse(&v1.RegisterResponse{
-		Message: "Check your email for a verification link.",
+		Message: "Check your email for a verification link and a code.",
 	}), nil
 }
 
@@ -278,11 +279,24 @@ func (h *Auth) sendVerifyEmail(ctx context.Context, u *users.User) error {
 	}
 
 	verifyURL := h.cfg.WebBaseURL + "/verify?token=" + token
+	// The code is entered on the same page, with the address prefilled,
+	// so the email can name the place as well as the number.
+	codeURL := h.cfg.WebBaseURL + "/verify?email=" + url.QueryEscape(u.Email)
+	// An invited address is active the moment it verifies; telling that
+	// person Roger will review them within a day is wrong, and every
+	// pilot participant is that person. Best-effort: a lookup failure
+	// falls back to the general wording.
+	whitelisted := false
+	if _, gErr := h.users.GetActiveGrant(ctx, u.Email); gErr == nil {
+		whitelisted = true
+	}
 
 	text, htmlBody, err := email.VerifyTemplate.Render(map[string]any{
-		"Name":      u.Name,
-		"VerifyURL": verifyURL,
-		"Code":      code,
+		"Name":        u.Name,
+		"VerifyURL":   verifyURL,
+		"CodeURL":     codeURL,
+		"Code":        code,
+		"Whitelisted": whitelisted,
 	})
 	if err != nil {
 		return err
