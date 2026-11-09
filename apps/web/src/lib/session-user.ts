@@ -45,3 +45,12 @@ export function isAdmin(u: SessionUser | null): boolean {
 export function canPilot(u: SessionUser | null): boolean {
   return !!u && (u.pilotApproved === true || isAdmin(u));
 }
+
+// A pilot participant and nothing else (FSD FR-PLT-18): the flag
+// without the admin role. Owner, 2026-11-09: participants do not need
+// the rest of the site; they land in the pilot, see only the pilot,
+// and are sent back to it from any member page. The owner, as admin,
+// keeps the whole site.
+export function isPilotOnly(u: SessionUser | null): boolean {
+  return !!u && u.pilotApproved === true && !isAdmin(u);
+}

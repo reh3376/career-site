@@ -4,7 +4,7 @@ import Link from "next/link";
 // moment it verifies, so it is sent to sign in; everyone else is told
 // the truth about the wait. Shared by the link path (server) and the
 // code path (client), so the two never drift.
-export function Verified({ name, status }: { name: string; status: string }) {
+export function Verified({ name, status, pilot = false }: { name: string; status: string; pilot?: boolean }) {
   const first = name ? name.split(" ")[0] : "";
   const active = status === "MEMBER_STATUS_ACTIVE";
   return (
@@ -19,11 +19,13 @@ export function Verified({ name, status }: { name: string; status: string }) {
       {active ? (
         <>
           <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
-            Your email is verified and your access is ready. Sign in to continue.
+            {pilot
+              ? "Your email is verified and the pilot is ready: about twenty minutes, in three parts, at your own pace. Sign in to begin."
+              : "Your email is verified and your access is ready. Sign in to continue."}
           </p>
           <p className="mt-8">
             <Link
-              href="/login?next=/home"
+              href={pilot ? "/login?next=/pilot" : "/login?next=/home"}
               className="inline-flex items-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
             >
               Sign in

@@ -422,6 +422,9 @@ func (h *Auth) applyWhitelistAutoApprove(
 			Name:   u.Name,
 			Email:  u.Email,
 			Status: v1.MemberStatus_MEMBER_STATUS_ACTIVE,
+			// The page sends a participant to the pilot, not the member
+			// home (FSD FR-PLT-18).
+			PilotApproved: u.PilotApproved,
 		},
 	}), nil
 }
@@ -462,11 +465,20 @@ func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) err
 	if u.ExpiresAt != nil {
 		summary = fmt.Sprintf("through %s UTC", u.ExpiresAt.UTC().Format("Mon, 02 Jan 2006 15:04"))
 	}
+	signIn := h.cfg.WebBaseURL + "/login"
+	subject := "Your career-site access is ready"
+	if u.PilotApproved {
+		// A participant's account exists for the pilot; the email says
+		// so and points at it (FSD FR-PLT-18).
+		signIn = h.cfg.WebBaseURL + "/login?next=/pilot"
+		subject = "Your pilot is ready"
+	}
 	text, html, err := email.WelcomeWhitelistTemplate.Render(map[string]any{
 		"Name":          u.Name,
-		"SignInURL":     h.cfg.WebBaseURL + "/login",
+		"SignInURL":     signIn,
 		"AccessSummary": summary,
 		"OwnerEmail":    h.cfg.OwnerContactEmail,
+		"Pilot":         u.PilotApproved,
 	})
 	if err != nil {
 		return err
@@ -474,7 +486,7 @@ func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) err
 	return h.email.Send(ctx, email.Message{
 		To:       u.Email,
 		From:     h.cfg.MailFrom,
-		Subject:  "Your career-site access is ready",
+		Subject:  subject,
 		TextBody: text,
 		HTMLBody: html,
 		Kind:     "welcome_whitelist",

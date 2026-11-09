@@ -15,7 +15,11 @@ export const metadata: Metadata = pageMetadata({
   path: "/register",
 });
 
-export default async function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ pilot?: string }> }) {
+  // ?pilot=1 is the link the owner sends a confirmed participant: the
+  // same form, with an intro that says what this registration is for.
+  const { pilot: pilotParam } = await searchParams;
+  const forPilot = pilotParam === "1";
   const mode = await getUiMode();
   // Read per request from the container's environment, not inlined at
   // build time; see lib/turnstile.ts.
@@ -45,17 +49,18 @@ export default async function RegisterPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-signal">
-        access is reviewed
+        {forPilot ? "the pilot" : "access is reviewed"}
       </p>
       <h1
         className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-ink sm:text-5xl"
         style={{ fontVariationSettings: '"opsz" 120, "SOFT" 40' }}
       >
-        Request access.
+        {forPilot ? "Join the pilot." : "Request access."}
       </h1>
       <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
-        A short intake so I know who&rsquo;s reaching out. I get an email when
-        you submit; I&rsquo;ll usually reply within a day.
+        {forPilot
+          ? "Register with the email address you confirmed with Roger. Once you verify it, the pilot opens: about twenty minutes, in three parts, at your own pace, then a call of about thirty minutes."
+          : "A short intake so I know who\u2019s reaching out. I get an email when you submit; I\u2019ll usually reply within a day."}
       </p>
       <div className="mt-12">
         <RegisterForm turnstileSiteKey={turnstileSiteKey} />

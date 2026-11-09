@@ -12,7 +12,7 @@ import { Verified } from "./verified";
 export function CodeForm({ initialEmail }: { initialEmail: string }) {
   const [state, formAction] = useActionState(verifyByCodeAction, { values: { email: initialEmail } } as CodeState);
   if (state.ok) {
-    return <Verified name={state.name ?? ""} status={state.status ?? ""} />;
+    return <Verified name={state.name ?? ""} status={state.status ?? ""} pilot={state.pilot} />;
   }
   return (
     <form action={formAction} className="mt-8 max-w-md space-y-5">
