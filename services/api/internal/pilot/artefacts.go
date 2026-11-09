@@ -11,7 +11,7 @@ import (
 
 // CurrentRecordVersion and CurrentWorkflowVersion name the files served.
 const (
-	CurrentRecordVersion   = "v1"
+	CurrentRecordVersion   = "v1.1"
 	CurrentWorkflowVersion = "v2"
 )
 

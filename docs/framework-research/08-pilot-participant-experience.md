@@ -80,6 +80,8 @@ Fifteen minutes on the survey, then five on the stimulus, then eight to ten on t
 2. Which row would you check first, and why?
 3. *(Recruiter)* Could you rank ten of these for a role outside your field? *(HM)* Would you touch the override button, or read the résumé instead?
 
+On the site (`15`), where the record is read before the call, its general box asks three questions instead of "which row first": which rows they would verify themselves before relying on the record and why those; what they could not understand without someone explaining it; whether they would use Audit or Override on any row and what they would do with it. The call's question 2 is read against those answers.
+
 The stimulus is shown last so that Section E has already captured an unprimed reading of the paragraph. Their reaction to the record itself is **not** a pilot finding about the survey; it is early input to the viewer design and is filed under that heading.
 
 **They can affect.**

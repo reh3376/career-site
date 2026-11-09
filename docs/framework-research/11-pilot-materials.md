@@ -70,7 +70,7 @@ One file per participant, `pilot-interview-NN.md`, in the private repository (§
 | Prompt | Notes | Verbatim |
 |---|---|---|
 | B1. Is this what you pictured from the paragraph? What is different? | | |
-| B2. Which row would you check first, and why? | | |
+| B2. Which rows would you verify yourself before relying on this record, and why those? (Asked on the site too, with: what could you not understand without explanation; would you use Audit or Override, and what would you do with it.) | | |
 | B3. (Recruiter) Could you rank ten of these for a role outside your field? (HM) Would you touch the override button, or read the résumé instead? | | |
 
 ## Part C: the company hiring workflow (8 to 10 min, shown after Part B)
