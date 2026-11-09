@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 // a token the page is the code form, not an error.
 export const dynamic = "force-dynamic";
 
-type VerifyResult = { ok: true; name: string; status: string; pilot: boolean } | { ok: false; error: string };
+type VerifyResult = { ok: true; name: string; status: string; pilot: boolean; email: string } | { ok: false; error: string };
 
 async function verify(token: string): Promise<VerifyResult> {
   try {
@@ -28,7 +28,13 @@ async function verify(token: string): Promise<VerifyResult> {
         credential: { case: "token", value: token },
       }),
     );
-    return { ok: true, name: resp.me?.name ?? "", status: statusName(resp.me?.status), pilot: resp.me?.pilotApproved === true };
+    return {
+      ok: true,
+      name: resp.me?.name ?? "",
+      status: statusName(resp.me?.status),
+      pilot: resp.me?.pilotApproved === true,
+      email: resp.me?.email ?? "",
+    };
   } catch (err) {
     const message =
       err instanceof ConnectError ? err.rawMessage : err instanceof Error ? err.message : "Verification failed.";
@@ -101,7 +107,7 @@ export default async function VerifyPage({
 
   return (
     <Wrapper>
-      <Verified name={result.name} status={result.status} pilot={result.pilot} />
+      <Verified name={result.name} status={result.status} pilot={result.pilot} email={result.email} />
     </Wrapper>
   );
 }

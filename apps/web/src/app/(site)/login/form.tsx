@@ -56,8 +56,10 @@ export function LoginForm({
         <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-3">
           <input type="checkbox" name="plusPilot" className="mt-0.5 h-4 w-4" />
           <span>
-            My pilot account is my address plus <span className="font-mono text-ink">+pilot</span>. A pilot account
-            registered that way is separate from a regular one; tick this and the suffix is added for you.
+            I am signing in to the pilot and my pilot username is my address plus{" "}
+            <span className="font-mono text-ink">+pilot</span> (for example{" "}
+            <span className="font-mono text-ink">jane+pilot@example.com</span>). Tick this and the suffix is added
+            for you; or type the full pilot address yourself and leave it unticked.
           </span>
         </label>
       </div>
