@@ -11,35 +11,23 @@ export const dynamic = "force-dynamic";
 
 type CorpusDoc = {
   id: string;
-  source_kind?: string;
   sourceKind?: string;
-  source_path?: string;
   sourcePath?: string;
   title: string;
   visibility?: string;
-  chunk_count?: number;
   chunkCount?: number;
-  embedded_count?: number;
   embeddedCount?: number;
-  ingested_at?: string;
   ingestedAt?: string;
-  updated_at?: string;
   updatedAt?: string;
 };
 
 type ListResp = {
   documents?: CorpusDoc[];
-  total_documents?: number;
   totalDocuments?: number;
-  total_chunks?: number;
   totalChunks?: number;
-  total_embedded?: number;
   totalEmbedded?: number;
-  total_public?: number;
   totalPublic?: number;
-  total_corpus_only?: number;
   totalCorpusOnly?: number;
-  embedder_counts?: { model?: string; count?: number }[];
   embedderCounts?: { model?: string; count?: number }[];
 };
 
@@ -92,31 +80,31 @@ export default async function AdminCorpusPage() {
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">documents</dt>
             <dd className="m-0 tabular text-ink text-2xl">
-              {result.data.total_documents ?? result.data.totalDocuments ?? 0}
+              {result.data.totalDocuments ?? result.data.totalDocuments ?? 0}
             </dd>
           </div>
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">public</dt>
             <dd className="m-0 tabular text-ink text-2xl">
-              {result.data.total_public ?? result.data.totalPublic ?? 0}
+              {result.data.totalPublic ?? result.data.totalPublic ?? 0}
             </dd>
           </div>
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">corpus-only</dt>
             <dd className="m-0 tabular text-ink text-2xl">
-              {result.data.total_corpus_only ?? result.data.totalCorpusOnly ?? 0}
+              {result.data.totalCorpusOnly ?? result.data.totalCorpusOnly ?? 0}
             </dd>
           </div>
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">chunks</dt>
             <dd className="m-0 tabular text-ink text-2xl">
-              {result.data.total_chunks ?? result.data.totalChunks ?? 0}
+              {result.data.totalChunks ?? result.data.totalChunks ?? 0}
             </dd>
           </div>
           <div className="flex items-baseline gap-3">
             <dt className="text-ink-3">embedded</dt>
             <dd className="m-0 tabular text-ink text-2xl">
-              {result.data.total_embedded ?? result.data.totalEmbedded ?? 0}
+              {result.data.totalEmbedded ?? result.data.totalEmbedded ?? 0}
             </dd>
           </div>
         </dl>
@@ -130,7 +118,7 @@ export default async function AdminCorpusPage() {
           <JobPanel
             embedderCounts={(
               (result.ok
-                ? (result.data.embedder_counts ?? result.data.embedderCounts)
+                ? (result.data.embedderCounts ?? result.data.embedderCounts)
                 : undefined) ?? []
             ).map((c) => ({ model: c.model ?? "", count: c.count ?? 0 }))}
           />
@@ -165,11 +153,11 @@ export default async function AdminCorpusPage() {
 }
 
 function DocRow({ d, nowMs }: { d: CorpusDoc; nowMs: number }) {
-  const sourceKind = d.source_kind ?? d.sourceKind ?? "";
-  const sourcePath = d.source_path ?? d.sourcePath ?? "";
-  const chunks = d.chunk_count ?? d.chunkCount ?? 0;
-  const embedded = d.embedded_count ?? d.embeddedCount ?? 0;
-  const ingestedIso = d.ingested_at ?? d.ingestedAt;
+  const sourceKind = d.sourceKind ?? "";
+  const sourcePath = d.sourcePath ?? "";
+  const chunks = d.chunkCount ?? 0;
+  const embedded = d.embeddedCount ?? 0;
+  const ingestedIso = d.ingestedAt;
   const ingested = ingestedIso ? new Date(ingestedIso) : null;
   const embedComplete = chunks > 0 && embedded === chunks;
   return (

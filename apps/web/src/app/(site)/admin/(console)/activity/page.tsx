@@ -11,22 +11,15 @@ export const dynamic = "force-dynamic";
 // Accept both so the type is robust to a future codec flip and so
 // dev tools showing snake_case (proto view) don't confuse anyone.
 type MemberActivity = {
-  user_id?: string;
   userId?: string;
   name: string;
   email: string;
   status: string;
-  total_sessions?: number;
   totalSessions?: number;
-  total_active_secs?: string;
   totalActiveSecs?: string;
-  ask_roger_count?: number;
   askRogerCount?: number;
-  total_events?: number;
   totalEvents?: number;
-  last_kind?: string;
   lastKind?: string;
-  last_event_at?: string;
   lastEventAt?: string;
 };
 
@@ -168,7 +161,7 @@ export default async function AdminActivityPage({
             </thead>
             <tbody>
               {(result.data.members ?? []).map((m) => (
-                <Row key={m.user_id} m={m} nowMs={nowMs} />
+                <Row key={m.userId} m={m} nowMs={nowMs} />
               ))}
             </tbody>
           </table>
@@ -203,13 +196,13 @@ function SortTab({
 }
 
 function Row({ m, nowMs }: { m: MemberActivity; nowMs: number }) {
-  const userId = pick(m.user_id, m.userId, "");
-  const totalSessions = pick(m.total_sessions, m.totalSessions, 0);
-  const totalActive = Number(pick(m.total_active_secs, m.totalActiveSecs, "0"));
-  const askRoger = pick(m.ask_roger_count, m.askRogerCount, 0);
-  const totalEvents = pick(m.total_events, m.totalEvents, 0);
-  const lastKind = pick(m.last_kind, m.lastKind, "");
-  const lastEventAt = pick(m.last_event_at, m.lastEventAt, "");
+  const userId = pick(m.userId, m.userId, "");
+  const totalSessions = pick(m.totalSessions, m.totalSessions, 0);
+  const totalActive = Number(pick(m.totalActiveSecs, m.totalActiveSecs, "0"));
+  const askRoger = pick(m.askRogerCount, m.askRogerCount, 0);
+  const totalEvents = pick(m.totalEvents, m.totalEvents, 0);
+  const lastKind = pick(m.lastKind, m.lastKind, "");
+  const lastEventAt = pick(m.lastEventAt, m.lastEventAt, "");
   const lastAt = lastEventAt ? new Date(lastEventAt) : null;
   const statusCls = STATUS_TONE[m.status] ?? "text-ink-3";
   return (

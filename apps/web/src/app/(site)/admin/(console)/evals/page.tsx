@@ -16,22 +16,16 @@ type Run = {
   status?: string;
   note?: string;
   model?: string;
-  app_commit?: string;
   appCommit?: string;
-  corpus_fingerprint?: string;
   corpusFingerprint?: string;
-  prompts_json?: string;
   promptsJson?: string;
   threshold?: number;
   total?: number;
   scored?: number;
-  gate_correct?: number;
   gateCorrect?: number;
-  order_violations?: number;
   orderViolations?: number;
   margin?: number;
   errors?: number;
-  started_at?: string;
   startedAt?: string;
 };
 
@@ -59,7 +53,7 @@ export default async function AdminEvalsPage() {
   ]);
   const postings = set?.postings ?? [];
   const evals = runs?.runs ?? [];
-  const gateOf = (p: Posting) => p.expected_gate ?? p.expectedGate ?? "";
+  const gateOf = (p: Posting) => p.expectedGate ?? "";
   const chosen = postings.filter((p) => p.selection !== "random").length;
   const random = postings.filter((p) => p.selection === "random").length;
   const unlabelled = postings.filter((p) => gateOf(p) === "").length;
@@ -133,9 +127,9 @@ export default async function AdminEvalsPage() {
         ) : (
           <ul className="mt-4 space-y-3">
             {evals.map((r) => {
-              const started = r.started_at ?? r.startedAt;
-              const correct = r.gate_correct ?? r.gateCorrect ?? 0;
-              const violations = r.order_violations ?? r.orderViolations ?? 0;
+              const started = r.startedAt;
+              const correct = r.gateCorrect ?? 0;
+              const violations = r.orderViolations ?? 0;
               return (
                 <li
                   key={String(r.id)}
@@ -173,9 +167,9 @@ export default async function AdminEvalsPage() {
                   <p className="mt-1 font-mono text-[11px] text-ink-3">
                     {r.model || "-"}
                     {" · corpus "}
-                    {r.corpus_fingerprint ?? r.corpusFingerprint ?? "-"}
+                    {r.corpusFingerprint ?? "-"}
                     {" · build "}
-                    {r.app_commit ?? r.appCommit ?? "-"}
+                    {r.appCommit ?? "-"}
                   </p>
                 </li>
               );

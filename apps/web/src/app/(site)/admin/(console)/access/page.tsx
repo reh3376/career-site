@@ -14,19 +14,19 @@ export const dynamic = "force-dynamic";
 type AccessGrant = {
   id: string;
   email: string;
-  default_ttl: string;
+  defaultTtl: string;
   notes?: string;
-  entry_expires_at?: string;
-  created_by?: string;
-  created_at?: string;
-  updated_at?: string;
+  entryExpiresAt?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
   pilot?: boolean;
 };
 
 type ListResp = {
   grants?: AccessGrant[];
-  active_count?: number;
-  expired_count?: number;
+  activeCount?: number;
+  expiredCount?: number;
 };
 
 type FetchResult =
@@ -82,7 +82,7 @@ export default async function AdminAccessPage({
     );
   }
 
-  const { grants = [], active_count = 0, expired_count = 0 } = result.data;
+  const { grants = [], activeCount = 0, expiredCount = 0 } = result.data;
   const nowMs = getNowMs();
 
   return (
@@ -101,16 +101,16 @@ export default async function AdminAccessPage({
       <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-3">
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">active</dt>
-          <dd className="m-0 tabular text-ink text-2xl">{active_count}</dd>
+          <dd className="m-0 tabular text-ink text-2xl">{activeCount}</dd>
         </div>
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">lapsed</dt>
-          <dd className="m-0 tabular text-ink text-2xl">{expired_count}</dd>
+          <dd className="m-0 tabular text-ink text-2xl">{expiredCount}</dd>
         </div>
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">total</dt>
           <dd className="m-0 tabular text-ink text-2xl">
-            {active_count + expired_count}
+            {activeCount + expiredCount}
           </dd>
         </div>
       </dl>
@@ -179,15 +179,15 @@ function Header() {
 }
 
 function GrantRow({ g, nowMs }: { g: AccessGrant; nowMs: number }) {
-  const created = g.created_at ? new Date(g.created_at) : null;
-  const entryExp = g.entry_expires_at ? new Date(g.entry_expires_at) : null;
+  const created = g.createdAt ? new Date(g.createdAt) : null;
+  const entryExp = g.entryExpiresAt ? new Date(g.entryExpiresAt) : null;
   const isLapsed = entryExp !== null && entryExp.getTime() <= nowMs;
   return (
     <li className="py-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <span className="text-ink">{g.email}</span>
         {g.pilot ? <span className="text-accent">pilot participant</span> : null}
-        <span>ttl · {TTL_LABEL[g.default_ttl] ?? g.default_ttl}</span>
+        <span>ttl · {TTL_LABEL[g.defaultTtl] ?? g.defaultTtl}</span>
         {created ? <span>added · {relativeDays(created, nowMs)}</span> : null}
         {entryExp ? (
           <span className={isLapsed ? "text-signal" : "text-ink-2"}>
