@@ -30,7 +30,7 @@ Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewe
 
 - PL-1: pilot flag on whitelist entries and members, `Me.pilot_approved`, the admin toggle, forgot-password by 5-digit emailed code replacing the link; migration 00064. **Built 2026-11-08.**
 - PL-2: pilot tables (00065), `PilotService`, instrument v0.1 and the stimulus as embedded JSON, events. **Built 2026-11-08.**
-- PL-3: the `/pilot` pages (consent, survey, record, workflow, done), the company-workflow SVG, `/admin/pilot`, whitelist checkbox and member toggle in the web; live pass. **Built 2026-11-08; deployed 2026-11-09 (`ba6fdc6e04c3`), outside checks pass; the owner's run on the deployed build is still owed.** An admin delete of a session (FR-PLT-15) added 2026-11-09 so that run can be removed before the ten start.
+- PL-3: the `/pilot` pages (consent, survey, record, workflow, done), the company-workflow SVG, `/admin/pilot`, whitelist checkbox and member toggle in the web; live pass. **Built 2026-11-08; deployed 2026-11-09 (`ba6fdc6e04c3`), outside checks pass; the owner's live review (`15` §11, 22 steps) is the completion criterion and is still owed.** An admin delete of a session (FR-PLT-15) added 2026-11-09 so that run can be removed before the ten start.
 - PL-4: field it (owner whitelists the ten; exports to the private folder after week 2).
 
 ## P3 — Pilot recruiting and fielding (owner)
