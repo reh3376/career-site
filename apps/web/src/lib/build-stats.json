@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 538,
+    "byAssistant": 539,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 1001,
+    "commits": 1003,
     "days": 53,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-09",
-    "merges": 394,
-    "nonMerge": 607,
+    "merges": 395,
+    "nonMerge": 608,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -30,12 +30,12 @@
         {
           "files": 153,
           "language": "Go",
-          "lines": 37922
+          "lines": 37923
         },
         {
           "files": 152,
           "language": "TSX",
-          "lines": 29062
+          "lines": 29119
         },
         {
           "files": 73,
@@ -45,7 +45,7 @@
         {
           "files": 73,
           "language": "TypeScript",
-          "lines": 6295
+          "lines": 6303
         },
         {
           "files": 29,
@@ -60,7 +60,7 @@
         {
           "files": 30,
           "language": "Email templates",
-          "lines": 676
+          "lines": 680
         },
         {
           "files": 1,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 91654
+      "lines": 91724
     },
     "config": {
       "files": 33,

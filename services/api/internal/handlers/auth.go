@@ -479,6 +479,7 @@ func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) err
 		"AccessSummary": summary,
 		"OwnerEmail":    h.cfg.OwnerContactEmail,
 		"Pilot":         u.PilotApproved,
+		"Email":         u.Email,
 	})
 	if err != nil {
 		return err

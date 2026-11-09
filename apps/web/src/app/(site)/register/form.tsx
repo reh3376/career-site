@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+
+import { withPlusPilot } from "@/lib/plus-pilot";
 
 import { Turnstile } from "@/components/turnstile";
 
@@ -16,6 +18,12 @@ export function RegisterForm({ turnstileSiteKey,
 }) {
   const [state, formAction] = useActionState(registerAction, initialState);
   const v = state.values ?? {};
+  // For the pilot form only: what the address will be once the +pilot
+  // box has done its work, shown live so nobody is surprised by the
+  // address they then have to sign in with (owner, 2026-11-09).
+  const [typed, setTyped] = useState(v.email ?? "");
+  const [plus, setPlus] = useState(forPilot);
+  const finalEmail = forPilot && plus ? withPlusPilot(typed.trim().toLowerCase()) : typed.trim().toLowerCase();
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
@@ -48,17 +56,42 @@ export function RegisterForm({ turnstileSiteKey,
           required
           autoComplete="email"
           defaultValue={v.email ?? ""}
+          onChange={forPilot ? (e) => setTyped(e.target.value) : undefined}
           className={fieldInputClass}
         />
         {forPilot ? (
-          <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-3">
-            <input type="checkbox" name="plusPilot" className="mt-0.5 h-4 w-4" />
-            <span>
-              Add <span className="font-mono text-ink">+pilot</span> to my address, for a pilot account separate from
-              a regular one. Only if that is the address Roger confirmed with you: Gmail and most personal mail
-              deliver it, some company mail does not, and the verification email has to reach you.
-            </span>
-          </label>
+          <div className="mt-3 space-y-3">
+            <label className="flex items-start gap-2 text-xs leading-relaxed text-ink-3">
+              <input
+                type="checkbox"
+                name="plusPilot"
+                checked={plus}
+                onChange={(e) => setPlus(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                Add <span className="font-mono text-ink">+pilot</span> to my address for the pilot. Example:{" "}
+                <span className="font-mono text-ink">jane@example.com</span> becomes{" "}
+                <span className="font-mono text-ink">jane+pilot@example.com</span>. Mail to it still reaches your
+                inbox with Gmail and most personal mail; some company mail systems do not deliver it, so untick this
+                if Roger confirmed a different address with you.
+              </span>
+            </label>
+            <p className="border-l-2 border-accent bg-accent/10 px-4 py-3 text-sm text-ink">
+              {finalEmail ? (
+                <>
+                  You will register, and sign in to the pilot, as{" "}
+                  <span className="font-mono">{finalEmail}</span>. Keep the{" "}
+                  <span className="font-mono">+pilot</span> part: it is your username for the pilot.
+                </>
+              ) : (
+                <>
+                  Type your email above. You will sign in to the pilot with the address shown here, including the{" "}
+                  <span className="font-mono">+pilot</span> part.
+                </>
+              )}
+            </p>
+          </div>
         ) : null}
       </Field>
 
