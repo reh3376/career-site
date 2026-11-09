@@ -66,7 +66,12 @@ func NewDigitCode(n int) (plaintext string, hash []byte, err error) {
 // agentPasswordAlphabet leaves out the characters that look alike in a
 // console font (0 O 1 l I), because the owner reads this once and the
 // agent types it once.
-const agentPasswordAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+//
+// The gitleaks marker: the secret scanner's generic rule reads a long
+// high-entropy literal assigned near the word "password" as a leaked
+// key. This is the alphabet passwords are drawn from, not a password,
+// and it is the same 57 characters in every checkout.
+const agentPasswordAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789" // gitleaks:allow
 
 // NewAgentPassword returns a 20-character one-time password for the
 // agent account (FSD FR-AUTH-20): about 115 bits from a 57-character
