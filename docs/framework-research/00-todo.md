@@ -36,7 +36,7 @@ Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewe
 ## P3 — Pilot recruiting and fielding (owner)
 
 - Ten names: five recruiters/HR, five hiring managers, ≥3 technical/manufacturing hirers, none from current employers. Confirm each one's email address and add it to the whitelist with the pilot flag (`15` §0 decision 1).
-- Post the pilot version of the recruitment post; schedule calls.
+- Post the pilot version of the recruitment post (rewritten for the on-site pilot 2026-11-09, `07` §2.1, first comment names the site); schedule calls.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 
 ## P4 — Schema follow-through (parallel with P3) — **runs as steps 2 and 3 of `13-phase-0-build-plan.md` §2**
