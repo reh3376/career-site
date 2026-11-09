@@ -1,6 +1,6 @@
 # Pilot Materials: Consent Text, Interviewer Template, Platform, Stimulus Check
 
-**Status.** Written 2026-11-08; closes P2 in `00-todo.md`. Everything the participant sees or the interviewer holds, ready to field. The instrument itself stays in `06-employer-side-discovery-research-plan.md`; its version history is `12-instrument-change-log.md`. Repository copy ahead of project (2026-11-08): new document.
+**Status.** Written 2026-11-08; closes P2 in `00-todo.md`. Extended the same day at the owner's instruction: the company hiring workflow is shown to every participant for review and comment (§7), which lengthens the call to about thirty minutes. Everything the participant sees or the interviewer holds, ready to field. The instrument itself stays in `06-employer-side-discovery-research-plan.md`; its version history is `12-instrument-change-log.md`. Repository copy ahead of project (2026-11-08): new document.
 
 Specs these satisfy: `08-pilot-participant-experience.md` §4, items 1 to 5. Item 6, the ten names, is the owner's (P3).
 
@@ -16,7 +16,7 @@ The first screen of the survey form, before Section A. Plain text, no logo, no c
 >
 > **What this is for.** I am designing software that screens job applications by evidence against each requirement rather than by keywords. Before I ask fifty recruiters and hiring managers which hiring problems matter most, I need ten people to try the survey and tell me where its wording fails. That is what you are being asked to do.
 >
-> **What I am asking of you.** About ten minutes on the survey, then a fifteen-minute call about the survey: which questions you read twice, which answers did not fit, how long it took. On the call I will also show you a one-page mock-up for five minutes and ask what you make of it. Not what you think of the idea; what the questions did to you.
+> **What I am asking of you.** About ten minutes on the survey, then a call of about thirty minutes. Fifteen of those are about the survey: which questions you read twice, which answers did not fit, how long it took. Then I will show you a one-page mock-up for five minutes and ask what you make of it, and a one-page chart of how a company hires, for about ten minutes, and ask where it matches how hiring runs where you work and where it does not. Not what you think of the idea; what the questions did to you, and what the chart gets wrong.
 >
 > **What is kept.** Your answers, without your name or your employer. Notes from the call, with quotes marked as quotes. The call is not recorded unless you tick the box below. Nothing here asks about any candidate or any named person.
 >
@@ -65,13 +65,32 @@ One file per participant, `pilot-interview-NN.md`, in the private repository (§
 | If a rejected candidate could contest one specific judgment with new evidence, would you want to see it? Under what conditions would you re-open the decision? | both | | |
 | If applicants could see, before applying, which of your requirements their background does and doesn't cover, would that change the quality or quantity of applications you receive? | recruiter | | |
 
-## Part B: the stimulus (5 min, shown last, read-only, no explanation first)
+## Part B: the stimulus (5 min, shown after Part A, read-only, no explanation first)
 
 | Prompt | Notes | Verbatim |
 |---|---|---|
 | B1. Is this what you pictured from the paragraph? What is different? | | |
 | B2. Which row would you check first, and why? | | |
 | B3. (Recruiter) Could you rank ten of these for a role outside your field? (HM) Would you touch the override button, or read the résumé instead? | | |
+
+## Part C: the company hiring workflow (8 to 10 min, shown after Part B)
+
+Screen-share the company perspective only (C-01 to C-26). Say nothing
+about the framework's components; the chart is shown as "how we think a
+hire runs" and the participant corrects it.
+
+| Prompt | Notes | Verbatim |
+|---|---|---|
+| C1. Walk me along this from C-01. Where does it match how a hire actually runs where you work, and where does it not? | | |
+| C2. Which step is missing? Which two are really one step? | | |
+| C3. Who owns C-06 (writing the role and its requirements) and C-07 (the sign-off) in your organisation? | | |
+| C4. Where do holds actually happen in this picture, and what brings one back? | | |
+| C5. At C-12 to C-14, who decides? Does the hiring manager cut people from the slate before interviewing? | | |
+| C6. Is there anything on this chart you would not want a candidate to see? | | |
+
+Per node, mark **M** (matches), **D** (differs; say how) or **X** (does
+not exist here) in the tally sheet `workflow-review-tally.md` in the
+same private folder, one column per participant.
 
 ## Close
 
@@ -86,7 +105,9 @@ One file per participant, `pilot-interview-NN.md`, in the private repository (§
 Part A and the probes feed the instrument change log. Part B feeds
 `viewer-requirements-backlog.md` as proposed items tagged
 `source=pilot-stimulus`; an objection to the verdict vocabulary is
-recorded here verbatim and not debated (08 §2.3).
+recorded here verbatim and not debated (08 §2.3). Part C feeds
+`workflow-review-tally.md` and, after all ten, revision 3 of the
+company perspective in 09.
 ```
 
 Rules for filling it (from `08` §2.3): the stimulus is never explained before the participant reads it; a participant arguing with the study design rather than the instrument is noted and set aside; nothing about the match record's verdicts, structure or vocabulary is changed on the call.
@@ -138,4 +159,17 @@ The private folder exists with a README stating these rules (`13` §0 decision 1
 - Build the Google Form from §3 (about an hour), or ask the agent to draft every question's text as a paste-ready list.
 - Post the pilot version of the recruitment post (`07` §2.1), link in the first comment.
 - Open the stimulus on a phone once (§4).
-- Schedule the ten calls for week 2.
+- Schedule the ten calls for week 2, at thirty minutes each.
+- Decide how the workflow chart reaches participants (§7): the GitHub-rendered page needs no sign-in; the artifact does until it is shared.
+
+## 7. Company workflow review on the call
+
+Added 2026-11-08 at the owner's instruction: the company perspective of the hiring workflow (`09` §1, `10` §1, C-01 to C-26) is shown to each of the ten participants for review and comment. The workflows are the process model every framework component is classified against (`01` §5.6), so ten practitioners' corrections to them are worth more at this stage than anything else the pilot collects.
+
+**When.** Part C of the call, after the survey questions and after the stimulus, so neither the Section E measurement nor the first reaction to the match record is primed by a picture of the whole process. Eight to ten minutes; the six prompts are in the template (§2). The candidate perspective (K-01 to K-16) is not shown to employer-side participants; it belongs to the candidate-side study.
+
+**What is shown.** The company flowchart, revision 2, screen-shared by the interviewer. Two sources carry the same diagram: the design artifact <https://claude.ai/artifact/AJWsmPtYodKEfbcbBRbieL> (tabs for each perspective, pan and zoom; private until the owner shares it) and the GitHub-rendered Mermaid in [`10-hiring-workflow-diagrams.md`](10-hiring-workflow-diagrams.md), which needs no sign-in and is the link to put in the close-out email for written comments. The participant is told it is a draft of how a hire runs and asked to correct it, not told what the system will do at any node.
+
+**What is captured.** Notes and verbatim phrases in the participant's `pilot-interview-NN.md` under Part C, and a mark per node (matches, differs, does not exist here) in `workflow-review-tally.md`, one column per participant, both in the private folder (§5). Nothing a participant says about their own organisation's process is published; the aggregate (how many of ten said a node differs, and the recurring correction) feeds revision 3 of `09` after the pilot, with the review record in `09` §4 extended to say what moved and why.
+
+**What it changes elsewhere.** The consent text (§1) and the recruitment post (`07` §2.1) now say about thirty minutes; `08` §1 and §2.3 carry the third part; `12` records it as change 10.

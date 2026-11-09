@@ -2,7 +2,7 @@
 
 One record per resolved decision from the FSD (`docs/FSD.md` §14). The file number is the decision ID (`D-04` → `0004-…`), so the FSD table and the record match.
 
-That invariant lapsed: 0028, 0029 and 0030 have no `D-` row in §14, because the decisions they record were taken outside the FSD's open-decisions table. Noted here on 2026-10-12 rather than papered over by inventing three rows after the fact. 0031 resumes it with `D-31`. Format: context, decision, consequences. A record is required whenever a technology in FSD §8.2 is replaced or a decision is reversed; the superseded record stays and points at its successor.
+That invariant lapsed: 0028, 0029 and 0030 have no `D-` row in §14, because the decisions they record were taken outside the FSD's open-decisions table. Noted here on 2026-10-12 rather than papered over by inventing three rows after the fact. 0031 resumes it with `D-31`; 0032 opens `D-32` to `D-38` rather than resolving one, because it is a build decision whose open questions are listed in §14. Format: context, decision, consequences. A record is required whenever a technology in FSD §8.2 is replaced or a decision is reversed; the superseded record stays and points at its successor.
 
 The reasoning in a record is historical and is not rewritten. Where a later change extended or superseded part of a decision, the record ends with a dated "Status update" section that says what changed and where the current behaviour lives.
 
@@ -18,3 +18,4 @@ The reasoning in a record is historical and is not rewritten. Where a later chan
 | [0029](0029-tenancy-seam.md) | A tenancy seam, not a tenancy layer | Accepted 2026-09-22 |
 | [0030](0030-relational-collection-graph-analysis.md) | Collect in Postgres, analyse in a graph later | Accepted 2026-10-04 |
 | [0031](0031-declared-controls-are-enforced-controls.md) | A declared control is an enforced control | Accepted 2026-10-12 |
+| [0032](0032-generalise-the-reviewer-into-the-hiring-framework.md) | Generalise the JD reviewer into the hiring framework's Phase 0 | Accepted 2026-11-08 |

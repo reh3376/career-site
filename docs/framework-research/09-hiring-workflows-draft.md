@@ -138,3 +138,4 @@ Applied to `06-employer-side-discovery-research-plan.md`, marked **[WF]** there:
 ## 6. Next
 
 - After the pilot: close C-14, K-04, K-09; set the priority of the hold-state requirement; then update `01` §5.6 and §4 above. (§3 was folded into `01` §5.6 on 2026-11-08; P1 complete.)
+- After the pilot: revision 3 of the company perspective from the ten participants' node-by-node review (`11` §7, tally in the private folder), with §4 extended to record what moved and why.

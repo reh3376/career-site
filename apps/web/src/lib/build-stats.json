@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 511,
+    "byAssistant": 514,
     "byBot": 24,
     "byOwner": 44,
-    "commits": 956,
+    "commits": 959,
     "days": 52,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-08",
     "merges": 377,
-    "nonMerge": 579,
+    "nonMerge": 582,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,7 +25,7 @@
   },
   "lines": {
     "code": {
-      "files": 470,
+      "files": 471,
       "languages": [
         {
           "files": 134,
@@ -53,9 +53,9 @@
           "lines": 5593
         },
         {
-          "files": 19,
+          "files": 20,
           "language": "Shell",
-          "lines": 2497
+          "lines": 2633
         },
         {
           "files": 30,
@@ -68,7 +68,7 @@
           "lines": 248
         }
       ],
-      "lines": 82274
+      "lines": 82410
     },
     "config": {
       "files": 30,
@@ -81,10 +81,10 @@
         {
           "files": 17,
           "language": "YAML",
-          "lines": 1961
+          "lines": 1971
         }
       ],
-      "lines": 5003
+      "lines": 5013
     },
     "contract": {
       "files": 17,
@@ -98,15 +98,15 @@
       "lines": 7770
     },
     "documentation": {
-      "files": 143,
+      "files": 144,
       "languages": [
         {
-          "files": 143,
+          "files": 144,
           "language": "Markdown",
-          "lines": 35185
+          "lines": 35496
         }
       ],
-      "lines": 35185
+      "lines": 35496
     },
     "generated": {
       "files": 70,
@@ -162,17 +162,17 @@
     }
   },
   "structure": {
-    "adrs": 10,
+    "adrs": 11,
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
     "goTests": 439,
     "migrations": 63,
     "pythonTests": 30,
-    "requirements": 186,
+    "requirements": 207,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
-    "requirementsNotBuilt": 46,
+    "requirementsNotBuilt": 67,
     "requirementsPartial": 2,
     "requirementsShipped": 136,
     "rpcs": 149,
