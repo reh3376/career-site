@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 504,
-    "byBot": 21,
-    "byOwner": 39,
-    "commits": 935,
-    "days": 39,
+    "byAssistant": 507,
+    "byBot": 24,
+    "byOwner": 44,
+    "commits": 950,
+    "days": 52,
     "firstCommit": "2026-09-18",
-    "lastCommit": "2026-10-26",
-    "merges": 371,
-    "nonMerge": 564,
+    "lastCommit": "2026-11-08",
+    "merges": 375,
+    "nonMerge": 575,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -35,7 +35,7 @@
         {
           "files": 127,
           "language": "TSX",
-          "lines": 26018
+          "lines": 26045
         },
         {
           "files": 66,
@@ -45,12 +45,12 @@
         {
           "files": 29,
           "language": "Python",
-          "lines": 6189
+          "lines": 6193
         },
         {
           "files": 64,
           "language": "TypeScript",
-          "lines": 5569
+          "lines": 5593
         },
         {
           "files": 19,
@@ -68,7 +68,7 @@
           "lines": 248
         }
       ],
-      "lines": 82219
+      "lines": 82274
     },
     "config": {
       "files": 30,
@@ -98,15 +98,15 @@
       "lines": 7770
     },
     "documentation": {
-      "files": 125,
+      "files": 140,
       "languages": [
         {
-          "files": 125,
+          "files": 140,
           "language": "Markdown",
-          "lines": 33042
+          "lines": 34932
         }
       ],
-      "lines": 33042
+      "lines": 34932
     },
     "generated": {
       "files": 70,
