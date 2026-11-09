@@ -17,6 +17,7 @@ const NAV = [
   { href: "/admin/contacts", label: "Contact messages" },
   { href: "/admin/registrations", label: "Registrations" },
   { href: "/admin/access", label: "Access & whitelist" },
+  { href: "/admin/agent", label: "Agent access" },
   { href: "/admin/activity", label: "Activity" },
   { href: "/admin/corpus", label: "Corpus" },
   { href: "/admin/jd", label: "JD submissions" },
