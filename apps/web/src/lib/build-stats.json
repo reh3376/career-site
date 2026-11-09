@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 532,
+    "byAssistant": 533,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 990,
+    "commits": 991,
     "days": 53,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-09",
     "merges": 389,
-    "nonMerge": 601,
+    "nonMerge": 602,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,12 +25,12 @@
   },
   "lines": {
     "code": {
-      "files": 521,
+      "files": 522,
       "languages": [
         {
-          "files": 151,
+          "files": 152,
           "language": "Go",
-          "lines": 37492
+          "lines": 37615
         },
         {
           "files": 146,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 90458
+      "lines": 90581
     },
     "config": {
       "files": 33,
@@ -140,12 +140,12 @@
       "lines": 85345
     },
     "tests": {
-      "files": 106,
+      "files": 107,
       "languages": [
         {
-          "files": 87,
+          "files": 88,
           "language": "Go",
-          "lines": 15891
+          "lines": 15956
         },
         {
           "files": 14,
@@ -158,7 +158,7 @@
           "lines": 456
         }
       ],
-      "lines": 17448
+      "lines": 17513
     }
   },
   "structure": {
@@ -166,7 +166,7 @@
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
-    "goTests": 463,
+    "goTests": 464,
     "migrations": 69,
     "pythonTests": 30,
     "requirements": 225,
