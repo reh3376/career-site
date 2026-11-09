@@ -1,6 +1,15 @@
-# Auto-open (or keep updated) a draft PR against main whenever a
-# feature branch is pushed. Keeps the review surface visible; you flip
-# the draft to ready-for-review when the work is done.
+# Auto-open a draft PR against main whenever a feature branch is
+# pushed, and on every later push rebuild its description from the
+# branch's commit messages (scripts/pr_body.sh), so the description
+# always says what the PR contains. You flip the draft to
+# ready-for-review when the work is done.
+#
+# Until 2026-11-08 this step did nothing once a PR existed, so the
+# description froze at the first push as one line per commit and a
+# reviewer could read about commit one and merge commit three. The
+# owner's rule is that all work pushed as part of a PR is documented in
+# its description; the generated section sits between markers so what a
+# person types outside it survives.
 #
 # Ignores pushes to main itself. Uses GITHUB_TOKEN so no PAT needed;
 # the pull-requests: write permission scoped to this workflow only.
@@ -62,21 +71,22 @@ jobs:
             exit 0
           fi
 
-          # Does a PR already exist for this branch?
+          # Does a PR already exist for this branch? If so, rebuild the
+          # generated section of its description from every commit now on
+          # the branch and leave the rest of the body as the author wrote
+          # it. The title is not touched on an update.
           existing=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number' || echo "")
           if [ -n "$existing" ]; then
-            echo "PR #$existing already open for $BRANCH — nothing to do."
+            gh pr view "$existing" --json body --jq .body > /tmp/existing-body.md
+            scripts/pr_body.sh merge origin/main "$GITHUB_SHA" /tmp/existing-body.md > /tmp/pr-body.md
+            gh pr edit "$existing" --body-file /tmp/pr-body.md
+            echo "PR #$existing description rebuilt from $ahead commit(s)."
             exit 0
           fi
 
-          # Build a body from the commit list since main.
-          {
-            echo "Auto-opened from a push to \`$BRANCH\`. Flip to Ready-for-review when this is done."
-            echo
-            echo "## Commits since main"
-            echo
-            git log --pretty=format:'- %h %s' origin/main..HEAD
-          } > /tmp/pr-body.md
+          # New PR: the generated summary plus the PR template's checklist
+          # and sections for the author to fill.
+          scripts/pr_body.sh full origin/main "$GITHUB_SHA" > /tmp/pr-body.md
 
           # First-line-of-newest-commit as the title.
           title=$(git log -1 --pretty=format:'%s')

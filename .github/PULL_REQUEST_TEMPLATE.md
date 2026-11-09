@@ -1,7 +1,9 @@
 <!--
-Auto-opened by .github/workflows/auto-pr.yml on push to a feature branch,
-OR manually via `gh pr create`. Either way, fill this out before flipping
-draft → ready-for-review.
+Auto-opened by .github/workflows/auto-pr.yml on push to a feature branch.
+The workflow puts a generated summary of every commit above this template
+and rebuilds that summary on each push (scripts/pr_body.sh); the sections
+below are yours and are kept as you leave them. Fill them in before
+flipping draft → ready-for-review.
 -->
 
 ## What's in this PR
