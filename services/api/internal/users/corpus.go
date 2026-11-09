@@ -370,10 +370,15 @@ func (r *Repo) ListChunksByKind(ctx context.Context, sourceKind string, limit in
     FROM corpus_chunks c
     JOIN corpus_documents d ON d.id = c.document_id
     WHERE d.source_kind = $1
+      AND d.candidate_id = $3::uuid
     ORDER BY d.id, c.chunk_index
     LIMIT $2
   `
-	rows, err := r.pool.Query(ctx, q, sourceKind, limit)
+	// The same candidate boundary as searchCorpus (FSD FR-HF-19): the
+	// profile sheet and the master résumé this hands the judge and the
+	// résumé writer must be the one candidate's, not whichever document
+	// of that kind is in the table.
+	rows, err := r.pool.Query(ctx, q, sourceKind, limit, OwnerCandidateID)
 	if err != nil {
 		return nil, fmt.Errorf("list chunks by kind: %w", err)
 	}

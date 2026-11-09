@@ -281,6 +281,19 @@ func TestDualWriteAgrees(t *testing.T) {
 	if active != 3 {
 		t.Errorf("active requirements after the second run = %d, want 3", active)
 	}
+	// r1 and r3 were unchanged (r3 with nil parties on input and {} in
+	// the row) and must keep version 1: a new version for an identical
+	// extraction would make every run a rewrite.
+	for _, localID := range []string{"r1", "r3"} {
+		var version, total int
+		if err := r.pool.QueryRow(ctx, `
+      SELECT max(version), count(*) FROM requirements WHERE role_id = $1::uuid AND local_id = $2`, roleID, localID).Scan(&version, &total); err != nil {
+			t.Fatal(err)
+		}
+		if version != 1 || total != 1 {
+			t.Errorf("%s was re-versioned by an identical extraction: max version %d, %d rows", localID, version, total)
+		}
+	}
 	var prev string
 	var ids2 []string
 	if err := r.pool.QueryRow(ctx, `SELECT supersedes_run_id::text, requirement_ids::text[] FROM match_records WHERE run_id = $1::uuid`, run2).Scan(&prev, &ids2); err != nil {

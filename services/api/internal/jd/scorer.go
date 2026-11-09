@@ -641,7 +641,11 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 	if len(ids) > 0 {
 		hits, err := s.users.GetCorpusChunks(ctx, ids)
 		if err != nil {
+			// The rows are still written; the baseline is marked skipped
+			// rather than computed over empty text, which would record a
+			// complete keyword miss that never happened.
 			s.log.Warn("jd: hiring dual write could not read the offered chunks", slog.Int64("id", submissionID), slog.String("error", err.Error()))
+			in.KeywordSkipped = "offered chunks could not be read: " + truncErr(err.Error())
 		}
 		for _, h := range hits {
 			text[h.Chunk.ID] = h.Chunk.Text

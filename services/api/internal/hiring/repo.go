@@ -74,7 +74,13 @@ type RequirementRow struct {
 // type is excluded on purpose, so a change to the type heuristic does
 // not mint a new version of every requirement in the database.
 func (in RequirementInput) key() string {
+	// nil and empty are the same absence: the row stores {} and reads
+	// back as an empty slice, while the extractor may hand over nil, and
+	// the two must not mint a new version on every run.
 	parties := slices.Clone(in.NamedParties)
+	if parties == nil {
+		parties = []string{}
+	}
 	slices.Sort(parties)
 	b, _ := json.Marshal([]any{in.Text, in.SourceQuote, in.Category, in.Weight, parties})
 	return string(b)

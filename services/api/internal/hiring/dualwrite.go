@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // Writer is the dual write of Phase 0 step 3 (14 §4): after the JD
@@ -65,6 +66,12 @@ type RunInput struct {
 	// because the comparison is "would a filter over the same evidence
 	// have found it", not "over the evidence the judge chose".
 	Offered map[string][]Chunk
+	// KeywordSkipped, when set, says why the baseline could not be
+	// computed (the chunk texts could not be read back). The record is
+	// still written, with no baseline items and this reason, rather
+	// than an all-false baseline that would read as a complete keyword
+	// miss.
+	KeywordSkipped string
 }
 
 // Record writes the run as rows. Errors are returned for the caller to
@@ -128,18 +135,23 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 
 	// The keyword baseline over the offered evidence (FR-HF-12).
 	items := map[string]any{}
-	for _, r := range reqs {
-		var texts []string
-		for _, c := range in.Offered[r.LocalID] {
-			texts = append(texts, c.Text)
+	baseline := map[string]any{"rule": KeywordRule, "items": items}
+	if in.KeywordSkipped != "" {
+		baseline["skipped"] = in.KeywordSkipped
+	} else {
+		for _, r := range reqs {
+			var texts []string
+			for _, c := range in.Offered[r.LocalID] {
+				texts = append(texts, c.Text)
+			}
+			found, terms := KeywordBaseline(r.Text, texts)
+			if terms == nil {
+				terms = []string{}
+			}
+			items[r.LocalID] = map[string]any{"found": found, "terms": terms}
 		}
-		found, terms := KeywordBaseline(r.Text, texts)
-		if terms == nil {
-			terms = []string{}
-		}
-		items[r.LocalID] = map[string]any{"found": found, "terms": terms}
 	}
-	kb, _ := json.Marshal(map[string]any{"rule": KeywordRule, "items": items})
+	kb, _ := json.Marshal(baseline)
 
 	prev, err := w.repo.PreviousRunID(ctx, in.SubmissionID, in.Attempt)
 	if err != nil {
@@ -178,8 +190,15 @@ func trimTitle(s string) string {
 	if i := strings.IndexAny(s, "\r\n"); i >= 0 {
 		s = strings.TrimSpace(s[:i])
 	}
+	// Cut on a rune boundary: a posting's first line is full of dashes
+	// and curly quotes, and a string cut inside one of them is invalid
+	// UTF-8 that Postgres refuses, which would cost the run every row.
 	if len(s) > 160 {
-		s = s[:160]
+		cut := 160
+		for cut > 0 && !utf8.RuneStart(s[cut]) {
+			cut--
+		}
+		s = s[:cut]
 	}
 	return s
 }
