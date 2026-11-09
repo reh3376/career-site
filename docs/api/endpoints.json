@@ -2530,6 +2530,22 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.PilotService",
+      "method": "DeletePilotSession",
+      "path": "/api/career.v1.PilotService/DeletePilotSession",
+      "grpc_full_method": "/career.v1.PilotService/DeletePilotSession",
+      "internal": false,
+      "request": "career.v1.DeletePilotSessionRequest",
+      "response": "career.v1.DeletePilotSessionResponse",
+      "summary": "Deletes one session with everything it holds: answers, flags, comments and section timings.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.sidecar.v1.SidecarService",
       "method": "Embed",
       "path": null,

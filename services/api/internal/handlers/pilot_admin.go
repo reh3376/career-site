@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"log/slog"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -103,7 +104,8 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 		return nil, connect.NewError(connect.CodeInternal, errors.New("export failed"))
 	}
 	// Codes by session order, oldest first, so a code is stable as long
-	// as no earlier session is deleted, which none ever is.
+	// as no earlier session is deleted, which DeletePilotSession is meant
+	// to do only before the ten start (FR-PLT-15).
 	sort.Slice(list, func(i, j int) bool { return list[i].Session.CreatedAt.Before(list[j].Session.CreatedAt) })
 	code := map[string]string{}
 	for i := range list {
@@ -172,4 +174,44 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 		return nil, connect.NewError(connect.CodeInternal, errors.New("export failed"))
 	}
 	return connect.NewResponse(&v1.ExportPilotResponse{Csv: buf.String(), RowCount: int32(rows)}), nil
+}
+
+// uuidShape is the only session id the delete accepts. A cast of an
+// arbitrary string to uuid fails inside Postgres with an error that
+// would read as "lookup failed"; this turns it into a 400 instead.
+var uuidShape = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// DeletePilotSession removes one session and, by cascade, everything
+// it holds (FSD FR-PLT-15). It exists for the owner's own runs on the
+// deployed build. Nothing stops an admin deleting a participant's
+// session, because the owner is the only admin; the audit row the
+// interceptor writes and the event below record whose it was.
+func (h *Pilot) DeletePilotSession(ctx context.Context, req *connect.Request[v1.DeletePilotSessionRequest]) (*connect.Response[v1.DeletePilotSessionResponse], error) {
+	admin, err := RequireCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id := req.Msg.SessionId
+	if !uuidShape.MatchString(id) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id must be a UUID"))
+	}
+	s, err := h.users.GetPilotSessionByID(ctx, id)
+	if errors.Is(err, users.ErrNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("no such session"))
+	}
+	if err != nil {
+		h.log.Error("DeletePilotSession lookup failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("lookup failed"))
+	}
+	deleted, err := h.users.DeletePilotSession(ctx, s.ID)
+	if err != nil {
+		h.log.Error("DeletePilotSession failed", slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("delete failed"))
+	}
+	if !deleted {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("no such session"))
+	}
+	h.log.Info("pilot session deleted", slog.String("session_id", s.ID), slog.Int64("user_id", s.UserID), slog.Int64("by", admin.ID))
+	h.events.Emit(ctx, requestEvent(req, "pilot.session_deleted", admin.ID, map[string]any{"user_id": s.UserID}))
+	return connect.NewResponse(&v1.DeletePilotSessionResponse{MemberId: strconv.FormatInt(s.UserID, 10)}), nil
 }

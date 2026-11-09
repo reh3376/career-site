@@ -107,6 +107,7 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `pilot.comment` | | `target_kind` | a comment on the match record or the workflow was saved or removed |
 | `pilot.part_done` | | `part` | the record or the workflow part was marked done |
 | `pilot.finished` | | `user_id` | a pilot session was closed |
+| `pilot.session_deleted` | | `user_id` | an admin deleted a pilot session with everything it held; `user_id` is the participant's, the event's own user is the admin (FSD FR-PLT-15) |
 | `dtest.started` | | `device_class`, `audio_mode`, `tap_check_passed`, `is_repeat`, `synthetic` | a decision test run opened. The conditions are here as well as on the session row because they split the sample, and a funnel that cannot be split by them cannot say whether phones drop out more |
 | `dtest.block_finished` | | `block_no`, `load`, `correct`, `expired`, `recall_outcome`, `digits_held` | one block closed, emitted when its number is handed back. The only trace an abandoned run leaves of how far it got: `dt_sessions.status` stays `running` and says nothing more |
 | `dtest.finished` | | `correct`, `answered`, `expired`, `duration_s`, `wants_results` | a run completed. `duration_s` against the fifteen-minute design target is the burden measurement |

@@ -3,13 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BRANCH_LABEL, STATUS_TONE, fmt, getPilotSession, type PilotAnswer, type PilotComment } from "../lib";
+import { DeleteSessionButton } from "./delete-session-button";
 
 export const metadata: Metadata = { title: "Admin · Pilot session" };
 export const dynamic = "force-dynamic";
 
 // One session in full: answers with flags in instrument order, comments
 // by target, and the section open and submit instants (FSD FR-PLT-11).
-// Read-only; nothing a participant wrote is edited from here.
+// Nothing a participant wrote is edited from here; the one write is the
+// delete at the foot, which removes a whole session (FR-PLT-15) and is
+// there for the owner's own runs on the deployed build.
 export default async function AdminPilotSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await getPilotSession(id);
@@ -143,6 +146,21 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
           </ul>
         )}
       </section>
+
+      {ses?.id ? (
+        <section aria-labelledby="delete-heading" className="mt-12 border-t border-line pt-6">
+          <p id="delete-heading" className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            delete
+          </p>
+          <p className="mt-3 max-w-prose text-sm text-ink-3">
+            For your own runs on the deployed build, so they never sit beside a participant&rsquo;s in the list or an
+            export. Participant codes in the exports follow session order, so delete before the ten start, not after.
+          </p>
+          <div className="mt-4">
+            <DeleteSessionButton id={ses.id} who={s?.email || s?.name || "this member"} />
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

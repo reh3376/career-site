@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 158 of them, and none missing:
+**Every method declares a level.** 159 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 89 |
+| `AUTH_LEVEL_ADMIN` | 90 |
 | `AUTH_LEVEL_MEMBER` | 52 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 158 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 159 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1166,6 +1166,9 @@ command.
    FSD FR-PLT-02, FR-AUTH-20, FR-ADM-24).
 3. 2026-11-08: 89/52/17 (158). `PilotService` (FSD §5.16): nine MEMBER
    methods gated on the pilot flag in the handler, three ADMIN methods.
+4. 2026-11-09: 90/52/17 (159). `PilotService.DeletePilotSession`, ADMIN
+   and audited (FSD FR-PLT-15), for the owner's own runs on the deployed
+   build.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

@@ -173,3 +173,63 @@ func TestPilotWritePathAgainstPostgres(t *testing.T) {
 		t.Fatalf("summary: %+v", mine)
 	}
 }
+
+// The owner's own runs on the deployed build are removed with
+// DeletePilotSession (FSD FR-PLT-15). The cascades in 00065 are what
+// make that one statement rather than four, and a cascade declared in
+// SQL is as invisible to go build as a column count is, so it is run.
+func TestDeletePilotSessionCascades(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	var userID int64
+	if err := r.pool.QueryRow(ctx, `
+    INSERT INTO users (email, name, status, role)
+    VALUES ('pilot-del-' || gen_random_uuid()::text || '@example.test', 'Pilot Deleter', 'active', 'member')
+    RETURNING id`).Scan(&userID); err != nil {
+		t.Fatalf("make user: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID) })
+
+	const version = "test-del-v0.0"
+	if err := r.EnsurePilotInstrument(ctx, version, []byte(`{"version":"test-del-v0.0","sections":[]}`)); err != nil {
+		t.Fatalf("EnsurePilotInstrument: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM pilot_instruments WHERE version = $1`, version) })
+
+	s, err := r.StartPilotSession(ctx, userID, version, false)
+	if err != nil {
+		t.Fatalf("StartPilotSession: %v", err)
+	}
+	if err := r.UpsertPilotAnswers(ctx, s.ID, "A", []PilotAnswer{{ItemID: "A1", ValueJSON: `"recruiter"`}}); err != nil {
+		t.Fatalf("UpsertPilotAnswers: %v", err)
+	}
+	if err := r.RecordPilotSectionEvent(ctx, s.ID, "A", "opened"); err != nil {
+		t.Fatalf("RecordPilotSectionEvent: %v", err)
+	}
+	if _, err := r.UpsertPilotComment(ctx, s.ID, "record_row", "r1", "a comment"); err != nil {
+		t.Fatalf("UpsertPilotComment: %v", err)
+	}
+
+	deleted, err := r.DeletePilotSession(ctx, s.ID)
+	if err != nil || !deleted {
+		t.Fatalf("DeletePilotSession: deleted=%v err=%v", deleted, err)
+	}
+	for _, table := range []string{"pilot_sessions", "pilot_answers", "pilot_section_events", "pilot_comments"} {
+		var n int
+		col := "session_id"
+		if table == "pilot_sessions" {
+			col = "id"
+		}
+		if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM `+table+` WHERE `+col+` = $1::uuid`, s.ID).Scan(&n); err != nil {
+			t.Fatalf("count %s: %v", table, err)
+		}
+		if n != 0 {
+			t.Errorf("%s still holds %d row(s) for the deleted session; the cascade did not run", table, n)
+		}
+	}
+	// A second delete finds nothing and says so, which is what lets the
+	// handler answer "no such session" rather than "deleted".
+	if again, err := r.DeletePilotSession(ctx, s.ID); err != nil || again {
+		t.Fatalf("second DeletePilotSession: deleted=%v err=%v, want false and nil", again, err)
+	}
+}

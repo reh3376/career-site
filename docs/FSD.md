@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Document ID | CAREER-SITE-FSD-2026-001 |
-| Version | 0.5.5. The last audit against the running system was 0.4.1 on 2026-10-05; 0.5.0 added §5.15, 0.5.1 added §5.16 and FR-AUTH-19, 0.5.2 added FR-AUTH-20 and FR-ADM-24, 0.5.3 records PL-1 shipping five of those rows, 0.5.4 adds the pilot's API and tables, 0.5.5 records PL-3 shipping the pilot's pages |
+| Version | 0.5.6. The last audit against the running system was 0.4.1 on 2026-10-05; 0.5.0 added §5.15, 0.5.1 added §5.16 and FR-AUTH-19, 0.5.2 added FR-AUTH-20 and FR-ADM-24, 0.5.3 records PL-1 shipping five of those rows, 0.5.4 adds the pilot's API and tables, 0.5.5 records PL-3 shipping the pilot's pages, 0.5.6 adds and ships FR-PLT-15, the admin delete of a pilot session |
 | Date | 2026-10-01 |
 | Owner | Roger E. Henley II |
 | Prepared with | Claude (Anthropic), working from the owner's brief, master résumé, and published writing |
@@ -40,6 +40,7 @@
 | 0.5.3 | 2026-11-08 | R. Henley / Claude | **PL-1 shipped.** FR-PLT-01 and FR-PLT-02 (the pilot flag on members and whitelist entries, set at auto-approval, switchable on the member page), FR-AUTH-19 (forgot-password by 5-digit emailed code, replacing the link), FR-AUTH-20 (the agent account with one-time passwords) and FR-ADM-24 (`/admin/agent`) move to Shipped: migration 00064, five new `AdminService` methods, `Me.pilot_approved`, the reset flow rewritten end to end, the agent branch of `Login`. The sixteenth admin surface; FR-ADM-17's count corrected. §2b: Shipped 136 to 141, Not built 84 to 79. On production from the first deploy after merge. |
 | 0.5.4 | 2026-11-08 | R. Henley / Claude | **PL-2, the pilot's data and API.** Migration 00065 (five pilot tables) and `PilotService` (nine member methods gated on the pilot flag, three admin methods), listed in §8.5; the survey instrument (`06` §3 plus the change-log additions, `survey v0.1`), the mocked match record and the company workflow as embedded versioned JSON, validated at start-up; answers validated per item type with branching from A1 and the per-selection C3 grid; exports by P-NN code. The FR-PLT rows stay Not built until PL-3 puts the pages in front of a participant, because a row marked shipped names something a person can use. |
 | 0.5.5 | 2026-11-08 | R. Henley / Claude | **PL-3, the pilot's pages.** FR-PLT-03 to FR-PLT-14 move to Shipped and FR-PLT-01's gate half lands: `/pilot` (consent, then the three-part home with progress and Finish), `/pilot/survey/<section>` rendering the seven item types from data with the per-item flag and the C3 grid, `/pilot/record` (the match record read-only with Audit and Override disabled and a comment box per row), `/pilot/workflow` (the committed SVG inlined, the node list by phase with a comment per step, the repeatable missing-step field), `/pilot/done`; `/admin/pilot` with the session list, the per-session detail and three CSV exports, the seventeenth admin surface; "Pilot" in the menu and a card on `/home` for flagged members and admins; `/pilot` in the member route table and the crawler disallow list; `authpolicy/pilot_test.go` pins that no `PilotService` method is public (FR-PLT-12). §2b: Shipped 141 to 153, Not built 79 to 67. The live pass on the deployed build is PL-3's exit and is recorded in `15-pilot-on-site.md` when it has happened. |
+| 0.5.6 | 2026-11-09 | R. Henley / Claude | **An admin deletes a pilot session.** PR 389 deployed to production on 2026-11-09 (`ba6fdc6e04c3`, migrations to 65); the owner's end-to-end run on it creates a session that must not sit beside the ten, so FR-PLT-15 adds `PilotService.DeletePilotSession` (admin, audited, cascade over answers, comments and timings) and a confirmed button at the foot of `/admin/pilot/<id>`, shipped the same day. §2b: Shipped 153 to 154, total 224 to 225. |
 
 ---
 
@@ -217,12 +218,12 @@ rather than estimated:
 
 | | count |
 |---|---|
-| Shipped | 153 |
+| Shipped | 154 |
 | Partially shipped | 2 |
 | Dropped, decided against | 1 |
 | Deferred, blocked on content | 1 |
 | Not built | 67 |
-| **Total** | **224** |
+| **Total** | **225** |
 
 Moved on 2026-11-08: §5.15 added 21 FR-HF rows, all Not built, so Not
 built went from 46 to 67 and the total from 186 to 207 with nothing
@@ -230,7 +231,8 @@ shipping or regressing. Later the same day §5.16 and FR-AUTH-19 added
 15 more, to 82 and 222, and FR-AUTH-20 and the agent-access console row
 two more, to 84 and 224. PL-1 then shipped five of the new rows the
 same night: Shipped 136 to 141, Not built 84 to 79, total unchanged; PL-3 then
-shipped the twelve pilot pages rows: Shipped 141 to 153, Not built 79 to 67. Specification ahead of code is what the
+shipped the twelve pilot pages rows: Shipped 141 to 153, Not built 79 to 67. On 2026-11-09 FR-PLT-15 was added
+and shipped in one change: Shipped 153 to 154, total 224 to 225. Specification ahead of code is what the
 spec-first rule asks for, and the table says so rather than hiding it.
 
 **This table is checked, not trusted.** `scripts/check_docs.py` compares
@@ -755,6 +757,7 @@ folder. The rows below are all **Not built** at 0.5.1.
 | FR-PLT-12 | No pilot answer, flag or comment shall appear on any public page or in any public figure; exports shall be keyed by a participant code the owner assigns, not by name or address, and shall be kept in the private repository. | Must (**Shipped**) | **Shipped 2026-11-08** (PL-3): the data half is `services/api/internal/authpolicy/pilot_test.go`, which fails if any `PilotService` method is declared public or if the read-all and export methods are not admin; exports carry P-NN codes (PL-2); `/pilot` is in `CRAWLER_DISALLOW` and the member pages are `noindex`. The process half is the private folder's README. Process half enforced by the private folder's README; data half by the absence of any public read path, checked by a source test like the admin auth gate's. |
 | FR-PLT-13 | The pilot shall emit events `pilot.consent`, `pilot.section_submitted`, `pilot.comment`, `pilot.finished` through the product event stream (§5.12), registered in `docs/events/README.md`. | Should (**Shipped**) | **Shipped 2026-11-08** (PL-2, confirmed with PL-3): `pilot.consent`, `pilot.section_submitted`, `pilot.comment`, `pilot.part_done` and `pilot.finished` are emitted from `handlers/pilot.go` and registered with their props; `pilot.part_done` is one more than this row named, for the two reading parts. |
 | FR-PLT-14 | Pilot sessions shall be distinguishable from any later main-wave collection by instrument version and a pilot marker, and shall never be merged into main-wave figures. | Should (**Shipped**) | **Shipped 2026-11-08** (PL-2, confirmed with PL-3): sessions carry `instrument_version` and live in the five pilot tables, which no main-wave collection shares; the exports carry the version. A later main wave gets its own tables rather than a marker column on these. `07` §1: pilot responses are kept separately. |
+| FR-PLT-15 | An admin shall be able to delete one pilot session with everything it holds (answers, flags, comments, section timings), so that the owner's own runs on the deployed build do not sit beside the participants' in the list or the exports; the deletion shall be audited and shall emit an event. A participant's session is not deleted while the pilot runs, and because export codes follow session order the delete is for use before the ten start. | Should (**Shipped**) | **Shipped 2026-11-09**: `PilotService.DeletePilotSession` (`AUTH_LEVEL_ADMIN`, `AUDIT_LEVEL_RECORDED`), one `DELETE` with the cascades of 00065 (`TestDeletePilotSessionCascades` runs them), event `pilot.session_deleted`; a confirmed button at the foot of `/admin/pilot/<id>` that returns to the list. `authpolicy/pilot_test.go` counts it among the admin methods (four of thirteen). |
 
 Open items for this section: none that block PL-1 to PL-3 (`15` §8).
 The pilot's own open questions (what the ten say about the survey, the

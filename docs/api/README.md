@@ -129,7 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 84 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
-| [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 12 |
+| [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 13 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -5371,6 +5371,7 @@ The pilot: one sitting per participant per instrument version.
 | [`ListPilotSessions`](#pilotservice-listpilotsessions) | `/api/career.v1.PilotService/ListPilotSessions` | Admin | default | `ListPilotSessionsRequest` → `ListPilotSessionsResponse` | Lists every pilot session with its participant, branch, status and timings, for /admin/pilot. |
 | [`GetPilotSession`](#pilotservice-getpilotsession) | `/api/career.v1.PilotService/GetPilotSession` | Admin | default | `GetPilotSessionRequest` → `GetPilotSessionResponse` | One session in full: answers with flags, comments by target, and the section open and submit instants. |
 | [`ExportPilot`](#pilotservice-exportpilot) | `/api/career.v1.PilotService/ExportPilot` | Admin | default | `ExportPilotRequest` → `ExportPilotResponse` | Exports one table as CSV, keyed by the participant code the admin assigns rather than by name or address, for the private folder. |
+| [`DeletePilotSession`](#pilotservice-deletepilotsession) | `/api/career.v1.PilotService/DeletePilotSession` | Admin | default | `DeletePilotSessionRequest` → `DeletePilotSessionResponse` | Deletes one session with everything it holds: answers, flags, comments and section timings. |
 
 ### PilotService.GetPilot
 
@@ -5734,6 +5735,39 @@ assigns rather than by name or address, for the private folder.
 ```json
 {
   "table": "string"
+}
+```
+
+</details>
+
+### PilotService.DeletePilotSession
+
+`POST /api/career.v1.PilotService/DeletePilotSession` · **Auth:** Admin · **Rate limit:** default/min
+
+Deletes one session with everything it holds: answers, flags,
+comments and section timings. It exists so the owner's own runs
+on the deployed build never sit beside the participants' in the
+list or the exports. Participant codes in exports follow session
+order, so this is for use before the ten start; a participant's
+session is not deleted while the pilot runs.
+
+**Request** — [`DeletePilotSessionRequest`](#deletepilotsessionrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+
+**Response** — [`DeletePilotSessionResponse`](#deletepilotsessionresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string |  | Id of the member whose session was removed, so the page can say whose it was. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionId": "string"
 }
 ```
 
@@ -10855,6 +10889,22 @@ A CSV export.
 |---|---|---|---|---|
 | `csv` | `string` | string |  | CSV with a header row. Participants appear as P-NN codes assigned by session order, never by name or address. |
 | `rowCount` | `int32` | number |  | Rows in csv, excluding the header. |
+
+### DeletePilotSessionRequest
+
+Which session to delete.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+
+### DeletePilotSessionResponse
+
+What was deleted.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string |  | Id of the member whose session was removed, so the page can say whose it was. |
 
 ### GetVersionRequest
 

@@ -368,3 +368,17 @@ func (r *Repo) ListPilotSessionSummaries(ctx context.Context) ([]PilotSessionSum
 	}
 	return out, rows.Err()
 }
+
+// DeletePilotSession removes one session; its answers, comments and
+// section events go with it through the cascades in 00065. Reports
+// whether a row matched, so the handler can say "no such session"
+// rather than "deleted" for an id that was never there.
+func (r *Repo) DeletePilotSession(ctx context.Context, id string) (bool, error) {
+	tag, err := r.pool.Exec(ctx, `
+    DELETE FROM pilot_sessions WHERE id = $1::uuid AND tenant_id = $2`,
+		id, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return false, fmt.Errorf("delete pilot session: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
