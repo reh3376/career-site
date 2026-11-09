@@ -207,3 +207,36 @@ Owner's instruction, 2026-11-08 (late): an account for an agent to sign in with,
 - **What this is not.** Not a second admin. The owner decides, each time, whether an agent gets in, and sees afterwards when it did and from where. If an agent session is ever found doing something the owner did not ask for, the record of which password let it in is the first thing to read.
 
 FSD rows: FR-AUTH-20 (the login) and FR-ADM-24 (the creator). Built in PL-1.
+
+## 11. The owner's live review
+
+Owner's rule, 2026-11-09: no UI or UX element is complete until the owner has reviewed it live on the deployed site and approved it. Built, deployed and CI-green describe the code; this section records the review. The script below is walked together, one step at a time, on rogerhenley.dev after the deploy that carries PR 389 (the pilot), PR 393 (the session delete) and PR 394 (Phase 0 step 3). Each step gets one of three marks when it is done: approved, changed (with what), or deferred (with why).
+
+**Set-up.** A participant-shaped account that the owner controls: a plus-address of the owner's mailbox (`<name>+pilot@gmail.com`) delivers to the same inbox, matches nothing else on the whitelist, and can be removed afterwards. The owner's own admin account is used for the admin half.
+
+| # | As | Do | Expect | Mark |
+|---|---|---|---|---|
+| 1 | admin | Sign in; open `/admin/access`; add the plus-address with the pilot checkbox ticked, 30 days | The row shows the pilot flag | |
+| 2 | nobody | In a private window, register with the plus-address and a twelve-character password; open the verification email | The account is active the moment the email is confirmed, no manual approval; `/home` shows the pilot card | |
+| 3 | participant | Open the menu | "Pilot" appears before "Ask Roger" | |
+| 4 | participant | Open `/pilot` | The consent screen: who runs it, what for, what is asked (about ten minutes on the survey, then the two readings, then a call of about thirty minutes), what is kept, what you get; the consent box is required, the recording box optional | |
+| 5 | participant | Consent and start | Section A opens; progress reads "section 1 of n"; every item has the "this was unclear or didn't fit me" box | |
+| 6 | participant | Answer A1 as recruiter and work through the recruiter branch | Seven sections; C2 and C3 draw their rows from the C1 selection made on the same screen; a required item left blank is named and scrolled to; the last section's button reads "Save and finish the survey" | |
+| 7 | participant | Close the tab mid-survey, sign in again, open `/pilot` | The home shows the survey in progress and resumes at the section left | |
+| 8 | participant | Finish the survey | Back on `/pilot`, the survey row shows done and the Finish button appears | |
+| 9 | participant | Open the match record | Header with run label, role, coverage bar, legend; ten rows with determination tones; Audit and Override shown disabled with the caption; a comment box under each row and one general box; "I have read the record" marks the part done | |
+| 10 | participant | Save a row comment, empty it, save again | "Saved." then "Removed."; the comment survives a reload | |
+| 11 | participant | Open the workflow | The chart opens fitted, not on a blank corner; half and full sizes work; "open full size in a new tab" works; nodes listed by phase with a comment box each; the missing-step field adds a new slot after each save | |
+| 12 | participant | Mark the workflow read; finish the pilot | `/pilot/done` says what happens next (the call, the summary) | |
+| 13 | participant | Try `/pilot/survey/A` after finishing | Still readable; nothing breaks | |
+| 14 | admin | Open `/admin/pilot` | The session listed with branch, status, consent time, parts done, measured and self-reported minutes, comment and flag counts | |
+| 15 | admin | Open the session | Every answer with its flag, comments grouped by target, the section timings oldest first | |
+| 16 | admin | Export sessions, answers, comments | Three CSVs download; the participant appears as P-01, never by name or address; the row counts look right | |
+| 17 | admin | Delete the session from the foot of its page | A confirm; then the list without it; the page 404s | |
+| 18 | admin | On `/admin/registrations/<id>` switch the plus-address's pilot flag off; sign in as the participant; open `/pilot` | 404; no menu entry; no home card; switch it back on and both return | |
+| 19 | admin | `/admin/agent`: create a one-time password; in a private window sign in as `agent@345` with it; try it a second time; create another and wait sixteen minutes | First sign-in works and lands on an admin session; the second is refused; the aged one is refused; the live-session list shows the agent and ends it with one click | |
+| 20 | participant | Forgot password with the plus-address: new password and the 5-digit code from the email | Signed in; a wrong code is refused; the code expires at fifteen minutes | |
+| 21 | admin | Re-score one JD submission from `/admin/jd`; when it finishes, in `/admin/db` run `SELECT * FROM v_dual_write_agreement ORDER BY finished_at DESC LIMIT 3` and `SELECT local_id, version, type, left(text, 60) FROM requirements ORDER BY created_at DESC LIMIT 10` | The newest run has `record_written` and `agrees` true; requirement rows exist with heuristic types | |
+| 22 | admin | Remove the plus-address account and its whitelist row | Gone from `/admin/registrations` and `/admin/access` | |
+
+**Record.** The marks are written into this table when the review happens, with the date; anything marked changed becomes a fix in the next PR and a note on the FSD row; the FSD rows stay "Shipped" (code on production) and this section is where completion in the owner's sense is recorded.
