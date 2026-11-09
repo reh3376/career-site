@@ -30,6 +30,7 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | `11-pilot-materials.md` | P2 deliverables: consent and landing text, the one-page interviewer note template with the [WF] probes, the survey platform decision, the stimulus check at laptop and narrow widths, and where participant material lives. |
 | `12-instrument-change-log.md` | One row per change to the survey or interview guide, starting at `survey v0.1`; the signal behind each change. |
 | `13-phase-0-build-plan.md` | The decisions the owner delegated on 2026-11-08, with reasoning, and the nine-step sequence from the prototype to the framework's first running version. The working order for everything after P2. |
+| `14-schema-rendering.md` | Step 2: the v1 schemas rendered as goose migrations (seven entities plus the vocabulary registry and catalog events) and as `career.v1` proto (messages and a `HiringService`), the column-or-jsonb rule, the dual-write hand-over, and six points for the owner's review before step 3. |
 
 The mocked match record used as the interview stimulus is a published
 artifact rather than a file; its link is recorded in `07-…` and in the
