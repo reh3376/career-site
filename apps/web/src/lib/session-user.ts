@@ -12,6 +12,8 @@ export type SessionUser = {
   email: string;
   status: string;
   role: string;
+  // The pilot flag (FSD FR-PLT-01). Absent from the JSON when false.
+  pilotApproved?: boolean;
 };
 
 // Resolve the calling browser's session to a SessionUser, or null when
@@ -34,4 +36,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
 export function isAdmin(u: SessionUser | null): boolean {
   return u?.role === "MEMBER_ROLE_ADMIN";
+}
+
+// Whether the pilot area is open to this member: the flag, or the
+// admin role, which passes the gate whatever the flag says (owner,
+// 2026-11-08). The menu and the home card read this; the pages and
+// every PilotService RPC enforce the same rule server-side.
+export function canPilot(u: SessionUser | null): boolean {
+  return !!u && (u.pilotApproved === true || isAdmin(u));
 }

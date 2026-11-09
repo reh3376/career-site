@@ -100,10 +100,15 @@ export const MEMBER_PATHS = [
   "/meetings",
   "/settings",
   "/version",
+  // The pilot home (FSD §5.16). A member route like any other here;
+  // whether the member may enter is decided by the page and the API
+  // from the pilot flag, not by the proxy, which only knows the
+  // route exists.
+  "/pilot",
 ] as const;
 
 // Gated prefixes: the admin console and the id-bearing member pages.
-const MEMBER_PREFIXES = ["/admin", "/jd-upload/"] as const;
+const MEMBER_PREFIXES = ["/admin", "/jd-upload/", "/pilot/"] as const;
 
 export function isMemberPath(pathname: string): boolean {
   // Public wins. The one-click Accept/Decline link lives under
@@ -147,6 +152,7 @@ export const CRAWLER_DISALLOW = [
   "/home",
   "/jd-upload",
   "/settings",
+  "/pilot",
   "/admin",
   "/api/",
 ] as const;

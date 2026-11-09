@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { HamburgerMenu } from "@/components/hamburger-menu";
-import { getSessionUser, isAdmin } from "@/lib/session-user";
+import { canPilot, getSessionUser, isAdmin } from "@/lib/session-user";
 import { getSocialLinks } from "@/lib/social-links";
 import { getUiMode } from "@/lib/ui-mode";
 
@@ -14,6 +14,7 @@ export async function SiteHeader() {
   const [me, mode] = await Promise.all([getSessionUser(), getUiMode()]);
   const signedIn = me != null;
   const admin = isAdmin(me);
+  const pilot = canPilot(me);
   const social = getSocialLinks();
 
   return (
@@ -103,6 +104,7 @@ export async function SiteHeader() {
           <HamburgerMenu
             signedIn={signedIn}
             isAdmin={admin}
+            pilot={pilot}
             memberName={me?.name}
             memberEmail={me?.email}
             mode={mode}

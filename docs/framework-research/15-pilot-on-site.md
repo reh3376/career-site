@@ -2,7 +2,7 @@
 
 **Status.** Written 2026-11-08 (late) on the owner's instructions of the same evening, recorded in §0. The pilot moves from Google Forms plus a screen-shared call onto the site itself, behind a per-participant flag. Supersedes `11` §3 (the platform decision), `13` §0 decision 8 and `12` row 9. This workstream is built **before** Phase 0 step 3, because it blocks the owner's recruiting (P3) and step 3 blocks nothing outside this repository. Repository copy ahead of project (2026-11-08): new document.
 
-FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not built at 0.5.1).
+FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not built at 0.5.1; all Shipped at 0.5.5, the same day).
 
 ---
 
@@ -181,6 +181,8 @@ The company perspective only. Two renderings on one page: the diagram as an SVG 
 | PL-4 | Field: whitelist the ten, live pass per `11`, exports into the private folder after week 2 | Ten finished sessions |
 
 Phase 0 step 3 resumes after PL-3. The hiring migrations in `14` §2 renumber from 00066; `14` anticipated that.
+
+**Status, 2026-11-08.** PL-1 and PL-2 built (one PR); PL-3 built (the next). What PL-3 added beyond the table: a `gate.ts` shared by every pilot page that turns the API's refusal into a 404, the chart inlined server-side from the committed SVG because its labels are `foreignObject` and an `<img>` would drop them, the admin surface as the seventeenth, and `authpolicy/pilot_test.go` for FR-PLT-12. PL-3's exit, the owner's end-to-end run on the deployed build with the export opening, has not happened yet and is recorded here when it has. The whitelist checkbox and the member toggle named in the PL-3 row shipped early, with PL-1.
 
 ## 9. What this changes in the earlier documents
 

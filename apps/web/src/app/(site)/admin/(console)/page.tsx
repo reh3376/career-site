@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Admin · Overview" };
 // partial gets one at the moment it becomes partial. A label on
 // everything is a label on nothing.
 //
-// Grouped rather than listed flat: fourteen entries in one column is a
+// Grouped rather than listed flat: seventeen entries in one column is a
 // list nobody reads to the bottom of.
 
 type Surface = { href: string; title: string; body: string; status?: "scaffolded" | "later" };
@@ -121,6 +121,11 @@ const GROUPS: { heading: string; note: string; surfaces: Surface[] }[] = [
         body: "Every run, block by block and answer by answer, with the accuracy-against-confidence gap. Also where the phase timings are set.",
       },
       {
+        href: "/admin/pilot",
+        title: "Pilot",
+        body: "The ten employer-side participants: who has consented, how far each has got, measured against self-reported minutes, and every answer, flag and comment. CSV exports keyed by participant code.",
+      },
+      {
         href: "/admin/db",
         title: "Query console",
         body: "Read-only SQL against the metric views. For the question that does not have a tile.",
@@ -139,7 +144,7 @@ export default function AdminOverviewPage() {
         Overview.
       </h1>
       <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
-        Sixteen surfaces, all of them live. Anything partial carries a
+        Seventeen surfaces, all of them live. Anything partial carries a
         label; nothing here does.
       </p>
 

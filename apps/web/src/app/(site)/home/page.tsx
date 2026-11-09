@@ -27,6 +27,8 @@ type Me = {
   createdAt?: string;
   expires_at?: string;
   expiresAt?: string;
+  pilot_approved?: boolean;
+  pilotApproved?: boolean;
 };
 
 type ActivityEvent = {
@@ -316,6 +318,15 @@ export default async function HomePage() {
       <WelcomeBackPanel welcome={welcome} nowMs={nowMs} />
 
       <section className="mt-14 grid gap-6 md:grid-cols-3">
+        {me.pilotApproved || me.pilot_approved || me.role === "MEMBER_ROLE_ADMIN" ? (
+          <LiveCard
+            label="the pilot · for you"
+            title="The employer-side pilot"
+            body="A ten-minute survey about hiring, a one-page match record and a chart of how a company hires, each with room to say where the wording fails and where the picture is wrong. About thirty minutes on a call afterwards."
+            href="/pilot"
+            cta="Open the pilot →"
+          />
+        ) : null}
         <LiveCard
           label="jd upload · live"
           title="Have a role in mind?"

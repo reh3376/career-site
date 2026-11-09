@@ -246,3 +246,14 @@ html[data-mode="ot"] .pilot {
   background-repeat: repeat-x;
   background-position: 0 100%;
 }
+
+/* The pilot's company-workflow chart (apps/web/public/pilot/
+   company-workflow.svg), inlined on /pilot/workflow. The SVG carries
+   its own width and height so the text stays legible; the frame
+   scrolls. Mermaid's fills are fixed colours, so the frame stays
+   white in dark mode rather than inheriting the canvas. */
+.pilot-chart svg {
+  display: block;
+  max-width: none;
+  height: auto;
+}
