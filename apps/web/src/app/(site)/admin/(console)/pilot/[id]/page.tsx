@@ -2,17 +2,30 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BRANCH_LABEL, STATUS_TONE, fmt, getPilotSession, type PilotAnswer, type PilotComment } from "../lib";
+import {
+  BRANCH_LABEL,
+  REVIEW_LABEL,
+  REVIEW_TONE,
+  STATUS_TONE,
+  fmt,
+  getPilotSession,
+  type PilotAnswer,
+  type PilotComment,
+  type PilotNote,
+} from "../lib";
 import { DeleteSessionButton } from "./delete-session-button";
+import { NoteBox } from "./note-box";
+import { ReviewForm } from "./review-form";
 
 export const metadata: Metadata = { title: "Admin · Pilot session" };
 export const dynamic = "force-dynamic";
 
 // One session in full: answers with flags in instrument order, comments
-// by target, and the section open and submit instants (FSD FR-PLT-11).
-// Nothing a participant wrote is edited from here; the one write is the
-// delete at the foot, which removes a whole session (FR-PLT-15) and is
-// there for the owner's own runs on the deployed build.
+// by target, and the section open and submit instants (FSD FR-PLT-11),
+// with the owner's notes beside each (FR-PLT-16) and the owner's
+// judgement on the sitting (FR-PLT-17). Nothing a participant wrote is
+// edited from here; the owner's own words and the delete at the foot
+// (FR-PLT-15, for the owner's own runs) are the writes.
 export default async function AdminPilotSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await getPilotSession(id);
@@ -34,6 +47,10 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
   const tone = STATUS_TONE[status] ?? "text-ink-2";
   const byKind = groupComments(d.comments ?? []);
   const events = d.events ?? [];
+  const notes = new Map<string, PilotNote>();
+  for (const n of d.notes ?? []) notes.set(`${n.targetKind}:${n.targetId ?? ""}`, n);
+  const noteFor = (kind: string, id: string) => notes.get(`${kind}:${id}`)?.body ?? "";
+  const sessionId = ses?.id ?? "";
 
   return (
     <>
@@ -86,8 +103,29 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
           </dd>
           <dt className="text-ink-3">sections done</dt>
           <dd className="m-0 text-ink">{ses?.sectionsDone?.join(" ") || "-"}</dd>
+          <dt className="text-ink-3">your judgement</dt>
+          <dd className={`m-0 ${REVIEW_TONE[s?.reviewStatus ?? "unreviewed"] ?? "text-ink-3"}`}>
+            {REVIEW_LABEL[s?.reviewStatus ?? "unreviewed"] ?? s?.reviewStatus}
+            {s?.reviewedAt ? <span className="text-ink-3"> · {fmt(s.reviewedAt)}</span> : null}
+            {s?.reviewNote ? <span className="text-ink-2"> · {s.reviewNote}</span> : null}
+          </dd>
         </dl>
       </section>
+
+      {sessionId ? (
+        <section aria-labelledby="review-heading" className="mt-12 border-t border-line pt-6">
+          <p id="review-heading" className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            your review of this sitting
+          </p>
+          <p className="mt-3 max-w-prose text-sm text-ink-3">
+            The judgement says whether this sitting counts: reviewed is vouched for, excluded stays in the database and
+            out of every figure, with the reason. The note is the call&rsquo;s record as a whole; notes on single answers,
+            rows and steps sit beside them below.
+          </p>
+          <ReviewForm sessionId={sessionId} status={s?.reviewStatus ?? "unreviewed"} note={s?.reviewNote ?? ""} />
+          <NoteBox sessionId={sessionId} targetKind="session" targetId="" initialBody={noteFor("session", "")} label="note on the sitting" />
+        </section>
+      ) : null}
 
       <section aria-labelledby="answers-heading" className="mt-12 border-t border-line pt-6">
         <p id="answers-heading" className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
@@ -96,7 +134,7 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
         {d.answers?.length ? (
           <ul className="mt-4 divide-y divide-line border-y border-line">
             {d.answers.map((a) => (
-              <AnswerRow key={a.itemId} a={a} />
+              <AnswerRow key={a.itemId} a={a} sessionId={sessionId} note={noteFor("item", a.itemId)} />
             ))}
           </ul>
         ) : (
@@ -121,6 +159,16 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
                     <div>
                       <p className="whitespace-pre-wrap text-sm text-ink">{c.body}</p>
                       <p className="mt-1 font-mono text-[11px] text-ink-4">{fmt(c.updatedAt)}</p>
+                      {sessionId ? (
+                        <NoteBox
+                          sessionId={sessionId}
+                          targetKind={c.targetKind}
+                          targetId={c.targetId ?? ""}
+                          initialBody={noteFor(c.targetKind, c.targetId ?? "")}
+                          label="your note"
+                          compact
+                        />
+                      ) : null}
                     </div>
                   </li>
                 ))}
@@ -239,14 +287,20 @@ function renderValue(json?: string): React.ReactNode {
   return <span className="font-mono text-xs">{json}</span>;
 }
 
-function AnswerRow({ a }: { a: PilotAnswer }) {
+function AnswerRow({ a, sessionId, note }: { a: PilotAnswer; sessionId: string; note: string }) {
   return (
     <li className="grid gap-2 py-3 sm:grid-cols-[6rem_1fr]">
       <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <span className="text-ink">{a.itemId}</span>
         {a.flagged ? <span className="ml-2 text-signal">flag</span> : null}
       </div>
-      <div className="text-sm text-ink-2">{renderValue(a.valueJson)}</div>
+      <div>
+        {a.prompt ? <p className="text-sm text-ink-3">{a.prompt}</p> : null}
+        <div className={`text-sm text-ink ${a.prompt ? "mt-1" : ""}`}>{renderValue(a.valueJson)}</div>
+        {sessionId ? (
+          <NoteBox sessionId={sessionId} targetKind="item" targetId={a.itemId} initialBody={note} label="your note" compact />
+        ) : null}
+      </div>
     </li>
   );
 }

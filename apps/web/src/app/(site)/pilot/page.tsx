@@ -40,8 +40,9 @@ export default async function PilotHomePage() {
   return (
     <Shell>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
-        Three parts, in any order after the survey has started. Leave and
-        come back whenever you like; everything saves as you go.
+        Three parts, in order: the survey, then a match record to read, then
+        a chart of how a company hires. Leave and come back whenever you
+        like; everything saves as you go.
       </p>
 
       <ol className="mt-10 divide-y divide-line border-y border-line">
@@ -52,6 +53,7 @@ export default async function PilotHomePage() {
           href={p.surveyDone ? "/pilot/survey/A" : p.surveyHref}
           cta={p.surveyDone ? "Review your answers" : session.sectionsDone?.length ? "Continue the survey" : "Start the survey"}
           done={p.surveyDone}
+          next={!p.surveyDone}
         />
         <Part
           n={2}
@@ -60,6 +62,7 @@ export default async function PilotHomePage() {
           href="/pilot/record"
           cta={p.recordDone ? "Read it again" : "Read the record"}
           done={p.recordDone}
+          next={p.surveyDone && !p.recordDone}
         />
         <Part
           n={3}
@@ -68,6 +71,7 @@ export default async function PilotHomePage() {
           href="/pilot/workflow"
           cta={p.workflowDone ? "Read it again" : "Read the workflow"}
           done={p.workflowDone}
+          next={p.surveyDone && p.recordDone && !p.workflowDone}
         />
       </ol>
 
@@ -80,10 +84,16 @@ export default async function PilotHomePage() {
             </Link>
             .
           </p>
-        ) : p.surveyDone ? (
-          <FinishButton recordDone={p.recordDone} workflowDone={p.workflowDone} />
+        ) : p.surveyDone && p.recordDone && p.workflowDone ? (
+          <FinishButton />
         ) : (
-          <p className="text-sm text-ink-3">Finish the survey to close your session. The two reading parts can be done before or after.</p>
+          <p className="text-sm text-ink-3">
+            {!p.surveyDone
+              ? "Finish the survey, then read the record and the workflow; the session closes after all three."
+              : !p.recordDone
+                ? "Next: read the match record. The session closes after all three parts."
+                : "Next: read the workflow. The session closes after all three parts."}
+          </p>
         )}
       </div>
     </Shell>
@@ -154,6 +164,7 @@ function Part({
   href,
   cta,
   done,
+  next,
 }: {
   n: number;
   title: string;
@@ -161,20 +172,27 @@ function Part({
   href: string;
   cta: string;
   done: boolean;
+  // The part the participant should do now; one row carries it.
+  next?: boolean;
 }) {
   return (
     <li className="grid gap-3 py-6 sm:grid-cols-[3rem_1fr_auto] sm:items-start">
-      <span className="font-display text-3xl leading-none text-ink-3">{n}</span>
+      <span className={`font-display text-3xl leading-none ${next ? "text-accent" : "text-ink-3"}`}>{n}</span>
       <div>
         <p className="font-display text-xl leading-snug text-ink" style={{ fontVariationSettings: '"opsz" 40, "SOFT" 50' }}>
           {title}
           {done ? <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.14em] text-success">done</span> : null}
+          {next ? <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">next</span> : null}
         </p>
         <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>
       </div>
       <Link
         href={href}
-        className="inline-flex items-center justify-center rounded-md border border-accent px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline transition-colors hover:bg-accent hover:text-white"
+        className={
+          next
+            ? "inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+            : "inline-flex items-center justify-center rounded-md border border-accent px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline transition-colors hover:bg-accent hover:text-white"
+        }
       >
         {cta}
       </Link>

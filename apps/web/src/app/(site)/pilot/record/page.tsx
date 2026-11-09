@@ -88,7 +88,7 @@ export default async function PilotRecordPage() {
         >
           I have read the record
         </button>
-        <p className="text-xs text-ink-3">Marks this part done. You can still come back and change your comments.</p>
+        <p className="text-xs text-ink-3">Marks this part done and takes you on to the workflow. You can still come back and change your comments.</p>
       </form>
     </div>
   );

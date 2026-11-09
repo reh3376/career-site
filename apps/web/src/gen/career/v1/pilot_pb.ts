@@ -29,7 +29,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/pilot.proto.
  */
 export const file_career_v1_pilot: GenFile = /*@__PURE__*/
-  fileDesc("ChVjYXJlZXIvdjEvcGlsb3QucHJvdG8SCWNhcmVlci52MSKpAwoMUGlsb3RTZXNzaW9uEgoKAmlkGAEgASgJEg4KBnN0YXR1cxgCIAEoCRITCgtyb2xlX2JyYW5jaBgDIAEoCRIaChJpbnN0cnVtZW50X3ZlcnNpb24YBCABKAkSLgoKY29uc2VudF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFAoMcmVjb3JkaW5nX29rGAYgASgIEjYKEnN1cnZleV9maW5pc2hlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNgoScmVjb3JkX2ZpbmlzaGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI4ChR3b3JrZmxvd19maW5pc2hlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhUKDXNlY3Rpb25zX2RvbmUYCyADKAkSFAoMbmV4dF9zZWN0aW9uGAwgASgJIhEKD0dldFBpbG90UmVxdWVzdCJ4ChBHZXRQaWxvdFJlc3BvbnNlEg8KB2FsbG93ZWQYASABKAgSDQoFYWRtaW4YAiABKAgSGgoSaW5zdHJ1bWVudF92ZXJzaW9uGAMgASgJEigKB3Nlc3Npb24YBCABKAsyFy5jYXJlZXIudjEuUGlsb3RTZXNzaW9uIjoKEVN0YXJ0UGlsb3RSZXF1ZXN0Eg8KB2NvbnNlbnQYASABKAgSFAoMcmVjb3JkaW5nX29rGAIgASgIIj4KElN0YXJ0UGlsb3RSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiJMCgpQaWxvdFNjYWxlEgsKA21pbhgBIAEoBRILCgNtYXgYAiABKAUSEQoJbWluX2xhYmVsGAMgASgJEhEKCW1heF9sYWJlbBgEIAEoCSI8Cg5QaWxvdERpbWVuc2lvbhIKCgJpZBgBIAEoCRINCgVsYWJlbBgCIAEoCRIPCgdvcHRpb25zGAMgAygJIvgBCglQaWxvdEl0ZW0SCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRIOCgZwcm9tcHQYAyABKAkSDAoEaGVscBgEIAEoCRIPCgdvcHRpb25zGAUgAygJEhIKCm1heF9zZWxlY3QYBiABKAUSEAoIcmVxdWlyZWQYByABKAgSJAoFc2NhbGUYCCABKAsyFS5jYXJlZXIudjEuUGlsb3RTY2FsZRItCgpkaW1lbnNpb25zGAkgAygLMhkuY2FyZWVyLnYxLlBpbG90RGltZW5zaW9uEhIKCnBpbG90X29ubHkYCiABKAgSEwoLc291cmNlX2l0ZW0YCyABKAkiWQoLUGlsb3RBbnN3ZXISGgoHaXRlbV9pZBgBIAEoCUIJukgGcgQQARgIEh0KCnZhbHVlX2pzb24YAiABKAlCCbpIBnIEGKCcARIPCgdmbGFnZ2VkGAMgASgIIjcKFkdldFBpbG90U2VjdGlvblJlcXVlc3QSHQoKc2VjdGlvbl9pZBgBIAEoCUIJukgGcgQQARgCItkBChdHZXRQaWxvdFNlY3Rpb25SZXNwb25zZRIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVpbnRybxgDIAEoCRIjCgVpdGVtcxgEIAMoCzIULmNhcmVlci52MS5QaWxvdEl0ZW0SJwoHYW5zd2VycxgFIAMoCzIWLmNhcmVlci52MS5QaWxvdEFuc3dlchINCgVpbmRleBgGIAEoBRINCgV0b3RhbBgHIAEoBRIoCgdzZXNzaW9uGAggASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiJtChlTdWJtaXRQaWxvdFNlY3Rpb25SZXF1ZXN0Eh0KCnNlY3Rpb25faWQYASABKAlCCbpIBnIEEAEYAhIxCgdhbnN3ZXJzGAIgAygLMhYuY2FyZWVyLnYxLlBpbG90QW5zd2VyQgi6SAWSAQIQPCJVChpTdWJtaXRQaWxvdFNlY3Rpb25SZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbhINCgVlbmRlZBgCIAEoCCIXChVHZXRQaWxvdFJlY29yZFJlcXVlc3QicAoWR2V0UGlsb3RSZWNvcmRSZXNwb25zZRITCgtyZWNvcmRfanNvbhgBIAEoCRIpCghjb21tZW50cxgCIAMoCzIXLmNhcmVlci52MS5QaWxvdENvbW1lbnQSFgoOcmVjb3JkX3ZlcnNpb24YAyABKAkiGQoXR2V0UGlsb3RXb3JrZmxvd1JlcXVlc3QifAoRUGlsb3RXb3JrZmxvd05vZGUSCgoCaWQYASABKAkSDQoFcGhhc2UYAiABKAkSDAoEbmFtZRgDIAEoCRINCgVvd25lchgEIAEoCRIPCgdzdW1tYXJ5GAUgASgJEhAKCGRlY2lzaW9uGAYgASgIEgwKBG9wZW4YByABKAgiLwoSUGlsb3RXb3JrZmxvd1BoYXNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJItsBChhHZXRQaWxvdFdvcmtmbG93UmVzcG9uc2USDQoFaW50cm8YASABKAkSDwoHcHJvbXB0cxgCIAMoCRItCgZwaGFzZXMYAyADKAsyHS5jYXJlZXIudjEuUGlsb3RXb3JrZmxvd1BoYXNlEisKBW5vZGVzGAQgAygLMhwuY2FyZWVyLnYxLlBpbG90V29ya2Zsb3dOb2RlEikKCGNvbW1lbnRzGAUgAygLMhcuY2FyZWVyLnYxLlBpbG90Q29tbWVudBIYChB3b3JrZmxvd192ZXJzaW9uGAYgASgJInQKDFBpbG90Q29tbWVudBITCgt0YXJnZXRfa2luZBgBIAEoCRIRCgl0YXJnZXRfaWQYAiABKAkSDAoEYm9keRgDIAEoCRIuCgp1cGRhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJvChlVcHNlcnRQaWxvdENvbW1lbnRSZXF1ZXN0Eh4KC3RhcmdldF9raW5kGAEgASgJQgm6SAZyBBABGCASGgoJdGFyZ2V0X2lkGAIgASgJQge6SARyAhgQEhYKBGJvZHkYAyABKAlCCLpIBXIDGKAfIkYKGlVwc2VydFBpbG90Q29tbWVudFJlc3BvbnNlEigKB2NvbW1lbnQYASABKAsyFy5jYXJlZXIudjEuUGlsb3RDb21tZW50Ij0KFE1hcmtQaWxvdFBhcnRSZXF1ZXN0EiUKBHBhcnQYASABKAlCF7pIFHISUgZyZWNvcmRSCHdvcmtmbG93IkEKFU1hcmtQaWxvdFBhcnRSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiIUChJGaW5pc2hQaWxvdFJlcXVlc3QiPwoTRmluaXNoUGlsb3RSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiIaChhMaXN0UGlsb3RTZXNzaW9uc1JlcXVlc3Qi0wEKE1BpbG90U2Vzc2lvblN1bW1hcnkSKAoHc2Vzc2lvbhgBIAEoCzIXLmNhcmVlci52MS5QaWxvdFNlc3Npb24SEQoJbWVtYmVyX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSDQoFZW1haWwYBCABKAkSGAoQbWVhc3VyZWRfbWludXRlcxgFIAEoBRIdChVzZWxmX3JlcG9ydGVkX21pbnV0ZXMYBiABKAUSFQoNY29tbWVudF9jb3VudBgHIAEoBRISCgpmbGFnX2NvdW50GAggASgFImkKGUxpc3RQaWxvdFNlc3Npb25zUmVzcG9uc2USMAoIc2Vzc2lvbnMYASADKAsyHi5jYXJlZXIudjEuUGlsb3RTZXNzaW9uU3VtbWFyeRIaChJpbnN0cnVtZW50X3ZlcnNpb24YAiABKAkiNwoWR2V0UGlsb3RTZXNzaW9uUmVxdWVzdBIdCgpzZXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGEAiWwoRUGlsb3RTZWN0aW9uRXZlbnQSDwoHc2VjdGlvbhgBIAEoCRINCgVldmVudBgCIAEoCRImCgJhdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAizAEKF0dldFBpbG90U2Vzc2lvblJlc3BvbnNlEi8KB3N1bW1hcnkYASABKAsyHi5jYXJlZXIudjEuUGlsb3RTZXNzaW9uU3VtbWFyeRInCgdhbnN3ZXJzGAIgAygLMhYuY2FyZWVyLnYxLlBpbG90QW5zd2VyEikKCGNvbW1lbnRzGAMgAygLMhcuY2FyZWVyLnYxLlBpbG90Q29tbWVudBIsCgZldmVudHMYBCADKAsyHC5jYXJlZXIudjEuUGlsb3RTZWN0aW9uRXZlbnQiRwoSRXhwb3J0UGlsb3RSZXF1ZXN0EjEKBXRhYmxlGAEgASgJQiK6SB9yHVIIc2Vzc2lvbnNSB2Fuc3dlcnNSCGNvbW1lbnRzIjUKE0V4cG9ydFBpbG90UmVzcG9uc2USCwoDY3N2GAEgASgJEhEKCXJvd19jb3VudBgCIAEoBSI6ChlEZWxldGVQaWxvdFNlc3Npb25SZXF1ZXN0Eh0KCnNlc3Npb25faWQYASABKAlCCbpIBnIEEAEYQCIvChpEZWxldGVQaWxvdFNlc3Npb25SZXNwb25zZRIRCgltZW1iZXJfaWQYASABKAky3QkKDFBpbG90U2VydmljZRJJCghHZXRQaWxvdBIaLmNhcmVlci52MS5HZXRQaWxvdFJlcXVlc3QaGy5jYXJlZXIudjEuR2V0UGlsb3RSZXNwb25zZSIEgLUYAhJPCgpTdGFydFBpbG90EhwuY2FyZWVyLnYxLlN0YXJ0UGlsb3RSZXF1ZXN0Gh0uY2FyZWVyLnYxLlN0YXJ0UGlsb3RSZXNwb25zZSIEgLUYAhJeCg9HZXRQaWxvdFNlY3Rpb24SIS5jYXJlZXIudjEuR2V0UGlsb3RTZWN0aW9uUmVxdWVzdBoiLmNhcmVlci52MS5HZXRQaWxvdFNlY3Rpb25SZXNwb25zZSIEgLUYAhJnChJTdWJtaXRQaWxvdFNlY3Rpb24SJC5jYXJlZXIudjEuU3VibWl0UGlsb3RTZWN0aW9uUmVxdWVzdBolLmNhcmVlci52MS5TdWJtaXRQaWxvdFNlY3Rpb25SZXNwb25zZSIEgLUYAhJbCg5HZXRQaWxvdFJlY29yZBIgLmNhcmVlci52MS5HZXRQaWxvdFJlY29yZFJlcXVlc3QaIS5jYXJlZXIudjEuR2V0UGlsb3RSZWNvcmRSZXNwb25zZSIEgLUYAhJhChBHZXRQaWxvdFdvcmtmbG93EiIuY2FyZWVyLnYxLkdldFBpbG90V29ya2Zsb3dSZXF1ZXN0GiMuY2FyZWVyLnYxLkdldFBpbG90V29ya2Zsb3dSZXNwb25zZSIEgLUYAhJnChJVcHNlcnRQaWxvdENvbW1lbnQSJC5jYXJlZXIudjEuVXBzZXJ0UGlsb3RDb21tZW50UmVxdWVzdBolLmNhcmVlci52MS5VcHNlcnRQaWxvdENvbW1lbnRSZXNwb25zZSIEgLUYAhJYCg1NYXJrUGlsb3RQYXJ0Eh8uY2FyZWVyLnYxLk1hcmtQaWxvdFBhcnRSZXF1ZXN0GiAuY2FyZWVyLnYxLk1hcmtQaWxvdFBhcnRSZXNwb25zZSIEgLUYAhJSCgtGaW5pc2hQaWxvdBIdLmNhcmVlci52MS5GaW5pc2hQaWxvdFJlcXVlc3QaHi5jYXJlZXIudjEuRmluaXNoUGlsb3RSZXNwb25zZSIEgLUYAhJoChFMaXN0UGlsb3RTZXNzaW9ucxIjLmNhcmVlci52MS5MaXN0UGlsb3RTZXNzaW9uc1JlcXVlc3QaJC5jYXJlZXIudjEuTGlzdFBpbG90U2Vzc2lvbnNSZXNwb25zZSIIgLUYA6C1GAESYgoPR2V0UGlsb3RTZXNzaW9uEiEuY2FyZWVyLnYxLkdldFBpbG90U2Vzc2lvblJlcXVlc3QaIi5jYXJlZXIudjEuR2V0UGlsb3RTZXNzaW9uUmVzcG9uc2UiCIC1GAOgtRgBElYKC0V4cG9ydFBpbG90Eh0uY2FyZWVyLnYxLkV4cG9ydFBpbG90UmVxdWVzdBoeLmNhcmVlci52MS5FeHBvcnRQaWxvdFJlc3BvbnNlIgiAtRgDoLUYAhJrChJEZWxldGVQaWxvdFNlc3Npb24SJC5jYXJlZXIudjEuRGVsZXRlUGlsb3RTZXNzaW9uUmVxdWVzdBolLmNhcmVlci52MS5EZWxldGVQaWxvdFNlc3Npb25SZXNwb25zZSIIgLUYA6C1GAJCpAEKDWNvbS5jYXJlZXIudjFCClBpbG90UHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChVjYXJlZXIvdjEvcGlsb3QucHJvdG8SCWNhcmVlci52MSKpAwoMUGlsb3RTZXNzaW9uEgoKAmlkGAEgASgJEg4KBnN0YXR1cxgCIAEoCRITCgtyb2xlX2JyYW5jaBgDIAEoCRIaChJpbnN0cnVtZW50X3ZlcnNpb24YBCABKAkSLgoKY29uc2VudF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFAoMcmVjb3JkaW5nX29rGAYgASgIEjYKEnN1cnZleV9maW5pc2hlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNgoScmVjb3JkX2ZpbmlzaGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI4ChR3b3JrZmxvd19maW5pc2hlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhUKDXNlY3Rpb25zX2RvbmUYCyADKAkSFAoMbmV4dF9zZWN0aW9uGAwgASgJIhEKD0dldFBpbG90UmVxdWVzdCJ4ChBHZXRQaWxvdFJlc3BvbnNlEg8KB2FsbG93ZWQYASABKAgSDQoFYWRtaW4YAiABKAgSGgoSaW5zdHJ1bWVudF92ZXJzaW9uGAMgASgJEigKB3Nlc3Npb24YBCABKAsyFy5jYXJlZXIudjEuUGlsb3RTZXNzaW9uIjoKEVN0YXJ0UGlsb3RSZXF1ZXN0Eg8KB2NvbnNlbnQYASABKAgSFAoMcmVjb3JkaW5nX29rGAIgASgIIj4KElN0YXJ0UGlsb3RSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiJMCgpQaWxvdFNjYWxlEgsKA21pbhgBIAEoBRILCgNtYXgYAiABKAUSEQoJbWluX2xhYmVsGAMgASgJEhEKCW1heF9sYWJlbBgEIAEoCSI8Cg5QaWxvdERpbWVuc2lvbhIKCgJpZBgBIAEoCRINCgVsYWJlbBgCIAEoCRIPCgdvcHRpb25zGAMgAygJIvgBCglQaWxvdEl0ZW0SCgoCaWQYASABKAkSDAoEdHlwZRgCIAEoCRIOCgZwcm9tcHQYAyABKAkSDAoEaGVscBgEIAEoCRIPCgdvcHRpb25zGAUgAygJEhIKCm1heF9zZWxlY3QYBiABKAUSEAoIcmVxdWlyZWQYByABKAgSJAoFc2NhbGUYCCABKAsyFS5jYXJlZXIudjEuUGlsb3RTY2FsZRItCgpkaW1lbnNpb25zGAkgAygLMhkuY2FyZWVyLnYxLlBpbG90RGltZW5zaW9uEhIKCnBpbG90X29ubHkYCiABKAgSEwoLc291cmNlX2l0ZW0YCyABKAkiegoLUGlsb3RBbnN3ZXISGgoHaXRlbV9pZBgBIAEoCUIJukgGcgQQARgIEh0KCnZhbHVlX2pzb24YAiABKAlCCbpIBnIEGKCcARIPCgdmbGFnZ2VkGAMgASgIEg4KBnByb21wdBgEIAEoCRIPCgdzZWN0aW9uGAUgASgJIjcKFkdldFBpbG90U2VjdGlvblJlcXVlc3QSHQoKc2VjdGlvbl9pZBgBIAEoCUIJukgGcgQQARgCItkBChdHZXRQaWxvdFNlY3Rpb25SZXNwb25zZRIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRINCgVpbnRybxgDIAEoCRIjCgVpdGVtcxgEIAMoCzIULmNhcmVlci52MS5QaWxvdEl0ZW0SJwoHYW5zd2VycxgFIAMoCzIWLmNhcmVlci52MS5QaWxvdEFuc3dlchINCgVpbmRleBgGIAEoBRINCgV0b3RhbBgHIAEoBRIoCgdzZXNzaW9uGAggASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiJtChlTdWJtaXRQaWxvdFNlY3Rpb25SZXF1ZXN0Eh0KCnNlY3Rpb25faWQYASABKAlCCbpIBnIEEAEYAhIxCgdhbnN3ZXJzGAIgAygLMhYuY2FyZWVyLnYxLlBpbG90QW5zd2VyQgi6SAWSAQIQPCJVChpTdWJtaXRQaWxvdFNlY3Rpb25SZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbhINCgVlbmRlZBgCIAEoCCIXChVHZXRQaWxvdFJlY29yZFJlcXVlc3QicAoWR2V0UGlsb3RSZWNvcmRSZXNwb25zZRITCgtyZWNvcmRfanNvbhgBIAEoCRIpCghjb21tZW50cxgCIAMoCzIXLmNhcmVlci52MS5QaWxvdENvbW1lbnQSFgoOcmVjb3JkX3ZlcnNpb24YAyABKAkiGQoXR2V0UGlsb3RXb3JrZmxvd1JlcXVlc3QifAoRUGlsb3RXb3JrZmxvd05vZGUSCgoCaWQYASABKAkSDQoFcGhhc2UYAiABKAkSDAoEbmFtZRgDIAEoCRINCgVvd25lchgEIAEoCRIPCgdzdW1tYXJ5GAUgASgJEhAKCGRlY2lzaW9uGAYgASgIEgwKBG9wZW4YByABKAgiLwoSUGlsb3RXb3JrZmxvd1BoYXNlEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJItsBChhHZXRQaWxvdFdvcmtmbG93UmVzcG9uc2USDQoFaW50cm8YASABKAkSDwoHcHJvbXB0cxgCIAMoCRItCgZwaGFzZXMYAyADKAsyHS5jYXJlZXIudjEuUGlsb3RXb3JrZmxvd1BoYXNlEisKBW5vZGVzGAQgAygLMhwuY2FyZWVyLnYxLlBpbG90V29ya2Zsb3dOb2RlEikKCGNvbW1lbnRzGAUgAygLMhcuY2FyZWVyLnYxLlBpbG90Q29tbWVudBIYChB3b3JrZmxvd192ZXJzaW9uGAYgASgJInQKDFBpbG90Q29tbWVudBITCgt0YXJnZXRfa2luZBgBIAEoCRIRCgl0YXJnZXRfaWQYAiABKAkSDAoEYm9keRgDIAEoCRIuCgp1cGRhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJvChlVcHNlcnRQaWxvdENvbW1lbnRSZXF1ZXN0Eh4KC3RhcmdldF9raW5kGAEgASgJQgm6SAZyBBABGCASGgoJdGFyZ2V0X2lkGAIgASgJQge6SARyAhgQEhYKBGJvZHkYAyABKAlCCLpIBXIDGKAfIkYKGlVwc2VydFBpbG90Q29tbWVudFJlc3BvbnNlEigKB2NvbW1lbnQYASABKAsyFy5jYXJlZXIudjEuUGlsb3RDb21tZW50Ij0KFE1hcmtQaWxvdFBhcnRSZXF1ZXN0EiUKBHBhcnQYASABKAlCF7pIFHISUgZyZWNvcmRSCHdvcmtmbG93IkEKFU1hcmtQaWxvdFBhcnRSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiIUChJGaW5pc2hQaWxvdFJlcXVlc3QiPwoTRmluaXNoUGlsb3RSZXNwb25zZRIoCgdzZXNzaW9uGAEgASgLMhcuY2FyZWVyLnYxLlBpbG90U2Vzc2lvbiIaChhMaXN0UGlsb3RTZXNzaW9uc1JlcXVlc3QisAIKE1BpbG90U2Vzc2lvblN1bW1hcnkSKAoHc2Vzc2lvbhgBIAEoCzIXLmNhcmVlci52MS5QaWxvdFNlc3Npb24SEQoJbWVtYmVyX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSDQoFZW1haWwYBCABKAkSGAoQbWVhc3VyZWRfbWludXRlcxgFIAEoBRIdChVzZWxmX3JlcG9ydGVkX21pbnV0ZXMYBiABKAUSFQoNY29tbWVudF9jb3VudBgHIAEoBRISCgpmbGFnX2NvdW50GAggASgFEhUKDXJldmlld19zdGF0dXMYCSABKAkSEwoLcmV2aWV3X25vdGUYCiABKAkSLwoLcmV2aWV3ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImkKGUxpc3RQaWxvdFNlc3Npb25zUmVzcG9uc2USMAoIc2Vzc2lvbnMYASADKAsyHi5jYXJlZXIudjEuUGlsb3RTZXNzaW9uU3VtbWFyeRIaChJpbnN0cnVtZW50X3ZlcnNpb24YAiABKAkiNwoWR2V0UGlsb3RTZXNzaW9uUmVxdWVzdBIdCgpzZXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGEAiWwoRUGlsb3RTZWN0aW9uRXZlbnQSDwoHc2VjdGlvbhgBIAEoCRINCgVldmVudBgCIAEoCRImCgJhdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi8QEKF0dldFBpbG90U2Vzc2lvblJlc3BvbnNlEi8KB3N1bW1hcnkYASABKAsyHi5jYXJlZXIudjEuUGlsb3RTZXNzaW9uU3VtbWFyeRInCgdhbnN3ZXJzGAIgAygLMhYuY2FyZWVyLnYxLlBpbG90QW5zd2VyEikKCGNvbW1lbnRzGAMgAygLMhcuY2FyZWVyLnYxLlBpbG90Q29tbWVudBIsCgZldmVudHMYBCADKAsyHC5jYXJlZXIudjEuUGlsb3RTZWN0aW9uRXZlbnQSIwoFbm90ZXMYBSADKAsyFC5jYXJlZXIudjEuUGlsb3ROb3RlIk4KEkV4cG9ydFBpbG90UmVxdWVzdBI4CgV0YWJsZRgBIAEoCUIpukgmciRSCHNlc3Npb25zUgdhbnN3ZXJzUghjb21tZW50c1IFbm90ZXMiNQoTRXhwb3J0UGlsb3RSZXNwb25zZRILCgNjc3YYASABKAkSEQoJcm93X2NvdW50GAIgASgFIjoKGURlbGV0ZVBpbG90U2Vzc2lvblJlcXVlc3QSHQoKc2Vzc2lvbl9pZBgBIAEoCUIJukgGcgQQARhAIi8KGkRlbGV0ZVBpbG90U2Vzc2lvblJlc3BvbnNlEhEKCW1lbWJlcl9pZBgBIAEoCSKBAQoJUGlsb3ROb3RlEhMKC3RhcmdldF9raW5kGAEgASgJEhEKCXRhcmdldF9pZBgCIAEoCRIMCgRib2R5GAMgASgJEi4KCnVwZGF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg4KBmF1dGhvchgFIAEoCSLlAQoWVXBzZXJ0UGlsb3ROb3RlUmVxdWVzdBIdCgpzZXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGEASeAoLdGFyZ2V0X2tpbmQYAiABKAlCY7pIYHJeUgdzZXNzaW9uUgRpdGVtUgpyZWNvcmRfcm93Ug5yZWNvcmRfZ2VuZXJhbFINd29ya2Zsb3dfbm9kZVIQd29ya2Zsb3dfbWlzc2luZ1IQd29ya2Zsb3dfZ2VuZXJhbBIaCgl0YXJnZXRfaWQYAyABKAlCB7pIBHICGCASFgoEYm9keRgEIAEoCUIIukgFcgMYwD4iWgoXVXBzZXJ0UGlsb3ROb3RlUmVzcG9uc2USLgoKdXBkYXRlZF9hdBgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHcmVtb3ZlZBgCIAEoCCKMAQocU2V0UGlsb3RTZXNzaW9uUmV2aWV3UmVxdWVzdBIdCgpzZXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGEASNQoGc3RhdHVzGAIgASgJQiW6SCJyIFIKdW5yZXZpZXdlZFIIcmV2aWV3ZWRSCGV4Y2x1ZGVkEhYKBG5vdGUYAyABKAlCCLpIBXIDGNAPIlAKHVNldFBpbG90U2Vzc2lvblJldmlld1Jlc3BvbnNlEi8KB3N1bW1hcnkYASABKAsyHi5jYXJlZXIudjEuUGlsb3RTZXNzaW9uU3VtbWFyeTK3CwoMUGlsb3RTZXJ2aWNlEkkKCEdldFBpbG90EhouY2FyZWVyLnYxLkdldFBpbG90UmVxdWVzdBobLmNhcmVlci52MS5HZXRQaWxvdFJlc3BvbnNlIgSAtRgCEk8KClN0YXJ0UGlsb3QSHC5jYXJlZXIudjEuU3RhcnRQaWxvdFJlcXVlc3QaHS5jYXJlZXIudjEuU3RhcnRQaWxvdFJlc3BvbnNlIgSAtRgCEl4KD0dldFBpbG90U2VjdGlvbhIhLmNhcmVlci52MS5HZXRQaWxvdFNlY3Rpb25SZXF1ZXN0GiIuY2FyZWVyLnYxLkdldFBpbG90U2VjdGlvblJlc3BvbnNlIgSAtRgCEmcKElN1Ym1pdFBpbG90U2VjdGlvbhIkLmNhcmVlci52MS5TdWJtaXRQaWxvdFNlY3Rpb25SZXF1ZXN0GiUuY2FyZWVyLnYxLlN1Ym1pdFBpbG90U2VjdGlvblJlc3BvbnNlIgSAtRgCElsKDkdldFBpbG90UmVjb3JkEiAuY2FyZWVyLnYxLkdldFBpbG90UmVjb3JkUmVxdWVzdBohLmNhcmVlci52MS5HZXRQaWxvdFJlY29yZFJlc3BvbnNlIgSAtRgCEmEKEEdldFBpbG90V29ya2Zsb3cSIi5jYXJlZXIudjEuR2V0UGlsb3RXb3JrZmxvd1JlcXVlc3QaIy5jYXJlZXIudjEuR2V0UGlsb3RXb3JrZmxvd1Jlc3BvbnNlIgSAtRgCEmcKElVwc2VydFBpbG90Q29tbWVudBIkLmNhcmVlci52MS5VcHNlcnRQaWxvdENvbW1lbnRSZXF1ZXN0GiUuY2FyZWVyLnYxLlVwc2VydFBpbG90Q29tbWVudFJlc3BvbnNlIgSAtRgCElgKDU1hcmtQaWxvdFBhcnQSHy5jYXJlZXIudjEuTWFya1BpbG90UGFydFJlcXVlc3QaIC5jYXJlZXIudjEuTWFya1BpbG90UGFydFJlc3BvbnNlIgSAtRgCElIKC0ZpbmlzaFBpbG90Eh0uY2FyZWVyLnYxLkZpbmlzaFBpbG90UmVxdWVzdBoeLmNhcmVlci52MS5GaW5pc2hQaWxvdFJlc3BvbnNlIgSAtRgCEmgKEUxpc3RQaWxvdFNlc3Npb25zEiMuY2FyZWVyLnYxLkxpc3RQaWxvdFNlc3Npb25zUmVxdWVzdBokLmNhcmVlci52MS5MaXN0UGlsb3RTZXNzaW9uc1Jlc3BvbnNlIgiAtRgDoLUYARJiCg9HZXRQaWxvdFNlc3Npb24SIS5jYXJlZXIudjEuR2V0UGlsb3RTZXNzaW9uUmVxdWVzdBoiLmNhcmVlci52MS5HZXRQaWxvdFNlc3Npb25SZXNwb25zZSIIgLUYA6C1GAESVgoLRXhwb3J0UGlsb3QSHS5jYXJlZXIudjEuRXhwb3J0UGlsb3RSZXF1ZXN0Gh4uY2FyZWVyLnYxLkV4cG9ydFBpbG90UmVzcG9uc2UiCIC1GAOgtRgCEmsKEkRlbGV0ZVBpbG90U2Vzc2lvbhIkLmNhcmVlci52MS5EZWxldGVQaWxvdFNlc3Npb25SZXF1ZXN0GiUuY2FyZWVyLnYxLkRlbGV0ZVBpbG90U2Vzc2lvblJlc3BvbnNlIgiAtRgDoLUYAhJiCg9VcHNlcnRQaWxvdE5vdGUSIS5jYXJlZXIudjEuVXBzZXJ0UGlsb3ROb3RlUmVxdWVzdBoiLmNhcmVlci52MS5VcHNlcnRQaWxvdE5vdGVSZXNwb25zZSIIgLUYA6C1GAISdAoVU2V0UGlsb3RTZXNzaW9uUmV2aWV3EicuY2FyZWVyLnYxLlNldFBpbG90U2Vzc2lvblJldmlld1JlcXVlc3QaKC5jYXJlZXIudjEuU2V0UGlsb3RTZXNzaW9uUmV2aWV3UmVzcG9uc2UiCIC1GAOgtRgCQqQBCg1jb20uY2FyZWVyLnYxQgpQaWxvdFByb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * One pilot sitting.
@@ -438,6 +438,21 @@ export type PilotAnswer = Message<"career.v1.PilotAnswer"> & {
    * @generated from field: bool flagged = 3;
    */
   flagged: boolean;
+
+  /**
+   * The item's question text, filled on the admin read so a review
+   * reads as questions rather than ids. Ignored on submit.
+   *
+   * @generated from field: string prompt = 4;
+   */
+  prompt: string;
+
+  /**
+   * The section the item belongs to, filled on the admin read.
+   *
+   * @generated from field: string section = 5;
+   */
+  section: string;
 };
 
 /**
@@ -1063,6 +1078,27 @@ export type PilotSessionSummary = Message<"career.v1.PilotSessionSummary"> & {
    * @generated from field: int32 flag_count = 8;
    */
   flagCount: number;
+
+  /**
+   * The owner's curation judgement: unreviewed, reviewed or excluded.
+   *
+   * @generated from field: string review_status = 9;
+   */
+  reviewStatus: string;
+
+  /**
+   * Why, when excluded or worth a word when reviewed.
+   *
+   * @generated from field: string review_note = 10;
+   */
+  reviewNote: string;
+
+  /**
+   * When the judgement was last set.
+   *
+   * @generated from field: google.protobuf.Timestamp reviewed_at = 11;
+   */
+  reviewedAt?: Timestamp | undefined;
 };
 
 /**
@@ -1189,6 +1225,13 @@ export type GetPilotSessionResponse = Message<"career.v1.GetPilotSessionResponse
    * @generated from field: repeated career.v1.PilotSectionEvent events = 4;
    */
   events: PilotSectionEvent[];
+
+  /**
+   * The owner's notes on this session, by target.
+   *
+   * @generated from field: repeated career.v1.PilotNote notes = 5;
+   */
+  notes: PilotNote[];
 };
 
 /**
@@ -1205,7 +1248,7 @@ export const GetPilotSessionResponseSchema: GenMessage<GetPilotSessionResponse> 
  */
 export type ExportPilotRequest = Message<"career.v1.ExportPilotRequest"> & {
   /**
-   * sessions, answers or comments.
+   * sessions, answers, comments or notes.
    *
    * @generated from field: string table = 1;
    */
@@ -1290,6 +1333,183 @@ export type DeletePilotSessionResponse = Message<"career.v1.DeletePilotSessionRe
  */
 export const DeletePilotSessionResponseSchema: GenMessage<DeletePilotSessionResponse> = /*@__PURE__*/
   messageDesc(file_career_v1_pilot, 35);
+
+/**
+ * One owner's note on a pilot session or on something in it.
+ *
+ * @generated from message career.v1.PilotNote
+ */
+export type PilotNote = Message<"career.v1.PilotNote"> & {
+  /**
+   * session, item, record_row, record_general, workflow_node,
+   * workflow_missing or workflow_general.
+   *
+   * @generated from field: string target_kind = 1;
+   */
+  targetKind: string;
+
+  /**
+   * The item id, row id or node id; empty for the session and the
+   * general kinds.
+   *
+   * @generated from field: string target_id = 2;
+   */
+  targetId: string;
+
+  /**
+   * The note.
+   *
+   * @generated from field: string body = 3;
+   */
+  body: string;
+
+  /**
+   * When it was last saved.
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 4;
+   */
+  updatedAt?: Timestamp | undefined;
+
+  /**
+   * Who saved it, as a display name.
+   *
+   * @generated from field: string author = 5;
+   */
+  author: string;
+};
+
+/**
+ * Describes the message career.v1.PilotNote.
+ * Use `create(PilotNoteSchema)` to create a new message.
+ */
+export const PilotNoteSchema: GenMessage<PilotNote> = /*@__PURE__*/
+  messageDesc(file_career_v1_pilot, 36);
+
+/**
+ * A note to save or replace.
+ *
+ * @generated from message career.v1.UpsertPilotNoteRequest
+ */
+export type UpsertPilotNoteRequest = Message<"career.v1.UpsertPilotNoteRequest"> & {
+  /**
+   * Session id (UUID).
+   *
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * See PilotNote.target_kind.
+   *
+   * @generated from field: string target_kind = 2;
+   */
+  targetKind: string;
+
+  /**
+   * See PilotNote.target_id.
+   *
+   * @generated from field: string target_id = 3;
+   */
+  targetId: string;
+
+  /**
+   * The note; empty removes it.
+   *
+   * @generated from field: string body = 4;
+   */
+  body: string;
+};
+
+/**
+ * Describes the message career.v1.UpsertPilotNoteRequest.
+ * Use `create(UpsertPilotNoteRequestSchema)` to create a new message.
+ */
+export const UpsertPilotNoteRequestSchema: GenMessage<UpsertPilotNoteRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_pilot, 37);
+
+/**
+ * The stored note.
+ *
+ * @generated from message career.v1.UpsertPilotNoteResponse
+ */
+export type UpsertPilotNoteResponse = Message<"career.v1.UpsertPilotNoteResponse"> & {
+  /**
+   * When it was saved; unset when the note was removed.
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 1;
+   */
+  updatedAt?: Timestamp | undefined;
+
+  /**
+   * True when an empty body removed the note.
+   *
+   * @generated from field: bool removed = 2;
+   */
+  removed: boolean;
+};
+
+/**
+ * Describes the message career.v1.UpsertPilotNoteResponse.
+ * Use `create(UpsertPilotNoteResponseSchema)` to create a new message.
+ */
+export const UpsertPilotNoteResponseSchema: GenMessage<UpsertPilotNoteResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_pilot, 38);
+
+/**
+ * The owner's judgement on a session.
+ *
+ * @generated from message career.v1.SetPilotSessionReviewRequest
+ */
+export type SetPilotSessionReviewRequest = Message<"career.v1.SetPilotSessionReviewRequest"> & {
+  /**
+   * Session id (UUID).
+   *
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * unreviewed, reviewed or excluded.
+   *
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * The reason; required when excluding.
+   *
+   * @generated from field: string note = 3;
+   */
+  note: string;
+};
+
+/**
+ * Describes the message career.v1.SetPilotSessionReviewRequest.
+ * Use `create(SetPilotSessionReviewRequestSchema)` to create a new message.
+ */
+export const SetPilotSessionReviewRequestSchema: GenMessage<SetPilotSessionReviewRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_pilot, 39);
+
+/**
+ * The session after the judgement.
+ *
+ * @generated from message career.v1.SetPilotSessionReviewResponse
+ */
+export type SetPilotSessionReviewResponse = Message<"career.v1.SetPilotSessionReviewResponse"> & {
+  /**
+   * The summary row as it now reads.
+   *
+   * @generated from field: career.v1.PilotSessionSummary summary = 1;
+   */
+  summary?: PilotSessionSummary | undefined;
+};
+
+/**
+ * Describes the message career.v1.SetPilotSessionReviewResponse.
+ * Use `create(SetPilotSessionReviewResponseSchema)` to create a new message.
+ */
+export const SetPilotSessionReviewResponseSchema: GenMessage<SetPilotSessionReviewResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_pilot, 40);
 
 /**
  * The pilot: one sitting per participant per instrument version.
@@ -1445,6 +1665,34 @@ export const PilotService: GenService<{
     methodKind: "unary";
     input: typeof DeletePilotSessionRequestSchema;
     output: typeof DeletePilotSessionResponseSchema;
+  },
+  /**
+   * Saves or replaces the owner's note on a session, an answer, a
+   * record row or a workflow step; an empty body removes it. The notes
+   * are the call's record (11 §2 Parts A to C), kept in the database
+   * beside what they are about rather than in a file (owner,
+   * 2026-11-09: collect, govern, store and curate the data here).
+   *
+   * @generated from rpc career.v1.PilotService.UpsertPilotNote
+   */
+  upsertPilotNote: {
+    methodKind: "unary";
+    input: typeof UpsertPilotNoteRequestSchema;
+    output: typeof UpsertPilotNoteResponseSchema;
+  },
+  /**
+   * Sets the owner's curation judgement on a session: unreviewed,
+   * reviewed (fit to use), or excluded (with the reason), as the
+   * decision test's review does for its runs. Exports and figures
+   * carry the status so a reader can filter on what the owner has
+   * vouched for.
+   *
+   * @generated from rpc career.v1.PilotService.SetPilotSessionReview
+   */
+  setPilotSessionReview: {
+    methodKind: "unary";
+    input: typeof SetPilotSessionReviewRequestSchema;
+    output: typeof SetPilotSessionReviewResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_pilot, 0);

@@ -99,6 +99,24 @@ service PilotService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
+  // Saves or replaces the owner's note on a session, an answer, a
+  // record row or a workflow step; an empty body removes it. The notes
+  // are the call's record (11 §2 Parts A to C), kept in the database
+  // beside what they are about rather than in a file (owner,
+  // 2026-11-09: collect, govern, store and curate the data here).
+  rpc UpsertPilotNote(UpsertPilotNoteRequest) returns (UpsertPilotNoteResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Sets the owner's curation judgement on a session: unreviewed,
+  // reviewed (fit to use), or excluded (with the reason), as the
+  // decision test's review does for its runs. Exports and figures
+  // carry the status so a reader can filter on what the owner has
+  // vouched for.
+  rpc SetPilotSessionReview(SetPilotSessionReviewRequest) returns (SetPilotSessionReviewResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
 }
 
 // One pilot sitting.
@@ -226,6 +244,11 @@ message PilotAnswer {
   string value_json = 2 [(buf.validate.field).string.max_len = 20000];
   // "This was unclear or didn't fit me."
   bool flagged = 3;
+  // The item's question text, filled on the admin read so a review
+  // reads as questions rather than ids. Ignored on submit.
+  string prompt = 4;
+  // The section the item belongs to, filled on the admin read.
+  string section = 5;
 }
 
 // Request for one section.
@@ -414,6 +437,12 @@ message PilotSessionSummary {
   int32 comment_count = 7;
   // How many items the participant flagged.
   int32 flag_count = 8;
+  // The owner's curation judgement: unreviewed, reviewed or excluded.
+  string review_status = 9;
+  // Why, when excluded or worth a word when reviewed.
+  string review_note = 10;
+  // When the judgement was last set.
+  google.protobuf.Timestamp reviewed_at = 11;
 }
 
 // Every pilot session, newest first.
@@ -453,13 +482,15 @@ message GetPilotSessionResponse {
   repeated PilotComment comments = 3;
   // Section open and submit instants, oldest first.
   repeated PilotSectionEvent events = 4;
+  // The owner's notes on this session, by target.
+  repeated PilotNote notes = 5;
 }
 
 // Which table to export.
 message ExportPilotRequest {
-  // sessions, answers or comments.
+  // sessions, answers, comments or notes.
   string table = 1 [(buf.validate.field).string = {
-    in: ["sessions", "answers", "comments"]
+    in: ["sessions", "answers", "comments", "notes"]
   }];
 }
 
@@ -486,4 +517,66 @@ message DeletePilotSessionResponse {
   // Id of the member whose session was removed, so the page can say
   // whose it was.
   string member_id = 1;
+}
+
+// One owner's note on a pilot session or on something in it.
+message PilotNote {
+  // session, item, record_row, record_general, workflow_node,
+  // workflow_missing or workflow_general.
+  string target_kind = 1;
+  // The item id, row id or node id; empty for the session and the
+  // general kinds.
+  string target_id = 2;
+  // The note.
+  string body = 3;
+  // When it was last saved.
+  google.protobuf.Timestamp updated_at = 4;
+  // Who saved it, as a display name.
+  string author = 5;
+}
+
+// A note to save or replace.
+message UpsertPilotNoteRequest {
+  // Session id (UUID).
+  string session_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // See PilotNote.target_kind.
+  string target_kind = 2 [(buf.validate.field).string = {
+    in: ["session", "item", "record_row", "record_general", "workflow_node", "workflow_missing", "workflow_general"]
+  }];
+  // See PilotNote.target_id.
+  string target_id = 3 [(buf.validate.field).string.max_len = 32];
+  // The note; empty removes it.
+  string body = 4 [(buf.validate.field).string.max_len = 8000];
+}
+
+// The stored note.
+message UpsertPilotNoteResponse {
+  // When it was saved; unset when the note was removed.
+  google.protobuf.Timestamp updated_at = 1;
+  // True when an empty body removed the note.
+  bool removed = 2;
+}
+
+// The owner's judgement on a session.
+message SetPilotSessionReviewRequest {
+  // Session id (UUID).
+  string session_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // unreviewed, reviewed or excluded.
+  string status = 2 [(buf.validate.field).string = {
+    in: ["unreviewed", "reviewed", "excluded"]
+  }];
+  // The reason; required when excluding.
+  string note = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// The session after the judgement.
+message SetPilotSessionReviewResponse {
+  // The summary row as it now reads.
+  PilotSessionSummary summary = 1;
 }

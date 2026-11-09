@@ -3,7 +3,7 @@ import { getSessionCookie } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-const TABLES = new Set(["sessions", "answers", "comments"]);
+const TABLES = new Set(["sessions", "answers", "comments", "notes"]);
 
 // Downloads one pilot table as CSV (FSD FR-PLT-11). The RPC requires
 // the admin session and is audited, so an anonymous or non-admin
@@ -15,7 +15,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!cookie) return new Response("Not signed in", { status: 401 });
   const url = new URL(request.url);
   const table = url.searchParams.get("table") ?? "";
-  if (!TABLES.has(table)) return new Response("table must be sessions, answers or comments", { status: 400 });
+  if (!TABLES.has(table)) return new Response("table must be sessions, answers, comments or notes", { status: 400 });
   const resp = await callApi({
     path: "/api/career.v1.PilotService/ExportPilot",
     body: { table },

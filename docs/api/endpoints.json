@@ -2546,6 +2546,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.PilotService",
+      "method": "UpsertPilotNote",
+      "path": "/api/career.v1.PilotService/UpsertPilotNote",
+      "grpc_full_method": "/career.v1.PilotService/UpsertPilotNote",
+      "internal": false,
+      "request": "career.v1.UpsertPilotNoteRequest",
+      "response": "career.v1.UpsertPilotNoteResponse",
+      "summary": "Saves or replaces the owner's note on a session, an answer, a record row or a workflow step; an empty body removes it.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.PilotService",
+      "method": "SetPilotSessionReview",
+      "path": "/api/career.v1.PilotService/SetPilotSessionReview",
+      "grpc_full_method": "/career.v1.PilotService/SetPilotSessionReview",
+      "internal": false,
+      "request": "career.v1.SetPilotSessionReviewRequest",
+      "response": "career.v1.SetPilotSessionReviewResponse",
+      "summary": "Sets the owner's curation judgement on a session: unreviewed, reviewed (fit to use), or excluded (with the reason), as the decision test's review does for its runs.",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.sidecar.v1.SidecarService",
       "method": "Embed",
       "path": null,

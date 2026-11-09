@@ -28,9 +28,13 @@ export type PilotSessionSummary = {
   selfReportedMinutes?: number;
   commentCount?: number;
   flagCount?: number;
+  reviewStatus?: string;
+  reviewNote?: string;
+  reviewedAt?: string;
 };
 
-export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean };
+export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean; prompt?: string; section?: string };
+export type PilotNote = { targetKind: string; targetId?: string; body: string; author?: string; updatedAt?: string };
 export type PilotComment = { targetKind: string; targetId?: string; body: string; updatedAt?: string };
 export type PilotSectionEvent = { section: string; event: string; at?: string };
 
@@ -40,6 +44,7 @@ export type DetailResp = {
   answers?: PilotAnswer[];
   comments?: PilotComment[];
   events?: PilotSectionEvent[];
+  notes?: PilotNote[];
 };
 
 export type Fetched<T> = { ok: true; data: T } | { ok: false; status: number; message: string };
@@ -82,4 +87,16 @@ export const BRANCH_LABEL: Record<string, string> = {
 export const STATUS_TONE: Record<string, string> = {
   consented: "text-signal",
   finished: "text-success",
+};
+
+// The owner's curation judgement (FSD FR-PLT-17).
+export const REVIEW_LABEL: Record<string, string> = {
+  unreviewed: "unreviewed",
+  reviewed: "reviewed",
+  excluded: "excluded",
+};
+export const REVIEW_TONE: Record<string, string> = {
+  unreviewed: "text-ink-3",
+  reviewed: "text-success",
+  excluded: "text-danger",
 };

@@ -169,7 +169,7 @@ export default async function PilotWorkflowPage() {
         >
           I have read the workflow
         </button>
-        <p className="text-xs text-ink-3">Marks this part done. You can still come back and change your comments.</p>
+        <p className="text-xs text-ink-3">Marks this part done and takes you back to the pilot home to finish. You can still come back and change your comments.</p>
       </form>
     </div>
   );

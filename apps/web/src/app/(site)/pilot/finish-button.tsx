@@ -7,13 +7,12 @@ import { finishPilotAction, type FinishState } from "./actions";
 
 const initial: FinishState = {};
 
-// Closes the session. Offered once the survey is complete; the two
-// reading parts may be unfinished, and the button says so rather than
-// blocking, because a participant who read neither has still given us
-// the survey, which is the pilot's first purpose.
-export function FinishButton({ recordDone, workflowDone }: { recordDone: boolean; workflowDone: boolean }) {
+// Closes the session. Offered only once all three parts are done: the
+// first live run (2026-11-09) showed that a Finish offered earlier is
+// taken and the readings never happen, so the home page does not render
+// this until then and the API refuses to close a session before then.
+export function FinishButton() {
   const [state, formAction] = useActionState(finishPilotAction, initial);
-  const missing = [!recordDone ? "the match record" : null, !workflowDone ? "the workflow" : null].filter(Boolean);
   return (
     <form action={formAction} className="space-y-3">
       {state.error ? (
@@ -21,11 +20,10 @@ export function FinishButton({ recordDone, workflowDone }: { recordDone: boolean
           {state.error}
         </p>
       ) : null}
-      {missing.length ? (
-        <p className="text-sm text-ink-3">
-          You have not marked {missing.join(" or ")} as read. You can finish anyway and come back to comment later.
-        </p>
-      ) : null}
+      <p className="text-sm text-ink-3">
+        All three parts are done. Finishing closes your session; you can still come back to the record and the workflow
+        to change comments.
+      </p>
       <Submit />
     </form>
   );
