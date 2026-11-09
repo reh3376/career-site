@@ -1,6 +1,6 @@
 # Agent Handoff: Hiring_prod framework research
 
-**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08, after PR #382 merged, at the handoff point: P1 complete, P2 next.
+**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08 (late), after PRs #382 and #384 merged: P1 and P2 complete, the build sequence is `13-phase-0-build-plan.md` §2.
 
 ---
 
@@ -21,6 +21,7 @@ The design effort lives in a claude.ai Project called **Hiring_prod**. This dire
 | Code being generalised | `services/api/internal/jd/` (pipeline), `services/api/internal/prompts/` (extractor and judge prompts and JSON schemas), `services/api/internal/db/migrations/` (`decision_log` 00019, `jd_runs` 00025, `jd_outcomes`/`jd_feedback` 00026, golden set and evals 00027) | Read `docs/llm-tuning-log.md` before touching any of it |
 | Mocked match record (interview stimulus) | Published design artifact: <https://claude.ai/artifact/RumwAKPYaD2jerW5yc7Umv> | Owner-only until shared; reconstructed from documented runs, anonymised |
 | Workflow diagrams | `10-hiring-workflow-diagrams.md` (Mermaid, renders on GitHub), `diagrams/*.mmd`, `diagrams/workflow-viewer.html` (pan/zoom), and <https://claude.ai/artifact/AJWsmPtYodKEfbcbBRbieL> | |
+| Participant material (interviewer notes, survey exports, viewer-requirements backlog) | `docs/personal/framework-research/` in the private repository, never here | Decided 2026-11-08, `13` §0 decision 1; the folder's README says what goes where |
 | Branch | `claude_dev01` (the repository's designated Claude Code branch per `AGENTS.md`) | A push opens or updates a draft PR against `main` automatically (`.github/workflows/auto-pr.yml`); never open one by hand. PR #382 carried the first copy of this directory and merged 2026-11-08 |
 
 If you cannot reach the claude.ai project, work from this directory and say so in the status line of any document you change.
@@ -40,6 +41,9 @@ If you cannot reach the claude.ai project, work from this directory and say so i
 | [`08-pilot-participant-experience.md`](08-pilot-participant-experience.md) | The pilot from the participant's seat: four touchpoints, what they see, what they can and cannot change, what is captured. §4 lists what the owner needs before week 1. | When building pilot materials (P2) |
 | [`09-hiring-workflows-draft.md`](09-hiring-workflows-draft.md) | **Approved 2026-11-08.** Company (C-01–C-26) and candidate (K-01–K-16) workflows as node lists with decision points and owners; the owner's review record (§4); the table attaching every framework element to the nodes it serves (§3). | Whenever you need to know where in the process a component sits |
 | [`10-hiring-workflow-diagrams.md`](10-hiring-workflow-diagrams.md) | Mermaid source for both approved diagrams. | With `09` |
+| [`11-pilot-materials.md`](11-pilot-materials.md) | P2 deliverables: consent and landing text, interviewer note template, platform decision, stimulus check, where participant material lives. | When fielding the pilot |
+| [`12-instrument-change-log.md`](12-instrument-change-log.md) | Every change to the survey or interview guide, with its signal, from `survey v0.1`. | Before changing the instrument |
+| [`13-phase-0-build-plan.md`](13-phase-0-build-plan.md) | The delegated decisions with reasoning (§0), Phase 0 scope and exclusions (§1), the nine-step build sequence (§2). | **Before any work after P2; it is the working order** |
 | [`README.md`](README.md) | One-paragraph index of the directory. | Optional |
 
 ## 4. Decisions already made (do not re-open without the owner)
@@ -69,14 +73,14 @@ Other open design items are listed in `00-todo.md` P4 and P5 and in each documen
 
 ## 6. What to do next
 
-Work **from `00-todo.md`, in order**. As of this handoff:
+Work **from `00-todo.md`, in order**, and from the sequence in `13-phase-0-build-plan.md` §2. As of 2026-11-08 (late):
 
 - **P1** is complete: the workflows are approved and their framework-attachment table is now `01` §5.6.
-- **P2** (pilot materials) is where you start: consent/landing text, one-page interviewer note template including the `[WF]` probes, instrument change log starting at `survey v0.1`, survey platform decision, stimulus check at phone and laptop widths. Specs are in `08` §4.
+- **P2** is complete: pilot materials in `11-pilot-materials.md`, the instrument change log in `12-instrument-change-log.md`, and the private folder for participant material created.
 - **P3** is the owner's (recruiting ten names, posting).
-- **P4** schema follow-through runs in parallel with P3.
+- **P4** and the build run as steps 1 to 9 of `13` §2, in that order. The next step is the first one in `13` §2 whose exit has not been met.
 
-Do not start building the system itself from these documents. Phase 0 (`01` §5.5) begins after the pilot and the schema follow-through, and any change to this repository's reviewer goes through the FSD and an ADR.
+The owner delegated the build order and the open operational decisions on 2026-11-08; `13` §0 records each with its reasoning. The earlier rule that nothing is built before the pilot is narrowed, not dropped: the four pilot-dependent surfaces (C-14, K-04, K-09, hold-state priority) stay out of Phase 0 by name, and every change to this repository's reviewer still goes through the FSD and an ADR first.
 
 ## 7. Conventions to keep
 

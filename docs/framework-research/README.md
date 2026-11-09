@@ -27,6 +27,9 @@ change to the reviewer, it still goes through the FSD and an ADR.
 | `08-pilot-participant-experience.md` | The pilot from the participant's seat: each touchpoint, what they see, what they can change, and how it is captured. |
 | `09-hiring-workflows-draft.md` | The two hiring workflows as numbered node lists (company and candidate), decision points with owners, the owner's review record, and the table attaching each framework element to the nodes it serves. Approved 2026-11-08. |
 | `10-hiring-workflow-diagrams.md` | Mermaid source for both workflow diagrams; GitHub renders it. `diagrams/` holds the `.mmd` files and a self-contained pan-and-zoom viewer (`workflow-viewer.html`). |
+| `11-pilot-materials.md` | P2 deliverables: consent and landing text, the one-page interviewer note template with the [WF] probes, the survey platform decision, the stimulus check at laptop and narrow widths, and where participant material lives. |
+| `12-instrument-change-log.md` | One row per change to the survey or interview guide, starting at `survey v0.1`; the signal behind each change. |
+| `13-phase-0-build-plan.md` | The decisions the owner delegated on 2026-11-08, with reasoning, and the nine-step sequence from the prototype to the framework's first running version. The working order for everything after P2. |
 
 The mocked match record used as the interview stimulus is a published
 artifact rather than a file; its link is recorded in `07-…` and in the
