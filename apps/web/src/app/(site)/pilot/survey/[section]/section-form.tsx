@@ -31,10 +31,23 @@ function parseAnswers(answers: PilotAnswer[]): { values: Record<string, Value>; 
   return { values, flags };
 }
 
+// The rows a derived item (single_from, rating_per_selected) offers:
+// what the participant has selected in the source item right now, in
+// the order selected, when the source is on the same page; otherwise
+// what the API resolved from the saved answer. C1, C2 and C3 share a
+// section, so without the live read C2 and C3 would have no rows
+// until C1 had been saved, and C1 cannot be saved without them.
+function rowsFor(item: PilotItem, values: Record<string, Value>): string[] {
+  if (item.type !== "single_from" && item.type !== "rating_per_selected") return item.options ?? [];
+  const live = item.sourceItem ? values[item.sourceItem] : undefined;
+  if (Array.isArray(live)) return live as string[];
+  return item.options ?? [];
+}
+
 // Whether an item has an answer worth sending. Optional items are
 // only ever text, so an empty optional text is sent only when flagged,
 // so the flag has a row to live on.
-function answered(item: PilotItem, v: Value | undefined): boolean {
+function answered(item: PilotItem, v: Value | undefined, rows: string[]): boolean {
   if (v === undefined || v === null) return false;
   switch (item.type) {
     case "single":
@@ -49,7 +62,7 @@ function answered(item: PilotItem, v: Value | undefined): boolean {
     case "rating_per_selected": {
       if (typeof v !== "object" || Array.isArray(v)) return false;
       const m = v as Ratings;
-      return (item.options ?? []).every((opt) => (item.dimensions ?? []).every((d) => !!m[opt]?.[d.id]));
+      return rows.length > 0 && rows.every((opt) => (item.dimensions ?? []).every((d) => !!m[opt]?.[d.id]));
     }
     default:
       return false;
@@ -80,6 +93,20 @@ export function SectionForm({
       const next = { ...prev };
       if (v === undefined) delete next[id];
       else next[id] = v;
+      // A change to a source item (C1) drops any derived answer that
+      // named an option no longer selected, so the page never submits
+      // a rating for a row the participant has just removed.
+      const rows = Array.isArray(v) ? (v as string[]) : [];
+      for (const d of items) {
+        if (d.sourceItem !== id) continue;
+        const cur = next[d.id];
+        if (d.type === "single_from" && typeof cur === "string" && !rows.includes(cur)) delete next[d.id];
+        if (d.type === "rating_per_selected" && cur && typeof cur === "object" && !Array.isArray(cur)) {
+          const pruned: Ratings = {};
+          for (const [opt, r] of Object.entries(cur as Ratings)) if (rows.includes(opt)) pruned[opt] = r;
+          next[d.id] = pruned;
+        }
+      }
       return next;
     });
     setItemErrors((prev) => {
@@ -96,7 +123,7 @@ export function SectionForm({
     const out: AnswerInput[] = [];
     for (const it of items) {
       const v = values[it.id];
-      const has = answered(it, v);
+      const has = answered(it, v, rowsFor(it, values));
       if (!has) {
         if (it.required) {
           errs[it.id] = requiredMessage(it);
@@ -149,6 +176,7 @@ export function SectionForm({
         <Item
           key={it.id}
           item={it}
+          rows={rowsFor(it, values)}
           value={values[it.id]}
           flagged={!!flags[it.id]}
           error={itemErrors[it.id]}
@@ -186,6 +214,7 @@ function requiredMessage(it: PilotItem): string {
 
 function Item({
   item,
+  rows,
   value,
   flagged,
   error,
@@ -193,6 +222,7 @@ function Item({
   onFlag,
 }: {
   item: PilotItem;
+  rows: string[];
   value: Value | undefined;
   flagged: boolean;
   error?: string;
@@ -202,7 +232,6 @@ function Item({
   const labelId = `label-${item.id}`;
   return (
     <fieldset id={`item-${item.id}`} aria-labelledby={labelId} className={error ? "border-l-2 border-signal pl-4" : ""}>
-      <legend className="sr-only">{item.prompt}</legend>
       <div className="flex items-baseline gap-3">
         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{item.id}</span>
         {item.required ? null : (
@@ -215,7 +244,7 @@ function Item({
       {item.help ? <p className="mt-1 text-sm text-ink-3">{item.help}</p> : null}
 
       <div className="mt-4">
-        <Control item={item} value={value} onChange={onChange} />
+        <Control item={item} rows={rows} value={value} onChange={onChange} />
       </div>
 
       {error ? (
@@ -237,10 +266,12 @@ const optionClass =
 
 function Control({
   item,
+  rows,
   value,
   onChange,
 }: {
   item: PilotItem;
+  rows: string[];
   value: Value | undefined;
   onChange: (v: Value | undefined) => void;
 }) {
@@ -248,9 +279,9 @@ function Control({
     case "single":
     case "single_from": {
       const v = typeof value === "string" ? value : "";
-      const opts = item.options ?? [];
+      const opts = item.type === "single_from" ? rows : (item.options ?? []);
       if (item.type === "single_from" && opts.length === 0) {
-        return <p className="text-sm text-ink-3">Nothing was selected in the question this draws from.</p>;
+        return <p className="text-sm text-ink-3">Select something in {item.sourceItem || "the question above"} first; your choices appear here.</p>;
       }
       return (
         <div className="grid gap-2">
@@ -362,11 +393,10 @@ function Control({
       );
     }
     case "rating_per_selected": {
-      const rows = item.options ?? [];
       const dims = item.dimensions ?? [];
       const m: Ratings = value && typeof value === "object" && !Array.isArray(value) ? (value as Ratings) : {};
       if (rows.length === 0) {
-        return <p className="text-sm text-ink-3">Nothing was selected in the question this draws from.</p>;
+        return <p className="text-sm text-ink-3">Select something in {item.sourceItem || "the question above"} first; each choice gets a row here.</p>;
       }
       return (
         <ul className="divide-y divide-line border-y border-line">

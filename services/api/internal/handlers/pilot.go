@@ -197,6 +197,9 @@ func itemProto(it *pilot.Item, options []string) *v1.PilotItem {
 		MaxSelect: int32(it.MaxSelect),
 		Required:  it.Required,
 		PilotOnly: it.PilotOnly,
+		// Named so the page can draw C2's and C3's rows from C1's live
+		// selection; the options above are what the saved answer gives.
+		SourceItem: it.SourceItem,
 	}
 	if it.Scale != nil {
 		out.Scale = &v1.PilotScale{Min: int32(it.Scale.Min), Max: int32(it.Scale.Max), MinLabel: it.Scale.MinLabel, MaxLabel: it.Scale.MaxLabel}
@@ -308,6 +311,17 @@ func (h *Pilot) SubmitPilotSection(ctx context.Context, req *connect.Request[v1.
 		if !ok || it.IsEmptyAnswer(a.ValueJson) {
 			if it.Required {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s is required", it.ID))
+			}
+			// An optional item left blank but flagged still said
+			// something: "this was unclear". The flag needs a row to
+			// live on, so the row is saved with an empty value rather
+			// than dropped with it (FR-PLT-05).
+			if ok && a.Flagged {
+				empty := `""`
+				if it.Type != pilot.TypeText {
+					empty = "null"
+				}
+				toSave = append(toSave, users.PilotAnswer{Section: sec.ID, ItemID: it.ID, ValueJSON: empty, Flagged: true})
 			}
 			continue
 		}

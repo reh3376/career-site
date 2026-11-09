@@ -554,7 +554,12 @@ type PilotItem struct {
 	// The dimensions for a rating_per_selected item.
 	Dimensions []*PilotDimension `protobuf:"bytes,9,rep,name=dimensions,proto3" json:"dimensions,omitempty"`
 	// True for the pilot-only closing items.
-	PilotOnly     bool `protobuf:"varint,10,opt,name=pilot_only,json=pilotOnly,proto3" json:"pilot_only,omitempty"`
+	PilotOnly bool `protobuf:"varint,10,opt,name=pilot_only,json=pilotOnly,proto3" json:"pilot_only,omitempty"`
+	// For single_from and rating_per_selected, the id of the multi item
+	// whose selection supplies the rows (C1 for C2 and C3), so a page
+	// holding both can draw the rows from the live selection before
+	// anything is saved. Empty for every other type.
+	SourceItem    string `protobuf:"bytes,11,opt,name=source_item,json=sourceItem,proto3" json:"source_item,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -657,6 +662,13 @@ func (x *PilotItem) GetPilotOnly() bool {
 		return x.PilotOnly
 	}
 	return false
+}
+
+func (x *PilotItem) GetSourceItem() string {
+	if x != nil {
+		return x.SourceItem
+	}
+	return ""
 }
 
 // One answer, with the per-item flag.
@@ -2267,7 +2279,7 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x0ePilotDimension\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x18\n" +
-	"\aoptions\x18\x03 \x03(\tR\aoptions\"\xb7\x02\n" +
+	"\aoptions\x18\x03 \x03(\tR\aoptions\"\xd8\x02\n" +
 	"\tPilotItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x16\n" +
@@ -2283,7 +2295,9 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"dimensions\x12\x1d\n" +
 	"\n" +
 	"pilot_only\x18\n" +
-	" \x01(\bR\tpilotOnly\"u\n" +
+	" \x01(\bR\tpilotOnly\x12\x1f\n" +
+	"\vsource_item\x18\v \x01(\tR\n" +
+	"sourceItem\"u\n" +
 	"\vPilotAnswer\x12\"\n" +
 	"\aitem_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\bR\x06itemId\x12(\n" +
 	"\n" +

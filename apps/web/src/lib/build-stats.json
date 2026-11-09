@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 520,
+    "byAssistant": 521,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 971,
+    "commits": 972,
     "days": 52,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-08",
     "merges": 382,
-    "nonMerge": 589,
+    "nonMerge": 590,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,17 +25,17 @@
   },
   "lines": {
     "code": {
-      "files": 504,
+      "files": 505,
       "languages": [
         {
           "files": 144,
           "language": "Go",
-          "lines": 36118
+          "lines": 36143
         },
         {
-          "files": 142,
+          "files": 143,
           "language": "TSX",
-          "lines": 28306
+          "lines": 28381
         },
         {
           "files": 68,
@@ -45,12 +45,12 @@
         {
           "files": 29,
           "language": "Python",
-          "lines": 6193
+          "lines": 6197
         },
         {
           "files": 70,
           "language": "TypeScript",
-          "lines": 6081
+          "lines": 6084
         },
         {
           "files": 20,
@@ -65,10 +65,10 @@
         {
           "files": 1,
           "language": "CSS",
-          "lines": 259
+          "lines": 268
         }
       ],
-      "lines": 87972
+      "lines": 88088
     },
     "config": {
       "files": 33,
@@ -92,10 +92,10 @@
         {
           "files": 18,
           "language": "Protobuf",
-          "lines": 8382
+          "lines": 8387
         }
       ],
-      "lines": 8382
+      "lines": 8387
     },
     "documentation": {
       "files": 146,
@@ -103,10 +103,10 @@
         {
           "files": 146,
           "language": "Markdown",
-          "lines": 37280
+          "lines": 37281
         }
       ],
-      "lines": 37280
+      "lines": 37281
     },
     "generated": {
       "files": 74,
@@ -114,12 +114,12 @@
         {
           "files": 34,
           "language": "Go",
-          "lines": 48346
+          "lines": 48360
         },
         {
           "files": 18,
           "language": "TypeScript",
-          "lines": 27277
+          "lines": 27287
         },
         {
           "files": 1,
@@ -137,7 +137,7 @@
           "lines": 183
         }
       ],
-      "lines": 85108
+      "lines": 85132
     },
     "tests": {
       "files": 99,

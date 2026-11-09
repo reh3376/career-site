@@ -193,6 +193,11 @@ message PilotItem {
   repeated PilotDimension dimensions = 9;
   // True for the pilot-only closing items.
   bool pilot_only = 10;
+  // For single_from and rating_per_selected, the id of the multi item
+  // whose selection supplies the rows (C1 for C2 and C3), so a page
+  // holding both can draw the rows from the live selection before
+  // anything is saved. Empty for every other type.
+  string source_item = 11;
 }
 
 // One answer, with the per-item flag.

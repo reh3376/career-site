@@ -10610,6 +10610,7 @@ One survey item as the participant sees it.
 | `scale` | [`PilotScale`](#pilotscale) | object |  | The scale for a scale item. |
 | `dimensions` | [`PilotDimension`](#pilotdimension)[] | array of object |  | The dimensions for a rating_per_selected item. |
 | `pilotOnly` | `bool` | boolean |  | True for the pilot-only closing items. |
+| `sourceItem` | `string` | string |  | For single_from and rating_per_selected, the id of the multi item whose selection supplies the rows (C1 for C2 and C3), so a page holding both can draw the rows from the live selection before anything is saved. Empty for every other type. |
 
 ### PilotAnswer
 

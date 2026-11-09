@@ -186,9 +186,20 @@ func (r *Repo) ListPilotAnswers(ctx context.Context, sessionID string) ([]PilotA
 
 // RecordPilotSectionEvent writes an open or submit instant.
 func (r *Repo) RecordPilotSectionEvent(ctx context.Context, sessionID, section, event string) error {
+	// One row per real instant. A section page renders more than once
+	// per visit (a prefetch, a re-render after the submit that leaves
+	// it), and each render asks for the section, so a bare insert wrote
+	// two or three "opened" rows a few hundred milliseconds apart. The
+	// window is short enough that a participant who genuinely reopens
+	// a section is still recorded.
 	_, err := r.pool.Exec(ctx, `
     INSERT INTO pilot_section_events (tenant_id, session_id, section, event)
-    VALUES ($1, $2::uuid, $3, $4)`, tenant.FromContext(ctx).Int64(), sessionID, section, event)
+    SELECT $1, $2::uuid, $3, $4
+     WHERE NOT EXISTS (
+       SELECT 1 FROM pilot_section_events
+        WHERE session_id = $2::uuid AND section = $3 AND event = $4
+          AND at > now() - interval '10 seconds')`,
+		tenant.FromContext(ctx).Int64(), sessionID, section, event)
 	if err != nil {
 		return fmt.Errorf("record pilot section event: %w", err)
 	}

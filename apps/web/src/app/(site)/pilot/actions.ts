@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
@@ -11,6 +10,11 @@ import type { PilotComment, PilotSession } from "./lib";
 // Server actions behind the pilot pages (FSD §5.16). Every write
 // reports what the API said; a refused section submission names the
 // item, and the form shows it beside the question.
+//
+// No revalidatePath here: every pilot page is force-dynamic, so the
+// next render reads fresh anyway, and revalidating the current section
+// after a submit re-rendered it, which the API recorded as the section
+// being opened again.
 
 type Result<T> = { ok: true; data: T } | { ok: false; message: string };
 
@@ -47,7 +51,6 @@ export async function startPilotAction(_prev: ConsentState, formData: FormData):
   const recordingOk = formData.get("recording_ok") === "on";
   const res = await post<{ session?: PilotSession }>("StartPilot", { consent: true, recordingOk });
   if (!res.ok) return { error: res.message };
-  revalidatePath("/pilot", "layout");
   const next = res.data.session?.nextSection;
   redirect(next ? `/pilot/survey/${next}` : "/pilot");
 }
@@ -63,7 +66,6 @@ export async function submitSectionAction(sectionId: string, answers: AnswerInpu
     answers,
   });
   if (!res.ok) return { error: res.message };
-  revalidatePath("/pilot", "layout");
   const next = res.data.session?.nextSection;
   if (res.data.ended || !next) return { next: "/pilot" };
   return { next: `/pilot/survey/${next}` };
@@ -86,7 +88,6 @@ export async function upsertCommentAction(
 // Marks the record or the workflow part done and returns to the home.
 export async function markPartAction(part: "record" | "workflow"): Promise<void> {
   await post("MarkPilotPart", { part });
-  revalidatePath("/pilot", "layout");
   redirect("/pilot");
 }
 
@@ -96,6 +97,5 @@ export type FinishState = { error?: string };
 export async function finishPilotAction(): Promise<FinishState> {
   const res = await post("FinishPilot", {});
   if (!res.ok) return { error: res.message };
-  revalidatePath("/pilot", "layout");
   redirect("/pilot/done");
 }

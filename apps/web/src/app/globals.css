@@ -257,3 +257,12 @@ html[data-mode="ot"] .pilot {
   max-width: none;
   height: auto;
 }
+.pilot-chart[data-zoom="fit"] svg {
+  width: 100%;
+}
+.pilot-chart[data-zoom="half"] svg {
+  width: 1407px;
+}
+.pilot-chart[data-zoom="full"] svg {
+  width: 2814px;
+}

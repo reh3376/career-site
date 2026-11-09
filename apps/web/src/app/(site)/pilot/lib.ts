@@ -43,6 +43,9 @@ export type PilotItem = {
   scale?: PilotScale;
   dimensions?: PilotDimension[];
   pilotOnly?: boolean;
+  // For single_from and rating_per_selected, the multi item whose
+  // selection supplies the rows; the form reads it live.
+  sourceItem?: string;
 };
 export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean };
 export type PilotSectionView = {

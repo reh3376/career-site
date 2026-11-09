@@ -9,6 +9,7 @@ import { CommentBox } from "../comment-box";
 import { requireSignedIn, unwrap } from "../gate";
 import { getPilotWorkflow, type PilotComment } from "../lib";
 
+import { ChartFrame } from "./chart-frame";
 import { MissingSteps } from "./missing-steps";
 
 export const metadata: Metadata = { title: "Pilot · How a company hires" };
@@ -85,18 +86,12 @@ export default async function PilotWorkflowPage() {
           </a>
         </div>
         {svg ? (
-          <div
-            className="pilot-chart mt-3 max-h-[75vh] overflow-auto border border-line bg-white p-4"
-            // The SVG is this repository's own committed file, read
-            // from disk at request time, never from a request.
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
+          <ChartFrame svg={svg} />
         ) : (
           <p className="mt-3 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
             The chart file is missing from this build. The node list below is the same content.
           </p>
         )}
-        <p className="mt-2 text-xs text-ink-3">Scroll inside the frame to follow the chart; it reads top to bottom, phase by phase.</p>
       </section>
 
       <section className="mt-14">

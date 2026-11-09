@@ -92,7 +92,7 @@ class PilotDimension(_message.Message):
     def __init__(self, id: _Optional[str] = ..., label: _Optional[str] = ..., options: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class PilotItem(_message.Message):
-    __slots__ = ("id", "type", "prompt", "help", "options", "max_select", "required", "scale", "dimensions", "pilot_only")
+    __slots__ = ("id", "type", "prompt", "help", "options", "max_select", "required", "scale", "dimensions", "pilot_only", "source_item")
     ID_FIELD_NUMBER: _ClassVar[int]
     TYPE_FIELD_NUMBER: _ClassVar[int]
     PROMPT_FIELD_NUMBER: _ClassVar[int]
@@ -103,6 +103,7 @@ class PilotItem(_message.Message):
     SCALE_FIELD_NUMBER: _ClassVar[int]
     DIMENSIONS_FIELD_NUMBER: _ClassVar[int]
     PILOT_ONLY_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_ITEM_FIELD_NUMBER: _ClassVar[int]
     id: str
     type: str
     prompt: str
@@ -113,7 +114,8 @@ class PilotItem(_message.Message):
     scale: PilotScale
     dimensions: _containers.RepeatedCompositeFieldContainer[PilotDimension]
     pilot_only: bool
-    def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., prompt: _Optional[str] = ..., help: _Optional[str] = ..., options: _Optional[_Iterable[str]] = ..., max_select: _Optional[int] = ..., required: _Optional[bool] = ..., scale: _Optional[_Union[PilotScale, _Mapping]] = ..., dimensions: _Optional[_Iterable[_Union[PilotDimension, _Mapping]]] = ..., pilot_only: _Optional[bool] = ...) -> None: ...
+    source_item: str
+    def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., prompt: _Optional[str] = ..., help: _Optional[str] = ..., options: _Optional[_Iterable[str]] = ..., max_select: _Optional[int] = ..., required: _Optional[bool] = ..., scale: _Optional[_Union[PilotScale, _Mapping]] = ..., dimensions: _Optional[_Iterable[_Union[PilotDimension, _Mapping]]] = ..., pilot_only: _Optional[bool] = ..., source_item: _Optional[str] = ...) -> None: ...
 
 class PilotAnswer(_message.Message):
     __slots__ = ("item_id", "value_json", "flagged")
