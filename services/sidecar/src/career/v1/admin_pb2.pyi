@@ -2809,3 +2809,17 @@ class RevokeAgentSessionsResponse(_message.Message):
     REVOKED_FIELD_NUMBER: _ClassVar[int]
     revoked: int
     def __init__(self, revoked: _Optional[int] = ...) -> None: ...
+
+class DeleteMemberRequest(_message.Message):
+    __slots__ = ("member_id", "reason")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    reason: str
+    def __init__(self, member_id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class DeleteMemberResponse(_message.Message):
+    __slots__ = ("email",)
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    email: str
+    def __init__(self, email: _Optional[str] = ...) -> None: ...

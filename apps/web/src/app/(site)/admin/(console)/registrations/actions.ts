@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
@@ -65,6 +66,24 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
     cookie,
   }).catch(() => undefined);
   revalidatePath("/admin/registrations", "layout");
+}
+
+// Deletes an account outright (FSD FR-ADM-25): test accounts, and a
+// person who asks to be removed. The button confirms first; on success
+// the admin lands on the registrations list, which no longer has the
+// row. The API refuses admins and the caller's own account.
+export async function deleteMemberAction(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("member_id") ?? "");
+  if (!memberId) return;
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  const resp = await callApi({
+    path: "/api/career.v1.AdminService/DeleteMember",
+    body: { memberId, reason: reasonFrom(formData) },
+    cookie,
+  }).catch(() => undefined);
+  revalidatePath("/admin/registrations", "layout");
+  if (resp && resp.ok) redirect("/admin/registrations");
 }
 
 // Open or close the pilot area to a member (FSD FR-PLT-01/02). The

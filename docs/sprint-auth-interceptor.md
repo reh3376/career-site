@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 161 of them, and none missing:
+**Every method declares a level.** 162 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 92 |
+| `AUTH_LEVEL_ADMIN` | 93 |
 | `AUTH_LEVEL_MEMBER` | 52 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 161 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 162 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1172,6 +1172,9 @@ command.
 5. 2026-11-09: 92/52/17 (161). `PilotService.UpsertPilotNote` and
    `SetPilotSessionReview`, ADMIN and audited (FSD FR-PLT-16, 17): the
    owner's notes and curation judgement, in the database.
+6. 2026-11-09: 93/52/17 (162). `AdminService.DeleteMember`, ADMIN and
+   audited (FSD FR-ADM-25): an account deleted outright, for the test
+   accounts the live review creates.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

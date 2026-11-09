@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 84 |
+| [`AdminService`](#adminservice) | Owner console. | 85 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
@@ -2124,6 +2124,7 @@ Owner console.
 | [`AddMemberNote`](#adminservice-addmembernote) | `/api/career.v1.AdminService/AddMemberNote` | Admin | default | `AddMemberNoteRequest` → `AddMemberNoteResponse` | Adds a private admin note to a member. |
 | [`SetMemberStatus`](#adminservice-setmemberstatus) | `/api/career.v1.AdminService/SetMemberStatus` | Admin | default | `SetMemberStatusRequest` → `SetMemberStatusResponse` | Approves or rejects a registration waiting in PENDING_APPROVAL (approval mode only), or disables/re-enables an account. |
 | [`SetMemberPilotApproved`](#adminservice-setmemberpilotapproved) | `/api/career.v1.AdminService/SetMemberPilotApproved` | Admin | default | `SetMemberPilotApprovedRequest` → `SetMemberPilotApprovedResponse` | Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). |
+| [`DeleteMember`](#adminservice-deletemember) | `/api/career.v1.AdminService/DeleteMember` | Admin | default | `DeleteMemberRequest` → `DeleteMemberResponse` | Deletes an account outright (FSD FR-ADM-25): the user row and, through the cascades, its sessions, tokens and pilot sitting; rows that record history (decisions, audit, runs) keep a null where the member was. |
 | [`CreateAgentPassword`](#adminservice-createagentpassword) | `/api/career.v1.AdminService/CreateAgentPassword` | Admin | default | `CreateAgentPasswordRequest` → `CreateAgentPasswordResponse` | Creates a one-time password for the agent account (FR-AUTH-20, FR-ADM-24). |
 | [`ListAgentPasswords`](#adminservice-listagentpasswords) | `/api/career.v1.AdminService/ListAgentPasswords` | Admin | default | `ListAgentPasswordsRequest` → `ListAgentPasswordsResponse` | Lists recent agent passwords by state (hashes never leave the server) with the agent account's live session count. |
 | [`RevokeAgentPassword`](#adminservice-revokeagentpassword) | `/api/career.v1.AdminService/RevokeAgentPassword` | Admin | default | `RevokeAgentPasswordRequest` → `RevokeAgentPasswordResponse` | Revokes a live agent password before it is used or expires. |
@@ -2398,6 +2399,41 @@ flag opens the pilot area to that member; admins see it regardless.
 {
   "memberId": "string",
   "approved": true,
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.DeleteMember
+
+`POST /api/career.v1.AdminService/DeleteMember` · **Auth:** Admin · **Rate limit:** default/min
+
+Deletes an account outright (FSD FR-ADM-25): the user row and,
+through the cascades, its sessions, tokens and pilot sitting; rows
+that record history (decisions, audit, runs) keep a null where the
+member was. For test accounts and for a person who asks to be
+removed. An admin account, which includes the agent account, cannot
+be deleted here, and nobody deletes themselves.
+
+**Request** — [`DeleteMemberRequest`](#deletememberrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+**Response** — [`DeleteMemberResponse`](#deletememberresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `email` | `string` | string |  | The address the account had, so the page can say whose it was. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
   "reason": "string"
 }
 ```
@@ -9518,6 +9554,23 @@ How many sessions were ended.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `revoked` | `int32` | number |  | Sessions revoked by this call. |
+
+### DeleteMemberRequest
+
+Which account to delete.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+### DeleteMemberResponse
+
+What was deleted.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `email` | `string` | string |  | The address the account had, so the page can say whose it was. |
 
 ### RegisterRequest
 

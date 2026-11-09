@@ -15,6 +15,7 @@ import {
 } from "../actions";
 
 import { ActionButton, ReasonScope } from "./action-button";
+import { DeleteMemberButton } from "./delete-member-button";
 
 export const metadata: Metadata = { title: "Admin · Member detail" };
 export const dynamic = "force-dynamic";
@@ -411,6 +412,14 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
                 />
               </div>
             </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                delete
+              </p>
+              <div className="mt-2">
+                <DeleteMemberButton memberId={memberId} email={me.email} />
+              </div>
+            </div>
           </div>
         </ReasonScope>
       );
@@ -425,6 +434,7 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
               tone="accent"
               label="Re-enable"
             />
+            <DeleteMemberButton memberId={memberId} email={me.email} />
           </div>
         </ReasonScope>
       );

@@ -1525,3 +1525,48 @@ func accessGrantRepoToProto(g *users.AccessGrant) *v1.AccessGrant {
 	}
 	return out
 }
+
+// DeleteMember removes an account outright (FSD FR-ADM-25). Built for
+// the owner's test accounts during the pilot's live review and for a
+// person who asks to be removed. An admin account, which the agent
+// account is, cannot be deleted here, and nobody deletes themselves;
+// the repository refuses an admin row again on its own.
+func (a *Admin) DeleteMember(
+	ctx context.Context,
+	req *connect.Request[v1.DeleteMemberRequest],
+) (*connect.Response[v1.DeleteMemberResponse], error) {
+	caller, err := RequireCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := strconv.ParseInt(req.Msg.MemberId, 10, 64)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid member_id"))
+	}
+	u, err := a.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+	}
+	if u.ID == caller.ID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you cannot delete your own account here"))
+	}
+	if u.Role == users.RoleAdmin {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("an admin account cannot be deleted here"))
+	}
+	// Sessions go with the row by cascade; revoking first means a
+	// request already in flight on one of them fails closed.
+	if _, err := a.users.RevokeSessions(ctx, u.ID); err != nil {
+		a.log.Warn("revoke sessions before delete failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+	}
+	email, err := a.users.DeleteUser(ctx, u.ID)
+	if err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("member not found"))
+		}
+		a.log.Error("DeleteUser failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("delete failed"))
+	}
+	a.log.Info("member deleted", slog.Int64("user_id", u.ID), slog.Int64("by", caller.ID))
+	a.events.Emit(ctx, requestEvent(req, "member.deleted", caller.ID, map[string]any{"user_id": u.ID}))
+	return connect.NewResponse(&v1.DeleteMemberResponse{Email: email}), nil
+}
