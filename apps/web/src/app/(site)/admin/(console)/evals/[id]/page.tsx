@@ -9,64 +9,45 @@ export const metadata: Metadata = { title: "Admin · Evaluation" };
 export const dynamic = "force-dynamic";
 
 type Item = {
-  golden_id?: string | number;
   goldenId?: string | number;
-  golden_name?: string;
   goldenName?: string;
-  expected_gate?: string;
   expectedGate?: string;
-  submission_id?: string | number;
   submissionId?: string | number;
-  match_score?: number;
   matchScore?: number;
   fit?: string;
-  gate_side?: string;
   gateSide?: string;
   passed?: boolean;
   error?: string;
 };
 
 type CorpusDoc = {
-  document_id?: string | number;
   documentId?: string | number;
   title?: string;
-  source_kind?: string;
   sourceKind?: string;
   visibility?: string;
-  chunk_count?: number;
   chunkCount?: number;
-  content_hash?: string;
   contentHash?: string;
 };
 
 type Run = {
   id?: string | number;
-  corpus_documents?: CorpusDoc[];
   corpusDocuments?: CorpusDoc[];
   status?: string;
   note?: string;
   model?: string;
-  num_ctx?: number;
   numCtx?: number;
   host?: string;
-  embedder_model?: string;
   embedderModel?: string;
-  app_commit?: string;
   appCommit?: string;
-  prompts_json?: string;
   promptsJson?: string;
-  corpus_fingerprint?: string;
   corpusFingerprint?: string;
   threshold?: number;
   total?: number;
   scored?: number;
-  gate_correct?: number;
   gateCorrect?: number;
-  order_violations?: number;
   orderViolations?: number;
   margin?: number;
   errors?: number;
-  started_at?: string;
   startedAt?: string;
   items?: Item[];
 };
@@ -94,17 +75,17 @@ export default async function EvalDetailPage({
   if (!run) notFound();
 
   const items = run.items ?? [];
-  const corpusDocs = run.corpus_documents ?? run.corpusDocuments ?? [];
+  const corpusDocs = run.corpusDocuments ?? [];
   const totalChunks = corpusDocs.reduce(
-    (n, d) => n + (d.chunk_count ?? d.chunkCount ?? 0),
+    (n, d) => n + (d.chunkCount ?? 0),
     0,
   );
-  const correct = run.gate_correct ?? run.gateCorrect ?? 0;
-  const violations = run.order_violations ?? run.orderViolations ?? 0;
+  const correct = run.gateCorrect ?? 0;
+  const violations = run.orderViolations ?? 0;
   let prompts: [string, string][] = [];
   try {
     prompts = Object.entries(
-      JSON.parse(run.prompts_json ?? run.promptsJson ?? "{}") as Record<
+      JSON.parse(run.promptsJson ?? "{}") as Record<
         string,
         string
       >,
@@ -156,16 +137,16 @@ export default async function EvalDetailPage({
 
       <p className="mt-4 font-mono text-[11px] leading-relaxed text-ink-3">
         {run.model || "-"}
-        {(run.num_ctx ?? run.numCtx)
-          ? ` · ${run.num_ctx ?? run.numCtx} ctx`
+        {(run.numCtx)
+          ? ` · ${run.numCtx} ctx`
           : ""}
         {run.host ? ` · ${run.host}` : ""}
         {" · corpus "}
-        {run.corpus_fingerprint ?? run.corpusFingerprint ?? "-"}
+        {run.corpusFingerprint ?? "-"}
         {" · embed "}
-        {run.embedder_model ?? run.embedderModel ?? "-"}
+        {run.embedderModel ?? "-"}
         {" · build "}
-        {run.app_commit ?? run.appCommit ?? "-"}
+        {run.appCommit ?? "-"}
         {prompts.length
           ? ` · ${prompts.map(([k, v]) => `${k} ${v}`).join("  ·  ")}`
           : ""}
@@ -177,17 +158,17 @@ export default async function EvalDetailPage({
         </p>
         <ul className="mt-4 divide-y divide-line border-y border-line">
           {items.map((it) => {
-            const expected = it.expected_gate ?? it.expectedGate ?? "";
-            const actual = it.gate_side ?? it.gateSide ?? "";
-            const sub = it.submission_id ?? it.submissionId;
+            const expected = it.expectedGate ?? "";
+            const actual = it.gateSide ?? "";
+            const sub = it.submissionId;
             return (
               <li
-                key={String(it.golden_id ?? it.goldenId)}
+                key={String(it.goldenId)}
                 className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
               >
                 <div className="min-w-0">
                   <p className="text-sm text-ink">
-                    {it.golden_name ?? it.goldenName}
+                    {it.goldenName}
                     <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
                       expect {expected}
                       {actual && actual !== expected ? ` · got ${actual}` : ""}
@@ -213,7 +194,7 @@ export default async function EvalDetailPage({
                 </div>
                 <div className="flex items-center gap-4 font-mono text-sm">
                   <span className="text-ink">
-                    {num(it.match_score ?? it.matchScore)}
+                    {num(it.matchScore)}
                     {it.fit ? (
                       <span className="text-ink-3"> · {it.fit}</span>
                     ) : null}
@@ -258,11 +239,11 @@ export default async function EvalDetailPage({
             </p>
             <ul className="mt-4 divide-y divide-line border-y border-line">
               {corpusDocs.map((d) => {
-                const id = d.document_id ?? d.documentId;
-                const kind = d.source_kind ?? d.sourceKind ?? "";
-                const chunks = d.chunk_count ?? d.chunkCount ?? 0;
+                const id = d.documentId;
+                const kind = d.sourceKind ?? "";
+                const chunks = d.chunkCount ?? 0;
                 const vis = d.visibility ?? "";
-                const hash = d.content_hash ?? d.contentHash ?? "";
+                const hash = d.contentHash ?? "";
                 return (
                   <li
                     key={String(id)}

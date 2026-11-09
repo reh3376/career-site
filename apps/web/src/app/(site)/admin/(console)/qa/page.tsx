@@ -16,10 +16,8 @@ type Entry = {
   answer?: string;
   sources?: Source[];
   tags?: string[];
-  covers_restricted?: boolean;
   coversRestricted?: boolean;
   enabled?: boolean;
-  updated_at?: string;
   updatedAt?: string;
   phrasings?: {
     id: string;
@@ -31,7 +29,6 @@ type Entry = {
 
 type ListResp = {
   entries?: Entry[];
-  awaiting_embedding?: number | string;
   awaitingEmbedding?: number | string;
 };
 
@@ -54,13 +51,13 @@ export default async function QaBankPage() {
     } else {
       const data = (await resp.json()) as ListResp;
       entries = data.entries ?? [];
-      awaiting = Number(data.awaiting_embedding ?? data.awaitingEmbedding ?? 0);
+      awaiting = Number(data.awaitingEmbedding ?? 0);
     }
   }
 
   const live = entries.filter((e) => e.enabled).length;
   const restricted = entries.filter(
-    (e) => e.covers_restricted ?? e.coversRestricted,
+    (e) => e.coversRestricted,
   );
 
   return (
@@ -123,7 +120,7 @@ export default async function QaBankPage() {
 
       <ul className="mt-8 space-y-5">
         {entries.map((e) => {
-          const isRestricted = e.covers_restricted ?? e.coversRestricted;
+          const isRestricted = e.coversRestricted;
           const phrasings: Phrasing[] = (e.phrasings ?? []).map((p) => ({
             id: p.id,
             text: p.text ?? "",

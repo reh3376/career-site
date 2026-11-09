@@ -216,7 +216,7 @@ Owner's rule, 2026-11-09: no UI or UX element is complete until the owner has re
 
 | # | As | Do | Expect | Mark |
 |---|---|---|---|---|
-| 1 | admin | Sign in; open `/admin/access`; add the plus-address with the pilot checkbox ticked, 30 days | The row shows the pilot flag | |
+| 1 | admin | Sign in; open `/admin/access`; add the plus-address with the pilot checkbox ticked, 30 days | The row shows the pilot flag | **Changed, 2026-11-09.** The flag showed; the row read "TTL ·" with no value, no added date, "never lapses" whatever was set, and the counters read zero with two entries listed. The page declared the API's fields in snake_case against a camelCase codec, so every read was undefined; the activity page had the same defect, and five more admin pages carried snake_case duplicates beside working camelCase fallbacks. All seven fixed in the next PR. The owner's point stands: no automated check saw it. Re-check after the deploy. |
 | 2 | nobody | In a private window, register with the plus-address and a twelve-character password; open the verification email | The account is active the moment the email is confirmed, no manual approval; `/home` shows the pilot card | |
 | 3 | participant | Open the menu | "Pilot" appears before "Ask Roger" | |
 | 4 | participant | Open `/pilot` | The consent screen: who runs it, what for, what is asked (about ten minutes on the survey, then the two readings, then a call of about thirty minutes), what is kept, what you get; the consent box is required, the recording box optional | |

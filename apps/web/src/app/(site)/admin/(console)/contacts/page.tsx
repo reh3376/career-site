@@ -16,39 +16,28 @@ export const dynamic = "force-dynamic";
 // cookie via callApi.
 type SupportMessage = {
   id: string;
-  ticket_id?: string;
   ticketId?: string;
   category: string;
   status: string;
   subject: string;
   body: string;
-  sender_name?: string;
   senderName?: string;
-  sender_email?: string;
   senderEmail?: string;
-  user_id?: string;
   userId?: string;
-  created_at?: string;
   createdAt?: string;
-  updated_at?: string;
   updatedAt?: string;
-  resolved_at?: string;
   resolvedAt?: string;
-  hiring_role?: string;
   hiringRole?: string;
-  hiring_jd_url?: string;
   hiringJdUrl?: string;
-  hiring_target_start?: string;
-  dt_session_public_id?: string;
-  dtSessionPublicId?: string;
   hiringTargetStart?: string;
+  dtSessionPublicId?: string;
 };
 
 type ListResp = {
   messages?: SupportMessage[];
-  page?: { total_count?: number };
-  open_count?: number;
-  resolved_count?: number;
+  page?: { totalCount?: number };
+  openCount?: number;
+  resolvedCount?: number;
 };
 
 type FetchResult =
@@ -143,8 +132,8 @@ export default async function AdminContactsPage({
     );
   }
 
-  const { messages = [], open_count = 0, resolved_count = 0 } = result.data;
-  const total = open_count + resolved_count;
+  const { messages = [], openCount = 0, resolvedCount = 0 } = result.data;
+  const total = openCount + resolvedCount;
 
   return (
     <>
@@ -161,11 +150,11 @@ export default async function AdminContactsPage({
       <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-3">
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">open</dt>
-          <dd className="m-0 tabular text-ink text-2xl">{open_count}</dd>
+          <dd className="m-0 tabular text-ink text-2xl">{openCount}</dd>
         </div>
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">resolved</dt>
-          <dd className="m-0 tabular text-ink text-2xl">{resolved_count}</dd>
+          <dd className="m-0 tabular text-ink text-2xl">{resolvedCount}</dd>
         </div>
         <div className="flex items-baseline gap-3">
           <dt className="text-ink-3">total</dt>
@@ -240,21 +229,21 @@ function FilterTab({
 }
 
 function MessageRow({ m }: { m: SupportMessage }) {
-  const createdIso = m.created_at ?? m.createdAt;
+  const createdIso = m.createdAt;
   const created = createdIso ? new Date(createdIso) : null;
   const when = created ? formatWhen(created) : "-";
   const resolved = m.status === "SUPPORT_STATUS_RESOLVED";
-  const ticket = m.ticket_id ?? m.ticketId ?? "";
-  const senderName = m.sender_name ?? m.senderName ?? "";
-  const senderEmail = m.sender_email ?? m.senderEmail ?? "";
-  const hiringRole = m.hiring_role ?? m.hiringRole ?? "";
-  const hiringUrl = m.hiring_jd_url ?? m.hiringJdUrl ?? "";
-  const hiringStart = m.hiring_target_start ?? m.hiringTargetStart ?? "";
+  const ticket = m.ticketId ?? "";
+  const senderName = m.senderName ?? "";
+  const senderEmail = m.senderEmail ?? "";
+  const hiringRole = m.hiringRole ?? "";
+  const hiringUrl = m.hiringJdUrl ?? "";
+  const hiringStart = m.hiringTargetStart ?? "";
   const isHiring = m.category === "SUPPORT_CATEGORY_HIRING_INQUIRY";
   // Written from the decision test's thanks page. The run id is only
   // ever set when the server confirmed it named a run that finished,
   // so its presence is evidence, not a claim by the sender.
-  const dtRun = m.dt_session_public_id ?? m.dtSessionPublicId ?? "";
+  const dtRun = m.dtSessionPublicId ?? "";
   const isFeedback = m.category === "SUPPORT_CATEGORY_DECISION_TEST_FEEDBACK";
   return (
     <li className="py-5">
