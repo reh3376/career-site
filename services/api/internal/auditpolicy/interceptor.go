@@ -185,6 +185,7 @@ var targetFields = []struct {
 	{"phrasing_id", "qa_phrasing"},
 	{"notification_id", "notification"},
 	{"document_id", "corpus_document"},
+	{"session_id", "pilot_session"},
 	{"id", "id"},
 }
 
