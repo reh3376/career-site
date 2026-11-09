@@ -67,7 +67,10 @@ export async function submitSectionAction(sectionId: string, answers: AnswerInpu
   });
   if (!res.ok) return { error: res.message };
   const next = res.data.session?.nextSection;
-  if (res.data.ended || !next) return { next: "/pilot" };
+  // The survey done (or ended at A1) leads straight into the first
+  // reading. The first live run (2026-11-09) showed that a home page
+  // offering Finish here is taken, and the readings never happen.
+  if (res.data.ended || !next) return { next: "/pilot/record" };
   return { next: `/pilot/survey/${next}` };
 }
 
@@ -88,7 +91,9 @@ export async function upsertCommentAction(
 // Marks the record or the workflow part done and returns to the home.
 export async function markPartAction(part: "record" | "workflow"): Promise<void> {
   await post("MarkPilotPart", { part });
-  redirect("/pilot");
+  // The record leads into the workflow; the workflow leads back to the
+  // home, where Finish now appears once all three parts are done.
+  redirect(part === "record" ? "/pilot/workflow" : "/pilot");
 }
 
 export type FinishState = { error?: string };

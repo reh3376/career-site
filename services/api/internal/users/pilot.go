@@ -35,6 +35,21 @@ type PilotSession struct {
 	SelfReportedMinutes *int32
 	MostWantedToSkip    string
 	CreatedAt           time.Time
+	// The owner's curation judgement (FR-PLT-17): unreviewed, reviewed
+	// or excluded, with the reason and when it was set.
+	ReviewStatus string
+	ReviewNote   string
+	ReviewedAt   *time.Time
+}
+
+// PilotNote is one of the owner's notes on a session or on something
+// in it (FR-PLT-16): the call's record, kept with the data.
+type PilotNote struct {
+	TargetKind string
+	TargetID   string
+	Body       string
+	Author     string
+	UpdatedAt  time.Time
 }
 
 // PilotAnswer is one answered item.
@@ -75,7 +90,8 @@ type PilotSessionSummary struct {
 const pilotSessionCols = `
     s.id::text, s.user_id, s.instrument_version, s.role_branch, s.status, s.consent_at,
     s.recording_ok, s.survey_finished_at, s.record_finished_at, s.workflow_finished_at,
-    s.finished_at, s.self_reported_minutes, s.most_wanted_to_skip, s.created_at
+    s.finished_at, s.self_reported_minutes, s.most_wanted_to_skip, s.created_at,
+    s.review_status, s.review_note, s.reviewed_at
 `
 
 func scanPilotSession(row pgx.Row) (*PilotSession, error) {
@@ -84,6 +100,7 @@ func scanPilotSession(row pgx.Row) (*PilotSession, error) {
 		&s.ID, &s.UserID, &s.InstrumentVersion, &s.RoleBranch, &s.Status, &s.ConsentAt,
 		&s.RecordingOK, &s.SurveyFinishedAt, &s.RecordFinishedAt, &s.WorkflowFinishedAt,
 		&s.FinishedAt, &s.SelfReportedMinutes, &s.MostWantedToSkip, &s.CreatedAt,
+		&s.ReviewStatus, &s.ReviewNote, &s.ReviewedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -360,6 +377,7 @@ func (r *Repo) ListPilotSessionSummaries(ctx context.Context) ([]PilotSessionSum
 			&s.ID, &s.UserID, &s.InstrumentVersion, &s.RoleBranch, &s.Status, &s.ConsentAt,
 			&s.RecordingOK, &s.SurveyFinishedAt, &s.RecordFinishedAt, &s.WorkflowFinishedAt,
 			&s.FinishedAt, &s.SelfReportedMinutes, &s.MostWantedToSkip, &s.CreatedAt,
+			&s.ReviewStatus, &s.ReviewNote, &s.ReviewedAt,
 			&m.Name, &m.Email, &m.FirstOpened, &m.LastSubmit, &m.CommentCount, &m.FlagCount,
 		); err != nil {
 			return nil, fmt.Errorf("scan pilot summary: %w", err)
@@ -381,4 +399,70 @@ func (r *Repo) DeletePilotSession(ctx context.Context, id string) (bool, error) 
 		return false, fmt.Errorf("delete pilot session: %w", err)
 	}
 	return tag.RowsAffected() == 1, nil
+}
+
+// UpsertPilotNote saves or replaces one of the owner's notes; an empty
+// body removes it. Returns the stored row, or nil when removed.
+func (r *Repo) UpsertPilotNote(ctx context.Context, sessionID, kind, target, body string, authorID int64) (*PilotNote, error) {
+	if body == "" {
+		if _, err := r.pool.Exec(ctx, `
+    DELETE FROM pilot_notes WHERE session_id = $1::uuid AND target_kind = $2 AND target_id = $3`,
+			sessionID, kind, target); err != nil {
+			return nil, fmt.Errorf("delete pilot note: %w", err)
+		}
+		return nil, nil
+	}
+	n := &PilotNote{TargetKind: kind, TargetID: target, Body: body}
+	err := r.pool.QueryRow(ctx, `
+    INSERT INTO pilot_notes (tenant_id, session_id, target_kind, target_id, body, author_id)
+    VALUES ($1, $2::uuid, $3, $4, $5, $6)
+    ON CONFLICT (session_id, target_kind, target_id) DO UPDATE SET body = EXCLUDED.body, author_id = EXCLUDED.author_id
+    RETURNING updated_at, COALESCE((SELECT name FROM users WHERE id = $6), '')`,
+		tenant.FromContext(ctx).Int64(), sessionID, kind, target, body, authorID).Scan(&n.UpdatedAt, &n.Author)
+	if err != nil {
+		return nil, fmt.Errorf("upsert pilot note: %w", err)
+	}
+	return n, nil
+}
+
+// ListPilotNotes returns a session's notes, by kind then target, with
+// the author's name.
+func (r *Repo) ListPilotNotes(ctx context.Context, sessionID string) ([]PilotNote, error) {
+	rows, err := r.pool.Query(ctx, `
+    SELECT n.target_kind, n.target_id, n.body, COALESCE(u.name, ''), n.updated_at
+      FROM pilot_notes n LEFT JOIN users u ON u.id = n.author_id
+     WHERE n.session_id = $1::uuid ORDER BY n.target_kind, n.target_id`, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("list pilot notes: %w", err)
+	}
+	defer rows.Close()
+	var out []PilotNote
+	for rows.Next() {
+		var n PilotNote
+		if err := rows.Scan(&n.TargetKind, &n.TargetID, &n.Body, &n.Author, &n.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan pilot note: %w", err)
+		}
+		out = append(out, n)
+	}
+	return out, rows.Err()
+}
+
+// SetPilotSessionReview records the owner's curation judgement on a
+// session (FR-PLT-17). Setting it back to unreviewed clears the
+// reviewer and the instant, so the row reads as nobody has judged it.
+func (r *Repo) SetPilotSessionReview(ctx context.Context, sessionID, status, note string, by int64) error {
+	tag, err := r.pool.Exec(ctx, `
+    UPDATE pilot_sessions
+       SET review_status = $2, review_note = $3,
+           reviewed_at = CASE WHEN $2 = 'unreviewed' THEN NULL ELSE now() END,
+           reviewed_by = CASE WHEN $2 = 'unreviewed' THEN NULL ELSE $4::bigint END
+     WHERE id = $1::uuid AND tenant_id = $5`,
+		sessionID, status, note, by, tenant.FromContext(ctx).Int64())
+	if err != nil {
+		return fmt.Errorf("set pilot review: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

@@ -85,6 +85,12 @@ const (
 	// PilotServiceDeletePilotSessionProcedure is the fully-qualified name of the PilotService's
 	// DeletePilotSession RPC.
 	PilotServiceDeletePilotSessionProcedure = "/career.v1.PilotService/DeletePilotSession"
+	// PilotServiceUpsertPilotNoteProcedure is the fully-qualified name of the PilotService's
+	// UpsertPilotNote RPC.
+	PilotServiceUpsertPilotNoteProcedure = "/career.v1.PilotService/UpsertPilotNote"
+	// PilotServiceSetPilotSessionReviewProcedure is the fully-qualified name of the PilotService's
+	// SetPilotSessionReview RPC.
+	PilotServiceSetPilotSessionReviewProcedure = "/career.v1.PilotService/SetPilotSessionReview"
 )
 
 // PilotServiceClient is a client for the career.v1.PilotService service.
@@ -134,6 +140,18 @@ type PilotServiceClient interface {
 	// order, so this is for use before the ten start; a participant's
 	// session is not deleted while the pilot runs.
 	DeletePilotSession(context.Context, *connect.Request[v1.DeletePilotSessionRequest]) (*connect.Response[v1.DeletePilotSessionResponse], error)
+	// Saves or replaces the owner's note on a session, an answer, a
+	// record row or a workflow step; an empty body removes it. The notes
+	// are the call's record (11 §2 Parts A to C), kept in the database
+	// beside what they are about rather than in a file (owner,
+	// 2026-11-09: collect, govern, store and curate the data here).
+	UpsertPilotNote(context.Context, *connect.Request[v1.UpsertPilotNoteRequest]) (*connect.Response[v1.UpsertPilotNoteResponse], error)
+	// Sets the owner's curation judgement on a session: unreviewed,
+	// reviewed (fit to use), or excluded (with the reason), as the
+	// decision test's review does for its runs. Exports and figures
+	// carry the status so a reader can filter on what the owner has
+	// vouched for.
+	SetPilotSessionReview(context.Context, *connect.Request[v1.SetPilotSessionReviewRequest]) (*connect.Response[v1.SetPilotSessionReviewResponse], error)
 }
 
 // NewPilotServiceClient constructs a client for the career.v1.PilotService service. By default, it
@@ -225,24 +243,38 @@ func NewPilotServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(pilotServiceMethods.ByName("DeletePilotSession")),
 			connect.WithClientOptions(opts...),
 		),
+		upsertPilotNote: connect.NewClient[v1.UpsertPilotNoteRequest, v1.UpsertPilotNoteResponse](
+			httpClient,
+			baseURL+PilotServiceUpsertPilotNoteProcedure,
+			connect.WithSchema(pilotServiceMethods.ByName("UpsertPilotNote")),
+			connect.WithClientOptions(opts...),
+		),
+		setPilotSessionReview: connect.NewClient[v1.SetPilotSessionReviewRequest, v1.SetPilotSessionReviewResponse](
+			httpClient,
+			baseURL+PilotServiceSetPilotSessionReviewProcedure,
+			connect.WithSchema(pilotServiceMethods.ByName("SetPilotSessionReview")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // pilotServiceClient implements PilotServiceClient.
 type pilotServiceClient struct {
-	getPilot           *connect.Client[v1.GetPilotRequest, v1.GetPilotResponse]
-	startPilot         *connect.Client[v1.StartPilotRequest, v1.StartPilotResponse]
-	getPilotSection    *connect.Client[v1.GetPilotSectionRequest, v1.GetPilotSectionResponse]
-	submitPilotSection *connect.Client[v1.SubmitPilotSectionRequest, v1.SubmitPilotSectionResponse]
-	getPilotRecord     *connect.Client[v1.GetPilotRecordRequest, v1.GetPilotRecordResponse]
-	getPilotWorkflow   *connect.Client[v1.GetPilotWorkflowRequest, v1.GetPilotWorkflowResponse]
-	upsertPilotComment *connect.Client[v1.UpsertPilotCommentRequest, v1.UpsertPilotCommentResponse]
-	markPilotPart      *connect.Client[v1.MarkPilotPartRequest, v1.MarkPilotPartResponse]
-	finishPilot        *connect.Client[v1.FinishPilotRequest, v1.FinishPilotResponse]
-	listPilotSessions  *connect.Client[v1.ListPilotSessionsRequest, v1.ListPilotSessionsResponse]
-	getPilotSession    *connect.Client[v1.GetPilotSessionRequest, v1.GetPilotSessionResponse]
-	exportPilot        *connect.Client[v1.ExportPilotRequest, v1.ExportPilotResponse]
-	deletePilotSession *connect.Client[v1.DeletePilotSessionRequest, v1.DeletePilotSessionResponse]
+	getPilot              *connect.Client[v1.GetPilotRequest, v1.GetPilotResponse]
+	startPilot            *connect.Client[v1.StartPilotRequest, v1.StartPilotResponse]
+	getPilotSection       *connect.Client[v1.GetPilotSectionRequest, v1.GetPilotSectionResponse]
+	submitPilotSection    *connect.Client[v1.SubmitPilotSectionRequest, v1.SubmitPilotSectionResponse]
+	getPilotRecord        *connect.Client[v1.GetPilotRecordRequest, v1.GetPilotRecordResponse]
+	getPilotWorkflow      *connect.Client[v1.GetPilotWorkflowRequest, v1.GetPilotWorkflowResponse]
+	upsertPilotComment    *connect.Client[v1.UpsertPilotCommentRequest, v1.UpsertPilotCommentResponse]
+	markPilotPart         *connect.Client[v1.MarkPilotPartRequest, v1.MarkPilotPartResponse]
+	finishPilot           *connect.Client[v1.FinishPilotRequest, v1.FinishPilotResponse]
+	listPilotSessions     *connect.Client[v1.ListPilotSessionsRequest, v1.ListPilotSessionsResponse]
+	getPilotSession       *connect.Client[v1.GetPilotSessionRequest, v1.GetPilotSessionResponse]
+	exportPilot           *connect.Client[v1.ExportPilotRequest, v1.ExportPilotResponse]
+	deletePilotSession    *connect.Client[v1.DeletePilotSessionRequest, v1.DeletePilotSessionResponse]
+	upsertPilotNote       *connect.Client[v1.UpsertPilotNoteRequest, v1.UpsertPilotNoteResponse]
+	setPilotSessionReview *connect.Client[v1.SetPilotSessionReviewRequest, v1.SetPilotSessionReviewResponse]
 }
 
 // GetPilot calls career.v1.PilotService.GetPilot.
@@ -310,6 +342,16 @@ func (c *pilotServiceClient) DeletePilotSession(ctx context.Context, req *connec
 	return c.deletePilotSession.CallUnary(ctx, req)
 }
 
+// UpsertPilotNote calls career.v1.PilotService.UpsertPilotNote.
+func (c *pilotServiceClient) UpsertPilotNote(ctx context.Context, req *connect.Request[v1.UpsertPilotNoteRequest]) (*connect.Response[v1.UpsertPilotNoteResponse], error) {
+	return c.upsertPilotNote.CallUnary(ctx, req)
+}
+
+// SetPilotSessionReview calls career.v1.PilotService.SetPilotSessionReview.
+func (c *pilotServiceClient) SetPilotSessionReview(ctx context.Context, req *connect.Request[v1.SetPilotSessionReviewRequest]) (*connect.Response[v1.SetPilotSessionReviewResponse], error) {
+	return c.setPilotSessionReview.CallUnary(ctx, req)
+}
+
 // PilotServiceHandler is an implementation of the career.v1.PilotService service.
 type PilotServiceHandler interface {
 	// Says whether the caller may enter the pilot, and where they are in
@@ -357,6 +399,18 @@ type PilotServiceHandler interface {
 	// order, so this is for use before the ten start; a participant's
 	// session is not deleted while the pilot runs.
 	DeletePilotSession(context.Context, *connect.Request[v1.DeletePilotSessionRequest]) (*connect.Response[v1.DeletePilotSessionResponse], error)
+	// Saves or replaces the owner's note on a session, an answer, a
+	// record row or a workflow step; an empty body removes it. The notes
+	// are the call's record (11 §2 Parts A to C), kept in the database
+	// beside what they are about rather than in a file (owner,
+	// 2026-11-09: collect, govern, store and curate the data here).
+	UpsertPilotNote(context.Context, *connect.Request[v1.UpsertPilotNoteRequest]) (*connect.Response[v1.UpsertPilotNoteResponse], error)
+	// Sets the owner's curation judgement on a session: unreviewed,
+	// reviewed (fit to use), or excluded (with the reason), as the
+	// decision test's review does for its runs. Exports and figures
+	// carry the status so a reader can filter on what the owner has
+	// vouched for.
+	SetPilotSessionReview(context.Context, *connect.Request[v1.SetPilotSessionReviewRequest]) (*connect.Response[v1.SetPilotSessionReviewResponse], error)
 }
 
 // NewPilotServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -444,6 +498,18 @@ func NewPilotServiceHandler(svc PilotServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(pilotServiceMethods.ByName("DeletePilotSession")),
 		connect.WithHandlerOptions(opts...),
 	)
+	pilotServiceUpsertPilotNoteHandler := connect.NewUnaryHandler(
+		PilotServiceUpsertPilotNoteProcedure,
+		svc.UpsertPilotNote,
+		connect.WithSchema(pilotServiceMethods.ByName("UpsertPilotNote")),
+		connect.WithHandlerOptions(opts...),
+	)
+	pilotServiceSetPilotSessionReviewHandler := connect.NewUnaryHandler(
+		PilotServiceSetPilotSessionReviewProcedure,
+		svc.SetPilotSessionReview,
+		connect.WithSchema(pilotServiceMethods.ByName("SetPilotSessionReview")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.PilotService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PilotServiceGetPilotProcedure:
@@ -472,6 +538,10 @@ func NewPilotServiceHandler(svc PilotServiceHandler, opts ...connect.HandlerOpti
 			pilotServiceExportPilotHandler.ServeHTTP(w, r)
 		case PilotServiceDeletePilotSessionProcedure:
 			pilotServiceDeletePilotSessionHandler.ServeHTTP(w, r)
+		case PilotServiceUpsertPilotNoteProcedure:
+			pilotServiceUpsertPilotNoteHandler.ServeHTTP(w, r)
+		case PilotServiceSetPilotSessionReviewProcedure:
+			pilotServiceSetPilotSessionReviewHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -531,4 +601,12 @@ func (UnimplementedPilotServiceHandler) ExportPilot(context.Context, *connect.Re
 
 func (UnimplementedPilotServiceHandler) DeletePilotSession(context.Context, *connect.Request[v1.DeletePilotSessionRequest]) (*connect.Response[v1.DeletePilotSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.PilotService.DeletePilotSession is not implemented"))
+}
+
+func (UnimplementedPilotServiceHandler) UpsertPilotNote(context.Context, *connect.Request[v1.UpsertPilotNoteRequest]) (*connect.Response[v1.UpsertPilotNoteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.PilotService.UpsertPilotNote is not implemented"))
+}
+
+func (UnimplementedPilotServiceHandler) SetPilotSessionReview(context.Context, *connect.Request[v1.SetPilotSessionReviewRequest]) (*connect.Response[v1.SetPilotSessionReviewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.PilotService.SetPilotSessionReview is not implemented"))
 }

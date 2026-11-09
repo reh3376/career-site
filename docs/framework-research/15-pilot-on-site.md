@@ -21,7 +21,7 @@ FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not
 6. One session per participant per instrument version, resumable: answers save per section, a participant who closes the tab returns to the section they left. The pilot is a wording test, not a timed measurement, so resume costs nothing.
 7. The candidate perspective is **not** shown to employer-side participants; it belongs to the candidate-side study.
 8. Comments on the stimulus never change the record. Audit and Override are shown as the hiring manager would see them, disabled, with a caption saying so, because `08` §2.3 asks whether a hiring manager would touch them.
-9. Exports are CSV, taken by the owner from the admin surface, and land in the private folder. Pilot rows appear in no public figure anywhere on the site.
+9. ~~Exports are CSV, taken by the owner from the admin surface, and land in the private folder.~~ **Amended by the owner 2026-11-09 (§12):** the database is the system of record for everything a participant generates and for the owner's notes and judgement on it; CSV exports remain as copies for reading elsewhere and still land in the private folder. Pilot rows appear in no public figure anywhere on the site.
 10. The call keeps Part A (the cognitive interview on the survey) and uses Parts B and C to **discuss what the participant wrote on-site** rather than to show the material for the first time. The participant arrives having already read both pages at their own pace, which is a better first reading than a screen-share.
 
 ## 1. What a participant experiences
@@ -33,7 +33,7 @@ FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not
 5. `/pilot/survey/<section>`: one section per screen, progress shown, a "this was unclear or didn't fit me" checkbox beside every item, role branching from A1, the pilot-only closing items at the end. Section open and submit times are recorded.
 6. `/pilot/record`: the mocked match record, read-only, in the site's own design, with a comment box under each of the ten rows and one general box. The first prompt is `08`'s: which row would you check first, and why.
 7. `/pilot/workflow`: the company hiring workflow as a diagram and as a node list C-01 to C-26 with a comment box per node, plus a repeatable "a step that is missing" field.
-8. `/pilot/done`: what happens next, the call, the summary they will receive. Finishing marks the session complete; the owner sees it on `/admin/pilot`.
+8. `/pilot/done`: what happens next, the call, the summary they will receive. **From 2026-11-09 the three parts are sequential:** the last survey section leads into the record, the record into the workflow, and Finish appears, and is accepted, only once all three are done (§11 step 8). Finishing marks the session complete; the owner sees it on `/admin/pilot`.
 9. Forgot-password at any point: address, new password, the 5-digit code from the email, signed in.
 
 ## 2. Access and identity
@@ -223,15 +223,15 @@ Owner's rule, 2026-11-09: no UI or UX element is complete until the owner has re
 | 5 | participant | Consent and start | Section A opens; progress reads "section 1 of n"; every item has the "this was unclear or didn't fit me" box | |
 | 6 | participant | Answer A1 as recruiter and work through the recruiter branch | Seven sections; C2 and C3 draw their rows from the C1 selection made on the same screen; a required item left blank is named and scrolled to; the last section's button reads "Save and finish the survey" | |
 | 7 | participant | Close the tab mid-survey, sign in again, open `/pilot` | The home shows the survey in progress and resumes at the section left | |
-| 8 | participant | Finish the survey | Back on `/pilot`, the survey row shows done and the Finish button appears | |
-| 9 | participant | Open the match record | Header with run label, role, coverage bar, legend; ten rows with determination tones; Audit and Override shown disabled with the caption; a comment box under each row and one general box; "I have read the record" marks the part done | |
+| 8 | participant | Finish the survey | Back on `/pilot`, the survey row shows done and the Finish button appears | **Changed, 2026-11-09.** The owner did exactly this and the pilot was over: the home offered Finish after the survey, with a line saying the readings could wait, and he never saw the workflow, which is the part the pilot most needs read. The flow is now sequential (survey, record, workflow, then Finish) and `FinishPilot` refuses a session whose readings are not done. The expectation in this row is replaced: back on `/pilot`, the record row is marked next and there is no Finish yet. |
+| 9 | participant | Open the match record (reached from the last survey section) | Header with run label, role, coverage bar, legend; ten rows with determination tones; Audit and Override shown disabled with the caption; a comment box under each row and one general box; "I have read the record" marks the part done | |
 | 10 | participant | Save a row comment, empty it, save again | "Saved." then "Removed."; the comment survives a reload | |
 | 11 | participant | Open the workflow | The chart opens fitted, not on a blank corner; half and full sizes work; "open full size in a new tab" works; nodes listed by phase with a comment box each; the missing-step field adds a new slot after each save | |
-| 12 | participant | Mark the workflow read; finish the pilot | `/pilot/done` says what happens next (the call, the summary) | |
+| 12 | participant | Mark the workflow read; back on `/pilot`, finish the pilot | `/pilot/done` says what happens next (the call, the summary) | |
 | 13 | participant | Try `/pilot/survey/A` after finishing | Still readable; nothing breaks | |
 | 14 | admin | Open `/admin/pilot` | The session listed with branch, status, consent time, parts done, measured and self-reported minutes, comment and flag counts | |
-| 15 | admin | Open the session | Every answer with its flag, comments grouped by target, the section timings oldest first | |
-| 16 | admin | Export sessions, answers, comments | Three CSVs download; the participant appears as P-01, never by name or address; the row counts look right | |
+| 15 | admin | Open the session | Every answer with its question text and flag, comments grouped by target, the section timings oldest first; a note box beside each answer and comment and one for the sitting; the review form (unreviewed, reviewed, excluded with reason) | |
+| 16 | admin | Export sessions, answers, comments, notes | Four CSVs download; the participant appears as P-01, never by name or address; the sessions file carries the judgement; the row counts look right | |
 | 17 | admin | Delete the session from the foot of its page | A confirm; then the list without it; the page 404s | |
 | 18 | admin | On `/admin/registrations/<id>` switch the plus-address's pilot flag off; sign in as the participant; open `/pilot` | 404; no menu entry; no home card; switch it back on and both return | |
 | 19 | admin | `/admin/agent`: create a one-time password; in a private window sign in as `agent@345` with it; try it a second time; create another and wait sixteen minutes | First sign-in works and lands on an admin session; the second is refused; the aged one is refused; the live-session list shows the agent and ends it with one click | |
@@ -240,3 +240,17 @@ Owner's rule, 2026-11-09: no UI or UX element is complete until the owner has re
 | 22 | admin | Disable the plus-address account on its member page (accounts cannot be deleted, FR-AUTH-11) and remove its whitelist row | The member reads disabled on `/admin/registrations`; the row is gone from `/admin/access` | |
 
 **Record.** The marks are written into this table when the review happens, with the date; anything marked changed becomes a fix in the next PR and a note on the FSD row; the FSD rows stay "Shipped" (code on production) and this section is where completion in the owner's sense is recorded.
+
+## 12. The data lives in the database
+
+Owner's instruction, 2026-11-09, during the live review, after finishing a run as a participant and asking to review it: "This information should not only be accessible via text files, we need to collect, govern, store, and curate the data generated by each pilot participant in the database."
+
+What changes:
+
+- **The record of the call is in the database.** `11` §2's per-participant markdown file (`pilot-interview-NN.md`, Parts A, B and C) is replaced by `pilot_notes` (migration 00070): one note per target per session, where a target is the sitting as a whole, one survey answer, one match-record row or the record's general comment, one workflow step, one missing-step entry or the workflow's general comment. Notes carry their author and time and go with the session when it is deleted. They are written and read on `/admin/pilot/<id>`, beside what they are about, and exported as a fourth table.
+- **Every sitting carries a curation judgement** (`review_status`: unreviewed, reviewed, excluded; `review_note`; `reviewed_at`; `reviewed_by`), set from the same page, shown in the list, carried in the sessions export. An excluded sitting stays in the database and out of every figure, with its reason; this is the decision test's review model (00056) applied to the pilot. The owner's own runs are excluded rather than deleted when they are worth keeping as examples; the delete (FR-PLT-15) stays for runs that are not.
+- **Answers read as questions.** The admin read fills each answer's question text and section from the instrument, so a review is read against what was asked, not against item ids.
+- **Exports remain, as copies.** `§0` decision 9 is amended, not reversed: a CSV is for reading elsewhere and belongs in the private folder; it is not the record.
+- **The private folder's role narrows** to aggregate findings and the exports; nothing there is the only copy of anything a participant or the owner wrote.
+
+FSD rows FR-PLT-16 and FR-PLT-17, 0.5.8. The participant-facing change of the same hour, the sequential flow, is recorded in §11 step 8 and FR-PLT-10.

@@ -21,10 +21,12 @@ func TestPilotServiceHasNoPublicMethod(t *testing.T) {
 	}
 	const prefix = "/career.v1.PilotService/"
 	admin := map[string]bool{
-		prefix + "ListPilotSessions":  true,
-		prefix + "GetPilotSession":    true,
-		prefix + "ExportPilot":        true,
-		prefix + "DeletePilotSession": true,
+		prefix + "ListPilotSessions":     true,
+		prefix + "GetPilotSession":       true,
+		prefix + "ExportPilot":           true,
+		prefix + "DeletePilotSession":    true,
+		prefix + "UpsertPilotNote":       true,
+		prefix + "SetPilotSessionReview": true,
 	}
 	seen := 0
 	for proc, p := range m {
@@ -36,13 +38,13 @@ func TestPilotServiceHasNoPublicMethod(t *testing.T) {
 			t.Errorf("%s is declared public; the pilot has no public surface (FR-PLT-12)", proc)
 		}
 		if admin[proc] && p.Level != v1.AuthLevel_AUTH_LEVEL_ADMIN {
-			t.Errorf("%s is %s; the pilot's read-all, export and delete methods must be admin", proc, p.Level)
+			t.Errorf("%s is %s; the pilot's read-all, export, delete, note and review methods must be admin", proc, p.Level)
 		}
 		if p.AllowUnverified {
 			t.Errorf("%s allows an unverified account; a participant is a verified, whitelisted member", proc)
 		}
 	}
-	if seen != 13 {
-		t.Errorf("PilotService declares %d methods, expected 13 (nine member, four admin)", seen)
+	if seen != 15 {
+		t.Errorf("PilotService declares %d methods, expected 15 (nine member, six admin)", seen)
 	}
 }

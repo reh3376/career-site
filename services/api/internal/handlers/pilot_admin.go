@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -38,6 +39,20 @@ func (h *Pilot) summaryProto(ctx context.Context, m *users.PilotSessionSummary) 
 	}
 	if m.FirstOpened != nil && m.LastSubmit != nil {
 		out.MeasuredMinutes = pilot.MeasuredMinutes(m.FirstOpened.Unix(), m.LastSubmit.Unix())
+	}
+	out.ReviewStatus = m.Session.ReviewStatus
+	out.ReviewNote = m.Session.ReviewNote
+	if m.Session.ReviewedAt != nil {
+		out.ReviewedAt = timestamppb.New(*m.Session.ReviewedAt)
+	}
+	return out
+}
+
+// notesProto is the wire form of the owner's notes.
+func notesProto(list []users.PilotNote) []*v1.PilotNote {
+	out := make([]*v1.PilotNote, 0, len(list))
+	for _, n := range list {
+		out = append(out, &v1.PilotNote{TargetKind: n.TargetKind, TargetId: n.TargetID, Body: n.Body, Author: n.Author, UpdatedAt: timestamppb.New(n.UpdatedAt)})
 	}
 	return out
 }
@@ -85,9 +100,21 @@ func (h *Pilot) GetPilotSession(ctx context.Context, req *connect.Request[v1.Get
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("lookup failed"))
 	}
-	out := &v1.GetPilotSessionResponse{Summary: h.summaryProto(ctx, m)}
+	notes, err := h.users.ListPilotNotes(ctx, m.Session.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("lookup failed"))
+	}
+	out := &v1.GetPilotSessionResponse{Summary: h.summaryProto(ctx, m), Notes: notesProto(notes)}
 	for _, a := range answers {
-		out.Answers = append(out.Answers, &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged})
+		pa := &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged, Section: a.Section}
+		// The question text, so the owner's review reads as questions.
+		if it, sec := h.instrument.Item(a.ItemID); it != nil {
+			pa.Prompt = it.Prompt
+			if sec != nil && pa.Section == "" {
+				pa.Section = sec.ID
+			}
+		}
+		out.Answers = append(out.Answers, pa)
 	}
 	out.Comments = commentsProto(comments, "")
 	for _, e := range events {
@@ -125,7 +152,8 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 	case "sessions":
 		_ = w.Write([]string{"participant", "instrument_version", "role_branch", "status", "consent_at", "recording_ok",
 			"survey_finished_at", "record_finished_at", "workflow_finished_at", "finished_at",
-			"measured_minutes", "self_reported_minutes", "most_wanted_to_skip", "comment_count", "flag_count"})
+			"measured_minutes", "self_reported_minutes", "most_wanted_to_skip", "comment_count", "flag_count",
+			"review_status", "review_note", "reviewed_at"})
 		for i := range list {
 			m := &list[i]
 			s := &m.Session
@@ -139,7 +167,8 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 			}
 			_ = w.Write([]string{code[s.ID], s.InstrumentVersion, s.RoleBranch, s.Status, s.ConsentAt.UTC().Format(time.RFC3339),
 				strconv.FormatBool(s.RecordingOK), ts(s.SurveyFinishedAt), ts(s.RecordFinishedAt), ts(s.WorkflowFinishedAt), ts(s.FinishedAt),
-				strconv.Itoa(int(measured)), self, s.MostWantedToSkip, strconv.Itoa(int(m.CommentCount)), strconv.Itoa(int(m.FlagCount))})
+				strconv.Itoa(int(measured)), self, s.MostWantedToSkip, strconv.Itoa(int(m.CommentCount)), strconv.Itoa(int(m.FlagCount)),
+				s.ReviewStatus, s.ReviewNote, ts(s.ReviewedAt)})
 			rows++
 		}
 	case "answers":
@@ -166,8 +195,20 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 				rows++
 			}
 		}
+	case "notes":
+		_ = w.Write([]string{"participant", "target_kind", "target_id", "body", "author", "updated_at"})
+		for i := range list {
+			notes, err := h.users.ListPilotNotes(ctx, list[i].Session.ID)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInternal, errors.New("export failed"))
+			}
+			for _, n := range notes {
+				_ = w.Write([]string{code[list[i].Session.ID], n.TargetKind, n.TargetID, n.Body, n.Author, n.UpdatedAt.UTC().Format(time.RFC3339)})
+				rows++
+			}
+		}
 	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("table is sessions, answers or comments"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("table is sessions, answers, comments or notes"))
 	}
 	w.Flush()
 	if err := w.Error(); err != nil {
@@ -214,4 +255,92 @@ func (h *Pilot) DeletePilotSession(ctx context.Context, req *connect.Request[v1.
 	h.log.Info("pilot session deleted", slog.String("session_id", s.ID), slog.Int64("user_id", s.UserID), slog.Int64("by", admin.ID))
 	h.events.Emit(ctx, requestEvent(req, "pilot.session_deleted", admin.ID, map[string]any{"user_id": s.UserID}))
 	return connect.NewResponse(&v1.DeletePilotSessionResponse{MemberId: strconv.FormatInt(s.UserID, 10)}), nil
+}
+
+// UpsertPilotNote saves one of the owner's notes (FSD FR-PLT-16). The
+// target must exist: an item in the instrument, a row in the record, a
+// node in the workflow; the session and general kinds take no target.
+func (h *Pilot) UpsertPilotNote(ctx context.Context, req *connect.Request[v1.UpsertPilotNoteRequest]) (*connect.Response[v1.UpsertPilotNoteResponse], error) {
+	admin, err := RequireCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id := req.Msg.SessionId
+	if !uuidShape.MatchString(id) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id must be a UUID"))
+	}
+	if _, err := h.users.GetPilotSessionByID(ctx, id); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("no such session"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, errors.New("lookup failed"))
+	}
+	kind, target := req.Msg.TargetKind, strings.TrimSpace(req.Msg.TargetId)
+	switch kind {
+	case "session", "record_general", "workflow_general":
+		target = ""
+	case "item":
+		if it, _ := h.instrument.Item(target); it == nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such survey item"))
+		}
+	case "record_row":
+		if !h.record.HasRow(target) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such record row"))
+		}
+	case "workflow_node":
+		if !h.workflow.HasNode(target) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such workflow node"))
+		}
+	case "workflow_missing":
+		if target == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a missing-step note needs its number"))
+		}
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("unknown target kind"))
+	}
+	body := strings.TrimSpace(req.Msg.Body)
+	n, err := h.users.UpsertPilotNote(ctx, id, kind, target, body, admin.ID)
+	if err != nil {
+		h.log.Error("pilot note upsert failed", slog.String("session", id), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not save the note"))
+	}
+	if n == nil {
+		return connect.NewResponse(&v1.UpsertPilotNoteResponse{Removed: true}), nil
+	}
+	return connect.NewResponse(&v1.UpsertPilotNoteResponse{UpdatedAt: timestamppb.New(n.UpdatedAt)}), nil
+}
+
+// SetPilotSessionReview records the owner's curation judgement on a
+// session (FSD FR-PLT-17). Excluding needs a reason; the other two
+// take one.
+func (h *Pilot) SetPilotSessionReview(ctx context.Context, req *connect.Request[v1.SetPilotSessionReviewRequest]) (*connect.Response[v1.SetPilotSessionReviewResponse], error) {
+	admin, err := RequireCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id := req.Msg.SessionId
+	if !uuidShape.MatchString(id) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id must be a UUID"))
+	}
+	status, note := req.Msg.Status, strings.TrimSpace(req.Msg.Note)
+	if status == "excluded" && note == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("say why the session is excluded"))
+	}
+	if err := h.users.SetPilotSessionReview(ctx, id, status, note, admin.ID); err != nil {
+		if errors.Is(err, users.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("no such session"))
+		}
+		h.log.Error("pilot review set failed", slog.String("session", id), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not save the judgement"))
+	}
+	list, err := h.users.ListPilotSessionSummaries(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("lookup failed"))
+	}
+	for i := range list {
+		if list[i].Session.ID == id {
+			return connect.NewResponse(&v1.SetPilotSessionReviewResponse{Summary: h.summaryProto(ctx, &list[i])}), nil
+		}
+	}
+	return nil, connect.NewError(connect.CodeNotFound, errors.New("no such session"))
 }

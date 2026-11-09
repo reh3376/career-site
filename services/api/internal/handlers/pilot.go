@@ -537,6 +537,13 @@ func (h *Pilot) FinishPilot(ctx context.Context, req *connect.Request[v1.FinishP
 	if s.SurveyFinishedAt == nil && s.RoleBranch != pilot.BranchEnd {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("finish the survey first"))
 	}
+	// The two readings are the pilot's second purpose, and the first
+	// live run (2026-11-09) showed that a Finish offered before them is
+	// taken: the owner finished without ever seeing the workflow. All
+	// three parts, server-side (ADR 0031), before a session closes.
+	if s.RecordFinishedAt == nil || s.WorkflowFinishedAt == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("read the match record and the workflow first"))
+	}
 	if err := h.users.FinishPilotSession(ctx, s.ID); err != nil {
 		h.log.Error("pilot finish failed", slog.String("session", s.ID), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("could not close the session"))

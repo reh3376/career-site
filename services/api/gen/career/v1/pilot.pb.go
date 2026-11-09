@@ -684,7 +684,12 @@ type PilotAnswer struct {
 	// validates the shape against the instrument.
 	ValueJson string `protobuf:"bytes,2,opt,name=value_json,json=valueJson,proto3" json:"value_json,omitempty"`
 	// "This was unclear or didn't fit me."
-	Flagged       bool `protobuf:"varint,3,opt,name=flagged,proto3" json:"flagged,omitempty"`
+	Flagged bool `protobuf:"varint,3,opt,name=flagged,proto3" json:"flagged,omitempty"`
+	// The item's question text, filled on the admin read so a review
+	// reads as questions rather than ids. Ignored on submit.
+	Prompt string `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	// The section the item belongs to, filled on the admin read.
+	Section       string `protobuf:"bytes,5,opt,name=section,proto3" json:"section,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -738,6 +743,20 @@ func (x *PilotAnswer) GetFlagged() bool {
 		return x.Flagged
 	}
 	return false
+}
+
+func (x *PilotAnswer) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *PilotAnswer) GetSection() string {
+	if x != nil {
+		return x.Section
+	}
+	return ""
 }
 
 // Request for one section.
@@ -1807,7 +1826,13 @@ type PilotSessionSummary struct {
 	// How many comments the participant left.
 	CommentCount int32 `protobuf:"varint,7,opt,name=comment_count,json=commentCount,proto3" json:"comment_count,omitempty"`
 	// How many items the participant flagged.
-	FlagCount     int32 `protobuf:"varint,8,opt,name=flag_count,json=flagCount,proto3" json:"flag_count,omitempty"`
+	FlagCount int32 `protobuf:"varint,8,opt,name=flag_count,json=flagCount,proto3" json:"flag_count,omitempty"`
+	// The owner's curation judgement: unreviewed, reviewed or excluded.
+	ReviewStatus string `protobuf:"bytes,9,opt,name=review_status,json=reviewStatus,proto3" json:"review_status,omitempty"`
+	// Why, when excluded or worth a word when reviewed.
+	ReviewNote string `protobuf:"bytes,10,opt,name=review_note,json=reviewNote,proto3" json:"review_note,omitempty"`
+	// When the judgement was last set.
+	ReviewedAt    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1896,6 +1921,27 @@ func (x *PilotSessionSummary) GetFlagCount() int32 {
 		return x.FlagCount
 	}
 	return 0
+}
+
+func (x *PilotSessionSummary) GetReviewStatus() string {
+	if x != nil {
+		return x.ReviewStatus
+	}
+	return ""
+}
+
+func (x *PilotSessionSummary) GetReviewNote() string {
+	if x != nil {
+		return x.ReviewNote
+	}
+	return ""
+}
+
+func (x *PilotSessionSummary) GetReviewedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return nil
 }
 
 // Every pilot session, newest first.
@@ -2073,7 +2119,9 @@ type GetPilotSessionResponse struct {
 	// Every comment, by target.
 	Comments []*PilotComment `protobuf:"bytes,3,rep,name=comments,proto3" json:"comments,omitempty"`
 	// Section open and submit instants, oldest first.
-	Events        []*PilotSectionEvent `protobuf:"bytes,4,rep,name=events,proto3" json:"events,omitempty"`
+	Events []*PilotSectionEvent `protobuf:"bytes,4,rep,name=events,proto3" json:"events,omitempty"`
+	// The owner's notes on this session, by target.
+	Notes         []*PilotNote `protobuf:"bytes,5,rep,name=notes,proto3" json:"notes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2136,10 +2184,17 @@ func (x *GetPilotSessionResponse) GetEvents() []*PilotSectionEvent {
 	return nil
 }
 
+func (x *GetPilotSessionResponse) GetNotes() []*PilotNote {
+	if x != nil {
+		return x.Notes
+	}
+	return nil
+}
+
 // Which table to export.
 type ExportPilotRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// sessions, answers or comments.
+	// sessions, answers, comments or notes.
 	Table         string `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2331,6 +2386,328 @@ func (x *DeletePilotSessionResponse) GetMemberId() string {
 	return ""
 }
 
+// One owner's note on a pilot session or on something in it.
+type PilotNote struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// session, item, record_row, record_general, workflow_node,
+	// workflow_missing or workflow_general.
+	TargetKind string `protobuf:"bytes,1,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
+	// The item id, row id or node id; empty for the session and the
+	// general kinds.
+	TargetId string `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	// The note.
+	Body string `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	// When it was last saved.
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Who saved it, as a display name.
+	Author        string `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PilotNote) Reset() {
+	*x = PilotNote{}
+	mi := &file_career_v1_pilot_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PilotNote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PilotNote) ProtoMessage() {}
+
+func (x *PilotNote) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_pilot_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PilotNote.ProtoReflect.Descriptor instead.
+func (*PilotNote) Descriptor() ([]byte, []int) {
+	return file_career_v1_pilot_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *PilotNote) GetTargetKind() string {
+	if x != nil {
+		return x.TargetKind
+	}
+	return ""
+}
+
+func (x *PilotNote) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *PilotNote) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+func (x *PilotNote) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *PilotNote) GetAuthor() string {
+	if x != nil {
+		return x.Author
+	}
+	return ""
+}
+
+// A note to save or replace.
+type UpsertPilotNoteRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Session id (UUID).
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// See PilotNote.target_kind.
+	TargetKind string `protobuf:"bytes,2,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
+	// See PilotNote.target_id.
+	TargetId string `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	// The note; empty removes it.
+	Body          string `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertPilotNoteRequest) Reset() {
+	*x = UpsertPilotNoteRequest{}
+	mi := &file_career_v1_pilot_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertPilotNoteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertPilotNoteRequest) ProtoMessage() {}
+
+func (x *UpsertPilotNoteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_pilot_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertPilotNoteRequest.ProtoReflect.Descriptor instead.
+func (*UpsertPilotNoteRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_pilot_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *UpsertPilotNoteRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *UpsertPilotNoteRequest) GetTargetKind() string {
+	if x != nil {
+		return x.TargetKind
+	}
+	return ""
+}
+
+func (x *UpsertPilotNoteRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *UpsertPilotNoteRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+// The stored note.
+type UpsertPilotNoteResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// When it was saved; unset when the note was removed.
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// True when an empty body removed the note.
+	Removed       bool `protobuf:"varint,2,opt,name=removed,proto3" json:"removed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertPilotNoteResponse) Reset() {
+	*x = UpsertPilotNoteResponse{}
+	mi := &file_career_v1_pilot_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertPilotNoteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertPilotNoteResponse) ProtoMessage() {}
+
+func (x *UpsertPilotNoteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_pilot_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertPilotNoteResponse.ProtoReflect.Descriptor instead.
+func (*UpsertPilotNoteResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_pilot_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *UpsertPilotNoteResponse) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *UpsertPilotNoteResponse) GetRemoved() bool {
+	if x != nil {
+		return x.Removed
+	}
+	return false
+}
+
+// The owner's judgement on a session.
+type SetPilotSessionReviewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Session id (UUID).
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// unreviewed, reviewed or excluded.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// The reason; required when excluding.
+	Note          string `protobuf:"bytes,3,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPilotSessionReviewRequest) Reset() {
+	*x = SetPilotSessionReviewRequest{}
+	mi := &file_career_v1_pilot_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPilotSessionReviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPilotSessionReviewRequest) ProtoMessage() {}
+
+func (x *SetPilotSessionReviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_pilot_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPilotSessionReviewRequest.ProtoReflect.Descriptor instead.
+func (*SetPilotSessionReviewRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_pilot_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *SetPilotSessionReviewRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SetPilotSessionReviewRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SetPilotSessionReviewRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+// The session after the judgement.
+type SetPilotSessionReviewResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The summary row as it now reads.
+	Summary       *PilotSessionSummary `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPilotSessionReviewResponse) Reset() {
+	*x = SetPilotSessionReviewResponse{}
+	mi := &file_career_v1_pilot_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPilotSessionReviewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPilotSessionReviewResponse) ProtoMessage() {}
+
+func (x *SetPilotSessionReviewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_pilot_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPilotSessionReviewResponse.ProtoReflect.Descriptor instead.
+func (*SetPilotSessionReviewResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_pilot_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *SetPilotSessionReviewResponse) GetSummary() *PilotSessionSummary {
+	if x != nil {
+		return x.Summary
+	}
+	return nil
+}
+
 var File_career_v1_pilot_proto protoreflect.FileDescriptor
 
 const file_career_v1_pilot_proto_rawDesc = "" +
@@ -2391,12 +2768,14 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"pilot_only\x18\n" +
 	" \x01(\bR\tpilotOnly\x12\x1f\n" +
 	"\vsource_item\x18\v \x01(\tR\n" +
-	"sourceItem\"u\n" +
+	"sourceItem\"\xa7\x01\n" +
 	"\vPilotAnswer\x12\"\n" +
 	"\aitem_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\bR\x06itemId\x12(\n" +
 	"\n" +
 	"value_json\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x18\xa0\x9c\x01R\tvalueJson\x12\x18\n" +
-	"\aflagged\x18\x03 \x01(\bR\aflagged\"B\n" +
+	"\aflagged\x18\x03 \x01(\bR\aflagged\x12\x16\n" +
+	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12\x18\n" +
+	"\asection\x18\x05 \x01(\tR\asection\"B\n" +
 	"\x16GetPilotSectionRequest\x12(\n" +
 	"\n" +
 	"section_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x02R\tsectionId\"\x92\x02\n" +
@@ -2462,7 +2841,7 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x12FinishPilotRequest\"H\n" +
 	"\x13FinishPilotResponse\x121\n" +
 	"\asession\x18\x01 \x01(\v2\x17.career.v1.PilotSessionR\asession\"\x1a\n" +
-	"\x18ListPilotSessionsRequest\"\xb2\x02\n" +
+	"\x18ListPilotSessionsRequest\"\xb5\x03\n" +
 	"\x13PilotSessionSummary\x121\n" +
 	"\asession\x18\x01 \x01(\v2\x17.career.v1.PilotSessionR\asession\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x12\n" +
@@ -2472,7 +2851,13 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x15self_reported_minutes\x18\x06 \x01(\x05R\x13selfReportedMinutes\x12#\n" +
 	"\rcomment_count\x18\a \x01(\x05R\fcommentCount\x12\x1d\n" +
 	"\n" +
-	"flag_count\x18\b \x01(\x05R\tflagCount\"\x86\x01\n" +
+	"flag_count\x18\b \x01(\x05R\tflagCount\x12#\n" +
+	"\rreview_status\x18\t \x01(\tR\freviewStatus\x12\x1f\n" +
+	"\vreview_note\x18\n" +
+	" \x01(\tR\n" +
+	"reviewNote\x12;\n" +
+	"\vreviewed_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"reviewedAt\"\x86\x01\n" +
 	"\x19ListPilotSessionsResponse\x12:\n" +
 	"\bsessions\x18\x01 \x03(\v2\x1e.career.v1.PilotSessionSummaryR\bsessions\x12-\n" +
 	"\x12instrument_version\x18\x02 \x01(\tR\x11instrumentVersion\"B\n" +
@@ -2482,14 +2867,15 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x11PilotSectionEvent\x12\x18\n" +
 	"\asection\x18\x01 \x01(\tR\asection\x12\x14\n" +
 	"\x05event\x18\x02 \x01(\tR\x05event\x12*\n" +
-	"\x02at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"\xf0\x01\n" +
+	"\x02at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\"\x9c\x02\n" +
 	"\x17GetPilotSessionResponse\x128\n" +
 	"\asummary\x18\x01 \x01(\v2\x1e.career.v1.PilotSessionSummaryR\asummary\x120\n" +
 	"\aanswers\x18\x02 \x03(\v2\x16.career.v1.PilotAnswerR\aanswers\x123\n" +
 	"\bcomments\x18\x03 \x03(\v2\x17.career.v1.PilotCommentR\bcomments\x124\n" +
-	"\x06events\x18\x04 \x03(\v2\x1c.career.v1.PilotSectionEventR\x06events\"N\n" +
-	"\x12ExportPilotRequest\x128\n" +
-	"\x05table\x18\x01 \x01(\tB\"\xbaH\x1fr\x1dR\bsessionsR\aanswersR\bcommentsR\x05table\"D\n" +
+	"\x06events\x18\x04 \x03(\v2\x1c.career.v1.PilotSectionEventR\x06events\x12*\n" +
+	"\x05notes\x18\x05 \x03(\v2\x14.career.v1.PilotNoteR\x05notes\"U\n" +
+	"\x12ExportPilotRequest\x12?\n" +
+	"\x05table\x18\x01 \x01(\tB)\xbaH&r$R\bsessionsR\aanswersR\bcommentsR\x05notesR\x05table\"D\n" +
 	"\x13ExportPilotResponse\x12\x10\n" +
 	"\x03csv\x18\x01 \x01(\tR\x03csv\x12\x1b\n" +
 	"\trow_count\x18\x02 \x01(\x05R\browCount\"E\n" +
@@ -2497,7 +2883,35 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\tsessionId\"9\n" +
 	"\x1aDeletePilotSessionResponse\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\tR\bmemberId2\xdd\t\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\"\xb0\x01\n" +
+	"\tPilotNote\x12\x1f\n" +
+	"\vtarget_kind\x18\x01 \x01(\tR\n" +
+	"targetKind\x12\x1b\n" +
+	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12\x12\n" +
+	"\x04body\x18\x03 \x01(\tR\x04body\x129\n" +
+	"\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06author\x18\x05 \x01(\tR\x06author\"\x8d\x02\n" +
+	"\x16UpsertPilotNoteRequest\x12(\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\tsessionId\x12\x84\x01\n" +
+	"\vtarget_kind\x18\x02 \x01(\tBc\xbaH`r^R\asessionR\x04itemR\n" +
+	"record_rowR\x0erecord_generalR\rworkflow_nodeR\x10workflow_missingR\x10workflow_generalR\n" +
+	"targetKind\x12$\n" +
+	"\ttarget_id\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18 R\btargetId\x12\x1c\n" +
+	"\x04body\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc0>R\x04body\"n\n" +
+	"\x17UpsertPilotNoteResponse\x129\n" +
+	"\n" +
+	"updated_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
+	"\aremoved\x18\x02 \x01(\bR\aremoved\"\xa5\x01\n" +
+	"\x1cSetPilotSessionReviewRequest\x12(\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\tsessionId\x12=\n" +
+	"\x06status\x18\x02 \x01(\tB%\xbaH\"r R\n" +
+	"unreviewedR\breviewedR\bexcludedR\x06status\x12\x1c\n" +
+	"\x04note\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x04note\"Y\n" +
+	"\x1dSetPilotSessionReviewResponse\x128\n" +
+	"\asummary\x18\x01 \x01(\v2\x1e.career.v1.PilotSessionSummaryR\asummary2\xb7\v\n" +
 	"\fPilotService\x12I\n" +
 	"\bGetPilot\x12\x1a.career.v1.GetPilotRequest\x1a\x1b.career.v1.GetPilotResponse\"\x04\x80\xb5\x18\x02\x12O\n" +
 	"\n" +
@@ -2512,7 +2926,9 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x11ListPilotSessions\x12#.career.v1.ListPilotSessionsRequest\x1a$.career.v1.ListPilotSessionsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12b\n" +
 	"\x0fGetPilotSession\x12!.career.v1.GetPilotSessionRequest\x1a\".career.v1.GetPilotSessionResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12V\n" +
 	"\vExportPilot\x12\x1d.career.v1.ExportPilotRequest\x1a\x1e.career.v1.ExportPilotResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12k\n" +
-	"\x12DeletePilotSession\x12$.career.v1.DeletePilotSessionRequest\x1a%.career.v1.DeletePilotSessionResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa4\x01\n" +
+	"\x12DeletePilotSession\x12$.career.v1.DeletePilotSessionRequest\x1a%.career.v1.DeletePilotSessionResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12b\n" +
+	"\x0fUpsertPilotNote\x12!.career.v1.UpsertPilotNoteRequest\x1a\".career.v1.UpsertPilotNoteResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12t\n" +
+	"\x15SetPilotSessionReview\x12'.career.v1.SetPilotSessionReviewRequest\x1a(.career.v1.SetPilotSessionReviewResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa4\x01\n" +
 	"\rcom.career.v1B\n" +
 	"PilotProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
@@ -2529,52 +2945,57 @@ func file_career_v1_pilot_proto_rawDescGZIP() []byte {
 	return file_career_v1_pilot_proto_rawDescData
 }
 
-var file_career_v1_pilot_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_career_v1_pilot_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_career_v1_pilot_proto_goTypes = []any{
-	(*PilotSession)(nil),               // 0: career.v1.PilotSession
-	(*GetPilotRequest)(nil),            // 1: career.v1.GetPilotRequest
-	(*GetPilotResponse)(nil),           // 2: career.v1.GetPilotResponse
-	(*StartPilotRequest)(nil),          // 3: career.v1.StartPilotRequest
-	(*StartPilotResponse)(nil),         // 4: career.v1.StartPilotResponse
-	(*PilotScale)(nil),                 // 5: career.v1.PilotScale
-	(*PilotDimension)(nil),             // 6: career.v1.PilotDimension
-	(*PilotItem)(nil),                  // 7: career.v1.PilotItem
-	(*PilotAnswer)(nil),                // 8: career.v1.PilotAnswer
-	(*GetPilotSectionRequest)(nil),     // 9: career.v1.GetPilotSectionRequest
-	(*GetPilotSectionResponse)(nil),    // 10: career.v1.GetPilotSectionResponse
-	(*SubmitPilotSectionRequest)(nil),  // 11: career.v1.SubmitPilotSectionRequest
-	(*SubmitPilotSectionResponse)(nil), // 12: career.v1.SubmitPilotSectionResponse
-	(*GetPilotRecordRequest)(nil),      // 13: career.v1.GetPilotRecordRequest
-	(*GetPilotRecordResponse)(nil),     // 14: career.v1.GetPilotRecordResponse
-	(*GetPilotWorkflowRequest)(nil),    // 15: career.v1.GetPilotWorkflowRequest
-	(*PilotWorkflowNode)(nil),          // 16: career.v1.PilotWorkflowNode
-	(*PilotWorkflowPhase)(nil),         // 17: career.v1.PilotWorkflowPhase
-	(*GetPilotWorkflowResponse)(nil),   // 18: career.v1.GetPilotWorkflowResponse
-	(*PilotComment)(nil),               // 19: career.v1.PilotComment
-	(*UpsertPilotCommentRequest)(nil),  // 20: career.v1.UpsertPilotCommentRequest
-	(*UpsertPilotCommentResponse)(nil), // 21: career.v1.UpsertPilotCommentResponse
-	(*MarkPilotPartRequest)(nil),       // 22: career.v1.MarkPilotPartRequest
-	(*MarkPilotPartResponse)(nil),      // 23: career.v1.MarkPilotPartResponse
-	(*FinishPilotRequest)(nil),         // 24: career.v1.FinishPilotRequest
-	(*FinishPilotResponse)(nil),        // 25: career.v1.FinishPilotResponse
-	(*ListPilotSessionsRequest)(nil),   // 26: career.v1.ListPilotSessionsRequest
-	(*PilotSessionSummary)(nil),        // 27: career.v1.PilotSessionSummary
-	(*ListPilotSessionsResponse)(nil),  // 28: career.v1.ListPilotSessionsResponse
-	(*GetPilotSessionRequest)(nil),     // 29: career.v1.GetPilotSessionRequest
-	(*PilotSectionEvent)(nil),          // 30: career.v1.PilotSectionEvent
-	(*GetPilotSessionResponse)(nil),    // 31: career.v1.GetPilotSessionResponse
-	(*ExportPilotRequest)(nil),         // 32: career.v1.ExportPilotRequest
-	(*ExportPilotResponse)(nil),        // 33: career.v1.ExportPilotResponse
-	(*DeletePilotSessionRequest)(nil),  // 34: career.v1.DeletePilotSessionRequest
-	(*DeletePilotSessionResponse)(nil), // 35: career.v1.DeletePilotSessionResponse
-	(*timestamppb.Timestamp)(nil),      // 36: google.protobuf.Timestamp
+	(*PilotSession)(nil),                  // 0: career.v1.PilotSession
+	(*GetPilotRequest)(nil),               // 1: career.v1.GetPilotRequest
+	(*GetPilotResponse)(nil),              // 2: career.v1.GetPilotResponse
+	(*StartPilotRequest)(nil),             // 3: career.v1.StartPilotRequest
+	(*StartPilotResponse)(nil),            // 4: career.v1.StartPilotResponse
+	(*PilotScale)(nil),                    // 5: career.v1.PilotScale
+	(*PilotDimension)(nil),                // 6: career.v1.PilotDimension
+	(*PilotItem)(nil),                     // 7: career.v1.PilotItem
+	(*PilotAnswer)(nil),                   // 8: career.v1.PilotAnswer
+	(*GetPilotSectionRequest)(nil),        // 9: career.v1.GetPilotSectionRequest
+	(*GetPilotSectionResponse)(nil),       // 10: career.v1.GetPilotSectionResponse
+	(*SubmitPilotSectionRequest)(nil),     // 11: career.v1.SubmitPilotSectionRequest
+	(*SubmitPilotSectionResponse)(nil),    // 12: career.v1.SubmitPilotSectionResponse
+	(*GetPilotRecordRequest)(nil),         // 13: career.v1.GetPilotRecordRequest
+	(*GetPilotRecordResponse)(nil),        // 14: career.v1.GetPilotRecordResponse
+	(*GetPilotWorkflowRequest)(nil),       // 15: career.v1.GetPilotWorkflowRequest
+	(*PilotWorkflowNode)(nil),             // 16: career.v1.PilotWorkflowNode
+	(*PilotWorkflowPhase)(nil),            // 17: career.v1.PilotWorkflowPhase
+	(*GetPilotWorkflowResponse)(nil),      // 18: career.v1.GetPilotWorkflowResponse
+	(*PilotComment)(nil),                  // 19: career.v1.PilotComment
+	(*UpsertPilotCommentRequest)(nil),     // 20: career.v1.UpsertPilotCommentRequest
+	(*UpsertPilotCommentResponse)(nil),    // 21: career.v1.UpsertPilotCommentResponse
+	(*MarkPilotPartRequest)(nil),          // 22: career.v1.MarkPilotPartRequest
+	(*MarkPilotPartResponse)(nil),         // 23: career.v1.MarkPilotPartResponse
+	(*FinishPilotRequest)(nil),            // 24: career.v1.FinishPilotRequest
+	(*FinishPilotResponse)(nil),           // 25: career.v1.FinishPilotResponse
+	(*ListPilotSessionsRequest)(nil),      // 26: career.v1.ListPilotSessionsRequest
+	(*PilotSessionSummary)(nil),           // 27: career.v1.PilotSessionSummary
+	(*ListPilotSessionsResponse)(nil),     // 28: career.v1.ListPilotSessionsResponse
+	(*GetPilotSessionRequest)(nil),        // 29: career.v1.GetPilotSessionRequest
+	(*PilotSectionEvent)(nil),             // 30: career.v1.PilotSectionEvent
+	(*GetPilotSessionResponse)(nil),       // 31: career.v1.GetPilotSessionResponse
+	(*ExportPilotRequest)(nil),            // 32: career.v1.ExportPilotRequest
+	(*ExportPilotResponse)(nil),           // 33: career.v1.ExportPilotResponse
+	(*DeletePilotSessionRequest)(nil),     // 34: career.v1.DeletePilotSessionRequest
+	(*DeletePilotSessionResponse)(nil),    // 35: career.v1.DeletePilotSessionResponse
+	(*PilotNote)(nil),                     // 36: career.v1.PilotNote
+	(*UpsertPilotNoteRequest)(nil),        // 37: career.v1.UpsertPilotNoteRequest
+	(*UpsertPilotNoteResponse)(nil),       // 38: career.v1.UpsertPilotNoteResponse
+	(*SetPilotSessionReviewRequest)(nil),  // 39: career.v1.SetPilotSessionReviewRequest
+	(*SetPilotSessionReviewResponse)(nil), // 40: career.v1.SetPilotSessionReviewResponse
+	(*timestamppb.Timestamp)(nil),         // 41: google.protobuf.Timestamp
 }
 var file_career_v1_pilot_proto_depIdxs = []int32{
-	36, // 0: career.v1.PilotSession.consent_at:type_name -> google.protobuf.Timestamp
-	36, // 1: career.v1.PilotSession.survey_finished_at:type_name -> google.protobuf.Timestamp
-	36, // 2: career.v1.PilotSession.record_finished_at:type_name -> google.protobuf.Timestamp
-	36, // 3: career.v1.PilotSession.workflow_finished_at:type_name -> google.protobuf.Timestamp
-	36, // 4: career.v1.PilotSession.finished_at:type_name -> google.protobuf.Timestamp
+	41, // 0: career.v1.PilotSession.consent_at:type_name -> google.protobuf.Timestamp
+	41, // 1: career.v1.PilotSession.survey_finished_at:type_name -> google.protobuf.Timestamp
+	41, // 2: career.v1.PilotSession.record_finished_at:type_name -> google.protobuf.Timestamp
+	41, // 3: career.v1.PilotSession.workflow_finished_at:type_name -> google.protobuf.Timestamp
+	41, // 4: career.v1.PilotSession.finished_at:type_name -> google.protobuf.Timestamp
 	0,  // 5: career.v1.GetPilotResponse.session:type_name -> career.v1.PilotSession
 	0,  // 6: career.v1.StartPilotResponse.session:type_name -> career.v1.PilotSession
 	5,  // 7: career.v1.PilotItem.scale:type_name -> career.v1.PilotScale
@@ -2588,48 +3009,57 @@ var file_career_v1_pilot_proto_depIdxs = []int32{
 	17, // 15: career.v1.GetPilotWorkflowResponse.phases:type_name -> career.v1.PilotWorkflowPhase
 	16, // 16: career.v1.GetPilotWorkflowResponse.nodes:type_name -> career.v1.PilotWorkflowNode
 	19, // 17: career.v1.GetPilotWorkflowResponse.comments:type_name -> career.v1.PilotComment
-	36, // 18: career.v1.PilotComment.updated_at:type_name -> google.protobuf.Timestamp
+	41, // 18: career.v1.PilotComment.updated_at:type_name -> google.protobuf.Timestamp
 	19, // 19: career.v1.UpsertPilotCommentResponse.comment:type_name -> career.v1.PilotComment
 	0,  // 20: career.v1.MarkPilotPartResponse.session:type_name -> career.v1.PilotSession
 	0,  // 21: career.v1.FinishPilotResponse.session:type_name -> career.v1.PilotSession
 	0,  // 22: career.v1.PilotSessionSummary.session:type_name -> career.v1.PilotSession
-	27, // 23: career.v1.ListPilotSessionsResponse.sessions:type_name -> career.v1.PilotSessionSummary
-	36, // 24: career.v1.PilotSectionEvent.at:type_name -> google.protobuf.Timestamp
-	27, // 25: career.v1.GetPilotSessionResponse.summary:type_name -> career.v1.PilotSessionSummary
-	8,  // 26: career.v1.GetPilotSessionResponse.answers:type_name -> career.v1.PilotAnswer
-	19, // 27: career.v1.GetPilotSessionResponse.comments:type_name -> career.v1.PilotComment
-	30, // 28: career.v1.GetPilotSessionResponse.events:type_name -> career.v1.PilotSectionEvent
-	1,  // 29: career.v1.PilotService.GetPilot:input_type -> career.v1.GetPilotRequest
-	3,  // 30: career.v1.PilotService.StartPilot:input_type -> career.v1.StartPilotRequest
-	9,  // 31: career.v1.PilotService.GetPilotSection:input_type -> career.v1.GetPilotSectionRequest
-	11, // 32: career.v1.PilotService.SubmitPilotSection:input_type -> career.v1.SubmitPilotSectionRequest
-	13, // 33: career.v1.PilotService.GetPilotRecord:input_type -> career.v1.GetPilotRecordRequest
-	15, // 34: career.v1.PilotService.GetPilotWorkflow:input_type -> career.v1.GetPilotWorkflowRequest
-	20, // 35: career.v1.PilotService.UpsertPilotComment:input_type -> career.v1.UpsertPilotCommentRequest
-	22, // 36: career.v1.PilotService.MarkPilotPart:input_type -> career.v1.MarkPilotPartRequest
-	24, // 37: career.v1.PilotService.FinishPilot:input_type -> career.v1.FinishPilotRequest
-	26, // 38: career.v1.PilotService.ListPilotSessions:input_type -> career.v1.ListPilotSessionsRequest
-	29, // 39: career.v1.PilotService.GetPilotSession:input_type -> career.v1.GetPilotSessionRequest
-	32, // 40: career.v1.PilotService.ExportPilot:input_type -> career.v1.ExportPilotRequest
-	34, // 41: career.v1.PilotService.DeletePilotSession:input_type -> career.v1.DeletePilotSessionRequest
-	2,  // 42: career.v1.PilotService.GetPilot:output_type -> career.v1.GetPilotResponse
-	4,  // 43: career.v1.PilotService.StartPilot:output_type -> career.v1.StartPilotResponse
-	10, // 44: career.v1.PilotService.GetPilotSection:output_type -> career.v1.GetPilotSectionResponse
-	12, // 45: career.v1.PilotService.SubmitPilotSection:output_type -> career.v1.SubmitPilotSectionResponse
-	14, // 46: career.v1.PilotService.GetPilotRecord:output_type -> career.v1.GetPilotRecordResponse
-	18, // 47: career.v1.PilotService.GetPilotWorkflow:output_type -> career.v1.GetPilotWorkflowResponse
-	21, // 48: career.v1.PilotService.UpsertPilotComment:output_type -> career.v1.UpsertPilotCommentResponse
-	23, // 49: career.v1.PilotService.MarkPilotPart:output_type -> career.v1.MarkPilotPartResponse
-	25, // 50: career.v1.PilotService.FinishPilot:output_type -> career.v1.FinishPilotResponse
-	28, // 51: career.v1.PilotService.ListPilotSessions:output_type -> career.v1.ListPilotSessionsResponse
-	31, // 52: career.v1.PilotService.GetPilotSession:output_type -> career.v1.GetPilotSessionResponse
-	33, // 53: career.v1.PilotService.ExportPilot:output_type -> career.v1.ExportPilotResponse
-	35, // 54: career.v1.PilotService.DeletePilotSession:output_type -> career.v1.DeletePilotSessionResponse
-	42, // [42:55] is the sub-list for method output_type
-	29, // [29:42] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	41, // 23: career.v1.PilotSessionSummary.reviewed_at:type_name -> google.protobuf.Timestamp
+	27, // 24: career.v1.ListPilotSessionsResponse.sessions:type_name -> career.v1.PilotSessionSummary
+	41, // 25: career.v1.PilotSectionEvent.at:type_name -> google.protobuf.Timestamp
+	27, // 26: career.v1.GetPilotSessionResponse.summary:type_name -> career.v1.PilotSessionSummary
+	8,  // 27: career.v1.GetPilotSessionResponse.answers:type_name -> career.v1.PilotAnswer
+	19, // 28: career.v1.GetPilotSessionResponse.comments:type_name -> career.v1.PilotComment
+	30, // 29: career.v1.GetPilotSessionResponse.events:type_name -> career.v1.PilotSectionEvent
+	36, // 30: career.v1.GetPilotSessionResponse.notes:type_name -> career.v1.PilotNote
+	41, // 31: career.v1.PilotNote.updated_at:type_name -> google.protobuf.Timestamp
+	41, // 32: career.v1.UpsertPilotNoteResponse.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 33: career.v1.SetPilotSessionReviewResponse.summary:type_name -> career.v1.PilotSessionSummary
+	1,  // 34: career.v1.PilotService.GetPilot:input_type -> career.v1.GetPilotRequest
+	3,  // 35: career.v1.PilotService.StartPilot:input_type -> career.v1.StartPilotRequest
+	9,  // 36: career.v1.PilotService.GetPilotSection:input_type -> career.v1.GetPilotSectionRequest
+	11, // 37: career.v1.PilotService.SubmitPilotSection:input_type -> career.v1.SubmitPilotSectionRequest
+	13, // 38: career.v1.PilotService.GetPilotRecord:input_type -> career.v1.GetPilotRecordRequest
+	15, // 39: career.v1.PilotService.GetPilotWorkflow:input_type -> career.v1.GetPilotWorkflowRequest
+	20, // 40: career.v1.PilotService.UpsertPilotComment:input_type -> career.v1.UpsertPilotCommentRequest
+	22, // 41: career.v1.PilotService.MarkPilotPart:input_type -> career.v1.MarkPilotPartRequest
+	24, // 42: career.v1.PilotService.FinishPilot:input_type -> career.v1.FinishPilotRequest
+	26, // 43: career.v1.PilotService.ListPilotSessions:input_type -> career.v1.ListPilotSessionsRequest
+	29, // 44: career.v1.PilotService.GetPilotSession:input_type -> career.v1.GetPilotSessionRequest
+	32, // 45: career.v1.PilotService.ExportPilot:input_type -> career.v1.ExportPilotRequest
+	34, // 46: career.v1.PilotService.DeletePilotSession:input_type -> career.v1.DeletePilotSessionRequest
+	37, // 47: career.v1.PilotService.UpsertPilotNote:input_type -> career.v1.UpsertPilotNoteRequest
+	39, // 48: career.v1.PilotService.SetPilotSessionReview:input_type -> career.v1.SetPilotSessionReviewRequest
+	2,  // 49: career.v1.PilotService.GetPilot:output_type -> career.v1.GetPilotResponse
+	4,  // 50: career.v1.PilotService.StartPilot:output_type -> career.v1.StartPilotResponse
+	10, // 51: career.v1.PilotService.GetPilotSection:output_type -> career.v1.GetPilotSectionResponse
+	12, // 52: career.v1.PilotService.SubmitPilotSection:output_type -> career.v1.SubmitPilotSectionResponse
+	14, // 53: career.v1.PilotService.GetPilotRecord:output_type -> career.v1.GetPilotRecordResponse
+	18, // 54: career.v1.PilotService.GetPilotWorkflow:output_type -> career.v1.GetPilotWorkflowResponse
+	21, // 55: career.v1.PilotService.UpsertPilotComment:output_type -> career.v1.UpsertPilotCommentResponse
+	23, // 56: career.v1.PilotService.MarkPilotPart:output_type -> career.v1.MarkPilotPartResponse
+	25, // 57: career.v1.PilotService.FinishPilot:output_type -> career.v1.FinishPilotResponse
+	28, // 58: career.v1.PilotService.ListPilotSessions:output_type -> career.v1.ListPilotSessionsResponse
+	31, // 59: career.v1.PilotService.GetPilotSession:output_type -> career.v1.GetPilotSessionResponse
+	33, // 60: career.v1.PilotService.ExportPilot:output_type -> career.v1.ExportPilotResponse
+	35, // 61: career.v1.PilotService.DeletePilotSession:output_type -> career.v1.DeletePilotSessionResponse
+	38, // 62: career.v1.PilotService.UpsertPilotNote:output_type -> career.v1.UpsertPilotNoteResponse
+	40, // 63: career.v1.PilotService.SetPilotSessionReview:output_type -> career.v1.SetPilotSessionReviewResponse
+	49, // [49:64] is the sub-list for method output_type
+	34, // [34:49] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_pilot_proto_init() }
@@ -2644,7 +3074,7 @@ func file_career_v1_pilot_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_pilot_proto_rawDesc), len(file_career_v1_pilot_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

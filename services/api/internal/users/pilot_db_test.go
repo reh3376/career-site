@@ -233,3 +233,88 @@ func TestDeletePilotSessionCascades(t *testing.T) {
 		t.Fatalf("second DeletePilotSession: deleted=%v err=%v, want false and nil", again, err)
 	}
 }
+
+// The owner's notes and judgement (FSD FR-PLT-16, FR-PLT-17): upsert,
+// replace, remove, the author's name, and the review columns; and the
+// cascade that takes the notes with a deleted session.
+func TestPilotNotesAndReviewAgainstPostgres(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+	var userID, adminID int64
+	if err := r.pool.QueryRow(ctx, `
+    INSERT INTO users (email, name, status, role)
+    VALUES ('pilot-notes-' || gen_random_uuid()::text || '@example.test', 'Pilot Noted', 'active', 'member')
+    RETURNING id`).Scan(&userID); err != nil {
+		t.Fatalf("make user: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID) })
+	if err := r.pool.QueryRow(ctx, `
+    INSERT INTO users (email, name, status, role)
+    VALUES ('pilot-owner-' || gen_random_uuid()::text || '@example.test', 'The Owner', 'active', 'admin')
+    RETURNING id`).Scan(&adminID); err != nil {
+		t.Fatalf("make admin: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, adminID) })
+	const version = "test-notes-v0.0"
+	if err := r.EnsurePilotInstrument(ctx, version, []byte(`{"version":"test-notes-v0.0","sections":[]}`)); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM pilot_instruments WHERE version = $1`, version) })
+	s, err := r.StartPilotSession(ctx, userID, version, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.ReviewStatus != "unreviewed" || s.ReviewedAt != nil {
+		t.Fatalf("a new session must read unreviewed: %+v", s)
+	}
+
+	n, err := r.UpsertPilotNote(ctx, s.ID, "item", "C1", "read twice", adminID)
+	if err != nil || n == nil || n.Author != "The Owner" {
+		t.Fatalf("UpsertPilotNote: %+v err=%v", n, err)
+	}
+	if _, err := r.UpsertPilotNote(ctx, s.ID, "item", "C1", "read twice, then skipped", adminID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.UpsertPilotNote(ctx, s.ID, "session", "", "a careful sitting", adminID); err != nil {
+		t.Fatal(err)
+	}
+	notes, err := r.ListPilotNotes(ctx, s.ID)
+	if err != nil || len(notes) != 2 {
+		t.Fatalf("ListPilotNotes: %d err=%v", len(notes), err)
+	}
+	for _, x := range notes {
+		if x.TargetKind == "item" && x.Body != "read twice, then skipped" {
+			t.Errorf("replace did not replace: %q", x.Body)
+		}
+	}
+	if removed, err := r.UpsertPilotNote(ctx, s.ID, "item", "C1", "", adminID); err != nil || removed != nil {
+		t.Fatalf("empty body must remove: %+v err=%v", removed, err)
+	}
+	if notes, _ = r.ListPilotNotes(ctx, s.ID); len(notes) != 1 {
+		t.Fatalf("after removal want 1 note, got %d", len(notes))
+	}
+
+	if err := r.SetPilotSessionReview(ctx, s.ID, "excluded", "owner's own run", adminID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := r.GetPilotSessionByID(ctx, s.ID)
+	if got.ReviewStatus != "excluded" || got.ReviewNote != "owner's own run" || got.ReviewedAt == nil {
+		t.Fatalf("review not recorded: %+v", got)
+	}
+	if err := r.SetPilotSessionReview(ctx, s.ID, "unreviewed", "", adminID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = r.GetPilotSessionByID(ctx, s.ID); got.ReviewedAt != nil || got.ReviewStatus != "unreviewed" {
+		t.Fatalf("unreviewed must clear the instant: %+v", got)
+	}
+	if err := r.SetPilotSessionReview(ctx, "00000000-0000-4000-8000-000000000000", "reviewed", "", adminID); err != ErrNotFound {
+		t.Fatalf("unknown session: err = %v, want ErrNotFound", err)
+	}
+
+	if _, err := r.DeletePilotSession(ctx, s.ID); err != nil {
+		t.Fatal(err)
+	}
+	var left int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM pilot_notes WHERE session_id = $1::uuid`, s.ID).Scan(&left); err != nil || left != 0 {
+		t.Fatalf("notes survived the session's deletion: %d err=%v", left, err)
+	}
+}

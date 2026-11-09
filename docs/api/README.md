@@ -129,7 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 84 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
-| [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 13 |
+| [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
 ## AuthService
@@ -5372,6 +5372,8 @@ The pilot: one sitting per participant per instrument version.
 | [`GetPilotSession`](#pilotservice-getpilotsession) | `/api/career.v1.PilotService/GetPilotSession` | Admin | default | `GetPilotSessionRequest` → `GetPilotSessionResponse` | One session in full: answers with flags, comments by target, and the section open and submit instants. |
 | [`ExportPilot`](#pilotservice-exportpilot) | `/api/career.v1.PilotService/ExportPilot` | Admin | default | `ExportPilotRequest` → `ExportPilotResponse` | Exports one table as CSV, keyed by the participant code the admin assigns rather than by name or address, for the private folder. |
 | [`DeletePilotSession`](#pilotservice-deletepilotsession) | `/api/career.v1.PilotService/DeletePilotSession` | Admin | default | `DeletePilotSessionRequest` → `DeletePilotSessionResponse` | Deletes one session with everything it holds: answers, flags, comments and section timings. |
+| [`UpsertPilotNote`](#pilotservice-upsertpilotnote) | `/api/career.v1.PilotService/UpsertPilotNote` | Admin | default | `UpsertPilotNoteRequest` → `UpsertPilotNoteResponse` | Saves or replaces the owner's note on a session, an answer, a record row or a workflow step; an empty body removes it. |
+| [`SetPilotSessionReview`](#pilotservice-setpilotsessionreview) | `/api/career.v1.PilotService/SetPilotSessionReview` | Admin | default | `SetPilotSessionReviewRequest` → `SetPilotSessionReviewResponse` | Sets the owner's curation judgement on a session: unreviewed, reviewed (fit to use), or excluded (with the reason), as the decision test's review does for its runs. |
 
 ### PilotService.GetPilot
 
@@ -5502,7 +5504,9 @@ its answers.
     {
       "itemId": "string",
       "valueJson": "string",
-      "flagged": true
+      "flagged": true,
+      "prompt": "string",
+      "section": "string"
     }
   ]
 }
@@ -5699,6 +5703,7 @@ the section open and submit instants.
 | `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Every answer with its flag, in instrument order. |
 | `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | Every comment, by target. |
 | `events` | [`PilotSectionEvent`](#pilotsectionevent)[] | array of object |  | Section open and submit instants, oldest first. |
+| `notes` | [`PilotNote`](#pilotnote)[] | array of object |  | The owner's notes on this session, by target. |
 
 <details><summary>Example request body</summary>
 
@@ -5721,7 +5726,7 @@ assigns rather than by name or address, for the private folder.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments"` | sessions, answers or comments. |
+| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments" in: "notes"` | sessions, answers, comments or notes. |
 
 **Response** — [`ExportPilotResponse`](#exportpilotresponse)
 
@@ -5768,6 +5773,81 @@ session is not deleted while the pilot runs.
 ```json
 {
   "sessionId": "string"
+}
+```
+
+</details>
+
+### PilotService.UpsertPilotNote
+
+`POST /api/career.v1.PilotService/UpsertPilotNote` · **Auth:** Admin · **Rate limit:** default/min
+
+Saves or replaces the owner's note on a session, an answer, a
+record row or a workflow step; an empty body removes it. The notes
+are the call's record (11 §2 Parts A to C), kept in the database
+beside what they are about rather than in a file (owner,
+2026-11-09: collect, govern, store and curate the data here).
+
+**Request** — [`UpsertPilotNoteRequest`](#upsertpilotnoterequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+| `targetKind` | `string` | string | `string: in: "session" in: "item" in: "record_row" in: "record_general" in: "workflow_node" in: "workflow_missing" in: "workflow_general"` | See PilotNote.target_kind. |
+| `targetId` | `string` | string | `string: max_len: 32` | See PilotNote.target_id. |
+| `body` | `string` | string | `string: max_len: 8000` | The note; empty removes it. |
+
+**Response** — [`UpsertPilotNoteResponse`](#upsertpilotnoteresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was saved; unset when the note was removed. |
+| `removed` | `bool` | boolean |  | True when an empty body removed the note. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionId": "string",
+  "targetKind": "string",
+  "targetId": "string",
+  "body": "string"
+}
+```
+
+</details>
+
+### PilotService.SetPilotSessionReview
+
+`POST /api/career.v1.PilotService/SetPilotSessionReview` · **Auth:** Admin · **Rate limit:** default/min
+
+Sets the owner's curation judgement on a session: unreviewed,
+reviewed (fit to use), or excluded (with the reason), as the
+decision test's review does for its runs. Exports and figures
+carry the status so a reader can filter on what the owner has
+vouched for.
+
+**Request** — [`SetPilotSessionReviewRequest`](#setpilotsessionreviewrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+| `status` | `string` | string | `string: in: "unreviewed" in: "reviewed" in: "excluded"` | unreviewed, reviewed or excluded. |
+| `note` | `string` | string | `string: max_len: 2000` | The reason; required when excluding. |
+
+**Response** — [`SetPilotSessionReviewResponse`](#setpilotsessionreviewresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `summary` | [`PilotSessionSummary`](#pilotsessionsummary) | object |  | The summary row as it now reads. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionId": "string",
+  "status": "string",
+  "note": "string"
 }
 ```
 
@@ -10655,6 +10735,8 @@ One answer, with the per-item flag.
 | `itemId` | `string` | string | `string: min_len: 1 max_len: 8` | Item id. |
 | `valueJson` | `string` | string | `string: max_len: 20000` | The answer as JSON, shaped by the item type: a string for single and single_from, an array of strings for multi, a string for text, a number for number and scale, and an object keyed by selected option with one value per dimension for rating_per_selected. The server validates the shape against the instrument. |
 | `flagged` | `bool` | boolean |  | "This was unclear or didn't fit me." |
+| `prompt` | `string` | string |  | The item's question text, filled on the admin read so a review reads as questions rather than ids. Ignored on submit. |
+| `section` | `string` | string |  | The section the item belongs to, filled on the admin read. |
 
 ### GetPilotSectionRequest
 
@@ -10834,6 +10916,9 @@ One row of the admin session list.
 | `selfReportedMinutes` | `int32` | number |  | What the participant said it took; 0 until answered. |
 | `commentCount` | `int32` | number |  | How many comments the participant left. |
 | `flagCount` | `int32` | number |  | How many items the participant flagged. |
+| `reviewStatus` | `string` | string |  | The owner's curation judgement: unreviewed, reviewed or excluded. |
+| `reviewNote` | `string` | string |  | Why, when excluded or worth a word when reviewed. |
+| `reviewedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the judgement was last set. |
 
 ### ListPilotSessionsResponse
 
@@ -10872,6 +10957,7 @@ One session in full.
 | `answers` | [`PilotAnswer`](#pilotanswer)[] | array of object |  | Every answer with its flag, in instrument order. |
 | `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | Every comment, by target. |
 | `events` | [`PilotSectionEvent`](#pilotsectionevent)[] | array of object |  | Section open and submit instants, oldest first. |
+| `notes` | [`PilotNote`](#pilotnote)[] | array of object |  | The owner's notes on this session, by target. |
 
 ### ExportPilotRequest
 
@@ -10879,7 +10965,7 @@ Which table to export.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments"` | sessions, answers or comments. |
+| `table` | `string` | string | `string: in: "sessions" in: "answers" in: "comments" in: "notes"` | sessions, answers, comments or notes. |
 
 ### ExportPilotResponse
 
@@ -10905,6 +10991,56 @@ What was deleted.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `memberId` | `string` | string |  | Id of the member whose session was removed, so the page can say whose it was. |
+
+### PilotNote
+
+One owner's note on a pilot session or on something in it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `targetKind` | `string` | string |  | session, item, record_row, record_general, workflow_node, workflow_missing or workflow_general. |
+| `targetId` | `string` | string |  | The item id, row id or node id; empty for the session and the general kinds. |
+| `body` | `string` | string |  | The note. |
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was last saved. |
+| `author` | `string` | string |  | Who saved it, as a display name. |
+
+### UpsertPilotNoteRequest
+
+A note to save or replace.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+| `targetKind` | `string` | string | `string: in: "session" in: "item" in: "record_row" in: "record_general" in: "workflow_node" in: "workflow_missing" in: "workflow_general"` | See PilotNote.target_kind. |
+| `targetId` | `string` | string | `string: max_len: 32` | See PilotNote.target_id. |
+| `body` | `string` | string | `string: max_len: 8000` | The note; empty removes it. |
+
+### UpsertPilotNoteResponse
+
+The stored note.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was saved; unset when the note was removed. |
+| `removed` | `bool` | boolean |  | True when an empty body removed the note. |
+
+### SetPilotSessionReviewRequest
+
+The owner's judgement on a session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | string | `string: min_len: 1 max_len: 64` | Session id (UUID). |
+| `status` | `string` | string | `string: in: "unreviewed" in: "reviewed" in: "excluded"` | unreviewed, reviewed or excluded. |
+| `note` | `string` | string | `string: max_len: 2000` | The reason; required when excluding. |
+
+### SetPilotSessionReviewResponse
+
+The session after the judgement.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `summary` | [`PilotSessionSummary`](#pilotsessionsummary) | object |  | The summary row as it now reads. |
 
 ### GetVersionRequest
 

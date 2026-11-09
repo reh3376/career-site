@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { BRANCH_LABEL, STATUS_TONE, fmt, listPilotSessions, type PilotSessionSummary } from "./lib";
+import { BRANCH_LABEL, REVIEW_LABEL, REVIEW_TONE, STATUS_TONE, fmt, listPilotSessions, type PilotSessionSummary } from "./lib";
 
 export const metadata: Metadata = { title: "Admin · Pilot" };
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function AdminPilotPage() {
       <section aria-label="Exports" className="mt-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">export · csv · participants as P-NN</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {(["sessions", "answers", "comments"] as const).map((t) => (
+          {(["sessions", "answers", "comments", "notes"] as const).map((t) => (
             <a
               key={t}
               href={`/admin/pilot/export?table=${t}`}
@@ -56,7 +56,9 @@ export default async function AdminPilotPage() {
           ))}
         </div>
         <p className="mt-2 text-xs text-ink-3">
-          Each export is audited. Files belong in the private repository&rsquo;s pilot folder, never in this one.
+          Each export is audited. The database is the record: answers, comments, your notes and your judgement on
+          each sitting live here. A file is a copy for reading elsewhere and belongs in the private repository&rsquo;s
+          pilot folder, never in this one.
         </p>
       </section>
 
@@ -126,6 +128,9 @@ function SessionRow({ s }: { s: PilotSessionSummary }) {
         </span>
         <span>{s.commentCount ?? 0} comments</span>
         <span>{s.flagCount ?? 0} flags</span>
+        <span className={REVIEW_TONE[s.reviewStatus ?? "unreviewed"] ?? "text-ink-3"}>
+          {REVIEW_LABEL[s.reviewStatus ?? "unreviewed"] ?? s.reviewStatus}
+        </span>
         {ses?.recordingOk ? <span className="text-ink-2">recording ok</span> : null}
         {ses?.finishedAt ? <span className="text-ink-2">finished · {fmt(ses.finishedAt)}</span> : null}
       </div>

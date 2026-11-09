@@ -118,14 +118,18 @@ class PilotItem(_message.Message):
     def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., prompt: _Optional[str] = ..., help: _Optional[str] = ..., options: _Optional[_Iterable[str]] = ..., max_select: _Optional[int] = ..., required: _Optional[bool] = ..., scale: _Optional[_Union[PilotScale, _Mapping]] = ..., dimensions: _Optional[_Iterable[_Union[PilotDimension, _Mapping]]] = ..., pilot_only: _Optional[bool] = ..., source_item: _Optional[str] = ...) -> None: ...
 
 class PilotAnswer(_message.Message):
-    __slots__ = ("item_id", "value_json", "flagged")
+    __slots__ = ("item_id", "value_json", "flagged", "prompt", "section")
     ITEM_ID_FIELD_NUMBER: _ClassVar[int]
     VALUE_JSON_FIELD_NUMBER: _ClassVar[int]
     FLAGGED_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_FIELD_NUMBER: _ClassVar[int]
+    SECTION_FIELD_NUMBER: _ClassVar[int]
     item_id: str
     value_json: str
     flagged: bool
-    def __init__(self, item_id: _Optional[str] = ..., value_json: _Optional[str] = ..., flagged: _Optional[bool] = ...) -> None: ...
+    prompt: str
+    section: str
+    def __init__(self, item_id: _Optional[str] = ..., value_json: _Optional[str] = ..., flagged: _Optional[bool] = ..., prompt: _Optional[str] = ..., section: _Optional[str] = ...) -> None: ...
 
 class GetPilotSectionRequest(_message.Message):
     __slots__ = ("section_id",)
@@ -284,7 +288,7 @@ class ListPilotSessionsRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class PilotSessionSummary(_message.Message):
-    __slots__ = ("session", "member_id", "name", "email", "measured_minutes", "self_reported_minutes", "comment_count", "flag_count")
+    __slots__ = ("session", "member_id", "name", "email", "measured_minutes", "self_reported_minutes", "comment_count", "flag_count", "review_status", "review_note", "reviewed_at")
     SESSION_FIELD_NUMBER: _ClassVar[int]
     MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -293,6 +297,9 @@ class PilotSessionSummary(_message.Message):
     SELF_REPORTED_MINUTES_FIELD_NUMBER: _ClassVar[int]
     COMMENT_COUNT_FIELD_NUMBER: _ClassVar[int]
     FLAG_COUNT_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_STATUS_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_NOTE_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_AT_FIELD_NUMBER: _ClassVar[int]
     session: PilotSession
     member_id: str
     name: str
@@ -301,7 +308,10 @@ class PilotSessionSummary(_message.Message):
     self_reported_minutes: int
     comment_count: int
     flag_count: int
-    def __init__(self, session: _Optional[_Union[PilotSession, _Mapping]] = ..., member_id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., measured_minutes: _Optional[int] = ..., self_reported_minutes: _Optional[int] = ..., comment_count: _Optional[int] = ..., flag_count: _Optional[int] = ...) -> None: ...
+    review_status: str
+    review_note: str
+    reviewed_at: _timestamp_pb2.Timestamp
+    def __init__(self, session: _Optional[_Union[PilotSession, _Mapping]] = ..., member_id: _Optional[str] = ..., name: _Optional[str] = ..., email: _Optional[str] = ..., measured_minutes: _Optional[int] = ..., self_reported_minutes: _Optional[int] = ..., comment_count: _Optional[int] = ..., flag_count: _Optional[int] = ..., review_status: _Optional[str] = ..., review_note: _Optional[str] = ..., reviewed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class ListPilotSessionsResponse(_message.Message):
     __slots__ = ("sessions", "instrument_version")
@@ -328,16 +338,18 @@ class PilotSectionEvent(_message.Message):
     def __init__(self, section: _Optional[str] = ..., event: _Optional[str] = ..., at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
 class GetPilotSessionResponse(_message.Message):
-    __slots__ = ("summary", "answers", "comments", "events")
+    __slots__ = ("summary", "answers", "comments", "events", "notes")
     SUMMARY_FIELD_NUMBER: _ClassVar[int]
     ANSWERS_FIELD_NUMBER: _ClassVar[int]
     COMMENTS_FIELD_NUMBER: _ClassVar[int]
     EVENTS_FIELD_NUMBER: _ClassVar[int]
+    NOTES_FIELD_NUMBER: _ClassVar[int]
     summary: PilotSessionSummary
     answers: _containers.RepeatedCompositeFieldContainer[PilotAnswer]
     comments: _containers.RepeatedCompositeFieldContainer[PilotComment]
     events: _containers.RepeatedCompositeFieldContainer[PilotSectionEvent]
-    def __init__(self, summary: _Optional[_Union[PilotSessionSummary, _Mapping]] = ..., answers: _Optional[_Iterable[_Union[PilotAnswer, _Mapping]]] = ..., comments: _Optional[_Iterable[_Union[PilotComment, _Mapping]]] = ..., events: _Optional[_Iterable[_Union[PilotSectionEvent, _Mapping]]] = ...) -> None: ...
+    notes: _containers.RepeatedCompositeFieldContainer[PilotNote]
+    def __init__(self, summary: _Optional[_Union[PilotSessionSummary, _Mapping]] = ..., answers: _Optional[_Iterable[_Union[PilotAnswer, _Mapping]]] = ..., comments: _Optional[_Iterable[_Union[PilotComment, _Mapping]]] = ..., events: _Optional[_Iterable[_Union[PilotSectionEvent, _Mapping]]] = ..., notes: _Optional[_Iterable[_Union[PilotNote, _Mapping]]] = ...) -> None: ...
 
 class ExportPilotRequest(_message.Message):
     __slots__ = ("table",)
@@ -364,3 +376,53 @@ class DeletePilotSessionResponse(_message.Message):
     MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
     member_id: str
     def __init__(self, member_id: _Optional[str] = ...) -> None: ...
+
+class PilotNote(_message.Message):
+    __slots__ = ("target_kind", "target_id", "body", "updated_at", "author")
+    TARGET_KIND_FIELD_NUMBER: _ClassVar[int]
+    TARGET_ID_FIELD_NUMBER: _ClassVar[int]
+    BODY_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    AUTHOR_FIELD_NUMBER: _ClassVar[int]
+    target_kind: str
+    target_id: str
+    body: str
+    updated_at: _timestamp_pb2.Timestamp
+    author: str
+    def __init__(self, target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., author: _Optional[str] = ...) -> None: ...
+
+class UpsertPilotNoteRequest(_message.Message):
+    __slots__ = ("session_id", "target_kind", "target_id", "body")
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_KIND_FIELD_NUMBER: _ClassVar[int]
+    TARGET_ID_FIELD_NUMBER: _ClassVar[int]
+    BODY_FIELD_NUMBER: _ClassVar[int]
+    session_id: str
+    target_kind: str
+    target_id: str
+    body: str
+    def __init__(self, session_id: _Optional[str] = ..., target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ...) -> None: ...
+
+class UpsertPilotNoteResponse(_message.Message):
+    __slots__ = ("updated_at", "removed")
+    UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    REMOVED_FIELD_NUMBER: _ClassVar[int]
+    updated_at: _timestamp_pb2.Timestamp
+    removed: bool
+    def __init__(self, updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., removed: _Optional[bool] = ...) -> None: ...
+
+class SetPilotSessionReviewRequest(_message.Message):
+    __slots__ = ("session_id", "status", "note")
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
+    session_id: str
+    status: str
+    note: str
+    def __init__(self, session_id: _Optional[str] = ..., status: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
+
+class SetPilotSessionReviewResponse(_message.Message):
+    __slots__ = ("summary",)
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    summary: PilotSessionSummary
+    def __init__(self, summary: _Optional[_Union[PilotSessionSummary, _Mapping]] = ...) -> None: ...
