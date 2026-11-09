@@ -6,11 +6,11 @@ Verify your email address by opening this link (valid for 24 hours):
 
     {{.VerifyURL}}
 
-Or paste this 6-digit code into the verification screen:
+Or enter this 6-digit code at {{.CodeURL}}
 
     {{.Code}}
 
-After you verify, Roger reviews new accounts personally, usually within a day. You'll receive another email when he decides.
+{{if .Whitelisted}}Your address is on Roger's invitation list, so your access is ready the moment you verify: sign in and you are in.{{else}}After you verify, Roger reviews new accounts personally, usually within a day. You'll receive another email when he decides.{{end}}
 
 If you did not create this account, ignore this email; nothing further will happen.
 

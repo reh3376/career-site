@@ -84,6 +84,10 @@ type EmailToken struct {
 	// wrong codes have been counted against the token.
 	CodeHash []byte
 	Attempts int
+	// TokenHash is the hash of the link's token, filled by the verify
+	// code path so a matched code is consumed as the link would be. The
+	// reset helpers leave it nil.
+	TokenHash []byte
 }
 
 type CreateInput struct {

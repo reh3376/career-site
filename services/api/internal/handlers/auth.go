@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -260,7 +262,7 @@ func (h *Auth) Register(
 	}
 
 	return connect.NewResponse(&v1.RegisterResponse{
-		Message: "Check your email for a verification link.",
+		Message: "Check your email for a verification link and a code.",
 	}), nil
 }
 
@@ -278,11 +280,24 @@ func (h *Auth) sendVerifyEmail(ctx context.Context, u *users.User) error {
 	}
 
 	verifyURL := h.cfg.WebBaseURL + "/verify?token=" + token
+	// The code is entered on the same page, with the address prefilled,
+	// so the email can name the place as well as the number.
+	codeURL := h.cfg.WebBaseURL + "/verify?email=" + url.QueryEscape(u.Email)
+	// An invited address is active the moment it verifies; telling that
+	// person Roger will review them within a day is wrong, and every
+	// pilot participant is that person. Best-effort: a lookup failure
+	// falls back to the general wording.
+	whitelisted := false
+	if _, gErr := h.users.GetActiveGrant(ctx, u.Email); gErr == nil {
+		whitelisted = true
+	}
 
 	text, htmlBody, err := email.VerifyTemplate.Render(map[string]any{
-		"Name":      u.Name,
-		"VerifyURL": verifyURL,
-		"Code":      code,
+		"Name":        u.Name,
+		"VerifyURL":   verifyURL,
+		"CodeURL":     codeURL,
+		"Code":        code,
+		"Whitelisted": whitelisted,
 	})
 	if err != nil {
 		return err
@@ -307,7 +322,7 @@ func (h *Auth) Verify(
 	ctx context.Context,
 	req *connect.Request[v1.VerifyRequest],
 ) (*connect.Response[v1.VerifyResponse], error) {
-	tokenHash, err := h.resolveVerifyCredential(ctx, req.Msg)
+	tokenHash, err := h.resolveVerifyCredential(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +482,26 @@ func (h *Auth) sendWhitelistWelcomeEmail(ctx context.Context, u *users.User) err
 	})
 }
 
-func (h *Auth) resolveVerifyCredential(_ context.Context, msg *v1.VerifyRequest) ([]byte, error) {
+// The code half of verification (FSD FR-AUTH-03). Six digits, as
+// auth.NewCode mints them; five wrong codes burn the token, link and
+// all, as the reset flow does; the sign-in limiter bounds guessing
+// before the cap does.
+const (
+	verifyCodeDigits      = 6
+	verifyCodeMaxAttempts = 5
+)
+
+// badVerifyCode is the one answer for a wrong code and a wrong address,
+// so the response does not say which addresses have accounts.
+var badVerifyCode = connect.NewError(connect.CodeInvalidArgument,
+	errors.New("that code didn't match; check the address and the six digits, or use the link in the email"))
+
+// resolveVerifyCredential turns either credential into the token hash
+// Verify consumes. The link carries the token; the code is resolved to
+// the token it was emailed beside, so both paths consume one row and
+// a used link means a used code.
+func (h *Auth) resolveVerifyCredential(ctx context.Context, req *connect.Request[v1.VerifyRequest]) ([]byte, error) {
+	msg := req.Msg
 	switch cred := msg.Credential.(type) {
 	case *v1.VerifyRequest_Token:
 		if cred.Token == "" {
@@ -475,17 +509,48 @@ func (h *Auth) resolveVerifyCredential(_ context.Context, msg *v1.VerifyRequest)
 		}
 		return auth.HashToken(cred.Token), nil
 	case *v1.VerifyRequest_Code:
-		if cred.Code == "" || msg.Email == "" {
+		addr := strings.ToLower(strings.TrimSpace(msg.Email))
+		code := strings.TrimSpace(cred.Code)
+		if addr == "" || code == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument,
 				errors.New("email and code are required for code-based verify"))
 		}
-		// Codes are keyed by user; hash the plaintext code and hand the
-		// caller a "code hash" that the repo compares. Because we don't
-		// know the user_id yet we look up the code-hash column directly
-		// via a helper (below) — not yet implemented; token-based verify is
-		// the primary path in Phase 1.
-		return nil, connect.NewError(connect.CodeUnimplemented,
-			errors.New("code-based verify lands in Task 4; use the emailed link for now"))
+		if !isDigits(code, verifyCodeDigits) {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				errors.New("the code is the 6 digits from the email"))
+		}
+		if h.loginLimiter != nil {
+			key := "verifycode:" + ClientIP(req) + "|" + addr
+			if ok, retry := h.loginLimiter.Allow(key); !ok {
+				h.log.Warn("verify code rate limited", slog.String("email", addr), slog.Duration("retry_after", retry))
+				return nil, connect.NewError(connect.CodeResourceExhausted,
+					errors.New("too many attempts; try again shortly"))
+			}
+		}
+		u, err := h.users.GetByEmail(ctx, addr)
+		if err != nil {
+			return nil, badVerifyCode
+		}
+		live, err := h.users.LiveVerifyTokens(ctx, u.ID)
+		if err != nil {
+			h.log.Error("live verify tokens lookup failed", slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("verify failed"))
+		}
+		want := auth.HashToken(code)
+		for i := range live {
+			if subtle.ConstantTimeCompare(live[i].CodeHash, want) == 1 {
+				return live[i].TokenHash, nil
+			}
+		}
+		remaining, failErr := h.users.FailVerifyAttempt(ctx, u.ID, verifyCodeMaxAttempts)
+		if failErr != nil {
+			h.log.Warn("count verify attempt failed", slog.Int64("user_id", u.ID), slog.String("error", failErr.Error()))
+		}
+		if remaining == 0 && len(live) > 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				errors.New("that code is wrong, and after five tries the email's link and code are no longer live; register again to get a new email"))
+		}
+		return nil, badVerifyCode
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("token or code required"))
 	}

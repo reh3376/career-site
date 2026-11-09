@@ -110,8 +110,9 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string })
       <SubmitButton />
 
       <p className="text-xs leading-relaxed text-ink-3">
-        Registration is reviewed by Roger, usually within a day.
-        You&rsquo;ll receive an email when he decides.
+        You&rsquo;ll get an email with a link and a six-digit code to verify
+        your address. An invited address is active as soon as it verifies;
+        everyone else is reviewed by Roger, usually within a day.
       </p>
     </form>
   );
