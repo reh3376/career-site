@@ -2,6 +2,8 @@
 
 Companion to `06-employer-side-discovery-research-plan.md`. The pilot exists to fix wording, length and branching before the survey goes wide; it is not a data-collection wave.
 
+**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the recruitment post is not yet published; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added.
+
 ---
 
 ## 1. Pilot design

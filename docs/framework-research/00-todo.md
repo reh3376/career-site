@@ -2,7 +2,7 @@
 
 Open work items for the design effort, in the order they will be worked. Each item names what "done" looks like and which doc it feeds. Items are removed when done; decisions made along the way go into the doc they affect, not here.
 
-Last updated 2026-11-08 (P1 complete; handoff point).
+Last updated 2026-11-08 (P1 complete; handoff point). Repository copy ahead of project (2026-11-08): the PR #382 item under P6 removed after the PR merged.
 
 ---
 
@@ -55,4 +55,3 @@ Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pr
 ## P6 — Housekeeping
 
 - Keep `career-site/docs/framework-research/` in step with the project docs; re-copy after material changes.
-- PR #382 on `claude_dev01` carries two unrelated `content:` commits alongside the framework docs; retitle or split before merging.
