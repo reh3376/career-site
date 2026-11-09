@@ -55,6 +55,12 @@ export function ReasonScope({
 // while the round-trip is in flight. `extra` is a bag of arbitrary
 // hidden fields the specific action needs (e.g. { status: "..." },
 // { mode: "days", days: "30" }).
+// The reason the admin typed in the section's box, for a control that
+// cannot be an ActionButton (the delete, which confirms first).
+export function useReason(): string {
+  return useContext(ReasonContext);
+}
+
 type Action = (formData: FormData) => Promise<void>;
 
 export function ActionButton({

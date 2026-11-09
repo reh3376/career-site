@@ -9,7 +9,11 @@ import { registerAction, type RegisterState } from "./actions";
 
 const initialState: RegisterState = {};
 
-export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
+export function RegisterForm({ turnstileSiteKey,
+  forPilot = false,
+}: { turnstileSiteKey: string;
+  forPilot?: boolean;
+}) {
   const [state, formAction] = useActionState(registerAction, initialState);
   const v = state.values ?? {};
 
@@ -46,6 +50,16 @@ export function RegisterForm({ turnstileSiteKey }: { turnstileSiteKey: string })
           defaultValue={v.email ?? ""}
           className={fieldInputClass}
         />
+        {forPilot ? (
+          <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-3">
+            <input type="checkbox" name="plusPilot" className="mt-0.5 h-4 w-4" />
+            <span>
+              Add <span className="font-mono text-ink">+pilot</span> to my address, for a pilot account separate from
+              a regular one. Only if that is the address Roger confirmed with you: Gmail and most personal mail
+              deliver it, some company mail does not, and the verification email has to reach you.
+            </span>
+          </label>
+        ) : null}
       </Field>
 
       <Field id="password" label="Password" hint="At least 12 characters.">

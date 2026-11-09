@@ -97,6 +97,7 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
 | `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |
 | `admin.qa_entry_deleted` | | `entry_id` | an entry removed |
+| `member.deleted` | | `user_id` | an admin deleted an account outright; `user_id` is the deleted member's, the event's own user is the admin (FSD FR-ADM-25) |
 | `pilot.flag_changed` | | `user_id`, `approved` | an admin opened or closed the pilot area to a member (FSD FR-PLT-02) |
 | `agent.login` | | `user_id`, `password_id` | the agent account signed in with a one-time password (FR-AUTH-20); `login.success` fires too |
 | `agent.password_created` | | `password_id` | an admin created a one-time agent password, revoking any live one |

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { RegisterRequestSchema } from "@/gen/career/v1/auth_pb";
 import { authClient } from "@/lib/api";
+import { withPlusPilot } from "@/lib/plus-pilot";
 import { TURNSTILE_FIELD } from "@/lib/turnstile";
 
 // Fields the form collects. `state` is what useActionState works with.
@@ -24,7 +25,8 @@ export async function registerAction(
   formData: FormData,
 ): Promise<RegisterState> {
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  let email = String(formData.get("email") ?? "").trim();
+  if (formData.get("plusPilot") === "on") email = withPlusPilot(email);
   const password = String(formData.get("password") ?? "");
   const organization = String(formData.get("organization") ?? "").trim();
   const statedRole = String(formData.get("statedRole") ?? "").trim();

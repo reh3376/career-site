@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
+import { withPlusPilot } from "@/lib/plus-pilot";
 import { relaySetCookies } from "@/lib/session";
 import { TURNSTILE_FIELD } from "@/lib/turnstile";
 
@@ -15,8 +16,11 @@ export async function loginAction(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
+  let email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  // The optional pilot switch adds "+pilot" to the address for someone
+  // whose pilot account is their regular address plus that suffix.
+  if (formData.get("plusPilot") === "on") email = withPlusPilot(email);
   // Written into the form by the Turnstile widget (FR-AUTH-09).
   const turnstileToken = String(formData.get(TURNSTILE_FIELD) ?? "");
   const values = { email };

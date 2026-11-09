@@ -53,6 +53,13 @@ export function LoginForm({
           defaultValue={v.email ?? ""}
           className={fieldInputClass}
         />
+        <label className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-3">
+          <input type="checkbox" name="plusPilot" className="mt-0.5 h-4 w-4" />
+          <span>
+            My pilot account is my address plus <span className="font-mono text-ink">+pilot</span>. A pilot account
+            registered that way is separate from a regular one; tick this and the suffix is added for you.
+          </span>
+        </label>
       </div>
 
       <div>

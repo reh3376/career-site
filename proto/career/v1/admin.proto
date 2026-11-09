@@ -60,6 +60,16 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
+  // Deletes an account outright (FSD FR-ADM-25): the user row and,
+  // through the cascades, its sessions, tokens and pilot sitting; rows
+  // that record history (decisions, audit, runs) keep a null where the
+  // member was. For test accounts and for a person who asks to be
+  // removed. An admin account, which includes the agent account, cannot
+  // be deleted here, and nobody deletes themselves.
+  rpc DeleteMember(DeleteMemberRequest) returns (DeleteMemberResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
   // Creates a one-time password for the agent account (FR-AUTH-20,
   // FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
   // creating a new one revokes any live one, so at most one works at a
@@ -3946,4 +3956,21 @@ message RevokeAgentSessionsRequest {
 message RevokeAgentSessionsResponse {
   // Sessions revoked by this call.
   int32 revoked = 1;
+}
+
+// Which account to delete.
+message DeleteMemberRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Reason, recorded in the audit log.
+  string reason = 2 [(buf.validate.field).string.max_len = 1000];
+}
+
+// What was deleted.
+message DeleteMemberResponse {
+  // The address the account had, so the page can say whose it was.
+  string email = 1;
 }

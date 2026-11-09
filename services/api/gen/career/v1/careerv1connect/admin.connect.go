@@ -62,6 +62,9 @@ const (
 	// AdminServiceSetMemberPilotApprovedProcedure is the fully-qualified name of the AdminService's
 	// SetMemberPilotApproved RPC.
 	AdminServiceSetMemberPilotApprovedProcedure = "/career.v1.AdminService/SetMemberPilotApproved"
+	// AdminServiceDeleteMemberProcedure is the fully-qualified name of the AdminService's DeleteMember
+	// RPC.
+	AdminServiceDeleteMemberProcedure = "/career.v1.AdminService/DeleteMember"
 	// AdminServiceCreateAgentPasswordProcedure is the fully-qualified name of the AdminService's
 	// CreateAgentPassword RPC.
 	AdminServiceCreateAgentPasswordProcedure = "/career.v1.AdminService/CreateAgentPassword"
@@ -308,6 +311,13 @@ type AdminServiceClient interface {
 	// Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
 	// flag opens the pilot area to that member; admins see it regardless.
 	SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error)
+	// Deletes an account outright (FSD FR-ADM-25): the user row and,
+	// through the cascades, its sessions, tokens and pilot sitting; rows
+	// that record history (decisions, audit, runs) keep a null where the
+	// member was. For test accounts and for a person who asks to be
+	// removed. An admin account, which includes the agent account, cannot
+	// be deleted here, and nobody deletes themselves.
+	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 	// Creates a one-time password for the agent account (FR-AUTH-20,
 	// FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
 	// creating a new one revokes any live one, so at most one works at a
@@ -673,6 +683,12 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AdminServiceSetMemberPilotApprovedProcedure,
 			connect.WithSchema(adminServiceMethods.ByName("SetMemberPilotApproved")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteMember: connect.NewClient[v1.DeleteMemberRequest, v1.DeleteMemberResponse](
+			httpClient,
+			baseURL+AdminServiceDeleteMemberProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DeleteMember")),
 			connect.WithClientOptions(opts...),
 		),
 		createAgentPassword: connect.NewClient[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse](
@@ -1154,6 +1170,7 @@ type adminServiceClient struct {
 	addMemberNote           *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
 	setMemberStatus         *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
 	setMemberPilotApproved  *connect.Client[v1.SetMemberPilotApprovedRequest, v1.SetMemberPilotApprovedResponse]
+	deleteMember            *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
 	createAgentPassword     *connect.Client[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse]
 	listAgentPasswords      *connect.Client[v1.ListAgentPasswordsRequest, v1.ListAgentPasswordsResponse]
 	revokeAgentPassword     *connect.Client[v1.RevokeAgentPasswordRequest, v1.RevokeAgentPasswordResponse]
@@ -1262,6 +1279,11 @@ func (c *adminServiceClient) SetMemberStatus(ctx context.Context, req *connect.R
 // SetMemberPilotApproved calls career.v1.AdminService.SetMemberPilotApproved.
 func (c *adminServiceClient) SetMemberPilotApproved(ctx context.Context, req *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error) {
 	return c.setMemberPilotApproved.CallUnary(ctx, req)
+}
+
+// DeleteMember calls career.v1.AdminService.DeleteMember.
+func (c *adminServiceClient) DeleteMember(ctx context.Context, req *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error) {
+	return c.deleteMember.CallUnary(ctx, req)
 }
 
 // CreateAgentPassword calls career.v1.AdminService.CreateAgentPassword.
@@ -1673,6 +1695,13 @@ type AdminServiceHandler interface {
 	// Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
 	// flag opens the pilot area to that member; admins see it regardless.
 	SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error)
+	// Deletes an account outright (FSD FR-ADM-25): the user row and,
+	// through the cascades, its sessions, tokens and pilot sitting; rows
+	// that record history (decisions, audit, runs) keep a null where the
+	// member was. For test accounts and for a person who asks to be
+	// removed. An admin account, which includes the agent account, cannot
+	// be deleted here, and nobody deletes themselves.
+	DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error)
 	// Creates a one-time password for the agent account (FR-AUTH-20,
 	// FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
 	// creating a new one revokes any live one, so at most one works at a
@@ -2034,6 +2063,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		AdminServiceSetMemberPilotApprovedProcedure,
 		svc.SetMemberPilotApproved,
 		connect.WithSchema(adminServiceMethods.ByName("SetMemberPilotApproved")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceDeleteMemberHandler := connect.NewUnaryHandler(
+		AdminServiceDeleteMemberProcedure,
+		svc.DeleteMember,
+		connect.WithSchema(adminServiceMethods.ByName("DeleteMember")),
 		connect.WithHandlerOptions(opts...),
 	)
 	adminServiceCreateAgentPasswordHandler := connect.NewUnaryHandler(
@@ -2518,6 +2553,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSetMemberStatusHandler.ServeHTTP(w, r)
 		case AdminServiceSetMemberPilotApprovedProcedure:
 			adminServiceSetMemberPilotApprovedHandler.ServeHTTP(w, r)
+		case AdminServiceDeleteMemberProcedure:
+			adminServiceDeleteMemberHandler.ServeHTTP(w, r)
 		case AdminServiceCreateAgentPasswordProcedure:
 			adminServiceCreateAgentPasswordHandler.ServeHTTP(w, r)
 		case AdminServiceListAgentPasswordsProcedure:
@@ -2705,6 +2742,10 @@ func (UnimplementedAdminServiceHandler) SetMemberStatus(context.Context, *connec
 
 func (UnimplementedAdminServiceHandler) SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetMemberPilotApproved is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DeleteMember(context.Context, *connect.Request[v1.DeleteMemberRequest]) (*connect.Response[v1.DeleteMemberResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DeleteMember is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) CreateAgentPassword(context.Context, *connect.Request[v1.CreateAgentPasswordRequest]) (*connect.Response[v1.CreateAgentPasswordResponse], error) {
