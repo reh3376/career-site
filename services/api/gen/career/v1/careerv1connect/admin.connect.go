@@ -59,6 +59,21 @@ const (
 	// AdminServiceSetMemberStatusProcedure is the fully-qualified name of the AdminService's
 	// SetMemberStatus RPC.
 	AdminServiceSetMemberStatusProcedure = "/career.v1.AdminService/SetMemberStatus"
+	// AdminServiceSetMemberPilotApprovedProcedure is the fully-qualified name of the AdminService's
+	// SetMemberPilotApproved RPC.
+	AdminServiceSetMemberPilotApprovedProcedure = "/career.v1.AdminService/SetMemberPilotApproved"
+	// AdminServiceCreateAgentPasswordProcedure is the fully-qualified name of the AdminService's
+	// CreateAgentPassword RPC.
+	AdminServiceCreateAgentPasswordProcedure = "/career.v1.AdminService/CreateAgentPassword"
+	// AdminServiceListAgentPasswordsProcedure is the fully-qualified name of the AdminService's
+	// ListAgentPasswords RPC.
+	AdminServiceListAgentPasswordsProcedure = "/career.v1.AdminService/ListAgentPasswords"
+	// AdminServiceRevokeAgentPasswordProcedure is the fully-qualified name of the AdminService's
+	// RevokeAgentPassword RPC.
+	AdminServiceRevokeAgentPasswordProcedure = "/career.v1.AdminService/RevokeAgentPassword"
+	// AdminServiceRevokeAgentSessionsProcedure is the fully-qualified name of the AdminService's
+	// RevokeAgentSessions RPC.
+	AdminServiceRevokeAgentSessionsProcedure = "/career.v1.AdminService/RevokeAgentSessions"
 	// AdminServiceGetReviewQueueProcedure is the fully-qualified name of the AdminService's
 	// GetReviewQueue RPC.
 	AdminServiceGetReviewQueueProcedure = "/career.v1.AdminService/GetReviewQueue"
@@ -290,6 +305,21 @@ type AdminServiceClient interface {
 	// Approves or rejects a registration waiting in PENDING_APPROVAL (approval
 	// mode only), or disables/re-enables an account.
 	SetMemberStatus(context.Context, *connect.Request[v1.SetMemberStatusRequest]) (*connect.Response[v1.SetMemberStatusResponse], error)
+	// Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
+	// flag opens the pilot area to that member; admins see it regardless.
+	SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error)
+	// Creates a one-time password for the agent account (FR-AUTH-20,
+	// FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
+	// creating a new one revokes any live one, so at most one works at a
+	// time. The plaintext is returned once, here, and never stored.
+	CreateAgentPassword(context.Context, *connect.Request[v1.CreateAgentPasswordRequest]) (*connect.Response[v1.CreateAgentPasswordResponse], error)
+	// Lists recent agent passwords by state (hashes never leave the
+	// server) with the agent account's live session count.
+	ListAgentPasswords(context.Context, *connect.Request[v1.ListAgentPasswordsRequest]) (*connect.Response[v1.ListAgentPasswordsResponse], error)
+	// Revokes a live agent password before it is used or expires.
+	RevokeAgentPassword(context.Context, *connect.Request[v1.RevokeAgentPasswordRequest]) (*connect.Response[v1.RevokeAgentPasswordResponse], error)
+	// Ends every live session of the agent account.
+	RevokeAgentSessions(context.Context, *connect.Request[v1.RevokeAgentSessionsRequest]) (*connect.Response[v1.RevokeAgentSessionsResponse], error)
 	// Lists items needing the owner's attention: negative feedback,
 	// "I don't know" answers, escalations, and out-of-scope refusals.
 	GetReviewQueue(context.Context, *connect.Request[v1.GetReviewQueueRequest]) (*connect.Response[v1.GetReviewQueueResponse], error)
@@ -637,6 +667,36 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AdminServiceSetMemberStatusProcedure,
 			connect.WithSchema(adminServiceMethods.ByName("SetMemberStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		setMemberPilotApproved: connect.NewClient[v1.SetMemberPilotApprovedRequest, v1.SetMemberPilotApprovedResponse](
+			httpClient,
+			baseURL+AdminServiceSetMemberPilotApprovedProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SetMemberPilotApproved")),
+			connect.WithClientOptions(opts...),
+		),
+		createAgentPassword: connect.NewClient[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse](
+			httpClient,
+			baseURL+AdminServiceCreateAgentPasswordProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("CreateAgentPassword")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgentPasswords: connect.NewClient[v1.ListAgentPasswordsRequest, v1.ListAgentPasswordsResponse](
+			httpClient,
+			baseURL+AdminServiceListAgentPasswordsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListAgentPasswords")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeAgentPassword: connect.NewClient[v1.RevokeAgentPasswordRequest, v1.RevokeAgentPasswordResponse](
+			httpClient,
+			baseURL+AdminServiceRevokeAgentPasswordProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RevokeAgentPassword")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeAgentSessions: connect.NewClient[v1.RevokeAgentSessionsRequest, v1.RevokeAgentSessionsResponse](
+			httpClient,
+			baseURL+AdminServiceRevokeAgentSessionsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RevokeAgentSessions")),
 			connect.WithClientOptions(opts...),
 		),
 		getReviewQueue: connect.NewClient[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse](
@@ -1093,6 +1153,11 @@ type adminServiceClient struct {
 	getMember               *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
 	addMemberNote           *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
 	setMemberStatus         *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
+	setMemberPilotApproved  *connect.Client[v1.SetMemberPilotApprovedRequest, v1.SetMemberPilotApprovedResponse]
+	createAgentPassword     *connect.Client[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse]
+	listAgentPasswords      *connect.Client[v1.ListAgentPasswordsRequest, v1.ListAgentPasswordsResponse]
+	revokeAgentPassword     *connect.Client[v1.RevokeAgentPasswordRequest, v1.RevokeAgentPasswordResponse]
+	revokeAgentSessions     *connect.Client[v1.RevokeAgentSessionsRequest, v1.RevokeAgentSessionsResponse]
 	getReviewQueue          *connect.Client[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse]
 	resolveReviewItem       *connect.Client[v1.ResolveReviewItemRequest, v1.ResolveReviewItemResponse]
 	replyEscalation         *connect.Client[v1.ReplyEscalationRequest, v1.ReplyEscalationResponse]
@@ -1192,6 +1257,31 @@ func (c *adminServiceClient) AddMemberNote(ctx context.Context, req *connect.Req
 // SetMemberStatus calls career.v1.AdminService.SetMemberStatus.
 func (c *adminServiceClient) SetMemberStatus(ctx context.Context, req *connect.Request[v1.SetMemberStatusRequest]) (*connect.Response[v1.SetMemberStatusResponse], error) {
 	return c.setMemberStatus.CallUnary(ctx, req)
+}
+
+// SetMemberPilotApproved calls career.v1.AdminService.SetMemberPilotApproved.
+func (c *adminServiceClient) SetMemberPilotApproved(ctx context.Context, req *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error) {
+	return c.setMemberPilotApproved.CallUnary(ctx, req)
+}
+
+// CreateAgentPassword calls career.v1.AdminService.CreateAgentPassword.
+func (c *adminServiceClient) CreateAgentPassword(ctx context.Context, req *connect.Request[v1.CreateAgentPasswordRequest]) (*connect.Response[v1.CreateAgentPasswordResponse], error) {
+	return c.createAgentPassword.CallUnary(ctx, req)
+}
+
+// ListAgentPasswords calls career.v1.AdminService.ListAgentPasswords.
+func (c *adminServiceClient) ListAgentPasswords(ctx context.Context, req *connect.Request[v1.ListAgentPasswordsRequest]) (*connect.Response[v1.ListAgentPasswordsResponse], error) {
+	return c.listAgentPasswords.CallUnary(ctx, req)
+}
+
+// RevokeAgentPassword calls career.v1.AdminService.RevokeAgentPassword.
+func (c *adminServiceClient) RevokeAgentPassword(ctx context.Context, req *connect.Request[v1.RevokeAgentPasswordRequest]) (*connect.Response[v1.RevokeAgentPasswordResponse], error) {
+	return c.revokeAgentPassword.CallUnary(ctx, req)
+}
+
+// RevokeAgentSessions calls career.v1.AdminService.RevokeAgentSessions.
+func (c *adminServiceClient) RevokeAgentSessions(ctx context.Context, req *connect.Request[v1.RevokeAgentSessionsRequest]) (*connect.Response[v1.RevokeAgentSessionsResponse], error) {
+	return c.revokeAgentSessions.CallUnary(ctx, req)
 }
 
 // GetReviewQueue calls career.v1.AdminService.GetReviewQueue.
@@ -1580,6 +1670,21 @@ type AdminServiceHandler interface {
 	// Approves or rejects a registration waiting in PENDING_APPROVAL (approval
 	// mode only), or disables/re-enables an account.
 	SetMemberStatus(context.Context, *connect.Request[v1.SetMemberStatusRequest]) (*connect.Response[v1.SetMemberStatusResponse], error)
+	// Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
+	// flag opens the pilot area to that member; admins see it regardless.
+	SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error)
+	// Creates a one-time password for the agent account (FR-AUTH-20,
+	// FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
+	// creating a new one revokes any live one, so at most one works at a
+	// time. The plaintext is returned once, here, and never stored.
+	CreateAgentPassword(context.Context, *connect.Request[v1.CreateAgentPasswordRequest]) (*connect.Response[v1.CreateAgentPasswordResponse], error)
+	// Lists recent agent passwords by state (hashes never leave the
+	// server) with the agent account's live session count.
+	ListAgentPasswords(context.Context, *connect.Request[v1.ListAgentPasswordsRequest]) (*connect.Response[v1.ListAgentPasswordsResponse], error)
+	// Revokes a live agent password before it is used or expires.
+	RevokeAgentPassword(context.Context, *connect.Request[v1.RevokeAgentPasswordRequest]) (*connect.Response[v1.RevokeAgentPasswordResponse], error)
+	// Ends every live session of the agent account.
+	RevokeAgentSessions(context.Context, *connect.Request[v1.RevokeAgentSessionsRequest]) (*connect.Response[v1.RevokeAgentSessionsResponse], error)
 	// Lists items needing the owner's attention: negative feedback,
 	// "I don't know" answers, escalations, and out-of-scope refusals.
 	GetReviewQueue(context.Context, *connect.Request[v1.GetReviewQueueRequest]) (*connect.Response[v1.GetReviewQueueResponse], error)
@@ -1923,6 +2028,36 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		AdminServiceSetMemberStatusProcedure,
 		svc.SetMemberStatus,
 		connect.WithSchema(adminServiceMethods.ByName("SetMemberStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSetMemberPilotApprovedHandler := connect.NewUnaryHandler(
+		AdminServiceSetMemberPilotApprovedProcedure,
+		svc.SetMemberPilotApproved,
+		connect.WithSchema(adminServiceMethods.ByName("SetMemberPilotApproved")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceCreateAgentPasswordHandler := connect.NewUnaryHandler(
+		AdminServiceCreateAgentPasswordProcedure,
+		svc.CreateAgentPassword,
+		connect.WithSchema(adminServiceMethods.ByName("CreateAgentPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceListAgentPasswordsHandler := connect.NewUnaryHandler(
+		AdminServiceListAgentPasswordsProcedure,
+		svc.ListAgentPasswords,
+		connect.WithSchema(adminServiceMethods.ByName("ListAgentPasswords")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRevokeAgentPasswordHandler := connect.NewUnaryHandler(
+		AdminServiceRevokeAgentPasswordProcedure,
+		svc.RevokeAgentPassword,
+		connect.WithSchema(adminServiceMethods.ByName("RevokeAgentPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRevokeAgentSessionsHandler := connect.NewUnaryHandler(
+		AdminServiceRevokeAgentSessionsProcedure,
+		svc.RevokeAgentSessions,
+		connect.WithSchema(adminServiceMethods.ByName("RevokeAgentSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	adminServiceGetReviewQueueHandler := connect.NewUnaryHandler(
@@ -2381,6 +2516,16 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceAddMemberNoteHandler.ServeHTTP(w, r)
 		case AdminServiceSetMemberStatusProcedure:
 			adminServiceSetMemberStatusHandler.ServeHTTP(w, r)
+		case AdminServiceSetMemberPilotApprovedProcedure:
+			adminServiceSetMemberPilotApprovedHandler.ServeHTTP(w, r)
+		case AdminServiceCreateAgentPasswordProcedure:
+			adminServiceCreateAgentPasswordHandler.ServeHTTP(w, r)
+		case AdminServiceListAgentPasswordsProcedure:
+			adminServiceListAgentPasswordsHandler.ServeHTTP(w, r)
+		case AdminServiceRevokeAgentPasswordProcedure:
+			adminServiceRevokeAgentPasswordHandler.ServeHTTP(w, r)
+		case AdminServiceRevokeAgentSessionsProcedure:
+			adminServiceRevokeAgentSessionsHandler.ServeHTTP(w, r)
 		case AdminServiceGetReviewQueueProcedure:
 			adminServiceGetReviewQueueHandler.ServeHTTP(w, r)
 		case AdminServiceResolveReviewItemProcedure:
@@ -2556,6 +2701,26 @@ func (UnimplementedAdminServiceHandler) AddMemberNote(context.Context, *connect.
 
 func (UnimplementedAdminServiceHandler) SetMemberStatus(context.Context, *connect.Request[v1.SetMemberStatusRequest]) (*connect.Response[v1.SetMemberStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetMemberStatus is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SetMemberPilotApproved(context.Context, *connect.Request[v1.SetMemberPilotApprovedRequest]) (*connect.Response[v1.SetMemberPilotApprovedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SetMemberPilotApproved is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) CreateAgentPassword(context.Context, *connect.Request[v1.CreateAgentPasswordRequest]) (*connect.Response[v1.CreateAgentPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.CreateAgentPassword is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListAgentPasswords(context.Context, *connect.Request[v1.ListAgentPasswordsRequest]) (*connect.Response[v1.ListAgentPasswordsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ListAgentPasswords is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RevokeAgentPassword(context.Context, *connect.Request[v1.RevokeAgentPasswordRequest]) (*connect.Response[v1.RevokeAgentPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RevokeAgentPassword is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RevokeAgentSessions(context.Context, *connect.Request[v1.RevokeAgentSessionsRequest]) (*connect.Response[v1.RevokeAgentSessionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.RevokeAgentSessions is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetReviewQueue(context.Context, *connect.Request[v1.GetReviewQueueRequest]) (*connect.Response[v1.GetReviewQueueResponse], error) {

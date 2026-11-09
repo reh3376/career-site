@@ -54,6 +54,10 @@ NON_PAGE_ROUTES = {
     "/robots.txt",
     "/sitemap.xml",
     "/icon.svg",
+    # The pilot's company-workflow chart (FSD FR-PLT-09), a committed
+    # file under public/ that /pilot/workflow inlines and also links
+    # full-size. Listed here, not prefix-matched, like the others.
+    "/pilot/company-workflow.svg",
 }
 
 

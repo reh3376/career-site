@@ -97,6 +97,16 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
 | `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |
 | `admin.qa_entry_deleted` | | `entry_id` | an entry removed |
+| `pilot.flag_changed` | | `user_id`, `approved` | an admin opened or closed the pilot area to a member (FSD FR-PLT-02) |
+| `agent.login` | | `user_id`, `password_id` | the agent account signed in with a one-time password (FR-AUTH-20); `login.success` fires too |
+| `agent.password_created` | | `password_id` | an admin created a one-time agent password, revoking any live one |
+| `agent.password_revoked` | | `password_id` | an admin revoked a live agent password by hand |
+| `agent.sessions_revoked` | | `count` | an admin ended every live agent session |
+| `pilot.consent` | | `user_id` | a participant consented and a pilot session opened (FSD FR-PLT-03) |
+| `pilot.section_submitted` | | `section` | a survey section was submitted |
+| `pilot.comment` | | `target_kind` | a comment on the match record or the workflow was saved or removed |
+| `pilot.part_done` | | `part` | the record or the workflow part was marked done |
+| `pilot.finished` | | `user_id` | a pilot session was closed |
 | `dtest.started` | | `device_class`, `audio_mode`, `tap_check_passed`, `is_repeat`, `synthetic` | a decision test run opened. The conditions are here as well as on the session row because they split the sample, and a funnel that cannot be split by them cannot say whether phones drop out more |
 | `dtest.block_finished` | | `block_no`, `load`, `correct`, `expired`, `recall_outcome`, `digits_held` | one block closed, emitted when its number is handed back. The only trace an abandoned run leaves of how far it got: `dt_sessions.status` stays `running` and says nothing more |
 | `dtest.finished` | | `correct`, `answered`, `expired`, `duration_s`, `wants_results` | a run completed. `duration_s` against the fifteen-minute design target is the burden measurement |

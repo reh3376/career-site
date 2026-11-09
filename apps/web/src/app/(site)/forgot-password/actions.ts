@@ -1,17 +1,20 @@
 "use server";
 
+import { redirect } from "next/navigation";
+
 import { callApi } from "@/lib/api-fetch";
 
 export type ForgotState = {
-  submitted?: boolean;
-  message?: string;
   error?: string;
   values?: { email?: string };
 };
 
-// Server action for the /forgot-password form. The backend deliberately
-// returns the same fixed message whether the email matched an account or
-// not, so the UI can safely render that message without leaking existence.
+// Server action for the /forgot-password form. The backend returns the
+// same fixed message whether the email matched an account or not, so
+// the next screen can show it without leaking existence. On success the
+// member is sent straight to the reset screen with the address filled
+// in, because the code they are about to receive is entered there
+// (FSD FR-AUTH-19).
 export async function forgotPasswordAction(
   _prev: ForgotState,
   formData: FormData,
@@ -35,12 +38,5 @@ export async function forgotPasswordAction(
     return { error: msg, values: { email } };
   }
 
-  const j = (await resp.json()) as { message?: string };
-  return {
-    submitted: true,
-    message:
-      j.message ??
-      "If an account exists for that email, we've sent a reset link.",
-    values: { email },
-  };
+  redirect(`/reset-password?email=${encodeURIComponent(email)}&sent=1`);
 }

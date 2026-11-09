@@ -20,6 +20,7 @@ type AccessGrant = {
   created_by?: string;
   created_at?: string;
   updated_at?: string;
+  pilot?: boolean;
 };
 
 type ListResp = {
@@ -93,7 +94,8 @@ export default async function AdminAccessPage({
         how long the resulting account stays active; the (optional)
         entry-expiry limits how long the whitelist row itself is
         honoured. Removing an entry only stops future auto-approvals,
-        existing accounts are untouched.
+        existing accounts are untouched. An entry marked pilot makes the
+        member a pilot participant when they register.
       </p>
 
       <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-3">
@@ -184,6 +186,7 @@ function GrantRow({ g, nowMs }: { g: AccessGrant; nowMs: number }) {
     <li className="py-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <span className="text-ink">{g.email}</span>
+        {g.pilot ? <span className="text-accent">pilot participant</span> : null}
         <span>ttl · {TTL_LABEL[g.default_ttl] ?? g.default_ttl}</span>
         {created ? <span>added · {relativeDays(created, nowMs)}</span> : null}
         {entryExp ? (

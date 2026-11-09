@@ -75,6 +75,9 @@ type Admin struct {
 	sealer             *secrets.Sealer
 	stateSecret        []byte
 	webBaseURL         string
+	// agentUsername names the agent account for /admin/agent
+	// (FR-ADM-24); empty disables the surface. Set by SetAgentAccess.
+	agentUsername string
 	// jdScorer and jdTimeout back RescoreJd; nil scorer disables it.
 	jdScorer  *jd.Scorer
 	jdTimeout time.Duration
@@ -930,6 +933,7 @@ func (a *Admin) UpsertAccessGrant(
 		ttl,
 		req.Msg.Notes,
 		expiresAt,
+		req.Msg.Pilot,
 		&adminID,
 	)
 	if err != nil {
@@ -1393,13 +1397,14 @@ func memberStatusProtoToRepo(s v1.MemberStatus) users.Status {
 
 func memberRecordRepoToProto(u *users.User) *v1.MemberRecord {
 	me := &v1.Me{
-		Id:           strconv.FormatInt(u.ID, 10),
-		Name:         u.Name,
-		Email:        u.Email,
-		Organization: u.Organization,
-		StatedRole:   u.StatedRole,
-		Status:       statusToProto(u.Status),
-		Role:         roleToProto(u.Role),
+		Id:            strconv.FormatInt(u.ID, 10),
+		Name:          u.Name,
+		Email:         u.Email,
+		Organization:  u.Organization,
+		StatedRole:    u.StatedRole,
+		Status:        statusToProto(u.Status),
+		Role:          roleToProto(u.Role),
+		PilotApproved: u.PilotApproved,
 	}
 	if !u.CreatedAt.IsZero() {
 		me.CreatedAt = timestamppb.New(u.CreatedAt)
@@ -1510,6 +1515,7 @@ func accessGrantRepoToProto(g *users.AccessGrant) *v1.AccessGrant {
 		Notes:      g.Notes,
 		CreatedAt:  timestamppb.New(g.CreatedAt),
 		UpdatedAt:  timestamppb.New(g.UpdatedAt),
+		Pilot:      g.Pilot,
 	}
 	if g.EntryExpiresAt != nil {
 		out.EntryExpiresAt = timestamppb.New(*g.EntryExpiresAt)

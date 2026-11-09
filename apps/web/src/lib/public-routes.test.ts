@@ -40,7 +40,7 @@ describe("isPublicPath", () => {
   });
 
   it("refuses the things an account buys", () => {
-    for (const p of ["/jd-upload", "/ask", "/home", "/settings", "/meetings"]) {
+    for (const p of ["/jd-upload", "/ask", "/home", "/settings", "/meetings", "/pilot"]) {
       expect(isPublicPath(p), `${p} must not be public`).toBe(false);
     }
   });
@@ -73,6 +73,9 @@ describe("isMemberPath", () => {
       "/settings",
       "/admin",
       "/admin/corpus",
+      "/pilot",
+      "/pilot/survey/A",
+      "/pilot/record",
     ]) {
       expect(isMemberPath(p), `${p} should be gated`).toBe(true);
     }

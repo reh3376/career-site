@@ -155,8 +155,13 @@ type Config struct {
 	EventIdentityRetention time.Duration
 
 	// Sessions (FR-AUTH-08)
-	SessionTTL   time.Duration
-	CookieSecure bool
+	SessionTTL time.Duration
+	// AgentLoginUsername is the agent account's fixed sign-in name
+	// (FSD FR-AUTH-20); AgentSessionTTL is the life of a session a
+	// one-time agent password mints.
+	AgentLoginUsername string
+	AgentSessionTTL    time.Duration
+	CookieSecure       bool
 
 	// Admin bootstrap. When both are set the API ensures a user with
 	// AdminEmail exists in role=admin, status=active on every boot,
@@ -211,8 +216,10 @@ func Load() (Config, error) {
 
 		DecisionTokenTTL: time.Duration(envIntOr("DECISION_TOKEN_TTL_HOURS", 24*7)) * time.Hour,
 
-		SessionTTL:   time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
-		CookieSecure: os.Getenv("COOKIE_SECURE") == "1",
+		SessionTTL:         time.Duration(envIntOr("SESSION_TTL_HOURS", 24*30)) * time.Hour,
+		AgentLoginUsername: envOr("AGENT_LOGIN_USERNAME", "agent@345"),
+		AgentSessionTTL:    time.Duration(envIntOr("AGENT_SESSION_TTL_HOURS", 8)) * time.Hour,
+		CookieSecure:       os.Getenv("COOKIE_SECURE") == "1",
 
 		AdminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_USERNAME"))),
 		AdminPassword: os.Getenv("CAREER_SITE_ADMIN_PW"),

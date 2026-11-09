@@ -2,7 +2,7 @@
 
 **Status.** Written 2026-11-08 (late) on the owner's instructions of the same evening, recorded in §0. The pilot moves from Google Forms plus a screen-shared call onto the site itself, behind a per-participant flag. Supersedes `11` §3 (the platform decision), `13` §0 decision 8 and `12` row 9. This workstream is built **before** Phase 0 step 3, because it blocks the owner's recruiting (P3) and step 3 blocks nothing outside this repository. Repository copy ahead of project (2026-11-08): new document.
 
-FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not built at 0.5.1).
+FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not built at 0.5.1; all Shipped at 0.5.5, the same day).
 
 ---
 
@@ -52,7 +52,7 @@ FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not
 | `/forgot-password`, `/reset-password` | web | Address first; then new password and code on one screen; copy says the code expires in fifteen minutes |
 | `password_reset` email template | `services/api/internal/email/templates` | Carries the code and nothing clickable |
 
-The pilot gate is enforced twice: the `/pilot/*` pages read `Me.pilot_approved` server-side and return 404 to a member without it, and every `PilotService` RPC refuses a caller without it. Per ADR 0031, the flag that is declared on the whitelist form is the flag the gate reads.
+The pilot gate is enforced twice: the `/pilot/*` pages read `Me.pilot_approved` server-side and return 404 to a member without it, and every `PilotService` RPC refuses a caller without it. An admin passes the gate whatever the flag says, so the owner sees the pilot as a participant would (owner, 2026-11-08). Per ADR 0031, the flag that is declared on the whitelist form is the flag the gate reads.
 
 ## 3. Data model
 
@@ -182,6 +182,10 @@ The company perspective only. Two renderings on one page: the diagram as an SVG 
 
 Phase 0 step 3 resumes after PL-3. The hiring migrations in `14` §2 renumber from 00066; `14` anticipated that.
 
+**Status, 2026-11-08.** PL-1 and PL-2 built (one PR); PL-3 built (the next). What PL-3 added beyond the table: a `gate.ts` shared by every pilot page that turns the API's refusal into a 404, the chart inlined server-side from the committed SVG because its labels are `foreignObject` and an `<img>` would drop them, the admin surface as the seventeenth, and `authpolicy/pilot_test.go` for FR-PLT-12. PL-3's exit, the owner's end-to-end run on the deployed build with the export opening, has not happened yet and is recorded here when it has. The whitelist checkbox and the member toggle named in the PL-3 row shipped early, with PL-1.
+
+**Local run, 2026-11-08.** Before the push, the agent ran the pilot end to end on the local Docker stack against the real API, as a whitelisted participant (register, verify, auto-approve with the flag, consent, seven sections on the recruiter branch, both reading parts with comments, finish), then as an admin (list, detail, three exports, P-01 coding), then as a member without the flag (404 on the pages, `permission_denied` on the RPCs, no menu entry or card). Four defects found and fixed in the same PR: C2 and C3 share C1's screen but drew their rows only from a saved C1, so section C could not be submitted on a first visit (`PilotItem.source_item`, rows read live); an optional item flagged but left blank lost its flag; each section render recorded another "opened" instant; the inlined chart opened on a blank corner of a 2814-pixel picture (fit, half and full sizes, opening fitted). Measured minutes read 6 against a self-report of 9 for a run that skipped the reading; the instrument itself was not changed.
+
 ## 9. What this changes in the earlier documents
 
 - `11` §1: the consent text is now the first screen of `/pilot`. §2: Parts B and C are discussions of what the participant wrote on-site; the prompts stand. §3: superseded; the platform is the site. §4: the stimulus check is replaced by the site page (PL-3's live pass). §6: the owner's list loses the Google Form and gains the whitelist entries.
@@ -189,3 +193,15 @@ Phase 0 step 3 resumes after PL-3. The hiring migrations in `14` §2 renumber fr
 - `13` §0 decision 8 superseded by this document; §2 gains the PL sequence before step 3.
 - `08` §1 and §2.2: the survey channel is the site; the per-item flag is a true per-item control, as specified.
 - `00-todo.md`: P2b, the on-site build, with PL-1 to PL-4.
+
+## 10. The agent login
+
+Owner's instruction, 2026-11-08 (late): an account for an agent to sign in with, so a live pass or a review can be done without lending the owner's credentials.
+
+- **Fixed username**, `agent@345`, configured by `AGENT_LOGIN_USERNAME` with that default. It is not an email address, so the login request's email rule bounds length only and the handler decides the shape per path. The account row is created at boot the way the admin row is (`EnsureAgentUser`), with no standing password: the normal password path can never sign it in.
+- **One-time password, created from the admin console.** `/admin/agent`, reachable from the overview, has one button. The response shows the plaintext once; only the argon2 hash is stored (`agent_passwords`, migration 00064) with who created it and why.
+- **Fifteen minutes, single use, one live at a time.** A password expires fifteen minutes after creation and is consumed by the sign-in that uses it. Creating a new one revokes any live one, so the clock restarts and nothing older works. A live one can also be revoked by hand.
+- **The session.** A successful agent sign-in mints a session with a shorter life than a member's (`AGENT_SESSION_TTL_HOURS`, default 8), on an account with the admin role, because "access to the entire site" includes the console. The page lists live agent sessions and ends them with one click. Every attempt goes through the sign-in rate limiter; every creation, use, revocation and sign-in is an event and an audit row.
+- **What this is not.** Not a second admin. The owner decides, each time, whether an agent gets in, and sees afterwards when it did and from where. If an agent session is ever found doing something the owner did not ask for, the record of which password let it in is the first thing to read.
+
+FSD rows: FR-AUTH-20 (the login) and FR-ADM-24 (the creator). Built in PL-1.

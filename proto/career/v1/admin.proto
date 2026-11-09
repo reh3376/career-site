@@ -54,6 +54,36 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
+  // Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
+  // flag opens the pilot area to that member; admins see it regardless.
+  rpc SetMemberPilotApproved(SetMemberPilotApprovedRequest) returns (SetMemberPilotApprovedResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Creates a one-time password for the agent account (FR-AUTH-20,
+  // FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
+  // creating a new one revokes any live one, so at most one works at a
+  // time. The plaintext is returned once, here, and never stored.
+  rpc CreateAgentPassword(CreateAgentPasswordRequest) returns (CreateAgentPasswordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Lists recent agent passwords by state (hashes never leave the
+  // server) with the agent account's live session count.
+  rpc ListAgentPasswords(ListAgentPasswordsRequest) returns (ListAgentPasswordsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
+  }
+  // Revokes a live agent password before it is used or expires.
+  rpc RevokeAgentPassword(RevokeAgentPasswordRequest) returns (RevokeAgentPasswordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Ends every live session of the agent account.
+  rpc RevokeAgentSessions(RevokeAgentSessionsRequest) returns (RevokeAgentSessionsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
   // Lists items needing the owner's attention: negative feedback,
   // "I don't know" answers, escalations, and out-of-scope refusals.
   rpc GetReviewQueue(GetReviewQueueRequest) returns (GetReviewQueueResponse) {
@@ -1503,6 +1533,9 @@ message AccessGrant {
   google.protobuf.Timestamp created_at = 7;
   // When the entry was last updated.
   google.protobuf.Timestamp updated_at = 8;
+  // Whether a registration against this entry makes the member a pilot
+  // participant (FSD FR-PLT-02).
+  bool pilot = 9;
 }
 
 // List-grants request.
@@ -1540,6 +1573,9 @@ message UpsertAccessGrantRequest {
   string notes = 3 [(buf.validate.field).string.max_len = 1000];
   // When this whitelist entry itself should lapse; unset = never.
   google.protobuf.Timestamp entry_expires_at = 4;
+  // Mark the entry as a pilot entry: the member it approves gets the
+  // pilot flag (FSD FR-PLT-02).
+  bool pilot = 5;
 }
 
 // Upsert-grant response.
@@ -3811,4 +3847,103 @@ message DecisionTestReviewEvent {
   string reviewed_by = 5;
   // When, RFC3339.
   string created_at = 6;
+}
+
+// Request to set or clear a member's pilot flag.
+message SetMemberPilotApprovedRequest {
+  // Member ID.
+  string member_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // True opens the pilot area to the member; false closes it.
+  bool approved = 2;
+  // Reason, recorded in the audit log.
+  string reason = 3 [(buf.validate.field).string.max_len = 1000];
+}
+
+// The member after the change.
+message SetMemberPilotApprovedResponse {
+  // The member record, with pilot_approved as it now stands.
+  MemberRecord member = 1;
+}
+
+// One agent one-time password, without its hash.
+message AgentPassword {
+  // Row id, string over the wire.
+  string id = 1;
+  // When the owner created it.
+  google.protobuf.Timestamp created_at = 2;
+  // Fifteen minutes after creation; refused after this.
+  google.protobuf.Timestamp expires_at = 3;
+  // When it was used to sign in; unset while unused.
+  google.protobuf.Timestamp used_at = 4;
+  // When an admin revoked it, or when a newer password replaced it.
+  google.protobuf.Timestamp revoked_at = 5;
+  // Admin user id that created it.
+  string created_by = 6;
+  // The owner's note on why this agent session was allowed.
+  string reason = 7;
+  // live, used, expired or revoked, computed server-side at read time.
+  string state = 8;
+  // Whether the session this password minted is still live.
+  bool session_live = 9;
+}
+
+// Request to create a one-time agent password.
+message CreateAgentPasswordRequest {
+  // Why an agent is being let in; kept with the row and in the audit log.
+  string reason = 1 [(buf.validate.field).string.max_len = 1000];
+}
+
+// The created password. `plaintext` appears here and nowhere else.
+message CreateAgentPasswordResponse {
+  // The row as stored, minus the hash.
+  AgentPassword password = 1;
+  // The password itself, to be shown once. Not stored; not logged.
+  string plaintext = 2;
+  // The fixed username the agent signs in with.
+  string username = 3;
+}
+
+// Request to list agent passwords; takes no filters.
+message ListAgentPasswordsRequest {}
+
+// Recent agent passwords, newest first, with the live session count.
+message ListAgentPasswordsResponse {
+  // Up to the last 50 passwords.
+  repeated AgentPassword passwords = 1;
+  // Live sessions on the agent account right now.
+  int32 live_sessions = 2;
+  // The fixed username the agent signs in with.
+  string username = 3;
+}
+
+// Request to revoke a live agent password.
+message RevokeAgentPasswordRequest {
+  // Row id of the password.
+  string id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // Reason, recorded in the audit log.
+  string reason = 2 [(buf.validate.field).string.max_len = 1000];
+}
+
+// The password after revocation.
+message RevokeAgentPasswordResponse {
+  // The row as it now stands.
+  AgentPassword password = 1;
+}
+
+// Request to end every live agent session.
+message RevokeAgentSessionsRequest {
+  // Reason, recorded in the audit log.
+  string reason = 1 [(buf.validate.field).string.max_len = 1000];
+}
+
+// How many sessions were ended.
+message RevokeAgentSessionsResponse {
+  // Sessions revoked by this call.
+  int32 revoked = 1;
 }

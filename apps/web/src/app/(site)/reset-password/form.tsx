@@ -5,20 +5,18 @@ import { useFormStatus } from "react-dom";
 
 import { resetPasswordAction, type ResetState } from "./actions";
 
-const initial: ResetState = {};
-
 const fieldInputClass =
   "block w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-accent";
 const labelClass =
   "mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3";
 
-export function ResetForm({ token }: { token: string }) {
+export function ResetForm({ email }: { email: string }) {
+  const initial: ResetState = { values: { email } };
   const [state, formAction] = useActionState(resetPasswordAction, initial);
+  const v = state.values ?? {};
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
-      <input type="hidden" name="token" value={token} />
-
       {state.error ? (
         <p
           role="alert"
@@ -27,6 +25,21 @@ export function ResetForm({ token }: { token: string }) {
           {state.error}
         </p>
       ) : null}
+
+      <div>
+        <label htmlFor="email" className={labelClass}>
+          Email
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          defaultValue={v.email ?? email}
+          className={fieldInputClass}
+        />
+      </div>
 
       <div>
         <label htmlFor="new_password" className={labelClass}>
@@ -60,6 +73,28 @@ export function ResetForm({ token }: { token: string }) {
           autoComplete="new-password"
           className={fieldInputClass}
         />
+      </div>
+
+      <div>
+        <label htmlFor="code" className={labelClass}>
+          5-digit code from the email
+        </label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]{5}"
+          maxLength={5}
+          required
+          autoComplete="one-time-code"
+          placeholder="12345"
+          className={fieldInputClass + " font-mono tracking-[0.3em]"}
+        />
+        <p className="mt-2 text-xs text-ink-3">
+          Good for 15 minutes from when it was sent. Five wrong tries
+          and you will need a new one.
+        </p>
       </div>
 
       <Submit />

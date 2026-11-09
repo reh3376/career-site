@@ -13,3 +13,9 @@ allowBuilds:
 # Drop this override once Next.js bumps its own pin past 8.5.18.
 overrides:
   postcss: ">=8.5.18"
+  # minimatch >=7 <11.0.1 is affected by the globparts amplification
+  # advisory (Dependabot alert 20, 2026-11-08). Only
+  # @typescript-eslint/typescript-estree pulls a version in range
+  # (^10); lint is the consumer, and it runs in CI, so a break would
+  # show there. Drop this once typescript-eslint moves past 11.0.1.
+  "minimatch@>=7 <11.0.1": ">=11.0.1"

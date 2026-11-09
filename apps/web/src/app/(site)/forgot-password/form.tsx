@@ -16,20 +16,6 @@ export function ForgotForm() {
   const [state, formAction] = useActionState(forgotPasswordAction, initial);
   const v = state.values ?? {};
 
-  if (state.submitted) {
-    return (
-      <div className="space-y-4">
-        <p className="border-l-2 border-accent bg-accent/10 px-4 py-3 text-sm text-ink">
-          {state.message}
-        </p>
-        <p className="text-sm text-ink-3">
-          Nothing arrived after a couple of minutes? Check your spam
-          folder, or try again with the exact address on your account.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <form action={formAction} className="space-y-8" noValidate>
       {state.error ? (
@@ -69,7 +55,7 @@ function Submit() {
       disabled={pending}
       className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? "Sending…" : "Send reset link"}
+      {pending ? "Sending…" : "Email me a code"}
     </button>
   );
 }

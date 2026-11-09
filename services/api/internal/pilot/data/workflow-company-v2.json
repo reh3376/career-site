@@ -1,0 +1,48 @@
+{
+  "version": "v2",
+  "source": "docs/framework-research/09-hiring-workflows-draft.md §1, revision 2, approved by the owner 2026-11-08. Company perspective only; the candidate perspective is not shown to employer-side participants.",
+  "intro": "This is a draft of how a hire runs, from the first sign that a role is needed to the lessons captured when the requisition closes. It is not how your organisation does it; it is our best picture, and you are asked to correct it.",
+  "prompts": [
+    "Walk along it from C-01. Where does it match how a hire actually runs where you work, and where does it not?",
+    "Which step is missing? Which two are really one step?",
+    "Who owns C-06, writing the role and its requirements, and C-07, the sign-off, in your organisation?",
+    "Where do holds actually happen in this picture, and what brings one back?",
+    "At C-12 to C-14, who decides? Does the hiring manager cut people from the slate before interviewing?",
+    "Is there anything on this chart you would not want a candidate to see?"
+  ],
+  "phases": [
+    {"id": "A", "title": "Need and approval"},
+    {"id": "B", "title": "Role definition"},
+    {"id": "C", "title": "Sourcing and screening"},
+    {"id": "D", "title": "Assessment and decision"},
+    {"id": "E", "title": "Onboarding and outcome"}
+  ],
+  "nodes": [
+    {"id": "C-01", "phase": "A", "name": "Need identified", "owner": "Hiring manager", "summary": "Trigger: attrition, growth, new scope, backfill. Often undocumented; C-02 is the first record.", "decision": false},
+    {"id": "C-02", "phase": "A", "name": "Manpower request submitted", "owner": "Hiring manager", "summary": "Business case: why, what level, cost, when, backfill or new headcount.", "decision": false},
+    {"id": "C-03", "phase": "A", "name": "Request review", "owner": "Committee: finance, HR or people partner, the HM's manager, department head", "summary": "Checks budget, headcount plan, alternatives (redistribute, contractor, automate).", "decision": false},
+    {"id": "C-04", "phase": "A", "name": "Approval decision", "owner": "Budget owner, on the committee's recommendation", "summary": "Approved, rejected with a reason, or deferred with a resubmission date. A deferral past its date unreviewed escalates.", "decision": true},
+    {"id": "C-05", "phase": "B", "name": "HR role-definition template", "owner": "HR", "summary": "Standing artefact: required fields, structure, requirement types, weight scale, evidence-standard slots, comp band and level. HR owns the structure, refreshed rarely.", "decision": false},
+    {"id": "C-06", "phase": "B", "name": "HM drafts role definition and structured requirements", "owner": "Hiring manager, solely responsible for content", "summary": "Approved request plus the template become a role document: purpose, outcomes, typed and weighted requirements, alternatives, thresholds, evidence standards, level, comp band, location, working conditions.", "decision": false},
+    {"id": "C-07", "phase": "B", "name": "Conformance and comp check", "owner": "HR; legal where needed", "summary": "Conforms, non-conforming back to C-06 with the field list, or hold with a revisit date. HR does not re-judge the substance of the requirements.", "decision": true},
+    {"id": "C-08", "phase": "B", "name": "Job description rendered and posted", "owner": "Recruiter renders; HM approves the text", "summary": "The posting is a rendering of C-06, never the source of truth.", "decision": false},
+    {"id": "C-09", "phase": "C", "name": "Applications received or sourced", "owner": "Recruiter", "summary": "Applications, referrals and outreach form the applicant pool.", "decision": false},
+    {"id": "C-10", "phase": "C", "name": "Knockout and compliance filter", "owner": "ATS rules set by the recruiter", "summary": "Hard constraints only: authorisation, location, licence. Keyword knockouts live here today, the first source of false negatives.", "decision": false},
+    {"id": "C-11", "phase": "C", "name": "Initial screen via match record", "owner": "Recruiter or HR screener using the system", "summary": "Evidence gathered per candidate (C-11a), requirements judged against it with three coverage numbers (C-11b), and a system-driven clarification round for unresolved items (C-11c).", "decision": false},
+    {"id": "C-12", "phase": "C", "name": "Screen decision", "owner": "Recruiter, using the match record; HM may audit or override", "summary": "Advance, reject, hold with a revisit date, or needs HM input on flagged judgments.", "decision": true},
+    {"id": "C-13", "phase": "C", "name": "Recruiter screen call, with remaining clarifications", "owner": "Recruiter", "summary": "Interest, logistics, comp, constraints. The recruiter asks the still-unresolved items live from system-generated questions and records the structured answers.", "decision": false},
+    {"id": "C-14", "phase": "C", "name": "Slate to HM", "owner": "Recruiter to hiring manager", "summary": "Accept the slate, reject individuals (each recorded as an override), or reject the slate back to sourcing or to the role definition. Open question: do hiring managers cut individuals before interviewing often enough for this to be a decision point?", "decision": true, "open": true},
+    {"id": "C-15", "phase": "D", "name": "Interviews", "owner": "HM and panel; recruiter coordinates", "summary": "Interview evidence and working-style indicators. Interviews target unresolved and met-via-equivalency items first.", "decision": false},
+    {"id": "C-16", "phase": "D", "name": "Assessment or work sample (optional)", "owner": "HM or panel", "summary": "Additional evidence items.", "decision": false},
+    {"id": "C-17", "phase": "D", "name": "Hire decision", "owner": "HM; panel input; HR consult", "summary": "Select, reject all and re-source, reject all and redefine, or defer with a revisit date. Recorded against the match record so the outcome links to screening.", "decision": true},
+    {"id": "C-18", "phase": "D", "name": "Offer prepared", "owner": "HR and comp with the HM", "summary": "Off-band offers loop to the budget owner.", "decision": false},
+    {"id": "C-19", "phase": "D", "name": "Offer outcome", "owner": "Candidate decides; recruiter manages", "summary": "Accepted, negotiation, declined, or no response by a date, which is treated as declined and escalated to the recruiting lead.", "decision": true},
+    {"id": "C-20", "phase": "D", "name": "Notify non-selected", "owner": "Recruiter", "summary": "Rejection with a substantive reason where policy allows. The match record makes a substantive reason cheap.", "decision": false},
+    {"id": "C-21", "phase": "E", "name": "Pre-boarding", "owner": "HR", "summary": "Checks, paperwork, equipment. Verification of self-attested evidence belongs here if not earlier; a failed check goes back to C-17 or to withdrawal.", "decision": false},
+    {"id": "C-22", "phase": "E", "name": "Start and onboarding", "owner": "HM and HR", "summary": "Employee in role.", "decision": false},
+    {"id": "C-23", "phase": "E", "name": "30-day check-in", "owner": "HM and employee", "summary": "Fit rating, both directions. An outcome link.", "decision": false},
+    {"id": "C-24", "phase": "E", "name": "90-day review", "owner": "HM, employee and HR", "summary": "Fit and performance: confirm, extend probation, or exit. An outcome link.", "decision": false},
+    {"id": "C-25", "phase": "E", "name": "Retention and performance at 6 to 12 months", "owner": "HM, HRIS", "summary": "Outcome data that feeds calibration.", "decision": false},
+    {"id": "C-26", "phase": "E", "name": "Requisition closed; lessons captured", "owner": "Recruiter and HM", "summary": "Metrics, overrides and hold history become the process record.", "decision": false}
+  ]
+}

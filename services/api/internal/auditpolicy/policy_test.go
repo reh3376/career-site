@@ -138,6 +138,15 @@ var noTarget = map[string]bool{
 	"/career.v1.AdminService/CreateQaEntry": true,
 	// Acts on a job kind, not an instance. The kind is in the payload.
 	"/career.v1.AdminService/RunJob": true,
+	// The agent account (FR-AUTH-20) is one fixed row named by
+	// configuration, so neither request carries an id: creating a
+	// password acts on the account, and the new row's id exists only in
+	// the response; ending its sessions acts on the account too. The
+	// reason text is in the payload either way.
+	"/career.v1.AdminService/CreateAgentPassword": true,
+	"/career.v1.AdminService/RevokeAgentSessions": true,
+	// Exports the whole pilot dataset; the table name is in the payload.
+	"/career.v1.PilotService/ExportPilot": true,
 }
 
 func TestEveryRecordedProcedureResolvesATarget(t *testing.T) {

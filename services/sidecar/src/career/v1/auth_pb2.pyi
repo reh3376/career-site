@@ -116,12 +116,16 @@ class ForgotPasswordResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ...) -> None: ...
 
 class ResetPasswordRequest(_message.Message):
-    __slots__ = ("token", "new_password")
+    __slots__ = ("token", "new_password", "email", "code")
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     NEW_PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    CODE_FIELD_NUMBER: _ClassVar[int]
     token: str
     new_password: str
-    def __init__(self, token: _Optional[str] = ..., new_password: _Optional[str] = ...) -> None: ...
+    email: str
+    code: str
+    def __init__(self, token: _Optional[str] = ..., new_password: _Optional[str] = ..., email: _Optional[str] = ..., code: _Optional[str] = ...) -> None: ...
 
 class ResetPasswordResponse(_message.Message):
     __slots__ = ("me",)

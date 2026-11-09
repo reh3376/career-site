@@ -28,6 +28,9 @@ export async function upsertAccessGrantAction(
   const defaultTtl = String(formData.get("default_ttl") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
   const entryExpiresAtRaw = String(formData.get("entry_expires_at") ?? "").trim();
+  // The pilot flag (FSD FR-PLT-02): the member this entry approves gets
+  // the pilot area.
+  const pilot = formData.get("pilot") === "on";
 
   if (!email) return { ok: false, message: "Email is required." };
   if (!TTL_VALUES.has(defaultTtl)) {
@@ -38,6 +41,7 @@ export async function upsertAccessGrantAction(
     email,
     defaultTtl,
     notes,
+    pilot,
   };
   if (entryExpiresAtRaw) {
     const t = new Date(entryExpiresAtRaw);

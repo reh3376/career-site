@@ -201,6 +201,15 @@ func main() {
 		}
 		log.Info("admin bootstrap ok", slog.String("email", cfg.AdminEmail))
 	}
+	// The agent account (FR-AUTH-20): created once, never given a
+	// password hash, signed in only by a one-time password from the
+	// admin console. See users.EnsureAgentUser.
+	if cfg.AgentLoginUsername != "" {
+		if err := userRepo.EnsureAgentUser(ctx, cfg.AgentLoginUsername, "Agent"); err != nil {
+			log.Error("ensure agent user failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
 
 	authHandler := handlers.NewAuth(log, userRepo, mailer, pwned, handlers.AuthConfig{
 		WebBaseURL:          cfg.WebBaseURL,
@@ -211,6 +220,8 @@ func main() {
 		DecisionTokenSecret: cfg.DecisionTokenSecret,
 		SessionTTL:          cfg.SessionTTL,
 		CookieSecure:        cfg.CookieSecure,
+		AgentUsername:       cfg.AgentLoginUsername,
+		AgentSessionTTL:     cfg.AgentSessionTTL,
 	})
 	// The auth interceptor. Built here, after authHandler exists, so a
 	// construction failure exits before anything is served rather than
@@ -502,6 +513,7 @@ func main() {
 		handlers.CorpusRoots{Public: cfg.CorpusRoot, Private: cfg.CorpusPrivateRoot},
 		jdScorer, cfg.JDPipelineTimeout,
 	)
+	adminHandler.SetAgentAccess(cfg.AgentLoginUsername)
 
 	// Server-side emit points share the one writer.
 	authHandler.SetTurnstile(bots)
@@ -516,6 +528,21 @@ func main() {
 	chatHandler.SetEvents(eventWriter)
 	meetingsHandler.SetEvents(eventWriter)
 	decisionTestHandler.SetEvents(eventWriter)
+
+	// The employer-side pilot (FSD §5.16). The instrument, the record and
+	// the workflow are embedded data validated here, so a broken edit
+	// stops the server rather than a participant; the current instrument
+	// version is copied into pilot_instruments at boot.
+	pilotHandler, err := handlers.NewPilot(log, userRepo)
+	if err != nil {
+		log.Error("pilot data invalid", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := pilotHandler.EnsureInstrument(ctx); err != nil {
+		log.Error("pilot instrument record failed", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	pilotHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
@@ -561,6 +588,7 @@ func main() {
 		Chat:             chatHandler,
 		Events:           eventsHandler,
 		DecisionTest:     decisionTestHandler,
+		Pilot:            pilotHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})

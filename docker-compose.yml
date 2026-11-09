@@ -70,6 +70,8 @@ services:
       DATABASE_URL: postgres://career:career_dev_only@postgres:5432/career?sslmode=disable
       WEB_BASE_URL: http://localhost
       OWNER_CONTACT_EMAIL: rogerhenley345@gmail.com
+      AGENT_LOGIN_USERNAME: agent@345
+      AGENT_SESSION_TTL_HOURS: "8"
       MAIL_FROM: "career-site <noreply@career-site.local>"
       EMAIL_PROVIDER: smtp
       SMTP_HOST: mailpit

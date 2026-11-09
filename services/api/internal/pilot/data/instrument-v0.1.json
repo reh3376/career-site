@@ -1,0 +1,288 @@
+{
+  "version": "v0.1",
+  "title": "Employer-side discovery survey",
+  "source": "docs/framework-research/06-employer-side-discovery-research-plan.md §3 with the eight [WF] additions and the pilot-only closing items (12-instrument-change-log.md rows 1 to 8 and 11). Transcribed 2026-11-08.",
+  "branches": {
+    "item": "A1",
+    "map": {
+      "Recruiter / talent acquisition": "recruiter",
+      "HR generalist who screens applicants": "recruiter",
+      "Hiring manager (I own the role and decide)": "hm",
+      "Both recruiting and hiring-manager duties": "both",
+      "None of these": "end"
+    }
+  },
+  "sections": [
+    {
+      "id": "A",
+      "title": "Your role in hiring",
+      "intro": "Four questions that route the rest of the survey. Nothing here identifies you beyond your account.",
+      "items": [
+        {
+          "id": "A1",
+          "type": "single",
+          "prompt": "In the last 24 months, which best describes your role in hiring?",
+          "options": ["Recruiter / talent acquisition", "HR generalist who screens applicants", "Hiring manager (I own the role and decide)", "Both recruiting and hiring-manager duties", "None of these"],
+          "required": true
+        },
+        {
+          "id": "A2",
+          "type": "single",
+          "prompt": "Roughly how many roles have you been involved in hiring for in the last 24 months?",
+          "options": ["1 to 2", "3 to 5", "6 to 15", "16 to 50", "50 or more"],
+          "required": true
+        },
+        {
+          "id": "A3",
+          "type": "multi",
+          "prompt": "What kinds of roles, mostly? Select all that apply.",
+          "options": ["Engineering / technical", "Manufacturing / operations", "IT / software", "Sales / marketing", "Finance / admin", "Skilled trades", "Leadership", "Other"],
+          "required": true
+        },
+        {
+          "id": "A4",
+          "type": "single",
+          "prompt": "Organisation size, in employees.",
+          "options": ["Fewer than 50", "50 to 250", "250 to 1,000", "1,000 to 10,000", "More than 10,000"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "title": "In your own words",
+      "intro": "Two open questions before any list is shown, so the list does not put words in your mouth.",
+      "items": [
+        {
+          "id": "B1",
+          "type": "text",
+          "prompt": "Think of the last role that was hard to fill. In a sentence or two, what made it hard?",
+          "required": true
+        },
+        {
+          "id": "B2",
+          "type": "text",
+          "prompt": "If you could fix one thing about how your organisation screens applicants, what would it be?",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "title": "The problems",
+      "intro": "A list of problems people report with hiring. Pick the ones that cause you the most difficulty in your own work.",
+      "items": [
+        {
+          "id": "C1",
+          "type": "multi",
+          "prompt": "Select up to 5 that cause you the most difficulty in your own work.",
+          "max_select": 5,
+          "required": true,
+          "options": [
+            "Too many applications to review properly",
+            "Most applicants appear unqualified on the surface",
+            "Hard to tell real capability from keyword-optimised or AI-written résumés",
+            "The people doing the first screen don't have the domain knowledge to judge technical or specialised experience",
+            "Hiring managers reject most of the candidates screening passes through (interviews that go nowhere)",
+            "Strong candidates get missed because their titles, tools or wording don't match the posting",
+            "Time-to-fill is too long",
+            "Roles close unfilled or have to be reposted",
+            "Candidates stop responding or drop out part-way",
+            "Poor candidate experience damages our reputation",
+            "Job descriptions are inaccurate, out of date, or wish lists",
+            "The hiring manager and the recruiter disagree about what the role actually needs",
+            "We don't find out whether our hires worked out, so screening never improves",
+            "Compliance or bias risk from screening tools and criteria",
+            "Salary or level mismatch discovered late in the process",
+            "Interviews are inconsistent from one interviewer to the next",
+            "Working-style or team fit can't be assessed until very late",
+            "Internal delays: approvals, scheduling, decision-making",
+            "Our ATS or screening tools are rigid or hard to configure",
+            "I can't explain or justify a screening decision when asked"
+          ]
+        },
+        {
+          "id": "C2",
+          "type": "single_from",
+          "source_item": "C1",
+          "prompt": "Of the ones you selected, which single problem would you fix first?",
+          "required": true
+        },
+        {
+          "id": "C3",
+          "type": "rating_per_selected",
+          "source_item": "C1",
+          "prompt": "For each problem you selected: how often does it occur, and when it does, how costly is it?",
+          "required": true,
+          "dimensions": [
+            {"id": "frequency", "label": "How often", "options": ["Rarely", "Some roles", "Most roles", "Every role"]},
+            {"id": "cost", "label": "How costly when it happens", "options": ["Minor", "Moderate", "Major", "Severe"]}
+          ]
+        },
+        {
+          "id": "C4",
+          "type": "text",
+          "prompt": "Anything missing from the list?",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "title": "How screening actually happens",
+      "intro": "Facts about your process. If you do not know a number, say so; that is itself an answer.",
+      "items": [
+        {
+          "id": "D1",
+          "type": "multi",
+          "prompt": "Who does the first review of applications for a typical role?",
+          "options": ["Recruiter / HR", "Hiring manager", "ATS auto-filter", "Outside agency", "Other"],
+          "required": true
+        },
+        {
+          "id": "D2",
+          "type": "single",
+          "prompt": "Does your process use required keywords, knockout questions or auto-reject rules before a human looks?",
+          "options": ["Yes", "No", "Don't know"],
+          "required": true
+        },
+        {
+          "id": "D3",
+          "type": "single",
+          "prompt": "Typical applications per role.",
+          "options": ["Fewer than 25", "25 to 100", "100 to 300", "More than 300"],
+          "required": true
+        },
+        {
+          "id": "D4",
+          "type": "single",
+          "prompt": "Of the candidates the first screen passes, roughly what share does the hiring manager decline without an interview?",
+          "options": ["Less than 10%", "10 to 30%", "30 to 60%", "More than 60%", "Don't know"],
+          "required": true,
+          "note": "[WF] required in both branches; sets whether C-14 is a decision point"
+        },
+        {
+          "id": "D5",
+          "type": "single",
+          "prompt": "Do you track whether hires are performing or still employed at 90 days or one year, and link it back to how they were screened?",
+          "options": ["Yes, systematically", "Informally", "No"],
+          "required": true
+        },
+        {
+          "id": "D6",
+          "type": "single",
+          "branch": "hm",
+          "prompt": "How often have you later learned that a strong person was screened out before you saw them?",
+          "options": ["Never", "Once or twice", "Several times", "Regularly", "No way to know"],
+          "required": true
+        },
+        {
+          "id": "D7",
+          "type": "scale",
+          "branch": "recruiter",
+          "prompt": "How confident are you that your first screen does not eliminate people who could do the job?",
+          "scale": {"min": 1, "max": 5, "min_label": "Not confident", "max_label": "Very confident"},
+          "required": true
+        },
+        {
+          "id": "D7b",
+          "type": "text",
+          "branch": "recruiter",
+          "prompt": "What gives you that confidence?",
+          "required": false
+        },
+        {
+          "id": "D8",
+          "type": "single",
+          "prompt": "When a requisition or a candidate is put on hold, what usually happens to it?",
+          "options": ["Comes back on a planned date", "Comes back only if someone pushes", "Quietly dies", "Don't know"],
+          "required": true,
+          "note": "[WF] sets the priority of the hold-state requirement"
+        }
+      ]
+    },
+    {
+      "id": "E",
+      "title": "A screening tool",
+      "intro": "A screening tool that breaks the job description into individual requirements and, for each candidate, shows whether each requirement is met, which document or statement is the evidence, a one-sentence reason, and a coverage score computed from those verdicts. Reviewers can see every judgment and overrule any of them.",
+      "items": [
+        {
+          "id": "E1",
+          "type": "scale",
+          "prompt": "How useful would this be in your work?",
+          "scale": {"min": 1, "max": 5, "min_label": "Not useful", "max_label": "Very useful"},
+          "required": true
+        },
+        {
+          "id": "E2",
+          "type": "multi",
+          "prompt": "What would make you trust a verdict enough to act on it? Select all that apply.",
+          "options": ["Seeing the evidence it cites", "Seeing the reasoning", "Knowing the hiring manager can audit it", "Knowing it was tested on past hires", "Nothing, I'd re-check everything", "Other"],
+          "required": true
+        },
+        {
+          "id": "E3",
+          "type": "text",
+          "prompt": "What would make you overrule a verdict?",
+          "required": false
+        },
+        {
+          "id": "E4",
+          "type": "single",
+          "prompt": "How much time per application would you accept spending with such a record?",
+          "options": ["Less than 1 minute", "1 to 3 minutes", "3 to 10 minutes", "More than 10 minutes"],
+          "required": true
+        },
+        {
+          "id": "E5",
+          "type": "text",
+          "prompt": "Biggest concern about a tool like this?",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "F",
+      "title": "Before you go",
+      "intro": "Two yes-or-no questions. Your email is already on your account, so there is nothing to type.",
+      "items": [
+        {
+          "id": "F1",
+          "type": "single",
+          "prompt": "Would you be willing to do a 30-minute follow-up conversation?",
+          "options": ["Yes", "No"],
+          "required": true
+        },
+        {
+          "id": "F2",
+          "type": "single",
+          "prompt": "Would you like the summarised results when they exist?",
+          "options": ["Yes", "No"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "P",
+      "title": "About the survey itself",
+      "intro": "Pilot only. These two questions are about the survey you just took, not about hiring.",
+      "pilot_only": true,
+      "items": [
+        {
+          "id": "P1",
+          "type": "number",
+          "prompt": "Roughly how long did that take, in minutes?",
+          "required": true,
+          "pilot_only": true
+        },
+        {
+          "id": "P2",
+          "type": "text",
+          "prompt": "Which question did you most want to skip?",
+          "required": false,
+          "pilot_only": true
+        }
+      ]
+    }
+  ]
+}

@@ -74,6 +74,7 @@ export type SocialProps = {
 export function HamburgerMenu({
   signedIn,
   isAdmin,
+  pilot = false,
   memberName,
   memberEmail,
   mode,
@@ -81,6 +82,8 @@ export function HamburgerMenu({
 }: {
   signedIn: boolean;
   isAdmin: boolean;
+  // The pilot flag or the admin role (lib/session-user canPilot).
+  pilot?: boolean;
   memberName?: string;
   memberEmail?: string;
   mode: UiMode;
@@ -135,7 +138,7 @@ export function HamburgerMenu({
     };
   }, [open]);
 
-  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin, social });
+  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin, pilot, social });
 
   return (
     <>
@@ -285,10 +288,12 @@ function renderItem(item: MenuItem, close: () => void) {
 function buildGroups({
   signedIn,
   isAdmin,
+  pilot,
   social,
 }: {
   signedIn: boolean;
   isAdmin: boolean;
+  pilot: boolean;
   social?: SocialProps;
 }): MenuGroup[] {
   // Anonymous visitors see the evidence: the landing, the writing, the
@@ -346,6 +351,14 @@ function buildGroups({
       { kind: "link", label: "Book a meeting", href: "/meetings" },
     );
   }
+  if (pilot) {
+    // The pilot (FSD §5.16), for the ten participants and the owner.
+    // First among the member items because, for a participant, it is
+    // the reason the account exists. The page and the API re-check
+    // the flag; the menu only says where the door is.
+    const at = browse.findIndex((i) => i.label === "Ask Roger");
+    browse.splice(at === -1 ? browse.length : at, 0, { kind: "link", label: "Pilot", href: "/pilot" });
+  }
   const groups: MenuGroup[] = [{ label: "browse", items: browse }];
 
   if (isAdmin) {
@@ -356,6 +369,7 @@ function buildGroups({
         { kind: "link", label: "Contact messages", href: "/admin/contacts" },
         { kind: "link", label: "Registrations", href: "/admin/registrations" },
         { kind: "link", label: "Access & whitelist", href: "/admin/access" },
+        { kind: "link", label: "Pilot sessions", href: "/admin/pilot" },
       ],
     });
   }

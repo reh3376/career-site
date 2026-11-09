@@ -1,7 +1,7 @@
 // Package authpolicy reads the auth level each RPC declares in the proto
 // and makes it available as data the server can enforce.
 //
-// Until now `career.v1.auth` has been documentation. 141 methods declare
+// Until now `career.v1.auth` has been documentation. 158 methods declare
 // a level, nothing reads the declaration, and enforcement is ~90
 // hand-written gate calls in the handlers, one per handler that
 // remembered. That is the same shape as the Docker/UFW gap found on
@@ -75,7 +75,7 @@ func (m Map) Level(procedure string) (v1.AuthLevel, bool) {
 // It returns an error naming every method that declares no level. That
 // error is fatal at startup by design: the enum's own comment in
 // options.proto claims "Lint fails any method that leaves the level
-// unspecified", and no such lint rule ever existed. That all 141 methods
+// unspecified", and no such lint rule ever existed. That all 158 methods
 // happen to declare one today is care, not a control. This is the
 // control.
 //

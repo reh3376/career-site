@@ -67,6 +67,23 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/registrations", "layout");
 }
 
+// Open or close the pilot area to a member (FSD FR-PLT-01/02). The
+// whitelist entry normally sets this at auto-approval; this is the
+// override on the member page, in either direction.
+export async function setMemberPilotAction(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("member_id") ?? "");
+  const approved = String(formData.get("approved") ?? "") === "true";
+  if (!memberId) return;
+  const cookie = await getSessionCookie();
+  if (!cookie) return;
+  await callApi({
+    path: "/api/career.v1.AdminService/SetMemberPilotApproved",
+    body: { memberId, approved, reason: reasonFrom(formData) },
+    cookie,
+  }).catch(() => undefined);
+  revalidatePath("/admin/registrations", "layout");
+}
+
 // Re-fire the approval / decline email. The API audits the attempt
 // and the page re-renders with the new delivery row at the top of
 // the history, so the admin sees the provider's verdict inline.
