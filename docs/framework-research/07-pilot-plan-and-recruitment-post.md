@@ -2,7 +2,7 @@
 
 Companion to `06-employer-side-discovery-research-plan.md`. The pilot exists to fix wording, length and branching before the survey goes wide; it is not a data-collection wave.
 
-**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the recruitment post is not yet published; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added.
+**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the recruitment post is not yet published; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added; the call was extended to about thirty minutes the same day for the company workflow review (`11` §7), and §1 and §2.1 say so.
 
 ---
 
@@ -10,7 +10,7 @@ Companion to `06-employer-side-discovery-research-plan.md`. The pilot exists to 
 
 **Who.** 10 people: 5 recruiters/HR, 5 hiring managers, drawn from personal contacts who will tolerate a follow-up call. At least 3 should hire for technical or manufacturing roles. Nobody from the owner's current employers.
 
-**Format.** Each pilot participant completes the survey, then does a 15-minute call (or written notes) on the survey itself — a cognitive interview, not a content interview:
+**Format.** Each pilot participant completes the survey, then does a call of about thirty minutes (or written notes): fifteen on the survey itself — a cognitive interview, not a content interview — then five on the stimulus and eight to ten on the company hiring workflow (`11` §7). The survey part asks:
 
 - Which questions did you have to read twice?
 - Which answer options didn't fit your situation?
@@ -47,7 +47,7 @@ Two versions: one for the pilot (personal network, asks for the follow-up call) 
 >
 > I have a strong view of this from the applicant side. I need the other side.
 >
-> If you've recruited or been a hiring manager in the last two years, I'm looking for ten people to take a 10-minute survey and then spend 15 minutes on a call telling me which questions were badly worded. Not what you think of the idea — what you think of the survey. That's the pilot; the real one goes out after you've fixed it.
+> If you've recruited or been a hiring manager in the last two years, I'm looking for ten people to take a 10-minute survey and then spend about thirty minutes on a call: which questions were badly worded, and where a one-page chart of how companies hire gets it wrong. Not what you think of the idea — what you think of the survey and the chart. That's the pilot; the real one goes out after you've fixed it.
 >
 > Recruiters and hiring managers both, technical and manufacturing roles especially welcome. Anonymous, no employer named, and you get the summary when it's done.
 >

@@ -2,7 +2,7 @@
 
 Companion to `06-employer-side-discovery-research-plan.md` and `07-pilot-plan-and-recruitment-post.md`. This document walks the pilot from the participant's seat: each touchpoint, what is on their screen, what they are asked to do, what they can influence, and how that influence is captured.
 
-**Status.** Written 2026-11-08. Nothing in §4 is built yet; those items are P2 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added.
+**Status.** Written 2026-11-08. The materials in §4 are in `11-pilot-materials.md`. Repository copy ahead of project (2026-11-08): this status line added; the call gained a third part the same day at the owner's instruction, the company workflow review (`11` §7), and §1 and §2.3 say so.
 
 **A word on words.** The ten are recruiters, HR staff and hiring managers who test the research instrument. In all materials they are **participants**. "Candidate" is reserved for job seekers whose evidence the system judges; using it for the pilot group would confuse every conversation about the mocked match record, which has a candidate in it.
 
@@ -14,7 +14,7 @@ Companion to `06-employer-side-discovery-research-plan.md` and `07-pilot-plan-an
 |---|---|---|---|---|
 | 1 | Invitation and consent | 2 min | LinkedIn post or direct message → link | Whether the ask is clear and the anonymity promise is believed |
 | 2 | Survey v0.1 | ≤10 min | Survey form, phone or desktop | Wording, length, option fit, whether the concept paragraph communicates without a picture |
-| 3 | Cognitive-interview call | 15 min (20 with the stimulus) | Video or phone, screen-share for the stimulus | Where the survey failed them; then, separately, first reaction to the mocked match record |
+| 3 | Cognitive-interview call | About 30 min: 15 on the survey, 5 on the stimulus, 8 to 10 on the company workflow | Video or phone, screen-share for the stimulus and the workflow chart | Where the survey failed them; then, separately, first reaction to the mocked match record; then where the company hiring workflow matches their own and where it does not |
 | 4 | Close-out | 1 min, then async | Email | Whether they want the summary; what changed because of them |
 
 The order is deliberate: the survey's Section E asks them to picture the tool from one paragraph **before** they see the mocked record, and the call then shows the record. The gap between what they pictured and what they see is the measurement.
@@ -64,7 +64,7 @@ Section E's concept paragraph is shown as text only. No image, no link to the mo
 
 ### 2.3 Cognitive-interview call
 
-Fifteen minutes on the survey, then five on the stimulus, in that order. The interviewer has the participant's own survey responses open and refers to them ("you flagged item 11").
+Fifteen minutes on the survey, then five on the stimulus, then eight to ten on the company hiring workflow (Part C, `11` §7), in that order. The interviewer has the participant's own survey responses open and refers to them ("you flagged item 11").
 
 **Part A — the survey (15 min). They see** nothing new; they talk. Prompts from 07 §1, in this order:
 
