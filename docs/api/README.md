@@ -5542,7 +5542,8 @@ its answers.
       "valueJson": "string",
       "flagged": true,
       "prompt": "string",
-      "section": "string"
+      "section": "string",
+      "note": "string"
     }
   ]
 }
@@ -10790,6 +10791,7 @@ One answer, with the per-item flag.
 | `flagged` | `bool` | boolean |  | "This was unclear or didn't fit me." |
 | `prompt` | `string` | string |  | The item's question text, filled on the admin read so a review reads as questions rather than ids. Ignored on submit. |
 | `section` | `string` | string |  | The section the item belongs to, filled on the admin read. |
+| `note` | `string` | string | `string: max_len: 4000` | A note the participant wrote while answering, for the owner to read; optional, kept on the answer's row (owner, 2026-11-09). |
 
 ### GetPilotSectionRequest
 

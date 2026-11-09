@@ -297,6 +297,13 @@ function AnswerRow({ a, sessionId, note }: { a: PilotAnswer; sessionId: string; 
       <div>
         {a.prompt ? <p className="text-sm text-ink-3">{a.prompt}</p> : null}
         <div className={`text-sm text-ink ${a.prompt ? "mt-1" : ""}`}>{renderValue(a.valueJson)}</div>
+        {a.note ? (
+          <p className="mt-2 border-l-2 border-signal/60 pl-3 text-sm text-ink-2">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">participant&rsquo;s note</span>
+            <br />
+            <span className="whitespace-pre-wrap">{a.note}</span>
+          </p>
+        ) : null}
         {sessionId ? (
           <NoteBox sessionId={sessionId} targetKind="item" targetId={a.itemId} initialBody={note} label="your note" compact />
         ) : null}

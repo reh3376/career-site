@@ -58,6 +58,7 @@ type PilotAnswer struct {
 	ItemID     string
 	ValueJSON  string
 	Flagged    bool
+	Note       string
 	AnsweredAt time.Time
 }
 
@@ -169,12 +170,12 @@ func (r *Repo) UpsertPilotAnswers(ctx context.Context, sessionID, section string
 	t := tenant.FromContext(ctx).Int64()
 	for _, a := range answers {
 		if _, err := r.pool.Exec(ctx, `
-    INSERT INTO pilot_answers (tenant_id, session_id, section, item_id, value, flagged)
-    VALUES ($1, $2::uuid, $3, $4, $5::jsonb, $6)
+    INSERT INTO pilot_answers (tenant_id, session_id, section, item_id, value, flagged, note)
+    VALUES ($1, $2::uuid, $3, $4, $5::jsonb, $6, $7)
     ON CONFLICT (session_id, item_id) DO UPDATE
-      SET value = EXCLUDED.value, flagged = EXCLUDED.flagged, section = EXCLUDED.section,
+      SET value = EXCLUDED.value, flagged = EXCLUDED.flagged, note = EXCLUDED.note, section = EXCLUDED.section,
           answered_at = now()`,
-			t, sessionID, section, a.ItemID, a.ValueJSON, a.Flagged); err != nil {
+			t, sessionID, section, a.ItemID, a.ValueJSON, a.Flagged, a.Note); err != nil {
 			return fmt.Errorf("upsert pilot answer %s: %w", a.ItemID, err)
 		}
 	}
@@ -184,7 +185,7 @@ func (r *Repo) UpsertPilotAnswers(ctx context.Context, sessionID, section string
 // ListPilotAnswers returns every answer of a session, oldest first.
 func (r *Repo) ListPilotAnswers(ctx context.Context, sessionID string) ([]PilotAnswer, error) {
 	rows, err := r.pool.Query(ctx, `
-    SELECT section, item_id, value::text, flagged, answered_at
+    SELECT section, item_id, value::text, flagged, note, answered_at
       FROM pilot_answers WHERE session_id = $1::uuid ORDER BY answered_at, item_id`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("list pilot answers: %w", err)
@@ -193,7 +194,7 @@ func (r *Repo) ListPilotAnswers(ctx context.Context, sessionID string) ([]PilotA
 	var out []PilotAnswer
 	for rows.Next() {
 		var a PilotAnswer
-		if err := rows.Scan(&a.Section, &a.ItemID, &a.ValueJSON, &a.Flagged, &a.AnsweredAt); err != nil {
+		if err := rows.Scan(&a.Section, &a.ItemID, &a.ValueJSON, &a.Flagged, &a.Note, &a.AnsweredAt); err != nil {
 			return nil, fmt.Errorf("scan pilot answer: %w", err)
 		}
 		out = append(out, a)

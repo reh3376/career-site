@@ -55,7 +55,7 @@ export async function startPilotAction(_prev: ConsentState, formData: FormData):
   redirect(next ? `/pilot/survey/${next}` : "/pilot");
 }
 
-export type AnswerInput = { itemId: string; valueJson: string; flagged: boolean };
+export type AnswerInput = { itemId: string; valueJson: string; flagged: boolean; note?: string };
 export type SubmitResult = { error?: string; next?: string };
 
 // Saves a section and says where to go next: the following section,

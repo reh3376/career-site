@@ -47,7 +47,7 @@ export type PilotItem = {
   // selection supplies the rows; the form reads it live.
   sourceItem?: string;
 };
-export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean };
+export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean; note?: string };
 export type PilotSectionView = {
   id: string;
   title?: string;

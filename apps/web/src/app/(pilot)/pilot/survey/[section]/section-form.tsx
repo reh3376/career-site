@@ -16,11 +16,17 @@ import type { PilotAnswer, PilotItem } from "../../lib";
 type Ratings = Record<string, Record<string, string>>;
 type Value = string | string[] | number | Ratings;
 
-function parseAnswers(answers: PilotAnswer[]): { values: Record<string, Value>; flags: Record<string, boolean> } {
+function parseAnswers(answers: PilotAnswer[]): {
+  values: Record<string, Value>;
+  flags: Record<string, boolean>;
+  notes: Record<string, string>;
+} {
   const values: Record<string, Value> = {};
   const flags: Record<string, boolean> = {};
+  const notes: Record<string, string> = {};
   for (const a of answers) {
     if (a.flagged) flags[a.itemId] = true;
+    if (a.note) notes[a.itemId] = a.note;
     if (!a.valueJson) continue;
     try {
       values[a.itemId] = JSON.parse(a.valueJson) as Value;
@@ -28,7 +34,7 @@ function parseAnswers(answers: PilotAnswer[]): { values: Record<string, Value>; 
       /* an unreadable saved value is simply not pre-filled */
     }
   }
-  return { values, flags };
+  return { values, flags, notes };
 }
 
 // The rows a derived item (single_from, rating_per_selected) offers:
@@ -84,6 +90,9 @@ export function SectionForm({
   const initial = parseAnswers(answers);
   const [values, setValues] = useState<Record<string, Value>>(initial.values);
   const [flags, setFlags] = useState<Record<string, boolean>>(initial.flags);
+  // The participant's note beside each answer (FR-PLT-05 amended):
+  // whatever they want to say while answering, read by the owner.
+  const [notes, setNotes] = useState<Record<string, string>>(initial.notes);
   const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -127,8 +136,10 @@ export function SectionForm({
       if (!has) {
         if (it.required) {
           errs[it.id] = requiredMessage(it);
-        } else if (flags[it.id] && it.type === "text") {
-          out.push({ itemId: it.id, valueJson: JSON.stringify(""), flagged: true });
+        } else if ((flags[it.id] || (notes[it.id] ?? "").trim()) && it.type === "text") {
+          out.push({ itemId: it.id, valueJson: JSON.stringify(""), flagged: !!flags[it.id], note: (notes[it.id] ?? "").trim() });
+        } else if (flags[it.id] || (notes[it.id] ?? "").trim()) {
+          out.push({ itemId: it.id, valueJson: "null", flagged: !!flags[it.id], note: (notes[it.id] ?? "").trim() });
         }
         continue;
       }
@@ -136,7 +147,7 @@ export function SectionForm({
         errs[it.id] = `Select at most ${it.maxSelect}.`;
         continue;
       }
-      out.push({ itemId: it.id, valueJson: JSON.stringify(v), flagged: !!flags[it.id] });
+      out.push({ itemId: it.id, valueJson: JSON.stringify(v), flagged: !!flags[it.id], note: (notes[it.id] ?? "").trim() });
     }
     if (Object.keys(errs).length) {
       setItemErrors(errs);
@@ -179,6 +190,8 @@ export function SectionForm({
           rows={rowsFor(it, values)}
           value={values[it.id]}
           flagged={!!flags[it.id]}
+          note={notes[it.id] ?? ""}
+          onNote={(n) => setNotes((prev) => ({ ...prev, [it.id]: n }))}
           error={itemErrors[it.id]}
           onChange={(v) => setValue(it.id, v)}
           onFlag={(f) => setFlags((prev) => ({ ...prev, [it.id]: f }))}
@@ -217,17 +230,21 @@ function Item({
   rows,
   value,
   flagged,
+  note,
   error,
   onChange,
   onFlag,
+  onNote,
 }: {
   item: PilotItem;
   rows: string[];
   value: Value | undefined;
   flagged: boolean;
+  note: string;
   error?: string;
   onChange: (v: Value | undefined) => void;
   onFlag: (f: boolean) => void;
+  onNote: (n: string) => void;
 }) {
   const labelId = `label-${item.id}`;
   return (
@@ -256,6 +273,17 @@ function Item({
       <label className="mt-4 flex items-center gap-2 text-xs text-ink-3">
         <input type="checkbox" checked={flagged} onChange={(e) => onFlag(e.target.checked)} className="h-3.5 w-3.5" />
         This was unclear or didn&rsquo;t fit me
+      </label>
+      <label className="mt-3 block">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">notes (optional)</span>
+        <textarea
+          value={note}
+          onChange={(e) => onNote(e.target.value)}
+          rows={2}
+          maxLength={4000}
+          placeholder="Anything you want Roger to know about this question or your answer"
+          className="mt-1 block w-full border border-line-strong bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+        />
       </label>
     </fieldset>
   );

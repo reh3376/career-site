@@ -249,6 +249,9 @@ message PilotAnswer {
   string prompt = 4;
   // The section the item belongs to, filled on the admin read.
   string section = 5;
+  // A note the participant wrote while answering, for the owner to
+  // read; optional, kept on the answer's row (owner, 2026-11-09).
+  string note = 6 [(buf.validate.field).string.max_len = 4000];
 }
 
 // Request for one section.

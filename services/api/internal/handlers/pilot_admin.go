@@ -106,7 +106,7 @@ func (h *Pilot) GetPilotSession(ctx context.Context, req *connect.Request[v1.Get
 	}
 	out := &v1.GetPilotSessionResponse{Summary: h.summaryProto(ctx, m), Notes: notesProto(notes)}
 	for _, a := range answers {
-		pa := &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged, Section: a.Section}
+		pa := &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged, Section: a.Section, Note: a.Note}
 		// The question text, so the owner's review reads as questions.
 		if it, sec := h.instrument.Item(a.ItemID); it != nil {
 			pa.Prompt = it.Prompt
@@ -172,14 +172,14 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 			rows++
 		}
 	case "answers":
-		_ = w.Write([]string{"participant", "section", "item_id", "value_json", "flagged", "answered_at"})
+		_ = w.Write([]string{"participant", "section", "item_id", "value_json", "flagged", "note", "answered_at"})
 		for i := range list {
 			answers, err := h.users.ListPilotAnswers(ctx, list[i].Session.ID)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("export failed"))
 			}
 			for _, a := range answers {
-				_ = w.Write([]string{code[list[i].Session.ID], a.Section, a.ItemID, a.ValueJSON, strconv.FormatBool(a.Flagged), a.AnsweredAt.UTC().Format(time.RFC3339)})
+				_ = w.Write([]string{code[list[i].Session.ID], a.Section, a.ItemID, a.ValueJSON, strconv.FormatBool(a.Flagged), a.Note, a.AnsweredAt.UTC().Format(time.RFC3339)})
 				rows++
 			}
 		}
