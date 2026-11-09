@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { useFormStatus } from "react-dom";
 
 import { resetPasswordAction, type ResetState } from "./actions";
@@ -45,10 +46,9 @@ export function ResetForm({ email }: { email: string }) {
         <label htmlFor="new_password" className={labelClass}>
           New password
         </label>
-        <input
+        <PasswordInput
           id="new_password"
           name="new_password"
-          type="password"
           required
           minLength={12}
           autoComplete="new-password"
@@ -64,10 +64,9 @@ export function ResetForm({ email }: { email: string }) {
         <label htmlFor="confirm" className={labelClass}>
           Confirm new password
         </label>
-        <input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           required
           minLength={12}
           autoComplete="new-password"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { useFormStatus } from "react-dom";
 
 import { withPlusPilot } from "@/lib/plus-pilot";
@@ -96,10 +97,9 @@ export function RegisterForm({ turnstileSiteKey,
       </Field>
 
       <Field id="password" label="Password" hint="At least 12 characters.">
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           minLength={12}
           autoComplete="new-password"
