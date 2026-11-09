@@ -352,3 +352,15 @@ class ExportPilotResponse(_message.Message):
     csv: str
     row_count: int
     def __init__(self, csv: _Optional[str] = ..., row_count: _Optional[int] = ...) -> None: ...
+
+class DeletePilotSessionRequest(_message.Message):
+    __slots__ = ("session_id",)
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    session_id: str
+    def __init__(self, session_id: _Optional[str] = ...) -> None: ...
+
+class DeletePilotSessionResponse(_message.Message):
+    __slots__ = ("member_id",)
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    def __init__(self, member_id: _Optional[str] = ...) -> None: ...

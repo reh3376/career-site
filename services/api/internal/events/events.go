@@ -59,6 +59,7 @@ var Registry = map[string]struct {
 	"pilot.comment":           {Props: []string{"target_kind"}},
 	"pilot.part_done":         {Props: []string{"part"}},
 	"pilot.finished":          {Props: []string{"user_id"}},
+	"pilot.session_deleted":   {Props: []string{"user_id"}},
 	"logout":                  {},
 	"access.expired":          {Props: []string{"user_id"}},
 	// Content

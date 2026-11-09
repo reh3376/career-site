@@ -9,8 +9,9 @@
 //
 // Every member RPC here refuses a caller without the pilot flag, unless
 // the caller is an admin, who sees the pilot as a participant would.
-// The admin RPCs read and export; nothing a participant wrote is ever
-// shown on a public page.
+// The admin RPCs read, export and delete whole sessions (the owner's
+// own runs on the deployed build); nothing a participant wrote is ever
+// edited or shown on a public page.
 syntax = "proto3";
 
 package career.v1;
@@ -85,6 +86,16 @@ service PilotService {
   // Exports one table as CSV, keyed by the participant code the admin
   // assigns rather than by name or address, for the private folder.
   rpc ExportPilot(ExportPilotRequest) returns (ExportPilotResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Deletes one session with everything it holds: answers, flags,
+  // comments and section timings. It exists so the owner's own runs
+  // on the deployed build never sit beside the participants' in the
+  // list or the exports. Participant codes in exports follow session
+  // order, so this is for use before the ten start; a participant's
+  // session is not deleted while the pilot runs.
+  rpc DeletePilotSession(DeletePilotSessionRequest) returns (DeletePilotSessionResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
@@ -459,4 +470,20 @@ message ExportPilotResponse {
   string csv = 1;
   // Rows in csv, excluding the header.
   int32 row_count = 2;
+}
+
+// Which session to delete.
+message DeletePilotSessionRequest {
+  // Session id (UUID).
+  string session_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// What was deleted.
+message DeletePilotSessionResponse {
+  // Id of the member whose session was removed, so the page can say
+  // whose it was.
+  string member_id = 1;
 }

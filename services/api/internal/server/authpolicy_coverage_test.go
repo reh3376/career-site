@@ -41,11 +41,11 @@ func TestPolicyCoverageReportsMountedAndUnmounted(t *testing.T) {
 	if !strings.Contains(out, "auth policy coverage") {
 		t.Fatalf("the coverage line was never logged:\n%s", out)
 	}
-	// The summary has to carry real figures. "158 methods" rather than
+	// The summary has to carry real figures. "159 methods" rather than
 	// a count of what happened to be mounted, because the map is the
 	// whole contract and the mounted subset is a property of this
 	// process.
-	for _, want := range []string{"158 methods", "admin=89", "mounted_services=1"} {
+	for _, want := range []string{"159 methods", "admin=90", "mounted_services=1"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("coverage log is missing %q:\n%s", want, out)
 		}
@@ -114,10 +114,10 @@ func TestPolicyCoverageWithEveryServiceMounted(t *testing.T) {
 
 	for _, want := range []string{
 		"mounted_services=12",
-		// 141 declared minus the 8 on services nothing mounts. Asserted
+		// 159 declared minus the 8 on services nothing mounts. Asserted
 		// exactly: this is the number of procedures the S4 interceptor
 		// will be deciding on, and it should not drift unnoticed.
-		"procedures_served=150",
+		"procedures_served=151",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("coverage log is missing %q:\n%s", want, out)
