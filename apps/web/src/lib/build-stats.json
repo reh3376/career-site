@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 535,
+    "byAssistant": 536,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 995,
+    "commits": 997,
     "days": 53,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-09",
-    "merges": 391,
-    "nonMerge": 604,
+    "merges": 392,
+    "nonMerge": 605,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,17 +25,17 @@
   },
   "lines": {
     "code": {
-      "files": 525,
+      "files": 528,
       "languages": [
         {
           "files": 152,
           "language": "Go",
-          "lines": 37835
+          "lines": 37847
         },
         {
-          "files": 148,
+          "files": 151,
           "language": "TSX",
-          "lines": 28724
+          "lines": 28957
         },
         {
           "files": 73,
@@ -45,7 +45,7 @@
         {
           "files": 72,
           "language": "TypeScript",
-          "lines": 6230
+          "lines": 6256
         },
         {
           "files": 29,
@@ -60,7 +60,7 @@
         {
           "files": 30,
           "language": "Email templates",
-          "lines": 671
+          "lines": 676
         },
         {
           "files": 1,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 91159
+      "lines": 91435
     },
     "config": {
       "files": 33,
@@ -103,10 +103,10 @@
         {
           "files": 146,
           "language": "Markdown",
-          "lines": 37563
+          "lines": 37579
         }
       ],
-      "lines": 37563
+      "lines": 37579
     },
     "generated": {
       "files": 74,
@@ -169,12 +169,12 @@
     "goTests": 465,
     "migrations": 70,
     "pythonTests": 30,
-    "requirements": 227,
+    "requirements": 228,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
     "requirementsNotBuilt": 60,
     "requirementsPartial": 7,
-    "requirementsShipped": 158,
+    "requirementsShipped": 159,
     "rpcs": 169,
     "runtimeServices": 9,
     "services": 16,

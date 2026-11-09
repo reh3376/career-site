@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { AskPanel } from "@/components/ask/ask-panel";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getSessionUser } from "@/lib/session-user";
+import { isMemberPath } from "@/lib/public-routes";
+import { getSessionUser, isPilotOnly } from "@/lib/session-user";
 
 // The site's chrome: header, footer, and the assistant panel.
 //
@@ -30,10 +33,21 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
   // Whether to offer the assistant at all. A failure here must not take
   // the whole site down for a garnish, so it degrades to "no panel".
   let member = false;
+  let pilotOnly = false;
   try {
-    member = Boolean(await getSessionUser());
+    const me = await getSessionUser();
+    member = Boolean(me);
+    pilotOnly = isPilotOnly(me);
   } catch {
     member = false;
+  }
+  // A pilot participant is offered the pilot and nothing else (FSD
+  // FR-PLT-18). The proxy sets the path for member pages; on one of
+  // them, a participant goes back to the pilot. Public pages are
+  // public and stay reachable; the admin console is the owner's.
+  if (pilotOnly) {
+    const path = (await headers()).get("x-pathname") ?? "";
+    if (path && isMemberPath(path) && !path.startsWith("/admin")) redirect("/pilot");
   }
 
   return (
@@ -45,7 +59,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
           survives navigation (FR-CHAT-01). Rendered only for a
           signed-in member: an anonymous visitor cannot use the
           assistant and should not be offered it. */}
-      {member ? <AskPanel /> : null}
+      {member && !pilotOnly ? <AskPanel /> : null}
     </>
   );
 }

@@ -1,8 +1,10 @@
 Hello {{.Name}},
 
-Your account is ready, you're already on Roger's access list, so no manual review was needed.
+{{if .Pilot}}Your account is ready and the pilot is open to you. It takes about twenty minutes, in three parts: a short survey, a one-page match record to read and comment on, and a one-page chart of how a company hires. Leave and come back whenever you like; everything saves as you go.
 
-Sign in here: {{.SignInURL}}
+Begin here: {{.SignInURL}}{{else}}Your account is ready, you're already on Roger's access list, so no manual review was needed.
+
+Sign in here: {{.SignInURL}}{{end}}
 
 {{if .AccessSummary}}Your access: {{.AccessSummary}}.{{end}}
 

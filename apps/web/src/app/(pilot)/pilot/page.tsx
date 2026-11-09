@@ -37,6 +37,21 @@ export default async function PilotHomePage() {
     );
   }
   const p = progressOf(session);
+  // The one thing to do now, as a single button. The map of the three
+  // parts follows for orientation; the button is the way through.
+  const go = p.finished
+    ? { href: "/pilot/done", label: "What happens next", hint: "You finished. Thank you." }
+    : !p.surveyDone
+      ? {
+          href: p.surveyHref,
+          label: session.sectionsDone?.length ? "Continue the survey" : "Start the survey",
+          hint: "Part 1 of 3, about ten minutes.",
+        }
+      : !p.recordDone
+        ? { href: "/pilot/record", label: "Read the match record", hint: "Part 2 of 3, a one-page read with comment boxes." }
+        : !p.workflowDone
+          ? { href: "/pilot/workflow", label: "Read the workflow", hint: "Part 3 of 3, a one-page chart with comment boxes." }
+          : null;
   return (
     <Shell>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
@@ -44,6 +59,18 @@ export default async function PilotHomePage() {
         a chart of how a company hires. Leave and come back whenever you
         like; everything saves as you go.
       </p>
+
+      {go ? (
+        <div className="mt-8 flex flex-wrap items-center gap-4 border-l-2 border-accent bg-accent/10 px-5 py-4">
+          <Link
+            href={go.href}
+            className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+          >
+            {go.label}
+          </Link>
+          <span className="text-sm text-ink-2">{go.hint}</span>
+        </div>
+      ) : null}
 
       <ol className="mt-10 divide-y divide-line border-y border-line">
         <Part

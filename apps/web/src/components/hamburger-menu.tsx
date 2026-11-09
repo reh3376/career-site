@@ -75,6 +75,7 @@ export function HamburgerMenu({
   signedIn,
   isAdmin,
   pilot = false,
+  pilotOnly = false,
   memberName,
   memberEmail,
   mode,
@@ -84,6 +85,9 @@ export function HamburgerMenu({
   isAdmin: boolean;
   // The pilot flag or the admin role (lib/session-user canPilot).
   pilot?: boolean;
+  // The flag without the admin role: the menu is the pilot and Sign
+  // out, nothing else (FSD FR-PLT-18).
+  pilotOnly?: boolean;
   memberName?: string;
   memberEmail?: string;
   mode: UiMode;
@@ -138,7 +142,7 @@ export function HamburgerMenu({
     };
   }, [open]);
 
-  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin, pilot, social });
+  const groups: MenuGroup[] = buildGroups({ signedIn, isAdmin, pilot, pilotOnly, social });
 
   return (
     <>
@@ -289,13 +293,23 @@ function buildGroups({
   signedIn,
   isAdmin,
   pilot,
+  pilotOnly,
   social,
 }: {
   signedIn: boolean;
   isAdmin: boolean;
   pilot: boolean;
+  pilotOnly: boolean;
   social?: SocialProps;
 }): MenuGroup[] {
+  // A pilot participant is offered the pilot and a way out, nothing
+  // else (FSD FR-PLT-18): no browsing, no member pages, no elsewhere.
+  if (pilotOnly) {
+    return [
+      { label: "the pilot", items: [{ kind: "link", label: "The pilot", href: "/pilot" }] },
+      { label: "your account", items: [{ kind: "action", label: "Sign out", action: signOutAction }] },
+    ];
+  }
   // Anonymous visitors see the evidence: the landing, the writing, the
   // work photos, how the reviewer works, and the way in. The gallery
   // serves them a subset from the same URL.

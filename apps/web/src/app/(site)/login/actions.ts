@@ -44,12 +44,22 @@ export async function loginAction(
 
   // Success: relay the API's Set-Cookie so the browser session sticks.
   await relaySetCookies(resp.headers);
+  // A pilot participant (the flag without the admin role) lands in the
+  // pilot unless the link that brought them here said otherwise (FSD
+  // FR-PLT-18).
+  let pilotOnly = false;
+  try {
+    const j = (await resp.json()) as { me?: { pilotApproved?: boolean; role?: string } };
+    pilotOnly = j.me?.pilotApproved === true && j.me?.role !== "MEMBER_ROLE_ADMIN";
+  } catch {
+    /* no body, no change */
+  }
   // Honor ?next= when it's a same-origin path, the login page passes
   // the query through as a hidden form field. Anything that isn't a
   // plain "/foo" path is ignored so this can't be turned into an open
   // redirect.
   const nextRaw = String(formData.get("next") ?? "");
-  const next = safeNext(nextRaw);
+  const next = nextRaw ? safeNext(nextRaw) : pilotOnly ? "/pilot" : "/home";
   redirect(next);
 }
 

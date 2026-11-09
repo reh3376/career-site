@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { signOutAction } from "@/app/actions/session";
+
 import { requireSignedIn, unwrap } from "../gate";
 import { getPilot, progressOf } from "../lib";
 
@@ -50,7 +52,15 @@ export default async function PilotDonePage() {
           short list of what changed in the survey because of you.
         </p>
       </div>
-      <p className="mt-10">
+      <form action={signOutAction} className="mt-10">
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center rounded-md border border-accent px-6 py-3 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-white"
+        >
+          Sign out
+        </button>
+      </form>
+      <p className="mt-6">
         <Link href="/pilot" className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3 no-underline hover:text-accent">
           ← pilot home
         </Link>

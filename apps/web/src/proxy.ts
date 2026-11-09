@@ -44,8 +44,14 @@ export function proxy(request: NextRequest) {
     return withAnonId(request, NextResponse.next());
   }
   if (request.cookies.get(SESSION_COOKIE)?.value) {
+    // The pathname travels to the server layout as a request header,
+    // because a layout cannot otherwise know it, and the (site) layout
+    // needs it to send a pilot-only participant back to the pilot from
+    // any member page (lib/session-user isPilotOnly).
+    const reqHeaders = new Headers(request.headers);
+    reqHeaders.set("x-pathname", pathname);
     // Member pages are never indexed, whatever a crawler holds.
-    const res = NextResponse.next();
+    const res = NextResponse.next({ request: { headers: reqHeaders } });
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
     return withAnonId(request, res);
   }

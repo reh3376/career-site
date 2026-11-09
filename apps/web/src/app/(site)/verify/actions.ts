@@ -9,6 +9,7 @@ export type CodeState = {
   ok?: boolean;
   name?: string;
   status?: string;
+  pilot?: boolean;
 };
 
 // The second half of the verification email: the six-digit code, for
@@ -39,6 +40,6 @@ export async function verifyByCodeAction(_prev: CodeState, formData: FormData): 
   }
   // If the API ever starts a session here, the browser keeps it.
   await relaySetCookies(resp.headers);
-  const j = (await resp.json()) as { me?: { name?: string; status?: string } };
-  return { ok: true, name: j.me?.name ?? "", status: j.me?.status ?? "", values };
+  const j = (await resp.json()) as { me?: { name?: string; status?: string; pilotApproved?: boolean } };
+  return { ok: true, name: j.me?.name ?? "", status: j.me?.status ?? "", pilot: j.me?.pilotApproved === true, values };
 }
