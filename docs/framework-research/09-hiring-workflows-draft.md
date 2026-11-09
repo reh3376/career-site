@@ -4,7 +4,7 @@
 
 **Conventions.** `C-nn` company nodes, `K-nn` candidate nodes. `◆` marks a decision point. Every deferred or paused outcome carries a revisit date **and an escalation rule** (§4, Q7). "Owner" is the role accountable for the node, not the only participant.
 
-**Status.** Revision 2, 2026-11-08. Seven review questions answered by the owner; four decided, three folded into the pilot, and one (Q7) decided in principle with its priority awaiting pilot data (§4). **Both perspectives approved by the owner 2026-11-08.** Open items C-14, K-04 and K-09 stay marked open until the pilot closes them; the approved maps are the process model the framework is classified against (§3).
+**Status.** Revision 2, 2026-11-08. Seven review questions answered by the owner; four decided, three folded into the pilot, and one (Q7) decided in principle with its priority awaiting pilot data (§4). **Both perspectives approved by the owner 2026-11-08.** Open items C-14, K-04 and K-09 stay marked open until the pilot closes them; the approved maps are the process model the framework is classified against (§3). Repository copy ahead of project (2026-11-08): §6 trimmed, the fold into `01` §5.6 is done.
 
 ---
 
@@ -137,5 +137,4 @@ Applied to `06-employer-side-discovery-research-plan.md`, marked **[WF]** there:
 
 ## 6. Next
 
-- Fold §3 into `01-problem-definition-and-framework.md` as a process-model section (approved 2026-11-08; scheduled under P1 in the to-do).
-- After the pilot: close C-14, K-04, K-09; set the priority of the hold-state requirement.
+- After the pilot: close C-14, K-04, K-09; set the priority of the hold-state requirement; then update `01` §5.6 and §4 above. (§3 was folded into `01` §5.6 on 2026-11-08; P1 complete.)

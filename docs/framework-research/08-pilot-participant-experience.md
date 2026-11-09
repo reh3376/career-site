@@ -1,6 +1,8 @@
 # Pilot Participant Experience: What the Ten See and What They Can Change
 
-Companion to `06-employer-side-discovery-research-plan.md` and `07-pilot-plan-and-recruitment-post.md`. This document walks the pilot from the participant's seat: each touchpoint, what is on their screen, what they are asked to do, what they can influence, and how that influence is captured. Written 2026-11-08.
+Companion to `06-employer-side-discovery-research-plan.md` and `07-pilot-plan-and-recruitment-post.md`. This document walks the pilot from the participant's seat: each touchpoint, what is on their screen, what they are asked to do, what they can influence, and how that influence is captured.
+
+**Status.** Written 2026-11-08. Nothing in §4 is built yet; those items are P2 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added.
 
 **A word on words.** The ten are recruiters, HR staff and hiring managers who test the research instrument. In all materials they are **participants**. "Candidate" is reserved for job seekers whose evidence the system judges; using it for the pilot group would confuse every conversation about the mocked match record, which has a candidate in it.
 

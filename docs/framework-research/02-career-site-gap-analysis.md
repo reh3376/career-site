@@ -2,6 +2,8 @@
 
 **Purpose.** Map what `reh3376/career-site` already implements (at the 2026-11-08 `main`) against the data model (§5.1) and component list (§5.2) in `01-problem-definition-and-framework.md`, so the schema work and the Phase 0 build start from what exists rather than from zero.
 
+**Status.** Written 2026-11-08 against `main` at `e333935`. The status columns describe the reviewer at that commit; re-check them when `services/api/internal/jd/` changes. Repository copy ahead of project (2026-11-08): this status line added.
+
 **Short version.** The prototype is further along than the framework doc assumes on the *judgment, provenance, and calibration* side, and further behind on the *requirement-as-entity* and *multi-party* side. The single biggest structural gap is that requirements and judgments live as JSON inside one submission row rather than as first-class, versioned, editable records — which is exactly what the "next concrete step" (lock the Requirement and Equivalency Judgment schemas) has to fix.
 
 ---

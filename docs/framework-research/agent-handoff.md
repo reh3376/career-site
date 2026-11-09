@@ -1,6 +1,6 @@
 # Agent Handoff: Hiring_prod framework research
 
-**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08, at the handoff point: P1 complete, P2 next.
+**Read this first.** It is written for an AI coding agent (or a person) picking up the design effort in this directory with no prior context. It says what the effort is, where the source of record lives, what has been decided, what is open, what to do next, and the conventions to keep. Last updated 2026-11-08, after PR #382 merged, at the handoff point: P1 complete, P2 next.
 
 ---
 
@@ -21,7 +21,7 @@ The design effort lives in a claude.ai Project called **Hiring_prod**. This dire
 | Code being generalised | `services/api/internal/jd/` (pipeline), `services/api/internal/prompts/` (extractor and judge prompts and JSON schemas), `services/api/internal/db/migrations/` (`decision_log` 00019, `jd_runs` 00025, `jd_outcomes`/`jd_feedback` 00026, golden set and evals 00027) | Read `docs/llm-tuning-log.md` before touching any of it |
 | Mocked match record (interview stimulus) | Published design artifact: <https://claude.ai/artifact/RumwAKPYaD2jerW5yc7Umv> | Owner-only until shared; reconstructed from documented runs, anonymised |
 | Workflow diagrams | `10-hiring-workflow-diagrams.md` (Mermaid, renders on GitHub), `diagrams/*.mmd`, `diagrams/workflow-viewer.html` (pan/zoom), and <https://claude.ai/artifact/AJWsmPtYodKEfbcbBRbieL> | |
-| Branch | `claude_dev01` (the repository's designated Claude Code branch per `AGENTS.md`), draft PR #382 | The PR also carries two unrelated `content:` commits; retitle or split before merging |
+| Branch | `claude_dev01` (the repository's designated Claude Code branch per `AGENTS.md`) | A push opens or updates a draft PR against `main` automatically (`.github/workflows/auto-pr.yml`); never open one by hand. PR #382 carried the first copy of this directory and merged 2026-11-08 |
 
 If you cannot reach the claude.ai project, work from this directory and say so in the status line of any document you change.
 
@@ -47,7 +47,7 @@ If you cannot reach the claude.ai project, work from this directory and say so i
 From the owner directly, recorded in `09` §4 and the docs named:
 
 1. **Verdict structure.** `determination` (`met` · `met_equivalent` · `unresolved` · `not_met`) + `basis` (12 equivalency categories) + `uncertainty[]` codes. Three reported numbers: evidenced coverage, unresolved weight, unmet weight. `unresolved` is never silently scored as 0.5. (`03`, `04`)
-2. **Model reports, code decides.** Duration, scope, credential, recency and named-party comparisons are recomputed in code from `reported_facts` vs requirement `thresholds`; the model's `confidence` is logged, never used in arithmetic. Carried from the prototype, where it was proven. (`02`, `04`)
+2. **Model reports, code decides.** Duration, scope, credential, recency and named-party comparisons are recomputed in code from `reported_facts` vs requirement `thresholds`; the model's `confidence` is logged, never used in arithmetic. The division of labour is carried from the prototype, where it is proven for duration (`duration.go`) and named parties (`relationship.go`); the scope, credential and recency rules are v1 design (`04` §2.2) and have not run yet. (`02`, `04`)
 3. **Clarification questions ask for evidence, not confirmation**, and the answer *shape* is controlled, never the content: options come only from the candidate's own corpus or from generic, requirement-independent ladders. Free text is a capped supplement that goes through the judge as evidence, never parsed. (`03`, `04` §4)
 4. **Clarification runs in two stages**: system-driven for high-volume early screening (C-11c), recruiter-asked live from system-generated questions once a shortlist exists (C-13). Items carry `asked_by`. (`09` Q3)
 5. **Role definition**: HR owns the structure (a standing template, C-05); the hiring manager is solely responsible for drafting the content and structured requirements to that template (C-06); HR's sign-off is a conformance and comp check, not a substance review (C-07). (`09` Q2)
@@ -85,7 +85,8 @@ Do not start building the system itself from these documents. Phase 0 (`01` §5.
 - **Keep the numbered prefixes** and add new documents at the next number. Update `README.md`'s table and this file's §3 when you add one.
 - **Cross-reference by file name.** Project copies use `claude/<name>.md`; repository copies use `NN-<name>.md`. When copying, fix links to the repository names.
 - **Commit messages** follow the repository's Conventional Commits rule (`docs:` for this directory) and explain *why* in the body.
-- **Branch**: `claude_dev01`. A push updates draft PR #382 automatically; do not open a second PR by hand (see `CONTRIBUTING.md`).
+- **Adding a file here changes a published number.** `scripts/build_stats.py` counts Markdown, and CI fails the web job when `apps/web/src/lib/build-stats.json` disagrees with the tree. After adding, removing or materially editing documents, run `python3 scripts/build_stats.py` from the repository root (after `git add`, since it reads `git ls-files`) and commit the JSON with the change. The first copy of this directory failed CI on exactly this.
+- **Branch**: `claude_dev01`. A push opens or updates a draft PR automatically; do not open one by hand (see `CONTRIBUTING.md`, step 4). Mark the PR ready for review when the work is done.
 - **No em dashes in anything user-facing** on the site (`AGENTS.md`). These design documents are internal and do use them; do not copy their prose into `apps/web` as-is.
 - **Diagrams**: Mermaid, validated before publishing; quote edge labels that contain punctuation; keep `.mmd` sources in `diagrams/` and the rendered doc in `10`.
 - **Tone of the documents**: plain, specific, no filler; state what was decided and why, name what is open, and give every open item an owner or a trigger.
