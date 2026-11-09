@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 539,
+    "byAssistant": 541,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 1003,
+    "commits": 1006,
     "days": 53,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-09",
-    "merges": 395,
-    "nonMerge": 608,
+    "merges": 396,
+    "nonMerge": 610,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,22 +25,22 @@
   },
   "lines": {
     "code": {
-      "files": 531,
+      "files": 533,
       "languages": [
         {
           "files": 153,
           "language": "Go",
-          "lines": 37923
+          "lines": 37924
         },
         {
-          "files": 152,
+          "files": 153,
           "language": "TSX",
-          "lines": 29119
+          "lines": 29182
         },
         {
-          "files": 73,
+          "files": 74,
           "language": "SQL",
-          "lines": 8601
+          "lines": 8623
         },
         {
           "files": 73,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 91724
+      "lines": 91810
     },
     "config": {
       "files": 33,
@@ -92,10 +92,10 @@
         {
           "files": 18,
           "language": "Protobuf",
-          "lines": 8534
+          "lines": 8537
         }
       ],
-      "lines": 8534
+      "lines": 8537
     },
     "documentation": {
       "files": 146,
@@ -103,10 +103,10 @@
         {
           "files": 146,
           "language": "Markdown",
-          "lines": 37642
+          "lines": 37657
         }
       ],
-      "lines": 37642
+      "lines": 37657
     },
     "generated": {
       "files": 74,
@@ -114,12 +114,12 @@
         {
           "files": 34,
           "language": "Go",
-          "lines": 49166
+          "lines": 49177
         },
         {
           "files": 18,
           "language": "TypeScript",
-          "lines": 27658
+          "lines": 27666
         },
         {
           "files": 1,
@@ -129,7 +129,7 @@
         {
           "files": 20,
           "language": "Python",
-          "lines": 3549
+          "lines": 3551
         },
         {
           "files": 1,
@@ -137,7 +137,7 @@
           "lines": 183
         }
       ],
-      "lines": 86355
+      "lines": 86376
     },
     "tests": {
       "files": 108,
@@ -167,7 +167,7 @@
     "customChecks": 6,
     "directDependencies": 27,
     "goTests": 466,
-    "migrations": 70,
+    "migrations": 71,
     "pythonTests": 30,
     "requirements": 229,
     "requirementsDeferred": 1,

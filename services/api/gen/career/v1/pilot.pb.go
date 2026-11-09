@@ -689,7 +689,10 @@ type PilotAnswer struct {
 	// reads as questions rather than ids. Ignored on submit.
 	Prompt string `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	// The section the item belongs to, filled on the admin read.
-	Section       string `protobuf:"bytes,5,opt,name=section,proto3" json:"section,omitempty"`
+	Section string `protobuf:"bytes,5,opt,name=section,proto3" json:"section,omitempty"`
+	// A note the participant wrote while answering, for the owner to
+	// read; optional, kept on the answer's row (owner, 2026-11-09).
+	Note          string `protobuf:"bytes,6,opt,name=note,proto3" json:"note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -755,6 +758,13 @@ func (x *PilotAnswer) GetPrompt() string {
 func (x *PilotAnswer) GetSection() string {
 	if x != nil {
 		return x.Section
+	}
+	return ""
+}
+
+func (x *PilotAnswer) GetNote() string {
+	if x != nil {
+		return x.Note
 	}
 	return ""
 }
@@ -2768,14 +2778,15 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"pilot_only\x18\n" +
 	" \x01(\bR\tpilotOnly\x12\x1f\n" +
 	"\vsource_item\x18\v \x01(\tR\n" +
-	"sourceItem\"\xa7\x01\n" +
+	"sourceItem\"\xc5\x01\n" +
 	"\vPilotAnswer\x12\"\n" +
 	"\aitem_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\bR\x06itemId\x12(\n" +
 	"\n" +
 	"value_json\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x18\xa0\x9c\x01R\tvalueJson\x12\x18\n" +
 	"\aflagged\x18\x03 \x01(\bR\aflagged\x12\x16\n" +
 	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12\x18\n" +
-	"\asection\x18\x05 \x01(\tR\asection\"B\n" +
+	"\asection\x18\x05 \x01(\tR\asection\x12\x1c\n" +
+	"\x04note\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x04note\"B\n" +
 	"\x16GetPilotSectionRequest\x12(\n" +
 	"\n" +
 	"section_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x02R\tsectionId\"\x92\x02\n" +

@@ -252,7 +252,7 @@ func (h *Pilot) GetPilotSection(ctx context.Context, req *connect.Request[v1.Get
 	}
 	for _, a := range list {
 		if a.Section == sec.ID {
-			out.Answers = append(out.Answers, &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged})
+			out.Answers = append(out.Answers, &v1.PilotAnswer{ItemId: a.ItemID, ValueJson: a.ValueJSON, Flagged: a.Flagged, Note: a.Note})
 		}
 	}
 	order := h.instrument.SectionOrder(s.RoleBranch)
@@ -312,23 +312,23 @@ func (h *Pilot) SubmitPilotSection(ctx context.Context, req *connect.Request[v1.
 			if it.Required {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s is required", it.ID))
 			}
-			// An optional item left blank but flagged still said
-			// something: "this was unclear". The flag needs a row to
-			// live on, so the row is saved with an empty value rather
-			// than dropped with it (FR-PLT-05).
-			if ok && a.Flagged {
+			// An optional item left blank but flagged, or with a note,
+			// still said something: "this was unclear", or whatever the
+			// note says. Either needs a row to live on, so the row is
+			// saved with an empty value rather than dropped (FR-PLT-05).
+			if ok && (a.Flagged || strings.TrimSpace(a.Note) != "") {
 				empty := `""`
 				if it.Type != pilot.TypeText {
 					empty = "null"
 				}
-				toSave = append(toSave, users.PilotAnswer{Section: sec.ID, ItemID: it.ID, ValueJSON: empty, Flagged: true})
+				toSave = append(toSave, users.PilotAnswer{Section: sec.ID, ItemID: it.ID, ValueJSON: empty, Flagged: a.Flagged, Note: strings.TrimSpace(a.Note)})
 			}
 			continue
 		}
 		if err := it.ValidateAnswer(a.ValueJson, it.ResolveOptions(byItem)); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		toSave = append(toSave, users.PilotAnswer{Section: sec.ID, ItemID: it.ID, ValueJSON: a.ValueJson, Flagged: a.Flagged})
+		toSave = append(toSave, users.PilotAnswer{Section: sec.ID, ItemID: it.ID, ValueJSON: a.ValueJson, Flagged: a.Flagged, Note: strings.TrimSpace(a.Note)})
 	}
 	for id := range submitted {
 		if !known[id] {

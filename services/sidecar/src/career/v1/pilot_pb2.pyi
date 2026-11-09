@@ -118,18 +118,20 @@ class PilotItem(_message.Message):
     def __init__(self, id: _Optional[str] = ..., type: _Optional[str] = ..., prompt: _Optional[str] = ..., help: _Optional[str] = ..., options: _Optional[_Iterable[str]] = ..., max_select: _Optional[int] = ..., required: _Optional[bool] = ..., scale: _Optional[_Union[PilotScale, _Mapping]] = ..., dimensions: _Optional[_Iterable[_Union[PilotDimension, _Mapping]]] = ..., pilot_only: _Optional[bool] = ..., source_item: _Optional[str] = ...) -> None: ...
 
 class PilotAnswer(_message.Message):
-    __slots__ = ("item_id", "value_json", "flagged", "prompt", "section")
+    __slots__ = ("item_id", "value_json", "flagged", "prompt", "section", "note")
     ITEM_ID_FIELD_NUMBER: _ClassVar[int]
     VALUE_JSON_FIELD_NUMBER: _ClassVar[int]
     FLAGGED_FIELD_NUMBER: _ClassVar[int]
     PROMPT_FIELD_NUMBER: _ClassVar[int]
     SECTION_FIELD_NUMBER: _ClassVar[int]
+    NOTE_FIELD_NUMBER: _ClassVar[int]
     item_id: str
     value_json: str
     flagged: bool
     prompt: str
     section: str
-    def __init__(self, item_id: _Optional[str] = ..., value_json: _Optional[str] = ..., flagged: _Optional[bool] = ..., prompt: _Optional[str] = ..., section: _Optional[str] = ...) -> None: ...
+    note: str
+    def __init__(self, item_id: _Optional[str] = ..., value_json: _Optional[str] = ..., flagged: _Optional[bool] = ..., prompt: _Optional[str] = ..., section: _Optional[str] = ..., note: _Optional[str] = ...) -> None: ...
 
 class GetPilotSectionRequest(_message.Message):
     __slots__ = ("section_id",)

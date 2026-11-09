@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PasswordInput } from "@/components/password-input";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -76,10 +77,9 @@ export function LoginForm({
             forgot?
           </Link>
         </div>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           autoComplete="current-password"
           className={fieldInputClass}

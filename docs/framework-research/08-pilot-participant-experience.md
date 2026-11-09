@@ -40,7 +40,7 @@ The order is deliberate: the survey's Section E asks them to picture the tool fr
 
 ### 2.2 Survey v0.1
 
-**They see.** The instrument in 06 §3, sections A to F, one section per screen, progress shown. Two pilot-only additions:
+**They see.** The instrument in 06 §3, sections A to F, one section per screen, progress shown. Three pilot-only additions (the third added 2026-11-09 at the owner's instruction after his own run: a notes box on every question, for whatever the participant wants to say while answering, stored on the answer's row and read by the owner):
 
 - A visible **"flag this question"** control on every item (a small checkbox: "This was unclear or didn't fit me"). Flags are the cheapest cognitive-interview data and they are collected while the confusion is fresh, not reconstructed on the call.
 - A closing pilot-only item: *"Roughly how long did that take?"* and *"Which question did you most want to skip?"*
