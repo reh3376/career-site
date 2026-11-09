@@ -22,7 +22,7 @@ func TestBuildCoversEveryDeclaredMethod(t *testing.T) {
 
 	// The figures in docs/sprint-auth-interceptor.md, so that a change
 	// moving methods between levels has to come here and say so.
-	// Asserted exactly rather than as a floor: "at least 141" would be
+	// Asserted exactly rather than as a floor: "at least 146" would be
 	// satisfied by a map that had quietly gained a service, and the
 	// point of this map is that its contents are known.
 	d := m.Distribution()
@@ -30,7 +30,7 @@ func TestBuildCoversEveryDeclaredMethod(t *testing.T) {
 		level v1.AuthLevel
 		want  int
 	}{
-		{v1.AuthLevel_AUTH_LEVEL_ADMIN, 81},
+		{v1.AuthLevel_AUTH_LEVEL_ADMIN, 86},
 		{v1.AuthLevel_AUTH_LEVEL_MEMBER, 43},
 		{v1.AuthLevel_AUTH_LEVEL_PUBLIC, 17},
 	}
@@ -121,7 +121,7 @@ func TestBuildRejectsAMethodWithNoLevel(t *testing.T) {
 	}
 
 	// The error has to name the offending method. "Some method is
-	// missing a level" is not actionable on a 141-method API, and this
+	// missing a level" is not actionable on a 146-method API, and this
 	// error appears at boot during a deploy, with the service down.
 	if !strings.Contains(err.Error(), "/career.v1.SyntheticService/Unannotated") {
 		t.Errorf("error does not name the unannotated method, so the "+
@@ -153,7 +153,7 @@ func TestSummaryNamesEveryLevel(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 	got := m.Summary()
-	for _, want := range []string{"141 methods", "admin=81", "member=43", "public=17"} {
+	for _, want := range []string{"146 methods", "admin=86", "member=43", "public=17"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Summary() = %q, missing %q", got, want)
 		}

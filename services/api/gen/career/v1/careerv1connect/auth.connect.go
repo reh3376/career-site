@@ -172,11 +172,15 @@ type AuthServiceClient interface {
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Ends every session of the member ("sign out of all devices").
 	LogoutAll(context.Context, *connect.Request[v1.LogoutAllRequest]) (*connect.Response[v1.LogoutAllResponse], error)
-	// Emails a single-use password-reset link (valid one hour). Identical
-	// response whether or not the address is known.
+	// Emails a single-use 5-digit reset code (valid fifteen minutes).
+	// Identical response whether or not the address is known. Until
+	// 2026-11-08 this sent a link; the owner replaced it with a code
+	// entered beside the new password (FR-AUTH-19).
 	ForgotPassword(context.Context, *connect.Request[v1.ForgotPasswordRequest]) (*connect.Response[v1.ForgotPasswordResponse], error)
-	// Sets a new password using a reset token and signs the member in on
-	// success. All other sessions are revoked.
+	// Sets a new password using the address, the emailed code and the
+	// new password, and signs the member in on success. All other
+	// sessions are revoked. Five wrong codes burn the code; a code older
+	// than fifteen minutes is refused (FR-AUTH-19).
 	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Changes the password of the signed-in member; requires the current
 	// password. Other sessions are revoked.
@@ -413,11 +417,15 @@ type AuthServiceHandler interface {
 	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// Ends every session of the member ("sign out of all devices").
 	LogoutAll(context.Context, *connect.Request[v1.LogoutAllRequest]) (*connect.Response[v1.LogoutAllResponse], error)
-	// Emails a single-use password-reset link (valid one hour). Identical
-	// response whether or not the address is known.
+	// Emails a single-use 5-digit reset code (valid fifteen minutes).
+	// Identical response whether or not the address is known. Until
+	// 2026-11-08 this sent a link; the owner replaced it with a code
+	// entered beside the new password (FR-AUTH-19).
 	ForgotPassword(context.Context, *connect.Request[v1.ForgotPasswordRequest]) (*connect.Response[v1.ForgotPasswordResponse], error)
-	// Sets a new password using a reset token and signs the member in on
-	// success. All other sessions are revoked.
+	// Sets a new password using the address, the emailed code and the
+	// new password, and signs the member in on success. All other
+	// sessions are revoked. Five wrong codes burn the code; a code older
+	// than fifteen minutes is refused (FR-AUTH-19).
 	ResetPassword(context.Context, *connect.Request[v1.ResetPasswordRequest]) (*connect.Response[v1.ResetPasswordResponse], error)
 	// Changes the password of the signed-in member; requires the current
 	// password. Other sessions are revoked.

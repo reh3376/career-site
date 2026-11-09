@@ -201,6 +201,15 @@ func main() {
 		}
 		log.Info("admin bootstrap ok", slog.String("email", cfg.AdminEmail))
 	}
+	// The agent account (FR-AUTH-20): created once, never given a
+	// password hash, signed in only by a one-time password from the
+	// admin console. See users.EnsureAgentUser.
+	if cfg.AgentLoginUsername != "" {
+		if err := userRepo.EnsureAgentUser(ctx, cfg.AgentLoginUsername, "Agent"); err != nil {
+			log.Error("ensure agent user failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
 
 	authHandler := handlers.NewAuth(log, userRepo, mailer, pwned, handlers.AuthConfig{
 		WebBaseURL:          cfg.WebBaseURL,
@@ -211,6 +220,8 @@ func main() {
 		DecisionTokenSecret: cfg.DecisionTokenSecret,
 		SessionTTL:          cfg.SessionTTL,
 		CookieSecure:        cfg.CookieSecure,
+		AgentUsername:       cfg.AgentLoginUsername,
+		AgentSessionTTL:     cfg.AgentSessionTTL,
 	})
 	// The auth interceptor. Built here, after authHandler exists, so a
 	// construction failure exits before anything is served rather than
@@ -502,6 +513,7 @@ func main() {
 		handlers.CorpusRoots{Public: cfg.CorpusRoot, Private: cfg.CorpusPrivateRoot},
 		jdScorer, cfg.JDPipelineTimeout,
 	)
+	adminHandler.SetAgentAccess(cfg.AgentLoginUsername)
 
 	// Server-side emit points share the one writer.
 	authHandler.SetTurnstile(bots)

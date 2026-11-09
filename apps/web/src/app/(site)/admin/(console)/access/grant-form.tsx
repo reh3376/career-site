@@ -16,6 +16,7 @@ export function GrantForm({
     defaultTtl?: string;
     notes?: string;
     entryExpiresAt?: string;
+    pilot?: boolean;
   };
   submitLabel?: string;
 }) {
@@ -36,7 +37,7 @@ export function GrantForm({
   return (
     <form
       action={onSubmit}
-      className="grid gap-3 border border-line-strong bg-paper-2 p-4 sm:grid-cols-[1fr_140px_1fr_180px_auto] sm:items-end"
+      className="grid gap-3 border border-line-strong bg-paper-2 p-4 sm:grid-cols-[1fr_120px_1fr_160px_auto_auto] sm:items-end"
     >
       <label className="block text-xs">
         <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
@@ -89,6 +90,17 @@ export function GrantForm({
           defaultValue={initial?.entryExpiresAt ?? ""}
           className="mt-1 block w-full border border-line-strong bg-canvas px-2 py-1.5 font-mono text-sm text-ink outline-none focus:border-accent"
         />
+      </label>
+      <label className="flex h-[34px] items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          name="pilot"
+          defaultChecked={initial?.pilot ?? false}
+          className="h-4 w-4"
+        />
+        <span className="font-mono uppercase tracking-[0.14em] text-ink-3">
+          pilot
+        </span>
       </label>
       <SubmitBtn label={submitLabel} />
       {error ? (

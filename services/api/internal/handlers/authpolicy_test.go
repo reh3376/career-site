@@ -28,7 +28,7 @@ import (
 // that cannot fire can only disagree with the thing in front of it.
 //
 // **Why this comes before the interceptor.** Today `career.v1.auth` is
-// documentation: 141 methods declare a level and nothing reads it, while
+// documentation: 146 methods declare a level and nothing reads it, while
 // enforcement is ~93 hand-written gate calls. Moving enforcement into an
 // interceptor only preserves behaviour where the two already agree. Each
 // way they can disagree is a different kind of surprise:

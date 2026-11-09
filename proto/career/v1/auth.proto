@@ -128,13 +128,17 @@ service AuthService {
   rpc LogoutAll(LogoutAllRequest) returns (LogoutAllResponse) {
     option (career.v1.auth) = AUTH_LEVEL_MEMBER;
   }
-  // Emails a single-use password-reset link (valid one hour). Identical
-  // response whether or not the address is known.
+  // Emails a single-use 5-digit reset code (valid fifteen minutes).
+  // Identical response whether or not the address is known. Until
+  // 2026-11-08 this sent a link; the owner replaced it with a code
+  // entered beside the new password (FR-AUTH-19).
   rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
   }
-  // Sets a new password using a reset token and signs the member in on
-  // success. All other sessions are revoked.
+  // Sets a new password using the address, the emailed code and the
+  // new password, and signs the member in on success. All other
+  // sessions are revoked. Five wrong codes burn the code; a code older
+  // than fifteen minutes is refused (FR-AUTH-19).
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
     option (career.v1.auth) = AUTH_LEVEL_PUBLIC;
   }
@@ -267,9 +271,11 @@ message ResendVerificationResponse {
 
 // Sign-in form.
 message LoginRequest {
-  // Email address.
+  // Email address, or the agent account's fixed username (FR-AUTH-20),
+  // which is not an email address. The rule below therefore bounds the
+  // length only; the handler validates the shape for each path.
   string email = 1 [(buf.validate.field).string = {
-    email: true
+    min_len: 3
     max_len: 254
   }];
   // Password.
@@ -348,15 +354,25 @@ message ForgotPasswordResponse {
 
 // Password-reset completion.
 message ResetPasswordRequest {
-  // Single-use token from the reset email.
-  string token = 1 [(buf.validate.field).string = {
-    min_len: 16
-    max_len: 256
-  }];
+  // Deprecated 2026-11-08: the reset email no longer carries a link, so
+  // nothing sends this. Kept for wire compatibility; the server ignores
+  // it and requires email and code instead.
+  string token = 1 [(buf.validate.field).string.max_len = 256];
   // New password, same rules as registration.
   string new_password = 2 [(buf.validate.field).string = {
     min_len: 12
     max_len: 256
+  }];
+  // Email address of the account the code was sent to.
+  string email = 3 [(buf.validate.field).string = {
+    email: true
+    max_len: 254
+  }];
+  // The 5-digit code from the reset email. Fifteen minutes from the
+  // send; five wrong attempts burn it.
+  string code = 4 [(buf.validate.field).string = {
+    pattern: "^[0-9]{5}$"
+    max_len: 5
   }];
 }
 

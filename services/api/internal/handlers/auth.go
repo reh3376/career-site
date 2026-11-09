@@ -88,6 +88,17 @@ type AuthConfig struct {
 	// means "accept any nonzero version" — safe for dev; production sets it.
 	ConsentVersion string
 
+	// ResetCodeTTL is how long an emailed 5-digit reset code stays
+	// usable (FR-AUTH-19). Fifteen minutes: the code is short, so its
+	// life is too.
+	ResetCodeTTL time.Duration
+	// AgentUsername is the agent account's fixed sign-in name
+	// (FR-AUTH-20); empty disables the agent branch of Login.
+	AgentUsername string
+	// AgentSessionTTL is the life of a session minted by a one-time
+	// agent password: hours, not the member's thirty days.
+	AgentSessionTTL time.Duration
+
 	// Sessions
 	SessionTTL time.Duration // FR-AUTH-08: 30-day absolute lifetime.
 	// CookieSecure toggles the Secure attribute on the session cookie. Off
@@ -107,6 +118,12 @@ func NewAuth(
 	}
 	if cfg.ResetTTL == 0 {
 		cfg.ResetTTL = time.Hour
+	}
+	if cfg.ResetCodeTTL == 0 {
+		cfg.ResetCodeTTL = 15 * time.Minute
+	}
+	if cfg.AgentSessionTTL == 0 {
+		cfg.AgentSessionTTL = 8 * time.Hour
 	}
 	if cfg.DecisionTokenTTL == 0 {
 		cfg.DecisionTokenTTL = 7 * 24 * time.Hour
@@ -363,6 +380,17 @@ func (h *Auth) applyWhitelistAutoApprove(
 	}
 	u.Status = users.StatusActive
 	u.ExpiresAt = expiresAt
+	// A pilot entry makes a pilot participant (FR-PLT-02). Best-effort:
+	// the owner can set the flag on the member page if this write fails,
+	// and the member is approved either way.
+	if grant.Pilot {
+		if err := h.users.SetPilotApproved(ctx, u.ID, true); err != nil {
+			h.log.Warn("set pilot flag at auto-approve failed",
+				slog.Int64("user_id", u.ID), slog.String("error", err.Error()))
+		} else {
+			u.PilotApproved = true
+		}
+	}
 
 	go func() {
 		emailCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

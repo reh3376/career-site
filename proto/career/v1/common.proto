@@ -260,6 +260,10 @@ message Me {
   // Truncated provider error from the last failed send; empty on
   // success. Admin-side only.
   string last_notification_error = 18;
+  // Whether this member may enter the pilot area (FSD FR-PLT-01). Set
+  // from the whitelist entry at auto-approval or by an admin on the
+  // member page; admins see the pilot area whatever this says.
+  bool pilot_approved = 19;
 }
 
 // A recorded member action. Sent by the client in batches

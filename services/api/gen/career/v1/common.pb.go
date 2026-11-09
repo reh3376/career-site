@@ -1059,8 +1059,12 @@ type Me struct {
 	// Truncated provider error from the last failed send; empty on
 	// success. Admin-side only.
 	LastNotificationError string `protobuf:"bytes,18,opt,name=last_notification_error,json=lastNotificationError,proto3" json:"last_notification_error,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Whether this member may enter the pilot area (FSD FR-PLT-01). Set
+	// from the whitelist entry at auto-approval or by an admin on the
+	// member page; admins see the pilot area whatever this says.
+	PilotApproved bool `protobuf:"varint,19,opt,name=pilot_approved,json=pilotApproved,proto3" json:"pilot_approved,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Me) Reset() {
@@ -1217,6 +1221,13 @@ func (x *Me) GetLastNotificationError() string {
 		return x.LastNotificationError
 	}
 	return ""
+}
+
+func (x *Me) GetPilotApproved() bool {
+	if x != nil {
+		return x.PilotApproved
+	}
+	return false
 }
 
 // A recorded member action. Sent by the client in batches
@@ -1397,7 +1408,7 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"heard_from\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\theardFrom\x12+\n" +
 	"\x11tailoring_enabled\x18\x05 \x01(\bR\x10tailoringEnabled\x12X\n" +
-	"\x1aquestionnaire_completed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x18questionnaireCompletedAt\"\xac\x06\n" +
+	"\x1aquestionnaire_completed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x18questionnaireCompletedAt\"\xd3\x06\n" +
 	"\x02Me\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1421,7 +1432,8 @@ const file_career_v1_common_proto_rawDesc = "" +
 	"expires_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x124\n" +
 	"\x16last_notification_kind\x18\x10 \x01(\tR\x14lastNotificationKind\x12L\n" +
 	"\x14last_notification_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\x12lastNotificationAt\x126\n" +
-	"\x17last_notification_error\x18\x12 \x01(\tR\x15lastNotificationError\"\xd7\x04\n" +
+	"\x17last_notification_error\x18\x12 \x01(\tR\x15lastNotificationError\x12%\n" +
+	"\x0epilot_approved\x18\x13 \x01(\bR\rpilotApproved\"\xd7\x04\n" +
 	"\rActivityEvent\x12=\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.career.v1.ActivityEvent.KindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12'\n" +

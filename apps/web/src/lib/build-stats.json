@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 516,
+    "byAssistant": 517,
     "byBot": 25,
     "byOwner": 44,
-    "commits": 966,
+    "commits": 968,
     "days": 52,
     "firstCommit": "2026-09-18",
     "lastCommit": "2026-11-08",
-    "merges": 381,
-    "nonMerge": 585,
+    "merges": 382,
+    "nonMerge": 586,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,22 +25,22 @@
   },
   "lines": {
     "code": {
-      "files": 471,
+      "files": 480,
       "languages": [
         {
-          "files": 134,
+          "files": 139,
           "language": "Go",
-          "lines": 33542
+          "lines": 34405
         },
         {
-          "files": 127,
+          "files": 129,
           "language": "TSX",
-          "lines": 26045
+          "lines": 26467
         },
         {
-          "files": 66,
+          "files": 67,
           "language": "SQL",
-          "lines": 7484
+          "lines": 7567
         },
         {
           "files": 29,
@@ -48,9 +48,9 @@
           "lines": 6193
         },
         {
-          "files": 64,
+          "files": 65,
           "language": "TypeScript",
-          "lines": 5593
+          "lines": 5697
         },
         {
           "files": 20,
@@ -60,7 +60,7 @@
         {
           "files": 30,
           "language": "Email templates",
-          "lines": 672
+          "lines": 671
         },
         {
           "files": 1,
@@ -68,7 +68,7 @@
           "lines": 248
         }
       ],
-      "lines": 82410
+      "lines": 83881
     },
     "config": {
       "files": 30,
@@ -76,15 +76,15 @@
         {
           "files": 13,
           "language": "JSON",
-          "lines": 3042
+          "lines": 3122
         },
         {
           "files": 17,
           "language": "YAML",
-          "lines": 1971
+          "lines": 1978
         }
       ],
-      "lines": 5013
+      "lines": 5100
     },
     "contract": {
       "files": 17,
@@ -92,10 +92,10 @@
         {
           "files": 17,
           "language": "Protobuf",
-          "lines": 7770
+          "lines": 7925
         }
       ],
-      "lines": 7770
+      "lines": 7925
     },
     "documentation": {
       "files": 146,
@@ -103,10 +103,10 @@
         {
           "files": 146,
           "language": "Markdown",
-          "lines": 36241
+          "lines": 36542
         }
       ],
-      "lines": 36241
+      "lines": 36542
     },
     "generated": {
       "files": 70,
@@ -114,12 +114,12 @@
         {
           "files": 32,
           "language": "Go",
-          "lines": 44375
+          "lines": 45314
         },
         {
           "files": 17,
           "language": "TypeScript",
-          "lines": 25462
+          "lines": 25895
         },
         {
           "files": 1,
@@ -129,7 +129,7 @@
         {
           "files": 19,
           "language": "Python",
-          "lines": 3301
+          "lines": 3349
         },
         {
           "files": 1,
@@ -137,15 +137,15 @@
           "lines": 183
         }
       ],
-      "lines": 79113
+      "lines": 80533
     },
     "tests": {
-      "files": 95,
+      "files": 96,
       "languages": [
         {
-          "files": 76,
+          "files": 77,
           "language": "Go",
-          "lines": 14588
+          "lines": 14667
         },
         {
           "files": 14,
@@ -158,7 +158,7 @@
           "lines": 456
         }
       ],
-      "lines": 16142
+      "lines": 16221
     }
   },
   "structure": {
@@ -166,16 +166,16 @@
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
-    "goTests": 439,
-    "migrations": 63,
+    "goTests": 442,
+    "migrations": 64,
     "pythonTests": 30,
-    "requirements": 222,
+    "requirements": 224,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
-    "requirementsNotBuilt": 82,
+    "requirementsNotBuilt": 79,
     "requirementsPartial": 2,
-    "requirementsShipped": 136,
-    "rpcs": 149,
+    "requirementsShipped": 141,
+    "rpcs": 154,
     "runtimeServices": 9,
     "services": 15,
     "webTests": 91

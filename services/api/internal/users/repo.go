@@ -52,6 +52,9 @@ type User struct {
 	ExpiresAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// PilotApproved opens the pilot area (FSD FR-PLT-01). Set from the
+	// whitelist entry at auto-approval or by an admin on the member page.
+	PilotApproved bool
 	// Stamped by RecordDelivery (via the email.Audited decorator) on
 	// every member-bound send. LastNotificationError is nil on success
 	// and holds the truncated provider error on failure. Full history
@@ -76,6 +79,11 @@ type EmailToken struct {
 	ExpiresAt time.Time
 	UsedAt    *time.Time
 	CreatedAt time.Time
+	// CodeHash and Attempts carry the emailed-code flows (verify, and
+	// since 2026-11-08 reset): the SHA-256 of the digits, and how many
+	// wrong codes have been counted against the token.
+	CodeHash []byte
+	Attempts int
 }
 
 type CreateInput struct {
@@ -128,7 +136,8 @@ func (r *Repo) Create(ctx context.Context, in CreateInput) (*User, error) {
 const selectCols = `
     id, email, name, organization, stated_role, status, role,
     consent_version, consent_at, expires_at, created_at, updated_at,
-    last_notification_kind, last_notification_at, last_notification_error
+    last_notification_kind, last_notification_at, last_notification_error,
+    pilot_approved
 `
 
 func scanUser(row pgx.Row) (*User, error) {
@@ -147,6 +156,7 @@ func scanUser(row pgx.Row) (*User, error) {
 		&u.Status, &u.Role,
 		&u.ConsentVersion, &u.ConsentAt, &u.ExpiresAt, &u.CreatedAt, &u.UpdatedAt,
 		&kind, &at, &errText,
+		&u.PilotApproved,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

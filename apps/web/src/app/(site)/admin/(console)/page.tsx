@@ -38,6 +38,11 @@ const GROUPS: { heading: string; note: string; surfaces: Surface[] }[] = [
         body: "Email whitelist, active grants with their expiry, and a TTL bump for a member whose access is running out.",
       },
       {
+        href: "/admin/agent",
+        title: "Agent access",
+        body: "One-time passwords for the agent account: fifteen minutes, single use, one live at a time. Create one, see when it was used, and end the session.",
+      },
+      {
         href: "/admin/contacts",
         title: "Contact messages",
         body: "The support inbox by category, including contributor-access requests. Replies go from your own mailbox.",
@@ -134,7 +139,7 @@ export default function AdminOverviewPage() {
         Overview.
       </h1>
       <p className="mt-6 max-w-xl text-base leading-relaxed text-ink-2">
-        Fifteen surfaces, all of them live. Anything partial carries a
+        Sixteen surfaces, all of them live. Anything partial carries a
         label; nothing here does.
       </p>
 

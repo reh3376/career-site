@@ -814,7 +814,7 @@ class RunDbQueryResponse(_message.Message):
     def __init__(self, columns: _Optional[_Iterable[str]] = ..., column_types: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[DbRow, _Mapping]]] = ..., truncated: _Optional[bool] = ..., row_count: _Optional[int] = ..., elapsed_ms: _Optional[int] = ...) -> None: ...
 
 class AccessGrant(_message.Message):
-    __slots__ = ("id", "email", "default_ttl", "notes", "entry_expires_at", "created_by", "created_at", "updated_at")
+    __slots__ = ("id", "email", "default_ttl", "notes", "entry_expires_at", "created_by", "created_at", "updated_at", "pilot")
     ID_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_TTL_FIELD_NUMBER: _ClassVar[int]
@@ -823,6 +823,7 @@ class AccessGrant(_message.Message):
     CREATED_BY_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    PILOT_FIELD_NUMBER: _ClassVar[int]
     id: str
     email: str
     default_ttl: GrantTTL
@@ -831,7 +832,8 @@ class AccessGrant(_message.Message):
     created_by: str
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    pilot: bool
+    def __init__(self, id: _Optional[str] = ..., email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., pilot: _Optional[bool] = ...) -> None: ...
 
 class ListAccessGrantsRequest(_message.Message):
     __slots__ = ("query",)
@@ -850,16 +852,18 @@ class ListAccessGrantsResponse(_message.Message):
     def __init__(self, grants: _Optional[_Iterable[_Union[AccessGrant, _Mapping]]] = ..., active_count: _Optional[int] = ..., expired_count: _Optional[int] = ...) -> None: ...
 
 class UpsertAccessGrantRequest(_message.Message):
-    __slots__ = ("email", "default_ttl", "notes", "entry_expires_at")
+    __slots__ = ("email", "default_ttl", "notes", "entry_expires_at", "pilot")
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_TTL_FIELD_NUMBER: _ClassVar[int]
     NOTES_FIELD_NUMBER: _ClassVar[int]
     ENTRY_EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    PILOT_FIELD_NUMBER: _ClassVar[int]
     email: str
     default_ttl: GrantTTL
     notes: str
     entry_expires_at: _timestamp_pb2.Timestamp
-    def __init__(self, email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    pilot: bool
+    def __init__(self, email: _Optional[str] = ..., default_ttl: _Optional[_Union[GrantTTL, str]] = ..., notes: _Optional[str] = ..., entry_expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., pilot: _Optional[bool] = ...) -> None: ...
 
 class UpsertAccessGrantResponse(_message.Message):
     __slots__ = ("grant", "created")
@@ -2711,3 +2715,97 @@ class DecisionTestReviewEvent(_message.Message):
     reviewed_by: str
     created_at: str
     def __init__(self, block_no: _Optional[int] = ..., status: _Optional[str] = ..., reason: _Optional[str] = ..., note: _Optional[str] = ..., reviewed_by: _Optional[str] = ..., created_at: _Optional[str] = ...) -> None: ...
+
+class SetMemberPilotApprovedRequest(_message.Message):
+    __slots__ = ("member_id", "approved", "reason")
+    MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    APPROVED_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    member_id: str
+    approved: bool
+    reason: str
+    def __init__(self, member_id: _Optional[str] = ..., approved: _Optional[bool] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class SetMemberPilotApprovedResponse(_message.Message):
+    __slots__ = ("member",)
+    MEMBER_FIELD_NUMBER: _ClassVar[int]
+    member: MemberRecord
+    def __init__(self, member: _Optional[_Union[MemberRecord, _Mapping]] = ...) -> None: ...
+
+class AgentPassword(_message.Message):
+    __slots__ = ("id", "created_at", "expires_at", "used_at", "revoked_at", "created_by", "reason", "state", "session_live")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    USED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVOKED_AT_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BY_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    SESSION_LIVE_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    created_at: _timestamp_pb2.Timestamp
+    expires_at: _timestamp_pb2.Timestamp
+    used_at: _timestamp_pb2.Timestamp
+    revoked_at: _timestamp_pb2.Timestamp
+    created_by: str
+    reason: str
+    state: str
+    session_live: bool
+    def __init__(self, id: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., used_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., revoked_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., reason: _Optional[str] = ..., state: _Optional[str] = ..., session_live: _Optional[bool] = ...) -> None: ...
+
+class CreateAgentPasswordRequest(_message.Message):
+    __slots__ = ("reason",)
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    reason: str
+    def __init__(self, reason: _Optional[str] = ...) -> None: ...
+
+class CreateAgentPasswordResponse(_message.Message):
+    __slots__ = ("password", "plaintext", "username")
+    PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    PLAINTEXT_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    password: AgentPassword
+    plaintext: str
+    username: str
+    def __init__(self, password: _Optional[_Union[AgentPassword, _Mapping]] = ..., plaintext: _Optional[str] = ..., username: _Optional[str] = ...) -> None: ...
+
+class ListAgentPasswordsRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ListAgentPasswordsResponse(_message.Message):
+    __slots__ = ("passwords", "live_sessions", "username")
+    PASSWORDS_FIELD_NUMBER: _ClassVar[int]
+    LIVE_SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    passwords: _containers.RepeatedCompositeFieldContainer[AgentPassword]
+    live_sessions: int
+    username: str
+    def __init__(self, passwords: _Optional[_Iterable[_Union[AgentPassword, _Mapping]]] = ..., live_sessions: _Optional[int] = ..., username: _Optional[str] = ...) -> None: ...
+
+class RevokeAgentPasswordRequest(_message.Message):
+    __slots__ = ("id", "reason")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    reason: str
+    def __init__(self, id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class RevokeAgentPasswordResponse(_message.Message):
+    __slots__ = ("password",)
+    PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    password: AgentPassword
+    def __init__(self, password: _Optional[_Union[AgentPassword, _Mapping]] = ...) -> None: ...
+
+class RevokeAgentSessionsRequest(_message.Message):
+    __slots__ = ("reason",)
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    reason: str
+    def __init__(self, reason: _Optional[str] = ...) -> None: ...
+
+class RevokeAgentSessionsResponse(_message.Message):
+    __slots__ = ("revoked",)
+    REVOKED_FIELD_NUMBER: _ClassVar[int]
+    revoked: int
+    def __init__(self, revoked: _Optional[int] = ...) -> None: ...

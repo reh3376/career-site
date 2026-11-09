@@ -10,6 +10,7 @@ import {
   declineRegistrationAction,
   extendAccessAction,
   resendNotificationAction,
+  setMemberPilotAction,
   setMemberStatusAction,
 } from "../actions";
 
@@ -34,6 +35,8 @@ type Me = {
   last_notification_kind?: string;
   last_notification_at?: string;
   last_notification_error?: string;
+  pilot_approved?: boolean;
+  pilotApproved?: boolean;
 };
 
 type ActivityCounts = {
@@ -196,6 +199,14 @@ export default async function AdminMemberDetailPage({
           </dd>
           <dt className="text-ink-3">role</dt>
           <dd className="m-0 text-ink">{isAdmin ? "admin" : "member"}</dd>
+          <dt className="text-ink-3">pilot area</dt>
+          <dd className="m-0 text-ink">
+            {isAdmin
+              ? "open (admins always)"
+              : (me.pilot_approved ?? me.pilotApproved)
+                ? "open"
+                : "closed"}
+          </dd>
         </dl>
       </section>
 
@@ -360,6 +371,30 @@ function Actions({ me, isAdmin }: { me: Me; isAdmin: boolean }) {
                   tone="accent"
                   label="Make permanent"
                 />
+              </div>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                pilot area
+              </p>
+              <div className="mt-2">
+                {(me.pilot_approved ?? me.pilotApproved) ? (
+                  <ActionButton
+                    action={setMemberPilotAction}
+                    memberId={memberId}
+                    extra={{ approved: "false" }}
+                    tone="signal"
+                    label="Close pilot area"
+                  />
+                ) : (
+                  <ActionButton
+                    action={setMemberPilotAction}
+                    memberId={memberId}
+                    extra={{ approved: "true" }}
+                    tone="accent"
+                    label="Open pilot area"
+                  />
+                )}
               </div>
             </div>
             <div>

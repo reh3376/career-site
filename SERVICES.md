@@ -68,6 +68,7 @@ Every prod variable, with comments, is in [`.env.prod.example`](.env.prod.exampl
 | `ADMIN_USERNAME`, `CAREER_SITE_ADMIN_PW` | admin bootstrap | `.env.prod`; dev `.env` |
 | `CORPUS_ROOT`, `CORPUS_PRIVATE_ROOT` | corpus mounts (see above) | `/corpus`, `/corpus-private` |
 | `JD_PIPELINE_TIMEOUT_SECONDS` | wall-clock budget for one JD run (score, assess, résumé, PDF), counted from the moment the run gets the single pipeline slot (one pipeline at a time) | prod `3600` (example file says `1200`; the 4b on 4 vCPU needs 15 to 30 min per JD) |
+| `AGENT_LOGIN_USERNAME`, `AGENT_SESSION_TTL_HOURS` | the agent account's fixed sign-in name and the life of a session minted by a one-time password from `/admin/agent` (FSD FR-AUTH-20); the account row is created at boot with no standing password | default `agent@345` / `8`, passed through compose with those defaults |
 | `JD_MATCH_THRESHOLD` | seeds the `jd_fit_bands` row in `app_settings` on first read (the "strong" band, which is the résumé gate); after that the bands are edited on `/admin/jd`, not here | prod `0.70` (code default `0.55`) |
 | `LLM_NUM_CTX` | context window the api budgets prompts to; compose sets it from `SIDECAR_LLM_NUM_CTX` so the two never drift | prod `8192` |
 | `LLM_MONTHLY_CALL_CAP` | LLM gateway calls per calendar month, 0 = unlimited | prod `2000` |
@@ -182,6 +183,7 @@ the version running in production on every rollout.
 | 00060 | `decision_test_private_bank.sql` | retires the published items and seeds the 90-item private bank, so the answer key is not readable in a public repo |
 | 00061 | `decision_test_regrade_misaligned.sql` | re-grades answers scored against the wrong item after the draw landed and `SubmitAnswer` kept resolving by bank position |
 | 00062 | `decision_test_feedback.sql` | adds `support_messages.dt_session_public_id` and the `decision_test_feedback` category, so a participant can write from the thanks page without a name and the note can be read beside its own run |
+| 00064 | `pilot_access.sql` | adds `users.pilot_approved` and `access_grants.pilot` (the pilot area gate and the whitelist flag that sets it, FSD FR-PLT-01/02), `email_tokens.attempts` (forgot-password by 5-digit code, FR-AUTH-19), and `agent_passwords` (one-time passwords for the agent account, FR-AUTH-20: fifteen minutes, single use, one live at a time) |
 | 00063 | `decision_test_timer_condition.sql` | adds `dt_sessions.timer_visible`, the randomised per-question countdown condition, assigned server-side as a coin flip and recorded beside `audio_mode` and `device_class` because it splits the sample |
 
 Roles: `career` (app owner, full DML), `career_admin_readonly` (SELECT-only; bounds the `/admin/db` blast radius).

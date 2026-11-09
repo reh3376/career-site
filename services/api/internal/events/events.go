@@ -47,6 +47,12 @@ var Registry = map[string]struct {
 	"approval.auto_declined": {Props: []string{"user_id"}},
 	"login.success":          {Props: []string{"user_id"}},
 	"login.failed":           {Props: []string{"reason"}},
+	// Pilot access and the agent account (FSD §5.16, FR-AUTH-20)
+	"pilot.flag_changed":     {Props: []string{"user_id", "approved"}},
+	"agent.login":            {Props: []string{"user_id", "password_id"}},
+	"agent.password_created": {Props: []string{"password_id"}},
+	"agent.password_revoked": {Props: []string{"password_id"}},
+	"agent.sessions_revoked": {Props: []string{"count"}},
 	"logout":                 {},
 	"access.expired":         {Props: []string{"user_id"}},
 	// Content

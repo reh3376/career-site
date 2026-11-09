@@ -84,6 +84,11 @@ services:
       DATABASE_URL_READONLY: postgres://career_admin_readonly:${DB_READONLY_PASSWORD}@postgres:5432/career?sslmode=disable
       WEB_BASE_URL: https://${SITE_DOMAIN}
       OWNER_CONTACT_EMAIL: ${OWNER_CONTACT_EMAIL}
+      # The agent account (FR-AUTH-20): its fixed sign-in name and how
+      # long a session minted by a one-time password lives. Both default
+      # here so the stack comes up without them in .env.prod.
+      AGENT_LOGIN_USERNAME: ${AGENT_LOGIN_USERNAME:-agent@345}
+      AGENT_SESSION_TTL_HOURS: ${AGENT_SESSION_TTL_HOURS:-8}
       MAIL_FROM: ${MAIL_FROM}
       EMAIL_PROVIDER: resend
       RESEND_API_KEY: ${RESEND_API_KEY}

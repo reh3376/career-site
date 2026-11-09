@@ -78,6 +78,13 @@ func (h *Auth) Login(
 		}
 	}
 
+	// The agent account signs in with a one-time password rather than
+	// a standing one (FR-AUTH-20); see auth_agent.go. Branched after the
+	// limiter and the challenge so it pays both like everyone else.
+	if h.isAgentUsername(addr) {
+		return h.agentLogin(ctx, req, addr)
+	}
+
 	u, err := h.users.GetByEmail(ctx, addr)
 	if err != nil {
 		// Same response for "no such account" and "wrong password" so the
@@ -213,13 +220,14 @@ func (h *Auth) lookupSessionToken(ctx context.Context, token string) (*users.Use
 // buildMe maps a repo user to the proto Me carried in responses.
 func (h *Auth) buildMe(u *users.User) *v1.Me {
 	me := &v1.Me{
-		Id:           fmt.Sprintf("%d", u.ID),
-		Name:         u.Name,
-		Email:        u.Email,
-		Organization: u.Organization,
-		StatedRole:   u.StatedRole,
-		Status:       statusToProto(u.Status),
-		Role:         roleToProto(u.Role),
+		Id:            fmt.Sprintf("%d", u.ID),
+		Name:          u.Name,
+		Email:         u.Email,
+		Organization:  u.Organization,
+		StatedRole:    u.StatedRole,
+		Status:        statusToProto(u.Status),
+		Role:          roleToProto(u.Role),
+		PilotApproved: u.PilotApproved,
 	}
 	if !u.CreatedAt.IsZero() {
 		me.CreatedAt = timestamppb.New(u.CreatedAt)

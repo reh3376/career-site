@@ -52,7 +52,7 @@ FSD: §5.16 FR-PLT-01 to 14 and FR-AUTH-19 (specification ahead of code, all Not
 | `/forgot-password`, `/reset-password` | web | Address first; then new password and code on one screen; copy says the code expires in fifteen minutes |
 | `password_reset` email template | `services/api/internal/email/templates` | Carries the code and nothing clickable |
 
-The pilot gate is enforced twice: the `/pilot/*` pages read `Me.pilot_approved` server-side and return 404 to a member without it, and every `PilotService` RPC refuses a caller without it. Per ADR 0031, the flag that is declared on the whitelist form is the flag the gate reads.
+The pilot gate is enforced twice: the `/pilot/*` pages read `Me.pilot_approved` server-side and return 404 to a member without it, and every `PilotService` RPC refuses a caller without it. An admin passes the gate whatever the flag says, so the owner sees the pilot as a participant would (owner, 2026-11-08). Per ADR 0031, the flag that is declared on the whitelist form is the flag the gate reads.
 
 ## 3. Data model
 
@@ -189,3 +189,15 @@ Phase 0 step 3 resumes after PL-3. The hiring migrations in `14` §2 renumber fr
 - `13` §0 decision 8 superseded by this document; §2 gains the PL sequence before step 3.
 - `08` §1 and §2.2: the survey channel is the site; the per-item flag is a true per-item control, as specified.
 - `00-todo.md`: P2b, the on-site build, with PL-1 to PL-4.
+
+## 10. The agent login
+
+Owner's instruction, 2026-11-08 (late): an account for an agent to sign in with, so a live pass or a review can be done without lending the owner's credentials.
+
+- **Fixed username**, `agent@345`, configured by `AGENT_LOGIN_USERNAME` with that default. It is not an email address, so the login request's email rule bounds length only and the handler decides the shape per path. The account row is created at boot the way the admin row is (`EnsureAgentUser`), with no standing password: the normal password path can never sign it in.
+- **One-time password, created from the admin console.** `/admin/agent`, reachable from the overview, has one button. The response shows the plaintext once; only the argon2 hash is stored (`agent_passwords`, migration 00064) with who created it and why.
+- **Fifteen minutes, single use, one live at a time.** A password expires fifteen minutes after creation and is consumed by the sign-in that uses it. Creating a new one revokes any live one, so the clock restarts and nothing older works. A live one can also be revoked by hand.
+- **The session.** A successful agent sign-in mints a session with a shorter life than a member's (`AGENT_SESSION_TTL_HOURS`, default 8), on an account with the admin role, because "access to the entire site" includes the console. The page lists live agent sessions and ends them with one click. Every attempt goes through the sign-in rate limiter; every creation, use, revocation and sign-in is an event and an audit row.
+- **What this is not.** Not a second admin. The owner decides, each time, whether an agent gets in, and sees afterwards when it did and from where. If an agent session is ever found doing something the owner did not ask for, the record of which password let it in is the first thing to read.
+
+FSD rows: FR-AUTH-20 (the login) and FR-ADM-24 (the creator). Built in PL-1.

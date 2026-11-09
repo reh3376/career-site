@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 141 of them, and none missing:
+**Every method declares a level.** 146 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 81 |
+| `AUTH_LEVEL_ADMIN` | 86 |
 | `AUTH_LEVEL_MEMBER` | 43 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 141 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 146 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1160,6 +1160,10 @@ command.
 4. ~~**`Logout`: declare it PUBLIC?**~~ **Settled 2026-10-09: yes.** Done
    in the proto, `knownUngated` is now empty, and the declared split
    moved to 81/43/17.
+2. 2026-11-08: 86/43/17 (146). Five ADMIN methods for the pilot flag
+   and the agent account (`SetMemberPilotApproved`, `CreateAgentPassword`,
+   `ListAgentPasswords`, `RevokeAgentPassword`, `RevokeAgentSessions`;
+   FSD FR-PLT-02, FR-AUTH-20, FR-ADM-24).
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

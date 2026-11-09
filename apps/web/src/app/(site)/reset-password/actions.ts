@@ -7,41 +7,39 @@ import { relaySetCookies } from "@/lib/session";
 
 export type ResetState = {
   error?: string;
-  values?: { token?: string };
+  values?: { email?: string };
 };
 
-// Server action for /reset-password. Consumes the single-use token,
-// updates the password, and (on success) relays the fresh session
-// cookie from the API before redirecting to /home. Errors from the
-// backend (expired token, breached password, etc.) surface as
-// state.error so the client can render inline.
+// Server action for /reset-password. Sends the address, the emailed
+// 5-digit code and the new password; on success relays the fresh
+// session cookie from the API and redirects to /home (FSD FR-AUTH-19).
+// Errors from the backend (wrong or expired code, breached password)
+// surface as state.error so the client can render them inline.
 export async function resetPasswordAction(
   _prev: ResetState,
   formData: FormData,
 ): Promise<ResetState> {
-  const token = String(formData.get("token") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const code = String(formData.get("code") ?? "").replace(/\D/g, "");
   const newPassword = String(formData.get("new_password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (!token) {
-    return {
-      error: "This reset link is missing its token. Request a new one.",
-      values: { token },
-    };
+  if (!email) {
+    return { error: "Enter the email address the code was sent to.", values: { email } };
+  }
+  if (code.length !== 5) {
+    return { error: "The code is the 5 digits from the email.", values: { email } };
   }
   if (newPassword.length < 12) {
-    return {
-      error: "Password must be at least 12 characters.",
-      values: { token },
-    };
+    return { error: "Password must be at least 12 characters.", values: { email } };
   }
   if (newPassword !== confirm) {
-    return { error: "Passwords do not match.", values: { token } };
+    return { error: "Passwords do not match.", values: { email } };
   }
 
   const resp = await callApi({
     path: "/api/career.v1.AuthService/ResetPassword",
-    body: { token, newPassword },
+    body: { email, code, newPassword },
   });
 
   if (!resp.ok) {
@@ -52,7 +50,7 @@ export async function resetPasswordAction(
     } catch {
       /* keep default */
     }
-    return { error: msg, values: { token } };
+    return { error: msg, values: { email } };
   }
 
   await relaySetCookies(resp.headers);

@@ -126,7 +126,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 79 |
+| [`AdminService`](#adminservice) | Owner console. | 84 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
@@ -143,8 +143,8 @@ Registration, verification, sign-in, and credential management.
 | [`Login`](#authservice-login) | `/api/career.v1.AuthService/Login` | Public | default | `LoginRequest` → `LoginResponse` | Signs in with email and password and sets the session cookie. |
 | [`Logout`](#authservice-logout) | `/api/career.v1.AuthService/Logout` | Public | default | `LogoutRequest` → `LogoutResponse` | Ends the current session and clears the cookie. |
 | [`LogoutAll`](#authservice-logoutall) | `/api/career.v1.AuthService/LogoutAll` | Member | default | `LogoutAllRequest` → `LogoutAllResponse` | Ends every session of the member ("sign out of all devices"). |
-| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use password-reset link (valid one hour). |
-| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using a reset token and signs the member in on success. |
+| [`ForgotPassword`](#authservice-forgotpassword) | `/api/career.v1.AuthService/ForgotPassword` | Public | default | `ForgotPasswordRequest` → `ForgotPasswordResponse` | Emails a single-use 5-digit reset code (valid fifteen minutes). |
+| [`ResetPassword`](#authservice-resetpassword) | `/api/career.v1.AuthService/ResetPassword` | Public | default | `ResetPasswordRequest` → `ResetPasswordResponse` | Sets a new password using the address, the emailed code and the new password, and signs the member in on success. |
 | [`ChangePassword`](#authservice-changepassword) | `/api/career.v1.AuthService/ChangePassword` | Member | default | `ChangePasswordRequest` → `ChangePasswordResponse` | Changes the password of the signed-in member; requires the current password. |
 | [`ChangeEmail`](#authservice-changeemail) | `/api/career.v1.AuthService/ChangeEmail` | Member | default | `ChangeEmailRequest` → `ChangeEmailResponse` | **Not implemented.** Declared with no handler, so the embedded UnimplementedAuthServiceHandler answers `unimplemented`. |
 | [`MfaEnroll`](#authservice-mfaenroll) | `/api/career.v1.AuthService/MfaEnroll` | Member | default | `MfaEnrollRequest` → `MfaEnrollResponse` | **Not implemented, and not planned.** Declared with no handler, so the embedded UnimplementedAuthServiceHandler answers `unimplemented`. |
@@ -279,7 +279,7 @@ are available immediately on a successful admin sign-in.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
+| `email` | `string` | string | `string: min_len: 3 max_len: 254` | Email address, or the agent account's fixed username (FR-AUTH-20), which is not an email address. The rule below therefore bounds the length only; the handler validates the shape for each path. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
 | `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the sign-in page. Verified server-side on every sign-in (FR-AUTH-09). Login is the credential-stuffing target, and the rate limiter that guarded it alone is per-(IP, email) and in-process, so a botnet spreading attempts across addresses was bounded only by how many addresses it had. This comment has been wrong twice and the history is worth keeping. It first described a step-up challenge ("required after repeated failures... the server responds failed_precondition with reason turnstile_required") that was never built. On 2026-10-12 it was corrected to say the field was unread, which was true that morning. It is read now. A step-up would still be the gentler design, asking only after a few failures rather than on every sign-in; it is not what shipped, and that is a trade of member friction against a simpler control, not an oversight. |
 
@@ -366,8 +366,10 @@ _No fields; send `{}`._
 
 `POST /api/career.v1.AuthService/ForgotPassword` · **Auth:** Public · **Rate limit:** default/min
 
-Emails a single-use password-reset link (valid one hour). Identical
-response whether or not the address is known.
+Emails a single-use 5-digit reset code (valid fifteen minutes).
+Identical response whether or not the address is known. Until
+2026-11-08 this sent a link; the owner replaced it with a code
+entered beside the new password (FR-AUTH-19).
 
 **Request** — [`ForgotPasswordRequest`](#forgotpasswordrequest)
 
@@ -395,15 +397,19 @@ response whether or not the address is known.
 
 `POST /api/career.v1.AuthService/ResetPassword` · **Auth:** Public · **Rate limit:** default/min
 
-Sets a new password using a reset token and signs the member in on
-success. All other sessions are revoked.
+Sets a new password using the address, the emailed code and the
+new password, and signs the member in on success. All other
+sessions are revoked. Five wrong codes burn the code; a code older
+than fifteen minutes is refused (FR-AUTH-19).
 
 **Request** — [`ResetPasswordRequest`](#resetpasswordrequest)
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `token` | `string` | string | `string: min_len: 16 max_len: 256` | Single-use token from the reset email. |
+| `token` | `string` | string | `string: max_len: 256` | Deprecated 2026-11-08: the reset email no longer carries a link, so nothing sends this. Kept for wire compatibility; the server ignores it and requires email and code instead. |
 | `newPassword` | `string` | string | `string: min_len: 12 max_len: 256` | New password, same rules as registration. |
+| `email` | `string` | string | `string: max_len: 254 email: true` | Email address of the account the code was sent to. |
+| `code` | `string` | string | `string: max_len: 5 pattern: "^[0-9]{5$"` | The 5-digit code from the reset email. Fifteen minutes from the send; five wrong attempts burn it. |
 
 **Response** — [`ResetPasswordResponse`](#resetpasswordresponse)
 
@@ -416,7 +422,9 @@ success. All other sessions are revoked.
 ```json
 {
   "token": "string",
-  "newPassword": "string"
+  "newPassword": "string",
+  "email": "string",
+  "code": "string"
 }
 ```
 
@@ -2114,6 +2122,11 @@ Owner console.
 | [`GetMember`](#adminservice-getmember) | `/api/career.v1.AdminService/GetMember` | Admin | default | `GetMemberRequest` → `GetMemberResponse` | Returns one member with recent activity, conversations, admin notes, and email delivery history. |
 | [`AddMemberNote`](#adminservice-addmembernote) | `/api/career.v1.AdminService/AddMemberNote` | Admin | default | `AddMemberNoteRequest` → `AddMemberNoteResponse` | Adds a private admin note to a member. |
 | [`SetMemberStatus`](#adminservice-setmemberstatus) | `/api/career.v1.AdminService/SetMemberStatus` | Admin | default | `SetMemberStatusRequest` → `SetMemberStatusResponse` | Approves or rejects a registration waiting in PENDING_APPROVAL (approval mode only), or disables/re-enables an account. |
+| [`SetMemberPilotApproved`](#adminservice-setmemberpilotapproved) | `/api/career.v1.AdminService/SetMemberPilotApproved` | Admin | default | `SetMemberPilotApprovedRequest` → `SetMemberPilotApprovedResponse` | Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). |
+| [`CreateAgentPassword`](#adminservice-createagentpassword) | `/api/career.v1.AdminService/CreateAgentPassword` | Admin | default | `CreateAgentPasswordRequest` → `CreateAgentPasswordResponse` | Creates a one-time password for the agent account (FR-AUTH-20, FR-ADM-24). |
+| [`ListAgentPasswords`](#adminservice-listagentpasswords) | `/api/career.v1.AdminService/ListAgentPasswords` | Admin | default | `ListAgentPasswordsRequest` → `ListAgentPasswordsResponse` | Lists recent agent passwords by state (hashes never leave the server) with the agent account's live session count. |
+| [`RevokeAgentPassword`](#adminservice-revokeagentpassword) | `/api/career.v1.AdminService/RevokeAgentPassword` | Admin | default | `RevokeAgentPasswordRequest` → `RevokeAgentPasswordResponse` | Revokes a live agent password before it is used or expires. |
+| [`RevokeAgentSessions`](#adminservice-revokeagentsessions) | `/api/career.v1.AdminService/RevokeAgentSessions` | Admin | default | `RevokeAgentSessionsRequest` → `RevokeAgentSessionsResponse` | Ends every live session of the agent account. |
 | [`GetReviewQueue`](#adminservice-getreviewqueue) | `/api/career.v1.AdminService/GetReviewQueue` | Admin | default | `GetReviewQueueRequest` → `GetReviewQueueResponse` | Lists items needing the owner's attention: negative feedback, "I don't know" answers, escalations, and out-of-scope refusals. |
 | [`ResolveReviewItem`](#adminservice-resolvereviewitem) | `/api/career.v1.AdminService/ResolveReviewItem` | Admin | default | `ResolveReviewItemRequest` → `ResolveReviewItemResponse` | Resolves a review item, optionally recording that it was converted into a Q&A-bank entry (the entry itself is authored in `content/qa/`). |
 | [`ReplyEscalation`](#adminservice-replyescalation) | `/api/career.v1.AdminService/ReplyEscalation` | Admin | default | `ReplyEscalationRequest` → `ReplyEscalationResponse` | Replies to an escalation. |
@@ -2351,6 +2364,157 @@ mode only), or disables/re-enables an account.
 {
   "memberId": "string",
   "status": "MEMBER_STATUS_UNVERIFIED",
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.SetMemberPilotApproved
+
+`POST /api/career.v1.AdminService/SetMemberPilotApproved` · **Auth:** Admin · **Rate limit:** default/min
+
+Sets or clears a member's pilot flag (FSD FR-PLT-01, FR-PLT-02). The
+flag opens the pilot area to that member; admins see it regardless.
+
+**Request** — [`SetMemberPilotApprovedRequest`](#setmemberpilotapprovedrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `approved` | `bool` | boolean |  | True opens the pilot area to the member; false closes it. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+**Response** — [`SetMemberPilotApprovedResponse`](#setmemberpilotapprovedresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | The member record, with pilot_approved as it now stands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "memberId": "string",
+  "approved": true,
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.CreateAgentPassword
+
+`POST /api/career.v1.AdminService/CreateAgentPassword` · **Auth:** Admin · **Rate limit:** default/min
+
+Creates a one-time password for the agent account (FR-AUTH-20,
+FR-ADM-24). Good for one sign-in and for fifteen minutes from now;
+creating a new one revokes any live one, so at most one works at a
+time. The plaintext is returned once, here, and never stored.
+
+**Request** — [`CreateAgentPasswordRequest`](#createagentpasswordrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reason` | `string` | string | `string: max_len: 1000` | Why an agent is being let in; kept with the row and in the audit log. |
+
+**Response** — [`CreateAgentPasswordResponse`](#createagentpasswordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `password` | [`AgentPassword`](#agentpassword) | object |  | The row as stored, minus the hash. |
+| `plaintext` | `string` | string |  | The password itself, to be shown once. Not stored; not logged. |
+| `username` | `string` | string |  | The fixed username the agent signs in with. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.ListAgentPasswords
+
+`POST /api/career.v1.AdminService/ListAgentPasswords` · **Auth:** Admin · **Rate limit:** default/min
+
+Lists recent agent passwords by state (hashes never leave the
+server) with the agent account's live session count.
+
+**Request** — [`ListAgentPasswordsRequest`](#listagentpasswordsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`ListAgentPasswordsResponse`](#listagentpasswordsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `passwords` | [`AgentPassword`](#agentpassword)[] | array of object |  | Up to the last 50 passwords. |
+| `liveSessions` | `int32` | number |  | Live sessions on the agent account right now. |
+| `username` | `string` | string |  | The fixed username the agent signs in with. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### AdminService.RevokeAgentPassword
+
+`POST /api/career.v1.AdminService/RevokeAgentPassword` · **Auth:** Admin · **Rate limit:** default/min
+
+Revokes a live agent password before it is used or expires.
+
+**Request** — [`RevokeAgentPasswordRequest`](#revokeagentpasswordrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Row id of the password. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+**Response** — [`RevokeAgentPasswordResponse`](#revokeagentpasswordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `password` | [`AgentPassword`](#agentpassword) | object |  | The row as it now stands. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "id": "string",
+  "reason": "string"
+}
+```
+
+</details>
+
+### AdminService.RevokeAgentSessions
+
+`POST /api/career.v1.AdminService/RevokeAgentSessions` · **Auth:** Admin · **Rate limit:** default/min
+
+Ends every live session of the agent account.
+
+**Request** — [`RevokeAgentSessionsRequest`](#revokeagentsessionsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+**Response** — [`RevokeAgentSessionsResponse`](#revokeagentsessionsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `revoked` | `int32` | number |  | Sessions revoked by this call. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
   "reason": "string"
 }
 ```
@@ -3022,6 +3186,7 @@ controls how long the whitelist entry itself stays active.
 | `defaultTtl` | [`GrantTTL`](#grantttl) | string (enum name) | `enum: defined_only: true not_in: 0` | TTL that new registrations get on approval. |
 | `notes` | `string` | string | `string: max_len: 1000` | Free-text admin notes. |
 | `entryExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this whitelist entry itself should lapse; unset = never. |
+| `pilot` | `bool` | boolean |  | Mark the entry as a pilot entry: the member it approves gets the pilot flag (FSD FR-PLT-02). |
 
 **Response** — [`UpsertAccessGrantResponse`](#upsertaccessgrantresponse)
 
@@ -3037,7 +3202,8 @@ controls how long the whitelist entry itself stays active.
   "email": "string",
   "defaultTtl": "GRANT_TTL_1D",
   "notes": "string",
-  "entryExpiresAt": "2026-09-18T12:00:00Z"
+  "entryExpiresAt": "2026-09-18T12:00:00Z",
+  "pilot": true
 }
 ```
 
@@ -5814,6 +5980,7 @@ The calling member. Returned by sign-in, verification, GetMe, and GetHome.
 | `lastNotificationKind` | `string` | string |  | Kind of the last notification email the API sent to this member, e.g. "user_approved" / "user_declined" / "expiry_warn". Empty until the first send. Only populated on admin-side responses. |
 | `lastNotificationAt` | `Timestamp` | string (RFC 3339, UTC) |  | Wall-clock time of the last notification send attempt (success OR failure). Admin-side only. |
 | `lastNotificationError` | `string` | string |  | Truncated provider error from the last failed send; empty on success. Admin-side only. |
+| `pilotApproved` | `bool` | boolean |  | Whether this member may enter the pilot area (FSD FR-PLT-01). Set from the whitelist entry at auto-approval or by an admin on the member page; admins see the pilot area whatever this says. |
 
 ### ActivityEvent
 
@@ -7048,6 +7215,7 @@ One row of the access_grants table.
 | `createdBy` | `string` | string |  | Admin user_id that created the entry; empty for seeded rows. |
 | `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the entry was created. |
 | `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the entry was last updated. |
+| `pilot` | `bool` | boolean |  | Whether a registration against this entry makes the member a pilot participant (FSD FR-PLT-02). |
 
 ### ListAccessGrantsRequest
 
@@ -7078,6 +7246,7 @@ is updated in place; otherwise a new row is created.
 | `defaultTtl` | [`GrantTTL`](#grantttl) | string (enum name) | `enum: defined_only: true not_in: 0` | TTL that new registrations get on approval. |
 | `notes` | `string` | string | `string: max_len: 1000` | Free-text admin notes. |
 | `entryExpiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this whitelist entry itself should lapse; unset = never. |
+| `pilot` | `bool` | boolean |  | Mark the entry as a pilot entry: the member it approves gets the pilot flag (FSD FR-PLT-02). |
 
 ### UpsertAccessGrantResponse
 
@@ -8748,6 +8917,107 @@ only through the SQL console until now.
 | `reviewedBy` | `string` | string |  | Who recorded it. |
 | `createdAt` | `string` | string |  | When, RFC3339. |
 
+### SetMemberPilotApprovedRequest
+
+Request to set or clear a member's pilot flag.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `memberId` | `string` | string | `string: min_len: 1 max_len: 64` | Member ID. |
+| `approved` | `bool` | boolean |  | True opens the pilot area to the member; false closes it. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+### SetMemberPilotApprovedResponse
+
+The member after the change.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `member` | [`MemberRecord`](#memberrecord) | object |  | The member record, with pilot_approved as it now stands. |
+
+### AgentPassword
+
+One agent one-time password, without its hash.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | Row id, string over the wire. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the owner created it. |
+| `expiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | Fifteen minutes after creation; refused after this. |
+| `usedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was used to sign in; unset while unused. |
+| `revokedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When an admin revoked it, or when a newer password replaced it. |
+| `createdBy` | `string` | string |  | Admin user id that created it. |
+| `reason` | `string` | string |  | The owner's note on why this agent session was allowed. |
+| `state` | `string` | string |  | live, used, expired or revoked, computed server-side at read time. |
+| `sessionLive` | `bool` | boolean |  | Whether the session this password minted is still live. |
+
+### CreateAgentPasswordRequest
+
+Request to create a one-time agent password.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reason` | `string` | string | `string: max_len: 1000` | Why an agent is being let in; kept with the row and in the audit log. |
+
+### CreateAgentPasswordResponse
+
+The created password. `plaintext` appears here and nowhere else.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `password` | [`AgentPassword`](#agentpassword) | object |  | The row as stored, minus the hash. |
+| `plaintext` | `string` | string |  | The password itself, to be shown once. Not stored; not logged. |
+| `username` | `string` | string |  | The fixed username the agent signs in with. |
+
+### ListAgentPasswordsRequest
+
+Request to list agent passwords; takes no filters.
+
+_No fields._
+
+### ListAgentPasswordsResponse
+
+Recent agent passwords, newest first, with the live session count.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `passwords` | [`AgentPassword`](#agentpassword)[] | array of object |  | Up to the last 50 passwords. |
+| `liveSessions` | `int32` | number |  | Live sessions on the agent account right now. |
+| `username` | `string` | string |  | The fixed username the agent signs in with. |
+
+### RevokeAgentPasswordRequest
+
+Request to revoke a live agent password.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string | `string: min_len: 1 max_len: 64` | Row id of the password. |
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+### RevokeAgentPasswordResponse
+
+The password after revocation.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `password` | [`AgentPassword`](#agentpassword) | object |  | The row as it now stands. |
+
+### RevokeAgentSessionsRequest
+
+Request to end every live agent session.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reason` | `string` | string | `string: max_len: 1000` | Reason, recorded in the audit log. |
+
+### RevokeAgentSessionsResponse
+
+How many sessions were ended.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `revoked` | `int32` | number |  | Sessions revoked by this call. |
+
 ### RegisterRequest
 
 Registration form.
@@ -8812,7 +9082,7 @@ Sign-in form.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `email` | `string` | string | `string: max_len: 254 email: true` | Email address. |
+| `email` | `string` | string | `string: min_len: 3 max_len: 254` | Email address, or the agent account's fixed username (FR-AUTH-20), which is not an email address. The rule below therefore bounds the length only; the handler validates the shape for each path. |
 | `password` | `string` | string | `string: min_len: 1 max_len: 256` | Password. |
 | `turnstileToken` | `string` | string | `string: max_len: 2048` | Cloudflare Turnstile response token from the sign-in page. Verified server-side on every sign-in (FR-AUTH-09). Login is the credential-stuffing target, and the rate limiter that guarded it alone is per-(IP, email) and in-process, so a botnet spreading attempts across addresses was bounded only by how many addresses it had. This comment has been wrong twice and the history is worth keeping. It first described a step-up challenge ("required after repeated failures... the server responds failed_precondition with reason turnstile_required") that was never built. On 2026-10-12 it was corrected to say the field was unread, which was true that morning. It is read now. A step-up would still be the gentler design, asking only after a few failures rather than on every sign-in; it is not what shipped, and that is a trade of member friction against a simpler control, not an oversight. |
 
@@ -8874,8 +9144,10 @@ Password-reset completion.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `token` | `string` | string | `string: min_len: 16 max_len: 256` | Single-use token from the reset email. |
+| `token` | `string` | string | `string: max_len: 256` | Deprecated 2026-11-08: the reset email no longer carries a link, so nothing sends this. Kept for wire compatibility; the server ignores it and requires email and code instead. |
 | `newPassword` | `string` | string | `string: min_len: 12 max_len: 256` | New password, same rules as registration. |
+| `email` | `string` | string | `string: max_len: 254 email: true` | Email address of the account the code was sent to. |
+| `code` | `string` | string | `string: max_len: 5 pattern: "^[0-9]{5$"` | The 5-digit code from the reset email. Fifteen minutes from the send; five wrong attempts burn it. |
 
 ### ResetPasswordResponse
 

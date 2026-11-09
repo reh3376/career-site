@@ -48,6 +48,9 @@ type AccessGrant struct {
 	CreatedBy      *int64
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// Pilot marks the entry as a pilot participant's (FSD FR-PLT-02):
+	// the member it approves gets users.pilot_approved.
+	Pilot bool
 }
 
 // GetActiveGrant returns the whitelist entry for email if one exists and its
@@ -55,7 +58,7 @@ type AccessGrant struct {
 // exists (miss or expired-entry).
 func (r *Repo) GetActiveGrant(ctx context.Context, email string) (*AccessGrant, error) {
 	const q = `
-    SELECT id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at
+    SELECT id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at, pilot
     FROM access_grants
     WHERE email = $1
       AND (entry_expires_at IS NULL OR entry_expires_at > now())
@@ -63,7 +66,7 @@ func (r *Repo) GetActiveGrant(ctx context.Context, email string) (*AccessGrant, 
 	g := &AccessGrant{}
 	err := r.pool.QueryRow(ctx, q, email).Scan(
 		&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
-		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt, &g.Pilot,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -278,7 +281,7 @@ type ListGrantsResult struct {
 	ExpiredCount int32
 }
 
-const grantCols = `id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at`
+const grantCols = `id, email, default_ttl, notes, entry_expires_at, created_by, created_at, updated_at, pilot`
 
 // ListGrants returns every whitelist entry matching the filter, newest
 // first, plus per-status counts computed across the full table
@@ -317,7 +320,7 @@ func (r *Repo) ListGrants(ctx context.Context, f ListGrantsFilter) (*ListGrantsR
 		var g AccessGrant
 		if err := rows.Scan(
 			&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
-			&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+			&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt, &g.Pilot,
 		); err != nil {
 			return nil, fmt.Errorf("scan grant: %w", err)
 		}
@@ -337,25 +340,27 @@ func (r *Repo) UpsertGrant(
 	ttl GrantTTL,
 	notes string,
 	entryExpiresAt *time.Time,
+	pilot bool,
 	createdBy *int64,
 ) (*AccessGrant, bool, error) {
 	// ON CONFLICT with a RETURNING + xmax=0 trick tells us whether the
 	// row was newly inserted vs updated in a single round-trip.
 	const q = `
-    INSERT INTO access_grants (email, default_ttl, notes, entry_expires_at, created_by)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO access_grants (email, default_ttl, notes, entry_expires_at, pilot, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (email) DO UPDATE
       SET default_ttl = EXCLUDED.default_ttl,
           notes = EXCLUDED.notes,
           entry_expires_at = EXCLUDED.entry_expires_at,
+          pilot = EXCLUDED.pilot,
           updated_at = now()
     RETURNING ` + grantCols + `, (xmax = 0) AS inserted
   `
 	g := &AccessGrant{}
 	var inserted bool
-	err := r.pool.QueryRow(ctx, q, email, ttl, notes, entryExpiresAt, createdBy).Scan(
+	err := r.pool.QueryRow(ctx, q, email, ttl, notes, entryExpiresAt, pilot, createdBy).Scan(
 		&g.ID, &g.Email, &g.DefaultTTL, &g.Notes, &g.EntryExpiresAt,
-		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt,
+		&g.CreatedBy, &g.CreatedAt, &g.UpdatedAt, &g.Pilot,
 		&inserted,
 	)
 	if err != nil {

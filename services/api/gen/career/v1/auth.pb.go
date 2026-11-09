@@ -498,7 +498,9 @@ func (x *ResendVerificationResponse) GetMessage() string {
 // Sign-in form.
 type LoginRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Email address.
+	// Email address, or the agent account's fixed username (FR-AUTH-20),
+	// which is not an email address. The rule below therefore bounds the
+	// length only; the handler validates the shape for each path.
 	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	// Password.
 	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
@@ -900,10 +902,17 @@ func (x *ForgotPasswordResponse) GetMessage() string {
 // Password-reset completion.
 type ResetPasswordRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Single-use token from the reset email.
+	// Deprecated 2026-11-08: the reset email no longer carries a link, so
+	// nothing sends this. Kept for wire compatibility; the server ignores
+	// it and requires email and code instead.
 	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	// New password, same rules as registration.
-	NewPassword   string `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	NewPassword string `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	// Email address of the account the code was sent to.
+	Email string `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	// The 5-digit code from the reset email. Fifteen minutes from the
+	// send; five wrong attempts burn it.
+	Code          string `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -948,6 +957,20 @@ func (x *ResetPasswordRequest) GetToken() string {
 func (x *ResetPasswordRequest) GetNewPassword() string {
 	if x != nil {
 		return x.NewPassword
+	}
+	return ""
+}
+
+func (x *ResetPasswordRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *ResetPasswordRequest) GetCode() string {
+	if x != nil {
+		return x.Code
 	}
 	return ""
 }
@@ -1440,7 +1463,7 @@ const file_career_v1_auth_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"\x8b\x01\n" +
 	"\fLoginRequest\x12 \n" +
 	"\x05email\x18\x01 \x01(\tB\n" +
-	"\xbaH\ar\x05\x18\xfe\x01`\x01R\x05email\x12&\n" +
+	"\xbaH\ar\x05\x10\x03\x18\xfe\x01R\x05email\x12&\n" +
 	"\bpassword\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\bpassword\x121\n" +
 	"\x0fturnstile_token\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\x0eturnstileToken\"\x86\x01\n" +
@@ -1457,12 +1480,15 @@ const file_career_v1_auth_proto_rawDesc = "" +
 	"\x05email\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x18\xfe\x01`\x01R\x05email\"2\n" +
 	"\x16ForgotPasswordResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"g\n" +
-	"\x14ResetPasswordRequest\x12 \n" +
-	"\x05token\x18\x01 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x10\x18\x80\x02R\x05token\x12-\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"\xb0\x01\n" +
+	"\x14ResetPasswordRequest\x12\x1e\n" +
+	"\x05token\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x02R\x05token\x12-\n" +
 	"\fnew_password\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\f\x18\x80\x02R\vnewPassword\"6\n" +
+	"\xbaH\ar\x05\x10\f\x18\x80\x02R\vnewPassword\x12 \n" +
+	"\x05email\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x18\xfe\x01`\x01R\x05email\x12'\n" +
+	"\x04code\x18\x04 \x01(\tB\x13\xbaH\x10r\x0e\x18\x052\n" +
+	"^[0-9]{5}$R\x04code\"6\n" +
 	"\x15ResetPasswordResponse\x12\x1d\n" +
 	"\x02me\x18\x01 \x01(\v2\r.career.v1.MeR\x02me\"}\n" +
 	"\x15ChangePasswordRequest\x125\n" +
