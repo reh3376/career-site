@@ -2,7 +2,7 @@
 
 Open work items for the design effort, in the order they will be worked. Each item names what "done" looks like and which doc it feeds. Items are removed when done; decisions made along the way go into the doc they affect, not here.
 
-Last updated 2026-11-08 (P1 complete; handoff point). Repository copy ahead of project (2026-11-08): the PR #382 item under P6 removed after the PR merged.
+Last updated 2026-11-08, late (P1 and P2 complete; the build order delegated to the agent and recorded in `13-phase-0-build-plan.md`). Repository copy ahead of project (2026-11-08): P2 marked complete, P4 and P5 re-pointed at `13`.
 
 ---
 
@@ -22,13 +22,9 @@ Done: node lists (`09-hiring-workflows-draft.md`), review record, pilot addition
 
 Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pre-application gap view), K-09 (dispute), and set the priority of the hold-state requirement; then update `01` §5.6 and `09` §4.
 
-## P2 — Pilot materials (from `08-pilot-participant-experience.md` §4) — **next; handoff starts here**
+## P2 — Pilot materials — **complete 2026-11-08**
 
-- Consent / landing screen text.
-- One-page interviewer note template (prompt blocks, quote column), including the [WF] probes.
-- Instrument change log started at `survey v0.1` (first entry: the [WF] additions, 2026-11-08).
-- Survey platform decision (Google Forms acceptable for the pilot with fixed C1 order; randomising tool for the main wave).
-- Stimulus checked on screen-share at phone and laptop widths.
+Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewer note template with the [WF] probes, the platform decision, the stimulus check), `12-instrument-change-log.md` started at `survey v0.1`, and the private folder `docs/personal/framework-research/` for anything a participant says.
 
 ## P3 — Pilot recruiting and fielding (owner)
 
@@ -36,7 +32,7 @@ Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pr
 - Post the pilot version of the recruitment post; schedule calls.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 
-## P4 — Schema follow-through (parallel with P3)
+## P4 — Schema follow-through (parallel with P3) — **runs as steps 2 and 3 of `13-phase-0-build-plan.md` §2**
 
 - Proto and SQL rendering of the v1 entities; column vs jsonb decisions.
 - Add `asked_by` (system / recruiter) to the clarification item (workflow Q3).
@@ -45,7 +41,7 @@ Carried forward, not P1 work: after the pilot, close C-14 (slate cuts), K-04 (pr
 - Clarification trigger and round policy (revisit after pilot and main-wave interviews).
 - Hold-state entity: revisit date, owner, escalation target, escalation event (workflow Q7; priority after pilot).
 
-## P5 — Decisions needed before Phase 1 (from the gap analysis)
+## P5 — Decisions needed before Phase 1 (from the gap analysis) — **closed for Phase 0 by `13` §0 decisions 4 to 6; reopen before Phase 1**
 
 - Third-party confidential material entering the corpus when a second candidate exists (career-site backlog §1b).
 - Baseline plan for false-negative claims: keyword filter run in parallel on the same pool.
