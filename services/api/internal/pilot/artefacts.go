@@ -12,7 +12,7 @@ import (
 // CurrentRecordVersion and CurrentWorkflowVersion name the files served.
 const (
 	CurrentRecordVersion   = "v1.1"
-	CurrentWorkflowVersion = "v2"
+	CurrentWorkflowVersion = "v3"
 )
 
 // Record is the mocked match record as far as the server needs to know
@@ -67,7 +67,11 @@ func (r *Record) HasRow(id string) bool {
 	return false
 }
 
-// Workflow is the company hiring workflow, revision 2.
+// Workflow is the company hiring workflow as far as the server needs
+// it: the phases and node ids for validating comment targets, and the
+// fields revision 2 served one by one. From revision 3 the whole file
+// is passed through as Raw and the site renders it, so a revision may
+// add fields (questions, outcomes, return edges) without touching Go.
 type Workflow struct {
 	Version string          `json:"version"`
 	Source  string          `json:"source"`
@@ -75,6 +79,7 @@ type Workflow struct {
 	Prompts []string        `json:"prompts"`
 	Phases  []WorkflowPhase `json:"phases"`
 	Nodes   []WorkflowNode  `json:"nodes"`
+	Raw     []byte          `json:"-"`
 }
 
 // WorkflowPhase groups nodes.
@@ -127,7 +132,29 @@ func LoadWorkflow(version string) (*Workflow, error) {
 	if len(w.Nodes) == 0 {
 		return nil, fmt.Errorf("workflow %s has no nodes", version)
 	}
+	w.Raw = raw
 	return &w, nil
+}
+
+// HasPhase reports whether a target names a phase.
+func (w *Workflow) HasPhase(id string) bool {
+	for _, p := range w.Phases {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// IsDecision reports whether a node is a decision point, the only
+// nodes that take an outcomes answer.
+func (w *Workflow) IsDecision(id string) bool {
+	for _, n := range w.Nodes {
+		if n.ID == id {
+			return n.Decision
+		}
+	}
+	return false
 }
 
 // HasNode reports whether a comment target names a node.

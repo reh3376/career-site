@@ -58,7 +58,7 @@ export type PilotSectionView = {
   total?: number;
   session?: PilotSession;
 };
-export type PilotComment = { targetKind: string; targetId?: string; body: string; updatedAt?: string };
+export type PilotComment = { targetKind: string; targetId?: string; body: string; answer?: string; updatedAt?: string };
 export type PilotRecordView = { recordJson?: string; comments?: PilotComment[]; recordVersion?: string };
 export type PilotWorkflowNode = {
   id: string;
@@ -76,6 +76,7 @@ export type PilotWorkflowView = {
   nodes?: PilotWorkflowNode[];
   comments?: PilotComment[];
   workflowVersion?: string;
+  workflowJson?: string;
 };
 
 export type Fetched<T> = { ok: true; data: T } | { ok: false; status: number; message: string };

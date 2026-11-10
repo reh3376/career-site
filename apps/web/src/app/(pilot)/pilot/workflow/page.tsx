@@ -1,50 +1,33 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { markPartAction } from "../actions";
 import { CommentBox } from "../comment-box";
 import { requireSignedIn, unwrap } from "../gate";
 import { getPilotWorkflow, type PilotComment } from "../lib";
-
-import { ChartFrame } from "./chart-frame";
-import { MissingSteps } from "./missing-steps";
+import { FlowStrip } from "./flow-strip";
+import { PhaseStrip } from "./phase-strip";
+import { parseWorkflow, progressByPhase } from "./types";
 
 export const metadata: Metadata = { title: "Pilot · How a company hires" };
 export const dynamic = "force-dynamic";
 
-// The company hiring workflow as a diagram and as a node list with a
-// comment box per node and a repeatable "a step that is missing" field
-// (FSD FR-PLT-09). The diagram is an SVG committed to the repository,
-// inlined here because it carries foreignObject labels that an <img>
-// would drop; no third-party script is loaded. The candidate
-// perspective is not shown.
-async function readSvg(): Promise<string | null> {
-  try {
-    const p = path.join(process.cwd(), "public", "pilot", "company-workflow.svg");
-    const s = await readFile(p, "utf8");
-    // Drop any XML prologue; the element goes straight into the DOM.
-    return s.replace(/^<\?xml[^>]*>\s*/, "");
-  } catch {
-    return null;
-  }
-}
-
+// The company hiring workflow, revision 3 (FSD FR-PLT-09, amended
+// 2026-11-09 from the owner's comments after his own run: the 26-step
+// chart could not be evaluated as a whole, the summaries used our
+// vocabulary, and the questions did not say what was wanted). This
+// screen is the overview: the five stages as one small diagram and one
+// question about them; each stage then has a screen of its own.
 export default async function PilotWorkflowPage() {
   await requireSignedIn("/pilot/workflow");
-  const [data, svg] = await Promise.all([getPilotWorkflow().then(unwrap), readSvg()]);
+  const data = unwrap(await getPilotWorkflow());
+  const wf = parseWorkflow(data.workflowJson);
   const comments = new Map<string, PilotComment>();
   for (const c of data.comments ?? []) comments.set(`${c.targetKind}:${c.targetId ?? ""}`, c);
-  const missing = (data.comments ?? [])
-    .filter((c) => c.targetKind === "workflow_missing")
-    .map((c) => ({ id: c.targetId ?? "", body: c.body }))
-    .filter((c) => c.id !== "")
-    .sort((a, b) => Number(a.id) - Number(b.id));
-  const phases = data.phases ?? [];
-  const nodes = data.nodes ?? [];
-  const markWorkflowDone = markPartAction.bind(null, "workflow");
+  const phases = wf?.phases ?? [];
+  const nodes = wf?.nodes ?? [];
+  const progress = progressByPhase(phases, nodes, comments);
+  const next = phases.find((ph) => progress[ph.id].answered < progress[ph.id].total) ?? phases[0];
+  const started = phases.some((ph) => progress[ph.id].answered > 0);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-16 sm:px-10 sm:py-24">
@@ -60,117 +43,72 @@ export default async function PilotWorkflowPage() {
       >
         How a company hires.
       </h1>
-      {data.intro ? <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-2">{data.intro}</p> : null}
+      {wf?.intro ? <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink-2">{wf.intro}</p> : null}
 
-      {data.prompts?.length ? (
-        <section className="mt-8 max-w-2xl border-l-2 border-accent pl-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">what helps most</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-ink-2">
-            {data.prompts.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
+      {!wf ? (
+        <p className="mt-10 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+          The workflow could not be read. Try again in a moment.
+        </p>
+      ) : (
+        <>
+          <section className="mt-8 max-w-2xl border-l-2 border-accent pl-5">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">how this part works</p>
+            <p className="mt-2 text-sm leading-relaxed text-ink-2">
+              Five stages, one screen each. Under every step, one click: it happens like this, it happens differently, or it
+              does not happen where you work. A box opens only where something differs. At each decision you are asked
+              what the outcomes are where you work. About ten minutes.
+            </p>
+          </section>
 
-      <section className="mt-12">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the chart · C-01 to C-26</p>
-          <a
-            href="/pilot/company-workflow.svg"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent no-underline hover:underline"
-          >
-            open full size in a new tab ↗
-          </a>
-        </div>
-        {svg ? (
-          <ChartFrame svg={svg} />
-        ) : (
-          <p className="mt-3 border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
-            The chart file is missing from this build. The node list below is the same content.
+          <section className="mt-12">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the five stages</p>
+            <FlowStrip label="The five stages" items={phases.map((ph) => ({ id: ph.id, label: ph.title ?? ph.id }))} />
+            <ol className="mt-5 space-y-2">
+              {phases.map((ph) => (
+                <li key={ph.id} className="text-sm leading-relaxed">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{ph.id}</span>{" "}
+                  <span className="font-medium text-ink">{ph.title}.</span> <span className="text-ink-2">{ph.purpose}</span>
+                </li>
+              ))}
+            </ol>
+            {wf.overview_question ? (
+              <div className="mt-6 max-w-2xl">
+                <p className="text-base leading-relaxed text-ink">{wf.overview_question}</p>
+                <CommentBox
+                  targetKind="workflow_general"
+                  targetId="overview"
+                  initialBody={comments.get("workflow_general:overview")?.body ?? ""}
+                  label="your answer"
+                />
+              </div>
+            ) : null}
+          </section>
+
+          <section className="mt-12 border-t border-line pt-8">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the stages, one screen each</p>
+            <PhaseStrip phases={phases} progress={progress} />
+            {next ? (
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <Link
+                  href={`/pilot/workflow/${next.id}`}
+                  className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white no-underline shadow-sm transition-colors hover:bg-accent-hover"
+                >
+                  {started ? `Continue with stage ${next.id}` : `Start with stage ${next.id}`}: {next.title}
+                </Link>
+                <p className="text-xs text-ink-3">Every stage is a link above. The last stage ends this part.</p>
+              </div>
+            ) : null}
+          </section>
+
+          <p className="mt-12 text-xs text-ink-4">
+            The same 26 steps as one chart, for anyone who wants the whole picture at once:{" "}
+            <a href="/pilot/company-workflow.svg" target="_blank" rel="noopener noreferrer" className="text-ink-3 underline hover:text-accent">
+              open the full chart in a new tab
+            </a>
+            .
           </p>
-        )}
-      </section>
-
-      <section className="mt-14">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the steps, one by one</p>
-        <p className="mt-2 max-w-2xl text-sm text-ink-2">
-          Under each step, say whether it matches how a hire runs where you work. Leave the box empty where it does.
-        </p>
-        {phases.map((ph) => {
-          const own = nodes.filter((n) => n.phase === ph.id);
-          if (own.length === 0) return null;
-          return (
-            <div key={ph.id} className="mt-10">
-              <h2
-                className="font-display text-2xl leading-tight text-ink"
-                style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
-              >
-                <span className="mr-3 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">phase {ph.id}</span>
-                {ph.title}
-              </h2>
-              <ol className="mt-4 divide-y divide-line border-y border-line">
-                {own.map((n) => (
-                  <li key={n.id} className="py-6">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                      <span className="text-ink">{n.id}</span>
-                      {n.decision ? <span className="text-accent">decision</span> : null}
-                      {n.open ? <span className="text-signal">open · whether this step exists is one of the pilot&rsquo;s questions</span> : null}
-                    </div>
-                    <p className="mt-2 text-base leading-relaxed text-ink">{n.name}</p>
-                    {n.owner ? (
-                      <p className="mt-1 text-xs text-ink-3">
-                        <span className="font-mono uppercase tracking-[0.14em]">owner</span> · {n.owner}
-                      </p>
-                    ) : null}
-                    {n.summary ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">{n.summary}</p> : null}
-                    <CommentBox
-                      targetKind="workflow_node"
-                      targetId={n.id}
-                      initialBody={comments.get(`workflow_node:${n.id}`)?.body ?? ""}
-                      label={`your comment on ${n.id}`}
-                      placeholder="Does this match? Who owns it where you work? What is different?"
-                    />
-                  </li>
-                ))}
-              </ol>
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="mt-14 border-t border-line pt-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">a step that is missing</p>
-        <p className="mt-2 max-w-2xl text-sm text-ink-2">
-          Something that happens where you work and is not on the chart. One per box; another box appears when you save.
-        </p>
-        <MissingSteps initial={missing} />
-      </section>
-
-      <section className="mt-14 border-t border-line pt-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the chart as a whole</p>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-ink">
-          Which two steps are really one? Is there anything here you would not want a candidate to see?
-        </p>
-        <CommentBox
-          targetKind="workflow_general"
-          targetId=""
-          initialBody={comments.get("workflow_general:")?.body ?? ""}
-          label="your general comment"
-        />
-      </section>
-
-      <form action={markWorkflowDone} className="mt-12 flex flex-wrap items-center gap-4 border-t border-line pt-8">
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover"
-        >
-          I have read the workflow
-        </button>
-        <p className="text-xs text-ink-3">Marks this part done and takes you back to the pilot home to finish. You can still come back and change your comments.</p>
-      </form>
+        </>
+      )}
     </div>
   );
 }

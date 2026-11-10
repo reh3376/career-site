@@ -322,7 +322,7 @@ export default async function HomePage() {
           <LiveCard
             label="the pilot · for you"
             title="The employer-side pilot"
-            body="A ten-minute survey about hiring, a one-page match record and a chart of how a company hires, each with room to say where the wording fails and where the picture is wrong. About thirty minutes on a call afterwards."
+            body="A ten-minute survey about hiring, a one-page match record and a picture of how a company hires, in five stages, each with room to say where the wording fails and where the picture is wrong. About thirty minutes on a call afterwards."
             href="/pilot"
             cta="Open the pilot →"
           />

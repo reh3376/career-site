@@ -175,11 +175,23 @@ func TestRecordAndWorkflowLoad(t *testing.T) {
 	if len(w.Nodes) != 26 || !w.HasNode("C-01") || !w.HasNode("C-26") || w.HasNode("K-01") {
 		t.Fatalf("workflow nodes: %d", len(w.Nodes))
 	}
-	if len(w.Prompts) != 6 {
-		t.Fatalf("workflow carries the six Part C prompts, has %d", len(w.Prompts))
+	if len(w.Prompts) != 0 || len(w.Phases) != 5 || len(w.Raw) == 0 {
+		t.Fatalf("workflow v3 carries no prompts, five phases and its raw file: %d prompts, %d phases, %d bytes", len(w.Prompts), len(w.Phases), len(w.Raw))
+	}
+	if !w.HasPhase("B") || w.HasPhase("F") || !w.IsDecision("C-04") || w.IsDecision("C-01") {
+		t.Fatal("phase and decision lookups wrong")
+	}
+	decisions := 0
+	for _, n := range w.Nodes {
+		if n.Decision {
+			decisions++
+		}
+	}
+	if decisions != 6 {
+		t.Fatalf("six decision points, have %d", decisions)
 	}
 	// No em dash reaches a participant from these files (AGENTS.md).
-	for _, raw := range [][]byte{r.Raw} {
+	for _, raw := range [][]byte{r.Raw, w.Raw} {
 		if strings.Contains(string(raw), "—") {
 			t.Error("the stimulus contains an em dash")
 		}

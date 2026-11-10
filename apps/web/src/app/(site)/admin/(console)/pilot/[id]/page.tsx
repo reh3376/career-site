@@ -152,12 +152,18 @@ export default async function AdminPilotSessionPage({ params }: { params: Promis
           byKind.map(([kind, list]) => (
             <div key={kind} className="mt-6">
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">{KIND_LABEL[kind] ?? kind}</p>
+              {kind === "workflow_node" ? <Tally list={list} /> : null}
               <ul className="mt-2 divide-y divide-line border-y border-line">
                 {list.map((c) => (
                   <li key={`${c.targetKind}:${c.targetId}`} className="grid gap-2 py-3 sm:grid-cols-[6rem_1fr]">
                     <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{c.targetId || "general"}</span>
                     <div>
-                      <p className="whitespace-pre-wrap text-sm text-ink">{c.body}</p>
+                      {c.answer ? (
+                        <p className={`font-mono text-[11px] uppercase tracking-[0.14em] ${ANSWER_TONE[c.answer] ?? "text-ink-2"}`}>
+                          {ANSWER_LABEL[c.answer] ?? c.answer}
+                        </p>
+                      ) : null}
+                      {c.body ? <p className="whitespace-pre-wrap text-sm text-ink">{c.body}</p> : <p className="text-sm text-ink-4">no comment</p>}
                       <p className="mt-1 font-mono text-[11px] text-ink-4">{fmt(c.updatedAt)}</p>
                       {sessionId ? (
                         <NoteBox
@@ -217,11 +223,28 @@ const KIND_LABEL: Record<string, string> = {
   record_row: "match record · rows",
   record_general: "match record · general",
   workflow_node: "workflow · steps",
+  workflow_outcomes: "workflow · outcomes at decisions",
+  workflow_phase: "workflow · stage questions",
   workflow_missing: "workflow · missing steps",
-  workflow_general: "workflow · general",
+  workflow_general: "workflow · overview and closing",
 };
 
-const KIND_ORDER = ["record_row", "record_general", "workflow_node", "workflow_missing", "workflow_general"];
+const KIND_ORDER = ["record_row", "record_general", "workflow_node", "workflow_outcomes", "workflow_phase", "workflow_missing", "workflow_general"];
+
+// The three-way answer on a workflow step (revision 3): the M / D / X
+// tally the interview guide kept by hand, now counted per sitting.
+const ANSWER_LABEL: Record<string, string> = { matches: "happens like this", differs: "happens differently", absent: "does not happen" };
+const ANSWER_TONE: Record<string, string> = { matches: "text-success", differs: "text-signal", absent: "text-danger" };
+
+function Tally({ list }: { list: PilotComment[] }) {
+  const n = (a: string) => list.filter((c) => c.answer === a).length;
+  return (
+    <p className="mt-1 font-mono text-[11px] text-ink-3">
+      <span className="text-success">{n("matches")} like this</span> · <span className="text-signal">{n("differs")} differently</span> ·{" "}
+      <span className="text-danger">{n("absent")} do not happen</span> · {list.filter((c) => !c.answer).length} comment only
+    </p>
+  );
+}
 
 function groupComments(list: PilotComment[]): [string, PilotComment[]][] {
   const m = new Map<string, PilotComment[]>();

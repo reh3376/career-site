@@ -50,13 +50,13 @@ export default async function PilotHomePage() {
       : !p.recordDone
         ? { href: "/pilot/record", label: "Read the match record", hint: "Part 2 of 3, a one-page read with comment boxes." }
         : !p.workflowDone
-          ? { href: "/pilot/workflow", label: "Read the workflow", hint: "Part 3 of 3, a one-page chart with comment boxes." }
+          ? { href: "/pilot/workflow", label: "Read the workflow", hint: "Part 3 of 3, five stages with one click per step." }
           : null;
   return (
     <Shell>
       <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
         Three parts, in order: the survey, then a match record to read, then
-        a chart of how a company hires. Leave and come back whenever you
+        a picture of how a company hires, one stage at a time. Leave and come back whenever you
         like; everything saves as you go.
       </p>
 
@@ -163,10 +163,10 @@ function Consent() {
       </p>
       <p>
         <strong className="text-ink">What I am asking of you.</strong> About ten minutes on the survey here,
-        then a short read of a one-page match record and a one-page chart of how a company hires, with a
+        then a short read of a one-page match record and a picture of how a company hires, in five stages, with a
         comment box under every row and every step. Afterwards, a call of about thirty minutes: fifteen
         about the survey&rsquo;s wording, the rest about what you wrote. Not what you think of the idea; what
-        the questions did to you, and what the chart gets wrong.
+        the questions did to you, and what the picture of hiring gets wrong.
       </p>
       <p>
         <strong className="text-ink">What is kept.</strong> Your answers and comments, under your account

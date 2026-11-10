@@ -76,13 +76,16 @@ export async function submitSectionAction(sectionId: string, answers: AnswerInpu
 
 export type CommentResult = { error?: string; savedAt?: string; removed?: boolean };
 
-// Saves, replaces or removes one comment.
+// Saves, replaces or removes one comment. The answer is the three-way
+// click on a workflow step and travels with the body, so neither save
+// wipes the other; every other kind sends it empty.
 export async function upsertCommentAction(
   targetKind: string,
   targetId: string,
   body: string,
+  answer = "",
 ): Promise<CommentResult> {
-  const res = await post<{ comment?: PilotComment }>("UpsertPilotComment", { targetKind, targetId, body });
+  const res = await post<{ comment?: PilotComment }>("UpsertPilotComment", { targetKind, targetId, body, answer });
   if (!res.ok) return { error: res.message };
   if (!res.data.comment) return { removed: true };
   return { savedAt: res.data.comment.updatedAt ?? new Date().toISOString() };

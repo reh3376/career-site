@@ -124,17 +124,17 @@ func TestPilotWritePathAgainstPostgres(t *testing.T) {
 	}
 
 	// Comments: upsert, replace, remove.
-	c, err := r.UpsertPilotComment(ctx, s1.ID, "record_row", "r6", "would check this one first")
+	c, err := r.UpsertPilotComment(ctx, s1.ID, "record_row", "r6", "would check this one first", "")
 	if err != nil || c == nil || c.Body == "" {
 		t.Fatalf("UpsertPilotComment: %v %v", c, err)
 	}
-	if _, err := r.UpsertPilotComment(ctx, s1.ID, "record_row", "r6", "changed my mind"); err != nil {
+	if _, err := r.UpsertPilotComment(ctx, s1.ID, "record_row", "r6", "changed my mind", ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.UpsertPilotComment(ctx, s1.ID, "workflow_node", "C-12", "we have no hold state here"); err != nil {
+	if _, err := r.UpsertPilotComment(ctx, s1.ID, "workflow_node", "C-12", "we have no hold state here", "differs"); err != nil {
 		t.Fatal(err)
 	}
-	removed, err := r.UpsertPilotComment(ctx, s1.ID, "workflow_node", "C-12", "")
+	removed, err := r.UpsertPilotComment(ctx, s1.ID, "workflow_node", "C-12", "", "")
 	if err != nil || removed != nil {
 		t.Fatalf("remove: %v %v", removed, err)
 	}
@@ -206,7 +206,7 @@ func TestDeletePilotSessionCascades(t *testing.T) {
 	if err := r.RecordPilotSectionEvent(ctx, s.ID, "A", "opened"); err != nil {
 		t.Fatalf("RecordPilotSectionEvent: %v", err)
 	}
-	if _, err := r.UpsertPilotComment(ctx, s.ID, "record_row", "r1", "a comment"); err != nil {
+	if _, err := r.UpsertPilotComment(ctx, s.ID, "record_row", "r1", "a comment", ""); err != nil {
 		t.Fatalf("UpsertPilotComment: %v", err)
 	}
 
