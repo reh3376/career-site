@@ -7,10 +7,23 @@
 // reads better than a loop on a strip this small.
 export type FlowItem = { id: string; label: string; decision?: boolean; current?: boolean };
 
-export function FlowStrip({ items, returns, label }: { items: FlowItem[]; returns?: string[]; label: string }) {
+export function FlowStrip({
+  items,
+  returns,
+  label,
+  enters,
+  leaves,
+}: {
+  items: FlowItem[];
+  returns?: string[];
+  label: string;
+  enters?: string;
+  leaves?: string;
+}) {
   return (
     <figure className="mt-4">
       <ol className="flex flex-wrap items-stretch gap-y-3" aria-label={label}>
+        {enters ? <End text={enters} arrow /> : null}
         {items.map((it, i) => (
           <li key={it.id} className="flex items-stretch">
             <div
@@ -24,9 +37,10 @@ export function FlowStrip({ items, returns, label }: { items: FlowItem[]; return
               </span>
               <span className="mt-1 text-xs leading-snug text-ink">{it.label}</span>
             </div>
-            {i < items.length - 1 ? <Arrow /> : null}
+            {i < items.length - 1 || leaves ? <Arrow /> : null}
           </li>
         ))}
+        {leaves ? <End text={leaves} /> : null}
       </ol>
       {returns?.length ? (
         <figcaption className="mt-2 space-y-0.5 text-xs text-ink-3">
@@ -36,6 +50,21 @@ export function FlowStrip({ items, returns, label }: { items: FlowItem[]; return
         </figcaption>
       ) : null}
     </figure>
+  );
+}
+
+// What a stage starts from and what it hands on, drawn as dashed boxes
+// at either end so that a stage read on its own screen still shows
+// where it sits in the whole (the owner's review of revision 3 found
+// the stages lost their continuity when the chart was split).
+function End({ text, arrow }: { text: string; arrow?: boolean }) {
+  return (
+    <li className="flex items-stretch">
+      <div className="flex w-[150px] flex-col justify-center border border-dashed border-line-strong px-3 py-2">
+        <span className="text-xs italic leading-snug text-ink-3">{text}</span>
+      </div>
+      {arrow ? <Arrow /> : null}
+    </li>
   );
 }
 

@@ -6,7 +6,7 @@
 // with our outcomes, the return edges and the stage and closing
 // questions, all from the owner's comments after his own run
 // (docs/framework-research/15 §14).
-export type WorkflowPhase = { id: string; title?: string; purpose?: string };
+export type WorkflowPhase = { id: string; title?: string; purpose?: string; enters_with?: string; leaves_with?: string };
 
 export type WorkflowNode = {
   id: string;
@@ -29,6 +29,7 @@ export type WorkflowData = {
   step_question?: string;
   step_answers?: { value: string; label: string }[];
   differs_prompt?: string;
+  notes_prompt?: string;
   decision_question?: string;
   compare_label?: string;
   phase_questions?: { id: string; text: string; phases?: string[] }[];
