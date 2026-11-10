@@ -20,7 +20,7 @@ export function DeleteGrantButton({
       onSubmit={(e) => {
         if (
           !window.confirm(
-            `Remove ${email} from the whitelist? Existing accounts already granted access are unaffected.`,
+            `Remove ${email} from the whitelist? An account already registered with it keeps its access; if it is a pilot participant, the pilot closes for it.`,
           )
         ) {
           e.preventDefault();

@@ -5218,9 +5218,14 @@ func (x *DeleteAccessGrantRequest) GetId() string {
 
 // Delete-grant response.
 type DeleteAccessGrantResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Id of the member whose pilot flag was closed because the entry
+	// that let them in is gone (owner's rule of 2026-11-10, FR-PLT-02);
+	// empty when no member was registered with the address or the flag
+	// was already off. The page uses it to say so.
+	PilotClosedMemberId string `protobuf:"bytes,1,opt,name=pilot_closed_member_id,json=pilotClosedMemberId,proto3" json:"pilot_closed_member_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *DeleteAccessGrantResponse) Reset() {
@@ -5251,6 +5256,13 @@ func (x *DeleteAccessGrantResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DeleteAccessGrantResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAccessGrantResponse) Descriptor() ([]byte, []int) {
 	return file_career_v1_admin_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *DeleteAccessGrantResponse) GetPilotClosedMemberId() string {
+	if x != nil {
+		return x.PilotClosedMemberId
+	}
+	return ""
 }
 
 // One saved SQL statement on the /admin/db page, scoped to a single
@@ -17589,8 +17601,9 @@ const file_career_v1_admin_proto_rawDesc = "" +
 	"\x05grant\x18\x01 \x01(\v2\x16.career.v1.AccessGrantR\x05grant\x12\x18\n" +
 	"\acreated\x18\x02 \x01(\bR\acreated\"5\n" +
 	"\x18DeleteAccessGrantRequest\x12\x19\n" +
-	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x02id\"\x1b\n" +
-	"\x19DeleteAccessGrantResponse\"\xb8\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x02id\"P\n" +
+	"\x19DeleteAccessGrantResponse\x123\n" +
+	"\x16pilot_closed_member_id\x18\x01 \x01(\tR\x13pilotClosedMemberId\"\xb8\x01\n" +
 	"\n" +
 	"SavedQuery\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +

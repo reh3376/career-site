@@ -2,7 +2,7 @@
 
 Companion to `06-employer-side-discovery-research-plan.md`. The pilot exists to fix wording, length and branching before the survey goes wide; it is not a data-collection wave.
 
-**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added; the call was extended to about thirty minutes the same day for the company workflow review (`11` §7), and §1 and §2.1 say so. **2026-11-09:** §2.1 rewritten for the on-site pilot (`15`): the participant creates a login on rogerhenley.dev and reads the match record and the workflow chart there, with comment boxes, before the call; the post now states the problem, the ask and the profile of the ten in full, at the owner's request. Ready to post; the owner edits to taste.
+**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added; the call was extended to about thirty minutes the same day for the company workflow review (`11` §7), and §1 and §2.1 say so. **2026-11-09:** §2.1 rewritten for the on-site pilot (`15`): the participant creates a login on rogerhenley.dev and reads the match record and the workflow chart there, with comment boxes, before the call; the post now states the problem, the ask and the profile of the ten in full, at the owner's request. Ready to post; the owner edits to taste. **2026-11-10:** final for posting, after the participant path and the admin pages were approved live: the ask is a direct message, named in the first line and the last, not a comment; the time on the site is said as about half an hour (the owner's own run took thirty-one minutes knowing the material); "the chart" became "the two readings". An image for the post is in `diagrams/pilot-post.png` (§2.4).
 
 ---
 
@@ -45,7 +45,7 @@ Two versions: one for the pilot (personal network, asks for the follow-up call) 
 
 Rewritten 2026-11-09 for the on-site pilot. Plain text for LinkedIn: no link in the body (it goes in the first comment, §2.3), no hashtags unless the owner wants them, short paragraphs because LinkedIn folds the post after the first three lines, so the first line has to carry the ask.
 
-> I need ten people who hire, for a short pilot. Recruiters, HR, hiring managers. Details below.
+> I need ten people who hire, for a short pilot. Recruiters, HR, hiring managers. If that is you, message me here on LinkedIn. Details below.
 >
 > The problem I am working on. Qualified people are screened out of hiring because their résumé does not use the posting's exact words. The first screen is a keyword match, done by software or by a reviewer who is a generalist, and it cannot tell that two differently worded descriptions are the same capability. "Front-end development" in a capital projects posting means front-end engineering design, not web pages; a keyword filter does not know that. The person who would know, the hiring manager, sees the pool after the damage is done. In Harvard Business School and Accenture's Hidden Workers study, 88% of employers surveyed agreed that qualified high-skill candidates are vetted out because they do not match the job description's exact criteria. Employers say they have too many applicants and, in the same breath, that they cannot find anyone.
 >
@@ -55,11 +55,11 @@ Rewritten 2026-11-09 for the on-site pilot. Plain text for LinkedIn: no link in 
 >
 > Who I am looking for. Ten people who have hired in the last two years: five recruiters or HR, five hiring managers who owned the role. At least three of the ten should hire for technical or manufacturing roles (engineering, controls, maintenance, operations, skilled trades), because that is where the keyword failure bites hardest. Any industry otherwise.
 >
-> What I am asking. About twenty minutes on my site, on your own time, then one call of about thirty minutes. You create a login, take a ten-minute survey, then read a one-page mock-up of a match record, with a comment box under every row, and work through how a company hires, five stages with one click per step. On the call we go through what you wrote. This is a pilot: you are testing the survey and the chart, not endorsing the idea. The real survey goes out after you have fixed it.
+> What I am asking. About half an hour on my site, on your own time, then one call of about thirty minutes. You create a login, take a ten-minute survey, then read a one-page mock-up of a match record, with a comment box under every row, and work through how a company hires, five stages with one click per step. On the call we go through what you wrote. This is a pilot: you are testing the survey and the two readings, not endorsing the idea. The real survey goes out after you have fixed it.
 >
 > What is kept. Your answers, without your name or your employer. Nothing that identifies you or your company is published. You get the summary when it exists and a list of what changed because of you.
 >
-> If that is you, comment or message me and I will set you up. Sharing this to anyone in talent acquisition or anyone who manages a team is the most useful thing you can do with it.
+> If that is you, send me a message here on LinkedIn rather than a comment, so nobody has to volunteer in public, and I will set you up. Sharing this to anyone in talent acquisition or anyone who manages a team is the most useful thing you can do with it.
 
 **First comment**, posted by the owner right after the post:
 
@@ -84,7 +84,12 @@ Rewritten 2026-11-09 for the on-site pilot. Plain text for LinkedIn: no link in 
 - Any link belongs in the first comment on LinkedIn, not the post body, for reach. For the on-site pilot there is no survey link: the pilot area opens for a whitelisted address only after the owner has spoken to the person (`15` §0 decision 1), so the first comment names the site and says access is by invitation.
 - The pilot post names the profile of the ten in full (five recruiters or HR, five hiring managers, at least three technical or manufacturing hirers) because the owner asked for it and because it lets readers self-select and forward. "None from the owner's current employers" is the owner's own screening rule and stays out of the post.
 - The pilot post states the problem as the problem being studied and gives one example and one published figure (`01` §1). It does not claim the tool works; it says what it is meant to do.
+- The pilot post asks for a direct message, not a comment (2026-11-10). A comment is a public volunteering and names the person's employer through their profile; the post promises that nothing identifying them is published, and the first contact should keep that promise too. The first line carries the ask because LinkedIn folds the post after three lines.
 - If the owner's articles have an existing readership in manufacturing/controls, the wide post can be followed a week later with a one-line nudge citing the pilot's most surprising finding, which is the honest way to boost response.
+
+### 2.4 The post image
+
+Made 2026-11-10 at the owner's request: one image for the post, in the site's own palette and type (Fraunces, Inter Tight, JetBrains Mono on paper, ink and the teal accent), 1200 by 1200 so it takes the full width of the feed. It shows the one thing the post is about, in the form the pilot asks people to react to: three requirement rows, each with the posting's words, the candidate's words, the keyword screen's answer (no match) and the evidence reading (met, with its basis), under the line "Same capability. Different words. Screened out." The foot carries the ask and the site. The source is `diagrams/pilot-post.html`, rendered with headless Chrome to `diagrams/pilot-post.png`; no photograph, no stock, nothing that identifies a person or an employer. The three rows are of the kind the stimulus holds (`15` §14), in generic words.
 
 ---
 

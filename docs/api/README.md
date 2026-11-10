@@ -3261,7 +3261,9 @@ access are unaffected — this only stops future auto-approvals.
 
 **Response** — [`DeleteAccessGrantResponse`](#deleteaccessgrantresponse)
 
-_No fields; send `{}`._
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `pilotClosedMemberId` | `string` | string |  | Id of the member whose pilot flag was closed because the entry that let them in is gone (owner's rule of 2026-11-10, FR-PLT-02); empty when no member was registered with the address or the flag was already off. The page uses it to say so. |
 
 <details><summary>Example request body</summary>
 
@@ -7810,7 +7812,9 @@ Delete-grant request.
 
 Delete-grant response.
 
-_No fields._
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `pilotClosedMemberId` | `string` | string |  | Id of the member whose pilot flag was closed because the entry that let them in is gone (owner's rule of 2026-11-10, FR-PLT-02); empty when no member was registered with the address or the flag was already off. The page uses it to say so. |
 
 ### SavedQuery
 

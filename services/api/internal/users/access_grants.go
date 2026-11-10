@@ -369,18 +369,20 @@ func (r *Repo) UpsertGrant(
 	return g, inserted, nil
 }
 
-// DeleteGrant removes a whitelist entry by id. Returns ErrNotFound
-// when no row matched.
-func (r *Repo) DeleteGrant(ctx context.Context, id int64) error {
-	const q = `DELETE FROM access_grants WHERE id = $1`
-	tag, err := r.pool.Exec(ctx, q, id)
-	if err != nil {
-		return fmt.Errorf("delete grant: %w", err)
+// DeleteGrant removes a whitelist entry by id and returns the address
+// it held, so the caller can close the pilot for the member registered
+// with it (owner, 2026-11-10; FSD FR-PLT-02). Returns ErrNotFound when
+// no row matched.
+func (r *Repo) DeleteGrant(ctx context.Context, id int64) (string, error) {
+	const q = `DELETE FROM access_grants WHERE id = $1 RETURNING email`
+	var email string
+	if err := r.pool.QueryRow(ctx, q, id).Scan(&email); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", fmt.Errorf("delete grant: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return email, nil
 }
 
 // ActivatePending flips a pending user to active with the given expiry

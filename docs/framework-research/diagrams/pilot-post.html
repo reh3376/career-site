@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pilot post image</title>
+<style>
+  @font-face { font-family: "Fraunces"; src: url("../../../apps/web/src/fonts/fraunces-latin.woff2") format("woff2"); font-weight: 100 900; font-style: normal; }
+  @font-face { font-family: "Inter Tight"; src: url("../../../apps/web/src/fonts/inter-tight-latin.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "JetBrains Mono"; src: url("../../../apps/web/src/fonts/jetbrains-mono-latin.woff2") format("woff2"); font-weight: 100 800; }
+  :root {
+    --paper: #f6f6f4; --paper-2: #eeede8; --ink: #111417; --ink-2: #3a3f45; --ink-3: #7c828a;
+    --line: #d4d5d1; --line-strong: #b5b6b1; --accent: #164e63; --accent-soft: #e3eef2;
+    --signal: #c2410c; --signal-soft: #fce8dd; --success: #166534; --success-soft: #dcf0e4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 1200px; background: var(--paper); color: var(--ink); font-family: "Inter Tight", sans-serif; -webkit-font-smoothing: antialiased; }
+  .page { width: 1200px; height: 1200px; padding: 64px 72px 60px; display: flex; flex-direction: column; }
+  .kicker { font-family: "JetBrains Mono", monospace; font-size: 17px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); display: flex; justify-content: space-between; }
+  .kicker b { color: var(--accent); font-weight: 600; }
+  h1 { font-family: "Fraunces", serif; font-variation-settings: "opsz" 144, "SOFT" 40; font-weight: 420; font-size: 92px; line-height: 0.98; letter-spacing: -0.02em; margin-top: 34px; }
+  h1 .out { color: var(--signal); font-style: italic; }
+  .sub { margin-top: 26px; font-size: 24px; line-height: 1.35; color: var(--ink-2); max-width: 940px; }
+  table { margin-top: 38px; border-collapse: collapse; width: 100%; }
+  th { font-family: "JetBrains Mono", monospace; font-size: 13.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; text-align: left; padding: 0 18px 12px 0; border-bottom: 1.5px solid var(--line-strong); }
+  th:last-child, td:last-child { padding-right: 0; }
+  td { vertical-align: top; padding: 20px 18px 20px 0; border-bottom: 1px solid var(--line); font-size: 22px; line-height: 1.3; }
+  td.post { width: 300px; font-family: "Fraunces", serif; font-variation-settings: "opsz" 48, "SOFT" 60; font-size: 25px; color: var(--ink); }
+  td.cand { width: 430px; color: var(--ink-2); }
+  td.verdicts { width: 326px; }
+  .chip { display: block; font-family: "JetBrains Mono", monospace; font-size: 14px; letter-spacing: 0.04em; padding: 8px 12px; border-left: 4px solid; margin-bottom: 8px; line-height: 1.3; }
+  .chip small { display: block; font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; margin-bottom: 2px; }
+  .no { background: var(--signal-soft); border-color: var(--signal); color: var(--signal); }
+  .met { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+  .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .ask { font-size: 24px; line-height: 1.35; color: var(--ink-2); max-width: 660px; }
+  .ask b { color: var(--ink); font-weight: 600; }
+  .cta { text-align: right; }
+  .cta .big { font-family: "Fraunces", serif; font-variation-settings: "opsz" 144, "SOFT" 40; font-size: 58px; line-height: 1; color: var(--accent); letter-spacing: -0.015em; white-space: nowrap; }
+  .cta .site { white-space: nowrap; font-family: "JetBrains Mono", monospace; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="kicker"><span>A pilot <b>·</b> ten people who hire</span><span>recruiters <b>·</b> HR <b>·</b> hiring managers</span></div>
+  <h1>Same capability.<br>Different words.<br><span class="out">Screened out.</span></h1>
+  <p class="sub">The first screen is a keyword match. It cannot tell that two descriptions of the same work are the same work. The person who could tell sees the pool after the damage is done.</p>
+  <table>
+    <thead><tr><th>The posting asks for</th><th>The candidate wrote</th><th>Read two ways</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="post">Front-end development</td>
+        <td class="cand">Front-end engineering design for a plant expansion, from concept to the funding decision</td>
+        <td class="verdicts"><span class="chip no"><small>keyword screen</small>no match</span><span class="chip met"><small>evidence read</small>met · the same discipline</span></td>
+      </tr>
+      <tr>
+        <td class="post">Master's degree, or equivalent experience</td>
+        <td class="cand">A bachelor's, and the years of running the work that the posting itself says will do</td>
+        <td class="verdicts"><span class="chip no"><small>keyword screen</small>no match</span><span class="chip met"><small>evidence read</small>met · via equivalency</span></td>
+      </tr>
+      <tr>
+        <td class="post">PLC programming</td>
+        <td class="cand">Wrote and commissioned the control logic for three production lines, each one named</td>
+        <td class="verdicts"><span class="chip no"><small>keyword screen</small>no match</span><span class="chip met"><small>evidence read</small>met · direct, from the record</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="foot">
+    <p class="ask"><b>I need ten people who hire</b> to read a mock-up like this and tell me where it is wrong. Half an hour on my site, one call. Your name and employer stay out of it.</p>
+    <div class="cta"><div class="big">Message me.</div><div class="site">rogerhenley.dev · by invitation</div></div>
+  </div>
+</div>
+</body>
+</html>

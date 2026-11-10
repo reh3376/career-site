@@ -1607,7 +1607,13 @@ message DeleteAccessGrantRequest {
 }
 
 // Delete-grant response.
-message DeleteAccessGrantResponse {}
+message DeleteAccessGrantResponse {
+  // Id of the member whose pilot flag was closed because the entry
+  // that let them in is gone (owner's rule of 2026-11-10, FR-PLT-02);
+  // empty when no member was registered with the address or the flag
+  // was already off. The page uses it to say so.
+  string pilot_closed_member_id = 1;
+}
 
 // One saved SQL statement on the /admin/db page, scoped to a single
 // admin. Names are unique per owner but not globally.
