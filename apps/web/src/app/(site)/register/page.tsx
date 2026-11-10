@@ -59,7 +59,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
       </h1>
       <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
         {forPilot
-          ? "Register with the email address you confirmed with Roger. Once you verify it, the pilot opens: about twenty minutes, in three parts, at your own pace, then a call of about thirty minutes."
+          ? "Register with the email address you confirmed with Roger. Once you verify it, the pilot opens: about half an hour, in three parts, at your own pace, then a call of about thirty minutes."
           : "A short intake so I know who\u2019s reaching out. I get an email when you submit; I\u2019ll usually reply within a day."}
       </p>
       {/* The two forms are one form with two intros; a visitor who
