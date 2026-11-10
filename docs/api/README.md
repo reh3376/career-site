@@ -5592,11 +5592,12 @@ _No fields; send `{}`._
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `intro` | `string` | string |  | Text shown above the chart. |
-| `prompts` | `string`[] | array of string |  | The six prompts, shown as guidance for what kind of comment helps. |
+| `prompts` | `string`[] | array of string |  | Revision 2's six prompts; empty from revision 3, whose questions live in workflow_json. |
 | `phases` | [`PilotWorkflowPhase`](#pilotworkflowphase)[] | array of object |  | The five phases. |
 | `nodes` | [`PilotWorkflowNode`](#pilotworkflownode)[] | array of object |  | The nodes, in order. |
 | `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments, by target. |
 | `workflowVersion` | `string` | string |  | The workflow revision, for the export. |
+| `workflowJson` | `string` | string |  | The workflow as the embedded JSON file (revision 3 and later), rendered by the site; phases and nodes above are kept for readers of revision 2. |
 
 <details><summary>Example request body</summary>
 
@@ -5617,9 +5618,10 @@ An empty body removes it.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
-| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the general kinds. |
-| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty removes an existing comment. |
+| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_outcomes, workflow_phase, workflow_missing, workflow_general. |
+| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the record's general box. |
+| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty with an empty answer removes an existing comment. |
+| `answer` | `string` | string | `string: in: "" in: "matches" in: "differs" in: "absent"` | On a workflow step: matches, differs or absent. Ignored for other kinds. The site sends the stored body and answer together, so a click on the answer never wipes the comment and vice versa. |
 
 **Response** — [`UpsertPilotCommentResponse`](#upsertpilotcommentresponse)
 
@@ -5633,7 +5635,8 @@ An empty body removes it.
 {
   "targetKind": "string",
   "targetId": "string",
-  "body": "string"
+  "body": "string",
+  "answer": "string"
 }
 ```
 
@@ -10886,11 +10889,12 @@ The company workflow and the caller's comments.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `intro` | `string` | string |  | Text shown above the chart. |
-| `prompts` | `string`[] | array of string |  | The six prompts, shown as guidance for what kind of comment helps. |
+| `prompts` | `string`[] | array of string |  | Revision 2's six prompts; empty from revision 3, whose questions live in workflow_json. |
 | `phases` | [`PilotWorkflowPhase`](#pilotworkflowphase)[] | array of object |  | The five phases. |
 | `nodes` | [`PilotWorkflowNode`](#pilotworkflownode)[] | array of object |  | The nodes, in order. |
 | `comments` | [`PilotComment`](#pilotcomment)[] | array of object |  | The caller's comments, by target. |
 | `workflowVersion` | `string` | string |  | The workflow revision, for the export. |
+| `workflowJson` | `string` | string |  | The workflow as the embedded JSON file (revision 3 and later), rendered by the site; phases and nodes above are kept for readers of revision 2. |
 
 ### PilotComment
 
@@ -10898,10 +10902,11 @@ One comment on a target.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `targetKind` | `string` | string |  | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
-| `targetId` | `string` | string |  | r1..r10, C-01..C-26, a sequence number for missing steps, or empty. |
-| `body` | `string` | string |  | The comment. |
+| `targetKind` | `string` | string |  | record_row, record_general, workflow_node, workflow_outcomes, workflow_phase, workflow_missing, workflow_general. |
+| `targetId` | `string` | string |  | r1..r10; C-01..C-26; a phase question (A-merge, B-owner); a missing step (A-1); overview, candidate or holds; or empty. |
+| `body` | `string` | string |  | The comment; may be empty on a workflow step that carries only an answer. |
 | `updatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was last saved. |
+| `answer` | `string` | string |  | On a workflow step: matches, differs or absent. Empty elsewhere. |
 
 ### UpsertPilotCommentRequest
 
@@ -10909,9 +10914,10 @@ A comment to save or replace.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
-| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_missing, workflow_general. |
-| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the general kinds. |
-| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty removes an existing comment. |
+| `targetKind` | `string` | string | `string: min_len: 1 max_len: 32` | record_row, record_general, workflow_node, workflow_outcomes, workflow_phase, workflow_missing, workflow_general. |
+| `targetId` | `string` | string | `string: max_len: 16` | The target within the kind; validated against the record or the workflow. Empty for the record's general box. |
+| `body` | `string` | string | `string: max_len: 4000` | The comment. Empty with an empty answer removes an existing comment. |
+| `answer` | `string` | string | `string: in: "" in: "matches" in: "differs" in: "absent"` | On a workflow step: matches, differs or absent. Ignored for other kinds. The site sends the stored body and answer together, so a click on the answer never wipes the comment and vice versa. |
 
 ### UpsertPilotCommentResponse
 

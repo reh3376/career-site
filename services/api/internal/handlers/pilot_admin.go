@@ -184,14 +184,14 @@ func (h *Pilot) ExportPilot(ctx context.Context, req *connect.Request[v1.ExportP
 			}
 		}
 	case "comments":
-		_ = w.Write([]string{"participant", "target_kind", "target_id", "body", "updated_at"})
+		_ = w.Write([]string{"participant", "target_kind", "target_id", "answer", "body", "updated_at"})
 		for i := range list {
 			comments, err := h.users.ListPilotComments(ctx, list[i].Session.ID)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("export failed"))
 			}
 			for _, c := range comments {
-				_ = w.Write([]string{code[list[i].Session.ID], c.TargetKind, c.TargetID, c.Body, c.UpdatedAt.UTC().Format(time.RFC3339)})
+				_ = w.Write([]string{code[list[i].Session.ID], c.TargetKind, c.TargetID, c.Answer, c.Body, c.UpdatedAt.UTC().Format(time.RFC3339)})
 				rows++
 			}
 		}

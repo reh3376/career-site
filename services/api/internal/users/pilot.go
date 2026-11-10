@@ -66,8 +66,10 @@ type PilotAnswer struct {
 type PilotComment struct {
 	TargetKind string
 	TargetID   string
-	Body       string
-	UpdatedAt  time.Time
+	// Answer is matches, differs or absent on a workflow step; empty elsewhere.
+	Answer    string
+	Body      string
+	UpdatedAt time.Time
 }
 
 // PilotSectionEvent is an open or submit instant.
@@ -310,10 +312,11 @@ func (r *Repo) FinishPilotSession(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-// UpsertPilotComment saves or replaces a comment; an empty body removes
+// UpsertPilotComment saves or replaces a comment; an empty body with an
+// empty answer removes
 // it. Returns the stored row, or nil when removed.
-func (r *Repo) UpsertPilotComment(ctx context.Context, sessionID, kind, target, body string) (*PilotComment, error) {
-	if body == "" {
+func (r *Repo) UpsertPilotComment(ctx context.Context, sessionID, kind, target, body, answer string) (*PilotComment, error) {
+	if body == "" && answer == "" {
 		if _, err := r.pool.Exec(ctx, `
     DELETE FROM pilot_comments WHERE session_id = $1::uuid AND target_kind = $2 AND target_id = $3`,
 			sessionID, kind, target); err != nil {
@@ -321,12 +324,12 @@ func (r *Repo) UpsertPilotComment(ctx context.Context, sessionID, kind, target, 
 		}
 		return nil, nil
 	}
-	c := &PilotComment{TargetKind: kind, TargetID: target, Body: body}
+	c := &PilotComment{TargetKind: kind, TargetID: target, Body: body, Answer: answer}
 	err := r.pool.QueryRow(ctx, `
-    INSERT INTO pilot_comments (tenant_id, session_id, target_kind, target_id, body)
-    VALUES ($1, $2::uuid, $3, $4, $5)
-    ON CONFLICT (session_id, target_kind, target_id) DO UPDATE SET body = EXCLUDED.body
-    RETURNING updated_at`, tenant.FromContext(ctx).Int64(), sessionID, kind, target, body).Scan(&c.UpdatedAt)
+    INSERT INTO pilot_comments (tenant_id, session_id, target_kind, target_id, body, answer)
+    VALUES ($1, $2::uuid, $3, $4, $5, $6)
+    ON CONFLICT (session_id, target_kind, target_id) DO UPDATE SET body = EXCLUDED.body, answer = EXCLUDED.answer
+    RETURNING updated_at`, tenant.FromContext(ctx).Int64(), sessionID, kind, target, body, answer).Scan(&c.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("upsert pilot comment: %w", err)
 	}
@@ -336,7 +339,7 @@ func (r *Repo) UpsertPilotComment(ctx context.Context, sessionID, kind, target, 
 // ListPilotComments returns a session's comments, by kind then target.
 func (r *Repo) ListPilotComments(ctx context.Context, sessionID string) ([]PilotComment, error) {
 	rows, err := r.pool.Query(ctx, `
-    SELECT target_kind, target_id, body, updated_at FROM pilot_comments
+    SELECT target_kind, target_id, body, answer, updated_at FROM pilot_comments
      WHERE session_id = $1::uuid ORDER BY target_kind, target_id`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("list pilot comments: %w", err)
@@ -345,7 +348,7 @@ func (r *Repo) ListPilotComments(ctx context.Context, sessionID string) ([]Pilot
 	var out []PilotComment
 	for rows.Next() {
 		var c PilotComment
-		if err := rows.Scan(&c.TargetKind, &c.TargetID, &c.Body, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.TargetKind, &c.TargetID, &c.Body, &c.Answer, &c.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan pilot comment: %w", err)
 		}
 		out = append(out, c)

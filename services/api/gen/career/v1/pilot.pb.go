@@ -1335,7 +1335,8 @@ type GetPilotWorkflowResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Text shown above the chart.
 	Intro string `protobuf:"bytes,1,opt,name=intro,proto3" json:"intro,omitempty"`
-	// The six prompts, shown as guidance for what kind of comment helps.
+	// Revision 2's six prompts; empty from revision 3, whose questions
+	// live in workflow_json.
 	Prompts []string `protobuf:"bytes,2,rep,name=prompts,proto3" json:"prompts,omitempty"`
 	// The five phases.
 	Phases []*PilotWorkflowPhase `protobuf:"bytes,3,rep,name=phases,proto3" json:"phases,omitempty"`
@@ -1345,8 +1346,12 @@ type GetPilotWorkflowResponse struct {
 	Comments []*PilotComment `protobuf:"bytes,5,rep,name=comments,proto3" json:"comments,omitempty"`
 	// The workflow revision, for the export.
 	WorkflowVersion string `protobuf:"bytes,6,opt,name=workflow_version,json=workflowVersion,proto3" json:"workflow_version,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The workflow as the embedded JSON file (revision 3 and later),
+	// rendered by the site; phases and nodes above are kept for readers
+	// of revision 2.
+	WorkflowJson  string `protobuf:"bytes,7,opt,name=workflow_json,json=workflowJson,proto3" json:"workflow_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetPilotWorkflowResponse) Reset() {
@@ -1421,17 +1426,28 @@ func (x *GetPilotWorkflowResponse) GetWorkflowVersion() string {
 	return ""
 }
 
+func (x *GetPilotWorkflowResponse) GetWorkflowJson() string {
+	if x != nil {
+		return x.WorkflowJson
+	}
+	return ""
+}
+
 // One comment on a target.
 type PilotComment struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// record_row, record_general, workflow_node, workflow_missing, workflow_general.
+	// record_row, record_general, workflow_node, workflow_outcomes,
+	// workflow_phase, workflow_missing, workflow_general.
 	TargetKind string `protobuf:"bytes,1,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
-	// r1..r10, C-01..C-26, a sequence number for missing steps, or empty.
+	// r1..r10; C-01..C-26; a phase question (A-merge, B-owner); a missing
+	// step (A-1); overview, candidate or holds; or empty.
 	TargetId string `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	// The comment.
+	// The comment; may be empty on a workflow step that carries only an answer.
 	Body string `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
 	// When it was last saved.
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// On a workflow step: matches, differs or absent. Empty elsewhere.
+	Answer        string `protobuf:"bytes,5,opt,name=answer,proto3" json:"answer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1494,16 +1510,28 @@ func (x *PilotComment) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PilotComment) GetAnswer() string {
+	if x != nil {
+		return x.Answer
+	}
+	return ""
+}
+
 // A comment to save or replace.
 type UpsertPilotCommentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// record_row, record_general, workflow_node, workflow_missing, workflow_general.
+	// record_row, record_general, workflow_node, workflow_outcomes,
+	// workflow_phase, workflow_missing, workflow_general.
 	TargetKind string `protobuf:"bytes,1,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
 	// The target within the kind; validated against the record or the
-	// workflow. Empty for the general kinds.
+	// workflow. Empty for the record's general box.
 	TargetId string `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	// The comment. Empty removes an existing comment.
-	Body          string `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	// The comment. Empty with an empty answer removes an existing comment.
+	Body string `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	// On a workflow step: matches, differs or absent. Ignored for other
+	// kinds. The site sends the stored body and answer together, so a
+	// click on the answer never wipes the comment and vice versa.
+	Answer        string `protobuf:"bytes,4,opt,name=answer,proto3" json:"answer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1555,6 +1583,13 @@ func (x *UpsertPilotCommentRequest) GetTargetId() string {
 func (x *UpsertPilotCommentRequest) GetBody() string {
 	if x != nil {
 		return x.Body
+	}
+	return ""
+}
+
+func (x *UpsertPilotCommentRequest) GetAnswer() string {
+	if x != nil {
+		return x.Answer
 	}
 	return ""
 }
@@ -2823,26 +2858,29 @@ const file_career_v1_pilot_proto_rawDesc = "" +
 	"\x04open\x18\a \x01(\bR\x04open\":\n" +
 	"\x12PilotWorkflowPhase\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05title\x18\x02 \x01(\tR\x05title\"\x95\x02\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\"\xba\x02\n" +
 	"\x18GetPilotWorkflowResponse\x12\x14\n" +
 	"\x05intro\x18\x01 \x01(\tR\x05intro\x12\x18\n" +
 	"\aprompts\x18\x02 \x03(\tR\aprompts\x125\n" +
 	"\x06phases\x18\x03 \x03(\v2\x1d.career.v1.PilotWorkflowPhaseR\x06phases\x122\n" +
 	"\x05nodes\x18\x04 \x03(\v2\x1c.career.v1.PilotWorkflowNodeR\x05nodes\x123\n" +
 	"\bcomments\x18\x05 \x03(\v2\x17.career.v1.PilotCommentR\bcomments\x12)\n" +
-	"\x10workflow_version\x18\x06 \x01(\tR\x0fworkflowVersion\"\x9b\x01\n" +
+	"\x10workflow_version\x18\x06 \x01(\tR\x0fworkflowVersion\x12#\n" +
+	"\rworkflow_json\x18\a \x01(\tR\fworkflowJson\"\xb3\x01\n" +
 	"\fPilotComment\x12\x1f\n" +
 	"\vtarget_kind\x18\x01 \x01(\tR\n" +
 	"targetKind\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x129\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8b\x01\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06answer\x18\x05 \x01(\tR\x06answer\"\xc6\x01\n" +
 	"\x19UpsertPilotCommentRequest\x12*\n" +
 	"\vtarget_kind\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\n" +
 	"targetKind\x12$\n" +
 	"\ttarget_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x10R\btargetId\x12\x1c\n" +
-	"\x04body\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x04body\"O\n" +
+	"\x04body\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\x04body\x129\n" +
+	"\x06answer\x18\x04 \x01(\tB!\xbaH\x1er\x1cR\x00R\amatchesR\adiffersR\x06absentR\x06answer\"O\n" +
 	"\x1aUpsertPilotCommentResponse\x121\n" +
 	"\acomment\x18\x01 \x01(\v2\x17.career.v1.PilotCommentR\acomment\"C\n" +
 	"\x14MarkPilotPartRequest\x12+\n" +

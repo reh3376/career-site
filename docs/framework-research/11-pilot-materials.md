@@ -92,6 +92,12 @@ Per node, mark **M** (matches), **D** (differs; say how) or **X** (does
 not exist here) in the tally sheet `workflow-review-tally.md` in the
 same private folder, one column per participant.
 
+On the site (`15` §14, from 2026-11-09) the participant gives that mark per step
+before the call, as a three-way click, with a note where it differs and the
+outcomes at each decision in their own words; the tally sheet is filled
+from the comments export rather than by hand, and the call reads against
+those answers.
+
 ## Close
 
 | Prompt | Notes |

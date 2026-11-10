@@ -35,7 +35,7 @@ export type PilotSessionSummary = {
 
 export type PilotAnswer = { itemId: string; valueJson?: string; flagged?: boolean; prompt?: string; section?: string; note?: string };
 export type PilotNote = { targetKind: string; targetId?: string; body: string; author?: string; updatedAt?: string };
-export type PilotComment = { targetKind: string; targetId?: string; body: string; updatedAt?: string };
+export type PilotComment = { targetKind: string; targetId?: string; body: string; answer?: string; updatedAt?: string };
 export type PilotSectionEvent = { section: string; event: string; at?: string };
 
 export type ListResp = { sessions?: PilotSessionSummary[]; instrumentVersion?: string };

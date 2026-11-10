@@ -55,7 +55,7 @@ Rewritten 2026-11-09 for the on-site pilot. Plain text for LinkedIn: no link in 
 >
 > Who I am looking for. Ten people who have hired in the last two years: five recruiters or HR, five hiring managers who owned the role. At least three of the ten should hire for technical or manufacturing roles (engineering, controls, maintenance, operations, skilled trades), because that is where the keyword failure bites hardest. Any industry otherwise.
 >
-> What I am asking. About twenty minutes on my site, on your own time, then one call of about thirty minutes. You create a login, take a ten-minute survey, then read a one-page mock-up of a match record and a one-page chart of how a company hires, with a comment box under every row and every step. On the call we go through what you wrote. This is a pilot: you are testing the survey and the chart, not endorsing the idea. The real survey goes out after you have fixed it.
+> What I am asking. About twenty minutes on my site, on your own time, then one call of about thirty minutes. You create a login, take a ten-minute survey, then read a one-page mock-up of a match record, with a comment box under every row, and work through how a company hires, five stages with one click per step. On the call we go through what you wrote. This is a pilot: you are testing the survey and the chart, not endorsing the idea. The real survey goes out after you have fixed it.
 >
 > What is kept. Your answers, without your name or your employer. Nothing that identifies you or your company is published. You get the summary when it exists and a list of what changed because of you.
 >

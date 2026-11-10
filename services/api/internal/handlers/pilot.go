@@ -394,7 +394,7 @@ func commentsProto(list []users.PilotComment, prefix string) []*v1.PilotComment 
 		if !strings.HasPrefix(c.TargetKind, prefix) {
 			continue
 		}
-		out = append(out, &v1.PilotComment{TargetKind: c.TargetKind, TargetId: c.TargetID, Body: c.Body, UpdatedAt: timestamppb.New(c.UpdatedAt)})
+		out = append(out, &v1.PilotComment{TargetKind: c.TargetKind, TargetId: c.TargetID, Body: c.Body, Answer: c.Answer, UpdatedAt: timestamppb.New(c.UpdatedAt)})
 	}
 	return out
 }
@@ -438,6 +438,7 @@ func (h *Pilot) GetPilotWorkflow(ctx context.Context, _ *connect.Request[v1.GetP
 		Intro:           h.workflow.Intro,
 		Prompts:         h.workflow.Prompts,
 		WorkflowVersion: h.workflow.Version,
+		WorkflowJson:    string(h.workflow.Raw),
 		Comments:        commentsProto(comments, "workflow_"),
 	}
 	for _, p := range h.workflow.Phases {
@@ -460,6 +461,7 @@ func (h *Pilot) UpsertPilotComment(ctx context.Context, req *connect.Request[v1.
 		return nil, err
 	}
 	kind, target := req.Msg.TargetKind, strings.TrimSpace(req.Msg.TargetId)
+	answer := req.Msg.Answer
 	switch kind {
 	case "record_row":
 		if !h.record.HasRow(target) {
@@ -469,23 +471,50 @@ func (h *Pilot) UpsertPilotComment(ctx context.Context, req *connect.Request[v1.
 		if !h.workflow.HasNode(target) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("no such workflow node"))
 		}
-	case "workflow_missing":
-		n, err := strconv.Atoi(target)
-		if err != nil || n < 1 || n > 20 {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a missing step is numbered 1 to 20"))
+	case "workflow_outcomes":
+		// The open question at a decision point: what can happen here.
+		if !h.workflow.IsDecision(target) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("outcomes are asked at decision steps only"))
 		}
-	case "record_general", "workflow_general":
+	case "workflow_phase":
+		// A stage question: <phase>-<question>, e.g. A-merge, B-owner.
+		phase, q, ok := strings.Cut(target, "-")
+		if !ok || !h.workflow.HasPhase(phase) || (q != "merge" && q != "owner") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a stage question is <stage>-merge or <stage>-owner"))
+		}
+	case "workflow_missing":
+		// A missing step is numbered within its stage: A-1 to A-20.
+		phase, num, ok := strings.Cut(target, "-")
+		n, err := strconv.Atoi(num)
+		if !ok || !h.workflow.HasPhase(phase) || err != nil || n < 1 || n > 20 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a missing step is <stage>-1 to <stage>-20"))
+		}
+	case "record_general":
 		if target != "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a general comment has no target id"))
 		}
+	case "workflow_general":
+		switch target {
+		case "", "overview", "candidate", "holds":
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a workflow general comment is overview, candidate or holds"))
+		}
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("unknown comment target kind"))
+	}
+	if kind != "workflow_node" {
+		answer = ""
+	}
+	switch answer {
+	case "", "matches", "differs", "absent":
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("an answer is matches, differs or absent"))
 	}
 	body := strings.TrimSpace(req.Msg.Body)
 	if len(body) > 4000 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("a comment is at most 4000 characters"))
 	}
-	c, err := h.users.UpsertPilotComment(ctx, s.ID, kind, target, body)
+	c, err := h.users.UpsertPilotComment(ctx, s.ID, kind, target, body, answer)
 	if err != nil {
 		h.log.Error("pilot comment save failed", slog.String("session", s.ID), slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("could not save the comment"))
@@ -493,7 +522,7 @@ func (h *Pilot) UpsertPilotComment(ctx context.Context, req *connect.Request[v1.
 	h.events.Emit(ctx, requestEvent(req, "pilot.comment", u.ID, map[string]any{"target_kind": kind}))
 	out := &v1.UpsertPilotCommentResponse{}
 	if c != nil {
-		out.Comment = &v1.PilotComment{TargetKind: c.TargetKind, TargetId: c.TargetID, Body: c.Body, UpdatedAt: timestamppb.New(c.UpdatedAt)}
+		out.Comment = &v1.PilotComment{TargetKind: c.TargetKind, TargetId: c.TargetID, Body: c.Body, Answer: c.Answer, UpdatedAt: timestamppb.New(c.UpdatedAt)}
 	}
 	return connect.NewResponse(out), nil
 }

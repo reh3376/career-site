@@ -220,42 +220,48 @@ class PilotWorkflowPhase(_message.Message):
     def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ...) -> None: ...
 
 class GetPilotWorkflowResponse(_message.Message):
-    __slots__ = ("intro", "prompts", "phases", "nodes", "comments", "workflow_version")
+    __slots__ = ("intro", "prompts", "phases", "nodes", "comments", "workflow_version", "workflow_json")
     INTRO_FIELD_NUMBER: _ClassVar[int]
     PROMPTS_FIELD_NUMBER: _ClassVar[int]
     PHASES_FIELD_NUMBER: _ClassVar[int]
     NODES_FIELD_NUMBER: _ClassVar[int]
     COMMENTS_FIELD_NUMBER: _ClassVar[int]
     WORKFLOW_VERSION_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_JSON_FIELD_NUMBER: _ClassVar[int]
     intro: str
     prompts: _containers.RepeatedScalarFieldContainer[str]
     phases: _containers.RepeatedCompositeFieldContainer[PilotWorkflowPhase]
     nodes: _containers.RepeatedCompositeFieldContainer[PilotWorkflowNode]
     comments: _containers.RepeatedCompositeFieldContainer[PilotComment]
     workflow_version: str
-    def __init__(self, intro: _Optional[str] = ..., prompts: _Optional[_Iterable[str]] = ..., phases: _Optional[_Iterable[_Union[PilotWorkflowPhase, _Mapping]]] = ..., nodes: _Optional[_Iterable[_Union[PilotWorkflowNode, _Mapping]]] = ..., comments: _Optional[_Iterable[_Union[PilotComment, _Mapping]]] = ..., workflow_version: _Optional[str] = ...) -> None: ...
+    workflow_json: str
+    def __init__(self, intro: _Optional[str] = ..., prompts: _Optional[_Iterable[str]] = ..., phases: _Optional[_Iterable[_Union[PilotWorkflowPhase, _Mapping]]] = ..., nodes: _Optional[_Iterable[_Union[PilotWorkflowNode, _Mapping]]] = ..., comments: _Optional[_Iterable[_Union[PilotComment, _Mapping]]] = ..., workflow_version: _Optional[str] = ..., workflow_json: _Optional[str] = ...) -> None: ...
 
 class PilotComment(_message.Message):
-    __slots__ = ("target_kind", "target_id", "body", "updated_at")
+    __slots__ = ("target_kind", "target_id", "body", "updated_at", "answer")
     TARGET_KIND_FIELD_NUMBER: _ClassVar[int]
     TARGET_ID_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
     target_kind: str
     target_id: str
     body: str
     updated_at: _timestamp_pb2.Timestamp
-    def __init__(self, target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    answer: str
+    def __init__(self, target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., answer: _Optional[str] = ...) -> None: ...
 
 class UpsertPilotCommentRequest(_message.Message):
-    __slots__ = ("target_kind", "target_id", "body")
+    __slots__ = ("target_kind", "target_id", "body", "answer")
     TARGET_KIND_FIELD_NUMBER: _ClassVar[int]
     TARGET_ID_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
     target_kind: str
     target_id: str
     body: str
-    def __init__(self, target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ...) -> None: ...
+    answer: str
+    def __init__(self, target_kind: _Optional[str] = ..., target_id: _Optional[str] = ..., body: _Optional[str] = ..., answer: _Optional[str] = ...) -> None: ...
 
 class UpsertPilotCommentResponse(_message.Message):
     __slots__ = ("comment",)
