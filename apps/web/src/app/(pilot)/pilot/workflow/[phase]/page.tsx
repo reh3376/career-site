@@ -43,6 +43,7 @@ export default async function PilotWorkflowPhasePage({ params }: { params: Promi
   const answers = wf.step_answers?.length ? wf.step_answers : DEFAULT_ANSWERS;
   const stepQuestion = wf.step_question ?? "Where you work, this step:";
   const differsPrompt = wf.differs_prompt ?? "How does it run where you work, and who does it?";
+  const notesPrompt = wf.notes_prompt ?? "Notes (optional)";
   const returns = nodes
     .filter((n) => n.returns_to)
     .map((n) => {
@@ -81,13 +82,15 @@ export default async function PilotWorkflowPhasePage({ params }: { params: Promi
           label={`Stage ${ph.id} steps`}
           items={nodes.map((n) => ({ id: n.id, label: n.name ?? n.id, decision: n.decision }))}
           returns={returns}
+          enters={ph.enters_with ? `${idx > 0 ? `from stage ${phases[idx - 1].id}: ` : "starts with "}${ph.enters_with}` : undefined}
+          leaves={ph.leaves_with ? `${idx < phases.length - 1 ? `to stage ${phases[idx + 1].id}: ` : "ends with "}${ph.leaves_with}` : undefined}
         />
       </section>
 
       <section className="mt-12">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">the steps</p>
         <p className="mt-2 max-w-2xl text-sm text-ink-2">
-          Under each step, one click. A box opens only when something is different where you work.
+          Under each step, one click, and a notes box for anything you want to say about it. Where it happens differently, say how.
         </p>
         <ol className="mt-4 divide-y divide-line border-y border-line">
           {nodes.map((n) => {
@@ -115,6 +118,7 @@ export default async function PilotWorkflowPhasePage({ params }: { params: Promi
                   question={stepQuestion}
                   answers={answers}
                   differsPrompt={differsPrompt}
+                  notesPrompt={notesPrompt}
                   initialAnswer={c?.answer ?? ""}
                   initialBody={c?.body ?? ""}
                 />

@@ -4,16 +4,19 @@ import { useState, useTransition } from "react";
 
 import { upsertCommentAction } from "../actions";
 
-// One step's answer: three buttons that save on the click, and a box
-// that opens only when the answer is "happens differently" (or when a
-// comment already exists). The answer and the comment live on the same
-// row, so both are always sent together: a click never wipes the text
-// and a saved text never clears the click.
+// One step's answer: three buttons that save on the click, and a notes
+// box under them whatever the answer (the owner's review of revision 3:
+// "C21 through C26 should have a notes / comments section"; the box had
+// opened only on "happens differently"). The box's prompt follows the
+// answer. The answer and the text live on the same row, so both are
+// always sent together: a click never wipes the text and a saved text
+// never clears the click.
 export function StepAnswer({
   nodeId,
   question,
   answers,
   differsPrompt,
+  notesPrompt,
   initialAnswer,
   initialBody,
 }: {
@@ -21,6 +24,7 @@ export function StepAnswer({
   question: string;
   answers: { value: string; label: string }[];
   differsPrompt: string;
+  notesPrompt: string;
   initialAnswer: string;
   initialBody: string;
 }) {
@@ -30,7 +34,6 @@ export function StepAnswer({
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const showBox = answer === "differs" || savedBody.trim() !== "" || body.trim() !== "";
   const dirty = body.trim() !== savedBody.trim();
   const id = `wf-${nodeId}`;
 
@@ -89,31 +92,29 @@ export function StepAnswer({
         {note && !dirty ? <span className="self-center font-mono text-[11px] uppercase tracking-[0.14em] text-success">{note}</span> : null}
         {error ? <span className="self-center text-xs text-signal">{error}</span> : null}
       </div>
-      {showBox ? (
-        <div className="mt-3">
-          <label htmlFor={id} className="block text-sm text-ink">
-            {differsPrompt}
-          </label>
-          <textarea
-            id={id}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={2}
-            maxLength={4000}
-            className="mt-1 block w-full border border-line-strong bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-          />
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={saveBody}
-              disabled={pending || !dirty}
-              className="inline-flex h-[30px] items-center border border-accent px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-accent transition-colors hover:bg-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pending ? "Saving…" : savedBody.trim() && !body.trim() ? "Remove" : "Save"}
-            </button>
-          </div>
+      <div className="mt-3">
+        <label htmlFor={id} className={`block text-sm ${answer === "differs" ? "text-ink" : "text-ink-3"}`}>
+          {answer === "differs" ? differsPrompt : notesPrompt}
+        </label>
+        <textarea
+          id={id}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={2}
+          maxLength={4000}
+          className="mt-1 block w-full border border-line-strong bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+        />
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={saveBody}
+            disabled={pending || !dirty}
+            className="inline-flex h-[30px] items-center border border-accent px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-accent transition-colors hover:bg-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "Saving…" : savedBody.trim() && !body.trim() ? "Remove" : "Save"}
+          </button>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

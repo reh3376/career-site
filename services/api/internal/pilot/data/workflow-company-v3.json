@@ -1,175 +1,347 @@
 {
   "version": "v3",
-  "source": "Revision 2 (docs/framework-research/09-hiring-workflows-draft.md §1, approved by the owner 2026-11-08), rewritten as revision 3 on 2026-11-09 from the owner's comments after his own run of the on-site pilot (docs/framework-research/15-pilot-on-site.md §14): one stage at a time, every step in plain language, a three-way answer per step, open questions at decision points, the chart as a whole at the stage level. Company perspective only; the candidate perspective is not shown to employer-side participants. The step ids are unchanged from revision 2.",
+  "source": "Revision 2 (docs/framework-research/09-hiring-workflows-draft.md §1, approved by the owner 2026-11-08), rewritten as revision 3 on 2026-11-09 from the owner's comments after his own run of the on-site pilot (docs/framework-research/15-pilot-on-site.md §14): one stage at a time, every step in plain language, a three-way answer per step, open questions at decision points, the chart as a whole at the stage level. Company perspective only; the candidate perspective is not shown to employer-side participants. The step ids are unchanged from revision 2. Amended 2026-11-10 after the owner's review of revision 3: a notes box on every step whatever the answer, each stage's entry and exit named on its diagram, and the stage questions say to leave the box empty if there is nothing.",
   "intro": "This is our picture of how a hire runs, from the first sign that a role is needed to the lessons kept when the search closes. It is not how your organisation does it. You are asked to say, stage by stage and step by step, where it matches and where it does not.",
   "prompts": [],
   "overview_question": "Does a hire where you work pass through these five stages, in this order? If not, what is different?",
   "step_question": "Where you work, this step:",
   "step_answers": [
-    { "value": "matches", "label": "Happens like this" },
-    { "value": "differs", "label": "Happens differently" },
-    { "value": "absent", "label": "Does not happen here" }
+    {
+      "value": "matches",
+      "label": "Happens like this"
+    },
+    {
+      "value": "differs",
+      "label": "Happens differently"
+    },
+    {
+      "value": "absent",
+      "label": "Does not happen here"
+    }
   ],
   "differs_prompt": "How does it run where you work, and who does it?",
   "decision_question": "What can happen at this point where you work? List the outcomes.",
   "compare_label": "Compare with our picture",
   "phase_questions": [
-    { "id": "merge", "text": "Where you work, are two of the steps above really one step? Which two?", "phases": ["A", "B", "C", "D", "E"] },
-    { "id": "owner", "text": "Who writes the role's requirements where you work, and who signs them off?", "phases": ["B"] }
+    {
+      "id": "merge",
+      "text": "Where you work, are two of the steps above really one step? Which two? Leave the box empty if not.",
+      "phases": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ]
+    },
+    {
+      "id": "owner",
+      "text": "Who writes the role's requirements where you work, and who signs them off? Leave the box empty if not.",
+      "phases": [
+        "B"
+      ]
+    }
   ],
-  "missing_question": "Is there a step in this stage that happens where you work and is not here? One per box.",
+  "missing_question": "Is there a step in this stage that happens where you work and is not here? One per box; leave it empty if not.",
   "closing": [
-    { "id": "candidate", "text": "Is there anything on this chart you would not want a candidate to see?" },
-    { "id": "holds", "text": "Where in this picture does a hire get put on hold where you work, and what brings it back?" }
+    {
+      "id": "candidate",
+      "text": "Is there anything on this chart you would not want a candidate to see?"
+    },
+    {
+      "id": "holds",
+      "text": "Where in this picture does a hire get put on hold where you work, and what brings it back?"
+    }
   ],
   "phases": [
-    { "id": "A", "title": "Need and approval", "purpose": "Someone decides a role is needed, and someone who owns a budget agrees to it." },
-    { "id": "B", "title": "Role definition", "purpose": "The hiring manager writes down what the role is and what it takes to do it, and HR checks that the definition is complete and within policy." },
-    { "id": "C", "title": "Sourcing and screening", "purpose": "Candidates come in and are narrowed to a short list the hiring manager will meet." },
-    { "id": "D", "title": "Assessment and decision", "purpose": "The hiring manager meets the candidates, chooses one, and an offer is made." },
-    { "id": "E", "title": "Onboarding and outcome", "purpose": "The person starts, and the company learns whether the hire worked." }
+    {
+      "id": "A",
+      "title": "Need and approval",
+      "purpose": "Someone decides a role is needed, and someone who owns a budget agrees to it.",
+      "enters_with": "a need for a role",
+      "leaves_with": "an approved request, or a denial or a deferral"
+    },
+    {
+      "id": "B",
+      "title": "Role definition",
+      "purpose": "The hiring manager writes down what the role is and what it takes to do it, and HR checks that the definition is complete and within policy.",
+      "enters_with": "an approved request",
+      "leaves_with": "a published posting"
+    },
+    {
+      "id": "C",
+      "title": "Sourcing and screening",
+      "purpose": "Candidates come in and are narrowed to a short list the hiring manager will meet.",
+      "enters_with": "a published posting",
+      "leaves_with": "a short list the hiring manager has accepted"
+    },
+    {
+      "id": "D",
+      "title": "Assessment and decision",
+      "purpose": "The hiring manager meets the candidates, chooses one, and an offer is made.",
+      "enters_with": "a short list the hiring manager has accepted",
+      "leaves_with": "an accepted offer"
+    },
+    {
+      "id": "E",
+      "title": "Onboarding and outcome",
+      "purpose": "The person starts, and the company learns whether the hire worked.",
+      "enters_with": "an accepted offer",
+      "leaves_with": "a closed search and the record of the hire"
+    }
   ],
   "nodes": [
     {
-      "id": "C-01", "phase": "A", "name": "A role is needed", "owner": "The hiring manager",
+      "id": "C-01",
+      "phase": "A",
+      "name": "A role is needed",
+      "owner": "The hiring manager",
       "summary": "Someone leaves, the work grows, or new work arrives. At this point there is usually nothing written down.",
       "decision": false
     },
     {
-      "id": "C-02", "phase": "A", "name": "A request for the role is written", "owner": "The hiring manager",
+      "id": "C-02",
+      "phase": "A",
+      "name": "A request for the role is written",
+      "owner": "The hiring manager",
       "summary": "The manager writes up why the role is needed, at what level, what it will cost, when it is needed, and whether it replaces someone or adds a person.",
       "decision": false
     },
     {
-      "id": "C-03", "phase": "A", "name": "The request is reviewed", "owner": "Finance, HR, the manager's own manager, the head of the department",
+      "id": "C-03",
+      "phase": "A",
+      "name": "The request is reviewed",
+      "owner": "Finance, HR, the manager's own manager, the head of the department",
       "summary": "They check the budget and the headcount plan, and whether the work could be covered another way: spread across the team, a contractor, or automation.",
       "decision": false
     },
     {
-      "id": "C-04", "phase": "A", "name": "The request is approved, or not", "owner": "Whoever owns the budget, on the reviewers' advice",
+      "id": "C-04",
+      "phase": "A",
+      "name": "The request is approved, or not",
+      "owner": "Whoever owns the budget, on the reviewers' advice",
       "summary": "The request is approved, turned down with a reason, or put off until a later date. In our picture a request put off past its date without a review is escalated.",
       "decision": true,
       "decision_question": "What can happen to a request at this point where you work? List the outcomes.",
-      "our_outcomes": ["Approved", "Turned down, with a reason", "Put off until a later date", "Put off past its date without a review, and escalated"]
+      "our_outcomes": [
+        "Approved",
+        "Turned down, with a reason",
+        "Put off until a later date",
+        "Put off past its date without a review, and escalated"
+      ]
     },
     {
-      "id": "C-05", "phase": "B", "name": "HR keeps a standard form for defining a role", "owner": "HR",
+      "id": "C-05",
+      "phase": "B",
+      "name": "HR keeps a standard form for defining a role",
+      "owner": "HR",
       "summary": "A standing template that says what a role definition must contain: the purpose of the role, its requirements and how much each matters, the level and the pay range. HR owns the form and changes it rarely.",
       "decision": false
     },
     {
-      "id": "C-06", "phase": "B", "name": "The manager writes the role definition and its requirements", "owner": "The hiring manager, who is responsible for the content",
+      "id": "C-06",
+      "phase": "B",
+      "name": "The manager writes the role definition and its requirements",
+      "owner": "The hiring manager, who is responsible for the content",
       "summary": "Using the form, the manager writes what the role is for, what it must deliver, each requirement with how much it matters and what would count as equivalent, the level, the pay range, the location and the working conditions.",
       "decision": false
     },
     {
-      "id": "C-07", "phase": "B", "name": "HR checks the definition", "owner": "HR, with legal where needed",
+      "id": "C-07",
+      "phase": "B",
+      "name": "HR checks the definition",
+      "owner": "HR, with legal where needed",
       "summary": "HR checks that the definition is complete and within policy and pay rules. It passes, goes back to the manager with a list of what to fix, or is held until a later date. HR does not second-guess the requirements themselves.",
       "decision": true,
-      "our_outcomes": ["Passes", "Goes back to the manager with a list of what to fix", "Held until a later date"],
-      "returns_to": "C-06", "returns_when": "when the definition does not pass"
+      "our_outcomes": [
+        "Passes",
+        "Goes back to the manager with a list of what to fix",
+        "Held until a later date"
+      ],
+      "returns_to": "C-06",
+      "returns_when": "when the definition does not pass"
     },
     {
-      "id": "C-08", "phase": "B", "name": "The job posting is written and published", "owner": "The recruiter writes it; the hiring manager approves the text",
+      "id": "C-08",
+      "phase": "B",
+      "name": "The job posting is written and published",
+      "owner": "The recruiter writes it; the hiring manager approves the text",
       "summary": "The posting is written from the role definition. In our picture the definition is the source and the posting is a copy of it, never the other way round.",
       "decision": false
     },
     {
-      "id": "C-09", "phase": "C", "name": "Applications come in", "owner": "The recruiter",
+      "id": "C-09",
+      "phase": "C",
+      "name": "Applications come in",
+      "owner": "The recruiter",
       "summary": "People apply, are referred, or are approached directly. Together they are the pool.",
       "decision": false
     },
     {
-      "id": "C-10", "phase": "C", "name": "Hard rules remove some applicants", "owner": "The recruiter, through rules set in the applicant tracking system",
+      "id": "C-10",
+      "phase": "C",
+      "name": "Hard rules remove some applicants",
+      "owner": "The recruiter, through rules set in the applicant tracking system",
       "summary": "Applicants who cannot be hired are removed: no right to work, wrong location, a licence missing. Today keyword rules often sit here too, and they are the first place a qualified person is lost.",
       "decision": false
     },
     {
-      "id": "C-11", "phase": "C", "name": "Each remaining candidate is screened against the requirements", "owner": "The recruiter or an HR screener",
+      "id": "C-11",
+      "phase": "C",
+      "name": "Each remaining candidate is screened against the requirements",
+      "owner": "The recruiter or an HR screener",
       "summary": "The screener compares each requirement in the posting against what the candidate's documents actually show, one requirement at a time, and asks the candidate about anything that is unclear before deciding. The match record you read belongs to this step.",
       "decision": false
     },
     {
-      "id": "C-12", "phase": "C", "name": "The screen decision", "owner": "The recruiter; the hiring manager can check or overrule any judgement",
+      "id": "C-12",
+      "phase": "C",
+      "name": "The screen decision",
+      "owner": "The recruiter; the hiring manager can check or overrule any judgement",
       "summary": "Each candidate goes forward, is turned down, is held until a later date, or is sent to the hiring manager because a judgement needs the manager's knowledge.",
       "decision": true,
-      "our_outcomes": ["Goes forward", "Turned down", "Held until a later date", "Sent to the hiring manager for a judgement that needs the manager's knowledge"]
+      "our_outcomes": [
+        "Goes forward",
+        "Turned down",
+        "Held until a later date",
+        "Sent to the hiring manager for a judgement that needs the manager's knowledge"
+      ]
     },
     {
-      "id": "C-13", "phase": "C", "name": "The recruiter calls the candidate", "owner": "The recruiter",
+      "id": "C-13",
+      "phase": "C",
+      "name": "The recruiter calls the candidate",
+      "owner": "The recruiter",
       "summary": "Interest, timing, pay expectations, practical constraints. Anything still unclear from the screen is asked here and the answers are written down.",
       "decision": false
     },
     {
-      "id": "C-14", "phase": "C", "name": "The short list goes to the hiring manager", "owner": "The recruiter hands it over; the hiring manager decides",
+      "id": "C-14",
+      "phase": "C",
+      "name": "The short list goes to the hiring manager",
+      "owner": "The recruiter hands it over; the hiring manager decides",
       "summary": "The manager accepts the list, removes individual people from it, or sends the whole list back, either for more candidates or because the role definition needs to change. We do not know whether managers remove individuals before interviewing often enough for this to count as a decision step; you can tell us.",
-      "decision": true, "open": true,
+      "decision": true,
+      "open": true,
       "decision_question": "What can happen to a short list at this point where you work? List the outcomes, and say whether the hiring manager removes individual people before interviewing.",
-      "our_outcomes": ["Accepts the list", "Removes individual people from it", "Sends the list back for more candidates", "Sends the list back because the role definition needs to change"]
+      "our_outcomes": [
+        "Accepts the list",
+        "Removes individual people from it",
+        "Sends the list back for more candidates",
+        "Sends the list back because the role definition needs to change"
+      ]
     },
     {
-      "id": "C-15", "phase": "D", "name": "Interviews", "owner": "The hiring manager and the other interviewers; the recruiter organises",
+      "id": "C-15",
+      "phase": "D",
+      "name": "Interviews",
+      "owner": "The hiring manager and the other interviewers; the recruiter organises",
       "summary": "The manager and the interviewers meet the candidates and judge what documents cannot show: how the person works and communicates. In our picture, interviews spend their time first on the requirements the screen could not settle.",
       "decision": false
     },
     {
-      "id": "C-16", "phase": "D", "name": "A test or a work sample, where used", "owner": "The hiring manager or the interviewers",
+      "id": "C-16",
+      "phase": "D",
+      "name": "A test or a work sample, where used",
+      "owner": "The hiring manager or the interviewers",
       "summary": "Some roles ask the candidate to do a piece of work or a test. Not every hire has this step.",
       "decision": false
     },
     {
-      "id": "C-17", "phase": "D", "name": "The hire decision", "owner": "The hiring manager, with the interviewers' views and HR's advice",
+      "id": "C-17",
+      "phase": "D",
+      "name": "The hire decision",
+      "owner": "The hiring manager, with the interviewers' views and HR's advice",
       "summary": "One candidate is chosen; or no one is chosen and the search goes on with new candidates; or no one is chosen and the role definition is changed first; or the decision is put off to a later date. In our picture the decision is written down next to the screening record, so the outcome can be traced back to it.",
       "decision": true,
-      "our_outcomes": ["One candidate is chosen", "No one is chosen; the search goes on with new candidates", "No one is chosen; the role definition is changed first", "The decision is put off to a later date"]
+      "our_outcomes": [
+        "One candidate is chosen",
+        "No one is chosen; the search goes on with new candidates",
+        "No one is chosen; the role definition is changed first",
+        "The decision is put off to a later date"
+      ]
     },
     {
-      "id": "C-18", "phase": "D", "name": "The offer is put together", "owner": "HR and compensation, with the hiring manager",
+      "id": "C-18",
+      "phase": "D",
+      "name": "The offer is put together",
+      "owner": "HR and compensation, with the hiring manager",
       "summary": "HR and compensation put the offer together with the hiring manager. If the pay is outside the approved range, it goes back to whoever owns the budget.",
       "decision": false
     },
     {
-      "id": "C-19", "phase": "D", "name": "The candidate answers the offer", "owner": "The candidate decides; the recruiter handles it",
+      "id": "C-19",
+      "phase": "D",
+      "name": "The candidate answers the offer",
+      "owner": "The candidate decides; the recruiter handles it",
       "summary": "The candidate accepts, negotiates, declines, or does not answer. In our picture no answer by an agreed date counts as declined and is raised with the head of recruiting.",
       "decision": true,
       "decision_question": "What can happen once an offer is out, where you work? List the outcomes.",
-      "our_outcomes": ["Accepts", "Negotiates", "Declines", "No answer by the agreed date, treated as declined"]
+      "our_outcomes": [
+        "Accepts",
+        "Negotiates",
+        "Declines",
+        "No answer by the agreed date, treated as declined"
+      ]
     },
     {
-      "id": "C-20", "phase": "D", "name": "The other candidates are told", "owner": "The recruiter",
+      "id": "C-20",
+      "phase": "D",
+      "name": "The other candidates are told",
+      "owner": "The recruiter",
       "summary": "Candidates who were not chosen are told, with a real reason where policy allows one. A screen that was written down requirement by requirement makes a real reason easy to give.",
       "decision": false
     },
     {
-      "id": "C-21", "phase": "E", "name": "Checks and paperwork before the start date", "owner": "HR",
+      "id": "C-21",
+      "phase": "E",
+      "name": "Checks and paperwork before the start date",
+      "owner": "HR",
       "summary": "Background checks, references, documents, equipment. If a check fails, the decision goes back to the hiring manager or the offer is withdrawn.",
       "decision": false,
-      "returns_to": "C-17", "returns_when": "when a check fails"
+      "returns_to": "C-17",
+      "returns_when": "when a check fails"
     },
     {
-      "id": "C-22", "phase": "E", "name": "The person starts", "owner": "The hiring manager and HR",
+      "id": "C-22",
+      "phase": "E",
+      "name": "The person starts",
+      "owner": "The hiring manager and HR",
       "summary": "First days and onboarding. The person is in the role.",
       "decision": false
     },
     {
-      "id": "C-23", "phase": "E", "name": "A check-in at about 30 days", "owner": "The hiring manager and the new employee",
+      "id": "C-23",
+      "phase": "E",
+      "name": "A check-in at about 30 days",
+      "owner": "The hiring manager and the new employee",
       "summary": "How is it going, from both sides.",
       "decision": false
     },
     {
-      "id": "C-24", "phase": "E", "name": "A review at about 90 days", "owner": "The hiring manager, the employee and HR",
+      "id": "C-24",
+      "phase": "E",
+      "name": "A review at about 90 days",
+      "owner": "The hiring manager, the employee and HR",
       "summary": "Is the person right for the role and doing it well: confirmed, probation extended, or the person leaves.",
       "decision": false
     },
     {
-      "id": "C-25", "phase": "E", "name": "How the hire is doing at six to twelve months", "owner": "The hiring manager; the HR system",
+      "id": "C-25",
+      "phase": "E",
+      "name": "How the hire is doing at six to twelve months",
+      "owner": "The hiring manager; the HR system",
       "summary": "Whether the person stayed and how they are performing. In our picture this is the information that shows whether the screening got it right.",
       "decision": false
     },
     {
-      "id": "C-26", "phase": "E", "name": "The search is closed and the lessons are kept", "owner": "The recruiter and the hiring manager",
+      "id": "C-26",
+      "phase": "E",
+      "name": "The search is closed and the lessons are kept",
+      "owner": "The recruiter and the hiring manager",
       "summary": "The search is closed. What took how long, which judgements were overruled, and which holds happened are kept as the record of the hire.",
       "decision": false
     }
-  ]
+  ],
+  "notes_prompt": "Notes (optional)"
 }

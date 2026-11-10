@@ -55,8 +55,8 @@ export default async function PilotWorkflowPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">how this part works</p>
             <p className="mt-2 text-sm leading-relaxed text-ink-2">
               Five stages, one screen each. Under every step, one click: it happens like this, it happens differently, or it
-              does not happen where you work. A box opens only where something differs. At each decision you are asked
-              what the outcomes are where you work. About ten minutes.
+              does not happen where you work, with a notes box under each. At each decision you are asked what the
+              outcomes are where you work. About ten minutes.
             </p>
           </section>
 
