@@ -30,7 +30,7 @@ export function Verified({
         <>
           <p className="mt-6 max-w-lg text-base leading-relaxed text-ink-2">
             {pilot
-              ? "Your email is verified and the pilot is ready: about twenty minutes, in three parts, at your own pace. Sign in to begin."
+              ? "Your email is verified and the pilot is ready: about half an hour, in three parts, at your own pace. Sign in to begin."
               : "Your email is verified and your access is ready. Sign in to continue."}
           </p>
           {pilot && email ? (

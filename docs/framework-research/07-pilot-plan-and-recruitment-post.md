@@ -2,7 +2,7 @@
 
 Companion to `06-employer-side-discovery-research-plan.md`. The pilot exists to fix wording, length and branching before the survey goes wide; it is not a data-collection wave.
 
-**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added; the call was extended to about thirty minutes the same day for the company workflow review (`11` §7), and §1 and §2.1 say so. **2026-11-09:** §2.1 rewritten for the on-site pilot (`15`): the participant creates a login on rogerhenley.dev and reads the match record and the workflow chart there, with comment boxes, before the call; the post now states the problem, the ask and the profile of the ten in full, at the owner's request. Ready to post; the owner edits to taste. **2026-11-10:** final for posting, after the participant path and the admin pages were approved live: the ask is a direct message, named in the first line and the last, not a comment; the time on the site is said as about half an hour (the owner's own run took thirty-one minutes knowing the material); "the chart" became "the two readings". An image for the post is in `diagrams/pilot-post.png` (§2.4).
+**Status.** Draft 2026-11-08, not yet fielded. The interview stimulus (§3) is built; the ten names are P3 in `00-todo.md`. Repository copy ahead of project (2026-11-08): this status line added; the call was extended to about thirty minutes the same day for the company workflow review (`11` §7), and §1 and §2.1 say so. **2026-11-09:** §2.1 rewritten for the on-site pilot (`15`): the participant creates a login on rogerhenley.dev and reads the match record and the workflow chart there, with comment boxes, before the call; the post now states the problem, the ask and the profile of the ten in full, at the owner's request. Ready to post; the owner edits to taste. **2026-11-10:** final for posting, after the participant path and the admin pages were approved live: the ask is a direct message, named in the first line and the last, not a comment; the time on the site is said as about half an hour (the owner's own run took thirty-one minutes knowing the material); "the chart" became "the two readings". An image for the post is in `diagrams/pilot-post.png` (§2.4). Later the same day the register page, the verified page and the welcome email, which still said about twenty minutes, were changed to say about half an hour too, and the message the owner sends a participant once the address is on the whitelist was written (§2.5).
 
 ---
 
@@ -90,6 +90,24 @@ Rewritten 2026-11-09 for the on-site pilot. Plain text for LinkedIn: no link in 
 ### 2.4 The post image
 
 Made 2026-11-10 at the owner's request: one image for the post, in the site's own palette and type (Fraunces, Inter Tight, JetBrains Mono on paper, ink and the teal accent), 1200 by 1200 so it takes the full width of the feed. It shows the one thing the post is about, in the form the pilot asks people to react to: three requirement rows, each with the posting's words, the candidate's words, the keyword screen's answer (no match) and the evidence reading (met, with its basis), under the line "Same capability. Different words. Screened out." The foot carries the ask and the site. The source is `diagrams/pilot-post.html`, rendered with headless Chrome to `diagrams/pilot-post.png`; no photograph, no stock, nothing that identifies a person or an employer. The three rows are of the kind the stimulus holds (`15` §14), in generic words.
+
+### 2.5 The message after whitelisting
+
+Written 2026-11-10 at the owner's request, for the direct message he sends once a volunteer's address is on the whitelist with the pilot box ticked. The link is the pilot registration page; the address the person registers with has to be the one on the whitelist, since that is what the auto-approval matches. The site says the same things in the same order (register, verify, sign in, three parts, about half an hour, the call), so nothing in the message is a promise the pages do not keep.
+
+> Hi <name>, you are set up for the pilot.
+>
+> Register here with the email address you gave me:
+> https://rogerhenley.dev/register?pilot=1
+>
+> Verify the address from the email that arrives, then sign in and the pilot opens. It is a short survey and two readings, about half an hour in all, at your own pace. You can stop and come back later.
+>
+> When you have finished, message me and we will set up the call, about thirty minutes.
+>
+> Nothing you write there is published. If anything is unclear, just message me.
+>
+> Thanks again,
+> Roger
 
 ---
 
