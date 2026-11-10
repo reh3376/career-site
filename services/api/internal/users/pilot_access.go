@@ -2,7 +2,10 @@ package users
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // SetPilotApproved opens or closes the pilot area to one member
@@ -113,4 +116,23 @@ func (r *Repo) FailResetAttempt(ctx context.Context, userID int64, maxAttempts i
 		}
 	}
 	return live, rows.Err()
+}
+
+// ClosePilotByEmail clears the pilot flag on the member registered with
+// the address, for the whitelist delete: the owner's rule of 2026-11-10
+// is that removing a pilot entry closes the pilot for the person it let
+// in, while the account itself stays. The column is citext, so the
+// match is case-insensitive like the auto-approval lookup. Returns the
+// member id and true when a flag was cleared; false, with no error,
+// when no member has the address or the flag was already off.
+func (r *Repo) ClosePilotByEmail(ctx context.Context, email string) (int64, bool, error) {
+	const q = `UPDATE users SET pilot_approved = false WHERE email = $1 AND pilot_approved RETURNING id`
+	var id int64
+	if err := r.pool.QueryRow(ctx, q, email).Scan(&id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("close pilot by email: %w", err)
+	}
+	return id, true, nil
 }

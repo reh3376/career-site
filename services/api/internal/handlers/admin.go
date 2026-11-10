@@ -954,14 +954,28 @@ func (a *Admin) DeleteAccessGrant(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
 	}
-	if err := a.users.DeleteGrant(ctx, id); err != nil {
+	email, err := a.users.DeleteGrant(ctx, id)
+	if err != nil {
 		if errors.Is(err, users.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("grant not found"))
 		}
 		a.log.Error("DeleteGrant failed", slog.String("error", err.Error()))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("delete failed"))
 	}
-	return connect.NewResponse(&v1.DeleteAccessGrantResponse{}), nil
+	// Removing a pilot entry closes the pilot for the member registered
+	// with it (owner, 2026-11-10; FSD FR-PLT-02). The entry is gone by
+	// now, so a failure here is logged and the page keeps working: the
+	// owner can close the flag on the member page.
+	resp := &v1.DeleteAccessGrantResponse{}
+	if memberID, closed, err := a.users.ClosePilotByEmail(ctx, email); err != nil {
+		a.log.Error("ClosePilotByEmail after DeleteGrant failed",
+			slog.Int64("grant_id", id), slog.String("error", err.Error()))
+	} else if closed {
+		resp.PilotClosedMemberId = strconv.FormatInt(memberID, 10)
+		a.events.Emit(ctx, requestEvent(req, "pilot.flag_changed", memberID,
+			map[string]any{"user_id": memberID, "approved": false, "via": "grant_deleted"}))
+	}
+	return connect.NewResponse(resp), nil
 }
 
 // ---------------------------------------------------------------

@@ -1,7 +1,10 @@
 package users
 
 import (
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 )
 
 // Every write the pilot performs, against a real database. The reason
@@ -316,5 +319,60 @@ func TestPilotNotesAndReviewAgainstPostgres(t *testing.T) {
 	var left int
 	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM pilot_notes WHERE session_id = $1::uuid`, s.ID).Scan(&left); err != nil || left != 0 {
 		t.Fatalf("notes survived the session's deletion: %d err=%v", left, err)
+	}
+}
+
+// Removing a whitelist entry closes the pilot for the member registered
+// with its address (owner, 2026-11-10; FSD FR-PLT-02). Against a real
+// database for the same reason as the test above, and because the
+// citext match is the point: the entry and the member may differ in
+// case.
+func TestDeletingAGrantClosesThePilotFlag(t *testing.T) {
+	r, ctx := dtTestRepo(t)
+
+	suffix := "closes-" + fmt.Sprint(time.Now().UnixNano())
+	email := "Pilot-" + suffix + "@example.test"
+	var userID int64
+	if err := r.pool.QueryRow(ctx, `
+    INSERT INTO users (email, name, status, role, pilot_approved)
+    VALUES ($1, 'Pilot Tester', 'active', 'member', true)
+    RETURNING id`, strings.ToLower(email)).Scan(&userID); err != nil {
+		t.Fatalf("make user: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID) })
+	var grantID int64
+	if err := r.pool.QueryRow(ctx, `
+    INSERT INTO access_grants (email, default_ttl, pilot) VALUES ($1, '7d', true) RETURNING id`, email).Scan(&grantID); err != nil {
+		t.Fatalf("make grant: %v", err)
+	}
+	t.Cleanup(func() { _, _ = r.pool.Exec(ctx, `DELETE FROM access_grants WHERE id = $1`, grantID) })
+
+	got, err := r.DeleteGrant(ctx, grantID)
+	if err != nil {
+		t.Fatalf("DeleteGrant: %v", err)
+	}
+	if !strings.EqualFold(got, email) {
+		t.Fatalf("DeleteGrant returned %q, want the entry's address", got)
+	}
+	id, closed, err := r.ClosePilotByEmail(ctx, got)
+	if err != nil || !closed || id != userID {
+		t.Fatalf("ClosePilotByEmail = (%d, %v, %v), want (%d, true, nil)", id, closed, err, userID)
+	}
+	var flag bool
+	if err := r.pool.QueryRow(ctx, `SELECT pilot_approved FROM users WHERE id = $1`, userID).Scan(&flag); err != nil {
+		t.Fatal(err)
+	}
+	if flag {
+		t.Fatal("the flag is still set after the grant was removed")
+	}
+	// Already off, or nobody registered with the address: no row, no error.
+	if _, closed, err := r.ClosePilotByEmail(ctx, got); err != nil || closed {
+		t.Fatalf("second close = (%v, %v), want (false, nil)", closed, err)
+	}
+	if _, closed, err := r.ClosePilotByEmail(ctx, "nobody-"+suffix+"@example.test"); err != nil || closed {
+		t.Fatalf("close for an unknown address = (%v, %v), want (false, nil)", closed, err)
+	}
+	if _, err := r.DeleteGrant(ctx, grantID); err != ErrNotFound {
+		t.Fatalf("DeleteGrant again: err = %v, want ErrNotFound", err)
 	}
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { callApi } from "@/lib/api-fetch";
@@ -65,10 +66,13 @@ const TTL_LABEL: Record<string, string> = {
 export default async function AdminAccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; closed?: string }>;
 }) {
   const params = await searchParams;
   const q = params.q ?? "";
+  // Set by the remove action when the entry's member lost the pilot
+  // flag with it (FSD FR-PLT-02); a member id, never an address.
+  const closed = /^[0-9]{1,20}$/.test(params.closed ?? "") ? params.closed : "";
   const result = await fetchGrants(q);
 
   if (!result.ok) {
@@ -93,10 +97,24 @@ export default async function AdminAccessPage({
         Emails on this list are auto-approved on signup. The TTL sets
         how long the resulting account stays active; the (optional)
         entry-expiry limits how long the whitelist row itself is
-        honoured. Removing an entry only stops future auto-approvals,
-        existing accounts are untouched. An entry marked pilot makes the
-        member a pilot participant when they register.
+        honoured. Removing an entry stops future auto-approvals and
+        closes the pilot for the member registered with it; the account
+        itself is untouched. An entry marked pilot makes the member a
+        pilot participant when they register.
       </p>
+
+      {closed ? (
+        <p
+          role="status"
+          className="mt-4 max-w-2xl border-l-2 border-accent bg-accent-soft/40 px-4 py-3 text-sm text-ink"
+        >
+          Removed. The pilot is closed for{" "}
+          <Link href={`/admin/registrations/${closed}`} className="underline">
+            member {closed}
+          </Link>{" "}
+          as well; the account stays.
+        </p>
+      ) : null}
 
       <dl className="mt-8 grid gap-3 border-y border-line py-4 font-mono text-sm text-ink-2 sm:grid-cols-3">
         <div className="flex items-baseline gap-3">

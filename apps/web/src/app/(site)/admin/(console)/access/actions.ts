@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { callApi } from "@/lib/api-fetch";
 import { getSessionCookie } from "@/lib/session";
@@ -82,11 +83,25 @@ export async function deleteAccessGrantAction(
   const cookie = await getSessionCookie();
   if (!cookie) return;
 
-  await callApi({
+  const resp = await callApi({
     path: "/api/career.v1.AdminService/DeleteAccessGrant",
     body: { id },
     cookie,
   }).catch(() => undefined);
 
+  // Removing a pilot entry closes the pilot for the member registered
+  // with it (FSD FR-PLT-02, owner 2026-11-10); the API names the member
+  // so the page can say so. The id goes in the URL, never the address.
+  let closedMemberId = "";
+  if (resp?.ok) {
+    try {
+      const j = (await resp.json()) as { pilotClosedMemberId?: string };
+      closedMemberId = j.pilotClosedMemberId ?? "";
+    } catch {
+      /* the row is gone either way */
+    }
+  }
+
   revalidatePath("/admin/access", "layout");
+  if (closedMemberId) redirect(`/admin/access?closed=${encodeURIComponent(closedMemberId)}`);
 }

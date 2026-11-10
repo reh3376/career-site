@@ -880,8 +880,10 @@ class DeleteAccessGrantRequest(_message.Message):
     def __init__(self, id: _Optional[str] = ...) -> None: ...
 
 class DeleteAccessGrantResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
+    __slots__ = ("pilot_closed_member_id",)
+    PILOT_CLOSED_MEMBER_ID_FIELD_NUMBER: _ClassVar[int]
+    pilot_closed_member_id: str
+    def __init__(self, pilot_closed_member_id: _Optional[str] = ...) -> None: ...
 
 class SavedQuery(_message.Message):
     __slots__ = ("id", "name", "sql", "created_at", "updated_at")
