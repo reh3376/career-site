@@ -204,10 +204,11 @@ database and `build-stats.json` on this date.
   stimulus and the five-stage company workflow with comments, finish),
   and the admin surface with exports. The participant path and the
   admin pages were approved live by the owner on 2026-11-09 and
-  2026-11-10. Five live steps remain (`15` §11 rows 18 to 22). No
-  participant has started; the recruitment post and its image are
-  final (`07` §2.1, §2.4); the message a participant receives after
-  whitelisting is written (`07` §2.5).
+  2026-11-10. Five live steps remain (`15` §11 rows 18 to 22). The
+  recruitment post went up on LinkedIn on 2026-11-10 with its image
+  (`07` §2.1, §2.4) and the first two volunteers were whitelisted the
+  same day with the pilot flag; no one has registered yet. Each
+  receives the message in `07` §2.5.
 - **Platform seams.** A `tenants` table and `tenant_id` on the
   data-layer tables (ADR 0029, attribution only); an event stream of
   85 named events, an audit log for recorded admin operations with the
@@ -324,3 +325,4 @@ items are mirrored in `backlog.md` §1c.
 | Date | Change |
 |---|---|
 | 2026-11-10 | Opened at the owner's request, from his statement of the end goal the same day. Goals, problem, thesis, current state on `0ed804ba9d9a`, the five stages, the enterprise-readiness table and the risks written. Backlog §1c opened to mirror the open items. |
+| 2026-11-10, later | §4: stage A is under way; the post is up and the first two participants are on the whitelist. Production on `15007b6fb58f`. |
