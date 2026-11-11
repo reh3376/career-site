@@ -2,7 +2,7 @@
 
 Open work items for the design effort, in the order they will be worked. Each item names what "done" looks like and which doc it feeds. Items are removed when done; decisions made along the way go into the doc they affect, not here.
 
-Last updated 2026-11-08, late (P1 and P2 complete; the build order delegated to the agent and recorded in `13-phase-0-build-plan.md`). Repository copy ahead of project (2026-11-08): P2 marked complete, P4 and P5 re-pointed at `13`.
+Last updated 2026-11-10 (P3 fielding started: the post is up and the first two participants are whitelisted). Repository copy ahead of project (2026-11-08): P2 marked complete, P4 and P5 re-pointed at `13`.
 
 ---
 
@@ -33,10 +33,12 @@ Done: `11-pilot-materials.md` (consent and landing text, the one-page interviewe
 - PL-3: the `/pilot` pages (consent, survey, record, workflow, done), the company-workflow SVG, `/admin/pilot`, whitelist checkbox and member toggle in the web; live pass. **Built 2026-11-08; deployed 2026-11-09 (`ba6fdc6e04c3`), outside checks pass; the owner's live review (`15` §11, 22 steps) is the completion criterion and is under way (2026-11-09: steps 1 to 8 reviewed; the flow made sequential, the owner's notes and judgement added in the database, `15` §12; participants given a pilot-only experience, `15` §13; the admin account delete and the optional +pilot switch added; third run complete, survey approved, notes box added; the record rebuilt as stimulus v1.1 from the owner's approved proposals and his three framework answers written as FR-HF-22 to 24; the workflow rebuilt as revision 3, one stage per screen in plain language with a three-way answer per step, awaiting live review, `15` §14; 2026-11-10: the workflow approved after three presentation fixes, so the whole participant path is approved; the admin list, session page and exports approved the same day, steps 13 to 16; steps 17 to 22 remain, the session delete, the pilot-flag gate, the agent login, forgot-password by code, the re-score check and the account cleanup).** An admin delete of a session (FR-PLT-15) added 2026-11-09 so that run can be removed before the ten start.
 - PL-4: field it (owner whitelists the ten; exports to the private folder after week 2).
 
-## P3 — Pilot recruiting and fielding (owner)
+## P3 — Pilot recruiting and fielding (owner) — **fielding started 2026-11-10**
+
+The pilot post went up on LinkedIn on 2026-11-10 and the first two volunteers were added to the whitelist the same day, each with the pilot flag and a 30-day entry (`15` §11 step 1 as approved). Neither had registered by the evening. Each volunteer receives the message in `07` §2.5 once whitelisted. Remaining below.
 
 - Ten names: five recruiters/HR, five hiring managers, ≥3 technical/manufacturing hirers, none from current employers. Confirm each one's email address and add it to the whitelist with the pilot flag (`15` §0 decision 1).
-- Post the pilot version of the recruitment post (rewritten for the on-site pilot 2026-11-09, `07` §2.1, first comment names the site); schedule calls.
+- ~~Post the pilot version of the recruitment post~~ (posted 2026-11-10, `07` §2.1); schedule calls as volunteers finish on the site.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 
 ## P4 — Schema follow-through (parallel with P3) — **steps 2 and 3 of `13-phase-0-build-plan.md` §2, built 2026-11-08 and 2026-11-09 (migrations 00066 to 00069, package `hiring`, the dual write); items 1, 2 and 4 landed as columns and tables, 3, 5 and 6 stay open**
