@@ -216,8 +216,8 @@ func (r *Repo) SyncRequirementVersions(ctx context.Context, roleID string, in []
 // the chunk does now; the candidate is the document's. The profile
 // sheet's chunks become profile_sheet items, everything else
 // corpus_document.
-func (r *Repo) EnsureChunkEvidence(ctx context.Context, chunkIDs []int64) (map[int64]string, error) {
-	out := map[int64]string{}
+func (r *Repo) EnsureChunkEvidence(ctx context.Context, chunkIDs []int64) (map[int64]EvidenceRef, error) {
+	out := map[int64]EvidenceRef{}
 	if len(chunkIDs) == 0 {
 		return out, nil
 	}
@@ -233,7 +233,7 @@ func (r *Repo) EnsureChunkEvidence(ctx context.Context, chunkIDs []int64) (map[i
     WHERE c.id = ANY($2)
     ON CONFLICT (chunk_id) DO UPDATE
       SET text = EXCLUDED.text, visibility = EXCLUDED.visibility
-    RETURNING chunk_id, id::text`,
+    RETURNING chunk_id, id::text, source_kind`,
 		tenant.FromContext(ctx).Int64(), chunkIDs, EvidenceSchema)
 	if err != nil {
 		return nil, fmt.Errorf("ensure chunk evidence: %w", err)
@@ -241,13 +241,106 @@ func (r *Repo) EnsureChunkEvidence(ctx context.Context, chunkIDs []int64) (map[i
 	defer rows.Close()
 	for rows.Next() {
 		var chunkID int64
-		var id string
-		if err := rows.Scan(&chunkID, &id); err != nil {
+		var ref EvidenceRef
+		if err := rows.Scan(&chunkID, &ref.ID, &ref.SourceKind); err != nil {
 			return nil, fmt.Errorf("ensure chunk evidence: scan: %w", err)
 		}
-		out[chunkID] = id
+		out[chunkID] = ref
 	}
 	return out, rows.Err()
+}
+
+// EvidenceRef is an evidence item's row id and source kind, by the
+// chunk it was made from.
+type EvidenceRef struct {
+	ID         string
+	SourceKind string
+}
+
+// JudgmentRow is one row of judgments as the writer stores it
+// (FR-HF-04): the model's answer after the code rules, its provenance,
+// and the derived verdict (FR-HF-07).
+type JudgmentRow struct {
+	RequirementID     string // requirements.id, the exact version judged
+	LocalID           string
+	Determination     string
+	Basis             string
+	Uncertainty       []string
+	EvidenceIDs       []string // evidence_items ids
+	Rationale         string
+	ReportedFacts     json.RawMessage
+	Confidence        *float64
+	RuleAdjustments   json.RawMessage
+	RationaleIssues   json.RawMessage
+	ProvenanceSummary json.RawMessage
+	DerivedVerdict    string
+	DecisionID        *int64
+	PromptID          string
+	PromptVersion     int
+	PromptFingerprint string
+	Model             string
+}
+
+// ReplaceJudgments writes a run's judgments in one transaction,
+// removing any earlier rows for the run first, so a retried persist of
+// the same run is one set of rows. Codes are written as given; the
+// registry check lives in TestWrittenCodesAreRegistered rather than a
+// CHECK constraint (14 §1).
+func (r *Repo) ReplaceJudgments(ctx context.Context, runID string, rows []JudgmentRow) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("judgments: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `DELETE FROM judgments WHERE run_id = $1::uuid`, runID); err != nil {
+		return fmt.Errorf("judgments: clear: %w", err)
+	}
+	tid := tenant.FromContext(ctx).Int64()
+	for _, j := range rows {
+		unc := j.Uncertainty
+		if unc == nil {
+			unc = []string{}
+		}
+		ev := j.EvidenceIDs
+		if ev == nil {
+			ev = []string{}
+		}
+		if _, err := tx.Exec(ctx, `
+      INSERT INTO judgments
+        (tenant_id, run_id, requirement_id, requirement_local_id, candidate_id, schema_version, vocab_version,
+         determination, basis, uncertainty, evidence_ids, rationale, reported_facts, confidence,
+         rule_adjustments, rationale_issues, provenance_summary, derived_verdict,
+         decision_id, prompt_id, prompt_version, prompt_fingerprint, model)
+      VALUES ($1, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7,
+              $8, $9, $10, $11::uuid[], $12, $13, $14,
+              $15, $16, $17, $18,
+              $19, $20, $21, $22, $23)`,
+			tid, runID, j.RequirementID, j.LocalID, OwnerCandidateID, JudgmentSchema, VocabVersion,
+			j.Determination, j.Basis, unc, ev, j.Rationale, orEmptyObject(j.ReportedFacts), j.Confidence,
+			orEmptyArray(j.RuleAdjustments), orEmptyArray(j.RationaleIssues), orEmptyObject(j.ProvenanceSummary), j.DerivedVerdict,
+			j.DecisionID, j.PromptID, j.PromptVersion, j.PromptFingerprint, j.Model,
+		); err != nil {
+			return fmt.Errorf("judgments: insert %s: %w", j.LocalID, err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("judgments: commit: %w", err)
+	}
+	return nil
+}
+
+func orEmptyObject(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return json.RawMessage(`{}`)
+	}
+	return raw
+}
+
+func orEmptyArray(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return json.RawMessage(`[]`)
+	}
+	return raw
 }
 
 // MatchRecord is one row of match_records. Pointers are the numbers a

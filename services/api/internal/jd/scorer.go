@@ -145,7 +145,7 @@ func (s *Scorer) logGate(ctx context.Context, submissionID int64, score, retriev
 		}
 		weightTotal, nReq = assessment.WeightTotal, len(assessment.Requirements)
 	}
-	input, _ := json.Marshal(map[string]any{
+	gateInput := map[string]any{
 		"score":           score,
 		"retrieval_score": retrieval,
 		"threshold":       s.Threshold(),
@@ -153,7 +153,13 @@ func (s *Scorer) logGate(ctx context.Context, submissionID int64, score, retriev
 		"requirements":    nReq,
 		"weight_total":    weightTotal,
 		"verdicts":        counts,
-	})
+	}
+	if assessed && assessment.Coverage != nil {
+		// Formula v3 beside the v2 score the gate read, so D-32 can be
+		// settled from the gate rows rather than re-run.
+		gateInput["coverage"] = assessment.Coverage
+	}
+	input, _ := json.Marshal(gateInput)
 	outcome := "below_threshold"
 	if next == "generating" {
 		outcome = "above_threshold"
@@ -234,7 +240,7 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 		TriggeredBy:  adminID,
 		AppCommit:    build.Commit,
 		ScoreFormula: ScoreFormula,
-		Prompts:      prompts.Fingerprints(),
+		Prompts:      s.promptFingerprints(),
 		NumCtx:       s.assessor.NumCtx(),
 		Host:         s.host,
 		// What this run was allowed to read. Recorded because two runs
@@ -530,6 +536,19 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	s.log.Info("jd: pdf ready", slog.Int64("id", submissionID), slog.Int("bytes", len(pdf)), slog.Int("pages", int(pages)))
 }
 
+// promptFingerprints is the registry's fingerprints with the judge's
+// replaced by the one this scorer's assessor actually sends, which is
+// rendered from the vocabulary registry at boot and so can differ from
+// the compiled-in default (14 §5).
+func (s *Scorer) promptFingerprints() map[string]string {
+	fps := prompts.Fingerprints()
+	if s != nil && s.assessor != nil {
+		j := s.assessor.JudgePrompt()
+		fps[j.ID] = j.Fingerprint()
+	}
+	return fps
+}
+
 // retryDelay is the pause before the single automatic retry.
 const retryDelay = 8 * time.Second
 
@@ -620,11 +639,28 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 	for _, r := range a.Requirements {
 		in.Requirements = append(in.Requirements, hiring.RequirementInput{
 			LocalID: r.ID, Text: r.Text, SourceQuote: r.SourceQuote,
-			Category: r.Category, Weight: r.Weight, NamedParties: r.NamedParties,
+			Category: r.Category, Weight: r.Weight, NamedParties: r.NamedParties, Type: r.Type,
 		})
 	}
+	judge := s.assessor.JudgePrompt()
+	in.JudgePromptID, in.JudgePromptVersion = judge.ID, judge.Version
 	for _, j := range a.Judgments {
-		in.Judgments = append(in.Judgments, hiring.JudgmentInput{LocalID: j.RequirementID, Verdict: j.Verdict, EvidenceChunkIDs: j.EvidenceIDs})
+		ji := hiring.JudgmentInput{
+			LocalID: j.RequirementID, Verdict: j.Verdict, EvidenceChunkIDs: j.EvidenceIDs,
+			Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
+			Rationale: j.Rationale, Confidence: j.Confidence, NotAssessed: j.NotAssessed,
+			DecisionID: a.DecisionIDs[j.RequirementID],
+		}
+		if j.ReportedFacts != nil {
+			ji.ReportedFacts, _ = json.Marshal(j.ReportedFacts)
+		}
+		if len(j.RuleAdjustments) > 0 {
+			ji.RuleAdjustments, _ = json.Marshal(j.RuleAdjustments)
+		}
+		if len(j.RationaleIssues) > 0 {
+			ji.RationaleIssues, _ = json.Marshal(j.RationaleIssues)
+		}
+		in.Judgments = append(in.Judgments, ji)
 	}
 	// Every chunk offered to any requirement, read once.
 	var ids []int64

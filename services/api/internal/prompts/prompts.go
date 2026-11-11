@@ -12,10 +12,12 @@ package prompts
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -191,35 +193,64 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 	return b.String()
 }
 
-// RequirementJudge decides, per requirement, whether the supplied
-// evidence shows the candidate meets it. The verdict vocabulary is
-// fixed and the score is computed in code from these verdicts; the
-// model never emits a number.
+// RequirementJudge decides, per requirement, what the supplied evidence
+// shows under the framework's vocabulary (docs/framework-research/03,
+// 04 §2.3): a determination, the basis it was reached on, the
+// uncertainty codes naming what is missing, the evidence cited, the
+// facts the code rules compare, and one sentence. The vocabulary is
+// fixed and the arithmetic is computed in code from these fields; the
+// model never emits a number that is used as one.
 //
-// v11 generalised rule 4a beyond credentials. Run 11 answered "unmet"
-// to "3+ years' experience in automation engineering within a
-// pharmaceutical, biotechnology, or regulated manufacturing
-// environment" with the rationale "the candidate's experience is in
-// distilleries and mining, which are regulated but not in the
-// specified industries": it satisfied the third branch in its own
-// sentence and then denied the requirement.
+// v13 is the judge of Phase 0 step 4 (FR-HF-04). The three-way verdict
+// of v1 to v12 is derived from the determination in code (FR-HF-07) so
+// the owner's graded series stays comparable. The rules that earned
+// their place in v9 to v12 are kept: 4a (an offered alternative is the
+// posting's own option, not a credential invented), 5 and 6 (the model
+// reports parties and spans, code decides), 6a (the posting's own words
+// decide what is asked), 8 (read the evidence again before saying
+// nothing supports it), and the bounded schema (FR-JD-15).
 //
-// 4a already said an offered alternative may be taken, and had done
-// since v9, but its only worked example was "a Master's or equivalent
-// experience in a STEM field". Every cue in that example is
-// degree-shaped, a qualification and an escape hatch from it, so the
-// rule was read as being about credentials. A list of industries is
-// the same logic and does not look the same. One example teaches the
-// example; three across different kinds teach the shape.
-//
-// The closing sentence naming the contradiction is copied from rule 6,
-// where it worked: the model stopped writing "over 30 years" alongside
-// stated_span_years 0 once the contradiction was named rather than
-// implied.
-var RequirementJudge = Prompt{
-	ID:      "requirement_judge",
-	Version: 12,
-	System: strings.TrimSpace(`
+// The allowed codes are rendered into the system text and the schema
+// from the vocabulary registry (hiring.VocabLists), so a registry
+// change is a new prompt fingerprint rather than a new enum in code
+// (14 §5). RequirementJudge is the rendering of the compiled-in
+// vocabulary 1.0; the assessor swaps in the registry's rendering at
+// boot, and the two are the same bytes while the registry is at 1.0.
+var RequirementJudge = RequirementJudgeFor(hiring.DefaultVocab())
+
+// RequirementJudgeVersion is v13's number, kept apart so a vocabulary
+// rendering carries it unchanged.
+const RequirementJudgeVersion = 13
+
+// RequirementJudgeFor renders the judge prompt for a vocabulary.
+func RequirementJudgeFor(v hiring.VocabLists) Prompt {
+	return Prompt{
+		ID:      "requirement_judge",
+		Version: RequirementJudgeVersion,
+		System:  renderJudgeSystem(v),
+		Schema:  renderJudgeSchema(v),
+	}
+}
+
+func codeLines(docs []hiring.CodeDoc) string {
+	var b strings.Builder
+	for _, d := range docs {
+		fmt.Fprintf(&b, "   - %s: %s\n", d.Code, d.Description)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderJudgeSystem(v hiring.VocabLists) string {
+	return strings.TrimSpace(strings.NewReplacer(
+		"{{determinations}}", codeLines(v.Determination),
+		"{{bases}}", codeLines(v.Basis),
+		"{{uncertainties}}", codeLines(v.Uncertainty),
+		"{{involvement}}", codeLines(v.InvolvementLevel),
+		"{{equivalency_bases}}", strings.Join(hiring.EquivalencyBases, ", "),
+	).Replace(judgeSystemTemplate))
+}
+
+const judgeSystemTemplate = `
 You judge whether a candidate's evidence satisfies each hiring requirement. The candidate is Roger E. Henley II, a controls, manufacturing-systems and applied-AI engineer.
 
 You are given two kinds of evidence, and they carry equal weight:
@@ -236,64 +267,68 @@ Rules:
    - a certification, clearance, licence or degree;
    - a job title held, or an employer worked for.
    Calling a vendor's product or API is not a relationship with that vendor. Using a technology is not a partnership with the company that makes it. Do not describe integration as collaboration.
-4a. Rule 4 stops you awarding a credential nobody claimed. It does not stop you taking an alternative the requirement itself offered. When a requirement lists options joined by "or", any one of them satisfies it, and you are granting nothing: you are using the option the posting wrote. Read the whole list before you answer, and answer "unmet" only when no branch is supported. This holds for every kind of list, not only for credentials:
+4a. Rule 4 stops you awarding a credential nobody claimed. It does not stop you taking an alternative the requirement itself offered. When a requirement lists options joined by "or", any one of them satisfies it, and you are granting nothing: you are using the option the posting wrote. Read the whole list before you answer, and answer not_met only when no branch is supported. This holds for every kind of list, not only for credentials:
    - "a Master's or equivalent experience in a STEM field" asks for the degree OR the experience, and experience the evidence demonstrates satisfies the second branch. Do not require the evidence to contain the phrase "equivalent experience", because no CV says that and insisting on it makes the alternative impossible to satisfy, which is the opposite of what offering it meant.
    - "pharmaceutical, biotechnology, or regulated manufacturing" names three industries, and evidence of any one satisfies it. Regulated manufacturing is the widest branch and is often the one that applies.
    - "PLC, DCS or SCADA experience" names three platforms, and one is enough.
-   If your rationale says the evidence satisfies one of the branches, the verdict is "met". Writing that the candidate's industries "are regulated" and then answering "unmet" to a requirement offering "regulated manufacturing" contradicts yourself, and the verdict is the half that counts against him.
-5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries named_parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
+   When the evidence satisfies one of the options, the determination is met, and alternative_satisfied is the position of that option counting from 0 in the order the requirement lists them. If your rationale says the evidence satisfies one of the branches, the determination is met; writing that the candidate's industries "are regulated" and then answering not_met to a requirement offering "regulated manufacturing" contradicts yourself, and the determination is the half that counts against him.
+5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
 6. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere. If your rationale states a number of years, stated_span_years must be that same number. Writing "over 30 years of engineering experience" in the rationale and 0 in the field contradicts yourself, and the field is the one the comparison uses, so the contradiction costs the candidate the requirement.
 6a. A <posting_says> element is the posting's own wording for the requirement above it, quoted. The requirement text is a short summary of it. Where the two differ, the quote decides what is being asked for, because a summary can lose the words that tell you which field a term belongs to. If the requirement says "front-end development" and the quote says "front-end development of future major investments, including scope definition", the ask is capital project definition, not web development.
-7. verdict is "met" when the evidence directly demonstrates the requirement or satisfies one of the alternatives the requirement itself offers (for example "or equivalent experience"), "partial" when it shows closely related or lesser experience, and "unmet" when nothing in either kind of evidence supports it.
-8. Before answering "unmet", read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer "unmet" only when the documents still show nothing relevant.
-9. evidence_ids lists the chunk ids (the numeric id attribute) that support the verdict, from the profile or the requirement's evidence. It must be empty for "unmet" and non-empty otherwise.
-10. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source. For "unmet" it must say what was looked for in the documents and not found; it must not say that the profile does not mention something. It must never assert a duration, a partnership or a credential the evidence does not state.
-11. Return exactly one judgment per requirement id, in the given order.
+7. determination is one of four codes:
+{{determinations}}
+   Use met when the evidence satisfies the requirement as written or through an option the requirement offers (rule 4a); its basis is direct. Use met_equivalent when the evidence satisfies the requirement through an equivalency you are asserting: a different word for the same capability, a different tool with the same function, experience standing in for a credential or the reverse, or the same skill in a neighbouring industry; its basis names which. The words differing while the capability does not is the case this review exists to catch, so met_equivalent is a full answer, not a lesser one. Use unresolved when the evidence is suggestive but a nameable fact is missing; prefer it to not_met whenever one question to the candidate could settle the matter. Use not_met when the evidence addresses the requirement and falls short beyond any question, or when nothing in either kind of evidence speaks to it.
+7a. basis is how the determination was reached, one of:
+{{bases}}
+   For unresolved, basis is the suspected route to met.
+7b. uncertainty lists the facts whose absence keeps a judgment unresolved, zero to four of:
+{{uncertainties}}
+   Each code is a question the candidate could be asked. Unresolved carries at least one; met, met_equivalent and not_met carry none.
+7c. These combinations are enforced, and an answer that breaks one is sent back: met requires basis direct or alternative_satisfied of 0 or more; met_equivalent requires one of {{equivalency_bases}}; unresolved requires at least one uncertainty code; not_met carries no uncertainty codes, and its evidence_ids are empty exactly when its basis is not_addressed.
+8. Before answering not_met, read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer not_met with basis not_addressed only when the documents still show nothing relevant.
+9. evidence_ids lists the chunk ids (the numeric id attribute) that support the determination, from the profile or the requirement's evidence. It must be empty for not_met with basis not_addressed and non-empty otherwise.
+10. reported_facts reports what you found about the relevant work; whether any of it is enough is decided elsewhere:
+   - stated_span_years: rule 6.
+   - most_recent_year: the latest year the evidence explicitly dates the relevant work; 0 when it states no date.
+   - stated_scope: the scale the evidence explicitly states for the relevant work, as {"unit": ..., "value": ...} with unit one of people, sites or usd; null when it states none.
+   - credential_found: {"level": ..., "field": ..., "status": ...} when the evidence states a degree, licence or certification relevant to the requirement, with status completed, in_progress or unknown; null otherwise.
+   - parties_evidenced: rule 5.
+   - alternative_satisfied: rule 4a; -1 when the requirement offers no options or the evidence satisfies its primary wording.
+   - involvement_level: the deepest involvement the evidence shows for the relevant work, one of:
+{{involvement}}
+11. rationale is one sentence, at most 200 characters, and must not quote private chunks (access="private") at length or name their source. For not_met it must say what was looked for in the documents and not found; it must not say that the profile does not mention something. It must never assert a duration, a partnership or a credential the evidence does not state.
+12. confidence is your own estimate from 0 to 1 that the determination is right. It is logged for calibration and never used in the arithmetic.
+13. Return exactly one judgment per requirement id, in the given order.
 Output only the JSON object.
-`),
-	// Every unbounded field here is bounded, and the bounds are the
-	// point of version 12.
-	//
-	// Rule 10 has asked for "one sentence, at most 200 characters"
-	// since version 1, and the model obeys it: the mean judgment is 123
-	// completion tokens. On one requirement it did not. Blue Origin's
-	// LLM requirement filled its 1200-token budget on run 13, and on
-	// run 14 filled 1200, retried at 2400, and filled that too, both
-	// times without closing the object. Each attempt cost 13 minutes
-	// and the posting was lost four hours in, twice.
-	//
-	// A budget is the wrong instrument. Doubling it buys a longer
-	// runaway, which is what run 14 measured. An instruction is also
-	// the wrong instrument here, because the instruction was already
-	// there and was ignored precisely on the requirement where the
-	// model had most to say.
-	//
-	// So the limit moves into the grammar. Ollama passes this schema to
-	// llama.cpp, which compiles it to a GBNF grammar and constrains
-	// decoding, and a bound it can express cannot be exceeded no matter
-	// what the model wants to write. Verified against qwen3:4b-q8_0 on
-	// the production box: asked for an exhaustive multi-paragraph
-	// rationale with a 120-character bound and num_predict 2000, it
-	// stopped at exactly 120 characters with done_reason "stop" and
-	// valid JSON.
-	//
-	// The bounds sit well above what a good answer needs, so a normal
-	// judgment still ends where the model chooses to end it and rule 10
-	// remains the thing that shapes it. 400 characters is twice what
-	// rule 10 asks for; the arrays are far above any real answer. They
-	// are a backstop, not a style guide.
-	//
-	// Field order matters and is load-bearing. The grammar emits
-	// properties in the order written here, so verdict and evidence_ids
-	// are already decided before rationale can misbehave, and
-	// bounding rationale is what lets stated_span_years and
-	// parties_evidenced be reached at all. Worst case is now about 350
-	// tokens against a 1200-token budget.
-	//
-	// judgments is capped at 1 because judgeBatchMax is 1: one
-	// requirement per call, so a second judgment is a malfunction
-	// rather than an answer.
-	Schema: `{
+`
+
+// Every unbounded field here is bounded, and the bounds are the point
+// (FR-JD-15; TestJudgeSchemaBoundsEveryOpenField holds them). A model
+// that will not stop writing is not hypothetical: Blue Origin was lost
+// twice on runs 13 and 14 to one judgment that filled its budget and
+// then double it. Ollama compiles this schema to a decoding grammar, so
+// a bound it can express cannot be exceeded; the bounds sit well above
+// what a good answer needs, so a normal judgment still ends where the
+// model chooses to end it.
+//
+// Field order is load-bearing: the grammar emits properties in the
+// order written, so determination, basis, uncertainty and the evidence
+// are decided before reported_facts and the free text can misbehave.
+// judgments is capped at 1 because judgeBatchMax is 1.
+func renderJudgeSchema(v hiring.VocabLists) string {
+	enum := func(codes []string) string {
+		b, _ := json.Marshal(codes)
+		return string(b)
+	}
+	return strings.NewReplacer(
+		"{{determinations}}", enum(hiring.Codes(v.Determination)),
+		"{{bases}}", enum(hiring.Codes(v.Basis)),
+		"{{uncertainties}}", enum(hiring.Codes(v.Uncertainty)),
+		"{{involvement}}", enum(hiring.Codes(v.InvolvementLevel)),
+	).Replace(judgeSchemaTemplate)
+}
+
+const judgeSchemaTemplate = `{
   "type": "object",
   "required": ["judgments"],
   "properties": {
@@ -303,20 +338,33 @@ Output only the JSON object.
       "maxItems": 1,
       "items": {
         "type": "object",
-        "required": ["requirement_id", "verdict", "evidence_ids", "rationale", "stated_span_years", "parties_evidenced"],
+        "required": ["requirement_id", "determination", "basis", "uncertainty", "evidence_ids", "reported_facts", "rationale", "confidence"],
         "properties": {
           "requirement_id": {"type": "string", "maxLength": 32},
-          "verdict": {"type": "string", "enum": ["met", "partial", "unmet"]},
+          "determination": {"type": "string", "enum": {{determinations}}},
+          "basis": {"type": "string", "enum": {{bases}}},
+          "uncertainty": {"type": "array", "maxItems": 4, "items": {"type": "string", "enum": {{uncertainties}}}},
           "evidence_ids": {"type": "array", "maxItems": 12, "items": {"type": "string", "maxLength": 24}},
+          "reported_facts": {
+            "type": "object",
+            "required": ["stated_span_years", "most_recent_year", "stated_scope", "credential_found", "parties_evidenced", "alternative_satisfied", "involvement_level"],
+            "properties": {
+              "stated_span_years": {"type": "number", "minimum": 0, "maximum": 60},
+              "most_recent_year": {"type": "integer", "minimum": 0, "maximum": 2100},
+              "stated_scope": {"type": ["object", "null"], "required": ["unit", "value"], "properties": {"unit": {"type": "string", "maxLength": 24}, "value": {"type": "number", "minimum": 0}}},
+              "credential_found": {"type": ["object", "null"], "required": ["level", "field", "status"], "properties": {"level": {"type": "string", "maxLength": 24}, "field": {"type": "string", "maxLength": 120}, "status": {"type": "string", "enum": ["completed", "in_progress", "unknown"]}}},
+              "parties_evidenced": {"type": "array", "maxItems": 8, "items": {"type": "string", "maxLength": 64}},
+              "alternative_satisfied": {"type": "integer", "minimum": -1, "maximum": 5},
+              "involvement_level": {"type": "string", "enum": {{involvement}}}
+            }
+          },
           "rationale": {"type": "string", "maxLength": 400},
-          "stated_span_years": {"type": "number"},
-          "parties_evidenced": {"type": "array", "maxItems": 8, "items": {"type": "string", "maxLength": 64}}
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1}
         }
       }
     }
   }
-}`,
-}
+}`
 
 // Requirement is one extracted JD requirement (mirrors the schema).
 type Requirement struct {
@@ -343,6 +391,12 @@ type Requirement struct {
 	// which companies a requirement names is a fact about the posting
 	// rather than a judgment about the candidate. Usually empty.
 	NamedParties []string `json:"named_parties,omitempty"`
+	// Type is the requirement's vocabulary type (skill, tool, credential,
+	// experience, relationship, behavioral, ...), set by the assessor
+	// from the type heuristic until the extractor emits it (FR-HF-02,
+	// step 5). The judge sees it; the rules read it; behavioral rows are
+	// never sent to the judge (FR-HF-18).
+	Type string `json:"type,omitempty"`
 }
 
 // JudgeChunkRunes caps the evidence text shown per chunk in the judge
@@ -396,12 +450,18 @@ func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit, 
 		// names was settled once, at extraction; asking the judge to
 		// re-derive it per requirement would be fourteen chances to
 		// disagree with itself.
+		// The type rides along too (v13): it tells the judge which
+		// reported_facts matter for this requirement.
+		typeAttr := ""
+		if r.Type != "" {
+			typeAttr = fmt.Sprintf(" type=%q", clean(r.Type))
+		}
 		if len(r.NamedParties) > 0 {
-			fmt.Fprintf(&b, "<requirement id=%q category=%q weight=\"%d\" parties=%q>%s</requirement>\n",
-				r.ID, r.Category, r.Weight, clean(strings.Join(r.NamedParties, ", ")), clean(r.Text))
+			fmt.Fprintf(&b, "<requirement id=%q%s category=%q weight=\"%d\" parties=%q>%s</requirement>\n",
+				r.ID, typeAttr, r.Category, r.Weight, clean(strings.Join(r.NamedParties, ", ")), clean(r.Text))
 		} else {
-			fmt.Fprintf(&b, "<requirement id=%q category=%q weight=\"%d\">%s</requirement>\n",
-				r.ID, r.Category, r.Weight, clean(r.Text))
+			fmt.Fprintf(&b, "<requirement id=%q%s category=%q weight=\"%d\">%s</requirement>\n",
+				r.ID, typeAttr, r.Category, r.Weight, clean(r.Text))
 		}
 		// The posting's own words, when extraction kept a verified span
 		// of them. The requirement text above is a summary capped at 200

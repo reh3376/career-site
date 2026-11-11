@@ -190,14 +190,18 @@ database and `build-stats.json` on this date.
   owner graded for before-and-after evaluation (`evaluation.md`,
   `llm-tuning-log.md`). 118 submissions and 1,761 decision-log rows so
   far, all for one candidate.
-- **The framework's Phase 0, steps 0 to 3 of 9** (ADR 0032, `13` §2):
+- **The framework's Phase 0, steps 0 to 4 of 9** (ADR 0032, `13` §2):
   requirement, judgment, evidence, match record, clarification and
   catalog as versioned rows with `candidate_id` and `tenant_id` from
   birth (migrations 00066 to 00069, package `hiring`); the pipeline
   writes the old representation and the new and a view proves they
-  agree; the `kw1` keyword baseline beside every record. 7 of the 24
-  FR-HF rows are shipped or partially shipped. Step 4, judge v13, is
-  next and needs an overnight golden-set run.
+  agree; the `kw1` keyword baseline beside every record. Step 4
+  (2026-11-10): judge v13 emits the framework's vocabulary, the code
+  rules compare what it reports, judgment rows are written per run and
+  the match record carries formula v3's three numbers beside the v2
+  score the gate still reads. 12 of the 24 FR-HF rows are shipped or
+  partially shipped. The golden-set run that settles the gate (D-32)
+  and the hand-over are the step's exit.
 - **The employer-side pilot on the site** (FSD §5.16, 18 rows shipped;
   `15`): whitelisted accounts with a pilot flag, a pilot-only
   experience (consent, the survey as versioned data, the match-record

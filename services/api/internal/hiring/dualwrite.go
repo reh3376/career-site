@@ -11,12 +11,13 @@ import (
 	"unicode/utf8"
 )
 
-// Writer is the dual write of Phase 0 step 3 (14 §4): after the JD
-// pipeline has stored its jsonb assessment, the same facts are written
-// as rows in the framework's tables, and the jsonb stays authoritative
-// until step 4 proves the rows. Judgment rows are not written here; a
-// judgment cannot be faked from a three-way verdict without inventing
-// a basis.
+// Writer is the dual write of Phase 0 steps 3 and 4 (14 §4): after the
+// JD pipeline has stored its jsonb assessment, the same facts are
+// written as rows in the framework's tables, and the jsonb stays
+// authoritative until the hand-over. Since step 4 the judge emits a
+// determination, a basis and the facts, so judgment rows are written
+// too and the match record carries formula v3's three numbers; a run
+// from before that (no determinations) still writes the v2 record.
 type Writer struct {
 	repo *Repo
 	log  *slog.Logger
@@ -34,14 +35,31 @@ type Chunk struct {
 	Text string
 }
 
-// JudgmentInput is what the prototype's judgment contributes to the
-// rows: which requirement, the three-way verdict, and the chunks it
-// cited. The verdict is not stored anywhere new; it decides nothing
-// here beyond which chunks become evidence items.
+// JudgmentInput is one settled judgment as the pipeline hands it over:
+// which requirement, the three-way verdict (kept for the v2 record and
+// checked against the derived verdict), the chunks it cited, and since
+// step 4 the determination, basis, uncertainty, facts and adjustments
+// that make a judgment row. A judgment with no Determination is a
+// pre-v13 one and writes no row.
 type JudgmentInput struct {
 	LocalID          string
 	Verdict          string
 	EvidenceChunkIDs []int64
+
+	Determination   string
+	Basis           string
+	Uncertainty     []string
+	Rationale       string
+	ReportedFacts   json.RawMessage
+	Confidence      *float64
+	RuleAdjustments json.RawMessage
+	RationaleIssues json.RawMessage
+	// DecisionID is the decision_log row holding the prompt and the raw
+	// response; 0 when the log write failed or the row was not judged.
+	DecisionID int64
+	// NotAssessed marks a behavioral requirement (FR-HF-18): weight 0 in
+	// the numbers, no model call.
+	NotAssessed bool
 }
 
 // RunInput is one finished pipeline run as the scorer saw it.
@@ -57,10 +75,14 @@ type RunInput struct {
 	// requirement's provenance.
 	Prompts           map[string]string
 	ExtractorPromptID string
-	Embedder          string
-	CorpusFingerprint string
-	Requirements      []RequirementInput
-	Judgments         []JudgmentInput
+	// JudgePromptID and JudgePromptVersion name the judge whose output
+	// the judgment rows hold; its fingerprint is read from Prompts.
+	JudgePromptID      string
+	JudgePromptVersion int
+	Embedder           string
+	CorpusFingerprint  string
+	Requirements       []RequirementInput
+	Judgments          []JudgmentInput
 	// Offered lists, per requirement local id, the chunks the judge was
 	// shown, cited or not; the keyword baseline runs over all of them,
 	// because the comparison is "would a filter over the same evidence
@@ -129,8 +151,67 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 			}
 		}
 	}
-	if _, err := w.repo.EnsureChunkEvidence(ctx, cited); err != nil {
+	evidence, err := w.repo.EnsureChunkEvidence(ctx, cited)
+	if err != nil {
 		return err
+	}
+
+	// Judgment rows (FR-HF-04), when the judge emitted the vocabulary.
+	rowByLocal := map[string]RequirementRow{}
+	for _, q := range rows {
+		rowByLocal[q.LocalID] = q
+	}
+	weightByLocal := map[string]int{}
+	categoryByLocal := map[string]string{}
+	for _, r := range reqs {
+		weightByLocal[r.LocalID] = r.Weight
+		categoryByLocal[r.LocalID] = r.Category
+	}
+	var judgmentRows []JudgmentRow
+	var coverageItems []Item
+	for _, j := range in.Judgments {
+		if j.Determination == "" {
+			continue
+		}
+		q, ok := rowByLocal[j.LocalID]
+		if !ok {
+			continue
+		}
+		var evIDs []string
+		kinds := map[string]int{}
+		for _, id := range j.EvidenceChunkIDs {
+			if ref, ok := evidence[id]; ok {
+				evIDs = append(evIDs, ref.ID)
+				kinds[ref.SourceKind]++
+			}
+		}
+		summary, _ := json.Marshal(kinds)
+		row := JudgmentRow{
+			RequirementID: q.ID, LocalID: j.LocalID,
+			Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
+			EvidenceIDs: evIDs, Rationale: j.Rationale,
+			ReportedFacts: j.ReportedFacts, Confidence: j.Confidence,
+			RuleAdjustments: j.RuleAdjustments, RationaleIssues: j.RationaleIssues,
+			ProvenanceSummary: summary,
+			DerivedVerdict:    DeriveVerdict(j.Determination),
+			PromptID:          in.JudgePromptID, PromptVersion: in.JudgePromptVersion,
+			PromptFingerprint: in.Prompts[in.JudgePromptID], Model: in.Model,
+		}
+		if j.DecisionID > 0 {
+			id := j.DecisionID
+			row.DecisionID = &id
+		}
+		judgmentRows = append(judgmentRows, row)
+		weight := weightByLocal[j.LocalID]
+		if j.NotAssessed {
+			weight = 0
+		}
+		coverageItems = append(coverageItems, Item{Weight: weight, Category: categoryByLocal[j.LocalID], Determination: j.Determination})
+	}
+	if len(judgmentRows) > 0 {
+		if err := w.repo.ReplaceJudgments(ctx, in.RunID, judgmentRows); err != nil {
+			return err
+		}
 	}
 
 	// The keyword baseline over the offered evidence (FR-HF-12).
@@ -157,12 +238,34 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 	if err != nil {
 		return err
 	}
-	versions, _ := json.Marshal(map[string]any{
+	// The record: formula v3's three numbers over the judgment rows
+	// (FR-HF-06) when there are any, the v2 score otherwise. The gate
+	// still reads jd_runs.match_score (v2) until D-32 is settled.
+	formula, rules := FormulaV2, ""
+	score := in.Score
+	record := MatchRecord{
+		RunID:           in.RunID,
+		RoleID:          roleID,
+		CandidateID:     OwnerCandidateID,
+		Attempt:         in.Attempt,
+		SupersedesRunID: prev,
+		RequirementIDs:  reqIDs,
+		KeywordBaseline: kb,
+		Evidenced:       &score,
+	}
+	if len(judgmentRows) > 0 {
+		formula, rules = FormulaV3, RulesVersion
+		c := CoverageV3(coverageItems)
+		record.Evidenced, record.Unresolved, record.Unmet = &c.Evidenced, &c.Unresolved, &c.Unmet
+		record.EquivalentShare, record.SelfAttestedShare = &c.EquivalentShare, &c.SelfAttestedShare
+	}
+	record.FormulaVersion = formula
+	record.Versions, _ = json.Marshal(map[string]any{
 		"requirement_schema": RequirementSchema,
 		"judgment_schema":    JudgmentSchema,
 		"vocab":              VocabVersion,
-		"formula":            FormulaV2,
-		"rules":              "",
+		"formula":            formula,
+		"rules":              rules,
 		"keyword_rule":       KeywordRule,
 		"type_rule":          TypeRule,
 		"prompts":            sortedPrompts(in.Prompts),
@@ -170,19 +273,7 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 		"embedder":           in.Embedder,
 		"corpus_fingerprint": in.CorpusFingerprint,
 	})
-	score := in.Score
-	return w.repo.UpsertMatchRecord(ctx, MatchRecord{
-		RunID:           in.RunID,
-		RoleID:          roleID,
-		CandidateID:     OwnerCandidateID,
-		Attempt:         in.Attempt,
-		SupersedesRunID: prev,
-		RequirementIDs:  reqIDs,
-		FormulaVersion:  FormulaV2,
-		Evidenced:       &score,
-		KeywordBaseline: kb,
-		Versions:        versions,
-	})
+	return w.repo.UpsertMatchRecord(ctx, record)
 }
 
 func trimTitle(s string) string {

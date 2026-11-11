@@ -49,7 +49,17 @@ func unboundedPaths(node any, path string) []string {
 	if at == "" {
 		at = "(root)"
 	}
-	switch obj["type"] {
+	// A nullable field is written as a type list, ["object", "null"];
+	// the non-null member is what gets walked.
+	typ := obj["type"]
+	if list, ok := typ.([]any); ok {
+		for _, member := range list {
+			if member != "null" {
+				typ = member
+			}
+		}
+	}
+	switch typ {
 	case "string":
 		if _, hasEnum := obj["enum"]; !hasEnum {
 			if _, bounded := obj["maxLength"]; !bounded {

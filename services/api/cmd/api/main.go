@@ -434,7 +434,18 @@ func main() {
 			// Phase 0 step 3: every run is also written as framework rows
 			// (docs/framework-research/14 §4), beside the jsonb that
 			// stays authoritative until step 4.
-			jdScorer.SetHiring(hiring.NewWriter(log, hiring.NewRepo(pool.Pool)))
+			hiringRepo := hiring.NewRepo(pool.Pool)
+			jdScorer.SetHiring(hiring.NewWriter(log, hiringRepo))
+			// Phase 0 step 4: the judge's allowed codes are rendered from
+			// the vocabulary registry, so a registry change is a new prompt
+			// fingerprint and not a deploy (14 §5). The compiled-in
+			// vocabulary 1.0 stands in when the registry cannot be read.
+			if reg, err := hiringRepo.LoadVocab(context.Background()); err != nil {
+				log.Warn("hiring vocabulary unavailable; the judge uses the compiled-in vocabulary", slog.String("error", err.Error()))
+			} else {
+				assessor.SetVocab(hiring.VocabFromRegistry(reg))
+				log.Info("judge rendered from the vocabulary registry", slog.String("fingerprint", assessor.JudgePrompt().Fingerprint()))
+			}
 			// Recorded on every run so a change in latency or in verdicts can
 			// be attributed to the machine rather than guessed at. One host
 			// today; the provider string is what distinguishes them.

@@ -79,12 +79,20 @@ func (d Decision) Reviewed() bool { return d.ReviewedAt != nil }
 // callers: the decision has already been made and persisted elsewhere,
 // so a logging failure is reported, never fatal to the pipeline.
 func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
+	_, err := r.InsertDecisionsReturning(ctx, rows)
+	return err
+}
+
+// InsertDecisionsReturning inserts the rows in one transaction and
+// returns their ids in input order, so a judgment row can cite the
+// decision that holds its prompt and response (FR-HF-04).
+func (r *Repo) InsertDecisionsReturning(ctx context.Context, rows []Decision) ([]int64, error) {
 	if len(rows) == 0 {
-		return nil
+		return nil, nil
 	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("insert decisions: begin: %w", err)
+		return nil, fmt.Errorf("insert decisions: begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	const q = `
@@ -93,9 +101,11 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
        input, output, prompt_text, response_text,
        prompt_tokens, completion_tokens, latency_ms, first_token_ms, error)
     VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    RETURNING id
   `
 	tid := tenant.FromContext(ctx).Int64()
 	rid := runid.FromContext(ctx)
+	ids := make([]int64, 0, len(rows))
 	for _, d := range rows {
 		in := d.Input
 		if len(in) == 0 {
@@ -105,19 +115,21 @@ func (r *Repo) InsertDecisions(ctx context.Context, rows []Decision) error {
 		if len(out) == 0 {
 			out = json.RawMessage(`{}`)
 		}
-		if _, err := tx.Exec(ctx, q,
+		var id int64
+		if err := tx.QueryRow(ctx, q,
 			tid, rid,
 			d.Kind, d.RefKind, d.RefID, d.Key, d.Model, d.PromptID, d.PromptVersion, d.NumCtx,
 			in, out, d.PromptText, d.ResponseText,
 			d.PromptTokens, d.CompletionTok, d.LatencyMs, d.FirstTokenMs, d.Error,
-		); err != nil {
-			return fmt.Errorf("insert decision %s/%s: %w", d.Kind, d.Key, err)
+		).Scan(&id); err != nil {
+			return nil, fmt.Errorf("insert decision %s/%s: %w", d.Kind, d.Key, err)
 		}
+		ids = append(ids, id)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("insert decisions: commit: %w", err)
+		return nil, fmt.Errorf("insert decisions: commit: %w", err)
 	}
-	return nil
+	return ids, nil
 }
 
 // DecisionFilter narrows ListDecisions. Zero values mean "any".
