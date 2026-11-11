@@ -95,6 +95,41 @@ detail:
       FROM llm_usage WHERE created_at > now() - interval '50 minutes'
      ORDER BY created_at;
 
+### Running one on the Mac instead
+
+Since 2026-11-10 the golden set can also run on the development
+machine, which matters when the box is busy with people (the pilot) or
+when a judge change needs several passes in a day. The M5 Max does a
+posting in well under a minute against the box's thirty to fifty, so
+the ten take about ten minutes.
+
+What has to be true first, each step once:
+
+1. The sidecar embeds for real: `SIDECAR_EMBED_PROVIDER=ollama` along
+   with `SIDECAR_LLM_PROVIDER=ollama` on `docker compose up -d sidecar`
+   (the host's Ollama has `nomic-embed-text` and `qwen3:4b-q8_0`).
+2. The private corpus is staged: `deploy/corpus-sync.sh
+   docs/personal/corpus-manifest.txt local` fills `./.corpus-private`,
+   which the api mounts read-only.
+3. Both scopes are indexed through the admin API as the local admin:
+   `RunJob` with `JOB_KIND_CORPUS_REINDEX_PUBLIC`, then `_PRIVATE`,
+   each waited to `JOB_STATUS_SUCCEEDED` through `GetJob`. The private
+   half then matches production (32 documents, 269 chunks); the public
+   half follows the checkout, so it can differ.
+4. The golden postings are copied from production (`COPY ... TO STDOUT`
+   over ssh into a staging table, inserted by name) and anything local
+   that production does not have is set inactive.
+
+Then `RunJob` with `JOB_KIND_EVAL_QUICK` and the note in `source_kind`,
+and `eval_runs` / `eval_items` fill as they do on the box. Two things
+to keep straight: the numbers compare with each other on the Mac, not
+with the box's runs, because the public corpus and the host differ and
+the record says so (`corpus_fingerprint`, `host`); and a before-and-after
+needs the earlier api built from its commit (`git worktree add` at the
+merge commit, `docker build` in `services/api`, run in place of the
+compose api on the `career-site_app` network with the alias `api` and
+the same environment), because the prompt under test is compiled in.
+
 ### Never deploy during a run
 
 The job runner keeps jobs in memory. Recreating the api container kills

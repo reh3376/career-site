@@ -2744,3 +2744,227 @@ above-gate posting rose.
 Run 16 is the study guide, ingested alone, so it stays a single
 variable. The open question it inherits is whether Blue Origin's LLM
 requirement stays met now that it has a document to stand on.
+
+## 2026-11-10: judge v13, the framework's vocabulary, and the rules that read it
+
+Phase 0 step 4 (`docs/framework-research/13` §2; FSD FR-HF-04 to 07
+and 18). The judge stops answering met, partial or unmet and starts
+answering the framework's four determinations with a basis, the
+uncertainty codes naming what is missing, and the facts the code rules
+compare. The three-way verdict is derived from the determination in
+code (met and met_equivalent to met, unresolved to partial, not_met to
+unmet), so the owner's 31 graded verdicts and `v_judge_agreement` keep
+one meaning across the change and the résumé gate keeps reading the v2
+score until D-32 is settled by the golden run below.
+
+### What changed in the prompt
+
+`requirement_judge` v12 to v13. The rules that earned their place are
+kept word for word where they still apply: 1 to 4 (judge from the
+evidence; the profile's silence is not evidence; a system built is
+evidence of the skills it required; rule 3 never establishes a quantity,
+a relationship, a credential or a title), 4a (an option the posting
+itself offered is the posting's own words, with three examples of
+different kinds), 5 and 6 (the model reports parties and spans, the code
+decides), 6a (the posting's quote decides what is asked), 8 (read the
+evidence again before saying nothing supports it), 9 (evidence ids) and
+the rationale rule. New: rule 7 defines the four determinations and
+when each applies, 7a the twelve bases, 7b the eight uncertainty codes,
+7c the four combinations that are enforced, 10 the `reported_facts`
+object (span, most recent year, scale, credential, parties, which
+option was taken, depth of involvement), and 12 `confidence`, logged
+and never used.
+
+The allowed codes are not typed into the prompt. They are rendered from
+the vocabulary registry (`vocab_codes`) at boot, into both the system
+text and the schema's enums, so a registry change is a new prompt
+fingerprint rather than a code change (`14` §5). The compiled-in
+vocabulary 1.0 stands in when the registry cannot be read, and
+`TestDefaultVocabMatchesTheSeededRegistry` holds the two to the same
+bytes. Fingerprint on the local stack at boot: `v13:5b72e80a`.
+
+The schema keeps every bound of v12 (FR-JD-15) and adds the new
+fields in the order that matters: determination, basis, uncertainty and
+evidence are decided before `reported_facts` and the free text. The
+nullable objects (`stated_scope`, `credential_found`) are required so
+the grammar always emits them; the bounds test now walks a
+`["object", "null"]` type list.
+
+### What changed around the prompt
+
+**Consistency rules** (`04` §2.3), which a schema cannot express: met
+needs basis direct or an option taken; met_equivalent needs one of the
+five equivalency bases; unresolved needs a code; not_met carries no
+code and cites evidence exactly when its basis is not `not_addressed`.
+An answer that breaks one is sent back once, with the rule named in a
+`<correction>` element appended to the user turn (the system prompt and
+the profile prefix are unchanged, so the prompt cache holds). A second
+failure is repaired in code, keeping the model's finding and fixing the
+label (a met with an equivalency basis is a met_equivalent; a met with
+a shortfall basis is the question that basis describes; one with an
+absence basis is not_met), and the repair is a `consistency` rule
+adjustment on the judgment. Losing a four-hour run to one mislabelled
+field would be worse than correcting it in the open.
+
+**Code rules** (`hiring/rules.go`, `rules-v1`). `duration.go` and
+`relationship.go` moved behind one interface that returns a
+`RuleAdjustment` with the rule's own version instead of a weakened
+verdict string, and were joined by recency (an explicit "within the
+last N years"), scope (a team size, a number of sites or a budget read
+from the requirement, compared with the `stated_scope` the judge
+reports in the same unit) and credential (a direct met on a
+credential-typed requirement needs a completed credential in the
+facts; an option taken or an experience-for-education equivalency
+stands). Each only weakens, to unresolved plus the code naming the
+missing fact when the shortfall is within tolerance (duration a quarter
+below the ask, scope half, recency half again the window; `05` §2.3),
+or to not_met with the shortfall basis when it is not; at most one rule
+moves a judgment so the reason a reader sees is singular. Nothing is
+scored as half of anything.
+
+**Behavioral requirements** (FR-HF-18) are typed by the heuristic of
+step 3 and never sent to the judge: recorded unresolved with
+`evidence_ambiguous`, weight 0 in both formulas, shown as not assessed.
+This is the one place the v2 score can move for a reason other than
+the judge: a posting whose "self-starter" line was judged met under v12
+loses that weight from both the numerator and the denominator under
+v13. The golden comparison below says whether it mattered.
+
+**Two formulas on every run.** The v2 score from the derived verdicts,
+unchanged in arithmetic, is what `jd_runs.match_score` holds and the
+gate reads. Formula v3's three numbers over the determinations are
+computed beside it and stored on the match record (`v3-three-numbers`),
+on the assessment jsonb and on the `jd_gate` decision row, so D-32 can
+be settled from stored rows.
+
+**Judgment rows** begin (migration 00073, one per requirement per run).
+`v_dual_write_agreement` recomputes the v2 score from the rows and
+agrees when it equals the stored score, which is the row-by-row proof
+the hand-over is decided from.
+
+### Smoke run on the local stack
+
+(Appended below once the run finishes: the local stack on the Mac,
+`qwen3:4b-q8_0` on the host's Ollama, embeddings stubbed so the score
+means nothing; what is being checked is that the model follows the
+schema, how often the consistency rules fire, and that the rows agree.)
+
+**Result (2026-11-10, local, submission 127 on the dev database).** A
+twelve-requirement controls posting, the same text as the step 3 smoke
+run: 37 seconds end to end on the M5 Max, eleven judge calls (the
+twelfth requirement, "self-starter", was typed behavioral and recorded
+not assessed with no call), none failed, no consistency rule fired, the
+longest completion 205 tokens against the 1,200 budget, mean latency
+2.6 s per call. Every judgment decoded into the new shape: one `met`
+on `direct` citing four chunks, one `met_equivalent` on
+`experience_for_education` for a degree-or-experience requirement with
+`stated_span_years` 30 and `involvement_level` owned, nine `not_met` on
+`not_addressed` citing nothing, each rationale saying what was looked
+for. The twelve judgment rows were written with the v13 fingerprint;
+the match record reads `v3-three-numbers`, evidenced 0.25, unresolved
+0, unmet 0.75, equivalent share 0.5, `rules-v1`; `v_dual_write_agreement`
+recomputes 0.25 from the eleven judged rows and agrees with
+`jd_runs.match_score` 0.25; the `jd_gate` row carries the same three
+numbers; the decision-log rows carry `determination` and
+`raw_determination` beside the derived `verdict`. Embeddings were
+stubbed, so the nine misses say nothing about the corpus; what the run
+shows is that the model follows the schema, the rows agree with the
+jsonb, and the gate is unchanged in kind.
+
+### Golden set, before and after, on the Mac
+
+The box was carrying pilot participants, so the comparison ran on the
+development machine instead (`docs/evaluation.md`, "Running one on the
+Mac instead"): the sidecar embedding for real with `nomic-embed-text`,
+the private corpus staged and reindexed (32 documents, 269 chunks, the
+same as production), the public corpus from the checkout (51 documents,
+110 chunks against production's 46 and 95), the ten golden postings
+copied from production, of which eight carry a label. Local gate 0.55
+against production's 0.70, so gate counts here are not production's;
+ordering violations, margin and per-posting movement do not depend on
+the gate and are what the two runs are compared on. Corpus fingerprint
+`025341e387c1` for both.
+
+**Run A, judge v12** (`v12:df4c4cc7`, the api built from the merge
+commit `b0b3d93` in a worktree and run in place of the compose api): 8
+of 8 scored in 11 minutes, 5 on the right side of the 0.55 gate, 2
+ordering violations, margin -0.1071.
+
+    ati            1.0000      heaven-hill  1.0000     cornerstone  0.9286
+    blue-origin    0.8214
+    ---------------------------------------- expected above the gate
+    cai            0.9286      nexus        0.6429     xai          0.5714
+    profluent      0.3571
+    ---------------------------------------- expected below the gate
+
+Seven of the eight scores are identical to production's run 15 of
+2026-09-30 to four decimals (xai 0.5714 here, 0.6429 there), which says
+the local corpus reproduces the box well enough for the comparison. The
+two violations are both the cai posting, which production's labels now
+place below the gate (it was above in September); under v12 it scores
+0.9286 and outranks blue-origin.
+
+**Run B, judge v13** (`v13:5b72e80a`, the compose api from this
+branch, same corpus, same labels, same gate): 8 of 8 scored in 14
+minutes, 5 on the right side of the 0.55 gate, **1 ordering violation
+(from 2), margin -0.0238 (from -0.1071)**, no errors. 120 judge calls
+for 110 judged requirements, none failed, the longest 265 completion
+tokens against the 1,200 budget, mean 194 (v12's mean was 125; the
+richer object costs about seventy tokens a call).
+
+    posting        want    v12      v13      moved   evidenced  unresolved  unmet
+    ati            above   1.0000   1.0000                1.000      0.000  0.000
+    heaven-hill    above   1.0000   1.0000                1.000      0.000  0.000
+    cornerstone    above   0.9286   0.9286                0.929      0.000  0.071
+    blue-origin    above   0.8214   0.8333   +0.0119      0.833      0.000  0.167
+    cai            below   0.9286   0.8571   -0.0714      0.857      0.000  0.143
+    nexus          below   0.6429   0.6429                0.643      0.000  0.357
+    xai            below   0.5714   0.5714                0.571      0.000  0.429
+    profluent      below   0.3571   0.2778   -0.0794      0.222      0.111  0.667
+
+Five postings did not move at all, which is the result that matters
+most: the vocabulary change, the derived verdict and the rules left
+the judge's reading of them intact. The three that moved, moved the
+right way. cai, which production's labels place below the gate, lost a
+requirement to the judge reading it as equivalent rather than direct
+and dropped under cornerstone, which halves the inversions; it still
+outscores blue-origin, and that pair is the one violation left.
+profluent lost a duration requirement outright: v12's rule weakened
+the met to partial (0.5), v13's calls a span more than a quarter short
+not_met (0), which is the rule as `05` §2.3 wrote it and the first
+place the v2 score moves for a reason other than the judge. blue-origin
+rose because its two behavioral lines ("passion", "collaborative")
+left the denominator (FR-HF-18) instead of being judged.
+
+Formula v3 beside it: with this corpus the judge almost never answers
+unresolved (3 of 110: two behavioral by construction, one
+`adjacent_domain` on profluent), so `evidenced` equals the v2 score
+wherever nothing was partial, and D-32's first option, gating on
+evidenced coverage with today's bands, would have placed every posting
+exactly where v2 did. That is a statement about this run, not a
+decision; the box's run is the record for D-32 and FR-HF-20.
+
+What the rows say the judge did, 110 judgments: 75 `met` on `direct`,
+26 `not_met` on `not_addressed` (every one citing nothing, as the rule
+asks), 7 `met_equivalent` (5 `vocabulary`, 1 `experience_for_education`,
+1 `education_for_experience`), 1 `not_met` on `duration_shortfall` from
+the rule, 3 `unresolved`. `v_dual_write_agreement` agrees on all eight
+runs: the v2 score recomputed from the judgment rows equals what the
+pipeline stored, requirement by requirement, which is the hand-over's
+precondition met on a real set.
+
+**The first thing to tune in v14.** Ten of the 120 calls were retries
+for a consistency rule, and five judgments were repaired after a
+second failure, all of them the same fault: the model found an
+equivalency, named its basis `vocabulary`, and still wrote `met`. The
+repair makes it `met_equivalent`, which is what it meant, and the
+arithmetic is the same either way, so no score depended on it. But a
+retry is a call, and 8 percent of calls is worth a sentence in rule 7
+that says the two words differently. Noted, not changed: the point of
+this run was to hold the prompt still and measure the rest.
+
+**Hand-over.** Not in this change. The result RPC still reads the
+jsonb; the jsonb writer still runs; the rows are proven against it on
+every run by the view. The box's own golden run under v13 is the exit
+(`13` §2 step 4; FR-HF-20), and it should run at a quiet hour the owner
+picks, because it holds the pipeline for six hours.

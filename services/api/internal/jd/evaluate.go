@@ -87,7 +87,7 @@ func (e *Evaluator) Run(ctx context.Context, note string, adminID int64, report 
 		AppCommit:   build.Commit,
 		Host:        e.scorer.host,
 		NumCtx:      e.scorer.assessor.NumCtx(),
-		Prompts:     prompts.Fingerprints(),
+		Prompts:     e.scorer.promptFingerprints(),
 		Threshold:   &threshold,
 		Total:       len(set),
 	}

@@ -100,20 +100,29 @@ func reqs() []RequirementInput {
 // host; v_dual_write_agreement does the same check on every real run.
 func TestDualWriteAgrees(t *testing.T) {
 	r, ctx := testRepo(t)
-	const score = 0.625
+	// The v2 score the pipeline stored, which the judgment rows must
+	// reproduce: r1 met (3), r2 unresolved, so partial (2 * 0.5), r3
+	// not_met and nice, so outside the denominator: 4 / 5.
+	const score = 0.8
 	f := newFixture(t, r, ctx, score)
 	w := NewWriter(nil, r)
 
+	conf := 0.9
 	in := RunInput{
 		SubmissionID: f.submissionID, Title: "Controls Engineer (test)\nsecond line ignored",
 		RunID: f.runID, Attempt: 1, Score: score, Model: "test-model",
-		Prompts: map[string]string{"jd_requirements": "v2:abcd", "jd_judge": "v3:ef01"}, ExtractorPromptID: "jd_requirements",
+		Prompts:           map[string]string{"jd_requirements": "v2:abcd", "requirement_judge": "v13:ef01"},
+		ExtractorPromptID: "jd_requirements", JudgePromptID: "requirement_judge", JudgePromptVersion: 13,
 		Embedder: "nomic", CorpusFingerprint: "abc123",
 		Requirements: reqs(),
 		Judgments: []JudgmentInput{
-			{LocalID: "r1", Verdict: "met", EvidenceChunkIDs: []int64{f.chunkIDs[0]}},
-			{LocalID: "r2", Verdict: "met", EvidenceChunkIDs: []int64{f.chunkIDs[1]}},
-			{LocalID: "r3", Verdict: "unmet"},
+			{LocalID: "r1", Verdict: "met", EvidenceChunkIDs: []int64{f.chunkIDs[0]},
+				Determination: DetMet, Basis: BasisDirect, Uncertainty: []string{}, Rationale: "Eight years of PLC work are stated.",
+				ReportedFacts: json.RawMessage(`{"stated_span_years": 8}`), Confidence: &conf, DecisionID: 0},
+			{LocalID: "r2", Verdict: "partial", EvidenceChunkIDs: []int64{f.chunkIDs[1]},
+				Determination: DetUnresolved, Basis: BasisVocabulary, Uncertainty: []string{UncEquivalenceUnconfirmed}, Rationale: "Designed the SCADA layer; the platform name is not stated."},
+			{LocalID: "r3", Verdict: "unmet",
+				Determination: DetNotMet, Basis: BasisNotAddressed, Uncertainty: []string{}, Rationale: "No front-end development work was found."},
 		},
 		Offered: map[string][]Chunk{
 			"r1": {{ID: f.chunkIDs[0], Text: "Programmed Allen-Bradley PLCs for eight years across three plants."}},
@@ -171,25 +180,81 @@ func TestDualWriteAgrees(t *testing.T) {
 		t.Errorf("heuristic types: r1=%s (want experience), r2=%s (want tool)", got[0].typ, got[1].typ)
 	}
 
-	// The match record agrees with jd_runs on the score and lists the
-	// exact requirement versions.
-	var evidenced float64
-	var runScore float64
+	// The match record carries formula v3's three numbers over the
+	// judgment rows and lists the exact requirement versions: r1 met
+	// (3 of 5), r2 unresolved (2 of 5), r3 not_met and nice (excluded).
+	var evidenced, unresolved, unmet, eqShare float64
 	var reqIDs []string
 	var formula string
 	var kb, versions []byte
 	var supersedes *string
 	if err := r.pool.QueryRow(ctx, `
-    SELECT m.evidenced, r.match_score, m.requirement_ids::text[], m.formula_version, m.keyword_baseline, m.versions, m.supersedes_run_id::text
-    FROM match_records m JOIN jd_runs r ON r.run_id = m.run_id WHERE m.run_id = $1::uuid`, f.runID).
-		Scan(&evidenced, &runScore, &reqIDs, &formula, &kb, &versions, &supersedes); err != nil {
+    SELECT m.evidenced, m.unresolved, m.unmet, m.coverage_equivalent_share, m.requirement_ids::text[], m.formula_version, m.keyword_baseline, m.versions, m.supersedes_run_id::text
+    FROM match_records m WHERE m.run_id = $1::uuid`, f.runID).
+		Scan(&evidenced, &unresolved, &unmet, &eqShare, &reqIDs, &formula, &kb, &versions, &supersedes); err != nil {
 		t.Fatalf("match record: %v", err)
 	}
-	if evidenced != runScore || evidenced != score {
-		t.Errorf("match_records.evidenced = %v, jd_runs.match_score = %v, want both %v", evidenced, runScore, score)
+	if near := func(a, b float64) bool { return a-b < 1e-9 && b-a < 1e-9 }; !near(evidenced, 0.6) || !near(unresolved, 0.4) || !near(unmet, 0) || eqShare != 0 {
+		t.Errorf("coverage = %v / %v / %v (equivalent share %v), want 0.6 / 0.4 / 0 (0)", evidenced, unresolved, unmet, eqShare)
 	}
-	if len(reqIDs) != 3 || formula != FormulaV2 || supersedes != nil {
+	if len(reqIDs) != 3 || formula != FormulaV3 || supersedes != nil {
 		t.Errorf("record: requirement_ids=%v formula=%s supersedes=%v", reqIDs, formula, supersedes)
+	}
+
+	// The judgment rows: one per requirement, the derived verdict equal
+	// to the verdict the pipeline scored, evidence pointing at the items
+	// made from the cited chunks, the provenance counted by kind.
+	type jrow struct {
+		localID, determination, basis, derived, promptFP string
+		uncertainty, evidence                            []string
+		provenance                                       []byte
+		confidence                                       *float64
+		promptVersion                                    int
+	}
+	jrows := map[string]jrow{}
+	jq, err := r.pool.Query(ctx, `
+    SELECT requirement_local_id, determination, basis, derived_verdict, prompt_fingerprint, uncertainty, evidence_ids::text[], provenance_summary, confidence, prompt_version
+    FROM judgments WHERE run_id = $1::uuid`, f.runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for jq.Next() {
+		var x jrow
+		if err := jq.Scan(&x.localID, &x.determination, &x.basis, &x.derived, &x.promptFP, &x.uncertainty, &x.evidence, &x.provenance, &x.confidence, &x.promptVersion); err != nil {
+			t.Fatal(err)
+		}
+		jrows[x.localID] = x
+	}
+	jq.Close()
+	if len(jrows) != 3 {
+		t.Fatalf("judgment rows = %d, want 3", len(jrows))
+	}
+	for _, j := range in.Judgments {
+		x := jrows[j.LocalID]
+		if x.determination != j.Determination || x.basis != j.Basis || x.derived != j.Verdict {
+			t.Errorf("%s: row %s/%s derived %s, input %s/%s verdict %s", j.LocalID, x.determination, x.basis, x.derived, j.Determination, j.Basis, j.Verdict)
+		}
+		if x.promptFP != "v13:ef01" || x.promptVersion != 13 {
+			t.Errorf("%s: prompt provenance %s v%d", j.LocalID, x.promptFP, x.promptVersion)
+		}
+	}
+	if jrows["r2"].uncertainty[0] != UncEquivalenceUnconfirmed || len(jrows["r3"].uncertainty) != 0 {
+		t.Errorf("uncertainty: r2=%v r3=%v", jrows["r2"].uncertainty, jrows["r3"].uncertainty)
+	}
+	// confidence is a real (float32) column, so compare within its precision.
+	if c := jrows["r1"].confidence; c == nil || *c-conf > 1e-6 || conf-*c > 1e-6 {
+		t.Errorf("r1 confidence = %v, want %v", c, conf)
+	}
+	var evID string
+	if err := r.pool.QueryRow(ctx, `SELECT id::text FROM evidence_items WHERE chunk_id = $1`, f.chunkIDs[0]).Scan(&evID); err != nil {
+		t.Fatal(err)
+	}
+	if len(jrows["r1"].evidence) != 1 || jrows["r1"].evidence[0] != evID || len(jrows["r3"].evidence) != 0 {
+		t.Errorf("evidence ids: r1=%v (want %s) r3=%v", jrows["r1"].evidence, evID, jrows["r3"].evidence)
+	}
+	var prov map[string]int
+	if err := json.Unmarshal(jrows["r1"].provenance, &prov); err != nil || prov["corpus_document"] != 1 {
+		t.Errorf("r1 provenance_summary = %s (err %v), want one corpus_document", jrows["r1"].provenance, err)
 	}
 	var baseline struct {
 		Rule  string `json:"rule"`
@@ -211,7 +276,7 @@ func TestDualWriteAgrees(t *testing.T) {
 		t.Errorf("r3 (front-end development against FEL-3) must not be found by the keyword filter; that gap is the point: %+v", baseline.Items["r3"])
 	}
 	var v map[string]any
-	if err := json.Unmarshal(versions, &v); err != nil || v["formula"] != FormulaV2 || v["vocab"] != VocabVersion || v["keyword_rule"] != KeywordRule {
+	if err := json.Unmarshal(versions, &v); err != nil || v["formula"] != FormulaV3 || v["rules"] != RulesVersion || v["vocab"] != VocabVersion || v["keyword_rule"] != KeywordRule {
 		t.Errorf("versions snapshot = %s (err %v)", versions, err)
 	}
 
@@ -242,8 +307,20 @@ func TestDualWriteAgrees(t *testing.T) {
 	if _, err := r.pool.Exec(ctx, `UPDATE jd_runs SET requirement_count = 3 WHERE run_id = $1::uuid`, f.runID); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.pool.QueryRow(ctx, `SELECT agrees FROM v_dual_write_agreement WHERE run_id = $1::uuid`, f.runID).Scan(&agrees); err != nil || !agrees {
-		t.Errorf("v_dual_write_agreement.agrees = %v (err %v), want true", agrees, err)
+	var recomputed float64
+	if err := r.pool.QueryRow(ctx, `SELECT agrees, judgments_v2_score FROM v_dual_write_agreement WHERE run_id = $1::uuid`, f.runID).Scan(&agrees, &recomputed); err != nil || !agrees {
+		t.Errorf("v_dual_write_agreement.agrees = %v (err %v), want true; v2 recomputed from the judgment rows = %v", agrees, err, recomputed)
+	}
+	// And it notices when they disagree: a run whose stored score the
+	// rows cannot reproduce is flagged, not smoothed over.
+	if _, err := r.pool.Exec(ctx, `UPDATE jd_runs SET match_score = 0.95 WHERE run_id = $1::uuid`, f.runID); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.pool.QueryRow(ctx, `SELECT agrees FROM v_dual_write_agreement WHERE run_id = $1::uuid`, f.runID).Scan(&agrees); err != nil || agrees {
+		t.Errorf("v_dual_write_agreement.agrees = %v (err %v) after the score was changed, want false", agrees, err)
+	}
+	if _, err := r.pool.Exec(ctx, `UPDATE jd_runs SET match_score = $2 WHERE run_id = $1::uuid`, f.runID, score); err != nil {
+		t.Fatal(err)
 	}
 
 	// A second run with one requirement reworded: r2 gets version 2
@@ -316,6 +393,24 @@ func TestDualWriteAgrees(t *testing.T) {
 	if !cites2 {
 		t.Errorf("the second record does not cite r2 version 2: %v", ids2)
 	}
+	var r2Version int
+	if err := r.pool.QueryRow(ctx, `
+    SELECT q.version FROM judgments j JOIN requirements q ON q.id = j.requirement_id
+    WHERE j.run_id = $1::uuid AND j.requirement_local_id = 'r2'`, run2).Scan(&r2Version); err != nil || r2Version != 2 {
+		t.Errorf("the second run's r2 judgment cites version %d (err %v), want 2: a judgment names exactly what was judged", r2Version, err)
+	}
+	var secondRows int
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM judgments WHERE run_id = $1::uuid`, run2).Scan(&secondRows); err != nil || secondRows != 3 {
+		t.Errorf("second run judgment rows = %d (err %v), want 3", secondRows, err)
+	}
+	// Writing the same run again replaces its rows rather than failing
+	// on the unique index or doubling them.
+	if err := w.Record(ctx, in2); err != nil {
+		t.Fatalf("Record (second run, again): %v", err)
+	}
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM judgments WHERE run_id = $1::uuid`, run2).Scan(&secondRows); err != nil || secondRows != 3 {
+		t.Errorf("after a repeated persist judgment rows = %d (err %v), want 3", secondRows, err)
+	}
 }
 
 // TestWrittenCodesAreRegistered is the control 14 §1 names in place of
@@ -358,6 +453,7 @@ func TestWrittenCodesAreRegistered(t *testing.T) {
 	check(VocabDetermination, `SELECT DISTINCT determination FROM judgments`)
 	check(VocabBasis, `SELECT DISTINCT basis FROM judgments`)
 	check(VocabBasis, `SELECT DISTINCT effective_basis FROM judgments`)
+	check(VocabUncertainty, `SELECT DISTINCT unnest(uncertainty) FROM judgments`)
 	check(VocabCatalogKind, `SELECT DISTINCT kind FROM equivalence_catalog`)
 	check(VocabCatalogStrength, `SELECT DISTINCT strength FROM equivalence_catalog`)
 	for _, c := range RequirementTypes {

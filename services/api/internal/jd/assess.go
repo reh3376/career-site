@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/ingest"
 	"github.com/reh3376/career-site/services/api/internal/llm"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
@@ -61,20 +61,22 @@ const ScoreFormula = "v2-nice-bonus"
 // calendar month has been reached (Phase 4 guardrail #8).
 var ErrMonthlyCap = errors.New("llm monthly call cap reached")
 
-// rawJudgment is the model's verdict as decoded, before validation.
+// rawJudgment is the model's judgment as decoded, before validation:
+// the v13 output schema (docs/framework-research/04 §2.3).
 type rawJudgment struct {
 	RequirementID string   `json:"requirement_id"`
-	Verdict       string   `json:"verdict"`
+	Determination string   `json:"determination"`
+	Basis         string   `json:"basis"`
+	Uncertainty   []string `json:"uncertainty"`
 	EvidenceIDs   []string `json:"evidence_ids"`
-	Rationale     string   `json:"rationale"`
-	// StatedSpanYears is what the evidence says about duration, reported
-	// by the model rather than judged by it. The comparison against what
-	// the requirement asks for happens in duration.go.
-	StatedSpanYears float64 `json:"stated_span_years"`
-	// PartiesEvidenced are the organisations the evidence names as ones
-	// the candidate worked with. Compared against the requirement's own
-	// named parties in relationship.go.
-	PartiesEvidenced []string `json:"parties_evidenced"`
+	// ReportedFacts are what the model found for the code rules to
+	// compare: the span, the latest year, the scale, the credential, the
+	// organisations named. Reported by the model, decided in hiring/rules.go.
+	ReportedFacts hiring.ReportedFacts `json:"reported_facts"`
+	Rationale     string               `json:"rationale"`
+	// Confidence is the model's self-report, logged for calibration and
+	// never used in arithmetic (FR-HF-05).
+	Confidence *float64 `json:"confidence,omitempty"`
 }
 
 // callResult is what one gateway call returned, kept for the ledger
@@ -87,31 +89,61 @@ type callResult struct {
 	LatencyMs        int64
 }
 
-// Judgment is the model's verdict on one requirement, validated.
+// Judgment is the settled judgment of one requirement: the model's
+// determination as the code rules left it, the three-way verdict
+// derived from it (FR-HF-07), and everything a reader needs to see how
+// it got there.
 type Judgment struct {
-	RequirementID string  `json:"requirement_id"`
-	Verdict       string  `json:"verdict"` // met | partial | unmet
-	EvidenceIDs   []int64 `json:"evidence_ids"`
-	Rationale     string  `json:"rationale"`
-	// StatedSpanYears is the duration the model found in the evidence,
-	// kept whether or not it mattered, so a reader can see what the
+	RequirementID string `json:"requirement_id"`
+	// Verdict is met | partial | unmet, derived in code from the
+	// determination so the owner's graded series and every reader of the
+	// stored assessment keep working across the vocabulary change.
+	Verdict string `json:"verdict"`
+	// Determination, Basis and Uncertainty are the v1 vocabulary (03 §2),
+	// after the code rules. Type is the requirement's type as judged.
+	Determination string   `json:"determination,omitempty"`
+	Basis         string   `json:"basis,omitempty"`
+	Uncertainty   []string `json:"uncertainty,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	EvidenceIDs   []int64  `json:"evidence_ids"`
+	Rationale     string   `json:"rationale"`
+	// ReportedFacts are kept whole so a reader can see what every
 	// comparison was made against.
-	StatedSpanYears float64 `json:"stated_span_years,omitempty"`
-	// PartiesEvidenced are the organisations the evidence named, kept so
-	// a reader can see what the comparison was made against.
+	ReportedFacts *hiring.ReportedFacts `json:"reported_facts,omitempty"`
+	Confidence    *float64              `json:"confidence,omitempty"`
+	// StatedSpanYears and PartiesEvidenced are copied out of
+	// ReportedFacts for the admin pages that read them by name.
+	StatedSpanYears  float64  `json:"stated_span_years,omitempty"`
 	PartiesEvidenced []string `json:"parties_evidenced,omitempty"`
-	// Adjusted explains a verdict that code weakened, and is empty when
-	// the model's verdict stood. An adjustment that cannot be read is
-	// indistinguishable from the model having said so itself.
+	// RuleAdjustments are the changes code made to the model's answer,
+	// each with its rule and version (FR-HF-05). Empty when the model's
+	// output stood.
+	RuleAdjustments []hiring.RuleAdjustment `json:"rule_adjustments,omitempty"`
+	// Adjusted is the adjustments' reasons joined, for readers that show
+	// one line. An adjustment that cannot be read is indistinguishable
+	// from the model having said so itself.
 	Adjusted string `json:"adjusted,omitempty"`
+	// NotAssessed marks a behavioral requirement (FR-HF-18): recorded,
+	// shown as not assessed, weight 0 in every number, never judged.
+	NotAssessed bool `json:"not_assessed,omitempty"`
 	// RationaleIssues are the ways the rationale disagrees with the
-	// record it was written from: a span it describes but did not
-	// report, a quote from nowhere, a quote from the evidence that it
-	// calls the requirement. They never change the verdict. They exist
-	// because every other check here is about the verdict, and run 9
-	// passed 9 of 9 with two judgments underneath it that did not hold
-	// up. See rationale.go.
+	// record it was written from. They never change the verdict. See
+	// rationale.go.
 	RationaleIssues []rationaleIssue `json:"rationale_issues,omitempty"`
+}
+
+// Coverage is the match record's arithmetic (FR-HF-06): three numbers
+// over effective determinations that sum to one over the denominator,
+// and two shares of the evidenced part. Formula v3; the résumé gate
+// still reads the v2 score until D-32 is settled by the golden run.
+type Coverage struct {
+	Evidenced         float64 `json:"evidenced"`
+	Unresolved        float64 `json:"unresolved"`
+	Unmet             float64 `json:"unmet"`
+	EquivalentShare   float64 `json:"coverage_equivalent_share"`
+	SelfAttestedShare float64 `json:"self_attested_share"`
+	Denominator       int     `json:"denominator"`
+	Formula           string  `json:"formula"`
 }
 
 // Assessment is the auditable record behind a match score: what the
@@ -133,9 +165,21 @@ type Assessment struct {
 	// JudgeBatches is how many model calls the judgment took (context
 	// budgeting on a small box splits it).
 	JudgeBatches int `json:"judge_batches,omitempty"`
+	// Coverage is formula v3's three numbers (FR-HF-06), beside the v2
+	// Score the gate reads. Nil when the assessor did not run.
+	Coverage *Coverage `json:"coverage,omitempty"`
+	// ConsistencyRetries counts judge calls sent back once for breaking
+	// a consistency rule (04 §2.3); a repair after a second failure is
+	// recorded on the judgment itself.
+	ConsistencyRetries int `json:"consistency_retries,omitempty"`
 	// Error is set when the pipeline could not complete and the caller
 	// fell back to the retrieval score.
 	Error string `json:"error,omitempty"`
+	// DecisionIDs maps requirement id to the decision_log row that holds
+	// the judgment's prompt and response, for the judgment rows the
+	// hiring writer creates. In-process only; not part of the stored
+	// assessment.
+	DecisionIDs map[string]int64 `json:"-"`
 }
 
 // Assessor runs the requirements → retrieval → judgment pipeline.
@@ -149,6 +193,34 @@ type Assessor struct {
 	// judgment prompt is split into batches that fit it, so the same
 	// pipeline runs on an 8 GB box (8k) and a workstation (16k+).
 	numCtx int
+	// judge is the requirement judge as rendered for the vocabulary in
+	// use (prompts.RequirementJudgeFor); vocab is that vocabulary, which
+	// the consistency rules validate against. Defaults to the compiled-in
+	// vocabulary 1.0; main swaps in the registry's rendering at boot.
+	judge prompts.Prompt
+	vocab hiring.VocabLists
+	// now is the clock the recency rule reads; tests pin it.
+	now func() time.Time
+}
+
+// SetVocab renders the judge for a vocabulary, usually the one loaded
+// from vocab_codes at boot, so a registry change is a new prompt
+// fingerprint rather than a code change (14 §5).
+func (a *Assessor) SetVocab(v hiring.VocabLists) {
+	if a == nil {
+		return
+	}
+	a.vocab = v
+	a.judge = prompts.RequirementJudgeFor(v)
+}
+
+// JudgePrompt is the judge as this assessor sends it, for run records
+// and the decision log.
+func (a *Assessor) JudgePrompt() prompts.Prompt {
+	if a == nil {
+		return prompts.RequirementJudge
+	}
+	return a.judge
 }
 
 // NumCtx is the context window this assessor asks the sidecar for. The
@@ -180,14 +252,17 @@ func NewAssessor(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, c
 	if numCtx <= 0 {
 		numCtx = 16384
 	}
-	return &Assessor{log: log, users: repo, embed: embed, llm: client, monthlyCap: monthlyCap, numCtx: numCtx}
+	return &Assessor{
+		log: log, users: repo, embed: embed, llm: client, monthlyCap: monthlyCap, numCtx: numCtx,
+		judge: prompts.RequirementJudge, vocab: hiring.DefaultVocab(), now: time.Now,
+	}
 }
 
 // batchRequirements groups requirements so each rendered judgment
 // prompt stays under the context budget. A single oversized
 // requirement still gets its own batch (the renderer caps chunk text).
 func (a *Assessor) batchRequirements(reqs []prompts.Requirement, evidence map[string][]users.CorpusHit, profile []users.CorpusHit) [][]prompts.Requirement {
-	budget := a.numCtx - judgeReserve - prompts.EstimateTokens(prompts.RequirementJudge.System)
+	budget := a.numCtx - judgeReserve - prompts.EstimateTokens(a.judgeOrDefault().System)
 	var batches [][]prompts.Requirement
 	var cur []prompts.Requirement
 	for _, r := range reqs {
@@ -227,9 +302,10 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	out := &Assessment{
 		EvidenceIDs: map[string][]int64{},
 		Prompts: map[string]int{
-			prompts.JDRequirements.ID:   prompts.JDRequirements.Version,
-			prompts.RequirementJudge.ID: prompts.RequirementJudge.Version,
+			prompts.JDRequirements.ID: prompts.JDRequirements.Version,
+			a.judgeOrDefault().ID:     a.judgeOrDefault().Version,
 		},
+		DecisionIDs: map[string]int64{},
 	}
 
 	// 1. Requirements.
@@ -259,6 +335,14 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	reqs, err := validateRequirements(reqDoc.Requirements, jdText)
 	if err != nil {
 		return nil, fmt.Errorf("requirements: %w", err)
+	}
+	// Type each requirement by the heuristic until the extractor types
+	// it (FR-HF-02, step 5): the judge sees the type, the rules read it,
+	// and behavioral rows are never sent to the judge (FR-HF-18).
+	for i := range reqs {
+		if reqs[i].Type == "" {
+			reqs[i].Type = hiring.InferType(reqs[i].Text, reqs[i].NamedParties)
+		}
 	}
 	out.Requirements = reqs
 
@@ -324,12 +408,25 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 			slog.Int64("jd_id", submissionID), slog.String("error", pErr.Error()))
 		profile = nil
 	}
+	// Behavioral requirements are recorded, never judged (FR-HF-18):
+	// scoring personality adjectives from documents is the opaque
+	// culture-fit judgment the framework names as a root cause.
+	var judgeable []prompts.Requirement
+	for _, r := range reqs {
+		if r.Type != "behavioral" {
+			judgeable = append(judgeable, r)
+		}
+	}
+	judge := a.judgeOrDefault()
 	var all []rawJudgment
-	batches := a.batchRequirements(reqs, evidence, profile)
+	// repairs names the requirements whose judgment broke a consistency
+	// rule twice and is repaired in code rather than lost.
+	repairs := map[string]bool{}
+	batches := a.batchRequirements(judgeable, evidence, profile)
 	if err := a.checkCapN(ctx, int64(len(batches))); err != nil {
 		return nil, err
 	}
-	// Per requirement: which call produced its verdict, so the decision
+	// Per requirement: which call produced its judgment, so the decision
 	// log can carry the exact prompt and raw response for each one.
 	calls := make([]callResult, 0, len(batches))
 	userPrompts := make([]string, 0, len(batches))
@@ -340,9 +437,38 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 			Judgments []rawJudgment `json:"judgments"`
 		}
 		user := prompts.RenderJudgeUser(batch, evidence, profile)
-		res, err := a.call(ctx, submissionID, prompts.RequirementJudge, user, 1200, &judgeDoc)
+		res, err := a.call(ctx, submissionID, judge, user, 1200, &judgeDoc)
 		if err != nil {
 			return nil, fmt.Errorf("judge batch %d/%d: %w", bi+1, len(batches), err)
+		}
+		// The consistency rules of 04 §2.3, which the schema cannot
+		// express. An answer that breaks one is sent back once with the
+		// rule named; one that breaks it again is repaired in code and
+		// the repair recorded, because losing a four-hour run to one
+		// mislabelled field is worse than correcting it in the open.
+		if broken := a.consistencyViolations(judgeDoc.Judgments, out.EvidenceIDs); len(broken) > 0 {
+			out.ConsistencyRetries++
+			a.log.Info("judge: answer broke a consistency rule, asking once more",
+				slog.Int64("jd_id", submissionID), slog.Int("batch", bi+1), slog.Any("rules", broken))
+			var again struct {
+				Judgments []rawJudgment `json:"judgments"`
+			}
+			correction := user + "\n\n<correction>Your previous answer broke these rules: " + strings.Join(broken, "; ") + ". Answer again, keeping to the rules.</correction>"
+			res2, err2 := a.call(ctx, submissionID, judge, correction, 1200, &again)
+			if err2 == nil && len(again.Judgments) > 0 {
+				res, user, judgeDoc.Judgments = res2, correction, again.Judgments
+				if stillBroken := a.consistencyViolations(judgeDoc.Judgments, out.EvidenceIDs); len(stillBroken) > 0 {
+					for _, j := range judgeDoc.Judgments {
+						repairs[j.RequirementID] = true
+					}
+				}
+			} else {
+				// The retry failed to produce an answer; the first one is
+				// repaired rather than the posting lost.
+				for _, j := range judgeDoc.Judgments {
+					repairs[j.RequirementID] = true
+				}
+			}
 		}
 		calls = append(calls, res)
 		userPrompts = append(userPrompts, user)
@@ -355,11 +481,13 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 	progress.report(76, "computing the score")
 	rawByReq := map[string]rawJudgment{}
 	byReq := map[string]Judgment{}
-	// The requirement's own text is what says how many years it asks
-	// for, so the duration rule needs it alongside the verdict.
 	reqByID := make(map[string]prompts.Requirement, len(reqs))
 	for _, r := range reqs {
 		reqByID[r.ID] = r
+	}
+	now := time.Now()
+	if a.now != nil {
+		now = a.now()
 	}
 	for _, j := range all {
 		if _, dup := rawByReq[j.RequirementID]; !dup {
@@ -368,113 +496,78 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 		if _, dup := byReq[j.RequirementID]; dup {
 			continue
 		}
-		allowed := map[int64]bool{}
+		req, ok := reqByID[j.RequirementID]
+		if !ok {
+			// A judgment for an id the posting does not have is a
+			// malfunction, not an answer; it is logged and dropped.
+			a.log.Warn("judge: judgment for an unknown requirement id dropped",
+				slog.Int64("jd_id", submissionID), slog.String("id", j.RequirementID))
+			continue
+		}
+		offered := map[int64]bool{}
 		for _, id := range out.EvidenceIDs[j.RequirementID] {
-			allowed[id] = true
+			offered[id] = true
 		}
-		var ids []int64
-		for _, s := range j.EvidenceIDs {
-			id, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
-			if err == nil && allowed[id] {
-				ids = append(ids, id)
-			}
-		}
-		verdict := j.Verdict
-		// A verdict that cites nothing it was given is downgraded: the
-		// score must be traceable to evidence, not to the model's mood.
-		if verdict != "unmet" && len(ids) == 0 {
-			verdict = "unmet"
-		}
-		if verdict == "unmet" {
-			ids = nil
-		}
-		// Duration is decided here, not by the judge. Three prompt
-		// versions failed to teach a small model to check a span before
-		// answering "met"; it reports the span it found and this applies
-		// the comparison. See duration.go.
-		adjusted := ""
-		if req, ok := reqByID[j.RequirementID]; ok {
-			verdict, adjusted = applyDurationRule(req.Text, verdict, j.StatedSpanYears)
-			// A requirement can ask for both a span and a named party.
-			// The duration rule runs first and may already have weakened
-			// the verdict, in which case this one has nothing to do.
-			if v, note := applyRelationshipRule(req, verdict, j.PartiesEvidenced); note != "" {
-				verdict = v
-				if adjusted == "" {
-					adjusted = note
-				} else {
-					adjusted += "; " + note
-				}
-			}
-		}
-		// Does the sentence agree with the record it was written from?
-		// Nothing here changes the verdict; these are counted by a run
-		// and shown to a reader, because the failure this addresses is a
-		// wrong-but-plausible rationale passing every check there was.
-		// See rationale.go.
-		var issues []rationaleIssue
-		if req, ok := reqByID[j.RequirementID]; ok {
-			var cited []string
-			for _, h := range evidence[j.RequirementID] {
-				for _, id := range ids {
-					if h.Chunk.ID == id {
-						cited = append(cited, h.Chunk.Text)
-					}
-				}
-			}
-			// j.Verdict, not the adjusted one: the disjunction arm asks
-			// whether the model contradicted itself, and a verdict the
-			// duration rule weakened is the code disagreeing with the
-			// model rather than the model with itself.
-			issues = checkRationale(j.Rationale, req.Text, req.SourceQuote, j.Verdict, cited, j.StatedSpanYears)
-		}
-
-		byReq[j.RequirementID] = Judgment{
-			RequirementID:    j.RequirementID,
-			Verdict:          verdict,
-			EvidenceIDs:      ids,
-			Rationale:        truncErr(strings.TrimSpace(j.Rationale)),
-			StatedSpanYears:  j.StatedSpanYears,
-			PartiesEvidenced: j.PartiesEvidenced,
-			Adjusted:         adjusted,
-			RationaleIssues:  issues,
+		byReq[j.RequirementID] = settleJudgment(settleInput{
+			req: req, raw: j, offered: offered, evidence: evidence[j.RequirementID],
+			now: now, vocab: a.vocab, repair: repairs[j.RequirementID],
+		})
+	}
+	for _, r := range reqs {
+		if r.Type == "behavioral" {
+			byReq[r.ID] = notAssessedJudgment(r)
 		}
 	}
 
 	// 4. Score in code. A requirement the model skipped counts as unmet.
 	//
-	// Formula (v2, 2026-09-22): every "must" requirement is in the
-	// denominator; a "nice" requirement joins it only when it earned
-	// something. Preferred items can raise a score, never sink it: an
-	// ATS that subtracts for a missing PMP or a preferred Master's is
-	// exactly the filter this reviewer is meant not to be. Verdict
-	// values are unchanged (met 1, partial 0.5, unmet 0).
-	// Floor: a posting with no "must" lines would otherwise score 1.0
-	// from a single evidenced preference; then every requirement counts.
+	// Two formulas, both from the derived three-way verdict and the
+	// determinations respectively. The v2 score (2026-09-22) is what the
+	// résumé gate reads until D-32 is settled by the golden run under
+	// v13: every "must" requirement is in the denominator; a "nice"
+	// requirement joins it only when it earned something, so a wish list
+	// can raise a score and never sink it; verdict values met 1, partial
+	// 0.5, unmet 0; floor: a posting with no "must" lines counts every
+	// requirement. Formula v3 (FR-HF-06) reports three numbers over the
+	// determinations and never scores unresolved as half of anything.
+	// Behavioral rows weigh nothing in either (FR-HF-18).
 	anyMust := false
 	for _, r := range reqs {
-		if r.Category == "must" {
+		if r.Category == "must" && r.Type != "behavioral" {
 			anyMust = true
 			break
 		}
 	}
 	var weighted float64
+	var items []hiring.Item
 	for _, r := range reqs {
 		j, ok := byReq[r.ID]
 		if !ok {
-			j = Judgment{RequirementID: r.ID, Verdict: "unmet", Rationale: "no judgment returned"}
+			j = Judgment{RequirementID: r.ID, Verdict: "unmet", Determination: hiring.DetNotMet, Basis: hiring.BasisNotAddressed,
+				Uncertainty: []string{}, Type: r.Type, Rationale: "no judgment returned"}
 		}
 		out.Judgments = append(out.Judgments, j)
-		v := verdictValue(j.Verdict)
-		if !anyMust || r.Category == "must" || v > 0 {
-			out.WeightTotal += r.Weight
+		w := r.Weight
+		if j.NotAssessed {
+			w = 0
 		}
-		weighted += float64(r.Weight) * v
+		v := verdictValue(j.Verdict)
+		if w > 0 && (!anyMust || r.Category == "must" || v > 0) {
+			out.WeightTotal += w
+		}
+		weighted += float64(w) * v
+		items = append(items, hiring.Item{Weight: w, Category: r.Category, Determination: j.Determination})
 	}
 	if out.WeightTotal > 0 {
 		out.Score = weighted / float64(out.WeightTotal)
 	}
 	out.ScoreFormula = ScoreFormula
+	c := hiring.CoverageV3(items)
+	out.Coverage = &Coverage{
+		Evidenced: c.Evidenced, Unresolved: c.Unresolved, Unmet: c.Unmet,
+		EquivalentShare: c.EquivalentShare, SelfAttestedShare: c.SelfAttestedShare,
+		Denominator: c.Denominator, Formula: hiring.FormulaV3,
+	}
 
 	// 5. Decision log: one row per verdict with everything the owner
 	// needs to judge it himself (docs/decision-log.md). Best-effort.
@@ -530,9 +623,24 @@ func (a *Assessor) logVerdicts(
 			"evidence":    ev,
 		})
 		outDoc := map[string]any{
-			"verdict":      j.Verdict,
-			"evidence_ids": j.EvidenceIDs,
-			"rationale":    j.Rationale,
+			"verdict":       j.Verdict,
+			"determination": j.Determination,
+			"basis":         j.Basis,
+			"uncertainty":   j.Uncertainty,
+			"evidence_ids":  j.EvidenceIDs,
+			"rationale":     j.Rationale,
+		}
+		if j.ReportedFacts != nil {
+			outDoc["reported_facts"] = j.ReportedFacts
+		}
+		if j.Confidence != nil {
+			outDoc["confidence"] = *j.Confidence
+		}
+		if len(j.RuleAdjustments) > 0 {
+			outDoc["rule_adjustments"] = j.RuleAdjustments
+		}
+		if j.NotAssessed {
+			outDoc["not_assessed"] = true
 		}
 		// Rationale issues ride on the decision row rather than getting
 		// a surface of their own, because this row is already the thing
@@ -551,27 +659,44 @@ func (a *Assessor) logVerdicts(
 			outDoc["adjusted"] = j.Adjusted
 		}
 		if rj, ok := raw[r.ID]; ok {
-			outDoc["raw_verdict"] = rj.Verdict
+			// raw_verdict stays the derived three-way reading of the
+			// model's own determination, so the agreement history keeps
+			// one meaning across the change (FR-HF-07).
+			outDoc["raw_verdict"] = hiring.DeriveVerdict(rj.Determination)
+			outDoc["raw_determination"] = rj.Determination
+			outDoc["raw_basis"] = rj.Basis
 			outDoc["raw_evidence_ids"] = rj.EvidenceIDs
 		} else {
 			outDoc["raw_verdict"] = ""
 		}
 		output, _ := json.Marshal(outDoc)
+		judge := a.judgeOrDefault()
 		d := users.Decision{
 			Kind: "jd_requirement_verdict", RefKind: "jd_submission", RefID: submissionID, Key: r.ID,
-			Model: out.Model, PromptID: prompts.RequirementJudge.ID, PromptVersion: prompts.RequirementJudge.Version,
+			Model: out.Model, PromptID: judge.ID, PromptVersion: judge.Version,
 			NumCtx: a.numCtx, Input: input, Output: output,
+		}
+		if j.NotAssessed {
+			d.Model = "code"
 		}
 		if bi, ok := batchOf[r.ID]; ok && bi < len(calls) {
 			c := calls[bi]
-			d.PromptText = prompts.RequirementJudge.System + "\n\n---\n\n" + userPrompts[bi]
+			d.PromptText = judge.System + "\n\n---\n\n" + userPrompts[bi]
 			d.ResponseText = c.Text
 			d.PromptTokens, d.CompletionTok, d.LatencyMs = c.PromptTokens, c.CompletionTokens, c.LatencyMs
 		}
 		rows = append(rows, d)
 	}
-	if err := a.users.InsertDecisions(context.WithoutCancel(ctx), rows); err != nil {
+	ids, err := a.users.InsertDecisionsReturning(context.WithoutCancel(ctx), rows)
+	if err != nil {
 		a.log.Warn("decision log write failed", slog.Int64("jd_id", submissionID), slog.String("error", err.Error()))
+		return
+	}
+	// The judgment rows the hiring writer creates cite these (FR-HF-04).
+	for i, d := range rows {
+		if i < len(ids) && out.DecisionIDs != nil {
+			out.DecisionIDs[d.Key] = ids[i]
+		}
 	}
 }
 
