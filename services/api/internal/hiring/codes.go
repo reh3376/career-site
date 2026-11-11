@@ -56,6 +56,10 @@ type VocabLists struct {
 	Basis            []CodeDoc
 	Uncertainty      []CodeDoc
 	InvolvementLevel []CodeDoc
+	// RequirementType is what the extractor types a requirement as
+	// (FR-HF-02). The judge does not render it, so adding it here does
+	// not move the judge's fingerprint.
+	RequirementType []CodeDoc
 }
 
 // DefaultVocab is vocabulary 1.0 as seeded by migration 00066, in seed
@@ -101,6 +105,17 @@ func DefaultVocab() VocabLists {
 			{"taught", "Trained others in it."},
 			{"unknown", "The evidence does not say."},
 		},
+		RequirementType: []CodeDoc{
+			{"skill", "A capability the work needs."},
+			{"outcome", "A result the role is expected to have produced before."},
+			{"tool", "A named tool, platform or vendor."},
+			{"domain", "An industry or context the work sits in."},
+			{"credential", "A degree, licence or certificate."},
+			{"experience", "Years or exposure in a kind of work."},
+			{"relationship", "A working relationship with named parties."},
+			{"constraint", "A condition of the role: location, clearance, travel, schedule."},
+			{"behavioral", "A personality or working-style adjective. Never judged by the model (FSD FR-HF-18)."},
+		},
 	}
 }
 
@@ -125,6 +140,7 @@ func VocabFromRegistry(reg *Registry) VocabLists {
 		Basis:            pick(VocabBasis),
 		Uncertainty:      pick(VocabUncertainty),
 		InvolvementLevel: pick(VocabInvolvementLevel),
+		RequirementType:  pick(VocabRequirementType),
 	}
 }
 

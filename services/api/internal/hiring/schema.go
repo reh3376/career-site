@@ -26,13 +26,19 @@ const (
 	MatchRecordSchema   = "1.0"
 
 	// VocabVersion is the vocabulary every row written today names.
-	// The codes themselves are rows in vocab_codes (vocab.go).
-	VocabVersion = "1.0"
+	// The codes themselves are rows in vocab_codes (vocab.go). 1.1 added
+	// the requirement classes and the vocabularies thresholds are
+	// written in (migration 00074); additive, so a minor version.
+	VocabVersion = "1.1"
 
 	// FormulaV2 is the prototype's arithmetic, which the dual write
-	// carries until step 4; FormulaV3 is the three numbers (formula.go).
+	// carries until step 4; FormulaV3 is the three numbers; FormulaV4 is
+	// the three numbers over the hiring manager's classes, with years
+	// and credential items counted only once an equivalency is defined
+	// (FR-HF-23, formula.go).
 	FormulaV2 = "v2-nice-bonus"
 	FormulaV3 = "v3-three-numbers"
+	FormulaV4 = "v4-classes"
 
 	// OwnerCandidateID is the one candidate of Phase 0 (FR-HF-19),
 	// seeded by 00066 so corpus_documents can default to it.

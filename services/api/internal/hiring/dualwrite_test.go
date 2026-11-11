@@ -26,22 +26,35 @@ func TestTrimTitleKeepsValidUTF8(t *testing.T) {
 
 // nil and empty named parties are the same absence; if they keyed
 // differently every run would mint a new version of every requirement
-// whose parties the extractor left out.
-func TestRequirementKeyTreatsNilAndEmptyPartiesAlike(t *testing.T) {
-	a := RequirementInput{LocalID: "r1", Text: "x", Category: "must", Weight: 2}
+// whose parties the extractor left out. Everything the judge sees or
+// the arithmetic reads is part of the key, so a judgment's
+// requirement_id is enough to say exactly what it was judged against.
+func TestJudgedKey(t *testing.T) {
+	a := Draft(RequirementInput{LocalID: "r1", Text: "x", Category: "must", Weight: 2}, nil, Provenance{})
 	b := a
-	b.NamedParties = []string{}
-	if a.key() != b.key() {
-		t.Errorf("nil and empty parties key differently:\n%s\n%s", a.key(), b.key())
+	b.NamedParties = nil
+	if !sameJudged(a, b) {
+		t.Errorf("nil and empty parties key differently:\n%s\n%s", judgedKey(a), judgedKey(b))
 	}
-	c := a
-	c.NamedParties = []string{"Acme"}
-	if a.key() == c.key() {
-		t.Error("a named party did not change the key")
+	for name, change := range map[string]func(*Requirement){
+		"a named party":         func(q *Requirement) { q.NamedParties = []string{"Acme"} },
+		"the type":              func(q *Requirement) { q.Type = "tool" },
+		"the class":             func(q *Requirement) { q.Class = ClassIdeal },
+		"the evidence standard": func(q *Requirement) { q.EvidenceStandard = "something else" },
+		"the equivalency":       func(q *Requirement) { q.Equivalency = "five years in lieu" },
+		"a threshold":           func(q *Requirement) { y := 3.0; q.Thresholds.MinYears = &y },
+		"inclusion":             func(q *Requirement) { q.Included = !q.Included },
+	} {
+		c := a
+		change(&c)
+		if sameJudged(a, c) {
+			t.Errorf("%s did not change the key", name)
+		}
 	}
-	d := a
-	d.Type = "tool"
-	if a.key() != d.key() {
-		t.Error("the type is part of the key; a heuristic change would re-version every row")
+	// Provenance is not judged: the same requirement extracted by a
+	// later prompt version is the same version.
+	d := Draft(RequirementInput{LocalID: "r1", Text: "x", Category: "must", Weight: 2}, nil, Provenance{PromptFingerprint: "v9:beef"})
+	if !sameJudged(a, d) {
+		t.Error("the extraction provenance changed the key; a prompt bump would re-version every row")
 	}
 }

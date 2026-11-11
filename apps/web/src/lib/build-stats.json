@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 550,
+    "byAssistant": 553,
     "byBot": 25,
     "byOwner": 47,
-    "commits": 1029,
-    "days": 54,
+    "commits": 1033,
+    "days": 55,
     "firstCommit": "2026-09-18",
-    "lastCommit": "2026-11-10",
-    "merges": 407,
-    "nonMerge": 622,
+    "lastCommit": "2026-11-11",
+    "merges": 408,
+    "nonMerge": 625,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,27 +25,27 @@
   },
   "lines": {
     "code": {
-      "files": 541,
+      "files": 551,
       "languages": [
         {
-          "files": 155,
+          "files": 161,
           "language": "Go",
-          "lines": 39348
+          "lines": 42008
         },
         {
-          "files": 156,
+          "files": 158,
           "language": "TSX",
-          "lines": 29690
+          "lines": 30338
         },
         {
-          "files": 76,
+          "files": 77,
           "language": "SQL",
-          "lines": 8730
+          "lines": 9044
         },
         {
-          "files": 74,
+          "files": 75,
           "language": "TypeScript",
-          "lines": 6401
+          "lines": 6641
         },
         {
           "files": 29,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 93947
+      "lines": 97809
     },
     "config": {
       "files": 35,
@@ -76,7 +76,7 @@
         {
           "files": 18,
           "language": "JSON",
-          "lines": 4527
+          "lines": 4607
         },
         {
           "files": 17,
@@ -84,18 +84,18 @@
           "lines": 1984
         }
       ],
-      "lines": 6511
+      "lines": 6591
     },
     "contract": {
-      "files": 18,
+      "files": 19,
       "languages": [
         {
-          "files": 18,
+          "files": 19,
           "language": "Protobuf",
-          "lines": 8559
+          "lines": 8938
         }
       ],
-      "lines": 8559
+      "lines": 8938
     },
     "documentation": {
       "files": 147,
@@ -103,23 +103,23 @@
         {
           "files": 147,
           "language": "Markdown",
-          "lines": 38405
+          "lines": 39126
         }
       ],
-      "lines": 38405
+      "lines": 39126
     },
     "generated": {
-      "files": 74,
+      "files": 78,
       "languages": [
         {
-          "files": 34,
+          "files": 36,
           "language": "Go",
-          "lines": 49228
+          "lines": 51223
         },
         {
-          "files": 18,
+          "files": 19,
           "language": "TypeScript",
-          "lines": 27704
+          "lines": 28675
         },
         {
           "files": 1,
@@ -127,9 +127,9 @@
           "lines": 5799
         },
         {
-          "files": 20,
+          "files": 21,
           "language": "Python",
-          "lines": 3553
+          "lines": 3685
         },
         {
           "files": 1,
@@ -137,15 +137,15 @@
           "lines": 183
         }
       ],
-      "lines": 86467
+      "lines": 89565
     },
     "tests": {
-      "files": 110,
+      "files": 116,
       "languages": [
         {
-          "files": 91,
+          "files": 97,
           "language": "Go",
-          "lines": 16697
+          "lines": 18233
         },
         {
           "files": 14,
@@ -158,7 +158,7 @@
           "lines": 456
         }
       ],
-      "lines": 18254
+      "lines": 19790
     }
   },
   "structure": {
@@ -166,18 +166,18 @@
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
-    "goTests": 485,
-    "migrations": 73,
+    "goTests": 511,
+    "migrations": 74,
     "pythonTests": 30,
     "requirements": 232,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
-    "requirementsNotBuilt": 58,
-    "requirementsPartial": 7,
-    "requirementsShipped": 165,
-    "rpcs": 170,
+    "requirementsNotBuilt": 55,
+    "requirementsPartial": 8,
+    "requirementsShipped": 167,
+    "rpcs": 175,
     "runtimeServices": 9,
-    "services": 16,
+    "services": 17,
     "webTests": 91
   }
 }

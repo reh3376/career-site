@@ -2,7 +2,7 @@
 
 Open work items for the design effort, in the order they will be worked. Each item names what "done" looks like and which doc it feeds. Items are removed when done; decisions made along the way go into the doc they affect, not here.
 
-Last updated 2026-11-10 (P3 fielding started: the post is up and the first two participants are whitelisted). Repository copy ahead of project (2026-11-08): P2 marked complete, P4 and P5 re-pointed at `13`.
+Last updated 2026-11-10 (P3 fielding started: the post is up and the first two participants are whitelisted; P4 step 5 built). Repository copy ahead of project (2026-11-08): P2 marked complete, P4 and P5 re-pointed at `13`.
 
 ---
 
@@ -41,7 +41,7 @@ The pilot post went up on LinkedIn on 2026-11-10 and the first two volunteers we
 - ~~Post the pilot version of the recruitment post~~ (posted 2026-11-10, `07` §2.1); schedule calls as volunteers finish on the site.
 - Run week 2; revise to `survey v1.0`; field wide week 3.
 
-## P4 — Schema follow-through (parallel with P3) — **steps 2, 3 and 4 of `13-phase-0-build-plan.md` §2, built 2026-11-08 to 2026-11-10 (migrations 00066 to 00069 and 00073, package `hiring`, the dual write, judge v13 with the code rules and formula v3); items 1, 2 and 4 landed as columns and tables, 3, 5 and 6 stay open; step 4's exit (the golden run and the hand-over) is pending**
+## P4 — Schema follow-through (parallel with P3) — **steps 2 to 5 of `13-phase-0-build-plan.md` §2, built 2026-11-08 to 2026-11-10 (migrations 00066 to 00069, 00073 and 00074, package `hiring`, the dual write, judge v13 then v14 with the code rules, the requirement as an editable row with classes and formula v4); items 1, 2 and 4 landed as columns and tables, item 3 has `concepts.match_terms` and stays open for the external seed, 5 and 6 stay open; step 4's exit (the golden run on the box and the hand-over) is pending, and step 5's editor awaits the owner's live review**
 
 - Proto and SQL rendering of the v1 entities; column vs jsonb decisions.
 - Add `asked_by` (system / recruiter) to the clarification item (workflow Q3).

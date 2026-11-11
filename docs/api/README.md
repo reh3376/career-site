@@ -129,6 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 85 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
+| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, and the settings the framework's arithmetic reads. | 5 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -5391,6 +5392,218 @@ stop measures the fifteen-minute burden.
 
 </details>
 
+## HiringService
+
+Requirements as editable, versioned rows, and the settings the
+framework's arithmetic reads.
+
+| Method | Path | Auth | Rate limit /min | Request → Response | Summary |
+|---|---|---|---|---|---|
+| [`ListRequirements`](#hiringservice-listrequirements) | `/api/career.v1.HiringService/ListRequirements` | Admin | default | `ListRequirementsRequest` → `ListRequirementsResponse` | Lists a role's requirements in reading order: the released version of each, any pending draft beside it, and the retired versions when asked for. |
+| [`UpdateRequirement`](#hiringservice-updaterequirement) | `/api/career.v1.HiringService/UpdateRequirement` | Admin | default | `UpdateRequirementRequest` → `UpdateRequirementResponse` | Saves an edit to a requirement as a new version, with the editor and a required reason. |
+| [`ReleaseRequirements`](#hiringservice-releaserequirements) | `/api/career.v1.HiringService/ReleaseRequirements` | Admin | default | `ReleaseRequirementsRequest` → `ReleaseRequirementsResponse` | Releases every pending draft of a role, each replacing the version it was edited from, and starts a run that judges the released list without extracting the posting again. |
+| [`GetHiringSettings`](#hiringservice-gethiringsettings) | `/api/career.v1.HiringService/GetHiringSettings` | Admin | default | `GetHiringSettingsRequest` → `GetHiringSettingsResponse` | Reads the framework's settings: the share of its weight a preferred requirement counts at. |
+| [`SetHiringSettings`](#hiringservice-sethiringsettings) | `/api/career.v1.HiringService/SetHiringSettings` | Admin | default | `SetHiringSettingsRequest` → `SetHiringSettingsResponse` | Sets the framework's settings (stored in app_settings; the api caches them for 15 s). |
+
+### HiringService.ListRequirements
+
+`POST /api/career.v1.HiringService/ListRequirements` · **Auth:** Admin · **Rate limit:** default/min
+
+Lists a role's requirements in reading order: the released version
+of each, any pending draft beside it, and the retired versions when
+asked for. The role is named directly or by the submitted posting
+it was created from.
+
+**Request** — [`ListRequirementsRequest`](#listrequirementsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string | `string: max_len: 64` | The role's id. |
+| `submissionId` | `string` | string | `string: max_len: 32` | The submitted posting's id, as /admin/jd shows it. |
+| `includeRetired` | `bool` | boolean |  | Also return retired versions, so an editor can show what changed. |
+
+**Response** — [`ListRequirementsResponse`](#listrequirementsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string |  | The role's id; empty when the posting has no requirement rows yet, which is a posting last scored before the hiring tables began. |
+| `requirements` | [`Requirement`](#requirement)[] | array of object |  | The versions, in reading order: by requirement, then by version. |
+| `pendingDrafts` | `int32` | number |  | How many drafts are waiting to be released. |
+| `humanEdited` | `bool` | boolean |  | Whether a person has edited any current requirement. Once true, a run judges the released list and never extracts over it. |
+| `types` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_type` codes an editor may choose from. |
+| `classes` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_class` codes. |
+| `scopeUnits` | [`VocabCode`](#vocabcode)[] | array of object |  | The `scope_unit` codes. |
+| `credentialLevels` | [`VocabCode`](#vocabcode)[] | array of object |  | The `credential_level` codes. |
+| `relationshipKinds` | [`VocabCode`](#vocabcode)[] | array of object |  | The `relationship_kind` codes. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "roleId": "string",
+  "submissionId": "string",
+  "includeRetired": true
+}
+```
+
+</details>
+
+### HiringService.UpdateRequirement
+
+`POST /api/career.v1.HiringService/UpdateRequirement` · **Auth:** Admin · **Rate limit:** default/min
+
+Saves an edit to a requirement as a new version, with the editor
+and a required reason. The version edited must be the current one:
+the pending draft when there is one, otherwise the released
+version. The new version is a draft; the released version stays
+what a run judges until the drafts are released. Fields left out of
+the patch are carried over, and thresholds, the evidence standard
+and the equivalence notes are derived again from a reworded
+requirement unless a person had set them.
+
+**Request** — [`UpdateRequirementRequest`](#updaterequirementrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requirementId` | `string` | string | `string: min_len: 1 max_len: 64` | The version being edited: the pending draft when there is one, otherwise the released version. |
+| `patch` | [`RequirementPatch`](#requirementpatch) | object | `required: true` | What to change. |
+| `editReason` | `string` | string | `string: min_len: 1 max_len: 500` | Why. Required; it is what makes an edit usable for calibration. |
+
+**Response** — [`UpdateRequirementResponse`](#updaterequirementresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requirement` | [`Requirement`](#requirement) | object |  | The draft the edit created. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "requirementId": "string",
+  "patch": {
+    "text": "string",
+    "type": "string",
+    "requirementClass": "string",
+    "weight": 0,
+    "thresholds": {
+      "minYears": 0.5,
+      "recencyYears": 0.5,
+      "minScope": {},
+      "credentialLevel": "string",
+      "credentialField": "string",
+      "relationshipKind": "string"
+    },
+    "evidenceStandard": "string",
+    "equivalenceNotes": "string",
+    "equivalency": "string",
+    "alternatives": {
+      "values": [
+        "string"
+      ]
+    },
+    "namedParties": {
+      "values": [
+        "string"
+      ]
+    }
+  },
+  "editReason": "string"
+}
+```
+
+</details>
+
+### HiringService.ReleaseRequirements
+
+`POST /api/career.v1.HiringService/ReleaseRequirements` · **Auth:** Admin · **Rate limit:** default/min
+
+Releases every pending draft of a role, each replacing the version
+it was edited from, and starts a run that judges the released list
+without extracting the posting again. With no draft pending it is
+how a re-judge of the list as it stands is asked for. Refused while
+the posting is already being scored.
+
+**Request** — [`ReleaseRequirementsRequest`](#releaserequirementsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string | `string: min_len: 1 max_len: 64` | The role's id. |
+
+**Response** — [`ReleaseRequirementsResponse`](#releaserequirementsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `released` | [`Requirement`](#requirement)[] | array of object |  | The versions released by this call; empty when no draft was pending. |
+| `runStarted` | `bool` | boolean |  | Whether a run judging the released list was started. False when the reviewer is not wired, as in development without a model. |
+| `submissionId` | `string` | string |  | The submitted posting the run belongs to, for following its progress on /admin/jd. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "roleId": "string"
+}
+```
+
+</details>
+
+### HiringService.GetHiringSettings
+
+`POST /api/career.v1.HiringService/GetHiringSettings` · **Auth:** Admin · **Rate limit:** default/min
+
+Reads the framework's settings: the share of its weight a preferred
+requirement counts at.
+
+**Request** — [`GetHiringSettingsRequest`](#gethiringsettingsrequest)
+
+_No fields; send `{}`._
+
+**Response** — [`GetHiringSettingsResponse`](#gethiringsettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object |  | Current settings. |
+
+<details><summary>Example request body</summary>
+
+```json
+{}
+```
+
+</details>
+
+### HiringService.SetHiringSettings
+
+`POST /api/career.v1.HiringService/SetHiringSettings` · **Auth:** Admin · **Rate limit:** default/min
+
+Sets the framework's settings (stored in app_settings; the api
+caches them for 15 s). Takes effect for the next run; a record
+already written keeps the fraction it was computed with.
+
+**Request** — [`SetHiringSettingsRequest`](#sethiringsettingsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object | `required: true` | The settings to store. |
+
+**Response** — [`SetHiringSettingsResponse`](#sethiringsettingsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object |  | Stored settings. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "settings": {
+    "preferredFraction": 0.5
+  }
+}
+```
+
+</details>
+
 ## PilotService
 
 The pilot: one sitting per participant per instrument version.
@@ -10311,6 +10524,203 @@ How the batch was handled.
 |---|---|---|---|---|
 | `accepted` | `int32` | number |  | Events stored (duplicates and rejected events are not counted). |
 
+### ScopeThreshold
+
+A scale: how many of what.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `unit` | `string` | string | `string: max_len: 32` | The measure, a `scope_unit` code: team_size, budget_usd, users, sites, io_points, systems, revenue_usd or other. |
+| `value` | `double` | number | `double: gt: 0.0` | The amount, greater than 0. |
+
+### Thresholds
+
+The structured values the code rules compare a judgment's reported
+facts against, so a shortfall is arithmetic. Every field is optional
+and present only when the requirement asks for it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `minYears` | `double` | number | `double: lte: 60.0 gte: 0.0` | _(oneof `_min_years`)_ Years of the work asked for. |
+| `recencyYears` | `double` | number | `double: lte: 60.0 gte: 0.0` | _(oneof `_recency_years`)_ The work must fall within this many years to count as current. |
+| `minScope` | [`ScopeThreshold`](#scopethreshold) | object |  | The scale asked for. |
+| `credentialLevel` | `string` | string | `string: max_len: 32` | A `credential_level` code: certificate, associate, bachelor, master, doctorate or license. Empty when no credential is asked. |
+| `credentialField` | `string` | string | `string: max_len: 120` | The field of the credential, as the posting wrote it. |
+| `relationshipKind` | `string` | string | `string: max_len: 32` | A `relationship_kind` code: employed_by, contracted_to, customer_of, partner_of or any_working. Empty when the requirement names no organisation. |
+
+### Requirement
+
+One version of one requirement of a role.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | The id of this version. A judgment names it. |
+| `roleId` | `string` | string |  | The role the requirement belongs to. |
+| `localId` | `string` | string |  | The requirement's name within the role, stable across versions: r1, r2 and so on. |
+| `version` | `int32` | number |  | This version's number, from 1. |
+| `supersedes` | `string` | string |  | The version this one was edited from; empty for the first. |
+| `schemaVersion` | `string` | string |  | The schema version the row was written under. |
+| `vocabVersion` | `string` | string |  | The vocabulary version the row's codes belong to. |
+| `text` | `string` | string |  | The requirement as it is judged. |
+| `sourceQuote` | `string` | string |  | The span of the posting it came from, word for word, verified to occur there. Empty when the extraction's quote could not be verified. |
+| `type` | `string` | string |  | A `requirement_type` code: skill, outcome, tool, domain, credential, experience, relationship, constraint or behavioral. A behavioral requirement is never judged by the model. |
+| `category` | `string` | string |  | What the posting said: must or nice. Not editable. |
+| `requirementClass` | `string` | string |  | A `requirement_class` code, set by the hiring manager: required counts at its full weight, preferred at a fraction of it, ideal as bonus credit only. Starts from the category. |
+| `weight` | `int32` | number |  | How much the item matters, 1 to 3. |
+| `evidenceStandard` | `string` | string |  | What counts as met, as unresolved and as not met, in words a person outside the field can read. Rendered from the type's template and editable. |
+| `evidenceStandardTemplate` | `string` | string |  | The template the evidence standard came from, as type@version; prefixed with "edited:" once a person has rewritten it. |
+| `alternatives` | `string`[] | array of string |  | The options the posting itself offers for this requirement, in the order written. Empty when it offers no choice. |
+| `equivalenceNotes` | `string` | string |  | What the equivalence catalog already knows about this requirement: what counts as it, what may, and what does not. Editable. |
+| `equivalency` | `string` | string |  | What the hiring manager accepts in place of the requirement as worded. A years or credential item counts in the numbers only when this is set or the posting offers an alternative. |
+| `thresholds` | [`Thresholds`](#thresholds) | object |  | The values the code rules compare against. |
+| `namedParties` | `string`[] | array of string |  | The organisations the requirement names. |
+| `included` | `bool` | boolean |  | Whether this version counts in the numbers. False for a years or credential item with no equivalency defined: shown, judged and left out of the arithmetic. |
+| `inclusionReason` | `string` | string |  | The sentence that goes with `included`; empty for a requirement the rule does not apply to. |
+| `editedByDisplay` | `string` | string |  | Who wrote this version; empty for the untouched extraction. |
+| `editedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this version was written by a person; unset for the extraction. |
+| `editReason` | `string` | string |  | Why the person changed it. |
+| `status` | [`RequirementStatus`](#requirementstatus) | string (enum name) |  | Where this version stands. |
+| `releasedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When this version was released for judging; unset while it is a draft. |
+| `releasedByPerson` | `bool` | boolean |  | Whether a person released it. False for the pipeline releasing its own extraction. |
+| `createdAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the row was written. |
+| `typeSource` | `string` | string |  | How the extraction typed the requirement: "model", the name of the type heuristic, or both joined when either read it as behavioral. Empty for a row from before the extractor typed requirements. |
+
+### StringList
+
+A list of strings that can be told apart from "not set": present and
+empty clears the list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `values` | `string`[] | array of string | `repeated: max_items: 8 items: string: max_len: 300` | The values. |
+
+### RequirementPatch
+
+An edit: only the fields present are changed.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `text` | `string` | string | `string: min_len: 1 max_len: 500` | _(oneof `_text`)_ The requirement as it should be judged. |
+| `type` | `string` | string | `string: max_len: 32` | _(oneof `_type`)_ A `requirement_type` code. |
+| `requirementClass` | `string` | string | `string: max_len: 32` | _(oneof `_requirement_class`)_ A `requirement_class` code: required, preferred or ideal. |
+| `weight` | `int32` | number | `int32: lte: 3 gte: 1` | _(oneof `_weight`)_ 1 to 3. |
+| `thresholds` | [`Thresholds`](#thresholds) | object |  | The whole set of thresholds, replacing the current one. Present and empty removes every threshold, and with it every comparison. |
+| `evidenceStandard` | `string` | string | `string: max_len: 500` | _(oneof `_evidence_standard`)_ The evidence standard, rewritten. |
+| `equivalenceNotes` | `string` | string | `string: max_len: 1000` | _(oneof `_equivalence_notes`)_ The equivalence notes, rewritten. |
+| `equivalency` | `string` | string | `string: max_len: 500` | _(oneof `_equivalency`)_ What is accepted in place of the requirement as worded. Empty removes it. |
+| `alternatives` | [`StringList`](#stringlist) | object |  | The posting's options, replacing the current list. At most six. |
+| `namedParties` | [`StringList`](#stringlist) | object |  | The named organisations, replacing the current list. At most eight. |
+
+### ListRequirementsRequest
+
+Names the role by its id or by the posting it came from; exactly one.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string | `string: max_len: 64` | The role's id. |
+| `submissionId` | `string` | string | `string: max_len: 32` | The submitted posting's id, as /admin/jd shows it. |
+| `includeRetired` | `bool` | boolean |  | Also return retired versions, so an editor can show what changed. |
+
+### ListRequirementsResponse
+
+A role's requirements.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string |  | The role's id; empty when the posting has no requirement rows yet, which is a posting last scored before the hiring tables began. |
+| `requirements` | [`Requirement`](#requirement)[] | array of object |  | The versions, in reading order: by requirement, then by version. |
+| `pendingDrafts` | `int32` | number |  | How many drafts are waiting to be released. |
+| `humanEdited` | `bool` | boolean |  | Whether a person has edited any current requirement. Once true, a run judges the released list and never extracts over it. |
+| `types` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_type` codes an editor may choose from. |
+| `classes` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_class` codes. |
+| `scopeUnits` | [`VocabCode`](#vocabcode)[] | array of object |  | The `scope_unit` codes. |
+| `credentialLevels` | [`VocabCode`](#vocabcode)[] | array of object |  | The `credential_level` codes. |
+| `relationshipKinds` | [`VocabCode`](#vocabcode)[] | array of object |  | The `relationship_kind` codes. |
+
+### VocabCode
+
+One code of a controlled vocabulary, as an editor labels it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `code` | `string` | string |  | The code as stored. |
+| `label` | `string` | string |  | The label a person reads. |
+| `description` | `string` | string |  | What the code means. |
+
+### UpdateRequirementRequest
+
+One edit of one requirement version.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requirementId` | `string` | string | `string: min_len: 1 max_len: 64` | The version being edited: the pending draft when there is one, otherwise the released version. |
+| `patch` | [`RequirementPatch`](#requirementpatch) | object | `required: true` | What to change. |
+| `editReason` | `string` | string | `string: min_len: 1 max_len: 500` | Why. Required; it is what makes an edit usable for calibration. |
+
+### UpdateRequirementResponse
+
+The new version.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requirement` | [`Requirement`](#requirement) | object |  | The draft the edit created. |
+
+### ReleaseRequirementsRequest
+
+Names the role whose drafts to release.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `roleId` | `string` | string | `string: min_len: 1 max_len: 64` | The role's id. |
+
+### ReleaseRequirementsResponse
+
+What was released and whether a run began.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `released` | [`Requirement`](#requirement)[] | array of object |  | The versions released by this call; empty when no draft was pending. |
+| `runStarted` | `bool` | boolean |  | Whether a run judging the released list was started. False when the reviewer is not wired, as in development without a model. |
+| `submissionId` | `string` | string |  | The submitted posting the run belongs to, for following its progress on /admin/jd. |
+
+### HiringSettings
+
+The framework's adjustable values.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `preferredFraction` | `double` | number | `double: lte: 1.0 gt: 0.0` | The share of its weight a preferred requirement counts at, and an evidenced ideal one: greater than 0, at most 1. 0.25 unless set. |
+
+### GetHiringSettingsRequest
+
+Asks for the settings in force.
+
+_No fields._
+
+### GetHiringSettingsResponse
+
+The settings in force.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object |  | Current settings. |
+
+### SetHiringSettingsRequest
+
+New settings.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object | `required: true` | The settings to store. |
+
+### SetHiringSettingsResponse
+
+The settings as stored.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `settings` | [`HiringSettings`](#hiringsettings) | object |  | Stored settings. |
+
 ### GetHomeRequest
 
 Empty.
@@ -11632,6 +12042,17 @@ Credential kinds.
 | `KIND_EDUCATION` | 2 | Degree or certificate. |
 | `KIND_SERVICE` | 3 | Military or public service. |
 | `KIND_ELIGIBILITY` | 4 | Eligibility statement (citizenship, clearance eligibility). |
+
+### RequirementStatus
+
+Where a requirement version stands.
+
+| Value | Number | Description |
+|---|---|---|
+| `REQUIREMENT_STATUS_UNSPECIFIED` | 0 | Not set. |
+| `REQUIREMENT_STATUS_DRAFT` | 1 | A pending edit: saved, not yet released, not judged. |
+| `REQUIREMENT_STATUS_ACTIVE` | 2 | The released version, which a run judges. |
+| `REQUIREMENT_STATUS_RETIRED` | 3 | Replaced by a later version, or dropped from the list. Kept because judgments name it. |
 
 ### MeetingType
 

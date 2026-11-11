@@ -93,6 +93,9 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `admin.rescore` | | `submission_id` | a rescore queued |
 | `admin.fit_bands_changed` | | | the fit bands saved |
 | `admin.jd_limit_changed` | | `limit` | the daily JD cap changed |
+| `admin.requirement_edited` | | `requirement_id`, `role_id`, `local_id`, `version`, `fields` | a requirement saved as a new draft version. `fields` names what the edit touched, so which parts of an extraction people correct can be read off the stream (FSD FR-HF-03) |
+| `admin.requirements_released` | | `role_id`, `submission_id`, `released`, `run_started` | a role's drafts released for judging; `released` is how many, and `run_started` says whether a run on the released list began |
+| `admin.hiring_settings_changed` | | `preferred_fraction` | the share of its weight a preferred requirement counts at was changed (FSD FR-HF-23) |
 | `admin.qa_entry_created` | | `entry_id`, `enabled`, `covers_restricted` | a Q&A bank entry added |
 | `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
 | `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |

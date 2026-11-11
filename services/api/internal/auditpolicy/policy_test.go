@@ -147,6 +147,9 @@ var noTarget = map[string]bool{
 	"/career.v1.AdminService/RevokeAgentSessions": true,
 	// Exports the whole pilot dataset; the table name is in the payload.
 	"/career.v1.PilotService/ExportPilot": true,
+	// One settings row, not an instance of anything; the value is on
+	// the event stream as admin.hiring_settings_changed.
+	"/career.v1.HiringService/SetHiringSettings": true,
 }
 
 func TestEveryRecordedProcedureResolvesATarget(t *testing.T) {

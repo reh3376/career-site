@@ -406,7 +406,7 @@ func receiverType(fn *ast.FuncDecl) string {
 }
 
 // receiverService maps a handler struct to the service it is registered
-// as in internal/server/server.go. These twelve are every service the
+// as in internal/server/server.go. These thirteen are every service the
 // server actually mounts.
 //
 // Explicit rather than inferred from the name, because the names do not
@@ -416,6 +416,7 @@ func receiverType(fn *ast.FuncDecl) string {
 // is what stops that going unnoticed.
 var receiverService = map[string]string{
 	"Pilot":        "PilotService",
+	"Hiring":       "HiringService",
 	"Activity":     "ActivityService",
 	"Admin":        "AdminService",
 	"Auth":         "AuthService",

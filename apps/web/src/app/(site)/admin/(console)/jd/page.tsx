@@ -3,8 +3,9 @@ import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
 
-import { getJdLimit } from "./actions";
+import { getJdLimit, getPreferredFraction } from "./actions";
 import { FitBandsForm } from "./fit-bands-form";
+import { PreferredFractionForm } from "./preferred-fraction-form";
 import { SubmissionLimitForm } from "./submission-limit-form";
 import { getJdBands } from "@/lib/jd-bands";
 import { getSessionCookie } from "@/lib/session";
@@ -93,6 +94,7 @@ export default async function AdminJdPage() {
   const nowMs = getNowMs();
   const bands = await getJdBands(await getSessionCookie());
   const limit = await getJdLimit();
+  const preferredFraction = await getPreferredFraction();
 
   return (
     <>
@@ -155,6 +157,29 @@ export default async function AdminJdPage() {
               Could not read the limit in force, so it is not shown rather
               than guessed at. The API refused the read; the cap itself is
               still enforced.
+            </p>
+          )}
+        </div>
+
+        <h2
+          className="font-display mt-10 text-2xl leading-tight text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          How much a preferred requirement counts.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
+          Each requirement is classed required, preferred or ideal on its
+          posting&rsquo;s page. A required item counts at its full weight and an
+          ideal one only as bonus credit. This is the share of its weight a
+          preferred item counts at.
+        </p>
+        <div className="mt-4">
+          {typeof preferredFraction === "number" ? (
+            <PreferredFractionForm initial={preferredFraction} />
+          ) : (
+            <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+              Could not read the fraction in force, so it is not shown rather
+              than guessed at.
             </p>
           )}
         </div>

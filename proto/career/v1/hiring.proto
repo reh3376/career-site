@@ -1,0 +1,379 @@
+// The hiring framework's own surface (FSD §5.15;
+// docs/framework-research/14-schema-rendering.md §3).
+//
+// The JD reviewer structures a posting into requirements and judges a
+// candidate's evidence against each one. This service is where a person
+// on the hiring side works on those requirements as rows: reads what
+// the extraction drafted, corrects it, and releases it for judging.
+// Every edit is a new version, a judgment names the version it judged,
+// and the extractor's draft and the person's edit are both kept, so the
+// reason for an edit feeds extractor calibration instead of vanishing
+// (J8).
+//
+// It is a service of its own rather than more methods on JdService
+// because the member's submit-and-poll flow and the hiring side's
+// editing flow have different callers and different rules (14 §3.3).
+// Phase 0 step 5 lands the requirement methods and the settings; the
+// match record, overrides, the clarification loop and the catalog
+// follow in steps 6 to 8.
+//
+// Vocabulary codes (type, class, threshold units) travel as strings,
+// not enums: the vocabulary is data in `vocab_codes`, a new code must
+// not be a proto change, and a reader keeps a code it does not know
+// (14 §3.1). The codes of vocabulary 1.1 are listed in the field
+// comments; the registry is the source of record.
+syntax = "proto3";
+
+package career.v1;
+
+import "buf/validate/validate.proto";
+import "career/v1/options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
+
+// Requirements as editable, versioned rows, and the settings the
+// framework's arithmetic reads.
+service HiringService {
+  // Lists a role's requirements in reading order: the released version
+  // of each, any pending draft beside it, and the retired versions when
+  // asked for. The role is named directly or by the submitted posting
+  // it was created from.
+  rpc ListRequirements(ListRequirementsRequest) returns (ListRequirementsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
+  }
+  // Saves an edit to a requirement as a new version, with the editor
+  // and a required reason. The version edited must be the current one:
+  // the pending draft when there is one, otherwise the released
+  // version. The new version is a draft; the released version stays
+  // what a run judges until the drafts are released. Fields left out of
+  // the patch are carried over, and thresholds, the evidence standard
+  // and the equivalence notes are derived again from a reworded
+  // requirement unless a person had set them.
+  rpc UpdateRequirement(UpdateRequirementRequest) returns (UpdateRequirementResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Releases every pending draft of a role, each replacing the version
+  // it was edited from, and starts a run that judges the released list
+  // without extracting the posting again. With no draft pending it is
+  // how a re-judge of the list as it stands is asked for. Refused while
+  // the posting is already being scored.
+  rpc ReleaseRequirements(ReleaseRequirementsRequest) returns (ReleaseRequirementsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Reads the framework's settings: the share of its weight a preferred
+  // requirement counts at.
+  rpc GetHiringSettings(GetHiringSettingsRequest) returns (GetHiringSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
+  }
+  // Sets the framework's settings (stored in app_settings; the api
+  // caches them for 15 s). Takes effect for the next run; a record
+  // already written keeps the fraction it was computed with.
+  rpc SetHiringSettings(SetHiringSettingsRequest) returns (SetHiringSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+}
+
+// Where a requirement version stands.
+enum RequirementStatus {
+  // Not set.
+  REQUIREMENT_STATUS_UNSPECIFIED = 0;
+  // A pending edit: saved, not yet released, not judged.
+  REQUIREMENT_STATUS_DRAFT = 1;
+  // The released version, which a run judges.
+  REQUIREMENT_STATUS_ACTIVE = 2;
+  // Replaced by a later version, or dropped from the list. Kept
+  // because judgments name it.
+  REQUIREMENT_STATUS_RETIRED = 3;
+}
+
+// A scale: how many of what.
+message ScopeThreshold {
+  // The measure, a `scope_unit` code: team_size, budget_usd, users,
+  // sites, io_points, systems, revenue_usd or other.
+  string unit = 1 [(buf.validate.field).string.max_len = 32];
+  // The amount, greater than 0.
+  double value = 2 [(buf.validate.field).double.gt = 0];
+}
+
+// The structured values the code rules compare a judgment's reported
+// facts against, so a shortfall is arithmetic. Every field is optional
+// and present only when the requirement asks for it.
+message Thresholds {
+  // Years of the work asked for.
+  optional double min_years = 1 [(buf.validate.field).double = {
+    gte: 0
+    lte: 60
+  }];
+  // The work must fall within this many years to count as current.
+  optional double recency_years = 2 [(buf.validate.field).double = {
+    gte: 0
+    lte: 60
+  }];
+  // The scale asked for.
+  ScopeThreshold min_scope = 3;
+  // A `credential_level` code: certificate, associate, bachelor,
+  // master, doctorate or license. Empty when no credential is asked.
+  string credential_level = 4 [(buf.validate.field).string.max_len = 32];
+  // The field of the credential, as the posting wrote it.
+  string credential_field = 5 [(buf.validate.field).string.max_len = 120];
+  // A `relationship_kind` code: employed_by, contracted_to,
+  // customer_of, partner_of or any_working. Empty when the requirement
+  // names no organisation.
+  string relationship_kind = 6 [(buf.validate.field).string.max_len = 32];
+}
+
+// One version of one requirement of a role.
+message Requirement {
+  // The id of this version. A judgment names it.
+  string id = 1;
+  // The role the requirement belongs to.
+  string role_id = 2;
+  // The requirement's name within the role, stable across versions:
+  // r1, r2 and so on.
+  string local_id = 3;
+  // This version's number, from 1.
+  int32 version = 4;
+  // The version this one was edited from; empty for the first.
+  string supersedes = 5;
+  // The schema version the row was written under.
+  string schema_version = 6;
+  // The vocabulary version the row's codes belong to.
+  string vocab_version = 7;
+  // The requirement as it is judged.
+  string text = 8;
+  // The span of the posting it came from, word for word, verified to
+  // occur there. Empty when the extraction's quote could not be
+  // verified.
+  string source_quote = 9;
+  // A `requirement_type` code: skill, outcome, tool, domain,
+  // credential, experience, relationship, constraint or behavioral. A
+  // behavioral requirement is never judged by the model.
+  string type = 10;
+  // What the posting said: must or nice. Not editable.
+  string category = 11;
+  // A `requirement_class` code, set by the hiring manager: required
+  // counts at its full weight, preferred at a fraction of it, ideal as
+  // bonus credit only. Starts from the category.
+  string requirement_class = 12;
+  // How much the item matters, 1 to 3.
+  int32 weight = 13;
+  // What counts as met, as unresolved and as not met, in words a person
+  // outside the field can read. Rendered from the type's template and
+  // editable.
+  string evidence_standard = 14;
+  // The template the evidence standard came from, as type@version;
+  // prefixed with "edited:" once a person has rewritten it.
+  string evidence_standard_template = 15;
+  // The options the posting itself offers for this requirement, in the
+  // order written. Empty when it offers no choice.
+  repeated string alternatives = 16;
+  // What the equivalence catalog already knows about this requirement:
+  // what counts as it, what may, and what does not. Editable.
+  string equivalence_notes = 17;
+  // What the hiring manager accepts in place of the requirement as
+  // worded. A years or credential item counts in the numbers only when
+  // this is set or the posting offers an alternative.
+  string equivalency = 18;
+  // The values the code rules compare against.
+  Thresholds thresholds = 19;
+  // The organisations the requirement names.
+  repeated string named_parties = 20;
+  // Whether this version counts in the numbers. False for a years or
+  // credential item with no equivalency defined: shown, judged and left
+  // out of the arithmetic.
+  bool included = 21;
+  // The sentence that goes with `included`; empty for a requirement
+  // the rule does not apply to.
+  string inclusion_reason = 22;
+  // Who wrote this version; empty for the untouched extraction.
+  string edited_by_display = 23;
+  // When this version was written by a person; unset for the
+  // extraction.
+  google.protobuf.Timestamp edited_at = 24;
+  // Why the person changed it.
+  string edit_reason = 25;
+  // Where this version stands.
+  RequirementStatus status = 26;
+  // When this version was released for judging; unset while it is a
+  // draft.
+  google.protobuf.Timestamp released_at = 27;
+  // Whether a person released it. False for the pipeline releasing its
+  // own extraction.
+  bool released_by_person = 28;
+  // When the row was written.
+  google.protobuf.Timestamp created_at = 29;
+  // How the extraction typed the requirement: "model", the name of the
+  // type heuristic, or both joined when either read it as behavioral.
+  // Empty for a row from before the extractor typed requirements.
+  string type_source = 30;
+}
+
+// A list of strings that can be told apart from "not set": present and
+// empty clears the list.
+message StringList {
+  // The values.
+  repeated string values = 1 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      string: {max_len: 300}
+    }
+  }];
+}
+
+// An edit: only the fields present are changed.
+message RequirementPatch {
+  // The requirement as it should be judged.
+  optional string text = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  // A `requirement_type` code.
+  optional string type = 2 [(buf.validate.field).string.max_len = 32];
+  // A `requirement_class` code: required, preferred or ideal.
+  optional string requirement_class = 3 [(buf.validate.field).string.max_len = 32];
+  // 1 to 3.
+  optional int32 weight = 4 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 3
+  }];
+  // The whole set of thresholds, replacing the current one. Present
+  // and empty removes every threshold, and with it every comparison.
+  Thresholds thresholds = 5;
+  // The evidence standard, rewritten.
+  optional string evidence_standard = 6 [(buf.validate.field).string.max_len = 500];
+  // The equivalence notes, rewritten.
+  optional string equivalence_notes = 7 [(buf.validate.field).string.max_len = 1000];
+  // What is accepted in place of the requirement as worded. Empty
+  // removes it.
+  optional string equivalency = 8 [(buf.validate.field).string.max_len = 500];
+  // The posting's options, replacing the current list. At most six.
+  StringList alternatives = 9;
+  // The named organisations, replacing the current list. At most eight.
+  StringList named_parties = 10;
+}
+
+// Names the role by its id or by the posting it came from; exactly one.
+message ListRequirementsRequest {
+  // The role's id.
+  string role_id = 1 [(buf.validate.field).string.max_len = 64];
+  // The submitted posting's id, as /admin/jd shows it.
+  string submission_id = 2 [(buf.validate.field).string.max_len = 32];
+  // Also return retired versions, so an editor can show what changed.
+  bool include_retired = 3;
+}
+
+// A role's requirements.
+message ListRequirementsResponse {
+  // The role's id; empty when the posting has no requirement rows yet,
+  // which is a posting last scored before the hiring tables began.
+  string role_id = 1;
+  // The versions, in reading order: by requirement, then by version.
+  repeated Requirement requirements = 2;
+  // How many drafts are waiting to be released.
+  int32 pending_drafts = 3;
+  // Whether a person has edited any current requirement. Once true, a
+  // run judges the released list and never extracts over it.
+  bool human_edited = 4;
+  // The `requirement_type` codes an editor may choose from.
+  repeated VocabCode types = 5;
+  // The `requirement_class` codes.
+  repeated VocabCode classes = 6;
+  // The `scope_unit` codes.
+  repeated VocabCode scope_units = 7;
+  // The `credential_level` codes.
+  repeated VocabCode credential_levels = 8;
+  // The `relationship_kind` codes.
+  repeated VocabCode relationship_kinds = 9;
+}
+
+// One code of a controlled vocabulary, as an editor labels it.
+message VocabCode {
+  // The code as stored.
+  string code = 1;
+  // The label a person reads.
+  string label = 2;
+  // What the code means.
+  string description = 3;
+}
+
+// One edit of one requirement version.
+message UpdateRequirementRequest {
+  // The version being edited: the pending draft when there is one,
+  // otherwise the released version.
+  string requirement_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // What to change.
+  RequirementPatch patch = 2 [(buf.validate.field).required = true];
+  // Why. Required; it is what makes an edit usable for calibration.
+  string edit_reason = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+}
+
+// The new version.
+message UpdateRequirementResponse {
+  // The draft the edit created.
+  Requirement requirement = 1;
+}
+
+// Names the role whose drafts to release.
+message ReleaseRequirementsRequest {
+  // The role's id.
+  string role_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// What was released and whether a run began.
+message ReleaseRequirementsResponse {
+  // The versions released by this call; empty when no draft was
+  // pending.
+  repeated Requirement released = 1;
+  // Whether a run judging the released list was started. False when
+  // the reviewer is not wired, as in development without a model.
+  bool run_started = 2;
+  // The submitted posting the run belongs to, for following its
+  // progress on /admin/jd.
+  string submission_id = 3;
+}
+
+// The framework's adjustable values.
+message HiringSettings {
+  // The share of its weight a preferred requirement counts at, and an
+  // evidenced ideal one: greater than 0, at most 1. 0.25 unless set.
+  double preferred_fraction = 1 [(buf.validate.field).double = {
+    gt: 0
+    lte: 1
+  }];
+}
+
+// Asks for the settings in force.
+message GetHiringSettingsRequest {}
+
+// The settings in force.
+message GetHiringSettingsResponse {
+  // Current settings.
+  HiringSettings settings = 1;
+}
+
+// New settings.
+message SetHiringSettingsRequest {
+  // The settings to store.
+  HiringSettings settings = 1 [(buf.validate.field).required = true];
+}
+
+// The settings as stored.
+message SetHiringSettingsResponse {
+  // Stored settings.
+  HiringSettings settings = 1;
+}

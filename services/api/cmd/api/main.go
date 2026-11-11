@@ -313,6 +313,11 @@ func main() {
 	// sidecar isn't dialled (rare — dev only) so /jd-upload still
 	// stores submissions even without scoring wired.
 	var jdScorer *jd.Scorer
+	// The hiring framework's rows and settings (FSD §5.15). Built here,
+	// outside the reviewer's wiring, because the requirement editor
+	// reads and edits rows whether or not a model is reachable.
+	hiringRepo := hiring.NewRepo(pool.Pool)
+	hiringSettings := hiring.NewSettingsStore(log, userRepo)
 	// Ask Roger's answer pipeline, built alongside the JD assessor
 	// because they share the gateway, the embedder and the same
 	// precondition: a sidecar that can name a real model.
@@ -431,20 +436,26 @@ func main() {
 		} else {
 			jdScorer = jd.NewScorer(log, userRepo, ingest.SidecarEmbed{Client: sc}, assessor, writer, jd.NewBandsStore(log, userRepo, jd.DefaultBands(cfg.JDMatchThreshold)), cfg.JDPipelineTimeout)
 			jdScorer.SetNotifier(jd.NewOwnerMailer(mailer, userRepo, cfg.MailFrom, cfg.OwnerContactEmail, cfg.WebBaseURL, log))
-			// Phase 0 step 3: every run is also written as framework rows
+			// Every run is written as framework rows
 			// (docs/framework-research/14 §4), beside the jsonb that
-			// stays authoritative until step 4.
-			hiringRepo := hiring.NewRepo(pool.Pool)
+			// stays authoritative until the hand-over. Since Phase 0
+			// step 5 the requirement rows are written before judging, so
+			// the judge is shown the row, as extracted or as edited.
 			jdScorer.SetHiring(hiring.NewWriter(log, hiringRepo))
+			// Formula v4 counts a preferred requirement at a fraction of
+			// its weight, a setting the console edits (FR-HF-23).
+			assessor.SetSettings(hiringSettings)
 			// Phase 0 step 4: the judge's allowed codes are rendered from
 			// the vocabulary registry, so a registry change is a new prompt
-			// fingerprint and not a deploy (14 §5). The compiled-in
-			// vocabulary 1.0 stands in when the registry cannot be read.
+			// fingerprint and not a deploy (14 §5); since step 5 the
+			// extractor's requirement types are too. The compiled-in
+			// vocabulary stands in when the registry cannot be read.
 			if reg, err := hiringRepo.LoadVocab(context.Background()); err != nil {
-				log.Warn("hiring vocabulary unavailable; the judge uses the compiled-in vocabulary", slog.String("error", err.Error()))
+				log.Warn("hiring vocabulary unavailable; the judge and the extractor use the compiled-in vocabulary", slog.String("error", err.Error()))
 			} else {
 				assessor.SetVocab(hiring.VocabFromRegistry(reg))
 				log.Info("judge rendered from the vocabulary registry", slog.String("fingerprint", assessor.JudgePrompt().Fingerprint()))
+				log.Info("extractor rendered from the vocabulary registry", slog.String("fingerprint", assessor.ExtractorPrompt().Fingerprint()))
 			}
 			// Recorded on every run so a change in latency or in verdicts can
 			// be attributed to the machine rather than guessed at. One host
@@ -559,6 +570,10 @@ func main() {
 		os.Exit(1)
 	}
 	pilotHandler.SetEvents(eventWriter)
+	// The requirement editor (FSD §5.15, Phase 0 step 5). The scorer is
+	// nil without a model, and a release then releases without a run.
+	hiringHandler := handlers.NewHiring(log, userRepo, hiringRepo, hiringSettings, jdScorer)
+	hiringHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.
 	adminHandler.SetJdLimits(jdLimits)
@@ -605,6 +620,7 @@ func main() {
 		Events:           eventsHandler,
 		DecisionTest:     decisionTestHandler,
 		Pilot:            pilotHandler,
+		Hiring:           hiringHandler,
 		// The public "how it works" page reads the same views the gate does.
 		Users: userRepo,
 	})
