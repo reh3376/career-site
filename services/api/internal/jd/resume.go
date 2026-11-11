@@ -91,6 +91,139 @@ const resumeReserve = 2600
 // posting and the full master résumé cannot both fit the window.
 const jdHeadRunes = 1500
 
+// resumeTokenBudget is the résumé's output cap. Production's longest
+// answer in 72 calls is 1,872 tokens and its average 959; the
+// development machine, with a wider context and so more evidence in
+// the prompt, averaged 1,511 and reached 2,114 before it first filled
+// the cap on 2026-11-10. A cap is a guess about the longest answer the
+// model will ever want to give, so it is paired with one retry
+// (generate) rather than raised and trusted.
+const resumeTokenBudget = 2200
+
+// resumeDoc is the model's résumé as decoded, before any line is
+// checked against its sources.
+type resumeDoc struct {
+	Headline     string `json:"headline"`
+	Summary      string `json:"summary"`
+	Competencies []struct {
+		Text    string   `json:"text"`
+		Sources []string `json:"sources"`
+	} `json:"competencies"`
+	Experience []struct {
+		Role         string `json:"role"`
+		Organisation string `json:"organisation"`
+		Dates        string `json:"dates"`
+		Bullets      []struct {
+			Text    string   `json:"text"`
+			Sources []string `json:"sources"`
+		} `json:"bullets"`
+	} `json:"experience"`
+	Education []struct {
+		Text    string   `json:"text"`
+		Sources []string `json:"sources"`
+	} `json:"education"`
+}
+
+// generate makes the résumé call and decodes it, with one retry when
+// the answer filled its budget.
+//
+// The judge has had this retry since evaluation run 13 lost a posting
+// to a judgment that filled its cap (assess.go, call). The résumé
+// writer did not, and on 2026-11-10 two reviews on the development
+// machine ended "failed" after their requirements had been judged and
+// scored, because the résumé stopped mid-string at exactly 2,200
+// tokens. A review that is finished must not be lost to the length of
+// the document written about it.
+//
+// The retry doubles the budget. The wider answer has to fit the same
+// context window, so the evidence is trimmed from the tail first: it is
+// in priority order (master résumé, then cited chunks, then the
+// posting's retrieval), so what goes is what mattered least. Returns
+// the evidence the answer was actually written from, because every
+// line is checked against the chunks it cites and must not be checked
+// against one the model never saw.
+func (w *ResumeWriter) generate(
+	ctx context.Context, submissionID int64, p prompts.Prompt,
+	render func([]users.CorpusHit) string, evidence []users.CorpusHit, budget int,
+) (resumeDoc, *llm.Response, []users.CorpusHit, error) {
+	var doc resumeDoc
+	call := func(maxTokens int, ev []users.CorpusHit) (*llm.Response, error) {
+		started := time.Now()
+		resp, err := w.llm.Generate(ctx, llm.Request{
+			System:      p.System,
+			User:        render(ev),
+			MaxTokens:   maxTokens,
+			Temperature: 0.2,
+			JSONSchema:  p.Schema,
+			TraceID:     fmt.Sprintf("jd:%d:%s", submissionID, p.ID),
+		})
+		usage := users.LLMUsage{
+			Kind: "jd_resume", RefID: submissionID,
+			PromptID: p.ID, PromptVersion: p.Version,
+			LatencyMs: time.Since(started).Milliseconds(), Model: "unknown",
+		}
+		if err == nil {
+			usage.OK = true
+			usage.Model = resp.Model
+			usage.PromptTokens = resp.PromptTokens
+			usage.CompletionTokens = resp.CompletionTokens
+			if resp.LatencyMs > 0 {
+				usage.LatencyMs = resp.LatencyMs
+			}
+		} else {
+			usage.Error = truncErr(err.Error())
+		}
+		// The repository is absent in tests that drive this with a
+		// scripted model; a missing ledger row is never a reason a call
+		// fails.
+		if w.users != nil {
+			if rErr := w.users.RecordLLMUsage(context.WithoutCancel(ctx), usage); rErr != nil {
+				w.log.Warn("llm usage record failed", slog.Int64("jd_id", submissionID), slog.String("error", rErr.Error()))
+			}
+		}
+		return resp, err
+	}
+
+	resp, err := call(resumeTokenBudget, evidence)
+	if err != nil {
+		return doc, nil, evidence, err
+	}
+	decodeErr := json.Unmarshal([]byte(resp.Text), &doc)
+	if decodeErr == nil {
+		return doc, resp, evidence, nil
+	}
+	if resp.CompletionTokens < resumeTokenBudget {
+		// Malformed under budget: a model that cannot follow the schema,
+		// which a wider budget would not fix.
+		return doc, resp, evidence, fmt.Errorf("decode resume: %w", decodeErr)
+	}
+
+	wider := 2 * resumeTokenBudget
+	room := budget - (wider - resumeTokenBudget)
+	trimmed := evidence
+	for len(trimmed) > 1 && prompts.EstimateTokens(render(trimmed)) > room {
+		trimmed = trimmed[:len(trimmed)-1]
+	}
+	w.log.Warn("resume output hit its token budget, retrying once at double",
+		slog.Int64("jd_id", submissionID), slog.Int("budget", resumeTokenBudget),
+		slog.Int("evidence_kept", len(trimmed)), slog.Int("evidence_dropped", len(evidence)-len(trimmed)))
+	resp2, err2 := call(wider, trimmed)
+	if err2 != nil {
+		return doc, resp, evidence, fmt.Errorf(
+			"decode resume: the model filled its %d-token budget and the retry at %d failed: %w",
+			resumeTokenBudget, wider, err2)
+	}
+	doc = resumeDoc{}
+	if err3 := json.Unmarshal([]byte(resp2.Text), &doc); err3 != nil {
+		return doc, resp2, trimmed, fmt.Errorf(
+			"decode resume: the model filled its %d-token budget, and the retry at %d did not decode either (%d tokens): %w",
+			resumeTokenBudget, wider, resp2.CompletionTokens, err3)
+	}
+	w.log.Info("resume retry at double budget decoded",
+		slog.Int64("jd_id", submissionID), slog.Int("completion_tokens", int(resp2.CompletionTokens)))
+	return doc, resp2, trimmed, nil
+}
+
 // NewResumeWriter wires the deps. renderer may be nil; numCtx <= 0 falls
 // back to 16384.
 func NewResumeWriter(log *slog.Logger, repo *users.Repo, client llm.Client, monthlyCap int64, renderer Renderer, ownerPassword string, numCtx int) *ResumeWriter {
@@ -200,61 +333,18 @@ func (w *ResumeWriter) Write(
 			slog.Int64("jd_id", submissionID), slog.Int("kept", len(evidence)), slog.Int("dropped", dropped), slog.Int("num_ctx", w.numCtx))
 	}
 
-	started := time.Now()
-	resp, err := w.llm.Generate(ctx, llm.Request{
-		System:      p.System,
-		User:        prompts.RenderResumeUser(jdText, hints, verdicts, evidence),
-		MaxTokens:   2200,
-		Temperature: 0.2,
-		JSONSchema:  p.Schema,
-		TraceID:     fmt.Sprintf("jd:%d:%s", submissionID, p.ID),
-	})
-	usage := users.LLMUsage{
-		Kind: "jd_resume", RefID: submissionID,
-		PromptID: p.ID, PromptVersion: p.Version,
-		LatencyMs: time.Since(started).Milliseconds(), Model: "unknown",
+	render := func(ev []users.CorpusHit) string {
+		return prompts.RenderResumeUser(jdText, hints, verdicts, ev)
 	}
-	if err == nil {
-		usage.OK = true
-		usage.Model = resp.Model
-		usage.PromptTokens = resp.PromptTokens
-		usage.CompletionTokens = resp.CompletionTokens
-		if resp.LatencyMs > 0 {
-			usage.LatencyMs = resp.LatencyMs
-		}
-	} else {
-		usage.Error = truncErr(err.Error())
-	}
-	if rErr := w.users.RecordLLMUsage(context.WithoutCancel(ctx), usage); rErr != nil {
-		w.log.Warn("llm usage record failed", slog.Int64("jd_id", submissionID), slog.String("error", rErr.Error()))
-	}
+	raw, resp, evidence, err := w.generate(ctx, submissionID, p, render, evidence, budget)
 	if err != nil {
 		return nil, "", err
 	}
-
-	var raw struct {
-		Headline     string `json:"headline"`
-		Summary      string `json:"summary"`
-		Competencies []struct {
-			Text    string   `json:"text"`
-			Sources []string `json:"sources"`
-		} `json:"competencies"`
-		Experience []struct {
-			Role         string `json:"role"`
-			Organisation string `json:"organisation"`
-			Dates        string `json:"dates"`
-			Bullets      []struct {
-				Text    string   `json:"text"`
-				Sources []string `json:"sources"`
-			} `json:"bullets"`
-		} `json:"experience"`
-		Education []struct {
-			Text    string   `json:"text"`
-			Sources []string `json:"sources"`
-		} `json:"education"`
-	}
-	if err := json.Unmarshal([]byte(resp.Text), &raw); err != nil {
-		return nil, "", fmt.Errorf("decode resume: %w", err)
+	// The ids a line may cite are the ones the answer was written from,
+	// which after a retry is the trimmed list.
+	seen = map[int64]bool{}
+	for _, h := range evidence {
+		seen[h.Chunk.ID] = true
 	}
 
 	out := &Resume{
