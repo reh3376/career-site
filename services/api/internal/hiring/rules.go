@@ -34,8 +34,10 @@ import (
 // a later tolerance change does not rewrite history.
 
 // RulesVersion names this set of rules and tolerances on the match
-// record (versions.rules). It changes when any rule's logic does.
-const RulesVersion = "rules-v1"
+// record (versions.rules). It changes when any rule's logic does. v2:
+// the duration, recency and scope rules compare against the
+// requirement's stored thresholds rather than reading its text (step 5).
+const RulesVersion = "rules-v2"
 
 // Rule names, as written in RuleAdjustment.Rule.
 const (
@@ -52,9 +54,9 @@ const (
 // Versions per rule. A rule's version moves when its comparison or
 // tolerance changes; the set version above moves with any of them.
 const (
-	RuleDurationVersion     = "v1"
-	RuleRecencyVersion      = "v1"
-	RuleScopeVersion        = "v1"
+	RuleDurationVersion     = "v2"
+	RuleRecencyVersion      = "v2"
+	RuleScopeVersion        = "v2"
 	RuleCredentialVersion   = "v1"
 	RuleRelationshipVersion = "v1"
 	RuleEvidenceVersion     = "v1"
@@ -126,13 +128,31 @@ func (v Verdict) Evidenced() bool {
 	return v.Determination == DetMet || v.Determination == DetMetEquivalent
 }
 
-// RuleInput is what the rules need from the requirement: its text
-// (which says how many years, how recent, how large), its type and the
+// RuleInput is what the rules need from the requirement: its
+// thresholds (how many years, how recent, how large), its type and the
 // organisations it names.
+//
+// Since step 5 the thresholds are stored on the requirement, derived
+// from its text when it is drafted and editable from then on, and the
+// rules compare against those and nothing else: a hiring manager who
+// removes a years threshold has removed the comparison, whatever the
+// text still says. Thresholds is nil only for a requirement that was
+// never drafted as a row (a run whose rows could not be written, and
+// tests); the rules then read the text as they did before.
 type RuleInput struct {
 	Text         string
 	Type         string
 	NamedParties []string
+	Thresholds   *Thresholds
+}
+
+// asks resolves what the requirement asks for: its stored thresholds
+// when it has them, the text otherwise.
+func (r RuleInput) asks() Thresholds {
+	if r.Thresholds != nil {
+		return *r.Thresholds
+	}
+	return DeriveThresholds(r.Text, r.Type, r.NamedParties)
 }
 
 // ApplyRules runs every code rule over a judgment, in a fixed order,
@@ -252,25 +272,26 @@ func durationRule(req RuleInput, v Verdict, facts ReportedFacts, _ time.Time) (V
 	if !v.Evidenced() {
 		return v, nil
 	}
-	need, asks := RequiredYears(req.Text)
-	if !asks {
+	min := req.asks().MinYears
+	if min == nil || *min <= 0 {
 		return v, nil
 	}
+	need := strconv.FormatFloat(*min, 'g', -1, 64)
 	span := facts.StatedSpanYears
-	if span >= float64(need) {
+	if span >= *min {
 		return v, nil
 	}
 	if span <= 0 {
 		return weaken(v, RuleDuration, RuleDurationVersion, DetUnresolved, v.Basis, UncDurationUnknown,
-			fmt.Sprintf("asks for %d years; the evidence shows the work but states no span for it", need))
+			fmt.Sprintf("asks for %s years; the evidence shows the work but states no span for it", need))
 	}
 	stated := strconv.FormatFloat(span, 'g', -1, 64)
-	if span >= float64(need)*(1-DurationTolerance) {
+	if span >= *min*(1-DurationTolerance) {
 		return weaken(v, RuleDuration, RuleDurationVersion, DetUnresolved, BasisDurationShortfall, UncDurationUnknown,
-			fmt.Sprintf("asks for %d years; the evidence states %s, within a quarter of the ask, so the exact span is a question rather than a refusal", need, stated))
+			fmt.Sprintf("asks for %s years; the evidence states %s, within a quarter of the ask, so the exact span is a question rather than a refusal", need, stated))
 	}
 	return weaken(v, RuleDuration, RuleDurationVersion, DetNotMet, BasisDurationShortfall, "",
-		fmt.Sprintf("asks for %d years; the evidence states %s", need, stated))
+		fmt.Sprintf("asks for %s years; the evidence states %s", need, stated))
 }
 
 // --- recency --------------------------------------------------------
@@ -298,10 +319,11 @@ func recencyRule(req RuleInput, v Verdict, facts ReportedFacts, now time.Time) (
 	if !v.Evidenced() {
 		return v, nil
 	}
-	window, asks := RequiredRecencyYears(req.Text)
-	if !asks {
+	within := req.asks().RecencyYears
+	if within == nil || *within <= 0 {
 		return v, nil
 	}
+	window := int(*within)
 	if facts.MostRecentYear <= 0 {
 		return weaken(v, RuleRecency, RuleRecencyVersion, DetUnresolved, v.Basis, UncRecencyUnknown,
 			fmt.Sprintf("asks for work within the last %d years; the evidence shows the work but states no dates for it", window))
@@ -393,10 +415,11 @@ func scopeRule(req RuleInput, v Verdict, facts ReportedFacts, _ time.Time) (Verd
 	if !v.Evidenced() {
 		return v, nil
 	}
-	need, asks := RequiredScope(req.Text)
-	if !asks {
+	min := req.asks().MinScope
+	if min == nil || min.Value <= 0 {
 		return v, nil
 	}
+	need := Scope{Unit: NormaliseScopeUnit(min.Unit), Value: min.Value}
 	if facts.StatedScope == nil || facts.StatedScope.Value <= 0 {
 		return weaken(v, RuleScope, RuleScopeVersion, DetUnresolved, v.Basis, UncScopeUnknown,
 			fmt.Sprintf("asks for a scale of %s; the evidence shows the work but states no scale for it", describeScope(need)))

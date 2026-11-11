@@ -186,6 +186,8 @@ var targetFields = []struct {
 	{"notification_id", "notification"},
 	{"document_id", "corpus_document"},
 	{"session_id", "pilot_session"},
+	{"requirement_id", "requirement"},
+	{"role_id", "role"},
 	{"id", "id"},
 }
 
@@ -220,6 +222,8 @@ var extras = map[string][]string{
 	"/career.v1.AdminService/CreateQaEntry":         {"question"},
 	"/career.v1.AdminService/ReviewDecisionTestRun": {"status", "block_no"},
 	"/career.v1.AdminService/ResolveReviewItem":     {"resolution"},
+	// The reason for an edit is the point of recording one (FR-HF-03).
+	"/career.v1.HiringService/UpdateRequirement": {"edit_reason"},
 }
 
 const maxExtraLen = 2000

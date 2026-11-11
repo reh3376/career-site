@@ -34,6 +34,11 @@ const (
 	VocabInvolvementLevel = "involvement_level"
 	VocabCatalogKind      = "catalog_kind"
 	VocabCatalogStrength  = "catalog_strength"
+	// Vocabulary 1.1 (migration 00074).
+	VocabRequirementClass = "requirement_class"
+	VocabScopeUnit        = "scope_unit"
+	VocabCredentialLevel  = "credential_level"
+	VocabRelationshipKind = "relationship_kind"
 
 	// Other is what an unknown code resolves to for logic. The raw
 	// value is kept beside it, never replaced (04 §0 rule 3).
@@ -152,4 +157,30 @@ func (r *Repo) LoadVocab(ctx context.Context) (*Registry, error) {
 var RequirementTypes = []string{
 	"skill", "outcome", "tool", "domain", "credential",
 	"experience", "relationship", "constraint", "behavioral",
+}
+
+// The requirement classes of FR-HF-23, and the three vocabularies
+// thresholds are written in (04 §1.2), compiled in for the same reason:
+// validation and the formula must not need a database. Vocabulary 1.1.
+const (
+	ClassRequired  = "required"
+	ClassPreferred = "preferred"
+	ClassIdeal     = "ideal"
+)
+
+var (
+	RequirementClasses = []string{ClassRequired, ClassPreferred, ClassIdeal}
+	ScopeUnits         = []string{"team_size", "budget_usd", "users", "sites", "io_points", "systems", "revenue_usd", "other"}
+	CredentialLevels   = []string{"certificate", "associate", "bachelor", "master", "doctorate", "license"}
+	RelationshipKinds  = []string{"employed_by", "contracted_to", "customer_of", "partner_of", "any_working"}
+)
+
+// ClassFromCategory is the class a requirement starts with: what the
+// posting required is required, what it preferred is preferred. Ideal
+// is only ever set by a person.
+func ClassFromCategory(category string) string {
+	if category == "must" {
+		return ClassRequired
+	}
+	return ClassPreferred
 }

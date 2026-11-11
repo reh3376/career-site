@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -62,10 +63,11 @@ type Scorer struct {
 	host string
 	// events is the product event stream (jd.finished); nil is silent.
 	events *events.Writer
-	// hiring is the dual write of Phase 0 step 3: the same run written
-	// as roles, requirements, evidence items and a match record beside
-	// the jsonb assessment (docs/framework-research/14 §4). nil writes
-	// nothing; a failure is logged and never fails the review.
+	// hiring writes the run as framework rows (docs/framework-research/
+	// 14 §4): since step 5 the requirement rows before judging, so the
+	// judge is shown the row, and the judgments and the match record
+	// after. nil writes nothing and judges the extraction in memory; a
+	// failure is logged and never fails the review.
 	hiring *hiring.Writer
 	// slots serialises pipelines. On the CPX31 two concurrent JDs made
 	// the embedder and the LLM swap in and out (one resident model at a
@@ -226,6 +228,96 @@ func (s *Scorer) RescoreAndPersist(ctx context.Context, submissionID int64, jdTe
 	s.scoreAndPersist(ctx, submissionID, jdText, hints, "rescore", adminID)
 }
 
+// RejudgeAndPersist runs the pipeline against the role's released
+// requirement rows without extracting the posting again (FR-HF-03): it
+// is what releasing an edit starts, and what "re-judge" means. The run
+// record says "release" and who asked. Everything after the
+// requirements is the ordinary pipeline: retrieval, the judge, the
+// rules, the gate and, above it, the résumé.
+func (s *Scorer) RejudgeAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, adminID int64) {
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, TriggerRelease, adminID)
+}
+
+// TriggerRelease is the run trigger of a re-judge on released rows.
+const TriggerRelease = "release"
+
+// runRequirements is what a run judged: the rows written before
+// judging, or, when they could not be written, the drafts exactly as
+// judged, which the writer stores afterwards.
+type runRequirements struct {
+	rows   []hiring.Requirement
+	drafts []hiring.Requirement
+}
+
+// assess settles a run's requirements and judges them (Phase 0 step
+// 5). A run that extracts writes the extraction as released rows
+// first, so the judge is shown the row and every judgment names the
+// version it judged; a run on a role a person has edited, or one asked
+// to re-judge, reads the released rows and does not extract. Row
+// writes use the context that survives cancellation, so a run that
+// times out in the judge does not leave a half-written list.
+func (s *Scorer) assess(ctx, persist context.Context, submissionID int64, jdText string, hints prompts.Hints, useRows bool, progress Progress) (*Assessment, runRequirements, error) {
+	var rr runRequirements
+	if useRows {
+		if s.hiring == nil {
+			return nil, rr, errors.New("requirements: the requirement rows are not wired")
+		}
+		prepared, err := s.hiring.Released(persist, submissionID)
+		if err != nil {
+			return nil, rr, fmt.Errorf("requirements: %w", err)
+		}
+		rr.rows = prepared.Rows
+		progress.report(8, "reading the released requirements")
+		a, err := s.assessor.Judge(ctx, submissionID, FromRows(rr.rows), "", hiring.SourceRows, progress)
+		return a, rr, err
+	}
+	extracted, model, err := s.assessor.Extract(ctx, submissionID, jdText, hints, progress)
+	if err != nil {
+		return nil, rr, err
+	}
+	ext := s.assessor.ExtractorPrompt()
+	prov := hiring.Provenance{PromptID: ext.ID, PromptFingerprint: ext.Fingerprint(), Model: model}
+	source := hiring.SourceExtraction
+	if s.hiring == nil {
+		rr.drafts = Drafts(extracted, nil, prov)
+	} else {
+		title := hints.Role
+		if title == "" {
+			title = jdText
+		}
+		inputs := make([]hiring.RequirementInput, 0, len(extracted))
+		for _, r := range extracted {
+			inputs = append(inputs, ToInput(r))
+		}
+		prepared, perr := s.hiring.Prepare(persist, submissionID, title, inputs, prov)
+		switch {
+		case perr == nil:
+			rr.rows = prepared.Rows
+		case errors.Is(perr, hiring.ErrHumanEdited):
+			// A person edited the requirements between the check and now.
+			// The edit stands; this run judges what is released.
+			released, rerr := s.hiring.Released(persist, submissionID)
+			if rerr != nil {
+				return nil, rr, fmt.Errorf("requirements: %w", rerr)
+			}
+			rr.rows, source = released.Rows, hiring.SourceRows
+		default:
+			// The review must not be lost to the new tables. The drafts
+			// are judged as they are and written afterwards, and the gap
+			// is in the log.
+			s.log.Warn("jd: requirement rows could not be written before judging; judging the drafts",
+				slog.Int64("id", submissionID), slog.String("error", perr.Error()))
+			rr.drafts = Drafts(extracted, nil, prov)
+		}
+	}
+	judged := rr.rows
+	if len(judged) == 0 {
+		judged = rr.drafts
+	}
+	a, err := s.assessor.Judge(ctx, submissionID, FromRows(judged), model, source, progress)
+	return a, rr, err
+}
+
 func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, trigger string, adminID int64) {
 	persist := context.WithoutCancel(ctx)
 
@@ -338,12 +430,29 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	})
 	progress(2, "starting")
 
+	// Which requirements this run judges (Phase 0 step 5). A re-judge
+	// reads the released rows by definition. So does any run on a role
+	// a person has edited: an extraction must never overwrite an edit,
+	// so once there is one, "re-score" means judge the list as it now
+	// stands.
+	useRows := trigger == TriggerRelease
+	if !useRows && s.hiring != nil {
+		if edited, eErr := s.hiring.Edited(persist, submissionID); eErr != nil {
+			s.log.Warn("jd: could not tell whether the requirements were edited; extracting",
+				slog.Int64("id", submissionID), slog.String("error", eErr.Error()))
+		} else if edited {
+			useRows = true
+		}
+	}
+
 	// Step zero: is this even a job posting? A score computed from a
 	// search-term list or a pasted résumé looks exactly like a real one
 	// and means nothing, which is worse than refusing to answer. Runs
 	// before retrieval so nothing expensive is spent on it, and fails
-	// open so a confused classifier cannot block real work.
-	if s.assessor != nil {
+	// open so a confused classifier cannot block real work. Skipped for
+	// a run on released rows: the posting was accepted when they were
+	// written, and a person has since read it.
+	if s.assessor != nil && !useRows {
 		progress(4, "checking the posting")
 		if v := s.assessor.CheckPosting(ctx, submissionID, jdText); !v.IsPosting {
 			msg := NotAPostingMessage(v)
@@ -389,13 +498,14 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 
 	score := retrieval
 	var assessment *Assessment
+	var judged runRequirements
 	if s.assessor != nil {
 		started := time.Now()
-		assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints, progress)
+		assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, progress)
 		if err != nil && isTransient(err) {
 			s.log.Warn("jd: assessment transient failure, retrying once", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 			if sleepCtx(ctx, retryDelay) {
-				assessment, err = s.assessor.Assess(ctx, submissionID, jdText, hints, progress)
+				assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, progress)
 			}
 		}
 		if err != nil {
@@ -446,7 +556,7 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 			}
 		}
 		if runOpen {
-			s.recordHiring(persist, submissionID, jdText, hints, run, assessment)
+			s.recordHiring(persist, submissionID, jdText, hints, run, assessment, judged)
 		}
 	} else if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, nil); uErr != nil {
 		s.log.Warn("jd: failed to store retrieval score", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
@@ -537,14 +647,16 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 }
 
 // promptFingerprints is the registry's fingerprints with the judge's
-// replaced by the one this scorer's assessor actually sends, which is
-// rendered from the vocabulary registry at boot and so can differ from
-// the compiled-in default (14 §5).
+// and the extractor's replaced by the ones this scorer's assessor
+// actually sends, which are rendered from the vocabulary registry at
+// boot and so can differ from the compiled-in defaults (14 §5).
 func (s *Scorer) promptFingerprints() map[string]string {
 	fps := prompts.Fingerprints()
 	if s != nil && s.assessor != nil {
 		j := s.assessor.JudgePrompt()
 		fps[j.ID] = j.Fingerprint()
+		x := s.assessor.ExtractorPrompt()
+		fps[x.ID] = x.Fingerprint()
 	}
 	return fps
 }
@@ -610,37 +722,37 @@ func scopeName(ctx context.Context) string {
 // it the pipeline behaves as before.
 func (s *Scorer) SetHiring(w *hiring.Writer) { s.hiring = w }
 
-// recordHiring writes the run as framework rows after the jsonb
-// assessment has been stored. Best-effort and after the fact: the
-// member's review is already persisted, so a failure here is a logged
-// gap in the new tables, visible in v_dual_write_agreement, and never
-// a failed submission. The chunk texts are read back because the
+// recordHiring writes the run's judgments and match record as
+// framework rows after the jsonb assessment has been stored, against
+// the requirement rows the run judged. Best-effort and after the fact:
+// the member's review is already persisted, so a failure here is a
+// logged gap in the new tables, visible in v_dual_write_agreement, and
+// never a failed submission. The chunk texts are read back because the
 // assessment keeps only their ids.
-func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, run users.JdRun, a *Assessment) {
+func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, run users.JdRun, a *Assessment, judged runRequirements) {
 	if s.hiring == nil || a == nil {
 		return
 	}
 	in := hiring.RunInput{
-		SubmissionID:      submissionID,
-		Title:             hints.Role,
-		RunID:             run.RunID,
-		Attempt:           run.Attempt,
-		Score:             a.Score,
-		Model:             a.Model,
-		Prompts:           run.Prompts,
-		ExtractorPromptID: prompts.JDRequirements.ID,
-		Embedder:          run.EmbedderModel,
-		CorpusFingerprint: run.CorpusFingerprint,
-		Offered:           map[string][]hiring.Chunk{},
+		SubmissionID:       submissionID,
+		Title:              hints.Role,
+		RunID:              run.RunID,
+		Attempt:            run.Attempt,
+		Score:              a.Score,
+		Model:              a.Model,
+		Prompts:            run.Prompts,
+		Embedder:           run.EmbedderModel,
+		CorpusFingerprint:  run.CorpusFingerprint,
+		Rows:               judged.rows,
+		Drafts:             judged.drafts,
+		RequirementsSource: a.RequirementsSource,
+		Offered:            map[string][]hiring.Chunk{},
+	}
+	if a.Coverage != nil {
+		in.PreferredFraction = a.Coverage.PreferredFraction
 	}
 	if in.Title == "" {
 		in.Title = jdText
-	}
-	for _, r := range a.Requirements {
-		in.Requirements = append(in.Requirements, hiring.RequirementInput{
-			LocalID: r.ID, Text: r.Text, SourceQuote: r.SourceQuote,
-			Category: r.Category, Weight: r.Weight, NamedParties: r.NamedParties, Type: r.Type,
-		})
 	}
 	judge := s.assessor.JudgePrompt()
 	in.JudgePromptID, in.JudgePromptVersion = judge.ID, judge.Version
@@ -696,5 +808,6 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 		s.log.Warn("jd: hiring dual write failed", slog.Int64("id", submissionID), slog.String("run", run.RunID), slog.String("error", err.Error()))
 		return
 	}
-	s.log.Info("jd: hiring rows written", slog.Int64("id", submissionID), slog.String("run", run.RunID), slog.Int("requirements", len(in.Requirements)))
+	s.log.Info("jd: hiring rows written", slog.Int64("id", submissionID), slog.String("run", run.RunID),
+		slog.Int("requirements", len(a.Requirements)), slog.String("source", a.RequirementsSource))
 }

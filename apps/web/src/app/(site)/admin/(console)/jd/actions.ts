@@ -212,3 +212,48 @@ export async function getJdLimit(): Promise<
     return undefined;
   }
 }
+
+export type FractionState = { saved?: boolean; error?: string; fraction?: number };
+
+// How much a preferred requirement counts: the share of its weight the
+// match record's figures give it (FSD FR-HF-23). Stored in app_settings
+// and cached by the api for 15 seconds; a record already written keeps
+// the fraction it was computed with.
+export async function setPreferredFractionAction(
+  _prev: FractionState,
+  formData: FormData,
+): Promise<FractionState> {
+  const fraction = Number(String(formData.get("fraction") ?? "").trim());
+  if (!Number.isFinite(fraction) || fraction <= 0 || fraction > 1) {
+    return { error: "A number greater than 0 and at most 1." };
+  }
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in.", fraction };
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/SetHiringSettings",
+    body: { settings: { preferredFraction: fraction } },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp), fraction };
+  revalidatePath("/admin/jd", "layout");
+  return { saved: true, fraction };
+}
+
+// The fraction in force. Undefined when the read is refused, so the
+// console shows nothing rather than a number nobody set.
+export async function getPreferredFraction(): Promise<number | undefined> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return undefined;
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/GetHiringSettings",
+    body: {},
+    cookie,
+  });
+  if (!resp.ok) return undefined;
+  try {
+    const j = (await resp.json()) as { settings?: { preferredFraction?: number } };
+    return j.settings?.preferredFraction;
+  } catch {
+    return undefined;
+  }
+}

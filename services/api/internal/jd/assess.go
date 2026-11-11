@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -134,16 +135,26 @@ type Judgment struct {
 
 // Coverage is the match record's arithmetic (FR-HF-06): three numbers
 // over effective determinations that sum to one over the denominator,
-// and two shares of the evidenced part. Formula v3; the résumé gate
-// still reads the v2 score until D-32 is settled by the golden run.
+// and two shares of the evidenced part. Formula v4 since step 5
+// (FR-HF-23): required items at full weight, preferred at a fraction,
+// ideal as bonus only, and a years or credential item counted only
+// once its equivalency is defined. The résumé gate still reads the v2
+// score until D-32 is settled by the golden run.
 type Coverage struct {
 	Evidenced         float64 `json:"evidenced"`
 	Unresolved        float64 `json:"unresolved"`
 	Unmet             float64 `json:"unmet"`
 	EquivalentShare   float64 `json:"coverage_equivalent_share"`
 	SelfAttestedShare float64 `json:"self_attested_share"`
-	Denominator       int     `json:"denominator"`
-	Formula           string  `json:"formula"`
+	// Denominator is the weight the three numbers are fractions of;
+	// fractional under v4, where a preferred item counts at a fraction.
+	Denominator float64 `json:"denominator"`
+	Formula     string  `json:"formula"`
+	// PreferredFraction is the fraction this record was computed with,
+	// and Excluded the requirement ids left out for want of a defined
+	// equivalency, so the three numbers can be read without the rows.
+	PreferredFraction float64  `json:"preferred_fraction,omitempty"`
+	Excluded          []string `json:"excluded,omitempty"`
 }
 
 // Assessment is the auditable record behind a match score: what the
@@ -172,6 +183,10 @@ type Assessment struct {
 	// a consistency rule (04 §2.3); a repair after a second failure is
 	// recorded on the judgment itself.
 	ConsistencyRetries int `json:"consistency_retries,omitempty"`
+	// RequirementsSource says whether the run extracted the posting
+	// ("extraction") or judged the role's released rows without
+	// extracting ("rows"), which is every run after a person edits them.
+	RequirementsSource string `json:"requirements_source,omitempty"`
 	// Error is set when the pipeline could not complete and the caller
 	// fell back to the retrieval score.
 	Error string `json:"error,omitempty"`
@@ -199,6 +214,13 @@ type Assessor struct {
 	// vocabulary 1.0; main swaps in the registry's rendering at boot.
 	judge prompts.Prompt
 	vocab hiring.VocabLists
+	// extractor is the requirements extractor as rendered for the same
+	// vocabulary (prompts.JDRequirementsFor): its type codes come from
+	// the registry too.
+	extractor prompts.Prompt
+	// settings holds the preferred fraction formula v4 counts a
+	// preferred item at; nil reads the default.
+	settings *hiring.SettingsStore
 	// now is the clock the recency rule reads; tests pin it.
 	now func() time.Time
 }
@@ -212,6 +234,23 @@ func (a *Assessor) SetVocab(v hiring.VocabLists) {
 	}
 	a.vocab = v
 	a.judge = prompts.RequirementJudgeFor(v)
+	a.extractor = prompts.JDRequirementsFor(v)
+}
+
+// SetSettings wires the store formula v4 reads its fraction from.
+func (a *Assessor) SetSettings(s *hiring.SettingsStore) {
+	if a != nil {
+		a.settings = s
+	}
+}
+
+// ExtractorPrompt is the extractor as this assessor sends it, for run
+// records and requirement provenance.
+func (a *Assessor) ExtractorPrompt() prompts.Prompt {
+	if a == nil || a.extractor.ID == "" {
+		return prompts.JDRequirements
+	}
+	return a.extractor
 }
 
 // JudgePrompt is the judge as this assessor sends it, for run records
@@ -254,7 +293,7 @@ func NewAssessor(log *slog.Logger, repo *users.Repo, embed ingest.EmbedClient, c
 	}
 	return &Assessor{
 		log: log, users: repo, embed: embed, llm: client, monthlyCap: monthlyCap, numCtx: numCtx,
-		judge: prompts.RequirementJudge, vocab: hiring.DefaultVocab(), now: time.Now,
+		judge: prompts.RequirementJudge, extractor: prompts.JDRequirements, vocab: hiring.DefaultVocab(), now: time.Now,
 	}
 }
 
@@ -290,55 +329,148 @@ func (p Progress) report(pct int32, stage string) {
 	}
 }
 
-// Assess produces the assessment for one JD: one requirements call,
-// one embed call, one judge call per requirement. Every call lands in
-// llm_usage. Progress is reported from 5% to 75%; the scorer owns the
-// rest (résumé, PDF).
+// Assess produces the assessment for one JD without the requirement
+// rows: extract, draft each requirement in code (type, thresholds,
+// evidence standard; no catalog, so no equivalence notes), and judge.
+// The scorer does the same with the rows written in between (Extract,
+// then hiring.Writer.Prepare, then Judge); this is the path for a run
+// whose rows could not be written, and for tests.
 func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, progress Progress) (*Assessment, error) {
-	if err := a.checkCap(ctx); err != nil {
+	extracted, model, err := a.Extract(ctx, submissionID, jdText, hints, progress)
+	if err != nil {
 		return nil, err
 	}
-	progress.report(5, "reading the posting")
-	out := &Assessment{
-		EvidenceIDs: map[string][]int64{},
-		Prompts: map[string]int{
-			prompts.JDRequirements.ID: prompts.JDRequirements.Version,
-			a.judgeOrDefault().ID:     a.judgeOrDefault().Version,
-		},
-		DecisionIDs: map[string]int64{},
-	}
+	return a.Judge(ctx, submissionID, DraftRequirements(extracted, nil, hiring.Provenance{}), model, hiring.SourceExtraction, progress)
+}
 
-	// 1. Requirements.
+// requirementsTokenBudget is the extractor's output cap. The budget is
+// arithmetic, not a guess. The schema allows 20 requirements, each
+// carrying text up to 200 characters and a source_quote up to 300,
+// plus id, category, weight, named_parties and, since v5, a type and
+// up to six alternatives: about 640 characters when a requirement
+// offers a choice and 580 when it does not, call it 180 tokens. Twenty
+// of those is 3,600, and the JSON wrapper rounds it up.
+//
+// It was 1,200, which was ample until source_quote was added on
+// 2026-09-25 and roughly tripled the output. Evaluation run 7 then
+// lost two of eight postings to "unexpected end of JSON input",
+// marginally rather than universally: a 4,682-character posting fit
+// and a 4,903-character one did not. A cap costs nothing when it is
+// not reached, so it is set where a full-length answer fits rather
+// than where a typical one does. 4,000 until v5; 4,800 with the two
+// fields v5 adds.
+const requirementsTokenBudget = 4800
+
+// Extract runs the requirements call and validates what came back: the
+// posting structured into requirements, each with its verified source
+// quote, the type the extractor gave it and the alternatives the
+// posting offers (FR-HF-02). Nothing here is a requirement row yet;
+// the caller drafts the rows from this. Returns the model that
+// answered, for the run record.
+func (a *Assessor) Extract(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, progress Progress) ([]prompts.Requirement, string, error) {
+	if err := a.checkCap(ctx); err != nil {
+		return nil, "", err
+	}
+	progress.report(5, "reading the posting")
 	var reqDoc struct {
 		Requirements []prompts.Requirement `json:"requirements"`
 	}
-	// The budget is arithmetic, not a guess. The schema allows 20
-	// requirements, each carrying text up to 200 characters and a
-	// source_quote up to 300, plus id, category, weight and
-	// named_parties: about 560 characters, call it 160 tokens. Twenty
-	// of those is 3,200, and the JSON wrapper rounds it up.
-	//
-	// It was 1,200, which was ample until source_quote was added on
-	// 2026-09-25 and roughly tripled the output. Evaluation run 7 then
-	// lost two of eight postings to "unexpected end of JSON input",
-	// marginally rather than universally: a 4,682-character posting fit
-	// and a 4,903-character one did not. A cap costs nothing when it is
-	// not reached, so it is set where a full-length answer fits rather
-	// than where a typical one does.
-	const requirementsTokenBudget = 4000
-	reqCall, err := a.call(ctx, submissionID, prompts.JDRequirements,
+	reqCall, err := a.call(ctx, submissionID, a.ExtractorPrompt(),
 		prompts.RenderRequirementsUser(jdText, hints), requirementsTokenBudget, &reqDoc)
 	if err != nil {
-		return nil, fmt.Errorf("requirements: %w", err)
+		return nil, "", fmt.Errorf("requirements: %w", err)
 	}
-	out.Model = reqCall.Model
 	reqs, err := validateRequirements(reqDoc.Requirements, jdText)
 	if err != nil {
-		return nil, fmt.Errorf("requirements: %w", err)
+		return nil, "", fmt.Errorf("requirements: %w", err)
 	}
-	// Type each requirement by the heuristic until the extractor types
-	// it (FR-HF-02, step 5): the judge sees the type, the rules read it,
-	// and behavioral rows are never sent to the judge (FR-HF-18).
+	return reqs, reqCall.Model, nil
+}
+
+// ToInput is an extracted requirement as the hiring package drafts a
+// row from it.
+func ToInput(r prompts.Requirement) hiring.RequirementInput {
+	return hiring.RequirementInput{
+		LocalID: r.ID, Text: r.Text, SourceQuote: r.SourceQuote, Category: r.Category, Weight: r.Weight,
+		NamedParties: r.NamedParties, Type: r.Type, Alternatives: r.Alternatives,
+	}
+}
+
+// FromRow is a requirement row as the judge is shown it and the
+// assessment stores it.
+func FromRow(q hiring.Requirement) prompts.Requirement {
+	thresholds := q.Thresholds
+	included := q.Included
+	return prompts.Requirement{
+		ID: q.LocalID, Text: q.Text, SourceQuote: q.SourceQuote, Category: q.Category, Weight: q.Weight,
+		NamedParties: q.NamedParties, Type: q.Type, Alternatives: q.Alternatives,
+		RowID: q.ID, Version: q.Version, Class: q.Class, Thresholds: &thresholds,
+		EvidenceStandard: q.EvidenceStandard, EquivalenceNotes: q.EquivalenceNotes, Equivalency: q.Equivalency,
+		StandardEdited: strings.HasPrefix(q.EvidenceStandardTemplate, hiring.EditedTemplatePrefix),
+		Included:       &included, Edited: q.EditedBy > 0,
+	}
+}
+
+// FromRows converts a run's rows in order.
+func FromRows(rows []hiring.Requirement) []prompts.Requirement {
+	out := make([]prompts.Requirement, 0, len(rows))
+	for _, q := range rows {
+		out = append(out, FromRow(q))
+	}
+	return out
+}
+
+// DraftRequirements drafts extracted requirements in code without
+// writing rows, for a run that has none: the same type, thresholds,
+// evidence standard and inclusion a row would carry, so the judge is
+// shown the same thing either way.
+func DraftRequirements(extracted []prompts.Requirement, catalog *hiring.Catalog, prov hiring.Provenance) []prompts.Requirement {
+	out := make([]prompts.Requirement, 0, len(extracted))
+	for _, r := range extracted {
+		out = append(out, FromRow(hiring.Draft(ToInput(r), catalog, prov)))
+	}
+	return out
+}
+
+// Drafts is DraftRequirements as the rows the writer would store, for
+// a run that judged drafts and writes them afterwards.
+func Drafts(extracted []prompts.Requirement, catalog *hiring.Catalog, prov hiring.Provenance) []hiring.Requirement {
+	out := make([]hiring.Requirement, 0, len(extracted))
+	for _, r := range extracted {
+		out = append(out, hiring.Draft(ToInput(r), catalog, prov))
+	}
+	return out
+}
+
+// Judge produces the assessment for requirements that are already
+// settled: retrieval for each, one judge call per requirement, the code
+// rules, and the arithmetic. reqs are the released requirement rows
+// (FromRows), as extracted or as a person edited them, so what is
+// judged is what the row says (FR-HF-03). Every call lands in
+// llm_usage. Progress is reported from 12% to 75%; the scorer owns the
+// rest (résumé, PDF).
+func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts.Requirement, model, source string, progress Progress) (*Assessment, error) {
+	if len(reqs) == 0 {
+		return nil, errors.New("judge: no requirements")
+	}
+	if err := a.checkCap(ctx); err != nil {
+		return nil, err
+	}
+	out := &Assessment{
+		EvidenceIDs: map[string][]int64{},
+		Prompts: map[string]int{
+			a.ExtractorPrompt().ID: a.ExtractorPrompt().Version,
+			a.judgeOrDefault().ID:  a.judgeOrDefault().Version,
+		},
+		DecisionIDs:        map[string]int64{},
+		Model:              model,
+		RequirementsSource: source,
+	}
+	// A requirement that reached here untyped (a provider that ignored
+	// the schema, a row from before the extractor typed them) is typed
+	// by the heuristic: the judge sees the type, the rules read it, and
+	// behavioral rows are never sent to the judge (FR-HF-18).
+	reqs = append([]prompts.Requirement{}, reqs...)
 	for i := range reqs {
 		if reqs[i].Type == "" {
 			reqs[i].Type = hiring.InferType(reqs[i].Text, reqs[i].NamedParties)
@@ -470,6 +602,11 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 				}
 			}
 		}
+		if out.Model == "" {
+			// A run on released rows made no extraction call; the judge
+			// is then the model of record.
+			out.Model = res.Model
+		}
 		calls = append(calls, res)
 		userPrompts = append(userPrompts, user)
 		for _, r := range batch {
@@ -521,25 +658,31 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 
 	// 4. Score in code. A requirement the model skipped counts as unmet.
 	//
-	// Two formulas, both from the derived three-way verdict and the
+	// Two formulas, from the derived three-way verdict and from the
 	// determinations respectively. The v2 score (2026-09-22) is what the
-	// résumé gate reads until D-32 is settled by the golden run under
-	// v13: every "must" requirement is in the denominator; a "nice"
-	// requirement joins it only when it earned something, so a wish list
-	// can raise a score and never sink it; verdict values met 1, partial
-	// 0.5, unmet 0; floor: a posting with no "must" lines counts every
-	// requirement. Formula v3 (FR-HF-06) reports three numbers over the
-	// determinations and never scores unresolved as half of anything.
+	// résumé gate reads until D-32 is settled by the golden run: every
+	// required requirement is in the denominator; any other joins it
+	// only when it earned something, so a wish list can raise a score
+	// and never sink it; verdict values met 1, partial 0.5, unmet 0;
+	// floor: a posting with no required lines counts every requirement.
+	// "Required" is the class the hiring manager set (FR-HF-23), which
+	// for a requirement nobody has edited is the posting's must, so an
+	// unedited posting scores exactly as it did. Formula v4 (FR-HF-06,
+	// FR-HF-23) reports three numbers over the determinations, counts a
+	// preferred item at a fraction and an ideal one as bonus only,
+	// leaves out a years or credential item whose equivalency nobody has
+	// defined, and never scores unresolved as half of anything.
 	// Behavioral rows weigh nothing in either (FR-HF-18).
-	anyMust := false
+	anyRequired := false
 	for _, r := range reqs {
-		if r.Category == "must" && r.Type != "behavioral" {
-			anyMust = true
+		if r.Required() && r.Type != "behavioral" {
+			anyRequired = true
 			break
 		}
 	}
 	var weighted float64
 	var items []hiring.Item
+	var excluded []string
 	for _, r := range reqs {
 		j, ok := byReq[r.ID]
 		if !ok {
@@ -552,21 +695,29 @@ func (a *Assessor) Assess(ctx context.Context, submissionID int64, jdText string
 			w = 0
 		}
 		v := verdictValue(j.Verdict)
-		if w > 0 && (!anyMust || r.Category == "must" || v > 0) {
+		if w > 0 && (!anyRequired || r.Required() || v > 0) {
 			out.WeightTotal += w
 		}
 		weighted += float64(w) * v
-		items = append(items, hiring.Item{Weight: w, Category: r.Category, Determination: j.Determination})
+		items = append(items, hiring.Item{
+			Weight: w, Category: r.Category, Class: r.Class, Excluded: !r.Counts(),
+			Determination: j.Determination,
+		})
+		if !r.Counts() && w > 0 {
+			excluded = append(excluded, r.ID)
+		}
 	}
 	if out.WeightTotal > 0 {
 		out.Score = weighted / float64(out.WeightTotal)
 	}
 	out.ScoreFormula = ScoreFormula
-	c := hiring.CoverageV3(items)
+	fraction := a.settings.Get(ctx).PreferredFraction
+	c := hiring.CoverageV4(items, fraction)
 	out.Coverage = &Coverage{
 		Evidenced: c.Evidenced, Unresolved: c.Unresolved, Unmet: c.Unmet,
 		EquivalentShare: c.EquivalentShare, SelfAttestedShare: c.SelfAttestedShare,
-		Denominator: c.Denominator, Formula: hiring.FormulaV3,
+		Denominator: c.Denominator, Formula: hiring.FormulaV4,
+		PreferredFraction: fraction, Excluded: excluded,
 	}
 
 	// 5. Decision log: one row per verdict with everything the owner
@@ -761,12 +912,51 @@ func validateRequirements(in []prompts.Requirement, jdText string) ([]prompts.Re
 			// reaches it must have been checked here.
 			r.SourceQuote = ""
 		}
+		// A type outside the vocabulary is no type; the heuristic stands
+		// in when the row is drafted. Alternatives are trimmed and
+		// bounded, and one alone is the requirement restated, not a
+		// choice.
+		if !slices.Contains(hiring.RequirementTypes, r.Type) {
+			r.Type = ""
+		}
+		r.Alternatives = cleanAlternatives(r.Alternatives)
+		// Everything else on a requirement is the row's, written in code
+		// after this. A provider that does not enforce the schema must
+		// not be able to set a class, a threshold or an evidence
+		// standard by adding a field to its answer.
+		r.RowID, r.Version, r.Class, r.Thresholds = "", 0, "", nil
+		r.EvidenceStandard, r.EquivalenceNotes, r.Equivalency = "", "", ""
+		r.Included, r.Edited, r.StandardEdited = nil, false, false
 		out = append(out, r)
 	}
 	if len(out) == 0 {
 		return nil, errors.New("no usable requirements")
 	}
 	return out, nil
+}
+
+// cleanAlternatives trims the extractor's alternatives, drops blanks
+// and repeats, and holds the list to the schema's bounds. Fewer than
+// two is no choice, and returns nil.
+func cleanAlternatives(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, a := range in {
+		a = strings.TrimSpace(a)
+		key := strings.ToLower(a)
+		if a == "" || seen[key] || len(out) >= hiring.MaxAlternatives {
+			continue
+		}
+		if len(a) > hiring.MaxAlternativeText {
+			a = a[:hiring.MaxAlternativeText]
+		}
+		seen[key] = true
+		out = append(out, a)
+	}
+	if len(out) < 2 {
+		return nil
+	}
+	return out
 }
 
 // call runs one schema-constrained generation, records usage, and

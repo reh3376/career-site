@@ -117,7 +117,12 @@ func settleJudgment(in settleInput) Judgment {
 
 	// Duration, recency, scope, credential and named parties: compared
 	// in code from the reported facts (FR-HF-05).
-	verdict, ruleAdjs := hiring.ApplyRules(hiring.RuleInput{Text: in.req.Text, Type: in.req.Type, NamedParties: in.req.NamedParties}, verdict, facts, in.now)
+	// The comparisons are against the thresholds the row stores, as
+	// drafted or as a person edited them; a requirement with no row
+	// (Thresholds nil) is read from its text as before.
+	verdict, ruleAdjs := hiring.ApplyRules(hiring.RuleInput{
+		Text: in.req.Text, Type: in.req.Type, NamedParties: in.req.NamedParties, Thresholds: in.req.Thresholds,
+	}, verdict, facts, in.now)
 	adjustments = append(adjustments, ruleAdjs...)
 	if verdict.Determination == hiring.DetNotMet && verdict.Basis == hiring.BasisNotAddressed {
 		ids = nil

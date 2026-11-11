@@ -148,6 +148,12 @@ var Registry = map[string]struct {
 	"admin.decision_reviewed": {Props: []string{"decision_id", "kind", "verdict", "corrected", "dimensions"}},
 	"admin.rescore":           {Props: []string{"submission_id"}},
 	"admin.fit_bands_changed": {},
+	// The requirement as an editable row (FSD FR-HF-03, FR-HF-23).
+	// `fields` names what an edit touched, so which parts of an
+	// extraction people correct can be read off the stream.
+	"admin.requirement_edited":      {Props: []string{"requirement_id", "role_id", "local_id", "version", "fields"}},
+	"admin.requirements_released":   {Props: []string{"role_id", "submission_id", "released", "run_started"}},
+	"admin.hiring_settings_changed": {Props: []string{"preferred_fraction"}},
 	// Also emitted and never recorded until the registry test found it.
 	"admin.jd_limit_changed": {Props: []string{"limit"}},
 	// Q&A bank. covers_restricted is recorded because approving such an

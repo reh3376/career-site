@@ -56,8 +56,8 @@ func TestJudgeEnumsMatchTheVocabulary(t *testing.T) {
 	check("basis", enumOf(props["basis"]), hiring.Codes(v.Basis))
 	check("uncertainty", enumOf(props["uncertainty"], "items"), hiring.Codes(v.Uncertainty))
 	check("involvement_level", enumOf(props["reported_facts"], "properties", "involvement_level"), hiring.Codes(v.InvolvementLevel))
-	if RequirementJudge.Version != RequirementJudgeVersion || RequirementJudgeVersion != 13 {
-		t.Errorf("judge version = %d, want 13", RequirementJudge.Version)
+	if RequirementJudge.Version != RequirementJudgeVersion || RequirementJudgeVersion != 14 {
+		t.Errorf("judge version = %d, want 14", RequirementJudge.Version)
 	}
 }
 

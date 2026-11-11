@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -83,6 +84,21 @@ func newFixture(t *testing.T, r *Repo, ctx context.Context, score float64) fixtu
 	return f
 }
 
+// drafts is reqs as the extraction stage drafts them, with the
+// database's catalog, which is what the pipeline hands the writer.
+func drafts(t *testing.T, r *Repo, ctx context.Context, in []RequirementInput) []Requirement {
+	t.Helper()
+	catalog, err := r.LoadCatalog(ctx)
+	if err != nil {
+		t.Fatalf("LoadCatalog: %v", err)
+	}
+	out := make([]Requirement, 0, len(in))
+	for _, x := range in {
+		out = append(out, Draft(x, catalog, Provenance{PromptID: "jd_requirements", PromptFingerprint: "v5:abcd", Model: "test-model"}))
+	}
+	return out
+}
+
 func reqs() []RequirementInput {
 	return []RequirementInput{
 		{LocalID: "r1", Text: "5+ years of PLC programming experience", SourceQuote: "5+ years PLC programming", Category: "must", Weight: 3},
@@ -111,10 +127,11 @@ func TestDualWriteAgrees(t *testing.T) {
 	in := RunInput{
 		SubmissionID: f.submissionID, Title: "Controls Engineer (test)\nsecond line ignored",
 		RunID: f.runID, Attempt: 1, Score: score, Model: "test-model",
-		Prompts:           map[string]string{"jd_requirements": "v2:abcd", "requirement_judge": "v13:ef01"},
-		ExtractorPromptID: "jd_requirements", JudgePromptID: "requirement_judge", JudgePromptVersion: 13,
+		Prompts:       map[string]string{"jd_requirements": "v5:abcd", "requirement_judge": "v13:ef01"},
+		JudgePromptID: "requirement_judge", JudgePromptVersion: 13,
 		Embedder: "nomic", CorpusFingerprint: "abc123",
-		Requirements: reqs(),
+		Drafts:             drafts(t, r, ctx, reqs()),
+		RequirementsSource: SourceExtraction,
 		Judgments: []JudgmentInput{
 			{LocalID: "r1", Verdict: "met", EvidenceChunkIDs: []int64{f.chunkIDs[0]},
 				Determination: DetMet, Basis: BasisDirect, Uncertainty: []string{}, Rationale: "Eight years of PLC work are stated.",
@@ -180,9 +197,13 @@ func TestDualWriteAgrees(t *testing.T) {
 		t.Errorf("heuristic types: r1=%s (want experience), r2=%s (want tool)", got[0].typ, got[1].typ)
 	}
 
-	// The match record carries formula v3's three numbers over the
-	// judgment rows and lists the exact requirement versions: r1 met
-	// (3 of 5), r2 unresolved (2 of 5), r3 not_met and nice (excluded).
+	// The match record carries formula v4's three numbers over the
+	// judgment rows and lists the exact requirement versions. r1 is a
+	// years item with no equivalency defined, so it is judged, shown and
+	// left out of the numbers (FR-HF-23); r2 is required and unresolved
+	// (2); r3 is preferred and not met, so it counts at a quarter of its
+	// weight (0.25). Nothing evidenced counts, 2 of 2.25 unresolved,
+	// 0.25 of 2.25 unmet. The v2 score the gate reads still counts r1.
 	var evidenced, unresolved, unmet, eqShare float64
 	var reqIDs []string
 	var formula string
@@ -194,10 +215,33 @@ func TestDualWriteAgrees(t *testing.T) {
 		Scan(&evidenced, &unresolved, &unmet, &eqShare, &reqIDs, &formula, &kb, &versions, &supersedes); err != nil {
 		t.Fatalf("match record: %v", err)
 	}
-	if near := func(a, b float64) bool { return a-b < 1e-9 && b-a < 1e-9 }; !near(evidenced, 0.6) || !near(unresolved, 0.4) || !near(unmet, 0) || eqShare != 0 {
-		t.Errorf("coverage = %v / %v / %v (equivalent share %v), want 0.6 / 0.4 / 0 (0)", evidenced, unresolved, unmet, eqShare)
+	if near := func(a, b float64) bool { return a-b < 1e-9 && b-a < 1e-9 }; !near(evidenced, 0) || !near(unresolved, 2/2.25) || !near(unmet, 0.25/2.25) || eqShare != 0 {
+		t.Errorf("coverage = %v / %v / %v (equivalent share %v), want 0 / 0.889 / 0.111 (0)", evidenced, unresolved, unmet, eqShare)
 	}
-	if len(reqIDs) != 3 || formula != FormulaV3 || supersedes != nil {
+	var r1Included, r2Included bool
+	var r1Class, r3Class, r2Notes, r1Standard, r1Template string
+	var r1Thresholds []byte
+	if err := r.pool.QueryRow(ctx, `
+    SELECT a.included, b.included, a.class, c.class, b.equivalence_notes, a.evidence_standard, a.evidence_standard_template, a.thresholds
+    FROM requirements a, requirements b, requirements c
+    WHERE a.role_id = $1::uuid AND b.role_id = a.role_id AND c.role_id = a.role_id
+      AND a.local_id = 'r1' AND b.local_id = 'r2' AND c.local_id = 'r3'`, roleID).
+		Scan(&r1Included, &r2Included, &r1Class, &r3Class, &r2Notes, &r1Standard, &r1Template, &r1Thresholds); err != nil {
+		t.Fatalf("drafted fields: %v", err)
+	}
+	if r1Included || !r2Included || r1Class != ClassRequired || r3Class != ClassPreferred {
+		t.Errorf("classes and inclusion: r1 included=%v class=%s, r2 included=%v, r3 class=%s", r1Included, r1Class, r2Included, r3Class)
+	}
+	if min := ParseThresholds(r1Thresholds).MinYears; min == nil || *min != 5 {
+		t.Errorf("r1 thresholds = %s, want min_years 5 read from the text", r1Thresholds)
+	}
+	if r1Template != "experience@"+TemplateVersion || !strings.Contains(r1Standard, "at least 5 years") {
+		t.Errorf("r1 evidence standard = %q (%s), want the experience template with the threshold", r1Standard, r1Template)
+	}
+	if !strings.Contains(r2Notes, "SCADA") {
+		t.Errorf("r2 equivalence notes = %q, want the catalog's SCADA entries", r2Notes)
+	}
+	if len(reqIDs) != 3 || formula != FormulaV4 || supersedes != nil {
 		t.Errorf("record: requirement_ids=%v formula=%s supersedes=%v", reqIDs, formula, supersedes)
 	}
 
@@ -276,7 +320,7 @@ func TestDualWriteAgrees(t *testing.T) {
 		t.Errorf("r3 (front-end development against FEL-3) must not be found by the keyword filter; that gap is the point: %+v", baseline.Items["r3"])
 	}
 	var v map[string]any
-	if err := json.Unmarshal(versions, &v); err != nil || v["formula"] != FormulaV3 || v["rules"] != RulesVersion || v["vocab"] != VocabVersion || v["keyword_rule"] != KeywordRule {
+	if err := json.Unmarshal(versions, &v); err != nil || v["formula"] != FormulaV4 || v["rules"] != RulesVersion || v["inclusion_rule"] != InclusionRule || v["requirements_source"] != SourceExtraction || v["vocab"] != VocabVersion || v["keyword_rule"] != KeywordRule {
 		t.Errorf("versions snapshot = %s (err %v)", versions, err)
 	}
 
@@ -334,8 +378,9 @@ func TestDualWriteAgrees(t *testing.T) {
 	}
 	in2 := in
 	in2.RunID, in2.Attempt, in2.Score = run2, 2, 0.7
-	in2.Requirements = reqs()
-	in2.Requirements[1].Text = "Hands-on experience with the Ignition SCADA platform"
+	reworded := reqs()
+	reworded[1].Text = "Hands-on experience with the Ignition SCADA platform"
+	in2.Drafts = drafts(t, r, ctx, reworded)
 	if err := w.Record(ctx, in2); err != nil {
 		t.Fatalf("Record (second run): %v", err)
 	}
@@ -421,7 +466,7 @@ func TestWrittenCodesAreRegistered(t *testing.T) {
 	r, ctx := testRepo(t)
 	f := newFixture(t, r, ctx, 0.5)
 	in := RunInput{SubmissionID: f.submissionID, Title: "Controls Engineer (test)", RunID: f.runID, Attempt: 1, Score: 0.5,
-		Requirements: reqs(), ExtractorPromptID: "jd_requirements", Offered: map[string][]Chunk{}}
+		Drafts: drafts(t, r, ctx, reqs()), Offered: map[string][]Chunk{}}
 	if err := NewWriter(nil, r).Record(ctx, in); err != nil {
 		t.Fatalf("Record: %v", err)
 	}
@@ -450,15 +495,30 @@ func TestWrittenCodesAreRegistered(t *testing.T) {
 		}
 	}
 	check(VocabRequirementType, `SELECT DISTINCT type FROM requirements`)
+	check(VocabRequirementClass, `SELECT DISTINCT class FROM requirements`)
+	check(VocabScopeUnit, `SELECT DISTINCT thresholds->'min_scope'->>'unit' FROM requirements WHERE thresholds ? 'min_scope'`)
+	check(VocabCredentialLevel, `SELECT DISTINCT thresholds->>'credential_level' FROM requirements WHERE thresholds ? 'credential_level'`)
+	check(VocabRelationshipKind, `SELECT DISTINCT thresholds->>'relationship_kind' FROM requirements WHERE thresholds ? 'relationship_kind'`)
 	check(VocabDetermination, `SELECT DISTINCT determination FROM judgments`)
 	check(VocabBasis, `SELECT DISTINCT basis FROM judgments`)
 	check(VocabBasis, `SELECT DISTINCT effective_basis FROM judgments`)
 	check(VocabUncertainty, `SELECT DISTINCT unnest(uncertainty) FROM judgments`)
 	check(VocabCatalogKind, `SELECT DISTINCT kind FROM equivalence_catalog`)
 	check(VocabCatalogStrength, `SELECT DISTINCT strength FROM equivalence_catalog`)
-	for _, c := range RequirementTypes {
-		if !reg.Known(VocabRequirementType, c) {
-			t.Errorf("compiled-in requirement type %q is not in the database registry", c)
+	for vocab, codes := range map[string][]string{
+		VocabRequirementType:  RequirementTypes,
+		VocabRequirementClass: RequirementClasses,
+		VocabScopeUnit:        ScopeUnits,
+		VocabCredentialLevel:  CredentialLevels,
+		VocabRelationshipKind: RelationshipKinds,
+	} {
+		for _, c := range codes {
+			if !reg.Known(vocab, c) {
+				t.Errorf("compiled-in %s code %q is not in the database registry", vocab, c)
+			}
+		}
+		if got := len(reg.Codes(vocab)); got != len(codes) {
+			t.Errorf("%s: the registry has %d live codes, this build knows %d", vocab, got, len(codes))
 		}
 	}
 }

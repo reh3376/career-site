@@ -264,6 +264,57 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **Hold a submission for review before its first judging (opened
+  2026-11-10, owner's decision).** J8 in the FSD has the pipeline pause
+  after extraction so the hiring manager confirms the requirement list
+  before anything is judged. Step 5 built the editor without the pause:
+  the pipeline releases its own extraction and judges at once, and a
+  person edits afterwards and releases, which judges again. A pause is
+  a small change now that extraction and judging are separate stages,
+  but it means a member's review waits for a person, so it needs
+  deciding first: whether it is a setting for the whole site or per
+  posting, what the member is told while waiting, and whether the owner
+  is emailed when a list is waiting. Evaluation runs must never hold.
+- **The extractor rarely lists a posting's alternatives (measured
+  2026-11-10).** `jd_requirements` v5 asks for the options a
+  requirement offers, split out in order. On the golden set it returned
+  a list for 1 of 112 requirements, where 19 texts contain an "or". The
+  options are still in the requirement text, which is what the judge's
+  rule 4a reads, and whether a years or credential item counts is
+  decided in code from the wording, not from this list, so nothing
+  depends on it today; a person can add the list in the editor. Worth
+  one prompt iteration against a labelled set, or a conservative split
+  in code for the plain cases ("a degree or equivalent experience"),
+  measured before it is shown to the judge.
+- **The extractor types most requirements as a skill (measured
+  2026-11-10).** 86 of 112 on the golden set, against the heuristic's
+  77; it agrees with the heuristic on every credential, behavioral and
+  relationship line, and where they differ it is almost always skill
+  for the heuristic's domain or tool. The types that change what
+  happens to a requirement (behavioral, credential) are the ones it
+  gets right, and both readings are stored on the row, so this is a
+  note for the first pass over `v_requirement_edits`: if people keep
+  retyping skill to tool or domain, the extractor's rule 9 is the
+  thing to revise.
+- **A role a person has edited is never extracted again (deliberate,
+  2026-11-10).** Once any requirement of a posting has been edited,
+  every run judges the released list, a plain re-score included, so an
+  extraction cannot overwrite an edit. There is no way to ask for a
+  fresh extraction of such a posting. If one is ever wanted (a new
+  extractor version, a posting whose edits should be thrown away), it
+  needs its own action with its own confirmation, and a rule for what
+  happens to the edited versions.
+- **The catalog's notes reach the judge as written (2026-11-10).**
+  Twenty of 112 golden requirements drew a note from the 24 seed
+  entries through `concepts.match_terms`. The seed was written as
+  illustration and is expected to be wrong in places (`05` status); the
+  match terms are plain phrases. The first review of real notes should
+  look for an entry that turns a requirement naming specific tools into
+  a generic one ("PyTorch or JAX" against "Python machine-learning
+  stack counts as machine learning frameworks"). Step 8's write-back is
+  what corrects the catalog; until then a wrong note is corrected by
+  editing the requirement.
+
 - **A LoRA adapter for résumé writing (owner, 2026-09-25).** Trained
   locally on his M5 Max with MLX, so no GPU spend and nothing leaves his
   machine. The training data is job descriptions paired with the

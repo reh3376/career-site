@@ -136,10 +136,42 @@ func RenderPostingCheckUser(text string) string {
 // JDRequirements turns a job description into a short list of discrete,
 // checkable requirements with a must/nice category and a weight. The
 // model never sees the corpus here; it only structures the posting.
-var JDRequirements = Prompt{
-	ID:      "jd_requirements",
-	Version: 4,
-	System: strings.TrimSpace(`
+//
+// v5 is the extractor of Phase 0 step 5 (FR-HF-02): it also types each
+// requirement and splits out the alternatives the posting itself
+// offers. Those are the two things about a requirement only a reader
+// can supply. Everything else a draft row carries is computed in code
+// from this output: thresholds are read out of the text by the parsers
+// the rules use, the evidence standard is rendered from the type's
+// template and the equivalence notes from the catalog (hiring.Draft).
+// The two new fields are written last in the schema, so the six fields
+// of v4 are still decided before them.
+//
+// The type codes are rendered from the vocabulary registry, as the
+// judge's codes are (JDRequirementsFor); JDRequirements is the
+// rendering of the compiled-in vocabulary.
+var JDRequirements = JDRequirementsFor(hiring.DefaultVocab())
+
+// JDRequirementsVersion is v5's number, kept apart so a vocabulary
+// rendering carries it unchanged.
+const JDRequirementsVersion = 5
+
+// JDRequirementsFor renders the extractor prompt for a vocabulary.
+func JDRequirementsFor(v hiring.VocabLists) Prompt {
+	types := v.RequirementType
+	if len(types) == 0 {
+		types = hiring.DefaultVocab().RequirementType
+	}
+	enum, _ := json.Marshal(hiring.Codes(types))
+	return Prompt{
+		ID:      "jd_requirements",
+		Version: JDRequirementsVersion,
+		System:  strings.TrimSpace(strings.ReplaceAll(extractorSystemTemplate, "{{types}}", codeLines(types))),
+		Schema:  strings.ReplaceAll(extractorSchemaTemplate, "{{types}}", string(enum)),
+	}
+}
+
+const extractorSystemTemplate = `
 You extract hiring requirements from a job description so each one can be checked against a candidate's evidence.
 
 Rules:
@@ -153,9 +185,16 @@ Rules:
 6. weight is 3 for the role's core purpose, 2 for a stated requirement, 1 for a preference or nice-to-have.
 7. ids are r1, r2, ... in order of importance.
 8. named_parties lists organisations the requirement names and expects the candidate to have worked with: companies, clients, institutions, agencies, employers. Almost always empty. Do not list technologies, languages, standards, frameworks, file formats, methodologies or product categories, however prominently they are named. "Collaborate with partners like Anthropic, AWS and OpenAI" names three parties. "Experience with Kubernetes and Python" names none.
+9. type is the kind of requirement, one of:
+{{types}}
+   Choose by what would prove it. A named product, platform or vendor technology is a tool. A result delivered is an outcome. A degree, licence or certification is a credential, even when the posting also offers experience in its place. A number of years in a kind of work is experience. Work with the organisations in named_parties is a relationship. A condition of the job, such as location, travel, clearance, schedule or work authorisation, is a constraint. An adjective about personality or working style, such as collaborative, self-starter or thrives in ambiguity, is behavioral. An industry or setting is a domain. Anything else is a skill.
+10. alternatives lists the options a requirement offers when the posting lets it be satisfied in more than one way, each as its own short phrase, in the order the posting writes them. "A Master's or equivalent experience in a STEM field" gives ["a Master's in a STEM field", "equivalent experience in a STEM field"]. "PLC, DCS or SCADA experience" gives ["PLC experience", "DCS experience", "SCADA experience"]. Leave it empty when the requirement offers no choice; a requirement that names two things it wants together, joined by "and", offers no choice. The options also stay in the text (rule 4).
 Output only the JSON object.
-`),
-	Schema: `{
+`
+
+// The two fields v5 adds are bounded, like every open field of the
+// judge's schema (FR-JD-15): a list of at most six short phrases.
+const extractorSchemaTemplate = `{
   "type": "object",
   "required": ["requirements"],
   "properties": {
@@ -165,20 +204,21 @@ Output only the JSON object.
       "maxItems": 20,
       "items": {
         "type": "object",
-        "required": ["id", "text", "source_quote", "category", "weight", "named_parties"],
+        "required": ["id", "text", "source_quote", "category", "weight", "named_parties", "type", "alternatives"],
         "properties": {
           "id": {"type": "string"},
           "text": {"type": "string"},
           "source_quote": {"type": "string"},
           "category": {"type": "string", "enum": ["must", "nice"]},
           "weight": {"type": "integer", "minimum": 1, "maximum": 3},
-          "named_parties": {"type": "array", "items": {"type": "string"}}
+          "named_parties": {"type": "array", "items": {"type": "string"}},
+          "type": {"type": "string", "enum": {{types}}},
+          "alternatives": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 300}}
         }
       }
     }
   }
-}`,
-}
+}`
 
 // RenderRequirementsUser builds the user turn for JDRequirements.
 func RenderRequirementsUser(jd string, hints Hints) string {
@@ -218,9 +258,22 @@ func RenderRequirementsUser(jd string, hints Hints) string {
 // boot, and the two are the same bytes while the registry is at 1.0.
 var RequirementJudge = RequirementJudgeFor(hiring.DefaultVocab())
 
-// RequirementJudgeVersion is v13's number, kept apart so a vocabulary
+// RequirementJudgeVersion is v14's number, kept apart so a vocabulary
 // rendering carries it unchanged.
-const RequirementJudgeVersion = 13
+//
+// v14 (Phase 0 step 5) shows the judge what a requirement row now
+// carries and a person may have edited: the alternatives numbered, the
+// hiring manager's accepted equivalent, the catalog's known
+// equivalents, and the evidence standard once a person has rewritten
+// it (rule 6b; 05 §1.3 and §2.4). An edit to any of them would
+// otherwise change nothing. The template-rendered standard is not
+// shown: the first v14 showed it on every requirement and the golden
+// set moved a weak posting across the gate on "unresolved" answers the
+// template had invited. It also says
+// once more, where the combinations are listed, that an equivalency
+// basis goes with met_equivalent: under v13 one answer in twelve wrote
+// met beside a vocabulary basis and was sent back for it.
+const RequirementJudgeVersion = 14
 
 // RequirementJudgeFor renders the judge prompt for a vocabulary.
 func RequirementJudgeFor(v hiring.VocabLists) Prompt {
@@ -275,6 +328,11 @@ Rules:
 5. parties_evidenced reports which organisations the evidence names, and nothing else. When a requirement carries parties, list those the evidence explicitly names as organisations the candidate worked with or for. Using a company's product, calling its API, or integrating with its service is not working with that company; do not list a party on that basis. Leave it empty when the evidence names none. As with the span, you are reporting what you found, not deciding whether it is enough.
 6. stated_span_years reports what the evidence says about duration, and nothing else. Read the evidence for the work this requirement is about, and give the number of years it explicitly states for that work. Give 0 when the evidence states no span for it. Never estimate, never infer a span from a system existing or from a list of projects, and never borrow the candidate's total years of experience in a different field. You are reporting a fact you found, not deciding whether it is enough; that decision is made elsewhere. If your rationale states a number of years, stated_span_years must be that same number. Writing "over 30 years of engineering experience" in the rationale and 0 in the field contradicts yourself, and the field is the one the comparison uses, so the contradiction costs the candidate the requirement.
 6a. A <posting_says> element is the posting's own wording for the requirement above it, quoted. The requirement text is a short summary of it. Where the two differ, the quote decides what is being asked for, because a summary can lose the words that tell you which field a term belongs to. If the requirement says "front-end development" and the quote says "front-end development of future major investments, including scope definition", the ask is capital project definition, not web development.
+6b. Up to four more elements may follow a requirement. Each was written by the hiring side; none of them is evidence about the candidate.
+   - <options> numbers the alternatives the requirement offers, from 0. They are the list rule 4a speaks of, and alternative_satisfied is the number of the one the evidence satisfies.
+   - <accepted_equivalent> states what the hiring manager accepts in place of the requirement as worded. Evidence that satisfies it makes the determination met_equivalent, with the basis that names the substitution.
+   - <known_equivalents> lists equivalences already confirmed, and pairs confirmed as not equivalent. One listed as counting supports met_equivalent. One listed as a question supports unresolved with equivalence_unconfirmed. Never assert an equivalence it says does not hold.
+   - <standard> is the hiring manager's own statement of what counts as met, as unresolved and as not met for this requirement. Where it is more specific than these rules, follow it.
 7. determination is one of four codes:
 {{determinations}}
    Use met when the evidence satisfies the requirement as written or through an option the requirement offers (rule 4a); its basis is direct. Use met_equivalent when the evidence satisfies the requirement through an equivalency you are asserting: a different word for the same capability, a different tool with the same function, experience standing in for a credential or the reverse, or the same skill in a neighbouring industry; its basis names which. The words differing while the capability does not is the case this review exists to catch, so met_equivalent is a full answer, not a lesser one. Use unresolved when the evidence is suggestive but a nameable fact is missing; prefer it to not_met whenever one question to the candidate could settle the matter. Use not_met when the evidence addresses the requirement and falls short beyond any question, or when nothing in either kind of evidence speaks to it.
@@ -284,7 +342,7 @@ Rules:
 7b. uncertainty lists the facts whose absence keeps a judgment unresolved, zero to four of:
 {{uncertainties}}
    Each code is a question the candidate could be asked. Unresolved carries at least one; met, met_equivalent and not_met carry none.
-7c. These combinations are enforced, and an answer that breaks one is sent back: met requires basis direct or alternative_satisfied of 0 or more; met_equivalent requires one of {{equivalency_bases}}; unresolved requires at least one uncertainty code; not_met carries no uncertainty codes, and its evidence_ids are empty exactly when its basis is not_addressed.
+7c. These combinations are enforced, and an answer that breaks one is sent back: met requires basis direct or alternative_satisfied of 0 or more; met_equivalent requires one of {{equivalency_bases}}; unresolved requires at least one uncertainty code; not_met carries no uncertainty codes, and its evidence_ids are empty exactly when its basis is not_addressed. So when the basis you have chosen is one of {{equivalency_bases}} and no option of the requirement is satisfied, the determination is met_equivalent, not met.
 8. Before answering not_met, read the requirement's <evidence> passages again and ask what the systems described in them would have required to build. Answer not_met with basis not_addressed only when the documents still show nothing relevant.
 9. evidence_ids lists the chunk ids (the numeric id attribute) that support the determination, from the profile or the requirement's evidence. It must be empty for not_met with basis not_addressed and non-empty otherwise.
 10. reported_facts reports what you found about the relevant work; whether any of it is enough is decided elsewhere:
@@ -392,11 +450,63 @@ type Requirement struct {
 	// rather than a judgment about the candidate. Usually empty.
 	NamedParties []string `json:"named_parties,omitempty"`
 	// Type is the requirement's vocabulary type (skill, tool, credential,
-	// experience, relationship, behavioral, ...), set by the assessor
-	// from the type heuristic until the extractor emits it (FR-HF-02,
-	// step 5). The judge sees it; the rules read it; behavioral rows are
-	// never sent to the judge (FR-HF-18).
+	// experience, relationship, behavioral, ...), set by the extractor
+	// since v5 (FR-HF-02) and by the heuristic when it gives none. The
+	// judge sees it; the rules read it; behavioral rows are never sent
+	// to the judge (FR-HF-18).
 	Type string `json:"type,omitempty"`
+	// Alternatives are the options the posting itself offers for this
+	// requirement, in the order written (extractor v5). The judge sees
+	// them numbered, and alternative_satisfied indexes them.
+	Alternatives []string `json:"alternatives,omitempty"`
+
+	// The fields below are not the model's. They are the requirement
+	// row this requirement was judged as (Phase 0 step 5): drafted in
+	// code from the extraction, edited by a person or not, and released.
+	// They are stored with the assessment so a reader of it sees exactly
+	// what the judge was shown.
+
+	// RowID and Version name the requirements row; empty and 0 for a
+	// run whose rows could not be written before judging.
+	RowID   string `json:"row_id,omitempty"`
+	Version int    `json:"version,omitempty"`
+	// Class is required | preferred | ideal (FR-HF-23): how the item
+	// counts, set by the hiring manager, starting from the category.
+	Class string `json:"class,omitempty"`
+	// Thresholds are what the code rules compare against. Nil only when
+	// the requirement was never drafted; the rules then read the text.
+	Thresholds *hiring.Thresholds `json:"thresholds,omitempty"`
+	// EvidenceStandard says what counts as met, unresolved and not met;
+	// EquivalenceNotes are the catalog's known equivalents; Equivalency
+	// is what the hiring manager accepts in place of the wording.
+	EvidenceStandard string `json:"evidence_standard,omitempty"`
+	EquivalenceNotes string `json:"equivalence_notes,omitempty"`
+	Equivalency      string `json:"equivalency,omitempty"`
+	// StandardEdited says a person rewrote the evidence standard. The
+	// judge is shown a standard only then: the template's own wording
+	// restates the judge's rules, and shown to a small model on every
+	// requirement it turned "not met" into "unresolved" on weak ones
+	// (docs/llm-tuning-log.md, 2026-11-10, step 5).
+	StandardEdited bool `json:"standard_edited,omitempty"`
+	// Included is false for a years or credential item with no
+	// equivalency defined: judged, shown and left out of the numbers
+	// (FR-HF-23). Nil means included.
+	Included *bool `json:"included,omitempty"`
+	// Edited says a person wrote this version.
+	Edited bool `json:"edited,omitempty"`
+}
+
+// Counts reports whether the requirement is in the numbers.
+func (r Requirement) Counts() bool { return r.Included == nil || *r.Included }
+
+// Required reports whether the requirement is always in the
+// denominator: class required, or for a requirement with no class the
+// posting's must.
+func (r Requirement) Required() bool {
+	if r.Class != "" {
+		return r.Class == hiring.ClassRequired
+	}
+	return r.Category == "must"
 }
 
 // JudgeChunkRunes caps the evidence text shown per chunk in the judge
@@ -473,6 +583,34 @@ func RenderJudgeUser(reqs []Requirement, evidence map[string][]users.CorpusHit, 
 		// on the summary having been a good one.
 		if r.SourceQuote != "" {
 			fmt.Fprintf(&b, "<posting_says>%s</posting_says>\n", clean(r.SourceQuote))
+		}
+		// What the requirement row carries beyond its wording (v14, rule
+		// 6b): the alternatives numbered so alternative_satisfied has
+		// something to index, the hiring manager's accepted equivalent,
+		// the catalog's known equivalents and, when a person has
+		// rewritten it, the evidence standard. An edit the judge is not
+		// shown is an edit that changed nothing; a template the judge is
+		// shown on every requirement is a second set of rules for a
+		// small model to misapply, so the template stays with the reader
+		// it was written for.
+		if len(r.Alternatives) > 1 {
+			b.WriteString("<options>")
+			for i, alt := range r.Alternatives {
+				if i > 0 {
+					b.WriteString("; ")
+				}
+				fmt.Fprintf(&b, "%d: %s", i, clean(alt))
+			}
+			b.WriteString("</options>\n")
+		}
+		if r.Equivalency != "" {
+			fmt.Fprintf(&b, "<accepted_equivalent>%s</accepted_equivalent>\n", clean(r.Equivalency))
+		}
+		if r.EquivalenceNotes != "" {
+			fmt.Fprintf(&b, "<known_equivalents>%s</known_equivalents>\n", clean(r.EquivalenceNotes))
+		}
+		if r.EvidenceStandard != "" && r.StandardEdited {
+			fmt.Fprintf(&b, "<standard>%s</standard>\n", clean(r.EvidenceStandard))
 		}
 		var hits []users.CorpusHit
 		for _, h := range evidence[r.ID] {

@@ -10,6 +10,12 @@ import { getSessionCookie } from "@/lib/session";
 import { RescoreButton } from "../rescore-button";
 
 import { OutcomePanel, type Feedback, type Outcome } from "./outcome-panel";
+import {
+  RequirementsEditor,
+  type Requirement as RequirementRow,
+  type Vocab,
+  type VocabCode,
+} from "./requirements-editor";
 import { RunHistory, type Run } from "./run-history";
 
 export const metadata: Metadata = { title: "Admin · JD submission" };
@@ -113,15 +119,50 @@ async function fetchDetail(id: string): Promise<Detail | null> {
   return (await resp.json()) as Detail;
 }
 
+type RequirementList = {
+  roleId?: string;
+  requirements?: RequirementRow[];
+  pendingDrafts?: number;
+  humanEdited?: boolean;
+  types?: VocabCode[];
+  classes?: VocabCode[];
+  scopeUnits?: VocabCode[];
+  credentialLevels?: VocabCode[];
+  relationshipKinds?: VocabCode[];
+};
+
+// The posting's requirements as rows (FSD FR-HF-03). Absent for a
+// posting last scored before the rows existed; the page then shows the
+// assessment alone, and a re-score writes them.
+async function fetchRequirements(id: string): Promise<RequirementList | null> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return null;
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/ListRequirements",
+    body: { submissionId: id, includeRetired: true },
+    cookie,
+  });
+  if (!resp.ok) return null;
+  return (await resp.json()) as RequirementList;
+}
+
 export default async function AdminJdDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const d = await fetchDetail(id);
+  const [d, reqList] = await Promise.all([fetchDetail(id), fetchRequirements(id)]);
   if (!d?.row) notFound();
   const r = d.row;
+  const vocab: Vocab = {
+    types: reqList?.types ?? [],
+    classes: reqList?.classes ?? [],
+    scopeUnits: reqList?.scopeUnits ?? [],
+    credentialLevels: reqList?.credentialLevels ?? [],
+    relationshipKinds: reqList?.relationshipKinds ?? [],
+  };
+  const inFlight = r.status === "JD_STATUS_SCORING" || r.status === "JD_STATUS_GENERATING";
 
   const score = r.match_score ?? r.matchScore;
   const retrieval = r.retrieval_score ?? r.retrievalScore;
@@ -224,9 +265,22 @@ export default async function AdminJdDetailPage({
         <p className="text-xs text-ink-3">
           Re-runs retrieval, assessment, and (above threshold) the résumé and
           PDF with the current prompts. Use after a transient failure or a
-          prompt change; the previous derivation is replaced.
+          prompt change; the previous derivation is replaced. If a requirement
+          below has been edited, the edited list is judged and the posting is
+          not read into requirements again.
         </p>
       </div>
+
+      {reqList?.roleId && (reqList.requirements?.length ?? 0) > 0 ? (
+        <RequirementsEditor
+          roleId={reqList.roleId}
+          requirements={reqList.requirements ?? []}
+          pendingDrafts={reqList.pendingDrafts ?? 0}
+          humanEdited={Boolean(reqList.humanEdited)}
+          vocab={vocab}
+          busy={inFlight}
+        />
+      ) : null}
 
       <section className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

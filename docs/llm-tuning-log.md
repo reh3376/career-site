@@ -2968,3 +2968,215 @@ jsonb; the jsonb writer still runs; the rows are proven against it on
 every run by the view. The box's own golden run under v13 is the exit
 (`13` §2 step 4; FR-HF-20), and it should run at a quiet hour the owner
 picks, because it holds the pipeline for six hours.
+
+## 2026-11-10: step 5, the extractor types requirements and the judge is shown the row
+
+Phase 0 step 5 (`docs/framework-research/13` §2; FSD FR-HF-01, 02, 03
+and 23). The requirement becomes an editable, versioned row: drafted
+from the extraction, corrected by a person with a reason, released, and
+judged as released. Two prompts change, one rule set, and the
+arithmetic on the match record. The résumé gate still reads the v2
+score (D-32).
+
+### What changed in the prompts
+
+`jd_requirements` v4 to v5. Rules 1 to 8 are kept word for word. Two
+fields are added, last in the schema so the six fields of v4 are
+decided before them: `type` (rule 9, one of the nine requirement types,
+rendered from the vocabulary registry as the judge's codes are, with a
+sentence on choosing by what would prove the requirement) and
+`alternatives` (rule 10, the options a requirement offers, split out in
+the order written, with two examples). The output cap goes from 4,000
+to 4,800 tokens for the two fields; the longest extraction on the
+golden set was 1,715 tokens, mean 1,337 (v4: 1,533 and 1,162).
+Fingerprint on the local stack: `v5:b95feedc`.
+
+Nothing else on a draft row comes from the model. Thresholds are read
+from the requirement's text in code by the parsers the rules already
+used (`thresholds-v1`); the class starts from the category; the
+evidence standard is rendered from the type's template; the
+equivalence notes come from the seeded catalog through
+`concepts.match_terms`; whether a years or credential item counts is
+decided from the wording and the equivalency field (`incl-v1`). The
+model reports, code decides.
+
+`requirement_judge` v13 to v14. The output schema does not change. Rule
+6b is new: up to four elements may follow a requirement, each written
+by the hiring side, `<options>` (the alternatives numbered, which is
+what `alternative_satisfied` indexes), `<accepted_equivalent>` (the
+hiring manager's statement of what is accepted in place of the
+wording), `<known_equivalents>` (the catalog's notes) and `<standard>`
+(the evidence standard, when a person has rewritten it). Rule 7c gains
+one sentence saying that an equivalency basis goes with
+`met_equivalent`, the fault v13's retries were spent on. Fingerprint:
+`v14:42984a17`.
+
+`rules-v1` to `rules-v2`: the duration, recency and scope rules compare
+against the thresholds stored on the requirement and nothing else, so
+a threshold a person removes is a comparison no longer made. For a
+requirement nobody has edited the stored threshold is the one the text
+parser gave, so the comparison is the same one as before.
+
+### Golden set on the Mac: v13, the first v14, and the v14 that ships
+
+Same method as the step 4 entry: the eight labelled postings, the local
+corpus (`025341e387c1`, unchanged since that run), host Ollama with
+`qwen3:4b-q8_0`, local gate 0.55, so the figures compare with each
+other and not with production's. Run 4 is the v13 baseline from the
+step 4 entry.
+
+    run  extractor    judge          gate correct  violations  margin    retries
+    4    v4:e13cbaeb  v13:5b72e80a   5 of 8        1           -0.0238   10 of 110
+    5    v5:b95feedc  v14:628212ca   4 of 8        1           -0.0024   23 of 110
+    6    v5:b95feedc  v14:42984a17   5 of 8        2           -0.0079   14 of 110
+
+    posting        want    v13      first v14  final v14  evidenced  unresolved  unmet
+    ati            above   1.0000   1.0000     1.0000     1.000      0.000       0.000
+    heaven-hill    above   1.0000   1.0000     1.0000     1.000      0.000       0.000
+    cornerstone    above   0.9286   0.8676     0.8382     0.794      0.088       0.118
+    blue-origin    above   0.8333   0.8438     0.8438     0.893      0.000       0.107
+    cai            below   0.8571   0.8462     0.8462     0.727      0.182       0.091
+    nexus          below   0.6429   0.6786     0.6786     0.667      0.000       0.333
+    xai            below   0.5714   0.6786     0.6071     0.727      0.000       0.273
+    profluent      below   0.2778   0.6207     0.4444     0.319      0.212       0.469
+
+(The three right-hand columns are formula v4 on the final run.)
+
+**The first v14 showed the judge the template's evidence standard on
+every requirement, and that was a mistake the set caught.** profluent,
+a protein machine-learning posting the labels place well below the
+gate, went from 0.28 to 0.62 and crossed it. Its requirements were
+extracted word for word as under v4, so the movement was the judge's:
+seven of fourteen judgments changed, five of them from `not_met` to
+`unresolved`. The rationales say why. "Familiarity with wet lab
+experimental assays" became unresolved on "water-related systems and
+temperature inference, which are related to wet lab experimental
+assays"; a PhD requirement became unresolved because a B.S. is stated
+and the credential template says a credential whose level is unclear is
+a question. Each template describes its unresolved case and names the
+code for it, and a four-billion-parameter model shown that on every
+call takes the invitation. Retries more than doubled, 23 of 110.
+
+The fix is the smaller reading of `05` §2.4: the judge is shown a
+standard only when a person has rewritten it. The template's own
+wording stays on the row for the reader it was written for; a rewritten
+one is an instruction about that requirement and has to reach the judge
+or the edit changes nothing. Run 6 is that build.
+
+**Run 6 against v13.** Gate decisions are the same five of eight. Two
+postings do not move at all (ati, heaven-hill), four move by 0.04 or
+less (blue-origin, cai, nexus, xai), and two move further:
+
+- cornerstone, 0.93 to 0.84. Extractor v5 reworded all fourteen of its
+  requirements (the two new rules perturb the wording of some postings:
+  85 of 112 requirement texts across the set are identical to v4's,
+  five postings entirely, ati nine of fourteen changed, xai four). Two
+  of the reworded lines lost their verdicts. That is the second
+  violation: cai, labelled below, now edges cornerstone by 0.008 as
+  well as blue-origin by 0.002.
+- profluent, 0.28 to 0.44, still below the gate. Two judgments on
+  unchanged text: the PhD line went from `not_met` to `unresolved`, and
+  "deep learning frameworks such as PyTorch or JAX" went from
+  `not_met` to `met_equivalent` because the catalog's seed entry
+  "Python machine-learning stack counts as machine learning frameworks"
+  matched it and the judge was told so.
+
+On the 85 requirements whose text did not change, 80 kept their
+verdict. Without a catalog note, 65 of 68 (two up, one down); with one,
+15 of 17, both movers upward and both in the direction the note points:
+the PyTorch line above, and nexus's bachelor's degree, `not_met` to
+`unresolved` on the partial entry that says long practice may count
+toward a degree. The second is the catalog doing what `05` §1.3 asks
+of a partial entry. The first is a seed entry that is too generous for
+a requirement that names its frameworks, which is what the seed's own
+status line predicts and what step 8's write-back exists to correct;
+until then a wrong note is corrected by editing the requirement
+(`docs/backlog.md` §3).
+
+What the rows say, 112 requirements and 110 judged: 71 `met` on
+`direct`, 22 `not_met` on `not_addressed`, 9 `met_equivalent` (6
+`vocabulary`, 2 `education_for_experience`, 1
+`experience_for_education`), 9 `unresolved` (5 `adjacent_domain`, 2
+`education_for_experience`, 2 behavioral by construction), 1 `not_met`
+on `duration_shortfall` from the rule. Nine judgments were adjusted in
+code: the two behavioral rows, one duration, six consistency repairs.
+No call failed; the longest judgment was 239 completion tokens, mean
+196. `v_dual_write_agreement` agrees on all eight runs under formula
+v4, with the v2 score recomputed from the rows through the class.
+
+**Retries.** 14 of 110, against 10 under v13. The sentence added to
+rule 7c did not reduce the fault it was written for: the answers sent
+back are still `met` beside an equivalency basis. Telling the model
+again is not the fix. The combination is unambiguous (the basis says
+what was meant), so the next change is to relabel it in code without a
+second call, and keep the retry for the faults a second answer can
+actually settle. Not done here: one change to the judge at a time.
+
+**What the extractor's two new fields are worth today.** The type: 86
+of 112 requirements came back as skill, where the heuristic reads 77 as
+skill; the two agree on 88 of 112, and on every credential (7),
+behavioral (2) and relationship (1) line, which are the types that
+change what happens to a requirement. Where they differ it is nearly
+always the extractor's skill against the heuristic's domain or tool.
+Both readings are stored on every row. The alternatives: a list came
+back for 1 of 112 requirements, where 19 texts contain an "or". The
+options are still in the text, which is what rule 4a reads, and
+inclusion is decided from the wording in code, so nothing depends on
+the list; it is the weakest thing in this change and is in the backlog
+as such.
+
+**Formula v4 on this set.** 12 of 112 requirements are years or
+credential items with no equivalency defined (7 state years, 7 are
+credentials, some with the posting's own "or equivalent"), and they are
+left out of the three numbers until someone writes down what is
+accepted in their place (FR-HF-23). Preferred items count at a quarter
+of their weight and always, so an unmet preference now costs a little
+where under v3 it cost nothing. The v2 score does neither, which is why
+`evidenced` and the v2 score part company on cai (0.727 against 0.846):
+D-32 is no longer "would gating on evidenced change anything" (under v3
+and v13 it would not have) and needs the box's run to answer.
+
+### The live run that found two defects
+
+A posting through the whole flow on the Mac, in a browser as the local
+admin (submission 144): twelve requirements drafted and judged; the
+capital-projects line ("lead front-end development on capital projects
+from concept through approval") edited to front-end loading with a
+reason and retyped from skill to outcome; released; judged again from
+the released rows in 49 seconds with no extraction call and no posting
+check; the second run's judgment naming version 2 and the first run's
+still naming version 1; then a years item given an equivalency and a
+travel constraint classed ideal, released, and judged a third time. The
+edits and releases are in `audit_log` with their reasons and in the
+event stream.
+
+1. **The re-judge read a different corpus.** The release handler asked
+   for the retrieval scope of the posting's last run so the edit would
+   be the only thing that changed, and `ListJdRuns` did not return the
+   scope, so it read the empty string and fell back to the public
+   corpus for a posting whose first run had read all of it. The score
+   moved from 0.87 to 0.92 for a reason that was not the edit, which is
+   the mistake that once made a re-score look non-deterministic. The
+   listing now carries the scope, the re-judge follows the last run that
+   records one, and both have tests. A re-score at the full scope then
+   put the posting at 0.83, and the next release, following that run's
+   scope, held it there.
+2. **The résumé writer could lose a finished review.** The first run
+   ended `failed` after its requirements had been judged and scored,
+   because the résumé filled its 2,200-token budget and stopped
+   mid-string. The same happened to heaven-hill in run 5. This stage
+   was not changed by step 5; it has simply been close to its cap on
+   this machine (2,114 of 2,200 in the step 4 runs, mean 1,511, against
+   production's maximum of 1,872 and mean of 959 over 72 calls). The
+   judge has had a retry at double budget since evaluation run 13; the
+   résumé writer now has the same, with the evidence trimmed from the
+   tail so the wider answer fits the window, and the lines are checked
+   against the evidence the answer was actually written from.
+
+### Not in this change
+
+The box's golden run. Step 4's exit was that run under v13; it has not
+happened, and it will now be under v14, which is the judge production
+will be running. It holds the pipeline for about six hours and should
+run at a quiet hour the owner picks. The hand-over (the result RPC
+reading `v_match_record`) waits for it, as before.

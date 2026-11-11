@@ -40,6 +40,7 @@ type Server struct {
 	events    *handlers.Events
 	dtest     *handlers.DecisionTest
 	pilot     *handlers.Pilot
+	hiring    *handlers.Hiring
 	sidecar   *sidecar.Client
 	db        *db.Pool
 	policy    authpolicy.Map
@@ -74,6 +75,9 @@ type Deps struct {
 	// (FSD §5.16). Members only; the handler gates on the pilot flag.
 	// Nil leaves it unmounted.
 	Pilot *handlers.Pilot
+	// Hiring serves the requirement editor of the hiring framework
+	// (FSD §5.15, Phase 0 step 5). Admin only. Nil leaves it unmounted.
+	Hiring *handlers.Hiring
 	// Users backs the public reviewer status on SystemService; nil
 	// leaves that endpoint answering Unavailable.
 	Users *users.Repo
@@ -114,6 +118,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) *Server {
 		events:    deps.Events,
 		dtest:     deps.DecisionTest,
 		pilot:     deps.Pilot,
+		hiring:    deps.Hiring,
 		sidecar:   deps.Sidecar,
 		db:        deps.DB,
 		policy:    deps.AuthPolicy,
@@ -255,6 +260,11 @@ func (s *Server) routes() http.Handler {
 	if s.pilot != nil {
 		pilotPath, pilotHandler := careerv1connect.NewPilotServiceHandler(s.pilot, opts...)
 		mount(pilotPath, pilotHandler)
+	}
+
+	if s.hiring != nil {
+		hiringPath, hiringHandler := careerv1connect.NewHiringServiceHandler(s.hiring, opts...)
+		mount(hiringPath, hiringHandler)
 	}
 
 	if s.jd != nil {

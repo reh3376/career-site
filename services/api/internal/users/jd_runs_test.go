@@ -192,3 +192,23 @@ func TestNothingIsInProgressAfterAReap(t *testing.T) {
 			"prefix warming would stay paused for ever")
 	}
 }
+
+// The listing carries what each run could read. It did not until
+// 2026-11-10, and the first caller that asked (the re-judge of a
+// released requirement list) read the empty string as "public".
+func TestListJdRunsCarriesTheRetrievalScope(t *testing.T) {
+	r, ctx := chatRepo(t)
+	id := makeRun(t, r, ctx, "ready", true)
+	var subID int64
+	if err := r.pool.QueryRow(ctx, `
+    UPDATE jd_runs SET retrieval_scope = 'all' WHERE id = $1 RETURNING submission_id`, id).Scan(&subID); err != nil {
+		t.Fatalf("set scope: %v", err)
+	}
+	runs, err := r.ListJdRuns(ctx, subID)
+	if err != nil || len(runs) != 1 {
+		t.Fatalf("ListJdRuns: %d runs, err %v", len(runs), err)
+	}
+	if runs[0].RetrievalScope != "all" {
+		t.Errorf("retrieval scope = %q, want all", runs[0].RetrievalScope)
+	}
+}
