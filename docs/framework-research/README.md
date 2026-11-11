@@ -14,6 +14,10 @@ change to the reviewer, it still goes through the FSD and an ADR.
 
 **Picking this up as a new agent or contributor? Start with [`agent-handoff.md`](agent-handoff.md).**
 
+The project-level roadmap, the goals in order, the stage gates and the
+enterprise-readiness table are in [`../roadmap.md`](../roadmap.md),
+opened 2026-11-10 from the owner's statement of the end goal.
+
 | Document | What it is |
 |---|---|
 | `00-todo.md` | The prioritised to-do list for the design effort; the working order of everything below. |
