@@ -99,6 +99,60 @@ build a brand on, and the fact that seeker documents would bring other
 people's confidential material into the corpus. Neither blocks anything
 while the only user is the owner.
 
+## 1c. Enterprise readiness (opened 2026-11-10)
+
+Opened the day the owner stated the end goal: a two-sided hiring
+platform, built to be integrated into an enterprise and likely sold to
+an ADP- or Workday-class buyer. `docs/roadmap.md` holds the goals, the
+stages and the full readiness table with what exists today; this
+section holds only the open work, grouped by the stage the roadmap
+assigns it. Nothing here runs before the pilot (stage A) and Phase 0
+(stage B) close, and the stage D items wait for funding (§1b).
+
+**Before stage C, the first employer.**
+
+- Decide where new framework code lives. The repository is MIT-licensed
+  and public, so its code is not exclusive to a buyer; the private
+  platform repository in §1b is the candidate home. Confirm with counsel
+  the ownership position on AI-assisted code. Roadmap §6 row 12.
+- A written threat model and an incident-response runbook. Row 5.
+- Person-level data rights: consent to activity recording at
+  registration (FR-AUTH-10), member self-service (FR-AUTH-11), export of
+  held data (FR-HIST-05), the 24-month retention job (FR-HIST-06). Row 3.
+- A lawful design for disparate-impact analysis over match records, and
+  a legal review of the employment-AI rules that apply (New York City
+  Local Law 144, the EU AI Act's high-risk rules as deferred, Colorado's
+  SB 26-189, U.S. disparate-impact law). Row 8.
+- The P5 decisions in `framework-research/00-todo.md`: confidential
+  material in the corpus, the baseline design, the throughput path,
+  K-04.
+
+**Stage D, the platform (funded).**
+
+- Row-level security keyed on `tenant_id`; retrofit `users`,
+  `jd_submissions` and `corpus_documents`; tenant resolution from the
+  host. Row 1.
+- OIDC and SAML single sign-on; SCIM provisioning; roles that follow the
+  hiring workflow; the second factor revisited for a multi-admin tenant.
+  Row 2.
+- Per-tenant retention settings; audit export to a customer's log
+  system with a retention rule for audit rows. Rows 3 and 4.
+- A software bill of materials, an external penetration test, a SOC 2
+  readiness assessment. Row 5.
+- A public API versioning policy; per-tenant service accounts and keys;
+  webhooks for match-record and stage events. Row 6.
+- Posting ingestion from applicant tracking and HR systems; candidate
+  evidence import with consent; published JSON schemas for requirement
+  and match record. Row 7.
+- A model card per judge version; candidate-facing notice and
+  explanation; a bias-audit procedure. Row 8.
+- Monitoring and alerting, written service-level objectives, a second
+  node or managed Postgres, a disaster-recovery runbook. Row 9.
+- A hosted-model option behind the same contract; cross-candidate
+  batching; a cheap first-pass judge with escalation. Row 10.
+- A formal WCAG 2.1 AA audit before the first enterprise customer.
+  Row 11.
+
 ## 2. Data layer (Roger's stated priority)
 
 D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
