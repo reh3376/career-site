@@ -150,7 +150,8 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
            prompts::text, corpus_fingerprint, corpus_documents, corpus_chunks,
            score_formula, retrieval_score, match_score, threshold, fit,
            requirement_count, met_count, partial_count, unmet_count,
-           resume_generated, queued_ms, duration_ms, phase_ms::text, started_at, finished_at
+           resume_generated, queued_ms, duration_ms, phase_ms::text, started_at, finished_at,
+           retrieval_scope
       FROM jd_runs
      WHERE submission_id = $1
      ORDER BY attempt DESC`, submissionID)
@@ -172,6 +173,12 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
 			&run.Threshold, &run.Fit, &run.RequirementCount, &run.MetCount,
 			&run.PartialCount, &run.UnmetCount, &run.ResumeGenerated, &run.QueuedMs,
 			&run.DurationMs, &phaseJSONText, &run.StartedAt, &run.FinishedAt,
+			// What the run could read. Left out of this listing until
+			// 2026-11-10, when the re-judge of step 5 asked it for the
+			// scope of the last run, got the empty string and read the
+			// public corpus for a posting whose first run had read all
+			// of it.
+			&run.RetrievalScope,
 		); err != nil {
 			return nil, fmt.Errorf("list jd runs: scan: %w", err)
 		}
