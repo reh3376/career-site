@@ -326,8 +326,86 @@ jobs:
       # pandoc converts; typst and pypdf come from the sidecar's own
       # dependencies, so the suite runs against the same versions the
       # conversion scripts use rather than a set pinned twice.
+      #
+      # The packages are kept in the Actions cache and installed from
+      # there. This step used to be `apt-get update && apt-get install`
+      # on every run, which made the suite depend on Ubuntu's mirrors
+      # being reachable from whichever runner the job landed on. On
+      # 2026-11-11 they were not: the runner could not resolve
+      # security.ubuntu.com or reach azure.archive.ubuntu.com for five
+      # and a half minutes, apt gave up with exit 100, and the push that
+      # merged PR 417 went red on main without a single conversion spec
+      # having run. Nothing was wrong with the change: the same tree had
+      # passed on the pull request, and a re-run on another runner
+      # passed.
+      #
+      # So the mirrors are needed only when the cache is cold (a new
+      # runner release, or a week with no run), and then with bounded
+      # timeouts and three attempts instead of one attempt that waits
+      # out apt's defaults. If the cached packages ever stop installing on a
+      # newer image, the step falls back to apt; bump the -v1 in the key
+      # so the cache is rebuilt rather than refused on every run.
+      - name: runner release
+        id: os
+        run: echo "release=$(. /etc/os-release && echo "$VERSION_ID")" >> "$GITHUB_OUTPUT"
+
+      - name: restore pandoc packages
+        id: pandoc-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/pandoc-debs
+          key: pandoc-debs-${{ runner.os }}-${{ runner.arch }}-${{ steps.os.outputs.release }}-v1
+
       - name: install pandoc
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc
+        id: pandoc
+        run: |
+          set -euo pipefail
+          dir="$HOME/pandoc-debs"
+          fetched=false
+          if command -v pandoc > /dev/null; then
+            echo "pandoc is already on this runner"
+          elif compgen -G "$dir/*.deb" > /dev/null && sudo dpkg -i "$dir"/*.deb; then
+            echo "pandoc installed from the cached packages, with no call to a mirror"
+          else
+            # Each call is bounded, so a dead mirror costs minutes and
+            # not the job's whole allowance: three attempts of at most
+            # five minutes each, with a pause between them.
+            apt_opts=(-o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=60)
+            installed=""
+            for attempt in 1 2 3; do
+              if sudo timeout 150 apt-get "${apt_opts[@]}" update \
+                && sudo timeout 150 apt-get "${apt_opts[@]}" install -y --no-install-recommends --fix-broken pandoc; then
+                installed=1
+                break
+              fi
+              echo "::warning::installing pandoc from the Ubuntu mirrors failed, attempt $attempt of 3"
+              if [ "$attempt" -lt 3 ]; then sleep $((attempt * 20)); fi
+            done
+            if [ -z "$installed" ]; then
+              echo "::error::pandoc could not be installed: the Ubuntu mirrors were unreachable from this runner on three attempts. That is the runner's network, not the change under test. Re-run the job."
+              exit 1
+            fi
+            # Keep what apt fetched for the next run. Losing the cache is
+            # not a reason to fail a job whose pandoc is installed.
+            mkdir -p "$dir" && rm -f "$dir"/*.deb
+            if cp /var/cache/apt/archives/*.deb "$dir"/ 2> /dev/null \
+              || (cd "$dir" && apt-get "${apt_opts[@]}" download pandoc pandoc-data); then
+              fetched=true
+            else
+              echo "::warning::pandoc is installed, but its packages could not be kept for the cache"
+            fi
+          fi
+          echo "fetched=$fetched" >> "$GITHUB_OUTPUT"
+          pandoc --version | head -1
+
+      # Saved here rather than at the end of the job, so a failing
+      # conversion spec does not cost the next run its packages.
+      - name: save pandoc packages
+        if: steps.pandoc.outputs.fetched == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/pandoc-debs
+          key: ${{ steps.pandoc-cache.outputs.cache-primary-key }}
 
       - name: sync deps
         working-directory: services/sidecar
