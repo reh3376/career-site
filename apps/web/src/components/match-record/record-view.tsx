@@ -1,19 +1,37 @@
 import type { ReactNode } from "react";
 
-// The match record as embedded in the API (services/api/internal/pilot/
-// data/stimulus-<version>.json), typed loosely: every field optional,
-// because the record is versioned data and a later version may add or
-// drop fields without this component having to know. v1.1 (2026-11-09)
-// added the labelled parts, the definitions panel, the record status,
-// the r1 callout and the follow-up and inclusion lines, all from the
-// owner's comments after his own run (docs/framework-research/15 §14).
+// The match record as a person reads it (FSD FR-HF-17, FR-PLT-08). One
+// component, three readers: the pilot's stimulus, the member who
+// submitted a posting, and the admin who may override a verdict. The
+// pilot's record is the mock of this view and the other two are the
+// real thing, so they are drawn by the same code and cannot drift.
+//
+// It renders a display model, not the API's messages. The pilot's model
+// is embedded in the API (services/api/internal/pilot/data/
+// stimulus-<version>.json); a real record's is built from
+// HiringService.GetMatchRecord by lib/match-record.ts. Every field is
+// optional, because the stimulus is versioned data and a later version
+// may add or drop fields without this component having to know. v1.1
+// (2026-11-09) added the labelled parts, the definitions panel, the
+// record status, the r1 callout and the follow-up and inclusion lines,
+// all from the owner's comments after his own run
+// (docs/framework-research/15 §14). Step 6 of Phase 0 (2026-11-12)
+// added what only a real record has: the gap class, what is missing,
+// the keyword screen, what code changed, and a verdict set by a person.
+// The stimulus sets none of those, so the pilot's page is unchanged.
 export type RecordRow = {
   id: string;
   requirement?: string;
   source_quote?: string;
   category?: string;
+  // The class as a person reads it, when it does not come from
+  // `category` (a real record carries required, preferred or ideal).
+  class_label?: string;
   type?: string;
   weight?: number;
+  // Marks beside the row's id: "checked in code", "edited before
+  // judging".
+  marks?: string[];
   determination?: string;
   determination_label?: string;
   basis?: string;
@@ -28,6 +46,20 @@ export type RecordRow = {
   inclusion?: { status?: string; reason?: string };
   followup?: { status?: string; next?: string };
   note?: string;
+  // What kind of distance lies between the evidence and the
+  // requirement, for a row that is not met (FR-HF-17).
+  gap?: { label?: string; meaning?: string };
+  // The facts that would settle an unresolved row.
+  missing?: { label?: string; meaning?: string }[];
+  // What a plain keyword screen over the same passages would have done
+  // with this row (FR-HF-12).
+  keyword?: { status?: string; note?: string };
+  // What the code rules changed in the model's answer, as sentences.
+  adjustments?: string[];
+  // A verdict a person set in place of the model's (FR-HF-08).
+  reviewed?: { title?: string; lines?: string[] };
+  // An override on an earlier run of the same posting.
+  earlier?: string;
   question?: {
     label?: string;
     text?: string;
@@ -55,6 +87,8 @@ export type RecordData = {
     unmet_pct?: number;
     equivalency_line?: string;
     self_attested_line?: string;
+    // Further lines under the figures: how many verdicts a person set.
+    figure_notes?: string[];
   };
   legend?: { determinations?: string[]; must?: string; nice?: string; weight?: string };
   definitions?: {
@@ -78,14 +112,39 @@ const CLASS_LABEL: Record<string, string> = { must: "Required", nice: "Preferred
 
 const MONO = "font-mono text-[11px] uppercase tracking-[0.14em]";
 
-export function RecordView({ record, rowComment }: { record: RecordData; rowComment: (rowId: string) => ReactNode }) {
+export function RecordView({
+  record,
+  rowComment,
+  rowActions,
+  controls = "pilot",
+  definitionsOpen = true,
+  anchorRows = false,
+  className = "mt-12",
+}: {
+  record: RecordData;
+  // What goes under each row: the pilot's comment box.
+  rowComment?: (rowId: string) => ReactNode;
+  // The row's controls when they are live: the admin's audit link and
+  // override form. Used with controls="live".
+  rowActions?: (rowId: string) => ReactNode;
+  // "pilot" draws Audit and Override disabled with the pilot's caption,
+  // "live" draws rowActions, "none" draws nothing (the member's view).
+  controls?: "pilot" | "live" | "none";
+  // The definitions panel stands open for a first-time reader and
+  // folds for someone who reads these every day.
+  definitionsOpen?: boolean;
+  // Give each row an id (row-r3) so a page can return to it.
+  anchorRows?: boolean;
+  // The space above the record, which depends on what precedes it.
+  className?: string;
+}) {
   const h = record.header ?? {};
   const rows = record.rows ?? [];
   const ev = h.evidenced_pct ?? 0;
   const un = h.unresolved_pct ?? 0;
   const nm = h.unmet_pct ?? 0;
   return (
-    <article className="mt-12 border border-line">
+    <article className={`${className} border border-line`}>
       <header className="border-b border-line bg-paper-2 px-6 py-6 sm:px-8">
         <p className={`${MONO} text-ink-3`}>{h.run_label}</p>
         <h2
@@ -124,6 +183,11 @@ export function RecordView({ record, rowComment }: { record: RecordData; rowComm
           </dl>
           {h.equivalency_line ? <p className="mt-3 text-xs text-ink-3">{h.equivalency_line}</p> : null}
           {h.self_attested_line ? <p className="mt-1 text-xs text-ink-3">{h.self_attested_line}</p> : null}
+          {(h.figure_notes ?? []).map((line) => (
+            <p key={line} className="mt-2 max-w-2xl border-l-2 border-line-strong pl-3 text-xs leading-relaxed text-ink-2">
+              {line}
+            </p>
+          ))}
         </div>
 
         {record.legend && !record.definitions ? (
@@ -136,12 +200,12 @@ export function RecordView({ record, rowComment }: { record: RecordData; rowComm
         ) : null}
       </header>
 
-      {record.definitions ? <Definitions d={record.definitions} /> : null}
+      {record.definitions ? <Definitions d={record.definitions} open={definitionsOpen} /> : null}
 
       <ol className="divide-y divide-line">
         {rows.map((r) => (
-          <Row key={r.id} r={r}>
-            {rowComment(r.id)}
+          <Row key={r.id} r={r} controls={controls} actions={rowActions?.(r.id)} anchor={anchorRows}>
+            {rowComment?.(r.id)}
           </Row>
         ))}
       </ol>
@@ -175,13 +239,10 @@ function Num({ label, value, tone, note }: { label: string; value: string; tone:
 
 // The definitions panel sits between the header and the rows, open, so
 // that a reader meets every term before the first row uses it.
-function Definitions({ d }: { d: NonNullable<RecordData["definitions"]> }) {
+function Definitions({ d, open }: { d: NonNullable<RecordData["definitions"]>; open: boolean }) {
   const groups = d.groups ?? [];
-  return (
-    <section aria-labelledby="record-definitions" className="border-b border-line px-6 py-6 sm:px-8">
-      <p id="record-definitions" className={`${MONO} text-ink-3`}>
-        {d.title ?? "Definitions"}
-      </p>
+  const body = (
+    <>
       {d.intro ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">{d.intro}</p> : null}
       <div className="mt-5 grid gap-6 sm:grid-cols-2">
         {groups.map((g, i) => (
@@ -197,6 +258,22 @@ function Definitions({ d }: { d: NonNullable<RecordData["definitions"]> }) {
           </div>
         ))}
       </div>
+    </>
+  );
+  if (!open) {
+    return (
+      <details className="border-b border-line px-6 py-4 sm:px-8">
+        <summary className={`${MONO} cursor-pointer text-ink-3 hover:text-accent`}>{d.title ?? "Definitions"}</summary>
+        {body}
+      </details>
+    );
+  }
+  return (
+    <section aria-labelledby="record-definitions" className="border-b border-line px-6 py-6 sm:px-8">
+      <p id="record-definitions" className={`${MONO} text-ink-3`}>
+        {d.title ?? "Definitions"}
+      </p>
+      {body}
     </section>
   );
 }
@@ -205,16 +282,31 @@ function Label({ children, className = "" }: { children: ReactNode; className?: 
   return <p className={`${MONO} text-ink-3 ${className}`}>{children}</p>;
 }
 
-function Row({ r, children }: { r: RecordRow; children: ReactNode }) {
+function Row({
+  r,
+  controls,
+  actions,
+  anchor,
+  children,
+}: {
+  r: RecordRow;
+  controls: "pilot" | "live" | "none";
+  actions?: ReactNode;
+  anchor: boolean;
+  children: ReactNode;
+}) {
   const tone = TONE[r.determination ?? ""] ?? TONE.not_assessed;
-  const cls = CLASS_LABEL[r.category ?? ""] ?? r.category;
+  const cls = r.class_label ?? CLASS_LABEL[r.category ?? ""] ?? r.category;
   return (
-    <li className="px-6 py-7 sm:px-8">
+    <li id={anchor ? `row-${r.id}` : undefined} className={`px-6 py-7 sm:px-8${anchor ? " scroll-mt-24" : ""}`}>
       <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${MONO} text-ink-3`}>
         <span className="text-ink">{r.id}</span>
         {cls ? <span className={r.category === "must" ? "text-ink-2" : "text-ink-4"}>{cls}</span> : null}
         {typeof r.weight === "number" ? <span>weight {r.weight}</span> : null}
         {r.type ? <span>kind: {r.type}</span> : null}
+        {(r.marks ?? []).map((m) => (
+          <span key={m}>{m}</span>
+        ))}
         {r.flagged_for_audit ? <span className="text-signal">flagged for expert audit</span> : null}
       </div>
 
@@ -251,6 +343,14 @@ function Row({ r, children }: { r: RecordRow; children: ReactNode }) {
               <p className="mt-1 text-sm leading-relaxed text-ink-2">{r.basis}</p>
             </>
           ) : null}
+          {r.gap?.label ? (
+            <>
+              <Label className="mt-3">Kind of gap</Label>
+              <p className="mt-1 text-sm leading-relaxed text-ink-2">
+                <span className="text-ink">{r.gap.label}.</span> {r.gap.meaning}
+              </p>
+            </>
+          ) : null}
         </div>
         <div>
           {r.history ? (
@@ -260,14 +360,58 @@ function Row({ r, children }: { r: RecordRow; children: ReactNode }) {
           ) : null}
           <Label>Reasoning</Label>
           <p className="mt-1 text-sm leading-relaxed text-ink-2">{r.rationale}</p>
+          {r.missing?.length ? (
+            <>
+              <Label className="mt-3">What is missing</Label>
+              <ul className="mt-1 space-y-1 text-sm leading-relaxed text-ink-2">
+                {r.missing.map((m) => (
+                  <li key={m.label}>
+                    <span className="text-ink">{m.label}.</span> {m.meaning}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {r.adjustments?.length ? (
+            <>
+              <Label className="mt-3">Changed in code</Label>
+              <ul className="mt-1 space-y-1 border-l-2 border-signal pl-3 text-sm leading-relaxed text-ink-2">
+                {r.adjustments.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
           {r.evidence ? (
             <>
               <Label className="mt-3">Evidence</Label>
               <p className="mt-1 font-mono text-[11px] text-ink-3">{r.evidence}</p>
             </>
           ) : null}
+          {r.keyword?.status ? (
+            <>
+              <Label className="mt-3">Keyword screen</Label>
+              <p className="mt-1 text-sm leading-relaxed text-ink-2">
+                <span className="text-ink">{r.keyword.status}.</span>
+                {r.keyword.note ? <> {r.keyword.note}</> : null}
+              </p>
+            </>
+          ) : null}
         </div>
       </div>
+
+      {r.reviewed ? (
+        <div className="mt-5 border border-accent/40 bg-paper-2 px-4 py-4">
+          <p className={`${MONO} text-accent`}>{r.reviewed.title ?? "Verdict set by a person"}</p>
+          <div className="mt-2 space-y-2 text-sm leading-relaxed text-ink">
+            {(r.reviewed.lines ?? []).map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {r.earlier ? <p className="mt-4 border-l-2 border-accent pl-4 text-sm leading-relaxed text-ink-2">{r.earlier}</p> : null}
 
       {r.inclusion ? (
         <p className="mt-4 text-sm leading-relaxed text-ink-2">
@@ -288,31 +432,34 @@ function Row({ r, children }: { r: RecordRow; children: ReactNode }) {
 
       {r.note ? <p className="mt-4 border-l-2 border-line-strong pl-4 text-sm leading-relaxed text-ink-2">{r.note}</p> : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className={`inline-flex h-[30px] cursor-not-allowed items-center border border-line px-3 ${MONO} text-ink-4`}
-        >
-          Audit
-        </button>
-        {r.no_override ? null : (
+      {controls === "pilot" ? (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled
             aria-disabled="true"
             className={`inline-flex h-[30px] cursor-not-allowed items-center border border-line px-3 ${MONO} text-ink-4`}
           >
-            Override
+            Audit
           </button>
-        )}
-        <span className="text-xs text-ink-4">
-          {r.no_override
-            ? "Shown as the hiring manager sees them. Disabled in the pilot; this row is not scored and cannot be overridden."
-            : "Shown as the hiring manager sees them. Disabled in the pilot; comments below never change the record."}
-        </span>
-      </div>
+          {r.no_override ? null : (
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className={`inline-flex h-[30px] cursor-not-allowed items-center border border-line px-3 ${MONO} text-ink-4`}
+            >
+              Override
+            </button>
+          )}
+          <span className="text-xs text-ink-4">
+            {r.no_override
+              ? "Shown as the hiring manager sees them. Disabled in the pilot; this row is not scored and cannot be overridden."
+              : "Shown as the hiring manager sees them. Disabled in the pilot; comments below never change the record."}
+          </span>
+        </div>
+      ) : null}
+      {controls === "live" && actions ? <div className="mt-5">{actions}</div> : null}
 
       {children}
     </li>

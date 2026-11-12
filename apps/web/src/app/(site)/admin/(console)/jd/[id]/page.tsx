@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { RecordView } from "@/components/match-record/record-view";
 import { callApi } from "@/lib/api-fetch";
+import { toRecordData, type MatchRecordResponse } from "@/lib/match-record";
 import { getSessionCookie } from "@/lib/session";
 
 import { RescoreButton } from "../rescore-button";
 
 import { OutcomePanel, type Feedback, type Outcome } from "./outcome-panel";
+import { OverrideControl } from "./override-control";
 import {
   RequirementsEditor,
   type Requirement as RequirementRow,
@@ -146,14 +149,42 @@ async function fetchRequirements(id: string): Promise<RequirementList | null> {
   return (await resp.json()) as RequirementList;
 }
 
+// The match record of one run (FSD FR-HF-17): the newest run that has
+// one, or the run named in ?run=. `missing` is a named run that has no
+// record in this form, which is a run scored before judgments were kept
+// as rows.
+async function fetchRecord(
+  id: string,
+  runId: string,
+): Promise<{ resp: MatchRecordResponse | null; missing: boolean }> {
+  const cookie = await getSessionCookie();
+  if (!cookie) return { resp: null, missing: false };
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/GetMatchRecord",
+    body: runId ? { submissionId: id, runId } : { submissionId: id },
+    cookie,
+  });
+  if (!resp.ok) return { resp: null, missing: Boolean(runId) };
+  return { resp: (await resp.json()) as MatchRecordResponse, missing: false };
+}
+
 export default async function AdminJdDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ run?: string }>;
 }) {
   const { id } = await params;
-  const [d, reqList] = await Promise.all([fetchDetail(id), fetchRequirements(id)]);
+  const asked = (await searchParams).run ?? "";
+  const wantedRun = /^[0-9a-fA-F-]{36}$/.test(asked) ? asked : "";
+  const [d, reqList, fetched] = await Promise.all([fetchDetail(id), fetchRequirements(id), fetchRecord(id, wantedRun)]);
   if (!d?.row) notFound();
+  const recordResp = fetched.resp?.record ? fetched.resp : null;
+  const recordData = recordResp ? toRecordData(recordResp, "admin") : null;
+  const judgmentByRow = new Map(
+    (recordResp?.record?.judgments ?? []).map((j) => [j.requirementLocalId ?? "", j] as const),
+  );
   const r = d.row;
   const vocab: Vocab = {
     types: reqList?.types ?? [],
@@ -282,68 +313,141 @@ export default async function AdminJdDetailPage({
         />
       ) : null}
 
-      <section className="mt-10">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-          assessment
-          {assessment?.prompts ? (
-            <span className="text-ink-4">
-              {" "}
-              ·{" "}
-              {Object.entries(assessment.prompts)
-                .map(([k, v]) => `${k} v${v}`)
-                .join(", ")}
-            </span>
-          ) : null}
-        </p>
-        {!assessment ? (
-          <p className="mt-3 text-sm text-ink-3">
-            No assessment stored. Either scoring has not run or the assessor was
-            not wired (retrieval score is the gate).
+      {recordResp && recordData ? (
+        <section id="record" className="mt-10 scroll-mt-24">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            match record
+            <span className="text-ink-4"> · </span>run {recordResp.record?.attempt ?? "?"}
+            {wantedRun ? (
+              <>
+                <span className="text-ink-4"> · </span>
+                <Link href={`/admin/jd/${r.id}#record`} className="text-accent no-underline hover:text-accent-hover">
+                  show the newest
+                </Link>
+              </>
+            ) : null}
           </p>
-        ) : assessment.error && !assessment.requirements?.length ? (
-          <p className="mt-3 border-l-2 border-signal bg-signal-soft/40 px-3 py-2 text-sm text-ink">
-            Assessment failed, gate fell back to the retrieval score:{" "}
-            <span className="font-mono text-[11px]">{assessment.error}</span>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">
+            The run as a reader sees it, and as the member who submitted the posting sees it without the passage
+            numbers, the private titles and the override form. A verdict you set here becomes the one the three
+            figures count; the model&rsquo;s stays on the row for comparison, and the fit and the résumé decision,
+            made when the run finished, do not move.
           </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-line border-y border-line">
-            {(assessment.requirements ?? []).map((req) => {
-              const j = judgmentsByReq.get(req.id);
-              const verdict = j?.verdict ?? "unmet";
+          <RecordView
+            record={recordData}
+            controls="live"
+            definitionsOpen={false}
+            anchorRows
+            className="mt-5"
+            rowActions={(rowId) => {
+              const j = judgmentByRow.get(rowId);
+              if (!j?.id) return null;
+              const closed = j.notAssessed
+                ? "Not judged from documents; this row takes no override."
+                : !recordResp.canOverride
+                  ? "A later run has replaced this record; override the row on the newest one."
+                  : undefined;
               return (
-                <li key={req.id} className="py-3">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-                    <span className="text-ink">{req.id}</span>
-                    <span>{req.category}</span>
-                    <span>w{req.weight}</span>
-                    <span className={VERDICT_TONE[verdict] ?? "text-ink-3"}>
-                      {verdict}
-                    </span>
-                    {j?.evidence_ids?.length ? (
-                      <span>chunks {j.evidence_ids.join(", ")}</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-sm text-ink">{req.text}</p>
-                  {j?.rationale ? (
-                    <p className="mt-1 text-xs text-ink-3">{j.rationale}</p>
-                  ) : null}
-                  {j?.adjusted ? (
-                    <p className="mt-1 border-l-2 border-signal pl-2 text-xs text-ink-2">
-                      downgraded in code: {j.adjusted}
-                    </p>
-                  ) : null}
-                </li>
+                <OverrideControl
+                  key={`${j.id}:${j.override?.at ?? ""}:${j.effectiveDetermination ?? ""}:${j.effectiveBasis ?? ""}`}
+                  target={{
+                    judgmentId: j.id,
+                    rowId,
+                    effectiveDetermination: j.effectiveDetermination ?? "",
+                    effectiveBasis: j.effectiveBasis ?? "",
+                    overridden: Boolean(j.override),
+                    overrideRole: j.override?.role,
+                    closed,
+                  }}
+                  auditHref={`/admin/decisions?ref=${r.id}&all=1`}
+                  choices={recordResp.overrideChoices ?? []}
+                  determinations={recordResp.determinations ?? []}
+                  bases={recordResp.bases ?? []}
+                  roles={recordResp.overrideRoles ?? []}
+                />
               );
-            })}
-          </ul>
-        )}
-        {assessment && typeof assessment.score === "number" ? (
-          <p className="mt-3 font-mono text-xs text-ink-3">
-            weighted score {assessment.score.toFixed(3)} over weight total{" "}
-            {assessment.weight_total ?? "-"} (met 1.0, partial 0.5, unmet 0)
+            }}
+          />
+        </section>
+      ) : null}
+
+      {fetched.missing ? (
+        <p id="record" className="mt-10 scroll-mt-24 border-l-2 border-line-strong pl-3 text-sm text-ink-2">
+          That run has no match record in this form: it was scored before judgments were kept as rows. Its figures are
+          in the run history below.{" "}
+          <Link href={`/admin/jd/${r.id}#record`} className="text-accent">
+            Show the newest record
+          </Link>
+          .
+        </p>
+      ) : null}
+
+      {/* The assessment as it was stored before judgments were rows. Shown
+          only for a posting that has no match record in the new form. */}
+      {recordData ? null : (
+        <section className="mt-10">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            assessment
+            {assessment?.prompts ? (
+              <span className="text-ink-4">
+                {" "}
+                ·{" "}
+                {Object.entries(assessment.prompts)
+                  .map(([k, v]) => `${k} v${v}`)
+                  .join(", ")}
+              </span>
+            ) : null}
           </p>
-        ) : null}
-      </section>
+          {!assessment ? (
+            <p className="mt-3 text-sm text-ink-3">
+              No assessment stored. Either scoring has not run or the assessor was
+              not wired (retrieval score is the gate).
+            </p>
+          ) : assessment.error && !assessment.requirements?.length ? (
+            <p className="mt-3 border-l-2 border-signal bg-signal-soft/40 px-3 py-2 text-sm text-ink">
+              Assessment failed, gate fell back to the retrieval score:{" "}
+              <span className="font-mono text-[11px]">{assessment.error}</span>
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-line border-y border-line">
+              {(assessment.requirements ?? []).map((req) => {
+                const j = judgmentsByReq.get(req.id);
+                const verdict = j?.verdict ?? "unmet";
+                return (
+                  <li key={req.id} className="py-3">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+                      <span className="text-ink">{req.id}</span>
+                      <span>{req.category}</span>
+                      <span>w{req.weight}</span>
+                      <span className={VERDICT_TONE[verdict] ?? "text-ink-3"}>
+                        {verdict}
+                      </span>
+                      {j?.evidence_ids?.length ? (
+                        <span>chunks {j.evidence_ids.join(", ")}</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-sm text-ink">{req.text}</p>
+                    {j?.rationale ? (
+                      <p className="mt-1 text-xs text-ink-3">{j.rationale}</p>
+                    ) : null}
+                    {j?.adjusted ? (
+                      <p className="mt-1 border-l-2 border-signal pl-2 text-xs text-ink-2">
+                        downgraded in code: {j.adjusted}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {assessment && typeof assessment.score === "number" ? (
+            <p className="mt-3 font-mono text-xs text-ink-3">
+              weighted score {assessment.score.toFixed(3)} over weight total{" "}
+              {assessment.weight_total ?? "-"} (met 1.0, partial 0.5, unmet 0)
+            </p>
+          ) : null}
+        </section>
+      )}
 
       {resume ? (
         <section className="mt-10">
@@ -375,7 +479,7 @@ export default async function AdminJdDetailPage({
         hasResume={Boolean(resume)}
       />
 
-      <RunHistory runs={runs} />
+      <RunHistory runs={runs} submissionId={r.id} shownRunId={recordResp?.record?.runId ?? ""} />
 
       <section className="mt-10">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">

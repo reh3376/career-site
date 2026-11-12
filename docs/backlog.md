@@ -264,6 +264,52 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
+- **Should an override carry to the next run (opened 2026-11-12,
+  owner's decision).** An override belongs to one judgment of one run.
+  A re-score or a release judges every requirement again and the new
+  record starts without overrides; the row says that a person had
+  decided it on an earlier run, and in what role, and whether the
+  requirement version is the same. The alternative is to carry an
+  override forward whenever the requirement version is unchanged, on
+  the reading that a person's decision about this candidate and this
+  requirement outlives a re-run. Against it: the corpus may have
+  changed, and a carried override hides what the model now says. Either
+  way the earlier override stays on its own run's record.
+- **Should an override move the fit (opened 2026-11-12, owner's
+  decision, part of D-32).** The fit and the résumé decision are made
+  when a run finishes, from the v2 score over the model's verdicts. An
+  override changes the three numbers and says, under them, that the
+  fit does not move. So a record can show every required item met by a
+  person's verdict beside a fit of "possible". Settling what the gate
+  reads (D-32) settles this too: once the fit is computed from the
+  record's numbers it can be computed again when they change, and then
+  the question is whether a résumé is written on the strength of an
+  override.
+- **An override to unresolved names nothing as missing (2026-11-12).**
+  FR-HF-08 has a person set a determination and a basis. The
+  uncertainty code, which is what step 7 turns into a question, is the
+  model's, and a row the model called not met has none. Step 7 needs
+  either a third field on the override or the code the basis implies
+  (`hiring.ShortfallBases` already maps the shortfall bases to one).
+- **The pilot's stimulus is to be regenerated from a real record
+  (step 6's exit, 2026-11-12).** `lib/match-record.ts` builds the
+  display model of a real record in the stimulus's own shape, so the
+  regeneration is that output for the record the owner picks, made
+  anonymous by hand, with the two things a real record cannot have yet
+  written in as the stimulus has them (the follow-up lines and the
+  question, which are step 7). It changes what participants read, so
+  it is proposed to the owner as stimulus v1.2 and not switched.
+- **The audit link opens the posting's decisions, not the row's
+  (2026-11-12).** Audit under a row of the admin record goes to
+  `/admin/decisions?ref=<posting>&all=1`. The judgment knows its own
+  decision-log id and the API sends it to admins; the decisions page
+  has no way to open one row. A `?id=` filter there would make the
+  link exact.
+- **The run history offers a record for every finished run
+  (2026-11-12).** A run scored before judgments were kept as rows has
+  none, and the page says so when the link is followed. A `has_record`
+  on the run listing would let the link be left out instead.
+
 - **Hold a submission for review before its first judging (opened
   2026-11-10, owner's decision).** J8 in the FSD has the pipeline pause
   after extraction so the hiring manager confirms the requirement list

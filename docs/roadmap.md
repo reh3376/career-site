@@ -176,9 +176,10 @@ prototype they generalise is the JD reviewer (FSD §5.11).
 
 ---
 
-## 4. Where we are, 2026-11-10
+## 4. Where we are, 2026-11-12
 
-Production is rogerhenley.dev on `0ed804ba9d9a`. Counts are from the
+Production is rogerhenley.dev on `1627cbd5a609`, which carries steps 0
+to 5; step 6 is built and awaits its merge and the owner's live review. Counts are from the
 database and `build-stats.json` on this date.
 
 **Built and live.**
@@ -190,7 +191,7 @@ database and `build-stats.json` on this date.
   owner graded for before-and-after evaluation (`evaluation.md`,
   `llm-tuning-log.md`). 118 submissions and 1,761 decision-log rows so
   far, all for one candidate.
-- **The framework's Phase 0, steps 0 to 5 of 9** (ADR 0032, `13` §2):
+- **The framework's Phase 0, steps 0 to 6 of 9** (ADR 0032, `13` §2):
   requirement, judgment, evidence, match record, clarification and
   catalog as versioned rows with `candidate_id` and `tenant_id` from
   birth (migrations 00066 to 00069, package `hiring`); the pipeline
@@ -208,9 +209,16 @@ database and `build-stats.json` on this date.
   judged. Requirements are classed required, preferred or ideal, and a
   years or credential item counts only once what is accepted in its
   place is written down (FR-HF-23). 14 of the 24 FR-HF rows are
-  shipped or partially shipped. The golden-set run that settles the
-  gate (D-32) and the hand-over are step 4's exit, still open; step
-  5's editor awaits the owner's live review.
+  shipped or partially shipped. Step 6 (2026-11-12): a finished review
+  is read as a match record in the form the pilot's stimulus mocks,
+  by the member who submitted the posting and by the owner, from one
+  component; a person on the hiring side can override a verdict with a
+  reason and a role, the three numbers follow the override and the
+  model's verdict stays beside it for the agreement measures. 16 of
+  the 24 FR-HF rows are now shipped or partially shipped. The
+  golden-set run that settles the gate (D-32) and the hand-over are
+  step 4's exit, still open; step 5's editor and step 6's record and
+  override await the owner's live review.
 - **The employer-side pilot on the site** (FSD §5.16, 18 rows shipped;
   `15`): whitelisted accounts with a pilot flag, a pilot-only
   experience (consent, the survey as versioned data, the match-record
@@ -228,8 +236,8 @@ database and `build-stats.json` on this date.
   rule that a declared control is an enforced one (ADR 0031), and the
   decision log.
 - **Engineering posture.** 232 requirements in the FSD, 167 shipped,
-  counted by script and checked in CI; 175 RPCs under a `buf` breaking
-  check with generated docs; 74 migrations replayed in CI; 11 ADRs;
+  counted by script and checked in CI; 177 RPCs under a `buf` breaking
+  check with generated docs; 75 migrations replayed in CI; 11 ADRs;
   467 Go, 91 web and 30 Python tests; 15 CI checks including
   govulncheck, pip-audit, pnpm audit, trivy, CodeQL for all three
   languages and dependabot; nightly backups with a weekly automated
@@ -339,4 +347,5 @@ items are mirrored in `backlog.md` §1c.
 |---|---|
 | 2026-11-10 | Opened at the owner's request, from his statement of the end goal the same day. Goals, problem, thesis, current state on `0ed804ba9d9a`, the five stages, the enterprise-readiness table and the risks written. Backlog §1c opened to mirror the open items. |
 | 2026-11-10, later | §4: stage A is under way; the post is up and the first two participants are on the whitelist. Production on `15007b6fb58f`. |
+| 2026-11-12, step 6 | §4: Phase 0 steps 0 to 6 of 9. The match record is read by a person in its own form and a verdict can be overridden; 16 of the 24 FR-HF rows shipped or partially shipped; 168 requirements shipped, 177 RPCs, 75 migrations. The production line now names `1627cbd5a609`, which it had not since `0ed804ba9d9a`. |
 | 2026-11-10, step 5 | §4: Phase 0 steps 0 to 5 of 9. The requirement is an editable, versioned row with classes; 14 of the 24 FR-HF rows shipped or partially shipped; the engineering counts moved with it (167 requirements shipped, 175 RPCs, 74 migrations). |

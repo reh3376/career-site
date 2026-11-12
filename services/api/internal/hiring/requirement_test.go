@@ -470,3 +470,29 @@ func TestRulesReadStoredThresholds(t *testing.T) {
 		t.Errorf("team_size 10 against 3 people: %+v %+v", v, adj)
 	}
 }
+
+// The sentence beside "included" follows the stored value, which is
+// what the arithmetic read, even when the rule has changed since the
+// version was written. The first live reading of a record found a row
+// marked not included beside the current rule's reason for including
+// it.
+func TestInclusionReasonFollowsTheStoredValue(t *testing.T) {
+	q := Draft(RequirementInput{LocalID: "r1", Text: "Bachelor of Science in Electrical Engineering or equivalent experience", Category: "must", Weight: 2, Type: "credential"}, nil, Provenance{})
+	if !q.Included || !strings.HasPrefix(q.InclusionReason(), "Included: the posting itself accepts an equivalent") {
+		t.Fatalf("as drafted: included=%v reason=%q", q.Included, q.InclusionReason())
+	}
+	// The same version as an earlier rule stored it.
+	q.Included = false
+	if got := q.InclusionReason(); !strings.HasPrefix(got, "Not included in the evaluation:") || strings.Contains(got, "accepts an equivalent") {
+		t.Errorf("a row stored as not included must not give a reason for including: %q", got)
+	}
+	// And the other way about.
+	bare := Draft(RequirementInput{LocalID: "r2", Text: "10+ years of engineering experience", Category: "must", Weight: 2, Type: "experience"}, nil, Provenance{})
+	if bare.Included {
+		t.Fatalf("a bare years item is not included as drafted")
+	}
+	bare.Included = true
+	if got := bare.InclusionReason(); !strings.HasPrefix(got, "Included:") || strings.Contains(got, "no equivalency") {
+		t.Errorf("a row stored as included must not give a reason for leaving it out: %q", got)
+	}
+}

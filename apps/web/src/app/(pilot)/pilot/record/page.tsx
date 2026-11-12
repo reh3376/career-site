@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RecordView, type RecordData } from "@/components/match-record/record-view";
+
 import { markPartAction } from "../actions";
 import { CommentBox } from "../comment-box";
 import { requireSignedIn, unwrap } from "../gate";
 import { getPilotRecord, type PilotComment } from "../lib";
-
-import { RecordView, type RecordData } from "./record-view";
 
 export const metadata: Metadata = { title: "Pilot · Match record" };
 export const dynamic = "force-dynamic";

@@ -534,6 +534,9 @@ func main() {
 
 	jdLimits := jd.NewLimitStore(log, userRepo, cfg.JDDailyLimit)
 	jdHandler := handlers.NewJd(log, userRepo, authHandler, jdScorer, cfg.JDPipelineTimeout, jdLimits)
+	// The result names the run whose match record the viewer reads
+	// (FR-HF-17); the record itself is HiringService's.
+	jdHandler.SetHiring(hiringRepo)
 	// Admin comes after the JD scorer so RescoreJd can reuse it.
 	adminHandler := handlers.NewAdmin(
 		log, userRepo, authHandler, decisionHandler, pool, readonlyPool, ingester,

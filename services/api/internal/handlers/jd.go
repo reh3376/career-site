@@ -22,6 +22,7 @@ import (
 	"github.com/reh3376/career-site/services/api/gen/career/v1/careerv1connect"
 	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/ratelimit"
@@ -47,7 +48,14 @@ type Jd struct {
 	limits *jd.LimitStore
 	// events is the product event stream; nil is silent.
 	events *events.Writer
+	// hiring reads which run holds a submission's match record, so the
+	// result can name it (FR-HF-17); nil leaves the verdict list as the
+	// only breakdown.
+	hiring *hiring.Repo
 }
+
+// SetHiring wires the hiring tables' reader.
+func (h *Jd) SetHiring(repo *hiring.Repo) { h.hiring = repo }
 
 func NewJd(log *slog.Logger, repo *users.Repo, auth *Auth, scorer *jd.Scorer, pipelineTimeout time.Duration, limits *jd.LimitStore) *Jd {
 	if pipelineTimeout <= 0 {
@@ -348,6 +356,19 @@ func (h *Jd) GetJdResult(
 	}
 	out.ProgressPct = s.ProgressPct
 	out.ProgressStage = s.ProgressStage
+	// The match record in its own form (FSD FR-HF-17), for the two
+	// readers HiringService.GetMatchRecord serves: the submitting member
+	// and an admin. Named only when the newest run is the one that has
+	// it, so a record is never shown beside the status of a later run
+	// that failed or is still going.
+	if h.hiring != nil && holdsToken && (member.Role == users.RoleAdmin || (s.UserID != 0 && s.UserID == member.ID)) {
+		runID, attempt, latest, ok, rErr := h.hiring.LatestRecordRun(ctx, id)
+		if rErr != nil {
+			h.log.Warn("jd: match record lookup failed; the verdict list stands in", slog.Int64("submission", id), slog.String("error", rErr.Error()))
+		} else if ok && attempt == latest {
+			out.MatchRecordRunId = runID
+		}
+	}
 	return connect.NewResponse(out), nil
 }
 

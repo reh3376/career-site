@@ -129,7 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 85 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
-| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, and the settings the framework's arithmetic reads. | 5 |
+| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, and the settings the framework's arithmetic reads. | 7 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -1377,6 +1377,7 @@ the résumé and its PDF link when status is `ready`.
 | `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
 | `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
 | `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
+| `matchRecordRunId` | `string` | string |  | The run whose match record HiringService.GetMatchRecord returns for this submission: set when the newest run has a record with judgments and the caller is the submitting member or an admin, so a client knows to show the record in place of the verdict list. Empty for a posting last scored before the hiring tables began. |
 
 <details><summary>Example request body</summary>
 
@@ -5394,7 +5395,8 @@ stop measures the fifteen-minute burden.
 
 ## HiringService
 
-Requirements as editable, versioned rows, and the settings the
+Requirements as editable, versioned rows, the match record a run
+produced, the override of a judgment, and the settings the
 framework's arithmetic reads.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
@@ -5404,6 +5406,8 @@ framework's arithmetic reads.
 | [`ReleaseRequirements`](#hiringservice-releaserequirements) | `/api/career.v1.HiringService/ReleaseRequirements` | Admin | default | `ReleaseRequirementsRequest` → `ReleaseRequirementsResponse` | Releases every pending draft of a role, each replacing the version it was edited from, and starts a run that judges the released list without extracting the posting again. |
 | [`GetHiringSettings`](#hiringservice-gethiringsettings) | `/api/career.v1.HiringService/GetHiringSettings` | Admin | default | `GetHiringSettingsRequest` → `GetHiringSettingsResponse` | Reads the framework's settings: the share of its weight a preferred requirement counts at. |
 | [`SetHiringSettings`](#hiringservice-sethiringsettings) | `/api/career.v1.HiringService/SetHiringSettings` | Admin | default | `SetHiringSettingsRequest` → `SetHiringSettingsResponse` | Sets the framework's settings (stored in app_settings; the api caches them for 15 s). |
+| [`GetMatchRecord`](#hiringservice-getmatchrecord) | `/api/career.v1.HiringService/GetMatchRecord` | Member | default | `GetMatchRecordRequest` → `GetMatchRecordResponse` | Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and any override. |
+| [`OverrideJudgment`](#hiringservice-overridejudgment) | `/api/career.v1.HiringService/OverrideJudgment` | Admin | default | `OverrideJudgmentRequest` → `OverrideJudgmentResponse` | Sets, replaces or withdraws a person's override of one judgment (FSD FR-HF-08). |
 
 ### HiringService.ListRequirements
 
@@ -5599,6 +5603,100 @@ already written keeps the fraction it was computed with.
   "settings": {
     "preferredFraction": 0.5
   }
+}
+```
+
+</details>
+
+### HiringService.GetMatchRecord
+
+`POST /api/career.v1.HiringService/GetMatchRecord` · **Auth:** Member · **Rate limit:** default/min
+
+Reads the match record of one run of a submitted posting: the three
+numbers and two shares, each requirement version judged, and each
+judgment with its basis, what is missing, the evidence cited, what
+the code rules changed, whether a keyword screen would have found
+it, and any override. Open to the member who submitted the posting
+and to an admin; anyone else gets not-found. With no run named it
+is the newest run that has a record. A member is never sent the
+private text of the candidate's documents, the title of a document
+that is not public, or the reason and name behind an override. The
+vocabularies come with the record so a viewer labels codes from the
+registry.
+
+**Request** — [`GetMatchRecordRequest`](#getmatchrecordrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | The submitted posting's id. |
+| `runId` | `string` | string | `string: max_len: 64` | One run of that posting. Empty reads the newest run that has a record. |
+
+**Response** — [`GetMatchRecordResponse`](#getmatchrecordresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `record` | [`MatchRecord`](#matchrecord) | object |  | The record. Unset when the posting has no record with judgments, which is a posting last scored before the hiring tables began. |
+| `determinations` | [`VocabCode`](#vocabcode)[] | array of object |  | The `determination` codes. |
+| `bases` | [`VocabCode`](#vocabcode)[] | array of object |  | The `basis` codes. |
+| `uncertainties` | [`VocabCode`](#vocabcode)[] | array of object |  | The `uncertainty` codes. |
+| `types` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_type` codes. |
+| `classes` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_class` codes. |
+| `sourceKinds` | [`VocabCode`](#vocabcode)[] | array of object |  | The `source_kind` codes. |
+| `overrideRoles` | [`VocabCode`](#vocabcode)[] | array of object |  | The `override_role` codes a reviewer may act in today. The role reserved for a candidate's dispute is not offered. |
+| `canOverride` | `bool` | boolean |  | Whether the caller may override a judgment on this record: an admin, on a record no later run has superseded. |
+| `overrideChoices` | [`OverrideChoice`](#overridechoice)[] | array of object |  | The pairs an override may set. Sent when the caller may override. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string",
+  "runId": "string"
+}
+```
+
+</details>
+
+### HiringService.OverrideJudgment
+
+`POST /api/career.v1.HiringService/OverrideJudgment` · **Auth:** Admin · **Rate limit:** default/min
+
+Sets, replaces or withdraws a person's override of one judgment
+(FSD FR-HF-08). The record's numbers are computed again from the
+effective values; the model's determination and basis stay on the
+judgment for the agreement measures, and every call is written to
+the decision log with the person, the role they acted in and the
+reason. Refused for a requirement that is not judged from documents
+(a working-style one), for a run that a later run has superseded,
+and for a determination and basis that contradict each other.
+
+**Request** — [`OverrideJudgmentRequest`](#overridejudgmentrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `judgmentId` | `string` | string | `string: min_len: 1 max_len: 64` | The judgment. |
+| `determination` | `string` | string | `string: max_len: 40` | The determination to set. Vocabulary `determination`. Left empty when withdrawing. |
+| `basis` | `string` | string | `string: max_len: 40` | The basis to set. Vocabulary `basis`; it must not contradict the determination. Left empty when withdrawing. |
+| `reason` | `string` | string | `string: min_len: 1 max_len: 1000` | Why. Required, for an override and for a withdrawal alike. |
+| `role` | `string` | string | `string: max_len: 40` | The role the reviewer acts in. Vocabulary `override_role`: hiring_manager, recruiter, system_admin. Left empty when withdrawing. |
+| `withdraw` | `bool` | boolean |  | Withdraw the override this judgment carries, so the model's answer is the effective one again. The withdrawal is logged like an override. |
+
+**Response** — [`OverrideJudgmentResponse`](#overridejudgmentresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `record` | [`MatchRecord`](#matchrecord) | object |  | The record with its numbers computed again. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "judgmentId": "string",
+  "determination": "string",
+  "basis": "string",
+  "reason": "string",
+  "role": "string",
+  "withdraw": true
 }
 ```
 
@@ -7235,6 +7333,7 @@ Poll response.
 | `progressPct` | `int32` | number |  | Pipeline progress, 0 to 100, while the submission is live; 100 once it has finished. |
 | `progressStage` | `string` | string |  | Short human-readable stage ("judging requirement 4 of 12"). |
 | `fitCategory` | `string` | string |  | Fit category derived from the score once known: very_strong, strong, possible, weak, very_weak; empty before scoring. |
+| `matchRecordRunId` | `string` | string |  | The run whose match record HiringService.GetMatchRecord returns for this submission: set when the newest run has a record with judgments and the caller is the submitting member or an admin, so a client knows to show the record in place of the verdict list. Empty for a posting last scored before the hiring tables began. |
 
 ### JdFitBands
 
@@ -10720,6 +10819,215 @@ The settings as stored.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `settings` | [`HiringSettings`](#hiringsettings) | object |  | Stored settings. |
+
+### Coverage
+
+The arithmetic of a match record (FSD FR-HF-06, FR-HF-23): three
+numbers that sum to one over the counted weight, and two shares of
+the evidenced part. Computed in code over effective determinations,
+which are a person's override where one is set and the model's
+answer after the code rules otherwise.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `evidenced` | `double` | number |  | Share of the counted weight that is evidenced: met, or met through an equivalency. 0 to 1. |
+| `unresolved` | `double` | number |  | Share that is unresolved: the documents suggest it and one nameable fact is missing. Never scored as half of anything. |
+| `unmet` | `double` | number |  | Share that is not met. |
+| `equivalentShare` | `double` | number |  | Of the evidenced weight, the share that rests on an equivalency. |
+| `selfAttestedShare` | `double` | number |  | Of the evidenced weight, the share that rests on the candidate's own answers to follow-up questions. |
+| `formulaVersion` | `string` | string |  | The formula the numbers were computed under: `v4-classes`, or `v3-three-numbers` for a record written before classes. |
+| `preferredFraction` | `double` | number |  | The share of its weight a preferred item counted at when the record was computed. |
+
+### EvidenceRef
+
+One piece of evidence a judgment cites. A citation, never the text:
+the private text of the candidate's documents is not sent to any
+reader of a record.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | The evidence item's id. |
+| `sourceKind` | `string` | string |  | Where it came from. Vocabulary `source_kind`: corpus_document, profile_sheet, candidate_response, verified_external. |
+| `title` | `string` | string |  | The title of the document it is a passage of. Empty for a reader who may not see it: a member is sent the title of a public document only. |
+| `chunkId` | `int64` | string (decimal) |  | The corpus passage behind the item. Sent to admins only; 0 otherwise. |
+| `withdrawn` | `bool` | boolean |  | Whether the candidate has since withdrawn the item. |
+
+### RuleAdjustment
+
+One change the code rules made to the model's answer (FSD FR-HF-05):
+a comparison of years, recency, scale, credential or named parties
+made in code from the facts the model reported.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `rule` | `string` | string |  | The rule: duration, recency, scope, credential, named_parties, evidence, consistency, behavioral. |
+| `ruleVersion` | `string` | string |  | The version of the rule that ran. |
+| `fromDetermination` | `string` | string |  | The determination before the rule. |
+| `toDetermination` | `string` | string |  | The determination after it. |
+| `fromBasis` | `string` | string |  | The basis before the rule. |
+| `toBasis` | `string` | string |  | The basis after it. |
+| `addedUncertainty` | `string`[] | array of string |  | Uncertainty codes the rule added. |
+| `reason` | `string` | string |  | The rule's reason, as a sentence. |
+
+### ReportedFacts
+
+The facts the model reported from the evidence, which the code rules
+compare against the requirement's thresholds. A zero or empty field
+was not stated.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `statedSpanYears` | `double` | number |  | Years of the work the evidence states; 0 when not stated. |
+| `mostRecentYear` | `int32` | number |  | The most recent year the evidence places the work in; 0 when not stated. |
+| `statedScope` | [`ScopeThreshold`](#scopethreshold) | object |  | The scale the evidence states; unset when not stated. |
+| `partiesEvidenced` | `string`[] | array of string |  | The named organisations the evidence shows a working relationship with. |
+
+### JudgmentOverride
+
+A person's override of a judgment (FSD FR-HF-08). It is read as the
+effective value; the model's own answer stays on the judgment.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `determination` | `string` | string |  | The determination the person set. Vocabulary `determination`. |
+| `basis` | `string` | string |  | The basis the person set. Vocabulary `basis`. |
+| `role` | `string` | string |  | The role the person acted in. Vocabulary `override_role`: hiring_manager, recruiter, system_admin. |
+| `at` | `Timestamp` | string (RFC 3339, UTC) |  | When it was set. |
+| `byDisplay` | `string` | string |  | Who set it. Sent to admins only. |
+| `reason` | `string` | string |  | Why. Sent to admins only. |
+
+### EarlierOverride
+
+An override a person set on an earlier run's judgment of the same
+requirement. A new run judges every requirement again and starts
+without overrides, so this is how a reviewer sees that a row was
+decided by a person before. Sent to admins only.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `attempt` | `int32` | number |  | The attempt number of the run that carries the override. |
+| `determination` | `string` | string |  | The determination the person set. |
+| `basis` | `string` | string |  | The basis the person set. |
+| `role` | `string` | string |  | The role the person acted in. |
+| `at` | `Timestamp` | string (RFC 3339, UTC) |  | When it was set. |
+| `sameVersion` | `bool` | boolean |  | Whether that judgment was of the same requirement version as this one. False when the requirement has been edited since. |
+
+### Judgment
+
+One judgment of one requirement version in one run (FSD FR-HF-04).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | The judgment's id. |
+| `requirementId` | `string` | string |  | The requirement version judged. |
+| `requirementLocalId` | `string` | string |  | The requirement's id within the role: r1, r2, ... |
+| `determination` | `string` | string |  | The model's determination after the code rules. Vocabulary `determination`: met, met_equivalent, unresolved, not_met. |
+| `basis` | `string` | string |  | The model's basis after the code rules. Vocabulary `basis`. |
+| `uncertainty` | `string`[] | array of string |  | What is missing, for an unresolved judgment. Vocabulary `uncertainty`. |
+| `effectiveDetermination` | `string` | string |  | The determination the record counts: the override when one is set, the model's otherwise. |
+| `effectiveBasis` | `string` | string |  | The basis the record shows: the override's when one is set, the model's otherwise. |
+| `override` | [`JudgmentOverride`](#judgmentoverride) | object |  | The override, when a person has set one. |
+| `derivedVerdict` | `string` | string |  | The three-way verdict derived from the model's determination: met, partial, unmet (FSD FR-HF-07). |
+| `rationale` | `string` | string |  | The model's one-sentence reasoning. It never quotes private text. |
+| `evidence` | [`EvidenceRef`](#evidenceref)[] | array of object |  | The evidence cited. |
+| `ruleAdjustments` | [`RuleAdjustment`](#ruleadjustment)[] | array of object |  | What the code rules changed, in the order they ran. |
+| `reportedFacts` | [`ReportedFacts`](#reportedfacts) | object |  | The facts the model reported. |
+| `gapClass` | `string` | string |  | The kind of gap, derived from the effective basis (FSD FR-HF-17): `lexical` (a difference of wording, tool or credential that an equivalency could bridge), `substantive` (the work falls short in scale, years, recency, relationship, or is contradicted), `unaddressed` (nothing speaks to it); empty when the basis is direct or the requirement was not assessed. |
+| `notAssessed` | `bool` | boolean |  | True for a working-style requirement (FSD FR-HF-18): recorded, not judged from documents, weighing nothing, and not open to override. |
+| `stale` | `bool` | boolean |  | True when a piece of evidence the judgment cites was withdrawn after it was made. |
+| `keywordKnown` | `bool` | boolean |  | Whether the keyword screen ran for this requirement. False when the passages could not be read back and the comparison was skipped. |
+| `keywordFound` | `bool` | boolean |  | Whether a plain term-overlap filter over the same passages the judge was shown would have found the requirement (FSD FR-HF-12). |
+| `keywordTerms` | `string`[] | array of string |  | The terms the filter matched. |
+| `decisionId` | `int64` | string (decimal) |  | The decision-log row that holds the prompt and the model's raw response. Sent to admins only; 0 otherwise. |
+| `earlierOverride` | [`EarlierOverride`](#earlieroverride) | object |  | An override on an earlier run's judgment of this requirement, when this judgment carries none. Sent to admins only. |
+
+### MatchRecord
+
+The match record of one run (FSD FR-HF-10, FR-HF-17).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string |  | The run. |
+| `roleId` | `string` | string |  | The role the posting became. |
+| `submissionId` | `string` | string |  | The submitted posting, as /jd-upload and /admin/jd number it. |
+| `attempt` | `int32` | number |  | 1 for the first run of the posting, 2 for the next, and so on. |
+| `supersedesRunId` | `string` | string |  | The run this one superseded; empty for the first. |
+| `superseded` | `bool` | boolean |  | True when a later run of the same posting has a record. A superseded record is history and takes no override. |
+| `runTrigger` | `string` | string |  | How the run was started: submit, rescore, release. |
+| `roleTitle` | `string` | string |  | The role as the submitter named it, or the posting's first line. |
+| `employer` | `string` | string |  | The employer as the submitter named it, if they did. |
+| `coverage` | [`Coverage`](#coverage) | object |  | The three numbers and the two shares. |
+| `requirements` | [`Requirement`](#requirement)[] | array of object |  | The requirement versions judged, in reading order. |
+| `judgments` | [`Judgment`](#judgment)[] | array of object |  | The judgments, one per requirement, in the same order. |
+| `overrideCount` | `int32` | number |  | How many judgments carry a person's override. |
+| `keywordRule` | `string` | string |  | The rule the keyword screen ran under: kw1. |
+| `keywordSkipped` | `string` | string |  | Why the keyword screen could not run, when it could not. |
+| `versions` | map<`string`, `string`> | object of string |  | The versions the record was written under: schemas, vocabulary, formula, rules, prompt fingerprints, model, embedder, corpus. |
+| `fit` | `string` | string |  | The fit the run was given when it finished, from the score the résumé gate reads: very_strong, strong, possible, weak, very_weak. It is the run's own and does not move with an override. |
+| `matchScore` | `double` | number |  | _(oneof `_match_score`)_ The score the résumé gate read when the run finished. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the run finished. |
+| `corpusDocuments` | `int32` | number |  | How many documents the candidate's corpus held when the run read it. |
+| `model` | `string` | string |  | The model that judged. |
+| `requirementsEdited` | `bool` | boolean |  | Whether a person edited any requirement version this run judged. |
+
+### OverrideChoice
+
+The determinations a reviewer may set and, for each, the bases that
+do not contradict it, so an override form offers only pairs the
+server will accept.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `determination` | `string` | string |  | The determination. |
+| `bases` | `string`[] | array of string |  | The bases it may carry. |
+
+### GetMatchRecordRequest
+
+Names the record: the submitted posting, and optionally one run of
+it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | The submitted posting's id. |
+| `runId` | `string` | string | `string: max_len: 64` | One run of that posting. Empty reads the newest run that has a record. |
+
+### GetMatchRecordResponse
+
+The record and the vocabularies it is labelled from.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `record` | [`MatchRecord`](#matchrecord) | object |  | The record. Unset when the posting has no record with judgments, which is a posting last scored before the hiring tables began. |
+| `determinations` | [`VocabCode`](#vocabcode)[] | array of object |  | The `determination` codes. |
+| `bases` | [`VocabCode`](#vocabcode)[] | array of object |  | The `basis` codes. |
+| `uncertainties` | [`VocabCode`](#vocabcode)[] | array of object |  | The `uncertainty` codes. |
+| `types` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_type` codes. |
+| `classes` | [`VocabCode`](#vocabcode)[] | array of object |  | The `requirement_class` codes. |
+| `sourceKinds` | [`VocabCode`](#vocabcode)[] | array of object |  | The `source_kind` codes. |
+| `overrideRoles` | [`VocabCode`](#vocabcode)[] | array of object |  | The `override_role` codes a reviewer may act in today. The role reserved for a candidate's dispute is not offered. |
+| `canOverride` | `bool` | boolean |  | Whether the caller may override a judgment on this record: an admin, on a record no later run has superseded. |
+| `overrideChoices` | [`OverrideChoice`](#overridechoice)[] | array of object |  | The pairs an override may set. Sent when the caller may override. |
+
+### OverrideJudgmentRequest
+
+One override of one judgment.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `judgmentId` | `string` | string | `string: min_len: 1 max_len: 64` | The judgment. |
+| `determination` | `string` | string | `string: max_len: 40` | The determination to set. Vocabulary `determination`. Left empty when withdrawing. |
+| `basis` | `string` | string | `string: max_len: 40` | The basis to set. Vocabulary `basis`; it must not contradict the determination. Left empty when withdrawing. |
+| `reason` | `string` | string | `string: min_len: 1 max_len: 1000` | Why. Required, for an override and for a withdrawal alike. |
+| `role` | `string` | string | `string: max_len: 40` | The role the reviewer acts in. Vocabulary `override_role`: hiring_manager, recruiter, system_admin. Left empty when withdrawing. |
+| `withdraw` | `bool` | boolean |  | Withdraw the override this judgment carries, so the model's answer is the effective one again. The withdrawal is logged like an override. |
+
+### OverrideJudgmentResponse
+
+The record after the override.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `record` | [`MatchRecord`](#matchrecord) | object |  | The record with its numbers computed again. |
 
 ### GetHomeRequest
 

@@ -3180,3 +3180,64 @@ happened, and it will now be under v14, which is the judge production
 will be running. It holds the pipeline for about six hours and should
 run at a quiet hour the owner picks. The hand-over (the result RPC
 reading `v_match_record`) waits for it, as before.
+
+## 2026-11-12: step 6, the record is read and overridden; no prompt or model change
+
+Phase 0 step 6 (`docs/framework-research/13` §2; FSD FR-HF-08, 10 and
+17). Entered here so that a reader looking for what changed the judge
+between two dates finds that nothing did.
+
+### What did not change
+
+`requirement_judge` stays v14 (`v14:42984a17`) and `jd_requirements`
+stays v5 (`v5:b95feedc`). The vocabulary is still 1.1, so the judge's
+codes render to the same bytes. The rules are `rules-v2`, the formula
+`v4-classes`, the keyword screen `kw1`. No golden run is owed for this
+step and none was made.
+
+### What a person can now do to a judgment
+
+An admin can set a determination and a basis on a judgment in place of
+the model's, with a required reason and a role (hiring manager,
+recruiter, system admin), replace it, or withdraw it. The match
+record's three numbers and two shares are computed again over effective
+determinations, under the formula and the preferred fraction the record
+was written with. The model's `determination`, `basis` and
+`derived_verdict` are not touched.
+
+This is the first source of labelled disagreement in the four-way
+vocabulary. `v_determination_agreement` and `v_basis_agreement` (00069)
+have been empty since they were written; each override is now a row in
+them, by prompt version and model, and `decision_log` holds every
+override as kind `hf_override` with the model's values and the reason
+beside it. Saving a verdict as the model had it is a confirmation and
+counts as agreement, so the measure is not built from corrections
+alone, which would read as a judge that is always wrong.
+
+### What to watch when overrides exist
+
+1. Which basis the disagreements fall on. `03` §2.4 expected the
+   equivalency bases, adjacent domain above all, to be where a
+   four-billion-parameter judge is weakest; `v_basis_agreement` says
+   whether that is so.
+2. Unresolved rows a person settles one way or the other. Those are
+   the rows the clarification loop of step 7 would have asked about,
+   and the reason given is what the question should have surfaced.
+3. Rows where the keyword screen passed and the judge did not, or the
+   reverse, that a person then overrode. The record shows the screen on
+   every row, so the comparison FR-HF-12 was written for can be read
+   against a person's verdict and not only the judge's.
+
+### Found while reading a real record
+
+The first local reading of a record in the new form showed a row marked
+"not included in the evaluation" beside the sentence "the posting
+itself accepts an equivalent". The flag is stored when a requirement
+version is written and is what the arithmetic read; the sentence was
+worked out from the inclusion rule as it stands now, and the rule had
+changed during step 5's development after that row was drafted. The
+sentence now follows the stored value and says when the rule has moved
+on (`Requirement.InclusionReason`). Production holds no rows drafted
+under the earlier rule; the guard is for the next time the rule
+changes.
+
