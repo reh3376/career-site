@@ -152,6 +152,9 @@ func (s *Server) routes() http.Handler {
 	// in `?t=` is the auth.
 	if s.jd != nil {
 		mux.HandleFunc("GET /api/jd/resume/{file}", s.jd.ServeResumePDF)
+		// A résumé written after review, for an admin's session only
+		// (FR-HF-08).
+		mux.HandleFunc("GET /api/hiring/review-resume/{file}", s.jd.ServeReviewResumePDF)
 	}
 
 	if s.meetings != nil {

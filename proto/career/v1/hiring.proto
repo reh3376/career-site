@@ -117,6 +117,22 @@ service HiringService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
+  // Asks for the tailored résumé to be written on a run's verdicts as
+  // they stand after review (FSD FR-HF-08). Offered when the run scored
+  // below the résumé gate, so wrote none, and a person's verdicts lift
+  // the score to the gate. The résumé is the owner's alone: it is kept
+  // apart from the submission, shown on the admin page, never emailed,
+  // and never sent to the member who submitted the posting. The call
+  // returns at once with the résumé marked as being written; the write
+  // waits its turn for the model like any review. Asking again replaces
+  // the last one. Refused when the run wrote a résumé of its own, when
+  // the score after review is below the gate, when no verdict has been
+  // set by a person, when a later run has superseded the record, and
+  // while one is already being written.
+  rpc WriteReviewResume(WriteReviewResumeRequest) returns (WriteReviewResumeResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
 }
 
 // Where a requirement version stands.
@@ -737,6 +753,15 @@ message GetMatchRecordResponse {
   bool can_override = 9;
   // The pairs an override may set. Sent when the caller may override.
   repeated OverrideChoice override_choices = 10;
+  // The résumé written after review for this run, when one has been
+  // asked for. Sent to admins only.
+  ReviewResume review_resume = 11;
+  // Whether a résumé after review may be asked for now. Sent to admins
+  // only.
+  bool can_write_review_resume = 12;
+  // Why a résumé after review is not offered, as a sentence, when the
+  // record carries an override and it is not. Sent to admins only.
+  string review_resume_note = 13;
 }
 
 // One override of one judgment.
@@ -771,4 +796,47 @@ message OverrideJudgmentRequest {
 message OverrideJudgmentResponse {
   // The record with its numbers computed again.
   MatchRecord record = 1;
+}
+
+// A résumé written at the owner's request on a run's verdicts after
+// review (FSD FR-HF-08). The owner's alone: never part of the member's
+// review and never emailed.
+message ReviewResume {
+  // The run whose record it was written from.
+  string run_id = 1;
+  // Where it stands: `writing`, `ready` or `failed`.
+  string status = 2;
+  // Why it failed, when it did.
+  string error = 3;
+  // The résumé in markdown, once ready.
+  string markdown = 4;
+  // When it was asked for.
+  google.protobuf.Timestamp requested_at = 5;
+  // When it was finished or failed; unset while it is being written.
+  google.protobuf.Timestamp finished_at = 6;
+  // The gate's score with the person's verdicts when it was asked for.
+  double reviewed_score = 7;
+  // How many verdicts a person had set when it was asked for.
+  int32 override_count = 8;
+  // Download path of the locked PDF, for an admin's session; empty
+  // when no PDF was rendered.
+  string download_path = 9;
+  // The model that wrote it.
+  string model = 10;
+}
+
+// Names the run.
+message WriteReviewResumeRequest {
+  // The run whose record the résumé is written from: the newest run of
+  // the posting.
+  string run_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+}
+
+// The résumé as it stands after the request: being written.
+message WriteReviewResumeResponse {
+  // The résumé's row.
+  ReviewResume review_resume = 1;
 }

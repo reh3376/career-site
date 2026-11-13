@@ -264,14 +264,14 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
 
 ## 3. JD reviewer
 
-- **Write a résumé after review, for the owner only (decided
-  2026-11-13, next to build).** When a person's verdicts lift a posting
-  that scored below the gate to at or above it, the admin record offers
-  a button that writes the tailored résumé on the effective verdicts.
-  It is shown to the owner alone and never emailed; he sends it himself
-  if he chooses. It must not be stored where the member's review reads
-  a résumé from, so it needs its own row, and it runs through the
-  scorer's single slot like any other model work.
+- **A deploy can cut off a résumé after review (2026-11-13).**
+  `rollout.sh` refuses to deploy while a decision test or an evaluation
+  is running; it does not look at `review_resumes`. A résumé being
+  written when the api is recreated is lost, the row is closed as
+  failed with the reason when the service starts, and the owner asks
+  for it again. He is the only person who can start one, so he knows
+  when one is in flight; if that stops being true, add the table to the
+  quiet check.
 - **An override to unresolved names nothing as missing (2026-11-12).**
   FR-HF-08 has a person set a determination and a basis. The
   uncertainty code, which is what step 7 turns into a question, is the

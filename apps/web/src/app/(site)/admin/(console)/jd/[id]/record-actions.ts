@@ -50,3 +50,27 @@ export async function overrideJudgmentAction(
   revalidatePath("/admin/jd", "layout");
   return { saved: withdraw ? "withdraw" : "override" };
 }
+
+// The résumé after review (FSD FR-HF-08): written when the owner asks,
+// on the verdicts as they stand, for him alone. This only starts it;
+// the page shows it being written and then the résumé.
+export type ReviewResumeState = { started?: boolean; error?: string };
+
+export async function writeReviewResumeAction(
+  _prev: ReviewResumeState,
+  formData: FormData,
+): Promise<ReviewResumeState> {
+  const runId = String(formData.get("run_id") ?? "").trim();
+  if (!runId) return { error: "The run is missing." };
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in." };
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/WriteReviewResume",
+    body: { runId },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp) };
+  revalidatePath("/admin/jd", "layout");
+  return { started: true };
+}
+

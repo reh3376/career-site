@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 169 of them, and none missing:
+**Every method declares a level.** 170 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 99 |
+| `AUTH_LEVEL_ADMIN` | 100 |
 | `AUTH_LEVEL_MEMBER` | 53 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 169 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 170 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -162,6 +162,11 @@ Connect interceptor:
   token in the link is the authentication
 - `GET /api/jd/resume/{file}` — the result token is the authentication
 - `GET /api/meetings/{file}` — an ICS file a calendar client fetches
+
+A fourth, added 2026-11-13, is not token-as-auth: `GET /api/hiring/review-resume/{file}`
+serves the PDF of a résumé written after review and checks the session
+itself, in the handler, for an active admin. It is a file download and
+so cannot be a Connect method; every refusal is the same not-found.
 
 Each is a deliberate token-as-auth design for something that has to work
 from an email client or a calendar app with no session. They are named
@@ -1185,6 +1190,9 @@ command.
    an admin; anyone else gets not-found), and `OverrideJudgment`, ADMIN
    and audited with `judgment_id` as its target (FSD FR-HF-08, 17,
    Phase 0 step 6). 161 procedures served.
+9. 2026-11-13: 100/53/17 (170). `HiringService.WriteReviewResume`,
+   ADMIN and audited with `run_id` as its target: the résumé after
+   review, the owner's alone (FSD FR-HF-08). 162 procedures served.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

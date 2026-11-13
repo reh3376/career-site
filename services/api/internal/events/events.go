@@ -158,6 +158,11 @@ var Registry = map[string]struct {
 	// The model's value rides beside the person's so disagreement, and
 	// which basis it falls on, can be read off the stream without a
 	// join; `agrees_with_model` marks a confirmation.
+	// A résumé asked for on a run's verdicts after review, and its PDF
+	// taken (FR-HF-08). It is the owner's alone and never sent, so these
+	// two are the whole of its trail on the stream.
+	"admin.review_resume_requested":  {Props: []string{"run_id", "submission_id", "reviewed_score", "threshold", "override_count", "again"}},
+	"admin.review_resume_downloaded": {Props: []string{"run_id", "submission_id"}},
 	"admin.judgment_overridden": {Props: []string{
 		"judgment_id", "run_id", "submission_id", "local_id", "action", "role",
 		"model_determination", "model_basis", "determination", "basis",

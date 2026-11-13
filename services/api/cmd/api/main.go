@@ -578,6 +578,15 @@ func main() {
 	hiringHandler := handlers.NewHiring(log, userRepo, hiringRepo, hiringSettings, jdScorer)
 	if jdScorer != nil {
 		hiringHandler.SetBands(jdScorer.BandsStore())
+		hiringHandler.SetReviewResumes(jdScorer)
+	}
+	// A résumé after review is written by a goroutine of this process.
+	// One still marked as being written was cut off by the restart that
+	// brought this process up; close it so it can be asked for again.
+	if n, err := hiringRepo.FailInterruptedReviewResumes(context.Background()); err != nil {
+		log.Warn("hiring: could not close interrupted review résumés", slog.String("error", err.Error()))
+	} else if n > 0 {
+		log.Info("hiring: review résumés interrupted by the restart were closed", slog.Int64("count", n))
 	}
 	hiringHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
