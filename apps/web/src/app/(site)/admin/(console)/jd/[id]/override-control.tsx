@@ -35,6 +35,9 @@ export type OverrideTarget = {
   // The override in place, if any.
   overridden: boolean;
   overrideRole?: string;
+  // The override was carried from an earlier run; saving it again makes
+  // it this run's own.
+  carried?: boolean;
   // Why the row takes no override, when it takes none.
   closed?: string;
 };
@@ -69,7 +72,11 @@ export function OverrideControl({
       {target.closed ? null : (
         <details className="mt-3">
           <summary className={`${label} cursor-pointer text-accent hover:text-accent-hover`}>
-            {target.overridden ? "Change or withdraw the override" : "Override or confirm this verdict"}
+            {target.carried
+              ? "Confirm, change or withdraw the carried override"
+              : target.overridden
+                ? "Change or withdraw the override"
+                : "Override or confirm this verdict"}
           </summary>
           <OverrideForm target={target} choices={choices} determinations={determinations} bases={bases} roles={roles} />
           {target.overridden ? <WithdrawForm target={target} /> : null}
@@ -153,7 +160,8 @@ function OverrideForm({
         <textarea name="reason" required maxLength={1000} rows={2} className={field} />
         <span className="mt-1 block text-xs text-ink-3">
           Required. What you know that the documents or the model did not show. Leave the verdict as it is to
-          confirm it. The model&rsquo;s own verdict is kept beside yours either way.
+          confirm it. The model&rsquo;s own verdict is kept beside yours either way, and the recruiter is shown
+          only the model&rsquo;s.
         </span>
       </label>
       <div className="flex flex-wrap items-center gap-4">

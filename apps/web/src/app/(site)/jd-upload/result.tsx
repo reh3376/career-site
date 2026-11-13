@@ -253,7 +253,9 @@ export function JdResult({
             "Content-Type": "application/json",
             "Connect-Protocol-Version": "1",
           },
-          body: JSON.stringify({ submissionId, runId: recordRunId }),
+          // This page is the recruiter's view for whoever opens it: an
+          // admin is sent what the submitting member is sent.
+          body: JSON.stringify({ submissionId, runId: recordRunId, asMember: true }),
         });
         if (!resp.ok) return;
         const j = (await resp.json()) as MatchRecordResponse;

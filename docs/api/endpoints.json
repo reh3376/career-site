@@ -2441,7 +2441,7 @@
       "internal": false,
       "request": "career.v1.GetMatchRecordRequest",
       "response": "career.v1.GetMatchRecordResponse",
-      "summary": "Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and any override.",
+      "summary": "Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and, for an admin, any override.",
       "auth": "member",
       "allow_unverified": false,
       "rate_limit_per_minute": 0,

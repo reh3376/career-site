@@ -116,11 +116,18 @@ type HiringServiceClient interface {
 	// numbers and two shares, each requirement version judged, and each
 	// judgment with its basis, what is missing, the evidence cited, what
 	// the code rules changed, whether a keyword screen would have found
-	// it, and any override. Open to the member who submitted the posting
-	// and to an admin; anyone else gets not-found. With no run named it
-	// is the newest run that has a record. A member is never sent the
-	// private text of the candidate's documents, the title of a document
-	// that is not public, or the reason and name behind an override. The
+	// it, and, for an admin, any override. Open to the member who
+	// submitted the posting and to an admin; anyone else gets not-found.
+	// With no run named it is the newest run that has a record.
+	//
+	// A member is sent the record as the model alone left it: the model's
+	// verdicts as the effective ones, the three numbers computed over
+	// them, and no override. In Phase 0 the only person who can override
+	// is the candidate, and the recruiter who submitted a posting is
+	// shown what the model found, not what the candidate made of it. A
+	// member is also never sent the title of a document that is not
+	// public, or a passage number; no reader is sent a passage's text.
+	// An admin may ask for the record as the member is sent it. The
 	// vocabularies come with the record so a viewer labels codes from the
 	// registry.
 	GetMatchRecord(context.Context, *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error)
@@ -131,7 +138,10 @@ type HiringServiceClient interface {
 	// the decision log with the person, the role they acted in and the
 	// reason. Refused for a requirement that is not judged from documents
 	// (a working-style one), for a run that a later run has superseded,
-	// and for a determination and basis that contradict each other.
+	// and for a determination and basis that contradict each other. An
+	// override is carried to the next run of the posting while the
+	// requirement it was set on is unchanged; saving a carried override
+	// again makes it that run's own.
 	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
 }
 
@@ -270,11 +280,18 @@ type HiringServiceHandler interface {
 	// numbers and two shares, each requirement version judged, and each
 	// judgment with its basis, what is missing, the evidence cited, what
 	// the code rules changed, whether a keyword screen would have found
-	// it, and any override. Open to the member who submitted the posting
-	// and to an admin; anyone else gets not-found. With no run named it
-	// is the newest run that has a record. A member is never sent the
-	// private text of the candidate's documents, the title of a document
-	// that is not public, or the reason and name behind an override. The
+	// it, and, for an admin, any override. Open to the member who
+	// submitted the posting and to an admin; anyone else gets not-found.
+	// With no run named it is the newest run that has a record.
+	//
+	// A member is sent the record as the model alone left it: the model's
+	// verdicts as the effective ones, the three numbers computed over
+	// them, and no override. In Phase 0 the only person who can override
+	// is the candidate, and the recruiter who submitted a posting is
+	// shown what the model found, not what the candidate made of it. A
+	// member is also never sent the title of a document that is not
+	// public, or a passage number; no reader is sent a passage's text.
+	// An admin may ask for the record as the member is sent it. The
 	// vocabularies come with the record so a viewer labels codes from the
 	// registry.
 	GetMatchRecord(context.Context, *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error)
@@ -285,7 +302,10 @@ type HiringServiceHandler interface {
 	// the decision log with the person, the role they acted in and the
 	// reason. Refused for a requirement that is not judged from documents
 	// (a working-style one), for a run that a later run has superseded,
-	// and for a determination and basis that contradict each other.
+	// and for a determination and basis that contradict each other. An
+	// override is carried to the next run of the posting while the
+	// requirement it was set on is unchanged; saving a carried override
+	// again makes it that run's own.
 	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
 }
 

@@ -308,20 +308,28 @@ class ReportedFacts(_message.Message):
     def __init__(self, stated_span_years: _Optional[float] = ..., most_recent_year: _Optional[int] = ..., stated_scope: _Optional[_Union[ScopeThreshold, _Mapping]] = ..., parties_evidenced: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class JudgmentOverride(_message.Message):
-    __slots__ = ("determination", "basis", "role", "at", "by_display", "reason")
+    __slots__ = ("determination", "basis", "role", "at", "by_display", "reason", "carried_from_attempt", "recheck", "model_determination_then", "model_basis_then")
     DETERMINATION_FIELD_NUMBER: _ClassVar[int]
     BASIS_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     AT_FIELD_NUMBER: _ClassVar[int]
     BY_DISPLAY_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
+    CARRIED_FROM_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    RECHECK_FIELD_NUMBER: _ClassVar[int]
+    MODEL_DETERMINATION_THEN_FIELD_NUMBER: _ClassVar[int]
+    MODEL_BASIS_THEN_FIELD_NUMBER: _ClassVar[int]
     determination: str
     basis: str
     role: str
     at: _timestamp_pb2.Timestamp
     by_display: str
     reason: str
-    def __init__(self, determination: _Optional[str] = ..., basis: _Optional[str] = ..., role: _Optional[str] = ..., at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., by_display: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+    carried_from_attempt: int
+    recheck: bool
+    model_determination_then: str
+    model_basis_then: str
+    def __init__(self, determination: _Optional[str] = ..., basis: _Optional[str] = ..., role: _Optional[str] = ..., at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., by_display: _Optional[str] = ..., reason: _Optional[str] = ..., carried_from_attempt: _Optional[int] = ..., recheck: _Optional[bool] = ..., model_determination_then: _Optional[str] = ..., model_basis_then: _Optional[str] = ...) -> None: ...
 
 class EarlierOverride(_message.Message):
     __slots__ = ("attempt", "determination", "basis", "role", "at", "same_version")
@@ -388,7 +396,7 @@ class Judgment(_message.Message):
     def __init__(self, id: _Optional[str] = ..., requirement_id: _Optional[str] = ..., requirement_local_id: _Optional[str] = ..., determination: _Optional[str] = ..., basis: _Optional[str] = ..., uncertainty: _Optional[_Iterable[str]] = ..., effective_determination: _Optional[str] = ..., effective_basis: _Optional[str] = ..., override: _Optional[_Union[JudgmentOverride, _Mapping]] = ..., derived_verdict: _Optional[str] = ..., rationale: _Optional[str] = ..., evidence: _Optional[_Iterable[_Union[EvidenceRef, _Mapping]]] = ..., rule_adjustments: _Optional[_Iterable[_Union[RuleAdjustment, _Mapping]]] = ..., reported_facts: _Optional[_Union[ReportedFacts, _Mapping]] = ..., gap_class: _Optional[str] = ..., not_assessed: _Optional[bool] = ..., stale: _Optional[bool] = ..., keyword_known: _Optional[bool] = ..., keyword_found: _Optional[bool] = ..., keyword_terms: _Optional[_Iterable[str]] = ..., decision_id: _Optional[int] = ..., earlier_override: _Optional[_Union[EarlierOverride, _Mapping]] = ...) -> None: ...
 
 class MatchRecord(_message.Message):
-    __slots__ = ("run_id", "role_id", "submission_id", "attempt", "supersedes_run_id", "superseded", "run_trigger", "role_title", "employer", "coverage", "requirements", "judgments", "override_count", "keyword_rule", "keyword_skipped", "versions", "fit", "match_score", "finished_at", "corpus_documents", "model", "requirements_edited")
+    __slots__ = ("run_id", "role_id", "submission_id", "attempt", "supersedes_run_id", "superseded", "run_trigger", "role_title", "employer", "coverage", "requirements", "judgments", "override_count", "keyword_rule", "keyword_skipped", "versions", "fit", "match_score", "finished_at", "corpus_documents", "model", "requirements_edited", "reviewed_score", "reviewed_fit")
     class VersionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -418,6 +426,8 @@ class MatchRecord(_message.Message):
     CORPUS_DOCUMENTS_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENTS_EDITED_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_SCORE_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_FIT_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     role_id: str
     submission_id: str
@@ -440,7 +450,9 @@ class MatchRecord(_message.Message):
     corpus_documents: int
     model: str
     requirements_edited: bool
-    def __init__(self, run_id: _Optional[str] = ..., role_id: _Optional[str] = ..., submission_id: _Optional[str] = ..., attempt: _Optional[int] = ..., supersedes_run_id: _Optional[str] = ..., superseded: _Optional[bool] = ..., run_trigger: _Optional[str] = ..., role_title: _Optional[str] = ..., employer: _Optional[str] = ..., coverage: _Optional[_Union[Coverage, _Mapping]] = ..., requirements: _Optional[_Iterable[_Union[Requirement, _Mapping]]] = ..., judgments: _Optional[_Iterable[_Union[Judgment, _Mapping]]] = ..., override_count: _Optional[int] = ..., keyword_rule: _Optional[str] = ..., keyword_skipped: _Optional[str] = ..., versions: _Optional[_Mapping[str, str]] = ..., fit: _Optional[str] = ..., match_score: _Optional[float] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., corpus_documents: _Optional[int] = ..., model: _Optional[str] = ..., requirements_edited: _Optional[bool] = ...) -> None: ...
+    reviewed_score: float
+    reviewed_fit: str
+    def __init__(self, run_id: _Optional[str] = ..., role_id: _Optional[str] = ..., submission_id: _Optional[str] = ..., attempt: _Optional[int] = ..., supersedes_run_id: _Optional[str] = ..., superseded: _Optional[bool] = ..., run_trigger: _Optional[str] = ..., role_title: _Optional[str] = ..., employer: _Optional[str] = ..., coverage: _Optional[_Union[Coverage, _Mapping]] = ..., requirements: _Optional[_Iterable[_Union[Requirement, _Mapping]]] = ..., judgments: _Optional[_Iterable[_Union[Judgment, _Mapping]]] = ..., override_count: _Optional[int] = ..., keyword_rule: _Optional[str] = ..., keyword_skipped: _Optional[str] = ..., versions: _Optional[_Mapping[str, str]] = ..., fit: _Optional[str] = ..., match_score: _Optional[float] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., corpus_documents: _Optional[int] = ..., model: _Optional[str] = ..., requirements_edited: _Optional[bool] = ..., reviewed_score: _Optional[float] = ..., reviewed_fit: _Optional[str] = ...) -> None: ...
 
 class OverrideChoice(_message.Message):
     __slots__ = ("determination", "bases")
@@ -451,12 +463,14 @@ class OverrideChoice(_message.Message):
     def __init__(self, determination: _Optional[str] = ..., bases: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetMatchRecordRequest(_message.Message):
-    __slots__ = ("submission_id", "run_id")
+    __slots__ = ("submission_id", "run_id", "as_member")
     SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    AS_MEMBER_FIELD_NUMBER: _ClassVar[int]
     submission_id: str
     run_id: str
-    def __init__(self, submission_id: _Optional[str] = ..., run_id: _Optional[str] = ...) -> None: ...
+    as_member: bool
+    def __init__(self, submission_id: _Optional[str] = ..., run_id: _Optional[str] = ..., as_member: _Optional[bool] = ...) -> None: ...
 
 class GetMatchRecordResponse(_message.Message):
     __slots__ = ("record", "determinations", "bases", "uncertainties", "types", "classes", "source_kinds", "override_roles", "can_override", "override_choices")

@@ -576,6 +576,9 @@ func main() {
 	// The requirement editor (FSD §5.15, Phase 0 step 5). The scorer is
 	// nil without a model, and a release then releases without a run.
 	hiringHandler := handlers.NewHiring(log, userRepo, hiringRepo, hiringSettings, jdScorer)
+	if jdScorer != nil {
+		hiringHandler.SetBands(jdScorer.BandsStore())
+	}
 	hiringHandler.SetEvents(eventWriter)
 	// The console edits the same store the JD handler enforces, so a
 	// change there takes effect on the next submission.

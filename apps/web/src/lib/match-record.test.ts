@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { toRecordData, wholePercents, type MatchRecordResponse } from "./match-record";
 
-// A record as Connect's JSON sends it: defaults left out, int64 as a
-// string. Four rows: a met years item, an unresolved row a person
-// settled, an unmet preference not included in the figures, and a
-// working-style row.
+// A record as Connect's JSON sends it to an admin: defaults left out,
+// int64 as a string. Four rows: a met years item, an unresolved row a
+// person settled, an unmet preference not included in the figures, and
+// a working-style row.
 function response(): MatchRecordResponse {
   return {
     determinations: [
@@ -44,6 +44,10 @@ function response(): MatchRecordResponse {
       coverage: { evidenced: 1, equivalentShare: 0.6, formulaVersion: "v4-classes", preferredFraction: 0.25 },
       overrideCount: 1,
       requirementsEdited: true,
+      fit: "possible",
+      matchScore: 0.62,
+      reviewedScore: 0.78,
+      reviewedFit: "strong",
       finishedAt: "2026-11-11T05:20:00Z",
       corpusDocuments: 14,
       versions: { formula: "v4-classes", "prompt.requirement_judge": "v14:42984a17", requirements_source: "rows" },
@@ -77,6 +81,26 @@ function response(): MatchRecordResponse {
   };
 }
 
+// The same run as the API sends it to the member who submitted the
+// posting: the model's verdicts as the effective ones, the numbers over
+// those, no override, no reviewed fit, no private titles or passages.
+function memberResponse(): MatchRecordResponse {
+  const r = response();
+  const rec = r.record!;
+  rec.coverage = { evidenced: 0.4, unresolved: 0.6, formulaVersion: "v4-classes", preferredFraction: 0.25 };
+  rec.overrideCount = undefined;
+  rec.reviewedScore = undefined;
+  rec.reviewedFit = undefined;
+  rec.judgments = (rec.judgments ?? []).map((j) => ({
+    ...j,
+    override: undefined,
+    effectiveDetermination: j.determination,
+    effectiveBasis: j.basis,
+    evidence: j.evidence?.map((e) => ({ ...e, chunkId: undefined })),
+  }));
+  return { ...r, canOverride: undefined, overrideChoices: undefined };
+}
+
 describe("wholePercents", () => {
   it("adds to exactly 100 by the largest remainder", () => {
     expect(wholePercents([1 / 3, 1 / 3, 1 / 3])).toEqual([34, 33, 33]);
@@ -94,7 +118,7 @@ describe("toRecordData", () => {
   });
 
   it("builds the header from the record, in whole percentages and plain counts", () => {
-    const d = toRecordData(response(), "member");
+    const d = toRecordData(response(), "admin");
     expect(d?.header?.run_label).toBe("Match record · run 2 · 2026-11-11");
     expect(d?.header?.subtitle).toBe("Acme Beverages · Posting #144");
     expect([d?.header?.evidenced_pct, d?.header?.unresolved_pct, d?.header?.unmet_pct]).toEqual([100, 0, 0]);
@@ -104,10 +128,45 @@ describe("toRecordData", () => {
     expect(d?.header?.equivalency_line).toContain("60% rests on an equivalency (1 item");
     expect(d?.header?.run_note).toContain("run 2");
     expect(d?.header?.figure_notes?.[0]).toContain("1 verdict on this record was set or confirmed by a person");
+    expect(d?.header?.figure_notes?.[0]).toContain("The recruiter who submitted the posting is shown the model's verdicts and figures only.");
+  });
+
+  it("shows the hiring side both fits, the run's own and the one after review", () => {
+    const lines = toRecordData(response(), "admin")?.header?.fit_lines ?? [];
+    expect(lines.map((l) => `${l.label}: ${l.value}`)).toEqual([
+      "Fit at run time: possible fit · 0.62",
+      "Fit after review: strong fit · 0.78",
+    ]);
+    expect(lines[1].note).toContain("no résumé is written or sent on this figure");
+    // With no override there is nothing after review to show.
+    const plain = response();
+    plain.record!.reviewedScore = undefined;
+    plain.record!.reviewedFit = undefined;
+    expect(toRecordData(plain, "admin")?.header?.fit_lines).toHaveLength(1);
+  });
+
+  it("shows a recruiter the model's record and nothing of an override", () => {
+    const d = toRecordData(memberResponse(), "member");
+    const row = d?.rows?.[1];
+    expect(row?.determination).toBe("unresolved");
+    expect(row?.reviewed).toBeUndefined();
+    expect(row?.marks).toEqual(["edited before judging"]);
+    expect(row?.missing?.[0].label).toBe("Equivalence unconfirmed");
+    expect(row?.gap?.label).toBe("Wording or equivalency");
+    expect([d?.header?.evidenced_pct, d?.header?.unresolved_pct, d?.header?.unmet_pct]).toEqual([40, 60, 0]);
+    expect(d?.header?.fit_lines).toBeUndefined();
+    expect(d?.header?.figure_notes).toBeUndefined();
+    expect(d?.header?.intro).not.toContain("overrule");
+    const all = JSON.stringify(d);
+    expect(all).not.toContain("set by a person");
+    expect(all).not.toContain("Set by a person");
+    expect(all).not.toContain("A Reviewer");
+    expect(all).not.toContain("passage 3");
+    expect(d?.rows?.[0].evidence).toBe("Career facts; 1 passage · corpus document, not public");
   });
 
   it("names the fact behind a basis and marks what code checked", () => {
-    const rows = toRecordData(response(), "member")?.rows ?? [];
+    const rows = toRecordData(memberResponse(), "member")?.rows ?? [];
     expect(rows[0].basis).toBe("Direct · 28 years stated against a threshold of 10 (checked in code)");
     expect(rows[0].marks).toEqual(["checked in code"]);
     expect(rows[0].class_label).toBe("Required");
@@ -121,32 +180,51 @@ describe("toRecordData", () => {
     expect(rows[2].gap?.label).toBe("Not addressed");
   });
 
-  it("shows a verdict a person set as the effective one, with the model's beside it", () => {
-    const member = toRecordData(response(), "member")?.rows?.[1];
-    expect(member?.determination).toBe("met_equivalent");
-    expect(member?.flagged_for_audit).toBe(true);
-    expect(member?.marks).toEqual(["edited before judging", "set by a person"]);
-    expect(member?.reviewed?.title).toBe("Verdict set by a person");
-    expect(member?.reviewed?.lines?.[0]).toBe("A person acting as hiring manager set this verdict on 2026-11-12: Met by equivalence (adjacent domain).");
-    expect(member?.reviewed?.lines?.[1]).toContain("The model's verdict was Unresolved (adjacent domain)");
+  it("shows the hiring side a verdict a person set, with the model's beside it", () => {
+    const row = toRecordData(response(), "admin")?.rows?.[1];
+    expect(row?.determination).toBe("met_equivalent");
+    expect(row?.flagged_for_audit).toBe(true);
+    expect(row?.marks).toEqual(["edited before judging", "set by a person"]);
+    expect(row?.reviewed?.title).toBe("Verdict set by a person");
+    expect(row?.reviewed?.lines?.[0]).toBe(
+      "A Reviewer, as hiring manager, set this verdict on 2026-11-12: Met by equivalence (adjacent domain).",
+    );
+    expect(row?.reviewed?.lines?.[1]).toContain("The model's verdict on this run is Unresolved (adjacent domain)");
+    expect(row?.reviewed?.lines?.at(-1)).toBe("Reason given: FEL-3 is front-end loading.");
+    expect(toRecordData(response(), "admin")?.rows?.[0].evidence).toBe(
+      "Career facts · passage 3; 1 passage · corpus document, not public",
+    );
     // A settled row no longer lists what was missing, and is not a gap.
-    expect(member?.missing).toBeUndefined();
-    expect(member?.gap).toBeUndefined();
+    expect(row?.missing).toBeUndefined();
+    expect(row?.gap).toBeUndefined();
   });
 
-  it("keeps the reviewer's name, reason and the passage numbers for an admin only", () => {
-    const member = toRecordData(response(), "member")?.rows ?? [];
-    const admin = toRecordData(response(), "admin")?.rows ?? [];
-    expect(JSON.stringify(member)).not.toContain("A Reviewer");
-    expect(JSON.stringify(member)).not.toContain("FEL-3 is front-end loading.");
-    expect(member[0].evidence).toBe("Career facts; 1 passage · corpus document, not public");
-    expect(admin[0].evidence).toBe("Career facts · passage 3; 1 passage · corpus document, not public");
-    expect(admin[1].reviewed?.lines?.[0]).toContain("A Reviewer, as hiring manager,");
-    expect(admin[1].reviewed?.lines?.at(-1)).toBe("Reason given: FEL-3 is front-end loading.");
+  it("says where a carried verdict came from and when it needs a second look", () => {
+    const r = response();
+    const o = r.record!.judgments![1].override!;
+    o.carriedFromAttempt = 2;
+    let row = toRecordData(r, "admin")?.rows?.[1];
+    expect(row?.marks).toEqual(["edited before judging", "set by a person", "carried from run 2"]);
+    expect(row?.reviewed?.title).toBe("Verdict set by a person");
+    expect(row?.reviewed?.lines?.join(" ")).toContain("Carried from run 2: the requirement has not changed since");
+
+    o.recheck = true;
+    o.modelDeterminationThen = "not_met";
+    o.modelBasisThen = "not_addressed";
+    const d = toRecordData(r, "admin");
+    row = d?.rows?.[1];
+    expect(row?.marks).toContain("second look needed");
+    expect(row?.reviewed?.title).toBe("Verdict set by a person · second look needed");
+    expect(row?.reviewed?.lines?.join(" ")).toContain(
+      "When this was set the model's verdict was Not met (not addressed); on this run it is Unresolved (adjacent domain).",
+    );
+    expect(d?.header?.figure_notes?.[1]).toBe(
+      "1 carried verdict needs a second look: the model's verdict on this run is not the one the person overrode.",
+    );
   });
 
   it("says what a keyword screen would have done with each row", () => {
-    const rows = toRecordData(response(), "member")?.rows ?? [];
+    const rows = toRecordData(response(), "admin")?.rows ?? [];
     expect(rows[0].keyword?.status).toBe("A keyword screen would have found this");
     expect(rows[1].keyword?.status).toBe("A keyword screen would have missed this");
     expect(rows[2].keyword?.status).toBe("A keyword screen would not have found this either");
@@ -163,11 +241,14 @@ describe("toRecordData", () => {
   });
 
   it("defines only the terms the record uses, from the registry", () => {
-    const groups = toRecordData(response(), "member")?.definitions?.groups ?? [];
+    const groups = toRecordData(response(), "admin")?.definitions?.groups ?? [];
     const terms = (title: string) => groups.find((g) => g.title?.startsWith(title))?.terms?.map((t) => t.term) ?? [];
     expect(terms("What a basis means")).toEqual(["Direct", "Adjacent domain", "Not addressed", "Not scored"]);
     expect(terms("Kinds of gap")).toEqual(["Not addressed"]);
     expect(terms("Marks on a row")).toContain("Set by a person");
+    // A recruiter's record has no such mark to define.
+    const mine = toRecordData(memberResponse(), "member")?.definitions?.groups ?? [];
+    expect(mine.find((g) => g.title === "Marks on a row")?.terms?.map((t) => t.term)).not.toContain("Set by a person");
     expect(terms("How items are classed").slice(0, 3)).toEqual(["Required", "Preferred", "Ideal"]);
   });
 
