@@ -13,11 +13,13 @@
 // It is a service of its own rather than more methods on JdService
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
-// Phase 0 step 5 lands the requirement methods and the settings; the
-// match record, overrides, the clarification loop and the catalog
-// follow in steps 6 to 8.
+// Phase 0 step 5 landed the requirement methods and the settings; step
+// 6 lands the match record as a person reads it and the override of a
+// judgment; the clarification loop and the catalog follow in steps 7
+// and 8.
 //
-// Vocabulary codes (type, class, threshold units) travel as strings,
+// Vocabulary codes (type, class, threshold units, determination, basis,
+// uncertainty, source kind, override role) travel as strings,
 // not enums: the vocabulary is data in `vocab_codes`, a new code must
 // not be a proto change, and a reader keeps a code it does not know
 // (14 §3.1). The codes of vocabulary 1.1 are listed in the field
@@ -32,7 +34,8 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/reh3376/career-site/services/api/gen/career/v1;careerv1";
 
-// Requirements as editable, versioned rows, and the settings the
+// Requirements as editable, versioned rows, the match record a run
+// produced, the override of a judgment, and the settings the
 // framework's arithmetic reads.
 service HiringService {
   // Lists a role's requirements in reading order: the released version
@@ -74,6 +77,33 @@ service HiringService {
   // caches them for 15 s). Takes effect for the next run; a record
   // already written keeps the fraction it was computed with.
   rpc SetHiringSettings(SetHiringSettingsRequest) returns (SetHiringSettingsResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Reads the match record of one run of a submitted posting: the three
+  // numbers and two shares, each requirement version judged, and each
+  // judgment with its basis, what is missing, the evidence cited, what
+  // the code rules changed, whether a keyword screen would have found
+  // it, and any override. Open to the member who submitted the posting
+  // and to an admin; anyone else gets not-found. With no run named it
+  // is the newest run that has a record. A member is never sent the
+  // private text of the candidate's documents, the title of a document
+  // that is not public, or the reason and name behind an override. The
+  // vocabularies come with the record so a viewer labels codes from the
+  // registry.
+  rpc GetMatchRecord(GetMatchRecordRequest) returns (GetMatchRecordResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_MEMBER;
+    option (career.v1.audit) = AUDIT_LEVEL_NONE;
+  }
+  // Sets, replaces or withdraws a person's override of one judgment
+  // (FSD FR-HF-08). The record's numbers are computed again from the
+  // effective values; the model's determination and basis stay on the
+  // judgment for the agreement measures, and every call is written to
+  // the decision log with the person, the role they acted in and the
+  // reason. Refused for a requirement that is not judged from documents
+  // (a working-style one), for a run that a later run has superseded,
+  // and for a determination and basis that contradict each other.
+  rpc OverrideJudgment(OverrideJudgmentRequest) returns (OverrideJudgmentResponse) {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
@@ -376,4 +406,329 @@ message SetHiringSettingsRequest {
 message SetHiringSettingsResponse {
   // Stored settings.
   HiringSettings settings = 1;
+}
+
+// The arithmetic of a match record (FSD FR-HF-06, FR-HF-23): three
+// numbers that sum to one over the counted weight, and two shares of
+// the evidenced part. Computed in code over effective determinations,
+// which are a person's override where one is set and the model's
+// answer after the code rules otherwise.
+message Coverage {
+  // Share of the counted weight that is evidenced: met, or met through
+  // an equivalency. 0 to 1.
+  double evidenced = 1;
+  // Share that is unresolved: the documents suggest it and one nameable
+  // fact is missing. Never scored as half of anything.
+  double unresolved = 2;
+  // Share that is not met.
+  double unmet = 3;
+  // Of the evidenced weight, the share that rests on an equivalency.
+  double equivalent_share = 4;
+  // Of the evidenced weight, the share that rests on the candidate's
+  // own answers to follow-up questions.
+  double self_attested_share = 5;
+  // The formula the numbers were computed under: `v4-classes`, or
+  // `v3-three-numbers` for a record written before classes.
+  string formula_version = 6;
+  // The share of its weight a preferred item counted at when the record
+  // was computed.
+  double preferred_fraction = 7;
+}
+
+// One piece of evidence a judgment cites. A citation, never the text:
+// the private text of the candidate's documents is not sent to any
+// reader of a record.
+message EvidenceRef {
+  // The evidence item's id.
+  string id = 1;
+  // Where it came from. Vocabulary `source_kind`: corpus_document,
+  // profile_sheet, candidate_response, verified_external.
+  string source_kind = 2;
+  // The title of the document it is a passage of. Empty for a reader
+  // who may not see it: a member is sent the title of a public document
+  // only.
+  string title = 3;
+  // The corpus passage behind the item. Sent to admins only; 0
+  // otherwise.
+  int64 chunk_id = 4;
+  // Whether the candidate has since withdrawn the item.
+  bool withdrawn = 5;
+}
+
+// One change the code rules made to the model's answer (FSD FR-HF-05):
+// a comparison of years, recency, scale, credential or named parties
+// made in code from the facts the model reported.
+message RuleAdjustment {
+  // The rule: duration, recency, scope, credential, named_parties,
+  // evidence, consistency, behavioral.
+  string rule = 1;
+  // The version of the rule that ran.
+  string rule_version = 2;
+  // The determination before the rule.
+  string from_determination = 3;
+  // The determination after it.
+  string to_determination = 4;
+  // The basis before the rule.
+  string from_basis = 5;
+  // The basis after it.
+  string to_basis = 6;
+  // Uncertainty codes the rule added.
+  repeated string added_uncertainty = 7;
+  // The rule's reason, as a sentence.
+  string reason = 8;
+}
+
+// The facts the model reported from the evidence, which the code rules
+// compare against the requirement's thresholds. A zero or empty field
+// was not stated.
+message ReportedFacts {
+  // Years of the work the evidence states; 0 when not stated.
+  double stated_span_years = 1;
+  // The most recent year the evidence places the work in; 0 when not
+  // stated.
+  int32 most_recent_year = 2;
+  // The scale the evidence states; unset when not stated.
+  ScopeThreshold stated_scope = 3;
+  // The named organisations the evidence shows a working relationship
+  // with.
+  repeated string parties_evidenced = 4;
+}
+
+// A person's override of a judgment (FSD FR-HF-08). It is read as the
+// effective value; the model's own answer stays on the judgment.
+message JudgmentOverride {
+  // The determination the person set. Vocabulary `determination`.
+  string determination = 1;
+  // The basis the person set. Vocabulary `basis`.
+  string basis = 2;
+  // The role the person acted in. Vocabulary `override_role`:
+  // hiring_manager, recruiter, system_admin.
+  string role = 3;
+  // When it was set.
+  google.protobuf.Timestamp at = 4;
+  // Who set it. Sent to admins only.
+  string by_display = 5;
+  // Why. Sent to admins only.
+  string reason = 6;
+}
+
+// An override a person set on an earlier run's judgment of the same
+// requirement. A new run judges every requirement again and starts
+// without overrides, so this is how a reviewer sees that a row was
+// decided by a person before. Sent to admins only.
+message EarlierOverride {
+  // The attempt number of the run that carries the override.
+  int32 attempt = 1;
+  // The determination the person set.
+  string determination = 2;
+  // The basis the person set.
+  string basis = 3;
+  // The role the person acted in.
+  string role = 4;
+  // When it was set.
+  google.protobuf.Timestamp at = 5;
+  // Whether that judgment was of the same requirement version as this
+  // one. False when the requirement has been edited since.
+  bool same_version = 6;
+}
+
+// One judgment of one requirement version in one run (FSD FR-HF-04).
+message Judgment {
+  // The judgment's id.
+  string id = 1;
+  // The requirement version judged.
+  string requirement_id = 2;
+  // The requirement's id within the role: r1, r2, ...
+  string requirement_local_id = 3;
+  // The model's determination after the code rules. Vocabulary
+  // `determination`: met, met_equivalent, unresolved, not_met.
+  string determination = 4;
+  // The model's basis after the code rules. Vocabulary `basis`.
+  string basis = 5;
+  // What is missing, for an unresolved judgment. Vocabulary
+  // `uncertainty`.
+  repeated string uncertainty = 6;
+  // The determination the record counts: the override when one is set,
+  // the model's otherwise.
+  string effective_determination = 7;
+  // The basis the record shows: the override's when one is set, the
+  // model's otherwise.
+  string effective_basis = 8;
+  // The override, when a person has set one.
+  JudgmentOverride override = 9;
+  // The three-way verdict derived from the model's determination: met,
+  // partial, unmet (FSD FR-HF-07).
+  string derived_verdict = 10;
+  // The model's one-sentence reasoning. It never quotes private text.
+  string rationale = 11;
+  // The evidence cited.
+  repeated EvidenceRef evidence = 12;
+  // What the code rules changed, in the order they ran.
+  repeated RuleAdjustment rule_adjustments = 13;
+  // The facts the model reported.
+  ReportedFacts reported_facts = 14;
+  // The kind of gap, derived from the effective basis (FSD FR-HF-17):
+  // `lexical` (a difference of wording, tool or credential that an
+  // equivalency could bridge), `substantive` (the work falls short in
+  // scale, years, recency, relationship, or is contradicted),
+  // `unaddressed` (nothing speaks to it); empty when the basis is
+  // direct or the requirement was not assessed.
+  string gap_class = 15;
+  // True for a working-style requirement (FSD FR-HF-18): recorded, not
+  // judged from documents, weighing nothing, and not open to override.
+  bool not_assessed = 16;
+  // True when a piece of evidence the judgment cites was withdrawn
+  // after it was made.
+  bool stale = 17;
+  // Whether the keyword screen ran for this requirement. False when the
+  // passages could not be read back and the comparison was skipped.
+  bool keyword_known = 18;
+  // Whether a plain term-overlap filter over the same passages the
+  // judge was shown would have found the requirement (FSD FR-HF-12).
+  bool keyword_found = 19;
+  // The terms the filter matched.
+  repeated string keyword_terms = 20;
+  // The decision-log row that holds the prompt and the model's raw
+  // response. Sent to admins only; 0 otherwise.
+  int64 decision_id = 21;
+  // An override on an earlier run's judgment of this requirement, when
+  // this judgment carries none. Sent to admins only.
+  EarlierOverride earlier_override = 22;
+}
+
+// The match record of one run (FSD FR-HF-10, FR-HF-17).
+message MatchRecord {
+  // The run.
+  string run_id = 1;
+  // The role the posting became.
+  string role_id = 2;
+  // The submitted posting, as /jd-upload and /admin/jd number it.
+  string submission_id = 3;
+  // 1 for the first run of the posting, 2 for the next, and so on.
+  int32 attempt = 4;
+  // The run this one superseded; empty for the first.
+  string supersedes_run_id = 5;
+  // True when a later run of the same posting has a record. A
+  // superseded record is history and takes no override.
+  bool superseded = 6;
+  // How the run was started: submit, rescore, release.
+  string run_trigger = 7;
+  // The role as the submitter named it, or the posting's first line.
+  string role_title = 8;
+  // The employer as the submitter named it, if they did.
+  string employer = 9;
+  // The three numbers and the two shares.
+  Coverage coverage = 10;
+  // The requirement versions judged, in reading order.
+  repeated Requirement requirements = 11;
+  // The judgments, one per requirement, in the same order.
+  repeated Judgment judgments = 12;
+  // How many judgments carry a person's override.
+  int32 override_count = 13;
+  // The rule the keyword screen ran under: kw1.
+  string keyword_rule = 14;
+  // Why the keyword screen could not run, when it could not.
+  string keyword_skipped = 15;
+  // The versions the record was written under: schemas, vocabulary,
+  // formula, rules, prompt fingerprints, model, embedder, corpus.
+  map<string, string> versions = 16;
+  // The fit the run was given when it finished, from the score the
+  // résumé gate reads: very_strong, strong, possible, weak, very_weak.
+  // It is the run's own and does not move with an override.
+  string fit = 17;
+  // The score the résumé gate read when the run finished.
+  optional double match_score = 18;
+  // When the run finished.
+  google.protobuf.Timestamp finished_at = 19;
+  // How many documents the candidate's corpus held when the run read
+  // it.
+  int32 corpus_documents = 20;
+  // The model that judged.
+  string model = 21;
+  // Whether a person edited any requirement version this run judged.
+  bool requirements_edited = 22;
+}
+
+// The determinations a reviewer may set and, for each, the bases that
+// do not contradict it, so an override form offers only pairs the
+// server will accept.
+message OverrideChoice {
+  // The determination.
+  string determination = 1;
+  // The bases it may carry.
+  repeated string bases = 2;
+}
+
+// Names the record: the submitted posting, and optionally one run of
+// it.
+message GetMatchRecordRequest {
+  // The submitted posting's id.
+  string submission_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // One run of that posting. Empty reads the newest run that has a
+  // record.
+  string run_id = 2 [(buf.validate.field).string.max_len = 64];
+}
+
+// The record and the vocabularies it is labelled from.
+message GetMatchRecordResponse {
+  // The record. Unset when the posting has no record with judgments,
+  // which is a posting last scored before the hiring tables began.
+  MatchRecord record = 1;
+  // The `determination` codes.
+  repeated VocabCode determinations = 2;
+  // The `basis` codes.
+  repeated VocabCode bases = 3;
+  // The `uncertainty` codes.
+  repeated VocabCode uncertainties = 4;
+  // The `requirement_type` codes.
+  repeated VocabCode types = 5;
+  // The `requirement_class` codes.
+  repeated VocabCode classes = 6;
+  // The `source_kind` codes.
+  repeated VocabCode source_kinds = 7;
+  // The `override_role` codes a reviewer may act in today. The role
+  // reserved for a candidate's dispute is not offered.
+  repeated VocabCode override_roles = 8;
+  // Whether the caller may override a judgment on this record: an
+  // admin, on a record no later run has superseded.
+  bool can_override = 9;
+  // The pairs an override may set. Sent when the caller may override.
+  repeated OverrideChoice override_choices = 10;
+}
+
+// One override of one judgment.
+message OverrideJudgmentRequest {
+  // The judgment.
+  string judgment_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  // The determination to set. Vocabulary `determination`. Left empty
+  // when withdrawing.
+  string determination = 2 [(buf.validate.field).string.max_len = 40];
+  // The basis to set. Vocabulary `basis`; it must not contradict the
+  // determination. Left empty when withdrawing.
+  string basis = 3 [(buf.validate.field).string.max_len = 40];
+  // Why. Required, for an override and for a withdrawal alike.
+  string reason = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 1000
+  }];
+  // The role the reviewer acts in. Vocabulary `override_role`:
+  // hiring_manager, recruiter, system_admin. Left empty when
+  // withdrawing.
+  string role = 5 [(buf.validate.field).string.max_len = 40];
+  // Withdraw the override this judgment carries, so the model's answer
+  // is the effective one again. The withdrawal is logged like an
+  // override.
+  bool withdraw = 6;
+}
+
+// The record after the override.
+message OverrideJudgmentResponse {
+  // The record with its numbers computed again.
+  MatchRecord record = 1;
 }

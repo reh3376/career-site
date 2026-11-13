@@ -294,9 +294,22 @@ type Requirement struct {
 }
 
 // InclusionReason is the sentence that goes with Included.
+//
+// Included is stored when a version is written and is what the
+// arithmetic of every record that judged the version read; the sentence
+// is worked out from the rule as it stands now. When the rule has
+// changed since the version was written the two can part, and a record
+// must not say "not included" beside a reason for including. The stored
+// value is the fact, so the sentence follows it and says why it differs.
 func (q Requirement) InclusionReason() string {
-	_, reason := Inclusion(q.Type, q.Thresholds, q.Text, q.Equivalency)
-	return reason
+	included, reason := Inclusion(q.Type, q.Thresholds, q.Text, q.Equivalency)
+	if included == q.Included {
+		return reason
+	}
+	if q.Included {
+		return "Included: counted under the inclusion rule in force when this version was written."
+	}
+	return "Not included in the evaluation: this version was written under an earlier inclusion rule and was left out of the figures. Under the rule as it stands it would count; saving the requirement again applies it."
 }
 
 // RequirementPatch is an edit: only the fields set are changed

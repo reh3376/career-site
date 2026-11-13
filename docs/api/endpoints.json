@@ -2434,6 +2434,38 @@
       "client_streaming": false
     },
     {
+      "service": "career.v1.HiringService",
+      "method": "GetMatchRecord",
+      "path": "/api/career.v1.HiringService/GetMatchRecord",
+      "grpc_full_method": "/career.v1.HiringService/GetMatchRecord",
+      "internal": false,
+      "request": "career.v1.GetMatchRecordRequest",
+      "response": "career.v1.GetMatchRecordResponse",
+      "summary": "Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and any override.",
+      "auth": "member",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
+      "service": "career.v1.HiringService",
+      "method": "OverrideJudgment",
+      "path": "/api/career.v1.HiringService/OverrideJudgment",
+      "grpc_full_method": "/career.v1.HiringService/OverrideJudgment",
+      "internal": false,
+      "request": "career.v1.OverrideJudgmentRequest",
+      "response": "career.v1.OverrideJudgmentResponse",
+      "summary": "Sets, replaces or withdraws a person's override of one judgment (FSD FR-HF-08).",
+      "auth": "admin",
+      "allow_unverified": false,
+      "rate_limit_per_minute": 0,
+      "mfa_fresh": false,
+      "server_streaming": false,
+      "client_streaming": false
+    },
+    {
       "service": "career.v1.PilotService",
       "method": "GetPilot",
       "path": "/api/career.v1.PilotService/GetPilot",

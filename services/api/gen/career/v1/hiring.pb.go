@@ -13,11 +13,13 @@
 // It is a service of its own rather than more methods on JdService
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
-// Phase 0 step 5 lands the requirement methods and the settings; the
-// match record, overrides, the clarification loop and the catalog
-// follow in steps 6 to 8.
+// Phase 0 step 5 landed the requirement methods and the settings; step
+// 6 lands the match record as a person reads it and the override of a
+// judgment; the clarification loop and the catalog follow in steps 7
+// and 8.
 //
-// Vocabulary codes (type, class, threshold units) travel as strings,
+// Vocabulary codes (type, class, threshold units, determination, basis,
+// uncertainty, source kind, override role) travel as strings,
 // not enums: the vocabulary is data in `vocab_codes`, a new code must
 // not be a proto change, and a reader keeps a code it does not know
 // (14 §3.1). The codes of vocabulary 1.1 are listed in the field
@@ -1457,6 +1459,1458 @@ func (x *SetHiringSettingsResponse) GetSettings() *HiringSettings {
 	return nil
 }
 
+// The arithmetic of a match record (FSD FR-HF-06, FR-HF-23): three
+// numbers that sum to one over the counted weight, and two shares of
+// the evidenced part. Computed in code over effective determinations,
+// which are a person's override where one is set and the model's
+// answer after the code rules otherwise.
+type Coverage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Share of the counted weight that is evidenced: met, or met through
+	// an equivalency. 0 to 1.
+	Evidenced float64 `protobuf:"fixed64,1,opt,name=evidenced,proto3" json:"evidenced,omitempty"`
+	// Share that is unresolved: the documents suggest it and one nameable
+	// fact is missing. Never scored as half of anything.
+	Unresolved float64 `protobuf:"fixed64,2,opt,name=unresolved,proto3" json:"unresolved,omitempty"`
+	// Share that is not met.
+	Unmet float64 `protobuf:"fixed64,3,opt,name=unmet,proto3" json:"unmet,omitempty"`
+	// Of the evidenced weight, the share that rests on an equivalency.
+	EquivalentShare float64 `protobuf:"fixed64,4,opt,name=equivalent_share,json=equivalentShare,proto3" json:"equivalent_share,omitempty"`
+	// Of the evidenced weight, the share that rests on the candidate's
+	// own answers to follow-up questions.
+	SelfAttestedShare float64 `protobuf:"fixed64,5,opt,name=self_attested_share,json=selfAttestedShare,proto3" json:"self_attested_share,omitempty"`
+	// The formula the numbers were computed under: `v4-classes`, or
+	// `v3-three-numbers` for a record written before classes.
+	FormulaVersion string `protobuf:"bytes,6,opt,name=formula_version,json=formulaVersion,proto3" json:"formula_version,omitempty"`
+	// The share of its weight a preferred item counted at when the record
+	// was computed.
+	PreferredFraction float64 `protobuf:"fixed64,7,opt,name=preferred_fraction,json=preferredFraction,proto3" json:"preferred_fraction,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Coverage) Reset() {
+	*x = Coverage{}
+	mi := &file_career_v1_hiring_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Coverage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Coverage) ProtoMessage() {}
+
+func (x *Coverage) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Coverage.ProtoReflect.Descriptor instead.
+func (*Coverage) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *Coverage) GetEvidenced() float64 {
+	if x != nil {
+		return x.Evidenced
+	}
+	return 0
+}
+
+func (x *Coverage) GetUnresolved() float64 {
+	if x != nil {
+		return x.Unresolved
+	}
+	return 0
+}
+
+func (x *Coverage) GetUnmet() float64 {
+	if x != nil {
+		return x.Unmet
+	}
+	return 0
+}
+
+func (x *Coverage) GetEquivalentShare() float64 {
+	if x != nil {
+		return x.EquivalentShare
+	}
+	return 0
+}
+
+func (x *Coverage) GetSelfAttestedShare() float64 {
+	if x != nil {
+		return x.SelfAttestedShare
+	}
+	return 0
+}
+
+func (x *Coverage) GetFormulaVersion() string {
+	if x != nil {
+		return x.FormulaVersion
+	}
+	return ""
+}
+
+func (x *Coverage) GetPreferredFraction() float64 {
+	if x != nil {
+		return x.PreferredFraction
+	}
+	return 0
+}
+
+// One piece of evidence a judgment cites. A citation, never the text:
+// the private text of the candidate's documents is not sent to any
+// reader of a record.
+type EvidenceRef struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The evidence item's id.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Where it came from. Vocabulary `source_kind`: corpus_document,
+	// profile_sheet, candidate_response, verified_external.
+	SourceKind string `protobuf:"bytes,2,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	// The title of the document it is a passage of. Empty for a reader
+	// who may not see it: a member is sent the title of a public document
+	// only.
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	// The corpus passage behind the item. Sent to admins only; 0
+	// otherwise.
+	ChunkId int64 `protobuf:"varint,4,opt,name=chunk_id,json=chunkId,proto3" json:"chunk_id,omitempty"`
+	// Whether the candidate has since withdrawn the item.
+	Withdrawn     bool `protobuf:"varint,5,opt,name=withdrawn,proto3" json:"withdrawn,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvidenceRef) Reset() {
+	*x = EvidenceRef{}
+	mi := &file_career_v1_hiring_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvidenceRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvidenceRef) ProtoMessage() {}
+
+func (x *EvidenceRef) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvidenceRef.ProtoReflect.Descriptor instead.
+func (*EvidenceRef) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *EvidenceRef) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *EvidenceRef) GetChunkId() int64 {
+	if x != nil {
+		return x.ChunkId
+	}
+	return 0
+}
+
+func (x *EvidenceRef) GetWithdrawn() bool {
+	if x != nil {
+		return x.Withdrawn
+	}
+	return false
+}
+
+// One change the code rules made to the model's answer (FSD FR-HF-05):
+// a comparison of years, recency, scale, credential or named parties
+// made in code from the facts the model reported.
+type RuleAdjustment struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The rule: duration, recency, scope, credential, named_parties,
+	// evidence, consistency, behavioral.
+	Rule string `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
+	// The version of the rule that ran.
+	RuleVersion string `protobuf:"bytes,2,opt,name=rule_version,json=ruleVersion,proto3" json:"rule_version,omitempty"`
+	// The determination before the rule.
+	FromDetermination string `protobuf:"bytes,3,opt,name=from_determination,json=fromDetermination,proto3" json:"from_determination,omitempty"`
+	// The determination after it.
+	ToDetermination string `protobuf:"bytes,4,opt,name=to_determination,json=toDetermination,proto3" json:"to_determination,omitempty"`
+	// The basis before the rule.
+	FromBasis string `protobuf:"bytes,5,opt,name=from_basis,json=fromBasis,proto3" json:"from_basis,omitempty"`
+	// The basis after it.
+	ToBasis string `protobuf:"bytes,6,opt,name=to_basis,json=toBasis,proto3" json:"to_basis,omitempty"`
+	// Uncertainty codes the rule added.
+	AddedUncertainty []string `protobuf:"bytes,7,rep,name=added_uncertainty,json=addedUncertainty,proto3" json:"added_uncertainty,omitempty"`
+	// The rule's reason, as a sentence.
+	Reason        string `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RuleAdjustment) Reset() {
+	*x = RuleAdjustment{}
+	mi := &file_career_v1_hiring_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RuleAdjustment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RuleAdjustment) ProtoMessage() {}
+
+func (x *RuleAdjustment) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RuleAdjustment.ProtoReflect.Descriptor instead.
+func (*RuleAdjustment) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *RuleAdjustment) GetRule() string {
+	if x != nil {
+		return x.Rule
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetRuleVersion() string {
+	if x != nil {
+		return x.RuleVersion
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetFromDetermination() string {
+	if x != nil {
+		return x.FromDetermination
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetToDetermination() string {
+	if x != nil {
+		return x.ToDetermination
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetFromBasis() string {
+	if x != nil {
+		return x.FromBasis
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetToBasis() string {
+	if x != nil {
+		return x.ToBasis
+	}
+	return ""
+}
+
+func (x *RuleAdjustment) GetAddedUncertainty() []string {
+	if x != nil {
+		return x.AddedUncertainty
+	}
+	return nil
+}
+
+func (x *RuleAdjustment) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// The facts the model reported from the evidence, which the code rules
+// compare against the requirement's thresholds. A zero or empty field
+// was not stated.
+type ReportedFacts struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Years of the work the evidence states; 0 when not stated.
+	StatedSpanYears float64 `protobuf:"fixed64,1,opt,name=stated_span_years,json=statedSpanYears,proto3" json:"stated_span_years,omitempty"`
+	// The most recent year the evidence places the work in; 0 when not
+	// stated.
+	MostRecentYear int32 `protobuf:"varint,2,opt,name=most_recent_year,json=mostRecentYear,proto3" json:"most_recent_year,omitempty"`
+	// The scale the evidence states; unset when not stated.
+	StatedScope *ScopeThreshold `protobuf:"bytes,3,opt,name=stated_scope,json=statedScope,proto3" json:"stated_scope,omitempty"`
+	// The named organisations the evidence shows a working relationship
+	// with.
+	PartiesEvidenced []string `protobuf:"bytes,4,rep,name=parties_evidenced,json=partiesEvidenced,proto3" json:"parties_evidenced,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReportedFacts) Reset() {
+	*x = ReportedFacts{}
+	mi := &file_career_v1_hiring_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportedFacts) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportedFacts) ProtoMessage() {}
+
+func (x *ReportedFacts) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportedFacts.ProtoReflect.Descriptor instead.
+func (*ReportedFacts) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ReportedFacts) GetStatedSpanYears() float64 {
+	if x != nil {
+		return x.StatedSpanYears
+	}
+	return 0
+}
+
+func (x *ReportedFacts) GetMostRecentYear() int32 {
+	if x != nil {
+		return x.MostRecentYear
+	}
+	return 0
+}
+
+func (x *ReportedFacts) GetStatedScope() *ScopeThreshold {
+	if x != nil {
+		return x.StatedScope
+	}
+	return nil
+}
+
+func (x *ReportedFacts) GetPartiesEvidenced() []string {
+	if x != nil {
+		return x.PartiesEvidenced
+	}
+	return nil
+}
+
+// A person's override of a judgment (FSD FR-HF-08). It is read as the
+// effective value; the model's own answer stays on the judgment.
+type JudgmentOverride struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The determination the person set. Vocabulary `determination`.
+	Determination string `protobuf:"bytes,1,opt,name=determination,proto3" json:"determination,omitempty"`
+	// The basis the person set. Vocabulary `basis`.
+	Basis string `protobuf:"bytes,2,opt,name=basis,proto3" json:"basis,omitempty"`
+	// The role the person acted in. Vocabulary `override_role`:
+	// hiring_manager, recruiter, system_admin.
+	Role string `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	// When it was set.
+	At *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=at,proto3" json:"at,omitempty"`
+	// Who set it. Sent to admins only.
+	ByDisplay string `protobuf:"bytes,5,opt,name=by_display,json=byDisplay,proto3" json:"by_display,omitempty"`
+	// Why. Sent to admins only.
+	Reason        string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JudgmentOverride) Reset() {
+	*x = JudgmentOverride{}
+	mi := &file_career_v1_hiring_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JudgmentOverride) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JudgmentOverride) ProtoMessage() {}
+
+func (x *JudgmentOverride) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JudgmentOverride.ProtoReflect.Descriptor instead.
+func (*JudgmentOverride) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *JudgmentOverride) GetDetermination() string {
+	if x != nil {
+		return x.Determination
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetBasis() string {
+	if x != nil {
+		return x.Basis
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
+func (x *JudgmentOverride) GetByDisplay() string {
+	if x != nil {
+		return x.ByDisplay
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// An override a person set on an earlier run's judgment of the same
+// requirement. A new run judges every requirement again and starts
+// without overrides, so this is how a reviewer sees that a row was
+// decided by a person before. Sent to admins only.
+type EarlierOverride struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The attempt number of the run that carries the override.
+	Attempt int32 `protobuf:"varint,1,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// The determination the person set.
+	Determination string `protobuf:"bytes,2,opt,name=determination,proto3" json:"determination,omitempty"`
+	// The basis the person set.
+	Basis string `protobuf:"bytes,3,opt,name=basis,proto3" json:"basis,omitempty"`
+	// The role the person acted in.
+	Role string `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
+	// When it was set.
+	At *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=at,proto3" json:"at,omitempty"`
+	// Whether that judgment was of the same requirement version as this
+	// one. False when the requirement has been edited since.
+	SameVersion   bool `protobuf:"varint,6,opt,name=same_version,json=sameVersion,proto3" json:"same_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EarlierOverride) Reset() {
+	*x = EarlierOverride{}
+	mi := &file_career_v1_hiring_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EarlierOverride) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EarlierOverride) ProtoMessage() {}
+
+func (x *EarlierOverride) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EarlierOverride.ProtoReflect.Descriptor instead.
+func (*EarlierOverride) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *EarlierOverride) GetAttempt() int32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *EarlierOverride) GetDetermination() string {
+	if x != nil {
+		return x.Determination
+	}
+	return ""
+}
+
+func (x *EarlierOverride) GetBasis() string {
+	if x != nil {
+		return x.Basis
+	}
+	return ""
+}
+
+func (x *EarlierOverride) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *EarlierOverride) GetAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
+func (x *EarlierOverride) GetSameVersion() bool {
+	if x != nil {
+		return x.SameVersion
+	}
+	return false
+}
+
+// One judgment of one requirement version in one run (FSD FR-HF-04).
+type Judgment struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The judgment's id.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The requirement version judged.
+	RequirementId string `protobuf:"bytes,2,opt,name=requirement_id,json=requirementId,proto3" json:"requirement_id,omitempty"`
+	// The requirement's id within the role: r1, r2, ...
+	RequirementLocalId string `protobuf:"bytes,3,opt,name=requirement_local_id,json=requirementLocalId,proto3" json:"requirement_local_id,omitempty"`
+	// The model's determination after the code rules. Vocabulary
+	// `determination`: met, met_equivalent, unresolved, not_met.
+	Determination string `protobuf:"bytes,4,opt,name=determination,proto3" json:"determination,omitempty"`
+	// The model's basis after the code rules. Vocabulary `basis`.
+	Basis string `protobuf:"bytes,5,opt,name=basis,proto3" json:"basis,omitempty"`
+	// What is missing, for an unresolved judgment. Vocabulary
+	// `uncertainty`.
+	Uncertainty []string `protobuf:"bytes,6,rep,name=uncertainty,proto3" json:"uncertainty,omitempty"`
+	// The determination the record counts: the override when one is set,
+	// the model's otherwise.
+	EffectiveDetermination string `protobuf:"bytes,7,opt,name=effective_determination,json=effectiveDetermination,proto3" json:"effective_determination,omitempty"`
+	// The basis the record shows: the override's when one is set, the
+	// model's otherwise.
+	EffectiveBasis string `protobuf:"bytes,8,opt,name=effective_basis,json=effectiveBasis,proto3" json:"effective_basis,omitempty"`
+	// The override, when a person has set one.
+	Override *JudgmentOverride `protobuf:"bytes,9,opt,name=override,proto3" json:"override,omitempty"`
+	// The three-way verdict derived from the model's determination: met,
+	// partial, unmet (FSD FR-HF-07).
+	DerivedVerdict string `protobuf:"bytes,10,opt,name=derived_verdict,json=derivedVerdict,proto3" json:"derived_verdict,omitempty"`
+	// The model's one-sentence reasoning. It never quotes private text.
+	Rationale string `protobuf:"bytes,11,opt,name=rationale,proto3" json:"rationale,omitempty"`
+	// The evidence cited.
+	Evidence []*EvidenceRef `protobuf:"bytes,12,rep,name=evidence,proto3" json:"evidence,omitempty"`
+	// What the code rules changed, in the order they ran.
+	RuleAdjustments []*RuleAdjustment `protobuf:"bytes,13,rep,name=rule_adjustments,json=ruleAdjustments,proto3" json:"rule_adjustments,omitempty"`
+	// The facts the model reported.
+	ReportedFacts *ReportedFacts `protobuf:"bytes,14,opt,name=reported_facts,json=reportedFacts,proto3" json:"reported_facts,omitempty"`
+	// The kind of gap, derived from the effective basis (FSD FR-HF-17):
+	// `lexical` (a difference of wording, tool or credential that an
+	// equivalency could bridge), `substantive` (the work falls short in
+	// scale, years, recency, relationship, or is contradicted),
+	// `unaddressed` (nothing speaks to it); empty when the basis is
+	// direct or the requirement was not assessed.
+	GapClass string `protobuf:"bytes,15,opt,name=gap_class,json=gapClass,proto3" json:"gap_class,omitempty"`
+	// True for a working-style requirement (FSD FR-HF-18): recorded, not
+	// judged from documents, weighing nothing, and not open to override.
+	NotAssessed bool `protobuf:"varint,16,opt,name=not_assessed,json=notAssessed,proto3" json:"not_assessed,omitempty"`
+	// True when a piece of evidence the judgment cites was withdrawn
+	// after it was made.
+	Stale bool `protobuf:"varint,17,opt,name=stale,proto3" json:"stale,omitempty"`
+	// Whether the keyword screen ran for this requirement. False when the
+	// passages could not be read back and the comparison was skipped.
+	KeywordKnown bool `protobuf:"varint,18,opt,name=keyword_known,json=keywordKnown,proto3" json:"keyword_known,omitempty"`
+	// Whether a plain term-overlap filter over the same passages the
+	// judge was shown would have found the requirement (FSD FR-HF-12).
+	KeywordFound bool `protobuf:"varint,19,opt,name=keyword_found,json=keywordFound,proto3" json:"keyword_found,omitempty"`
+	// The terms the filter matched.
+	KeywordTerms []string `protobuf:"bytes,20,rep,name=keyword_terms,json=keywordTerms,proto3" json:"keyword_terms,omitempty"`
+	// The decision-log row that holds the prompt and the model's raw
+	// response. Sent to admins only; 0 otherwise.
+	DecisionId int64 `protobuf:"varint,21,opt,name=decision_id,json=decisionId,proto3" json:"decision_id,omitempty"`
+	// An override on an earlier run's judgment of this requirement, when
+	// this judgment carries none. Sent to admins only.
+	EarlierOverride *EarlierOverride `protobuf:"bytes,22,opt,name=earlier_override,json=earlierOverride,proto3" json:"earlier_override,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Judgment) Reset() {
+	*x = Judgment{}
+	mi := &file_career_v1_hiring_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Judgment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Judgment) ProtoMessage() {}
+
+func (x *Judgment) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Judgment.ProtoReflect.Descriptor instead.
+func (*Judgment) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *Judgment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Judgment) GetRequirementId() string {
+	if x != nil {
+		return x.RequirementId
+	}
+	return ""
+}
+
+func (x *Judgment) GetRequirementLocalId() string {
+	if x != nil {
+		return x.RequirementLocalId
+	}
+	return ""
+}
+
+func (x *Judgment) GetDetermination() string {
+	if x != nil {
+		return x.Determination
+	}
+	return ""
+}
+
+func (x *Judgment) GetBasis() string {
+	if x != nil {
+		return x.Basis
+	}
+	return ""
+}
+
+func (x *Judgment) GetUncertainty() []string {
+	if x != nil {
+		return x.Uncertainty
+	}
+	return nil
+}
+
+func (x *Judgment) GetEffectiveDetermination() string {
+	if x != nil {
+		return x.EffectiveDetermination
+	}
+	return ""
+}
+
+func (x *Judgment) GetEffectiveBasis() string {
+	if x != nil {
+		return x.EffectiveBasis
+	}
+	return ""
+}
+
+func (x *Judgment) GetOverride() *JudgmentOverride {
+	if x != nil {
+		return x.Override
+	}
+	return nil
+}
+
+func (x *Judgment) GetDerivedVerdict() string {
+	if x != nil {
+		return x.DerivedVerdict
+	}
+	return ""
+}
+
+func (x *Judgment) GetRationale() string {
+	if x != nil {
+		return x.Rationale
+	}
+	return ""
+}
+
+func (x *Judgment) GetEvidence() []*EvidenceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *Judgment) GetRuleAdjustments() []*RuleAdjustment {
+	if x != nil {
+		return x.RuleAdjustments
+	}
+	return nil
+}
+
+func (x *Judgment) GetReportedFacts() *ReportedFacts {
+	if x != nil {
+		return x.ReportedFacts
+	}
+	return nil
+}
+
+func (x *Judgment) GetGapClass() string {
+	if x != nil {
+		return x.GapClass
+	}
+	return ""
+}
+
+func (x *Judgment) GetNotAssessed() bool {
+	if x != nil {
+		return x.NotAssessed
+	}
+	return false
+}
+
+func (x *Judgment) GetStale() bool {
+	if x != nil {
+		return x.Stale
+	}
+	return false
+}
+
+func (x *Judgment) GetKeywordKnown() bool {
+	if x != nil {
+		return x.KeywordKnown
+	}
+	return false
+}
+
+func (x *Judgment) GetKeywordFound() bool {
+	if x != nil {
+		return x.KeywordFound
+	}
+	return false
+}
+
+func (x *Judgment) GetKeywordTerms() []string {
+	if x != nil {
+		return x.KeywordTerms
+	}
+	return nil
+}
+
+func (x *Judgment) GetDecisionId() int64 {
+	if x != nil {
+		return x.DecisionId
+	}
+	return 0
+}
+
+func (x *Judgment) GetEarlierOverride() *EarlierOverride {
+	if x != nil {
+		return x.EarlierOverride
+	}
+	return nil
+}
+
+// The match record of one run (FSD FR-HF-10, FR-HF-17).
+type MatchRecord struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The run.
+	RunId string `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// The role the posting became.
+	RoleId string `protobuf:"bytes,2,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	// The submitted posting, as /jd-upload and /admin/jd number it.
+	SubmissionId string `protobuf:"bytes,3,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	// 1 for the first run of the posting, 2 for the next, and so on.
+	Attempt int32 `protobuf:"varint,4,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// The run this one superseded; empty for the first.
+	SupersedesRunId string `protobuf:"bytes,5,opt,name=supersedes_run_id,json=supersedesRunId,proto3" json:"supersedes_run_id,omitempty"`
+	// True when a later run of the same posting has a record. A
+	// superseded record is history and takes no override.
+	Superseded bool `protobuf:"varint,6,opt,name=superseded,proto3" json:"superseded,omitempty"`
+	// How the run was started: submit, rescore, release.
+	RunTrigger string `protobuf:"bytes,7,opt,name=run_trigger,json=runTrigger,proto3" json:"run_trigger,omitempty"`
+	// The role as the submitter named it, or the posting's first line.
+	RoleTitle string `protobuf:"bytes,8,opt,name=role_title,json=roleTitle,proto3" json:"role_title,omitempty"`
+	// The employer as the submitter named it, if they did.
+	Employer string `protobuf:"bytes,9,opt,name=employer,proto3" json:"employer,omitempty"`
+	// The three numbers and the two shares.
+	Coverage *Coverage `protobuf:"bytes,10,opt,name=coverage,proto3" json:"coverage,omitempty"`
+	// The requirement versions judged, in reading order.
+	Requirements []*Requirement `protobuf:"bytes,11,rep,name=requirements,proto3" json:"requirements,omitempty"`
+	// The judgments, one per requirement, in the same order.
+	Judgments []*Judgment `protobuf:"bytes,12,rep,name=judgments,proto3" json:"judgments,omitempty"`
+	// How many judgments carry a person's override.
+	OverrideCount int32 `protobuf:"varint,13,opt,name=override_count,json=overrideCount,proto3" json:"override_count,omitempty"`
+	// The rule the keyword screen ran under: kw1.
+	KeywordRule string `protobuf:"bytes,14,opt,name=keyword_rule,json=keywordRule,proto3" json:"keyword_rule,omitempty"`
+	// Why the keyword screen could not run, when it could not.
+	KeywordSkipped string `protobuf:"bytes,15,opt,name=keyword_skipped,json=keywordSkipped,proto3" json:"keyword_skipped,omitempty"`
+	// The versions the record was written under: schemas, vocabulary,
+	// formula, rules, prompt fingerprints, model, embedder, corpus.
+	Versions map[string]string `protobuf:"bytes,16,rep,name=versions,proto3" json:"versions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The fit the run was given when it finished, from the score the
+	// résumé gate reads: very_strong, strong, possible, weak, very_weak.
+	// It is the run's own and does not move with an override.
+	Fit string `protobuf:"bytes,17,opt,name=fit,proto3" json:"fit,omitempty"`
+	// The score the résumé gate read when the run finished.
+	MatchScore *float64 `protobuf:"fixed64,18,opt,name=match_score,json=matchScore,proto3,oneof" json:"match_score,omitempty"`
+	// When the run finished.
+	FinishedAt *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	// How many documents the candidate's corpus held when the run read
+	// it.
+	CorpusDocuments int32 `protobuf:"varint,20,opt,name=corpus_documents,json=corpusDocuments,proto3" json:"corpus_documents,omitempty"`
+	// The model that judged.
+	Model string `protobuf:"bytes,21,opt,name=model,proto3" json:"model,omitempty"`
+	// Whether a person edited any requirement version this run judged.
+	RequirementsEdited bool `protobuf:"varint,22,opt,name=requirements_edited,json=requirementsEdited,proto3" json:"requirements_edited,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *MatchRecord) Reset() {
+	*x = MatchRecord{}
+	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchRecord) ProtoMessage() {}
+
+func (x *MatchRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchRecord.ProtoReflect.Descriptor instead.
+func (*MatchRecord) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *MatchRecord) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetAttempt() int32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *MatchRecord) GetSupersedesRunId() string {
+	if x != nil {
+		return x.SupersedesRunId
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetSuperseded() bool {
+	if x != nil {
+		return x.Superseded
+	}
+	return false
+}
+
+func (x *MatchRecord) GetRunTrigger() string {
+	if x != nil {
+		return x.RunTrigger
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetRoleTitle() string {
+	if x != nil {
+		return x.RoleTitle
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetEmployer() string {
+	if x != nil {
+		return x.Employer
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetCoverage() *Coverage {
+	if x != nil {
+		return x.Coverage
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetRequirements() []*Requirement {
+	if x != nil {
+		return x.Requirements
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetJudgments() []*Judgment {
+	if x != nil {
+		return x.Judgments
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetOverrideCount() int32 {
+	if x != nil {
+		return x.OverrideCount
+	}
+	return 0
+}
+
+func (x *MatchRecord) GetKeywordRule() string {
+	if x != nil {
+		return x.KeywordRule
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetKeywordSkipped() string {
+	if x != nil {
+		return x.KeywordSkipped
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetVersions() map[string]string {
+	if x != nil {
+		return x.Versions
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetFit() string {
+	if x != nil {
+		return x.Fit
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetMatchScore() float64 {
+	if x != nil && x.MatchScore != nil {
+		return *x.MatchScore
+	}
+	return 0
+}
+
+func (x *MatchRecord) GetFinishedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FinishedAt
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetCorpusDocuments() int32 {
+	if x != nil {
+		return x.CorpusDocuments
+	}
+	return 0
+}
+
+func (x *MatchRecord) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *MatchRecord) GetRequirementsEdited() bool {
+	if x != nil {
+		return x.RequirementsEdited
+	}
+	return false
+}
+
+// The determinations a reviewer may set and, for each, the bases that
+// do not contradict it, so an override form offers only pairs the
+// server will accept.
+type OverrideChoice struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The determination.
+	Determination string `protobuf:"bytes,1,opt,name=determination,proto3" json:"determination,omitempty"`
+	// The bases it may carry.
+	Bases         []string `protobuf:"bytes,2,rep,name=bases,proto3" json:"bases,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideChoice) Reset() {
+	*x = OverrideChoice{}
+	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideChoice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideChoice) ProtoMessage() {}
+
+func (x *OverrideChoice) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideChoice.ProtoReflect.Descriptor instead.
+func (*OverrideChoice) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *OverrideChoice) GetDetermination() string {
+	if x != nil {
+		return x.Determination
+	}
+	return ""
+}
+
+func (x *OverrideChoice) GetBases() []string {
+	if x != nil {
+		return x.Bases
+	}
+	return nil
+}
+
+// Names the record: the submitted posting, and optionally one run of
+// it.
+type GetMatchRecordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The submitted posting's id.
+	SubmissionId string `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	// One run of that posting. Empty reads the newest run that has a
+	// record.
+	RunId         string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMatchRecordRequest) Reset() {
+	*x = GetMatchRecordRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMatchRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMatchRecordRequest) ProtoMessage() {}
+
+func (x *GetMatchRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMatchRecordRequest.ProtoReflect.Descriptor instead.
+func (*GetMatchRecordRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetMatchRecordRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *GetMatchRecordRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+// The record and the vocabularies it is labelled from.
+type GetMatchRecordResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The record. Unset when the posting has no record with judgments,
+	// which is a posting last scored before the hiring tables began.
+	Record *MatchRecord `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	// The `determination` codes.
+	Determinations []*VocabCode `protobuf:"bytes,2,rep,name=determinations,proto3" json:"determinations,omitempty"`
+	// The `basis` codes.
+	Bases []*VocabCode `protobuf:"bytes,3,rep,name=bases,proto3" json:"bases,omitempty"`
+	// The `uncertainty` codes.
+	Uncertainties []*VocabCode `protobuf:"bytes,4,rep,name=uncertainties,proto3" json:"uncertainties,omitempty"`
+	// The `requirement_type` codes.
+	Types []*VocabCode `protobuf:"bytes,5,rep,name=types,proto3" json:"types,omitempty"`
+	// The `requirement_class` codes.
+	Classes []*VocabCode `protobuf:"bytes,6,rep,name=classes,proto3" json:"classes,omitempty"`
+	// The `source_kind` codes.
+	SourceKinds []*VocabCode `protobuf:"bytes,7,rep,name=source_kinds,json=sourceKinds,proto3" json:"source_kinds,omitempty"`
+	// The `override_role` codes a reviewer may act in today. The role
+	// reserved for a candidate's dispute is not offered.
+	OverrideRoles []*VocabCode `protobuf:"bytes,8,rep,name=override_roles,json=overrideRoles,proto3" json:"override_roles,omitempty"`
+	// Whether the caller may override a judgment on this record: an
+	// admin, on a record no later run has superseded.
+	CanOverride bool `protobuf:"varint,9,opt,name=can_override,json=canOverride,proto3" json:"can_override,omitempty"`
+	// The pairs an override may set. Sent when the caller may override.
+	OverrideChoices []*OverrideChoice `protobuf:"bytes,10,rep,name=override_choices,json=overrideChoices,proto3" json:"override_choices,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetMatchRecordResponse) Reset() {
+	*x = GetMatchRecordResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMatchRecordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMatchRecordResponse) ProtoMessage() {}
+
+func (x *GetMatchRecordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMatchRecordResponse.ProtoReflect.Descriptor instead.
+func (*GetMatchRecordResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetMatchRecordResponse) GetRecord() *MatchRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetDeterminations() []*VocabCode {
+	if x != nil {
+		return x.Determinations
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetBases() []*VocabCode {
+	if x != nil {
+		return x.Bases
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetUncertainties() []*VocabCode {
+	if x != nil {
+		return x.Uncertainties
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetTypes() []*VocabCode {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetClasses() []*VocabCode {
+	if x != nil {
+		return x.Classes
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetSourceKinds() []*VocabCode {
+	if x != nil {
+		return x.SourceKinds
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetOverrideRoles() []*VocabCode {
+	if x != nil {
+		return x.OverrideRoles
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetCanOverride() bool {
+	if x != nil {
+		return x.CanOverride
+	}
+	return false
+}
+
+func (x *GetMatchRecordResponse) GetOverrideChoices() []*OverrideChoice {
+	if x != nil {
+		return x.OverrideChoices
+	}
+	return nil
+}
+
+// One override of one judgment.
+type OverrideJudgmentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The judgment.
+	JudgmentId string `protobuf:"bytes,1,opt,name=judgment_id,json=judgmentId,proto3" json:"judgment_id,omitempty"`
+	// The determination to set. Vocabulary `determination`. Left empty
+	// when withdrawing.
+	Determination string `protobuf:"bytes,2,opt,name=determination,proto3" json:"determination,omitempty"`
+	// The basis to set. Vocabulary `basis`; it must not contradict the
+	// determination. Left empty when withdrawing.
+	Basis string `protobuf:"bytes,3,opt,name=basis,proto3" json:"basis,omitempty"`
+	// Why. Required, for an override and for a withdrawal alike.
+	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The role the reviewer acts in. Vocabulary `override_role`:
+	// hiring_manager, recruiter, system_admin. Left empty when
+	// withdrawing.
+	Role string `protobuf:"bytes,5,opt,name=role,proto3" json:"role,omitempty"`
+	// Withdraw the override this judgment carries, so the model's answer
+	// is the effective one again. The withdrawal is logged like an
+	// override.
+	Withdraw      bool `protobuf:"varint,6,opt,name=withdraw,proto3" json:"withdraw,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideJudgmentRequest) Reset() {
+	*x = OverrideJudgmentRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideJudgmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideJudgmentRequest) ProtoMessage() {}
+
+func (x *OverrideJudgmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideJudgmentRequest.ProtoReflect.Descriptor instead.
+func (*OverrideJudgmentRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *OverrideJudgmentRequest) GetJudgmentId() string {
+	if x != nil {
+		return x.JudgmentId
+	}
+	return ""
+}
+
+func (x *OverrideJudgmentRequest) GetDetermination() string {
+	if x != nil {
+		return x.Determination
+	}
+	return ""
+}
+
+func (x *OverrideJudgmentRequest) GetBasis() string {
+	if x != nil {
+		return x.Basis
+	}
+	return ""
+}
+
+func (x *OverrideJudgmentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *OverrideJudgmentRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *OverrideJudgmentRequest) GetWithdraw() bool {
+	if x != nil {
+		return x.Withdraw
+	}
+	return false
+}
+
+// The record after the override.
+type OverrideJudgmentResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The record with its numbers computed again.
+	Record        *MatchRecord `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverrideJudgmentResponse) Reset() {
+	*x = OverrideJudgmentResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverrideJudgmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverrideJudgmentResponse) ProtoMessage() {}
+
+func (x *OverrideJudgmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverrideJudgmentResponse.ProtoReflect.Descriptor instead.
+func (*OverrideJudgmentResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *OverrideJudgmentResponse) GetRecord() *MatchRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
 var File_career_v1_hiring_proto protoreflect.FileDescriptor
 
 const file_career_v1_hiring_proto_rawDesc = "" +
@@ -1583,18 +3037,155 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x18SetHiringSettingsRequest\x12=\n" +
 	"\bsettings\x18\x01 \x01(\v2\x19.career.v1.HiringSettingsB\x06\xbaH\x03\xc8\x01\x01R\bsettings\"R\n" +
 	"\x19SetHiringSettingsResponse\x125\n" +
-	"\bsettings\x18\x01 \x01(\v2\x19.career.v1.HiringSettingsR\bsettings*\x94\x01\n" +
+	"\bsettings\x18\x01 \x01(\v2\x19.career.v1.HiringSettingsR\bsettings\"\x91\x02\n" +
+	"\bCoverage\x12\x1c\n" +
+	"\tevidenced\x18\x01 \x01(\x01R\tevidenced\x12\x1e\n" +
+	"\n" +
+	"unresolved\x18\x02 \x01(\x01R\n" +
+	"unresolved\x12\x14\n" +
+	"\x05unmet\x18\x03 \x01(\x01R\x05unmet\x12)\n" +
+	"\x10equivalent_share\x18\x04 \x01(\x01R\x0fequivalentShare\x12.\n" +
+	"\x13self_attested_share\x18\x05 \x01(\x01R\x11selfAttestedShare\x12'\n" +
+	"\x0fformula_version\x18\x06 \x01(\tR\x0eformulaVersion\x12-\n" +
+	"\x12preferred_fraction\x18\a \x01(\x01R\x11preferredFraction\"\x8d\x01\n" +
+	"\vEvidenceRef\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vsource_kind\x18\x02 \x01(\tR\n" +
+	"sourceKind\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x19\n" +
+	"\bchunk_id\x18\x04 \x01(\x03R\achunkId\x12\x1c\n" +
+	"\twithdrawn\x18\x05 \x01(\bR\twithdrawn\"\xa0\x02\n" +
+	"\x0eRuleAdjustment\x12\x12\n" +
+	"\x04rule\x18\x01 \x01(\tR\x04rule\x12!\n" +
+	"\frule_version\x18\x02 \x01(\tR\vruleVersion\x12-\n" +
+	"\x12from_determination\x18\x03 \x01(\tR\x11fromDetermination\x12)\n" +
+	"\x10to_determination\x18\x04 \x01(\tR\x0ftoDetermination\x12\x1d\n" +
+	"\n" +
+	"from_basis\x18\x05 \x01(\tR\tfromBasis\x12\x19\n" +
+	"\bto_basis\x18\x06 \x01(\tR\atoBasis\x12+\n" +
+	"\x11added_uncertainty\x18\a \x03(\tR\x10addedUncertainty\x12\x16\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\"\xd0\x01\n" +
+	"\rReportedFacts\x12*\n" +
+	"\x11stated_span_years\x18\x01 \x01(\x01R\x0fstatedSpanYears\x12(\n" +
+	"\x10most_recent_year\x18\x02 \x01(\x05R\x0emostRecentYear\x12<\n" +
+	"\fstated_scope\x18\x03 \x01(\v2\x19.career.v1.ScopeThresholdR\vstatedScope\x12+\n" +
+	"\x11parties_evidenced\x18\x04 \x03(\tR\x10partiesEvidenced\"\xc5\x01\n" +
+	"\x10JudgmentOverride\x12$\n" +
+	"\rdetermination\x18\x01 \x01(\tR\rdetermination\x12\x14\n" +
+	"\x05basis\x18\x02 \x01(\tR\x05basis\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12*\n" +
+	"\x02at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x1d\n" +
+	"\n" +
+	"by_display\x18\x05 \x01(\tR\tbyDisplay\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xca\x01\n" +
+	"\x0fEarlierOverride\x12\x18\n" +
+	"\aattempt\x18\x01 \x01(\x05R\aattempt\x12$\n" +
+	"\rdetermination\x18\x02 \x01(\tR\rdetermination\x12\x14\n" +
+	"\x05basis\x18\x03 \x01(\tR\x05basis\x12\x12\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role\x12*\n" +
+	"\x02at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12!\n" +
+	"\fsame_version\x18\x06 \x01(\bR\vsameVersion\"\x9b\a\n" +
+	"\bJudgment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
+	"\x0erequirement_id\x18\x02 \x01(\tR\rrequirementId\x120\n" +
+	"\x14requirement_local_id\x18\x03 \x01(\tR\x12requirementLocalId\x12$\n" +
+	"\rdetermination\x18\x04 \x01(\tR\rdetermination\x12\x14\n" +
+	"\x05basis\x18\x05 \x01(\tR\x05basis\x12 \n" +
+	"\vuncertainty\x18\x06 \x03(\tR\vuncertainty\x127\n" +
+	"\x17effective_determination\x18\a \x01(\tR\x16effectiveDetermination\x12'\n" +
+	"\x0feffective_basis\x18\b \x01(\tR\x0eeffectiveBasis\x127\n" +
+	"\boverride\x18\t \x01(\v2\x1b.career.v1.JudgmentOverrideR\boverride\x12'\n" +
+	"\x0fderived_verdict\x18\n" +
+	" \x01(\tR\x0ederivedVerdict\x12\x1c\n" +
+	"\trationale\x18\v \x01(\tR\trationale\x122\n" +
+	"\bevidence\x18\f \x03(\v2\x16.career.v1.EvidenceRefR\bevidence\x12D\n" +
+	"\x10rule_adjustments\x18\r \x03(\v2\x19.career.v1.RuleAdjustmentR\x0fruleAdjustments\x12?\n" +
+	"\x0ereported_facts\x18\x0e \x01(\v2\x18.career.v1.ReportedFactsR\rreportedFacts\x12\x1b\n" +
+	"\tgap_class\x18\x0f \x01(\tR\bgapClass\x12!\n" +
+	"\fnot_assessed\x18\x10 \x01(\bR\vnotAssessed\x12\x14\n" +
+	"\x05stale\x18\x11 \x01(\bR\x05stale\x12#\n" +
+	"\rkeyword_known\x18\x12 \x01(\bR\fkeywordKnown\x12#\n" +
+	"\rkeyword_found\x18\x13 \x01(\bR\fkeywordFound\x12#\n" +
+	"\rkeyword_terms\x18\x14 \x03(\tR\fkeywordTerms\x12\x1f\n" +
+	"\vdecision_id\x18\x15 \x01(\x03R\n" +
+	"decisionId\x12E\n" +
+	"\x10earlier_override\x18\x16 \x01(\v2\x1a.career.v1.EarlierOverrideR\x0fearlierOverride\"\xad\a\n" +
+	"\vMatchRecord\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
+	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12#\n" +
+	"\rsubmission_id\x18\x03 \x01(\tR\fsubmissionId\x12\x18\n" +
+	"\aattempt\x18\x04 \x01(\x05R\aattempt\x12*\n" +
+	"\x11supersedes_run_id\x18\x05 \x01(\tR\x0fsupersedesRunId\x12\x1e\n" +
+	"\n" +
+	"superseded\x18\x06 \x01(\bR\n" +
+	"superseded\x12\x1f\n" +
+	"\vrun_trigger\x18\a \x01(\tR\n" +
+	"runTrigger\x12\x1d\n" +
+	"\n" +
+	"role_title\x18\b \x01(\tR\troleTitle\x12\x1a\n" +
+	"\bemployer\x18\t \x01(\tR\bemployer\x12/\n" +
+	"\bcoverage\x18\n" +
+	" \x01(\v2\x13.career.v1.CoverageR\bcoverage\x12:\n" +
+	"\frequirements\x18\v \x03(\v2\x16.career.v1.RequirementR\frequirements\x121\n" +
+	"\tjudgments\x18\f \x03(\v2\x13.career.v1.JudgmentR\tjudgments\x12%\n" +
+	"\x0eoverride_count\x18\r \x01(\x05R\roverrideCount\x12!\n" +
+	"\fkeyword_rule\x18\x0e \x01(\tR\vkeywordRule\x12'\n" +
+	"\x0fkeyword_skipped\x18\x0f \x01(\tR\x0ekeywordSkipped\x12@\n" +
+	"\bversions\x18\x10 \x03(\v2$.career.v1.MatchRecord.VersionsEntryR\bversions\x12\x10\n" +
+	"\x03fit\x18\x11 \x01(\tR\x03fit\x12$\n" +
+	"\vmatch_score\x18\x12 \x01(\x01H\x00R\n" +
+	"matchScore\x88\x01\x01\x12;\n" +
+	"\vfinished_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"finishedAt\x12)\n" +
+	"\x10corpus_documents\x18\x14 \x01(\x05R\x0fcorpusDocuments\x12\x14\n" +
+	"\x05model\x18\x15 \x01(\tR\x05model\x12/\n" +
+	"\x13requirements_edited\x18\x16 \x01(\bR\x12requirementsEdited\x1a;\n" +
+	"\rVersionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
+	"\f_match_score\"L\n" +
+	"\x0eOverrideChoice\x12$\n" +
+	"\rdetermination\x18\x01 \x01(\tR\rdetermination\x12\x14\n" +
+	"\x05bases\x18\x02 \x03(\tR\x05bases\"g\n" +
+	"\x15GetMatchRecordRequest\x12.\n" +
+	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12\x1e\n" +
+	"\x06run_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\x05runId\"\xa9\x04\n" +
+	"\x16GetMatchRecordResponse\x12.\n" +
+	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record\x12<\n" +
+	"\x0edeterminations\x18\x02 \x03(\v2\x14.career.v1.VocabCodeR\x0edeterminations\x12*\n" +
+	"\x05bases\x18\x03 \x03(\v2\x14.career.v1.VocabCodeR\x05bases\x12:\n" +
+	"\runcertainties\x18\x04 \x03(\v2\x14.career.v1.VocabCodeR\runcertainties\x12*\n" +
+	"\x05types\x18\x05 \x03(\v2\x14.career.v1.VocabCodeR\x05types\x12.\n" +
+	"\aclasses\x18\x06 \x03(\v2\x14.career.v1.VocabCodeR\aclasses\x127\n" +
+	"\fsource_kinds\x18\a \x03(\v2\x14.career.v1.VocabCodeR\vsourceKinds\x12;\n" +
+	"\x0eoverride_roles\x18\b \x03(\v2\x14.career.v1.VocabCodeR\roverrideRoles\x12!\n" +
+	"\fcan_override\x18\t \x01(\bR\vcanOverride\x12D\n" +
+	"\x10override_choices\x18\n" +
+	" \x03(\v2\x19.career.v1.OverrideChoiceR\x0foverrideChoices\"\xf0\x01\n" +
+	"\x17OverrideJudgmentRequest\x12*\n" +
+	"\vjudgment_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"judgmentId\x12-\n" +
+	"\rdetermination\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18(R\rdetermination\x12\x1d\n" +
+	"\x05basis\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18(R\x05basis\x12\"\n" +
+	"\x06reason\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xe8\aR\x06reason\x12\x1b\n" +
+	"\x04role\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18(R\x04role\x12\x1a\n" +
+	"\bwithdraw\x18\x06 \x01(\bR\bwithdraw\"J\n" +
+	"\x18OverrideJudgmentResponse\x12.\n" +
+	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record*\x94\x01\n" +
 	"\x11RequirementStatus\x12\"\n" +
 	"\x1eREQUIREMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18REQUIREMENT_STATUS_DRAFT\x10\x01\x12\x1d\n" +
 	"\x19REQUIREMENT_STATUS_ACTIVE\x10\x02\x12\x1e\n" +
-	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xa4\x04\n" +
+	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xec\x05\n" +
 	"\rHiringService\x12e\n" +
 	"\x10ListRequirements\x12\".career.v1.ListRequirementsRequest\x1a#.career.v1.ListRequirementsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
 	"\x11UpdateRequirement\x12#.career.v1.UpdateRequirementRequest\x1a$.career.v1.UpdateRequirementResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
 	"\x13ReleaseRequirements\x12%.career.v1.ReleaseRequirementsRequest\x1a&.career.v1.ReleaseRequirementsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
 	"\x11GetHiringSettings\x12#.career.v1.GetHiringSettingsRequest\x1a$.career.v1.GetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
-	"\x11SetHiringSettings\x12#.career.v1.SetHiringSettingsRequest\x1a$.career.v1.SetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
+	"\x11SetHiringSettings\x12#.career.v1.SetHiringSettingsRequest\x1a$.career.v1.SetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12_\n" +
+	"\x0eGetMatchRecord\x12 .career.v1.GetMatchRecordRequest\x1a!.career.v1.GetMatchRecordResponse\"\b\x80\xb5\x18\x02\xa0\xb5\x18\x01\x12e\n" +
+	"\x10OverrideJudgment\x12\".career.v1.OverrideJudgmentRequest\x1a#.career.v1.OverrideJudgmentResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
 	"\rcom.career.v1B\vHiringProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -1611,7 +3202,7 @@ func file_career_v1_hiring_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_hiring_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_career_v1_hiring_proto_goTypes = []any{
 	(RequirementStatus)(0),              // 0: career.v1.RequirementStatus
 	(*ScopeThreshold)(nil),              // 1: career.v1.ScopeThreshold
@@ -1631,15 +3222,29 @@ var file_career_v1_hiring_proto_goTypes = []any{
 	(*GetHiringSettingsResponse)(nil),   // 15: career.v1.GetHiringSettingsResponse
 	(*SetHiringSettingsRequest)(nil),    // 16: career.v1.SetHiringSettingsRequest
 	(*SetHiringSettingsResponse)(nil),   // 17: career.v1.SetHiringSettingsResponse
-	(*timestamppb.Timestamp)(nil),       // 18: google.protobuf.Timestamp
+	(*Coverage)(nil),                    // 18: career.v1.Coverage
+	(*EvidenceRef)(nil),                 // 19: career.v1.EvidenceRef
+	(*RuleAdjustment)(nil),              // 20: career.v1.RuleAdjustment
+	(*ReportedFacts)(nil),               // 21: career.v1.ReportedFacts
+	(*JudgmentOverride)(nil),            // 22: career.v1.JudgmentOverride
+	(*EarlierOverride)(nil),             // 23: career.v1.EarlierOverride
+	(*Judgment)(nil),                    // 24: career.v1.Judgment
+	(*MatchRecord)(nil),                 // 25: career.v1.MatchRecord
+	(*OverrideChoice)(nil),              // 26: career.v1.OverrideChoice
+	(*GetMatchRecordRequest)(nil),       // 27: career.v1.GetMatchRecordRequest
+	(*GetMatchRecordResponse)(nil),      // 28: career.v1.GetMatchRecordResponse
+	(*OverrideJudgmentRequest)(nil),     // 29: career.v1.OverrideJudgmentRequest
+	(*OverrideJudgmentResponse)(nil),    // 30: career.v1.OverrideJudgmentResponse
+	nil,                                 // 31: career.v1.MatchRecord.VersionsEntry
+	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
 }
 var file_career_v1_hiring_proto_depIdxs = []int32{
 	1,  // 0: career.v1.Thresholds.min_scope:type_name -> career.v1.ScopeThreshold
 	2,  // 1: career.v1.Requirement.thresholds:type_name -> career.v1.Thresholds
-	18, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
+	32, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: career.v1.Requirement.status:type_name -> career.v1.RequirementStatus
-	18, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
-	18, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
+	32, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
+	32, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 6: career.v1.RequirementPatch.thresholds:type_name -> career.v1.Thresholds
 	4,  // 7: career.v1.RequirementPatch.alternatives:type_name -> career.v1.StringList
 	4,  // 8: career.v1.RequirementPatch.named_parties:type_name -> career.v1.StringList
@@ -1655,21 +3260,48 @@ var file_career_v1_hiring_proto_depIdxs = []int32{
 	13, // 18: career.v1.GetHiringSettingsResponse.settings:type_name -> career.v1.HiringSettings
 	13, // 19: career.v1.SetHiringSettingsRequest.settings:type_name -> career.v1.HiringSettings
 	13, // 20: career.v1.SetHiringSettingsResponse.settings:type_name -> career.v1.HiringSettings
-	6,  // 21: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
-	9,  // 22: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
-	11, // 23: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
-	14, // 24: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
-	16, // 25: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
-	7,  // 26: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
-	10, // 27: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
-	12, // 28: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
-	15, // 29: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
-	17, // 30: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
-	26, // [26:31] is the sub-list for method output_type
-	21, // [21:26] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	1,  // 21: career.v1.ReportedFacts.stated_scope:type_name -> career.v1.ScopeThreshold
+	32, // 22: career.v1.JudgmentOverride.at:type_name -> google.protobuf.Timestamp
+	32, // 23: career.v1.EarlierOverride.at:type_name -> google.protobuf.Timestamp
+	22, // 24: career.v1.Judgment.override:type_name -> career.v1.JudgmentOverride
+	19, // 25: career.v1.Judgment.evidence:type_name -> career.v1.EvidenceRef
+	20, // 26: career.v1.Judgment.rule_adjustments:type_name -> career.v1.RuleAdjustment
+	21, // 27: career.v1.Judgment.reported_facts:type_name -> career.v1.ReportedFacts
+	23, // 28: career.v1.Judgment.earlier_override:type_name -> career.v1.EarlierOverride
+	18, // 29: career.v1.MatchRecord.coverage:type_name -> career.v1.Coverage
+	3,  // 30: career.v1.MatchRecord.requirements:type_name -> career.v1.Requirement
+	24, // 31: career.v1.MatchRecord.judgments:type_name -> career.v1.Judgment
+	31, // 32: career.v1.MatchRecord.versions:type_name -> career.v1.MatchRecord.VersionsEntry
+	32, // 33: career.v1.MatchRecord.finished_at:type_name -> google.protobuf.Timestamp
+	25, // 34: career.v1.GetMatchRecordResponse.record:type_name -> career.v1.MatchRecord
+	8,  // 35: career.v1.GetMatchRecordResponse.determinations:type_name -> career.v1.VocabCode
+	8,  // 36: career.v1.GetMatchRecordResponse.bases:type_name -> career.v1.VocabCode
+	8,  // 37: career.v1.GetMatchRecordResponse.uncertainties:type_name -> career.v1.VocabCode
+	8,  // 38: career.v1.GetMatchRecordResponse.types:type_name -> career.v1.VocabCode
+	8,  // 39: career.v1.GetMatchRecordResponse.classes:type_name -> career.v1.VocabCode
+	8,  // 40: career.v1.GetMatchRecordResponse.source_kinds:type_name -> career.v1.VocabCode
+	8,  // 41: career.v1.GetMatchRecordResponse.override_roles:type_name -> career.v1.VocabCode
+	26, // 42: career.v1.GetMatchRecordResponse.override_choices:type_name -> career.v1.OverrideChoice
+	25, // 43: career.v1.OverrideJudgmentResponse.record:type_name -> career.v1.MatchRecord
+	6,  // 44: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
+	9,  // 45: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
+	11, // 46: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
+	14, // 47: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
+	16, // 48: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
+	27, // 49: career.v1.HiringService.GetMatchRecord:input_type -> career.v1.GetMatchRecordRequest
+	29, // 50: career.v1.HiringService.OverrideJudgment:input_type -> career.v1.OverrideJudgmentRequest
+	7,  // 51: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
+	10, // 52: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
+	12, // 53: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
+	15, // 54: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
+	17, // 55: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
+	28, // 56: career.v1.HiringService.GetMatchRecord:output_type -> career.v1.GetMatchRecordResponse
+	30, // 57: career.v1.HiringService.OverrideJudgment:output_type -> career.v1.OverrideJudgmentResponse
+	51, // [51:58] is the sub-list for method output_type
+	44, // [44:51] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_hiring_proto_init() }
@@ -1680,13 +3312,14 @@ func file_career_v1_hiring_proto_init() {
 	file_career_v1_options_proto_init()
 	file_career_v1_hiring_proto_msgTypes[1].OneofWrappers = []any{}
 	file_career_v1_hiring_proto_msgTypes[4].OneofWrappers = []any{}
+	file_career_v1_hiring_proto_msgTypes[24].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_hiring_proto_rawDesc), len(file_career_v1_hiring_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   17,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

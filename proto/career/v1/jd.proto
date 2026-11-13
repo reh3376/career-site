@@ -217,6 +217,12 @@ message GetJdResultResponse {
   // Fit category derived from the score once known: very_strong,
   // strong, possible, weak, very_weak; empty before scoring.
   string fit_category = 15;
+  // The run whose match record HiringService.GetMatchRecord returns for
+  // this submission: set when the newest run has a record with
+  // judgments and the caller is the submitting member or an admin, so a
+  // client knows to show the record in place of the verdict list.
+  // Empty for a posting last scored before the hiring tables began.
+  string match_record_run_id = 16;
 }
 
 // Lower edges of the fit categories; scores below weak are very weak.

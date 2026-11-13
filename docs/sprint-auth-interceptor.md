@@ -16,12 +16,12 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 167 of them, and none missing:
+**Every method declares a level.** 169 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 98 |
-| `AUTH_LEVEL_MEMBER` | 52 |
+| `AUTH_LEVEL_ADMIN` | 99 |
+| `AUTH_LEVEL_MEMBER` | 53 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
 (44 and 16 until 2026-10-09, when `Logout` was moved to PUBLIC. See S1.)
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 167 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 169 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1180,6 +1180,11 @@ command.
    settings; `UpdateRequirement`, `ReleaseRequirements` and
    `SetHiringSettings` audited, the two reads not. Thirteen services
    mounted, 159 procedures served.
+8. 2026-11-12: 99/53/17 (169). `HiringService.GetMatchRecord`, MEMBER
+   (the handler narrows it to the member who submitted the posting, or
+   an admin; anyone else gets not-found), and `OverrideJudgment`, ADMIN
+   and audited with `judgment_id` as its target (FSD FR-HF-08, 17,
+   Phase 0 step 6). 161 procedures served.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

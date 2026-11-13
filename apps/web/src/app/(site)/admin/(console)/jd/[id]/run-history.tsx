@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Run history for one submission (data layer D2).
 //
 // The rest of this page shows the latest run, because that is what the
@@ -78,11 +80,51 @@ function ms(v: number | undefined): string {
   return `${m}m ${s}s`;
 }
 
+// A finished run's match record, on this page. A run scored before
+// judgments were kept as rows has none, and the page says so when the
+// link is followed.
+function recordLink(run: Run, submissionId: string, shownRunId: string) {
+  const id = pick(run.run_id, run.runId) ?? "";
+  const status = run.status ?? "";
+  if (!submissionId || !id || (status !== "ready" && status !== "below_threshold")) return null;
+  if (id === shownRunId) {
+    return (
+      <>
+        <a href="#record" className="uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-hover">
+          record shown above
+        </a>
+        <span className="text-ink-4"> · </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <Link
+        href={`/admin/jd/${submissionId}?run=${id}#record`}
+        className="uppercase tracking-[0.14em] text-accent no-underline hover:text-accent-hover"
+      >
+        match record
+      </Link>
+      <span className="text-ink-4"> · </span>
+    </>
+  );
+}
+
 function score(v: number | undefined): string {
   return v === undefined || v === null ? "-" : Number(v).toFixed(3);
 }
 
-export function RunHistory({ runs }: { runs: Run[] }) {
+export function RunHistory({
+  runs,
+  submissionId = "",
+  shownRunId = "",
+}: {
+  runs: Run[];
+  // With these, each finished run links to its match record on this
+  // page, and the run whose record is showing says so.
+  submissionId?: string;
+  shownRunId?: string;
+}) {
   if (runs.length === 0) {
     return (
       <section className="mt-10">
@@ -138,6 +180,7 @@ export function RunHistory({ runs }: { runs: Run[] }) {
                   </span>
                 </p>
                 <p className="font-mono text-[11px] text-ink-3">
+                  {recordLink(run, submissionId, shownRunId)}
                   {started ? new Date(started).toLocaleString() : ""}
                 </p>
               </div>

@@ -13,11 +13,13 @@
 // It is a service of its own rather than more methods on JdService
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
-// Phase 0 step 5 lands the requirement methods and the settings; the
-// match record, overrides, the clarification loop and the catalog
-// follow in steps 6 to 8.
+// Phase 0 step 5 landed the requirement methods and the settings; step
+// 6 lands the match record as a person reads it and the override of a
+// judgment; the clarification loop and the catalog follow in steps 7
+// and 8.
 //
-// Vocabulary codes (type, class, threshold units) travel as strings,
+// Vocabulary codes (type, class, threshold units, determination, basis,
+// uncertainty, source kind, override role) travel as strings,
 // not enums: the vocabulary is data in `vocab_codes`, a new code must
 // not be a proto change, and a reader keeps a code it does not know
 // (14 §3.1). The codes of vocabulary 1.1 are listed in the field
@@ -73,6 +75,12 @@ const (
 	// HiringServiceSetHiringSettingsProcedure is the fully-qualified name of the HiringService's
 	// SetHiringSettings RPC.
 	HiringServiceSetHiringSettingsProcedure = "/career.v1.HiringService/SetHiringSettings"
+	// HiringServiceGetMatchRecordProcedure is the fully-qualified name of the HiringService's
+	// GetMatchRecord RPC.
+	HiringServiceGetMatchRecordProcedure = "/career.v1.HiringService/GetMatchRecord"
+	// HiringServiceOverrideJudgmentProcedure is the fully-qualified name of the HiringService's
+	// OverrideJudgment RPC.
+	HiringServiceOverrideJudgmentProcedure = "/career.v1.HiringService/OverrideJudgment"
 )
 
 // HiringServiceClient is a client for the career.v1.HiringService service.
@@ -104,6 +112,27 @@ type HiringServiceClient interface {
 	// caches them for 15 s). Takes effect for the next run; a record
 	// already written keeps the fraction it was computed with.
 	SetHiringSettings(context.Context, *connect.Request[v1.SetHiringSettingsRequest]) (*connect.Response[v1.SetHiringSettingsResponse], error)
+	// Reads the match record of one run of a submitted posting: the three
+	// numbers and two shares, each requirement version judged, and each
+	// judgment with its basis, what is missing, the evidence cited, what
+	// the code rules changed, whether a keyword screen would have found
+	// it, and any override. Open to the member who submitted the posting
+	// and to an admin; anyone else gets not-found. With no run named it
+	// is the newest run that has a record. A member is never sent the
+	// private text of the candidate's documents, the title of a document
+	// that is not public, or the reason and name behind an override. The
+	// vocabularies come with the record so a viewer labels codes from the
+	// registry.
+	GetMatchRecord(context.Context, *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error)
+	// Sets, replaces or withdraws a person's override of one judgment
+	// (FSD FR-HF-08). The record's numbers are computed again from the
+	// effective values; the model's determination and basis stay on the
+	// judgment for the agreement measures, and every call is written to
+	// the decision log with the person, the role they acted in and the
+	// reason. Refused for a requirement that is not judged from documents
+	// (a working-style one), for a run that a later run has superseded,
+	// and for a determination and basis that contradict each other.
+	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
 }
 
 // NewHiringServiceClient constructs a client for the career.v1.HiringService service. By default,
@@ -147,6 +176,18 @@ func NewHiringServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(hiringServiceMethods.ByName("SetHiringSettings")),
 			connect.WithClientOptions(opts...),
 		),
+		getMatchRecord: connect.NewClient[v1.GetMatchRecordRequest, v1.GetMatchRecordResponse](
+			httpClient,
+			baseURL+HiringServiceGetMatchRecordProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("GetMatchRecord")),
+			connect.WithClientOptions(opts...),
+		),
+		overrideJudgment: connect.NewClient[v1.OverrideJudgmentRequest, v1.OverrideJudgmentResponse](
+			httpClient,
+			baseURL+HiringServiceOverrideJudgmentProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("OverrideJudgment")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -157,6 +198,8 @@ type hiringServiceClient struct {
 	releaseRequirements *connect.Client[v1.ReleaseRequirementsRequest, v1.ReleaseRequirementsResponse]
 	getHiringSettings   *connect.Client[v1.GetHiringSettingsRequest, v1.GetHiringSettingsResponse]
 	setHiringSettings   *connect.Client[v1.SetHiringSettingsRequest, v1.SetHiringSettingsResponse]
+	getMatchRecord      *connect.Client[v1.GetMatchRecordRequest, v1.GetMatchRecordResponse]
+	overrideJudgment    *connect.Client[v1.OverrideJudgmentRequest, v1.OverrideJudgmentResponse]
 }
 
 // ListRequirements calls career.v1.HiringService.ListRequirements.
@@ -182,6 +225,16 @@ func (c *hiringServiceClient) GetHiringSettings(ctx context.Context, req *connec
 // SetHiringSettings calls career.v1.HiringService.SetHiringSettings.
 func (c *hiringServiceClient) SetHiringSettings(ctx context.Context, req *connect.Request[v1.SetHiringSettingsRequest]) (*connect.Response[v1.SetHiringSettingsResponse], error) {
 	return c.setHiringSettings.CallUnary(ctx, req)
+}
+
+// GetMatchRecord calls career.v1.HiringService.GetMatchRecord.
+func (c *hiringServiceClient) GetMatchRecord(ctx context.Context, req *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error) {
+	return c.getMatchRecord.CallUnary(ctx, req)
+}
+
+// OverrideJudgment calls career.v1.HiringService.OverrideJudgment.
+func (c *hiringServiceClient) OverrideJudgment(ctx context.Context, req *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error) {
+	return c.overrideJudgment.CallUnary(ctx, req)
 }
 
 // HiringServiceHandler is an implementation of the career.v1.HiringService service.
@@ -213,6 +266,27 @@ type HiringServiceHandler interface {
 	// caches them for 15 s). Takes effect for the next run; a record
 	// already written keeps the fraction it was computed with.
 	SetHiringSettings(context.Context, *connect.Request[v1.SetHiringSettingsRequest]) (*connect.Response[v1.SetHiringSettingsResponse], error)
+	// Reads the match record of one run of a submitted posting: the three
+	// numbers and two shares, each requirement version judged, and each
+	// judgment with its basis, what is missing, the evidence cited, what
+	// the code rules changed, whether a keyword screen would have found
+	// it, and any override. Open to the member who submitted the posting
+	// and to an admin; anyone else gets not-found. With no run named it
+	// is the newest run that has a record. A member is never sent the
+	// private text of the candidate's documents, the title of a document
+	// that is not public, or the reason and name behind an override. The
+	// vocabularies come with the record so a viewer labels codes from the
+	// registry.
+	GetMatchRecord(context.Context, *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error)
+	// Sets, replaces or withdraws a person's override of one judgment
+	// (FSD FR-HF-08). The record's numbers are computed again from the
+	// effective values; the model's determination and basis stay on the
+	// judgment for the agreement measures, and every call is written to
+	// the decision log with the person, the role they acted in and the
+	// reason. Refused for a requirement that is not judged from documents
+	// (a working-style one), for a run that a later run has superseded,
+	// and for a determination and basis that contradict each other.
+	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
 }
 
 // NewHiringServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -252,6 +326,18 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(hiringServiceMethods.ByName("SetHiringSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
+	hiringServiceGetMatchRecordHandler := connect.NewUnaryHandler(
+		HiringServiceGetMatchRecordProcedure,
+		svc.GetMatchRecord,
+		connect.WithSchema(hiringServiceMethods.ByName("GetMatchRecord")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceOverrideJudgmentHandler := connect.NewUnaryHandler(
+		HiringServiceOverrideJudgmentProcedure,
+		svc.OverrideJudgment,
+		connect.WithSchema(hiringServiceMethods.ByName("OverrideJudgment")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.HiringService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case HiringServiceListRequirementsProcedure:
@@ -264,6 +350,10 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 			hiringServiceGetHiringSettingsHandler.ServeHTTP(w, r)
 		case HiringServiceSetHiringSettingsProcedure:
 			hiringServiceSetHiringSettingsHandler.ServeHTTP(w, r)
+		case HiringServiceGetMatchRecordProcedure:
+			hiringServiceGetMatchRecordHandler.ServeHTTP(w, r)
+		case HiringServiceOverrideJudgmentProcedure:
+			hiringServiceOverrideJudgmentHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -291,4 +381,12 @@ func (UnimplementedHiringServiceHandler) GetHiringSettings(context.Context, *con
 
 func (UnimplementedHiringServiceHandler) SetHiringSettings(context.Context, *connect.Request[v1.SetHiringSettingsRequest]) (*connect.Response[v1.SetHiringSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.SetHiringSettings is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) GetMatchRecord(context.Context, *connect.Request[v1.GetMatchRecordRequest]) (*connect.Response[v1.GetMatchRecordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.GetMatchRecord is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.OverrideJudgment is not implemented"))
 }

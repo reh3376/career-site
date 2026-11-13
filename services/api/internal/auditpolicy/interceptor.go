@@ -188,6 +188,7 @@ var targetFields = []struct {
 	{"session_id", "pilot_session"},
 	{"requirement_id", "requirement"},
 	{"role_id", "role"},
+	{"judgment_id", "judgment"},
 	{"id", "id"},
 }
 

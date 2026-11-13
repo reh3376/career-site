@@ -13,11 +13,13 @@
 // It is a service of its own rather than more methods on JdService
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
-// Phase 0 step 5 lands the requirement methods and the settings; the
-// match record, overrides, the clarification loop and the catalog
-// follow in steps 6 to 8.
+// Phase 0 step 5 landed the requirement methods and the settings; step
+// 6 lands the match record as a person reads it and the override of a
+// judgment; the clarification loop and the catalog follow in steps 7
+// and 8.
 //
-// Vocabulary codes (type, class, threshold units) travel as strings,
+// Vocabulary codes (type, class, threshold units, determination, basis,
+// uncertainty, source kind, override role) travel as strings,
 // not enums: the vocabulary is data in `vocab_codes`, a new code must
 // not be a proto change, and a reader keeps a code it does not know
 // (14 §3.1). The codes of vocabulary 1.1 are listed in the field
@@ -39,7 +41,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/hiring.proto.
  */
 export const file_career_v1_hiring: GenFile = /*@__PURE__*/
-  fileDesc("ChZjYXJlZXIvdjEvaGlyaW5nLnByb3RvEgljYXJlZXIudjEiRgoOU2NvcGVUaHJlc2hvbGQSFQoEdW5pdBgBIAEoCUIHukgEcgIYIBIdCgV2YWx1ZRgCIAEoAUIOukgLEgkhAAAAAAAAAAAiqgIKClRocmVzaG9sZHMSLwoJbWluX3llYXJzGAEgASgBQhe6SBQSEhkAAAAAAABOQCkAAAAAAAAAAEgAiAEBEjMKDXJlY2VuY3lfeWVhcnMYAiABKAFCF7pIFBISGQAAAAAAAE5AKQAAAAAAAAAASAGIAQESLAoJbWluX3Njb3BlGAMgASgLMhkuY2FyZWVyLnYxLlNjb3BlVGhyZXNob2xkEiEKEGNyZWRlbnRpYWxfbGV2ZWwYBCABKAlCB7pIBHICGCASIQoQY3JlZGVudGlhbF9maWVsZBgFIAEoCUIHukgEcgIYeBIiChFyZWxhdGlvbnNoaXBfa2luZBgGIAEoCUIHukgEcgIYIEIMCgpfbWluX3llYXJzQhAKDl9yZWNlbmN5X3llYXJzIpEGCgtSZXF1aXJlbWVudBIKCgJpZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhAKCGxvY2FsX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSEgoKc3VwZXJzZWRlcxgFIAEoCRIWCg5zY2hlbWFfdmVyc2lvbhgGIAEoCRIVCg12b2NhYl92ZXJzaW9uGAcgASgJEgwKBHRleHQYCCABKAkSFAoMc291cmNlX3F1b3RlGAkgASgJEgwKBHR5cGUYCiABKAkSEAoIY2F0ZWdvcnkYCyABKAkSGQoRcmVxdWlyZW1lbnRfY2xhc3MYDCABKAkSDgoGd2VpZ2h0GA0gASgFEhkKEWV2aWRlbmNlX3N0YW5kYXJkGA4gASgJEiIKGmV2aWRlbmNlX3N0YW5kYXJkX3RlbXBsYXRlGA8gASgJEhQKDGFsdGVybmF0aXZlcxgQIAMoCRIZChFlcXVpdmFsZW5jZV9ub3RlcxgRIAEoCRITCgtlcXVpdmFsZW5jeRgSIAEoCRIpCgp0aHJlc2hvbGRzGBMgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSFQoNbmFtZWRfcGFydGllcxgUIAMoCRIQCghpbmNsdWRlZBgVIAEoCBIYChBpbmNsdXNpb25fcmVhc29uGBYgASgJEhkKEWVkaXRlZF9ieV9kaXNwbGF5GBcgASgJEi0KCWVkaXRlZF9hdBgYIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZWRpdF9yZWFzb24YGSABKAkSLAoGc3RhdHVzGBogASgOMhwuY2FyZWVyLnYxLlJlcXVpcmVtZW50U3RhdHVzEi8KC3JlbGVhc2VkX2F0GBsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaChJyZWxlYXNlZF9ieV9wZXJzb24YHCABKAgSLgoKY3JlYXRlZF9hdBgdIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLdHlwZV9zb3VyY2UYHiABKAkiLQoKU3RyaW5nTGlzdBIfCgZ2YWx1ZXMYASADKAlCD7pIDJIBCRAIIgVyAxisAiKDBAoQUmVxdWlyZW1lbnRQYXRjaBIdCgR0ZXh0GAEgASgJQgq6SAdyBRABGPQDSACIAQESGgoEdHlwZRgCIAEoCUIHukgEcgIYIEgBiAEBEicKEXJlcXVpcmVtZW50X2NsYXNzGAMgASgJQge6SARyAhggSAKIAQESHgoGd2VpZ2h0GAQgASgFQgm6SAYaBBgDKAFIA4gBARIpCgp0aHJlc2hvbGRzGAUgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSKAoRZXZpZGVuY2Vfc3RhbmRhcmQYBiABKAlCCLpIBXIDGPQDSASIAQESKAoRZXF1aXZhbGVuY2Vfbm90ZXMYByABKAlCCLpIBXIDGOgHSAWIAQESIgoLZXF1aXZhbGVuY3kYCCABKAlCCLpIBXIDGPQDSAaIAQESKwoMYWx0ZXJuYXRpdmVzGAkgASgLMhUuY2FyZWVyLnYxLlN0cmluZ0xpc3QSLAoNbmFtZWRfcGFydGllcxgKIAEoCzIVLmNhcmVlci52MS5TdHJpbmdMaXN0QgcKBV90ZXh0QgcKBV90eXBlQhQKEl9yZXF1aXJlbWVudF9jbGFzc0IJCgdfd2VpZ2h0QhQKEl9ldmlkZW5jZV9zdGFuZGFyZEIUChJfZXF1aXZhbGVuY2Vfbm90ZXNCDgoMX2VxdWl2YWxlbmN5ImwKF0xpc3RSZXF1aXJlbWVudHNSZXF1ZXN0EhgKB3JvbGVfaWQYASABKAlCB7pIBHICGEASHgoNc3VibWlzc2lvbl9pZBgCIAEoCUIHukgEcgIYIBIXCg9pbmNsdWRlX3JldGlyZWQYAyABKAgi4QIKGExpc3RSZXF1aXJlbWVudHNSZXNwb25zZRIPCgdyb2xlX2lkGAEgASgJEiwKDHJlcXVpcmVtZW50cxgCIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBIWCg5wZW5kaW5nX2RyYWZ0cxgDIAEoBRIUCgxodW1hbl9lZGl0ZWQYBCABKAgSIwoFdHlwZXMYBSADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiUKB2NsYXNzZXMYBiADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEikKC3Njb3BlX3VuaXRzGAcgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIvChFjcmVkZW50aWFsX2xldmVscxgIIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSMAoScmVsYXRpb25zaGlwX2tpbmRzGAkgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZSI9CglWb2NhYkNvZGUSDAoEY29kZRgBIAEoCRINCgVsYWJlbBgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCSKSAQoYVXBkYXRlUmVxdWlyZW1lbnRSZXF1ZXN0EiEKDnJlcXVpcmVtZW50X2lkGAEgASgJQgm6SAZyBBABGEASMgoFcGF0Y2gYAiABKAsyGy5jYXJlZXIudjEuUmVxdWlyZW1lbnRQYXRjaEIGukgDyAEBEh8KC2VkaXRfcmVhc29uGAMgASgJQgq6SAdyBRABGPQDIkgKGVVwZGF0ZVJlcXVpcmVtZW50UmVzcG9uc2USKwoLcmVxdWlyZW1lbnQYASABKAsyFi5jYXJlZXIudjEuUmVxdWlyZW1lbnQiOAoaUmVsZWFzZVJlcXVpcmVtZW50c1JlcXVlc3QSGgoHcm9sZV9pZBgBIAEoCUIJukgGcgQQARhAInMKG1JlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZRIoCghyZWxlYXNlZBgBIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBITCgtydW5fc3RhcnRlZBgCIAEoCBIVCg1zdWJtaXNzaW9uX2lkGAMgASgJIkUKDkhpcmluZ1NldHRpbmdzEjMKEnByZWZlcnJlZF9mcmFjdGlvbhgBIAEoAUIXukgUEhIZAAAAAAAA8D8hAAAAAAAAAAAiGgoYR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0IkgKGUdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2USKwoIc2V0dGluZ3MYASABKAsyGS5jYXJlZXIudjEuSGlyaW5nU2V0dGluZ3MiTwoYU2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0EjMKCHNldHRpbmdzGAEgASgLMhkuY2FyZWVyLnYxLkhpcmluZ1NldHRpbmdzQga6SAPIAQEiSAoZU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZRIrCghzZXR0aW5ncxgBIAEoCzIZLmNhcmVlci52MS5IaXJpbmdTZXR0aW5ncyqUAQoRUmVxdWlyZW1lbnRTdGF0dXMSIgoeUkVRVUlSRU1FTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYUkVRVUlSRU1FTlRfU1RBVFVTX0RSQUZUEAESHQoZUkVRVUlSRU1FTlRfU1RBVFVTX0FDVElWRRACEh4KGlJFUVVJUkVNRU5UX1NUQVRVU19SRVRJUkVEEAMypAQKDUhpcmluZ1NlcnZpY2USZQoQTGlzdFJlcXVpcmVtZW50cxIiLmNhcmVlci52MS5MaXN0UmVxdWlyZW1lbnRzUmVxdWVzdBojLmNhcmVlci52MS5MaXN0UmVxdWlyZW1lbnRzUmVzcG9uc2UiCIC1GAOgtRgBEmgKEVVwZGF0ZVJlcXVpcmVtZW50EiMuY2FyZWVyLnYxLlVwZGF0ZVJlcXVpcmVtZW50UmVxdWVzdBokLmNhcmVlci52MS5VcGRhdGVSZXF1aXJlbWVudFJlc3BvbnNlIgiAtRgDoLUYAhJuChNSZWxlYXNlUmVxdWlyZW1lbnRzEiUuY2FyZWVyLnYxLlJlbGVhc2VSZXF1aXJlbWVudHNSZXF1ZXN0GiYuY2FyZWVyLnYxLlJlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZSIIgLUYA6C1GAISaAoRR2V0SGlyaW5nU2V0dGluZ3MSIy5jYXJlZXIudjEuR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2UiCIC1GAOgtRgBEmgKEVNldEhpcmluZ1NldHRpbmdzEiMuY2FyZWVyLnYxLlNldEhpcmluZ1NldHRpbmdzUmVxdWVzdBokLmNhcmVlci52MS5TZXRIaXJpbmdTZXR0aW5nc1Jlc3BvbnNlIgiAtRgDoLUYAkKlAQoNY29tLmNhcmVlci52MUILSGlyaW5nUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChZjYXJlZXIvdjEvaGlyaW5nLnByb3RvEgljYXJlZXIudjEiRgoOU2NvcGVUaHJlc2hvbGQSFQoEdW5pdBgBIAEoCUIHukgEcgIYIBIdCgV2YWx1ZRgCIAEoAUIOukgLEgkhAAAAAAAAAAAiqgIKClRocmVzaG9sZHMSLwoJbWluX3llYXJzGAEgASgBQhe6SBQSEhkAAAAAAABOQCkAAAAAAAAAAEgAiAEBEjMKDXJlY2VuY3lfeWVhcnMYAiABKAFCF7pIFBISGQAAAAAAAE5AKQAAAAAAAAAASAGIAQESLAoJbWluX3Njb3BlGAMgASgLMhkuY2FyZWVyLnYxLlNjb3BlVGhyZXNob2xkEiEKEGNyZWRlbnRpYWxfbGV2ZWwYBCABKAlCB7pIBHICGCASIQoQY3JlZGVudGlhbF9maWVsZBgFIAEoCUIHukgEcgIYeBIiChFyZWxhdGlvbnNoaXBfa2luZBgGIAEoCUIHukgEcgIYIEIMCgpfbWluX3llYXJzQhAKDl9yZWNlbmN5X3llYXJzIpEGCgtSZXF1aXJlbWVudBIKCgJpZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhAKCGxvY2FsX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSEgoKc3VwZXJzZWRlcxgFIAEoCRIWCg5zY2hlbWFfdmVyc2lvbhgGIAEoCRIVCg12b2NhYl92ZXJzaW9uGAcgASgJEgwKBHRleHQYCCABKAkSFAoMc291cmNlX3F1b3RlGAkgASgJEgwKBHR5cGUYCiABKAkSEAoIY2F0ZWdvcnkYCyABKAkSGQoRcmVxdWlyZW1lbnRfY2xhc3MYDCABKAkSDgoGd2VpZ2h0GA0gASgFEhkKEWV2aWRlbmNlX3N0YW5kYXJkGA4gASgJEiIKGmV2aWRlbmNlX3N0YW5kYXJkX3RlbXBsYXRlGA8gASgJEhQKDGFsdGVybmF0aXZlcxgQIAMoCRIZChFlcXVpdmFsZW5jZV9ub3RlcxgRIAEoCRITCgtlcXVpdmFsZW5jeRgSIAEoCRIpCgp0aHJlc2hvbGRzGBMgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSFQoNbmFtZWRfcGFydGllcxgUIAMoCRIQCghpbmNsdWRlZBgVIAEoCBIYChBpbmNsdXNpb25fcmVhc29uGBYgASgJEhkKEWVkaXRlZF9ieV9kaXNwbGF5GBcgASgJEi0KCWVkaXRlZF9hdBgYIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZWRpdF9yZWFzb24YGSABKAkSLAoGc3RhdHVzGBogASgOMhwuY2FyZWVyLnYxLlJlcXVpcmVtZW50U3RhdHVzEi8KC3JlbGVhc2VkX2F0GBsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaChJyZWxlYXNlZF9ieV9wZXJzb24YHCABKAgSLgoKY3JlYXRlZF9hdBgdIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLdHlwZV9zb3VyY2UYHiABKAkiLQoKU3RyaW5nTGlzdBIfCgZ2YWx1ZXMYASADKAlCD7pIDJIBCRAIIgVyAxisAiKDBAoQUmVxdWlyZW1lbnRQYXRjaBIdCgR0ZXh0GAEgASgJQgq6SAdyBRABGPQDSACIAQESGgoEdHlwZRgCIAEoCUIHukgEcgIYIEgBiAEBEicKEXJlcXVpcmVtZW50X2NsYXNzGAMgASgJQge6SARyAhggSAKIAQESHgoGd2VpZ2h0GAQgASgFQgm6SAYaBBgDKAFIA4gBARIpCgp0aHJlc2hvbGRzGAUgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSKAoRZXZpZGVuY2Vfc3RhbmRhcmQYBiABKAlCCLpIBXIDGPQDSASIAQESKAoRZXF1aXZhbGVuY2Vfbm90ZXMYByABKAlCCLpIBXIDGOgHSAWIAQESIgoLZXF1aXZhbGVuY3kYCCABKAlCCLpIBXIDGPQDSAaIAQESKwoMYWx0ZXJuYXRpdmVzGAkgASgLMhUuY2FyZWVyLnYxLlN0cmluZ0xpc3QSLAoNbmFtZWRfcGFydGllcxgKIAEoCzIVLmNhcmVlci52MS5TdHJpbmdMaXN0QgcKBV90ZXh0QgcKBV90eXBlQhQKEl9yZXF1aXJlbWVudF9jbGFzc0IJCgdfd2VpZ2h0QhQKEl9ldmlkZW5jZV9zdGFuZGFyZEIUChJfZXF1aXZhbGVuY2Vfbm90ZXNCDgoMX2VxdWl2YWxlbmN5ImwKF0xpc3RSZXF1aXJlbWVudHNSZXF1ZXN0EhgKB3JvbGVfaWQYASABKAlCB7pIBHICGEASHgoNc3VibWlzc2lvbl9pZBgCIAEoCUIHukgEcgIYIBIXCg9pbmNsdWRlX3JldGlyZWQYAyABKAgi4QIKGExpc3RSZXF1aXJlbWVudHNSZXNwb25zZRIPCgdyb2xlX2lkGAEgASgJEiwKDHJlcXVpcmVtZW50cxgCIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBIWCg5wZW5kaW5nX2RyYWZ0cxgDIAEoBRIUCgxodW1hbl9lZGl0ZWQYBCABKAgSIwoFdHlwZXMYBSADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiUKB2NsYXNzZXMYBiADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEikKC3Njb3BlX3VuaXRzGAcgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIvChFjcmVkZW50aWFsX2xldmVscxgIIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSMAoScmVsYXRpb25zaGlwX2tpbmRzGAkgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZSI9CglWb2NhYkNvZGUSDAoEY29kZRgBIAEoCRINCgVsYWJlbBgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCSKSAQoYVXBkYXRlUmVxdWlyZW1lbnRSZXF1ZXN0EiEKDnJlcXVpcmVtZW50X2lkGAEgASgJQgm6SAZyBBABGEASMgoFcGF0Y2gYAiABKAsyGy5jYXJlZXIudjEuUmVxdWlyZW1lbnRQYXRjaEIGukgDyAEBEh8KC2VkaXRfcmVhc29uGAMgASgJQgq6SAdyBRABGPQDIkgKGVVwZGF0ZVJlcXVpcmVtZW50UmVzcG9uc2USKwoLcmVxdWlyZW1lbnQYASABKAsyFi5jYXJlZXIudjEuUmVxdWlyZW1lbnQiOAoaUmVsZWFzZVJlcXVpcmVtZW50c1JlcXVlc3QSGgoHcm9sZV9pZBgBIAEoCUIJukgGcgQQARhAInMKG1JlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZRIoCghyZWxlYXNlZBgBIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBITCgtydW5fc3RhcnRlZBgCIAEoCBIVCg1zdWJtaXNzaW9uX2lkGAMgASgJIkUKDkhpcmluZ1NldHRpbmdzEjMKEnByZWZlcnJlZF9mcmFjdGlvbhgBIAEoAUIXukgUEhIZAAAAAAAA8D8hAAAAAAAAAAAiGgoYR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0IkgKGUdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2USKwoIc2V0dGluZ3MYASABKAsyGS5jYXJlZXIudjEuSGlyaW5nU2V0dGluZ3MiTwoYU2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0EjMKCHNldHRpbmdzGAEgASgLMhkuY2FyZWVyLnYxLkhpcmluZ1NldHRpbmdzQga6SAPIAQEiSAoZU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZRIrCghzZXR0aW5ncxgBIAEoCzIZLmNhcmVlci52MS5IaXJpbmdTZXR0aW5ncyKsAQoIQ292ZXJhZ2USEQoJZXZpZGVuY2VkGAEgASgBEhIKCnVucmVzb2x2ZWQYAiABKAESDQoFdW5tZXQYAyABKAESGAoQZXF1aXZhbGVudF9zaGFyZRgEIAEoARIbChNzZWxmX2F0dGVzdGVkX3NoYXJlGAUgASgBEhcKD2Zvcm11bGFfdmVyc2lvbhgGIAEoCRIaChJwcmVmZXJyZWRfZnJhY3Rpb24YByABKAEiYgoLRXZpZGVuY2VSZWYSCgoCaWQYASABKAkSEwoLc291cmNlX2tpbmQYAiABKAkSDQoFdGl0bGUYAyABKAkSEAoIY2h1bmtfaWQYBCABKAMSEQoJd2l0aGRyYXduGAUgASgIIrsBCg5SdWxlQWRqdXN0bWVudBIMCgRydWxlGAEgASgJEhQKDHJ1bGVfdmVyc2lvbhgCIAEoCRIaChJmcm9tX2RldGVybWluYXRpb24YAyABKAkSGAoQdG9fZGV0ZXJtaW5hdGlvbhgEIAEoCRISCgpmcm9tX2Jhc2lzGAUgASgJEhAKCHRvX2Jhc2lzGAYgASgJEhkKEWFkZGVkX3VuY2VydGFpbnR5GAcgAygJEg4KBnJlYXNvbhgIIAEoCSKQAQoNUmVwb3J0ZWRGYWN0cxIZChFzdGF0ZWRfc3Bhbl95ZWFycxgBIAEoARIYChBtb3N0X3JlY2VudF95ZWFyGAIgASgFEi8KDHN0YXRlZF9zY29wZRgDIAEoCzIZLmNhcmVlci52MS5TY29wZVRocmVzaG9sZBIZChFwYXJ0aWVzX2V2aWRlbmNlZBgEIAMoCSKSAQoQSnVkZ21lbnRPdmVycmlkZRIVCg1kZXRlcm1pbmF0aW9uGAEgASgJEg0KBWJhc2lzGAIgASgJEgwKBHJvbGUYAyABKAkSJgoCYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmJ5X2Rpc3BsYXkYBSABKAkSDgoGcmVhc29uGAYgASgJIpQBCg9FYXJsaWVyT3ZlcnJpZGUSDwoHYXR0ZW1wdBgBIAEoBRIVCg1kZXRlcm1pbmF0aW9uGAIgASgJEg0KBWJhc2lzGAMgASgJEgwKBHJvbGUYBCABKAkSJgoCYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHNhbWVfdmVyc2lvbhgGIAEoCCL1BAoISnVkZ21lbnQSCgoCaWQYASABKAkSFgoOcmVxdWlyZW1lbnRfaWQYAiABKAkSHAoUcmVxdWlyZW1lbnRfbG9jYWxfaWQYAyABKAkSFQoNZGV0ZXJtaW5hdGlvbhgEIAEoCRINCgViYXNpcxgFIAEoCRITCgt1bmNlcnRhaW50eRgGIAMoCRIfChdlZmZlY3RpdmVfZGV0ZXJtaW5hdGlvbhgHIAEoCRIXCg9lZmZlY3RpdmVfYmFzaXMYCCABKAkSLQoIb3ZlcnJpZGUYCSABKAsyGy5jYXJlZXIudjEuSnVkZ21lbnRPdmVycmlkZRIXCg9kZXJpdmVkX3ZlcmRpY3QYCiABKAkSEQoJcmF0aW9uYWxlGAsgASgJEigKCGV2aWRlbmNlGAwgAygLMhYuY2FyZWVyLnYxLkV2aWRlbmNlUmVmEjMKEHJ1bGVfYWRqdXN0bWVudHMYDSADKAsyGS5jYXJlZXIudjEuUnVsZUFkanVzdG1lbnQSMAoOcmVwb3J0ZWRfZmFjdHMYDiABKAsyGC5jYXJlZXIudjEuUmVwb3J0ZWRGYWN0cxIRCglnYXBfY2xhc3MYDyABKAkSFAoMbm90X2Fzc2Vzc2VkGBAgASgIEg0KBXN0YWxlGBEgASgIEhUKDWtleXdvcmRfa25vd24YEiABKAgSFQoNa2V5d29yZF9mb3VuZBgTIAEoCBIVCg1rZXl3b3JkX3Rlcm1zGBQgAygJEhMKC2RlY2lzaW9uX2lkGBUgASgDEjQKEGVhcmxpZXJfb3ZlcnJpZGUYFiABKAsyGi5jYXJlZXIudjEuRWFybGllck92ZXJyaWRlIpsFCgtNYXRjaFJlY29yZBIOCgZydW5faWQYASABKAkSDwoHcm9sZV9pZBgCIAEoCRIVCg1zdWJtaXNzaW9uX2lkGAMgASgJEg8KB2F0dGVtcHQYBCABKAUSGQoRc3VwZXJzZWRlc19ydW5faWQYBSABKAkSEgoKc3VwZXJzZWRlZBgGIAEoCBITCgtydW5fdHJpZ2dlchgHIAEoCRISCgpyb2xlX3RpdGxlGAggASgJEhAKCGVtcGxveWVyGAkgASgJEiUKCGNvdmVyYWdlGAogASgLMhMuY2FyZWVyLnYxLkNvdmVyYWdlEiwKDHJlcXVpcmVtZW50cxgLIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBImCglqdWRnbWVudHMYDCADKAsyEy5jYXJlZXIudjEuSnVkZ21lbnQSFgoOb3ZlcnJpZGVfY291bnQYDSABKAUSFAoMa2V5d29yZF9ydWxlGA4gASgJEhcKD2tleXdvcmRfc2tpcHBlZBgPIAEoCRI2Cgh2ZXJzaW9ucxgQIAMoCzIkLmNhcmVlci52MS5NYXRjaFJlY29yZC5WZXJzaW9uc0VudHJ5EgsKA2ZpdBgRIAEoCRIYCgttYXRjaF9zY29yZRgSIAEoAUgAiAEBEi8KC2ZpbmlzaGVkX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIYChBjb3JwdXNfZG9jdW1lbnRzGBQgASgFEg0KBW1vZGVsGBUgASgJEhsKE3JlcXVpcmVtZW50c19lZGl0ZWQYFiABKAgaLwoNVmVyc2lvbnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQg4KDF9tYXRjaF9zY29yZSI2Cg5PdmVycmlkZUNob2ljZRIVCg1kZXRlcm1pbmF0aW9uGAEgASgJEg0KBWJhc2VzGAIgAygJIlIKFUdldE1hdGNoUmVjb3JkUmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCASFwoGcnVuX2lkGAIgASgJQge6SARyAhhAIrEDChZHZXRNYXRjaFJlY29yZFJlc3BvbnNlEiYKBnJlY29yZBgBIAEoCzIWLmNhcmVlci52MS5NYXRjaFJlY29yZBIsCg5kZXRlcm1pbmF0aW9ucxgCIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSIwoFYmFzZXMYAyADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEisKDXVuY2VydGFpbnRpZXMYBCADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiMKBXR5cGVzGAUgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIlCgdjbGFzc2VzGAYgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIqCgxzb3VyY2Vfa2luZHMYByADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiwKDm92ZXJyaWRlX3JvbGVzGAggAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIUCgxjYW5fb3ZlcnJpZGUYCSABKAgSMwoQb3ZlcnJpZGVfY2hvaWNlcxgKIAMoCzIZLmNhcmVlci52MS5PdmVycmlkZUNob2ljZSK2AQoXT3ZlcnJpZGVKdWRnbWVudFJlcXVlc3QSHgoLanVkZ21lbnRfaWQYASABKAlCCbpIBnIEEAEYQBIeCg1kZXRlcm1pbmF0aW9uGAIgASgJQge6SARyAhgoEhYKBWJhc2lzGAMgASgJQge6SARyAhgoEhoKBnJlYXNvbhgEIAEoCUIKukgHcgUQARjoBxIVCgRyb2xlGAUgASgJQge6SARyAhgoEhAKCHdpdGhkcmF3GAYgASgIIkIKGE92ZXJyaWRlSnVkZ21lbnRSZXNwb25zZRImCgZyZWNvcmQYASABKAsyFi5jYXJlZXIudjEuTWF0Y2hSZWNvcmQqlAEKEVJlcXVpcmVtZW50U3RhdHVzEiIKHlJFUVVJUkVNRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGFJFUVVJUkVNRU5UX1NUQVRVU19EUkFGVBABEh0KGVJFUVVJUkVNRU5UX1NUQVRVU19BQ1RJVkUQAhIeChpSRVFVSVJFTUVOVF9TVEFUVVNfUkVUSVJFRBADMuwFCg1IaXJpbmdTZXJ2aWNlEmUKEExpc3RSZXF1aXJlbWVudHMSIi5jYXJlZXIudjEuTGlzdFJlcXVpcmVtZW50c1JlcXVlc3QaIy5jYXJlZXIudjEuTGlzdFJlcXVpcmVtZW50c1Jlc3BvbnNlIgiAtRgDoLUYARJoChFVcGRhdGVSZXF1aXJlbWVudBIjLmNhcmVlci52MS5VcGRhdGVSZXF1aXJlbWVudFJlcXVlc3QaJC5jYXJlZXIudjEuVXBkYXRlUmVxdWlyZW1lbnRSZXNwb25zZSIIgLUYA6C1GAISbgoTUmVsZWFzZVJlcXVpcmVtZW50cxIlLmNhcmVlci52MS5SZWxlYXNlUmVxdWlyZW1lbnRzUmVxdWVzdBomLmNhcmVlci52MS5SZWxlYXNlUmVxdWlyZW1lbnRzUmVzcG9uc2UiCIC1GAOgtRgCEmgKEUdldEhpcmluZ1NldHRpbmdzEiMuY2FyZWVyLnYxLkdldEhpcmluZ1NldHRpbmdzUmVxdWVzdBokLmNhcmVlci52MS5HZXRIaXJpbmdTZXR0aW5nc1Jlc3BvbnNlIgiAtRgDoLUYARJoChFTZXRIaXJpbmdTZXR0aW5ncxIjLmNhcmVlci52MS5TZXRIaXJpbmdTZXR0aW5nc1JlcXVlc3QaJC5jYXJlZXIudjEuU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZSIIgLUYA6C1GAISXwoOR2V0TWF0Y2hSZWNvcmQSIC5jYXJlZXIudjEuR2V0TWF0Y2hSZWNvcmRSZXF1ZXN0GiEuY2FyZWVyLnYxLkdldE1hdGNoUmVjb3JkUmVzcG9uc2UiCIC1GAKgtRgBEmUKEE92ZXJyaWRlSnVkZ21lbnQSIi5jYXJlZXIudjEuT3ZlcnJpZGVKdWRnbWVudFJlcXVlc3QaIy5jYXJlZXIudjEuT3ZlcnJpZGVKdWRnbWVudFJlc3BvbnNlIgiAtRgDoLUYAkKlAQoNY29tLmNhcmVlci52MUILSGlyaW5nUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * A scale: how many of what.
@@ -851,6 +853,957 @@ export const SetHiringSettingsResponseSchema: GenMessage<SetHiringSettingsRespon
   messageDesc(file_career_v1_hiring, 16);
 
 /**
+ * The arithmetic of a match record (FSD FR-HF-06, FR-HF-23): three
+ * numbers that sum to one over the counted weight, and two shares of
+ * the evidenced part. Computed in code over effective determinations,
+ * which are a person's override where one is set and the model's
+ * answer after the code rules otherwise.
+ *
+ * @generated from message career.v1.Coverage
+ */
+export type Coverage = Message<"career.v1.Coverage"> & {
+  /**
+   * Share of the counted weight that is evidenced: met, or met through
+   * an equivalency. 0 to 1.
+   *
+   * @generated from field: double evidenced = 1;
+   */
+  evidenced: number;
+
+  /**
+   * Share that is unresolved: the documents suggest it and one nameable
+   * fact is missing. Never scored as half of anything.
+   *
+   * @generated from field: double unresolved = 2;
+   */
+  unresolved: number;
+
+  /**
+   * Share that is not met.
+   *
+   * @generated from field: double unmet = 3;
+   */
+  unmet: number;
+
+  /**
+   * Of the evidenced weight, the share that rests on an equivalency.
+   *
+   * @generated from field: double equivalent_share = 4;
+   */
+  equivalentShare: number;
+
+  /**
+   * Of the evidenced weight, the share that rests on the candidate's
+   * own answers to follow-up questions.
+   *
+   * @generated from field: double self_attested_share = 5;
+   */
+  selfAttestedShare: number;
+
+  /**
+   * The formula the numbers were computed under: `v4-classes`, or
+   * `v3-three-numbers` for a record written before classes.
+   *
+   * @generated from field: string formula_version = 6;
+   */
+  formulaVersion: string;
+
+  /**
+   * The share of its weight a preferred item counted at when the record
+   * was computed.
+   *
+   * @generated from field: double preferred_fraction = 7;
+   */
+  preferredFraction: number;
+};
+
+/**
+ * Describes the message career.v1.Coverage.
+ * Use `create(CoverageSchema)` to create a new message.
+ */
+export const CoverageSchema: GenMessage<Coverage> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 17);
+
+/**
+ * One piece of evidence a judgment cites. A citation, never the text:
+ * the private text of the candidate's documents is not sent to any
+ * reader of a record.
+ *
+ * @generated from message career.v1.EvidenceRef
+ */
+export type EvidenceRef = Message<"career.v1.EvidenceRef"> & {
+  /**
+   * The evidence item's id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Where it came from. Vocabulary `source_kind`: corpus_document,
+   * profile_sheet, candidate_response, verified_external.
+   *
+   * @generated from field: string source_kind = 2;
+   */
+  sourceKind: string;
+
+  /**
+   * The title of the document it is a passage of. Empty for a reader
+   * who may not see it: a member is sent the title of a public document
+   * only.
+   *
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * The corpus passage behind the item. Sent to admins only; 0
+   * otherwise.
+   *
+   * @generated from field: int64 chunk_id = 4;
+   */
+  chunkId: bigint;
+
+  /**
+   * Whether the candidate has since withdrawn the item.
+   *
+   * @generated from field: bool withdrawn = 5;
+   */
+  withdrawn: boolean;
+};
+
+/**
+ * Describes the message career.v1.EvidenceRef.
+ * Use `create(EvidenceRefSchema)` to create a new message.
+ */
+export const EvidenceRefSchema: GenMessage<EvidenceRef> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 18);
+
+/**
+ * One change the code rules made to the model's answer (FSD FR-HF-05):
+ * a comparison of years, recency, scale, credential or named parties
+ * made in code from the facts the model reported.
+ *
+ * @generated from message career.v1.RuleAdjustment
+ */
+export type RuleAdjustment = Message<"career.v1.RuleAdjustment"> & {
+  /**
+   * The rule: duration, recency, scope, credential, named_parties,
+   * evidence, consistency, behavioral.
+   *
+   * @generated from field: string rule = 1;
+   */
+  rule: string;
+
+  /**
+   * The version of the rule that ran.
+   *
+   * @generated from field: string rule_version = 2;
+   */
+  ruleVersion: string;
+
+  /**
+   * The determination before the rule.
+   *
+   * @generated from field: string from_determination = 3;
+   */
+  fromDetermination: string;
+
+  /**
+   * The determination after it.
+   *
+   * @generated from field: string to_determination = 4;
+   */
+  toDetermination: string;
+
+  /**
+   * The basis before the rule.
+   *
+   * @generated from field: string from_basis = 5;
+   */
+  fromBasis: string;
+
+  /**
+   * The basis after it.
+   *
+   * @generated from field: string to_basis = 6;
+   */
+  toBasis: string;
+
+  /**
+   * Uncertainty codes the rule added.
+   *
+   * @generated from field: repeated string added_uncertainty = 7;
+   */
+  addedUncertainty: string[];
+
+  /**
+   * The rule's reason, as a sentence.
+   *
+   * @generated from field: string reason = 8;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message career.v1.RuleAdjustment.
+ * Use `create(RuleAdjustmentSchema)` to create a new message.
+ */
+export const RuleAdjustmentSchema: GenMessage<RuleAdjustment> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 19);
+
+/**
+ * The facts the model reported from the evidence, which the code rules
+ * compare against the requirement's thresholds. A zero or empty field
+ * was not stated.
+ *
+ * @generated from message career.v1.ReportedFacts
+ */
+export type ReportedFacts = Message<"career.v1.ReportedFacts"> & {
+  /**
+   * Years of the work the evidence states; 0 when not stated.
+   *
+   * @generated from field: double stated_span_years = 1;
+   */
+  statedSpanYears: number;
+
+  /**
+   * The most recent year the evidence places the work in; 0 when not
+   * stated.
+   *
+   * @generated from field: int32 most_recent_year = 2;
+   */
+  mostRecentYear: number;
+
+  /**
+   * The scale the evidence states; unset when not stated.
+   *
+   * @generated from field: career.v1.ScopeThreshold stated_scope = 3;
+   */
+  statedScope?: ScopeThreshold | undefined;
+
+  /**
+   * The named organisations the evidence shows a working relationship
+   * with.
+   *
+   * @generated from field: repeated string parties_evidenced = 4;
+   */
+  partiesEvidenced: string[];
+};
+
+/**
+ * Describes the message career.v1.ReportedFacts.
+ * Use `create(ReportedFactsSchema)` to create a new message.
+ */
+export const ReportedFactsSchema: GenMessage<ReportedFacts> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 20);
+
+/**
+ * A person's override of a judgment (FSD FR-HF-08). It is read as the
+ * effective value; the model's own answer stays on the judgment.
+ *
+ * @generated from message career.v1.JudgmentOverride
+ */
+export type JudgmentOverride = Message<"career.v1.JudgmentOverride"> & {
+  /**
+   * The determination the person set. Vocabulary `determination`.
+   *
+   * @generated from field: string determination = 1;
+   */
+  determination: string;
+
+  /**
+   * The basis the person set. Vocabulary `basis`.
+   *
+   * @generated from field: string basis = 2;
+   */
+  basis: string;
+
+  /**
+   * The role the person acted in. Vocabulary `override_role`:
+   * hiring_manager, recruiter, system_admin.
+   *
+   * @generated from field: string role = 3;
+   */
+  role: string;
+
+  /**
+   * When it was set.
+   *
+   * @generated from field: google.protobuf.Timestamp at = 4;
+   */
+  at?: Timestamp | undefined;
+
+  /**
+   * Who set it. Sent to admins only.
+   *
+   * @generated from field: string by_display = 5;
+   */
+  byDisplay: string;
+
+  /**
+   * Why. Sent to admins only.
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message career.v1.JudgmentOverride.
+ * Use `create(JudgmentOverrideSchema)` to create a new message.
+ */
+export const JudgmentOverrideSchema: GenMessage<JudgmentOverride> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 21);
+
+/**
+ * An override a person set on an earlier run's judgment of the same
+ * requirement. A new run judges every requirement again and starts
+ * without overrides, so this is how a reviewer sees that a row was
+ * decided by a person before. Sent to admins only.
+ *
+ * @generated from message career.v1.EarlierOverride
+ */
+export type EarlierOverride = Message<"career.v1.EarlierOverride"> & {
+  /**
+   * The attempt number of the run that carries the override.
+   *
+   * @generated from field: int32 attempt = 1;
+   */
+  attempt: number;
+
+  /**
+   * The determination the person set.
+   *
+   * @generated from field: string determination = 2;
+   */
+  determination: string;
+
+  /**
+   * The basis the person set.
+   *
+   * @generated from field: string basis = 3;
+   */
+  basis: string;
+
+  /**
+   * The role the person acted in.
+   *
+   * @generated from field: string role = 4;
+   */
+  role: string;
+
+  /**
+   * When it was set.
+   *
+   * @generated from field: google.protobuf.Timestamp at = 5;
+   */
+  at?: Timestamp | undefined;
+
+  /**
+   * Whether that judgment was of the same requirement version as this
+   * one. False when the requirement has been edited since.
+   *
+   * @generated from field: bool same_version = 6;
+   */
+  sameVersion: boolean;
+};
+
+/**
+ * Describes the message career.v1.EarlierOverride.
+ * Use `create(EarlierOverrideSchema)` to create a new message.
+ */
+export const EarlierOverrideSchema: GenMessage<EarlierOverride> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 22);
+
+/**
+ * One judgment of one requirement version in one run (FSD FR-HF-04).
+ *
+ * @generated from message career.v1.Judgment
+ */
+export type Judgment = Message<"career.v1.Judgment"> & {
+  /**
+   * The judgment's id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The requirement version judged.
+   *
+   * @generated from field: string requirement_id = 2;
+   */
+  requirementId: string;
+
+  /**
+   * The requirement's id within the role: r1, r2, ...
+   *
+   * @generated from field: string requirement_local_id = 3;
+   */
+  requirementLocalId: string;
+
+  /**
+   * The model's determination after the code rules. Vocabulary
+   * `determination`: met, met_equivalent, unresolved, not_met.
+   *
+   * @generated from field: string determination = 4;
+   */
+  determination: string;
+
+  /**
+   * The model's basis after the code rules. Vocabulary `basis`.
+   *
+   * @generated from field: string basis = 5;
+   */
+  basis: string;
+
+  /**
+   * What is missing, for an unresolved judgment. Vocabulary
+   * `uncertainty`.
+   *
+   * @generated from field: repeated string uncertainty = 6;
+   */
+  uncertainty: string[];
+
+  /**
+   * The determination the record counts: the override when one is set,
+   * the model's otherwise.
+   *
+   * @generated from field: string effective_determination = 7;
+   */
+  effectiveDetermination: string;
+
+  /**
+   * The basis the record shows: the override's when one is set, the
+   * model's otherwise.
+   *
+   * @generated from field: string effective_basis = 8;
+   */
+  effectiveBasis: string;
+
+  /**
+   * The override, when a person has set one.
+   *
+   * @generated from field: career.v1.JudgmentOverride override = 9;
+   */
+  override?: JudgmentOverride | undefined;
+
+  /**
+   * The three-way verdict derived from the model's determination: met,
+   * partial, unmet (FSD FR-HF-07).
+   *
+   * @generated from field: string derived_verdict = 10;
+   */
+  derivedVerdict: string;
+
+  /**
+   * The model's one-sentence reasoning. It never quotes private text.
+   *
+   * @generated from field: string rationale = 11;
+   */
+  rationale: string;
+
+  /**
+   * The evidence cited.
+   *
+   * @generated from field: repeated career.v1.EvidenceRef evidence = 12;
+   */
+  evidence: EvidenceRef[];
+
+  /**
+   * What the code rules changed, in the order they ran.
+   *
+   * @generated from field: repeated career.v1.RuleAdjustment rule_adjustments = 13;
+   */
+  ruleAdjustments: RuleAdjustment[];
+
+  /**
+   * The facts the model reported.
+   *
+   * @generated from field: career.v1.ReportedFacts reported_facts = 14;
+   */
+  reportedFacts?: ReportedFacts | undefined;
+
+  /**
+   * The kind of gap, derived from the effective basis (FSD FR-HF-17):
+   * `lexical` (a difference of wording, tool or credential that an
+   * equivalency could bridge), `substantive` (the work falls short in
+   * scale, years, recency, relationship, or is contradicted),
+   * `unaddressed` (nothing speaks to it); empty when the basis is
+   * direct or the requirement was not assessed.
+   *
+   * @generated from field: string gap_class = 15;
+   */
+  gapClass: string;
+
+  /**
+   * True for a working-style requirement (FSD FR-HF-18): recorded, not
+   * judged from documents, weighing nothing, and not open to override.
+   *
+   * @generated from field: bool not_assessed = 16;
+   */
+  notAssessed: boolean;
+
+  /**
+   * True when a piece of evidence the judgment cites was withdrawn
+   * after it was made.
+   *
+   * @generated from field: bool stale = 17;
+   */
+  stale: boolean;
+
+  /**
+   * Whether the keyword screen ran for this requirement. False when the
+   * passages could not be read back and the comparison was skipped.
+   *
+   * @generated from field: bool keyword_known = 18;
+   */
+  keywordKnown: boolean;
+
+  /**
+   * Whether a plain term-overlap filter over the same passages the
+   * judge was shown would have found the requirement (FSD FR-HF-12).
+   *
+   * @generated from field: bool keyword_found = 19;
+   */
+  keywordFound: boolean;
+
+  /**
+   * The terms the filter matched.
+   *
+   * @generated from field: repeated string keyword_terms = 20;
+   */
+  keywordTerms: string[];
+
+  /**
+   * The decision-log row that holds the prompt and the model's raw
+   * response. Sent to admins only; 0 otherwise.
+   *
+   * @generated from field: int64 decision_id = 21;
+   */
+  decisionId: bigint;
+
+  /**
+   * An override on an earlier run's judgment of this requirement, when
+   * this judgment carries none. Sent to admins only.
+   *
+   * @generated from field: career.v1.EarlierOverride earlier_override = 22;
+   */
+  earlierOverride?: EarlierOverride | undefined;
+};
+
+/**
+ * Describes the message career.v1.Judgment.
+ * Use `create(JudgmentSchema)` to create a new message.
+ */
+export const JudgmentSchema: GenMessage<Judgment> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 23);
+
+/**
+ * The match record of one run (FSD FR-HF-10, FR-HF-17).
+ *
+ * @generated from message career.v1.MatchRecord
+ */
+export type MatchRecord = Message<"career.v1.MatchRecord"> & {
+  /**
+   * The run.
+   *
+   * @generated from field: string run_id = 1;
+   */
+  runId: string;
+
+  /**
+   * The role the posting became.
+   *
+   * @generated from field: string role_id = 2;
+   */
+  roleId: string;
+
+  /**
+   * The submitted posting, as /jd-upload and /admin/jd number it.
+   *
+   * @generated from field: string submission_id = 3;
+   */
+  submissionId: string;
+
+  /**
+   * 1 for the first run of the posting, 2 for the next, and so on.
+   *
+   * @generated from field: int32 attempt = 4;
+   */
+  attempt: number;
+
+  /**
+   * The run this one superseded; empty for the first.
+   *
+   * @generated from field: string supersedes_run_id = 5;
+   */
+  supersedesRunId: string;
+
+  /**
+   * True when a later run of the same posting has a record. A
+   * superseded record is history and takes no override.
+   *
+   * @generated from field: bool superseded = 6;
+   */
+  superseded: boolean;
+
+  /**
+   * How the run was started: submit, rescore, release.
+   *
+   * @generated from field: string run_trigger = 7;
+   */
+  runTrigger: string;
+
+  /**
+   * The role as the submitter named it, or the posting's first line.
+   *
+   * @generated from field: string role_title = 8;
+   */
+  roleTitle: string;
+
+  /**
+   * The employer as the submitter named it, if they did.
+   *
+   * @generated from field: string employer = 9;
+   */
+  employer: string;
+
+  /**
+   * The three numbers and the two shares.
+   *
+   * @generated from field: career.v1.Coverage coverage = 10;
+   */
+  coverage?: Coverage | undefined;
+
+  /**
+   * The requirement versions judged, in reading order.
+   *
+   * @generated from field: repeated career.v1.Requirement requirements = 11;
+   */
+  requirements: Requirement[];
+
+  /**
+   * The judgments, one per requirement, in the same order.
+   *
+   * @generated from field: repeated career.v1.Judgment judgments = 12;
+   */
+  judgments: Judgment[];
+
+  /**
+   * How many judgments carry a person's override.
+   *
+   * @generated from field: int32 override_count = 13;
+   */
+  overrideCount: number;
+
+  /**
+   * The rule the keyword screen ran under: kw1.
+   *
+   * @generated from field: string keyword_rule = 14;
+   */
+  keywordRule: string;
+
+  /**
+   * Why the keyword screen could not run, when it could not.
+   *
+   * @generated from field: string keyword_skipped = 15;
+   */
+  keywordSkipped: string;
+
+  /**
+   * The versions the record was written under: schemas, vocabulary,
+   * formula, rules, prompt fingerprints, model, embedder, corpus.
+   *
+   * @generated from field: map<string, string> versions = 16;
+   */
+  versions: { [key: string]: string };
+
+  /**
+   * The fit the run was given when it finished, from the score the
+   * résumé gate reads: very_strong, strong, possible, weak, very_weak.
+   * It is the run's own and does not move with an override.
+   *
+   * @generated from field: string fit = 17;
+   */
+  fit: string;
+
+  /**
+   * The score the résumé gate read when the run finished.
+   *
+   * @generated from field: optional double match_score = 18;
+   */
+  matchScore?: number | undefined;
+
+  /**
+   * When the run finished.
+   *
+   * @generated from field: google.protobuf.Timestamp finished_at = 19;
+   */
+  finishedAt?: Timestamp | undefined;
+
+  /**
+   * How many documents the candidate's corpus held when the run read
+   * it.
+   *
+   * @generated from field: int32 corpus_documents = 20;
+   */
+  corpusDocuments: number;
+
+  /**
+   * The model that judged.
+   *
+   * @generated from field: string model = 21;
+   */
+  model: string;
+
+  /**
+   * Whether a person edited any requirement version this run judged.
+   *
+   * @generated from field: bool requirements_edited = 22;
+   */
+  requirementsEdited: boolean;
+};
+
+/**
+ * Describes the message career.v1.MatchRecord.
+ * Use `create(MatchRecordSchema)` to create a new message.
+ */
+export const MatchRecordSchema: GenMessage<MatchRecord> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 24);
+
+/**
+ * The determinations a reviewer may set and, for each, the bases that
+ * do not contradict it, so an override form offers only pairs the
+ * server will accept.
+ *
+ * @generated from message career.v1.OverrideChoice
+ */
+export type OverrideChoice = Message<"career.v1.OverrideChoice"> & {
+  /**
+   * The determination.
+   *
+   * @generated from field: string determination = 1;
+   */
+  determination: string;
+
+  /**
+   * The bases it may carry.
+   *
+   * @generated from field: repeated string bases = 2;
+   */
+  bases: string[];
+};
+
+/**
+ * Describes the message career.v1.OverrideChoice.
+ * Use `create(OverrideChoiceSchema)` to create a new message.
+ */
+export const OverrideChoiceSchema: GenMessage<OverrideChoice> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 25);
+
+/**
+ * Names the record: the submitted posting, and optionally one run of
+ * it.
+ *
+ * @generated from message career.v1.GetMatchRecordRequest
+ */
+export type GetMatchRecordRequest = Message<"career.v1.GetMatchRecordRequest"> & {
+  /**
+   * The submitted posting's id.
+   *
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+
+  /**
+   * One run of that posting. Empty reads the newest run that has a
+   * record.
+   *
+   * @generated from field: string run_id = 2;
+   */
+  runId: string;
+};
+
+/**
+ * Describes the message career.v1.GetMatchRecordRequest.
+ * Use `create(GetMatchRecordRequestSchema)` to create a new message.
+ */
+export const GetMatchRecordRequestSchema: GenMessage<GetMatchRecordRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 26);
+
+/**
+ * The record and the vocabularies it is labelled from.
+ *
+ * @generated from message career.v1.GetMatchRecordResponse
+ */
+export type GetMatchRecordResponse = Message<"career.v1.GetMatchRecordResponse"> & {
+  /**
+   * The record. Unset when the posting has no record with judgments,
+   * which is a posting last scored before the hiring tables began.
+   *
+   * @generated from field: career.v1.MatchRecord record = 1;
+   */
+  record?: MatchRecord | undefined;
+
+  /**
+   * The `determination` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode determinations = 2;
+   */
+  determinations: VocabCode[];
+
+  /**
+   * The `basis` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode bases = 3;
+   */
+  bases: VocabCode[];
+
+  /**
+   * The `uncertainty` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode uncertainties = 4;
+   */
+  uncertainties: VocabCode[];
+
+  /**
+   * The `requirement_type` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode types = 5;
+   */
+  types: VocabCode[];
+
+  /**
+   * The `requirement_class` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode classes = 6;
+   */
+  classes: VocabCode[];
+
+  /**
+   * The `source_kind` codes.
+   *
+   * @generated from field: repeated career.v1.VocabCode source_kinds = 7;
+   */
+  sourceKinds: VocabCode[];
+
+  /**
+   * The `override_role` codes a reviewer may act in today. The role
+   * reserved for a candidate's dispute is not offered.
+   *
+   * @generated from field: repeated career.v1.VocabCode override_roles = 8;
+   */
+  overrideRoles: VocabCode[];
+
+  /**
+   * Whether the caller may override a judgment on this record: an
+   * admin, on a record no later run has superseded.
+   *
+   * @generated from field: bool can_override = 9;
+   */
+  canOverride: boolean;
+
+  /**
+   * The pairs an override may set. Sent when the caller may override.
+   *
+   * @generated from field: repeated career.v1.OverrideChoice override_choices = 10;
+   */
+  overrideChoices: OverrideChoice[];
+};
+
+/**
+ * Describes the message career.v1.GetMatchRecordResponse.
+ * Use `create(GetMatchRecordResponseSchema)` to create a new message.
+ */
+export const GetMatchRecordResponseSchema: GenMessage<GetMatchRecordResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 27);
+
+/**
+ * One override of one judgment.
+ *
+ * @generated from message career.v1.OverrideJudgmentRequest
+ */
+export type OverrideJudgmentRequest = Message<"career.v1.OverrideJudgmentRequest"> & {
+  /**
+   * The judgment.
+   *
+   * @generated from field: string judgment_id = 1;
+   */
+  judgmentId: string;
+
+  /**
+   * The determination to set. Vocabulary `determination`. Left empty
+   * when withdrawing.
+   *
+   * @generated from field: string determination = 2;
+   */
+  determination: string;
+
+  /**
+   * The basis to set. Vocabulary `basis`; it must not contradict the
+   * determination. Left empty when withdrawing.
+   *
+   * @generated from field: string basis = 3;
+   */
+  basis: string;
+
+  /**
+   * Why. Required, for an override and for a withdrawal alike.
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
+  /**
+   * The role the reviewer acts in. Vocabulary `override_role`:
+   * hiring_manager, recruiter, system_admin. Left empty when
+   * withdrawing.
+   *
+   * @generated from field: string role = 5;
+   */
+  role: string;
+
+  /**
+   * Withdraw the override this judgment carries, so the model's answer
+   * is the effective one again. The withdrawal is logged like an
+   * override.
+   *
+   * @generated from field: bool withdraw = 6;
+   */
+  withdraw: boolean;
+};
+
+/**
+ * Describes the message career.v1.OverrideJudgmentRequest.
+ * Use `create(OverrideJudgmentRequestSchema)` to create a new message.
+ */
+export const OverrideJudgmentRequestSchema: GenMessage<OverrideJudgmentRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 28);
+
+/**
+ * The record after the override.
+ *
+ * @generated from message career.v1.OverrideJudgmentResponse
+ */
+export type OverrideJudgmentResponse = Message<"career.v1.OverrideJudgmentResponse"> & {
+  /**
+   * The record with its numbers computed again.
+   *
+   * @generated from field: career.v1.MatchRecord record = 1;
+   */
+  record?: MatchRecord | undefined;
+};
+
+/**
+ * Describes the message career.v1.OverrideJudgmentResponse.
+ * Use `create(OverrideJudgmentResponseSchema)` to create a new message.
+ */
+export const OverrideJudgmentResponseSchema: GenMessage<OverrideJudgmentResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 29);
+
+/**
  * Where a requirement version stands.
  *
  * @generated from enum career.v1.RequirementStatus
@@ -893,7 +1846,8 @@ export const RequirementStatusSchema: GenEnum<RequirementStatus> = /*@__PURE__*/
   enumDesc(file_career_v1_hiring, 0);
 
 /**
- * Requirements as editable, versioned rows, and the settings the
+ * Requirements as editable, versioned rows, the match record a run
+ * produced, the override of a judgment, and the settings the
  * framework's arithmetic reads.
  *
  * @generated from service career.v1.HiringService
@@ -965,6 +1919,43 @@ export const HiringService: GenService<{
     methodKind: "unary";
     input: typeof SetHiringSettingsRequestSchema;
     output: typeof SetHiringSettingsResponseSchema;
+  },
+  /**
+   * Reads the match record of one run of a submitted posting: the three
+   * numbers and two shares, each requirement version judged, and each
+   * judgment with its basis, what is missing, the evidence cited, what
+   * the code rules changed, whether a keyword screen would have found
+   * it, and any override. Open to the member who submitted the posting
+   * and to an admin; anyone else gets not-found. With no run named it
+   * is the newest run that has a record. A member is never sent the
+   * private text of the candidate's documents, the title of a document
+   * that is not public, or the reason and name behind an override. The
+   * vocabularies come with the record so a viewer labels codes from the
+   * registry.
+   *
+   * @generated from rpc career.v1.HiringService.GetMatchRecord
+   */
+  getMatchRecord: {
+    methodKind: "unary";
+    input: typeof GetMatchRecordRequestSchema;
+    output: typeof GetMatchRecordResponseSchema;
+  },
+  /**
+   * Sets, replaces or withdraws a person's override of one judgment
+   * (FSD FR-HF-08). The record's numbers are computed again from the
+   * effective values; the model's determination and basis stay on the
+   * judgment for the agreement measures, and every call is written to
+   * the decision log with the person, the role they acted in and the
+   * reason. Refused for a requirement that is not judged from documents
+   * (a working-style one), for a run that a later run has superseded,
+   * and for a determination and basis that contradict each other.
+   *
+   * @generated from rpc career.v1.HiringService.OverrideJudgment
+   */
+  overrideJudgment: {
+    methodKind: "unary";
+    input: typeof OverrideJudgmentRequestSchema;
+    output: typeof OverrideJudgmentResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_hiring, 0);

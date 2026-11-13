@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { RecordView } from "@/components/match-record/record-view";
 import { track } from "@/lib/events-client";
+import { toRecordData, type MatchRecordResponse } from "@/lib/match-record";
 
 type Verdict = {
   id: string;
@@ -39,6 +41,10 @@ type Poll = {
   progress_stage?: string;
   fitCategory?: string;
   fit_category?: string;
+  // The run whose match record HiringService.GetMatchRecord returns;
+  // empty for a posting scored before records were kept in that form.
+  matchRecordRunId?: string;
+  match_record_run_id?: string;
 };
 
 const FIT_LABEL: Record<string, string> = {
@@ -168,6 +174,11 @@ export function JdResult({
   const [poll, setPoll] = useState<Poll | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(watch);
+  // The match record in its own form (FSD FR-HF-17), fetched once the
+  // review has finished and the result names a run that has one. Until
+  // it arrives, and for a posting that has none, the verdict list
+  // below stands in.
+  const [record, setRecord] = useState<MatchRecordResponse | null>(null);
 
   useEffect(() => {
     let stop = false;
@@ -229,6 +240,33 @@ export function JdResult({
     });
   }, [pollStatus, submissionId, resultToken]);
 
+  const recordRunId = poll?.matchRecordRunId ?? poll?.match_record_run_id ?? "";
+  const recordWanted = Boolean(recordRunId) && Boolean(pollStatus) && !LIVE.has(pollStatus);
+  useEffect(() => {
+    if (!recordWanted) return;
+    let stop = false;
+    void (async () => {
+      try {
+        const resp = await fetch("/api/career.v1.HiringService/GetMatchRecord", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Connect-Protocol-Version": "1",
+          },
+          body: JSON.stringify({ submissionId, runId: recordRunId }),
+        });
+        if (!resp.ok) return;
+        const j = (await resp.json()) as MatchRecordResponse;
+        if (!stop && j.record) setRecord(j);
+      } catch {
+        // The verdict list stands in; nothing is lost.
+      }
+    })();
+    return () => {
+      stop = true;
+    };
+  }, [recordWanted, recordRunId, submissionId]);
+
   if (failed) {
     return (
       <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
@@ -257,6 +295,7 @@ export function JdResult({
   );
   const stage = poll.progressStage ?? poll.progress_stage ?? "";
   const fit = poll.fitCategory ?? poll.fit_category ?? "";
+  const recordData = record ? toRecordData(record, "member") : null;
 
   return (
     <div className="space-y-5">
@@ -419,7 +458,20 @@ export function JdResult({
         </p>
       ) : null}
 
-      {!live && verdicts.length > 0 ? (
+      {!live && recordData ? (
+        <section className="border-t border-line pt-5">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            the match record
+          </p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">
+            Requirement by requirement: what was asked, what Roger&rsquo;s
+            records show, and what each verdict rests on. The three figures
+            count weight, not items, and an unresolved item is never scored as
+            half of anything.
+          </p>
+          <RecordView record={recordData} controls="none" className="mt-6" />
+        </section>
+      ) : !live && verdicts.length > 0 ? (
         <VerdictBreakdown
           verdicts={verdicts}
           met={met}

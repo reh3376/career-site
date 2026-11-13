@@ -154,6 +154,15 @@ var Registry = map[string]struct {
 	"admin.requirement_edited":      {Props: []string{"requirement_id", "role_id", "local_id", "version", "fields"}},
 	"admin.requirements_released":   {Props: []string{"role_id", "submission_id", "released", "run_started"}},
 	"admin.hiring_settings_changed": {Props: []string{"preferred_fraction"}},
+	// A person's override of a judgment, or its withdrawal (FR-HF-08).
+	// The model's value rides beside the person's so disagreement, and
+	// which basis it falls on, can be read off the stream without a
+	// join; `agrees_with_model` marks a confirmation.
+	"admin.judgment_overridden": {Props: []string{
+		"judgment_id", "run_id", "submission_id", "local_id", "action", "role",
+		"model_determination", "model_basis", "determination", "basis",
+		"agrees_with_model", "override_count",
+	}},
 	// Also emitted and never recorded until the registry test found it.
 	"admin.jd_limit_changed": {Props: []string{"limit"}},
 	// Q&A bank. covers_restricted is recorded because approving such an

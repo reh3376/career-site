@@ -554,9 +554,15 @@ type GetJdResultResponse struct {
 	ProgressStage string `protobuf:"bytes,14,opt,name=progress_stage,json=progressStage,proto3" json:"progress_stage,omitempty"`
 	// Fit category derived from the score once known: very_strong,
 	// strong, possible, weak, very_weak; empty before scoring.
-	FitCategory   string `protobuf:"bytes,15,opt,name=fit_category,json=fitCategory,proto3" json:"fit_category,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	FitCategory string `protobuf:"bytes,15,opt,name=fit_category,json=fitCategory,proto3" json:"fit_category,omitempty"`
+	// The run whose match record HiringService.GetMatchRecord returns for
+	// this submission: set when the newest run has a record with
+	// judgments and the caller is the submitting member or an admin, so a
+	// client knows to show the record in place of the verdict list.
+	// Empty for a posting last scored before the hiring tables began.
+	MatchRecordRunId string `protobuf:"bytes,16,opt,name=match_record_run_id,json=matchRecordRunId,proto3" json:"match_record_run_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetJdResultResponse) Reset() {
@@ -690,6 +696,13 @@ func (x *GetJdResultResponse) GetProgressStage() string {
 func (x *GetJdResultResponse) GetFitCategory() string {
 	if x != nil {
 		return x.FitCategory
+	}
+	return ""
+}
+
+func (x *GetJdResultResponse) GetMatchRecordRunId() string {
+	if x != nil {
+		return x.MatchRecordRunId
 	}
 	return ""
 }
@@ -1193,7 +1206,7 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"nextSlotAt\"p\n" +
 	"\x12GetJdResultRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12*\n" +
-	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xa6\x05\n" +
+	"\fresult_token\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\vresultToken\"\xd5\x05\n" +
 	"\x13GetJdResultResponse\x12+\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x13.career.v1.JdStatusR\x06status\x12$\n" +
 	"\vmatch_score\x18\x02 \x01(\x01H\x00R\n" +
@@ -1213,7 +1226,8 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x0fmatch_threshold\x18\f \x01(\x01R\x0ematchThreshold\x12!\n" +
 	"\fprogress_pct\x18\r \x01(\x05R\vprogressPct\x12%\n" +
 	"\x0eprogress_stage\x18\x0e \x01(\tR\rprogressStage\x12!\n" +
-	"\ffit_category\x18\x0f \x01(\tR\vfitCategoryB\x0e\n" +
+	"\ffit_category\x18\x0f \x01(\tR\vfitCategory\x12-\n" +
+	"\x13match_record_run_id\x18\x10 \x01(\tR\x10matchRecordRunIdB\x0e\n" +
 	"\f_match_score\"u\n" +
 	"\n" +
 	"JdFitBands\x12\x1f\n" +
