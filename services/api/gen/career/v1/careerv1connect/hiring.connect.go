@@ -81,6 +81,9 @@ const (
 	// HiringServiceOverrideJudgmentProcedure is the fully-qualified name of the HiringService's
 	// OverrideJudgment RPC.
 	HiringServiceOverrideJudgmentProcedure = "/career.v1.HiringService/OverrideJudgment"
+	// HiringServiceWriteReviewResumeProcedure is the fully-qualified name of the HiringService's
+	// WriteReviewResume RPC.
+	HiringServiceWriteReviewResumeProcedure = "/career.v1.HiringService/WriteReviewResume"
 )
 
 // HiringServiceClient is a client for the career.v1.HiringService service.
@@ -143,6 +146,19 @@ type HiringServiceClient interface {
 	// requirement it was set on is unchanged; saving a carried override
 	// again makes it that run's own.
 	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
+	// Asks for the tailored résumé to be written on a run's verdicts as
+	// they stand after review (FSD FR-HF-08). Offered when the run scored
+	// below the résumé gate, so wrote none, and a person's verdicts lift
+	// the score to the gate. The résumé is the owner's alone: it is kept
+	// apart from the submission, shown on the admin page, never emailed,
+	// and never sent to the member who submitted the posting. The call
+	// returns at once with the résumé marked as being written; the write
+	// waits its turn for the model like any review. Asking again replaces
+	// the last one. Refused when the run wrote a résumé of its own, when
+	// the score after review is below the gate, when no verdict has been
+	// set by a person, when a later run has superseded the record, and
+	// while one is already being written.
+	WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error)
 }
 
 // NewHiringServiceClient constructs a client for the career.v1.HiringService service. By default,
@@ -198,6 +214,12 @@ func NewHiringServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(hiringServiceMethods.ByName("OverrideJudgment")),
 			connect.WithClientOptions(opts...),
 		),
+		writeReviewResume: connect.NewClient[v1.WriteReviewResumeRequest, v1.WriteReviewResumeResponse](
+			httpClient,
+			baseURL+HiringServiceWriteReviewResumeProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("WriteReviewResume")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -210,6 +232,7 @@ type hiringServiceClient struct {
 	setHiringSettings   *connect.Client[v1.SetHiringSettingsRequest, v1.SetHiringSettingsResponse]
 	getMatchRecord      *connect.Client[v1.GetMatchRecordRequest, v1.GetMatchRecordResponse]
 	overrideJudgment    *connect.Client[v1.OverrideJudgmentRequest, v1.OverrideJudgmentResponse]
+	writeReviewResume   *connect.Client[v1.WriteReviewResumeRequest, v1.WriteReviewResumeResponse]
 }
 
 // ListRequirements calls career.v1.HiringService.ListRequirements.
@@ -245,6 +268,11 @@ func (c *hiringServiceClient) GetMatchRecord(ctx context.Context, req *connect.R
 // OverrideJudgment calls career.v1.HiringService.OverrideJudgment.
 func (c *hiringServiceClient) OverrideJudgment(ctx context.Context, req *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error) {
 	return c.overrideJudgment.CallUnary(ctx, req)
+}
+
+// WriteReviewResume calls career.v1.HiringService.WriteReviewResume.
+func (c *hiringServiceClient) WriteReviewResume(ctx context.Context, req *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error) {
+	return c.writeReviewResume.CallUnary(ctx, req)
 }
 
 // HiringServiceHandler is an implementation of the career.v1.HiringService service.
@@ -307,6 +335,19 @@ type HiringServiceHandler interface {
 	// requirement it was set on is unchanged; saving a carried override
 	// again makes it that run's own.
 	OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error)
+	// Asks for the tailored résumé to be written on a run's verdicts as
+	// they stand after review (FSD FR-HF-08). Offered when the run scored
+	// below the résumé gate, so wrote none, and a person's verdicts lift
+	// the score to the gate. The résumé is the owner's alone: it is kept
+	// apart from the submission, shown on the admin page, never emailed,
+	// and never sent to the member who submitted the posting. The call
+	// returns at once with the résumé marked as being written; the write
+	// waits its turn for the model like any review. Asking again replaces
+	// the last one. Refused when the run wrote a résumé of its own, when
+	// the score after review is below the gate, when no verdict has been
+	// set by a person, when a later run has superseded the record, and
+	// while one is already being written.
+	WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error)
 }
 
 // NewHiringServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -358,6 +399,12 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(hiringServiceMethods.ByName("OverrideJudgment")),
 		connect.WithHandlerOptions(opts...),
 	)
+	hiringServiceWriteReviewResumeHandler := connect.NewUnaryHandler(
+		HiringServiceWriteReviewResumeProcedure,
+		svc.WriteReviewResume,
+		connect.WithSchema(hiringServiceMethods.ByName("WriteReviewResume")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.HiringService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case HiringServiceListRequirementsProcedure:
@@ -374,6 +421,8 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 			hiringServiceGetMatchRecordHandler.ServeHTTP(w, r)
 		case HiringServiceOverrideJudgmentProcedure:
 			hiringServiceOverrideJudgmentHandler.ServeHTTP(w, r)
+		case HiringServiceWriteReviewResumeProcedure:
+			hiringServiceWriteReviewResumeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -409,4 +458,8 @@ func (UnimplementedHiringServiceHandler) GetMatchRecord(context.Context, *connec
 
 func (UnimplementedHiringServiceHandler) OverrideJudgment(context.Context, *connect.Request[v1.OverrideJudgmentRequest]) (*connect.Response[v1.OverrideJudgmentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.OverrideJudgment is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.WriteReviewResume is not implemented"))
 }

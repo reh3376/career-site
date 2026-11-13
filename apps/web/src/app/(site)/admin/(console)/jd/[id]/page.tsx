@@ -13,6 +13,7 @@ import { RescoreButton } from "../rescore-button";
 
 import { OutcomePanel, type Feedback, type Outcome } from "./outcome-panel";
 import { OverrideControl } from "./override-control";
+import { ReviewResumePanel } from "./review-resume-panel";
 import {
   RequirementsEditor,
   type Requirement as RequirementRow,
@@ -337,6 +338,13 @@ export default async function AdminJdDetailPage({
             </Link>
             .
           </p>
+          <ReviewResumePanel
+            key={`${recordResp.reviewResume?.status ?? "none"}:${recordResp.reviewResume?.requestedAt ?? ""}`}
+            runId={recordResp.record?.runId ?? ""}
+            resume={recordResp.reviewResume}
+            canWrite={Boolean(recordResp.canWriteReviewResume)}
+            note={recordResp.reviewResumeNote ?? ""}
+          />
           <RecordView
             record={recordData}
             controls="live"

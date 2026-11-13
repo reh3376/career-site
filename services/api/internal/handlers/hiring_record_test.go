@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
@@ -12,8 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/jd"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -343,5 +348,192 @@ func TestMatchRecordAgainstPostgres(t *testing.T) {
 	still, err := get(adminCtx, &v1.GetMatchRecordRequest{SubmissionId: sid})
 	if err != nil || still.Record.GetRunId() != f.runID || !still.CanOverride {
 		t.Errorf("the record while a later run is going: run=%q can=%v err=%v", still.GetRecord().GetRunId(), still.GetCanOverride(), err)
+	}
+}
+
+// fakeResumes stands in for the scorer: it records what it was asked to
+// write and finishes the row when the test lets it, so the request, the
+// busy refusal and the finished row can each be looked at.
+type fakeResumes struct {
+	repo    *hiring.Repo
+	called  chan [2]string
+	release chan struct{}
+}
+
+func (f *fakeResumes) CanWriteResume() bool { return true }
+
+func (f *fakeResumes) WriteReviewResume(ctx context.Context, submissionID int64, runID, jdText string, hints prompts.Hints) {
+	f.called <- [2]string{runID, hints.Role + "|" + strconv.Itoa(int(corpusscope.FromContext(ctx)))}
+	<-f.release
+	_ = f.repo.FinishReviewResume(ctx, runID, []byte(`{"experience":[]}`), "# Written after review", "test-model", "resume_tailor", 7)
+	_ = f.repo.SetReviewResumePDF(ctx, runID, []byte("%PDF-1.7 after review"), 2)
+	f.called <- [2]string{"done", ""}
+}
+
+// The résumé after review through the RPCs (owner's decision,
+// 2026-11-13): offered only once a person's verdicts lift a run that
+// finished below the gate to the gate, written for the owner alone,
+// and never part of what the member is sent.
+func TestReviewResumeAgainstPostgres(t *testing.T) {
+	h, pool, ctx := hiringStack(t)
+	// The gate is whatever is in force: a stored setting wins over the
+	// fallback, so the test reads it and does not assume one. The run is
+	// marked as having finished below it, which is what the offer reads.
+	bands := jd.NewBandsStore(slog.New(slog.NewTextHandler(io.Discard, nil)), h.users, jd.DefaultBands(0.8))
+	h.SetBands(bands)
+	gate := bands.Get(ctx).Strong
+	if gate <= 0.4 || gate > 1 {
+		t.Skipf("the gate in force here is %.2f; this test needs one between 0.40 and 1.00", gate)
+	}
+	f := newRecordFixture(t, h, pool, ctx)
+	if _, err := pool.Exec(ctx, `UPDATE jd_runs SET status = 'below_threshold', fit = 'possible', retrieval_scope = 'all' WHERE run_id = $1::uuid`, f.runID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE jd_submissions SET status = 'below_threshold' WHERE id = $1`, f.submissionID); err != nil {
+		t.Fatal(err)
+	}
+	sid := strconv.FormatInt(f.submissionID, 10)
+	adminCtx := WithCaller(ctx, &users.User{ID: f.adminID, Role: users.RoleAdmin})
+	ownerCtx := WithCaller(ctx, &users.User{ID: f.ownerID, Role: users.RoleMember})
+	read := func(c context.Context) *v1.GetMatchRecordResponse {
+		resp, err := h.GetMatchRecord(c, connect.NewRequest(&v1.GetMatchRecordRequest{SubmissionId: sid}))
+		if err != nil {
+			t.Fatalf("GetMatchRecord: %v", err)
+		}
+		return resp.Msg
+	}
+	write := func() (*v1.WriteReviewResumeResponse, error) {
+		resp, err := h.WriteReviewResume(adminCtx, connect.NewRequest(&v1.WriteReviewResumeRequest{RunId: f.runID}))
+		if err != nil {
+			return nil, err
+		}
+		return resp.Msg, nil
+	}
+	override := func(judgmentID, determination, basis string) {
+		t.Helper()
+		if _, err := h.OverrideJudgment(adminCtx, connect.NewRequest(&v1.OverrideJudgmentRequest{
+			JudgmentId: judgmentID, Determination: determination, Basis: basis, Reason: "test " + determination, Role: "hiring_manager",
+		})); err != nil {
+			t.Fatalf("override to %s: %v", determination, err)
+		}
+	}
+
+	// With no writer wired nothing is offered, and nothing can be asked.
+	first := read(adminCtx)
+	r2 := first.Record.Judgments[1].Id
+	if first.CanWriteReviewResume || first.ReviewResumeNote != "" || first.ReviewResume != nil {
+		t.Errorf("a record with no override is offered nothing and told nothing: %+v", first)
+	}
+	if _, err := write(); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("asking with no override: code %v, want failed_precondition", connect.CodeOf(err))
+	}
+	override(r2, "not_met", "scope_shortfall")
+	if got := read(adminCtx); got.CanWriteReviewResume || got.ReviewResumeNote != "The résumé writer is not available here." {
+		t.Errorf("with no writer wired: can=%v note=%q", got.CanWriteReviewResume, got.ReviewResumeNote)
+	}
+
+	fake := &fakeResumes{repo: h.repo, called: make(chan [2]string, 2), release: make(chan struct{})}
+	h.SetReviewResumes(fake)
+
+	// A review that leaves the score below the gate is offered nothing,
+	// and told why: r1 met (2) of 5.
+	wantNote := fmt.Sprintf("The score after review, 0.40, is below the résumé gate of %.2f, so no résumé is offered.", gate)
+	if got := read(adminCtx); got.CanWriteReviewResume || got.ReviewResumeNote != wantNote {
+		t.Errorf("below the gate after review: can=%v note=%q", got.CanWriteReviewResume, got.ReviewResumeNote)
+	}
+	if _, err := write(); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("asking below the gate: code %v, want failed_precondition", connect.CodeOf(err))
+	}
+	for name, c := range map[string]struct {
+		run  string
+		code connect.Code
+	}{
+		"a run id that is not a uuid": {"x", connect.CodeInvalidArgument},
+		"a run with no record":        {"00000000-0000-0000-0000-00000000dead", connect.CodeNotFound},
+	} {
+		if _, err := h.WriteReviewResume(adminCtx, connect.NewRequest(&v1.WriteReviewResumeRequest{RunId: c.run})); connect.CodeOf(err) != c.code {
+			t.Errorf("%s: code %v, want %v", name, connect.CodeOf(err), c.code)
+		}
+	}
+
+	// The person's verdict lifts it: both required rows now earn their
+	// weight, 1.00, which is at or above any gate.
+	override(r2, "met_equivalent", "adjacent_domain")
+	offered := read(adminCtx)
+	if !offered.CanWriteReviewResume || offered.ReviewResumeNote != "" || offered.Record.GetReviewedScore() != 1 {
+		t.Fatalf("at the gate after review: can=%v note=%q reviewed=%v", offered.CanWriteReviewResume, offered.ReviewResumeNote, offered.Record.GetReviewedScore())
+	}
+	// The member is told nothing of it, before or after.
+	if mine := read(ownerCtx); mine.CanWriteReviewResume || mine.ReviewResumeNote != "" || mine.ReviewResume != nil {
+		t.Errorf("a member's response must not name a résumé after review: %+v", mine)
+	}
+
+	asked, err := write()
+	if err != nil {
+		t.Fatalf("WriteReviewResume: %v", err)
+	}
+	if rr := asked.ReviewResume; rr == nil || rr.Status != hiring.ReviewResumeWriting || rr.RunId != f.runID || rr.ReviewedScore != 1 || rr.OverrideCount != 1 || rr.Markdown != "" {
+		t.Errorf("the row as asked for: %+v", asked.ReviewResume)
+	}
+	select {
+	case call := <-fake.called:
+		// Written for the run asked about, under the scope that run read.
+		if call[0] != f.runID || call[1] != "Controls Engineer|"+strconv.Itoa(int(corpusscope.All)) {
+			t.Errorf("the writer was called with %v", call)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the writer was never started")
+	}
+	writing := read(adminCtx)
+	if writing.ReviewResume.GetStatus() != hiring.ReviewResumeWriting || writing.CanWriteReviewResume {
+		t.Errorf("while it is being written: status=%q can=%v", writing.ReviewResume.GetStatus(), writing.CanWriteReviewResume)
+	}
+	if _, err := write(); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("asking again while one is being written: code %v, want failed_precondition", connect.CodeOf(err))
+	}
+	close(fake.release)
+	select {
+	case <-fake.called:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the writer never finished")
+	}
+
+	ready := read(adminCtx)
+	rr := ready.ReviewResume
+	if rr == nil || rr.Status != hiring.ReviewResumeReady || rr.Markdown != "# Written after review" || rr.FinishedAt == nil ||
+		rr.DownloadPath != ReviewResumeDownloadPath(f.runID) || rr.Model != "test-model" || !ready.CanWriteReviewResume {
+		t.Errorf("the résumé when ready, as the admin reads it: %+v can=%v", rr, ready.CanWriteReviewResume)
+	}
+	// The member's side of the posting has not moved: no résumé on the
+	// submission, the status as the run left it, and nothing in the
+	// record's response.
+	if mine := read(ownerCtx); mine.ReviewResume != nil || mine.CanWriteReviewResume {
+		t.Errorf("a member must never be sent the résumé after review: %+v", mine.ReviewResume)
+	}
+	jdh := NewJd(slog.New(slog.NewTextHandler(io.Discard, nil)), h.users, nil, nil, 0, nil)
+	jdh.SetHiring(h.repo)
+	result, err := jdh.GetJdResult(ownerCtx, connect.NewRequest(&v1.GetJdResultRequest{SubmissionId: sid}))
+	if err != nil {
+		t.Fatalf("GetJdResult: %v", err)
+	}
+	if result.Msg.ResumeMarkdown != "" || result.Msg.GeneratedResumeUrl != "" || result.Msg.Status != v1.JdStatus_JD_STATUS_BELOW_THRESHOLD {
+		t.Errorf("the member's result must be as the run left it: status=%v markdown=%q url=%q", result.Msg.Status, result.Msg.ResumeMarkdown, result.Msg.GeneratedResumeUrl)
+	}
+	// The PDF route answers an admin's session and nothing else; with no
+	// session lookup wired it is a plain not-found.
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, ReviewResumeDownloadPath(f.runID), nil)
+	req.SetPathValue("file", f.runID+".pdf")
+	jdh.ServeReviewResumePDF(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("the PDF without an admin session: %d, want 404", rec.Code)
+	}
+
+	// A run that wrote a résumé of its own is offered none after review.
+	if _, err := pool.Exec(ctx, `UPDATE jd_runs SET status = 'ready', resume_generated = true WHERE run_id = $1::uuid`, f.runID); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(adminCtx); got.CanWriteReviewResume || got.ReviewResumeNote != "This run wrote a résumé of its own, so none is written after review." {
+		t.Errorf("a run with its own résumé: can=%v note=%q", got.CanWriteReviewResume, got.ReviewResumeNote)
 	}
 }
