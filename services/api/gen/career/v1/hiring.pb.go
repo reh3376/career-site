@@ -1463,7 +1463,8 @@ func (x *SetHiringSettingsResponse) GetSettings() *HiringSettings {
 // numbers that sum to one over the counted weight, and two shares of
 // the evidenced part. Computed in code over effective determinations,
 // which are a person's override where one is set and the model's
-// answer after the code rules otherwise.
+// answer after the code rules otherwise. A member is sent the numbers
+// computed over the model's answers alone.
 type Coverage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Share of the counted weight that is evidenced: met, or met through
@@ -1846,7 +1847,8 @@ func (x *ReportedFacts) GetPartiesEvidenced() []string {
 }
 
 // A person's override of a judgment (FSD FR-HF-08). It is read as the
-// effective value; the model's own answer stays on the judgment.
+// effective value; the model's own answer stays on the judgment. Sent
+// to admins only: a member is sent the model's verdicts.
 type JudgmentOverride struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The determination the person set. Vocabulary `determination`.
@@ -1858,12 +1860,27 @@ type JudgmentOverride struct {
 	Role string `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
 	// When it was set.
 	At *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=at,proto3" json:"at,omitempty"`
-	// Who set it. Sent to admins only.
+	// Who set it.
 	ByDisplay string `protobuf:"bytes,5,opt,name=by_display,json=byDisplay,proto3" json:"by_display,omitempty"`
-	// Why. Sent to admins only.
-	Reason        string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Why.
+	Reason string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The attempt number of the run the override was set on, when it was
+	// carried to this run because the requirement is unchanged. 0 for an
+	// override set on this run.
+	CarriedFromAttempt int32 `protobuf:"varint,7,opt,name=carried_from_attempt,json=carriedFromAttempt,proto3" json:"carried_from_attempt,omitempty"`
+	// True for a carried override whose ground has moved: the model's
+	// verdict on this run is not the one the person overrode. The
+	// override still counts; it is marked for a second look, and saving
+	// it again on this run clears the mark.
+	Recheck bool `protobuf:"varint,8,opt,name=recheck,proto3" json:"recheck,omitempty"`
+	// The model's determination on the run where the person decided. Set
+	// for a carried override.
+	ModelDeterminationThen string `protobuf:"bytes,9,opt,name=model_determination_then,json=modelDeterminationThen,proto3" json:"model_determination_then,omitempty"`
+	// The model's basis on the run where the person decided. Set for a
+	// carried override.
+	ModelBasisThen string `protobuf:"bytes,10,opt,name=model_basis_then,json=modelBasisThen,proto3" json:"model_basis_then,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *JudgmentOverride) Reset() {
@@ -1934,6 +1951,34 @@ func (x *JudgmentOverride) GetByDisplay() string {
 func (x *JudgmentOverride) GetReason() string {
 	if x != nil {
 		return x.Reason
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetCarriedFromAttempt() int32 {
+	if x != nil {
+		return x.CarriedFromAttempt
+	}
+	return 0
+}
+
+func (x *JudgmentOverride) GetRecheck() bool {
+	if x != nil {
+		return x.Recheck
+	}
+	return false
+}
+
+func (x *JudgmentOverride) GetModelDeterminationThen() string {
+	if x != nil {
+		return x.ModelDeterminationThen
+	}
+	return ""
+}
+
+func (x *JudgmentOverride) GetModelBasisThen() string {
+	if x != nil {
+		return x.ModelBasisThen
 	}
 	return ""
 }
@@ -2051,12 +2096,12 @@ type Judgment struct {
 	// `uncertainty`.
 	Uncertainty []string `protobuf:"bytes,6,rep,name=uncertainty,proto3" json:"uncertainty,omitempty"`
 	// The determination the record counts: the override when one is set,
-	// the model's otherwise.
+	// the model's otherwise. Always the model's for a member.
 	EffectiveDetermination string `protobuf:"bytes,7,opt,name=effective_determination,json=effectiveDetermination,proto3" json:"effective_determination,omitempty"`
 	// The basis the record shows: the override's when one is set, the
-	// model's otherwise.
+	// model's otherwise. Always the model's for a member.
 	EffectiveBasis string `protobuf:"bytes,8,opt,name=effective_basis,json=effectiveBasis,proto3" json:"effective_basis,omitempty"`
-	// The override, when a person has set one.
+	// The override, when a person has set one. Sent to admins only.
 	Override *JudgmentOverride `protobuf:"bytes,9,opt,name=override,proto3" json:"override,omitempty"`
 	// The three-way verdict derived from the model's determination: met,
 	// partial, unmet (FSD FR-HF-07).
@@ -2312,7 +2357,7 @@ type MatchRecord struct {
 	Requirements []*Requirement `protobuf:"bytes,11,rep,name=requirements,proto3" json:"requirements,omitempty"`
 	// The judgments, one per requirement, in the same order.
 	Judgments []*Judgment `protobuf:"bytes,12,rep,name=judgments,proto3" json:"judgments,omitempty"`
-	// How many judgments carry a person's override.
+	// How many judgments carry a person's override. 0 for a member.
 	OverrideCount int32 `protobuf:"varint,13,opt,name=override_count,json=overrideCount,proto3" json:"override_count,omitempty"`
 	// The rule the keyword screen ran under: kw1.
 	KeywordRule string `protobuf:"bytes,14,opt,name=keyword_rule,json=keywordRule,proto3" json:"keyword_rule,omitempty"`
@@ -2336,8 +2381,16 @@ type MatchRecord struct {
 	Model string `protobuf:"bytes,21,opt,name=model,proto3" json:"model,omitempty"`
 	// Whether a person edited any requirement version this run judged.
 	RequirementsEdited bool `protobuf:"varint,22,opt,name=requirements_edited,json=requirementsEdited,proto3" json:"requirements_edited,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// The score the résumé gate reads, worked out again with each
+	// person's verdict in place of the model's. Set for an admin when the
+	// record carries an override; `match_score` stays the run's own.
+	ReviewedScore *float64 `protobuf:"fixed64,23,opt,name=reviewed_score,json=reviewedScore,proto3,oneof" json:"reviewed_score,omitempty"`
+	// The fit that score falls in under the bands in force now:
+	// very_strong, strong, possible, weak, very_weak. Set with
+	// `reviewed_score`. Shown beside `fit`, never in place of it.
+	ReviewedFit   string `protobuf:"bytes,24,opt,name=reviewed_fit,json=reviewedFit,proto3" json:"reviewed_fit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MatchRecord) Reset() {
@@ -2524,6 +2577,20 @@ func (x *MatchRecord) GetRequirementsEdited() bool {
 	return false
 }
 
+func (x *MatchRecord) GetReviewedScore() float64 {
+	if x != nil && x.ReviewedScore != nil {
+		return *x.ReviewedScore
+	}
+	return 0
+}
+
+func (x *MatchRecord) GetReviewedFit() string {
+	if x != nil {
+		return x.ReviewedFit
+	}
+	return ""
+}
+
 // The determinations a reviewer may set and, for each, the bases that
 // do not contradict it, so an override form offers only pairs the
 // server will accept.
@@ -2589,7 +2656,12 @@ type GetMatchRecordRequest struct {
 	SubmissionId string `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
 	// One run of that posting. Empty reads the newest run that has a
 	// record.
-	RunId         string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	RunId string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// Return the record as the submitting member is sent it, whoever is
+	// asking: the model's verdicts, no override, no private titles. An
+	// admin sets it to see what a recruiter sees; for a member it changes
+	// nothing.
+	AsMember      bool `protobuf:"varint,3,opt,name=as_member,json=asMember,proto3" json:"as_member,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2636,6 +2708,13 @@ func (x *GetMatchRecordRequest) GetRunId() string {
 		return x.RunId
 	}
 	return ""
+}
+
+func (x *GetMatchRecordRequest) GetAsMember() bool {
+	if x != nil {
+		return x.AsMember
+	}
+	return false
 }
 
 // The record and the vocabularies it is labelled from.
@@ -3069,7 +3148,7 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x11stated_span_years\x18\x01 \x01(\x01R\x0fstatedSpanYears\x12(\n" +
 	"\x10most_recent_year\x18\x02 \x01(\x05R\x0emostRecentYear\x12<\n" +
 	"\fstated_scope\x18\x03 \x01(\v2\x19.career.v1.ScopeThresholdR\vstatedScope\x12+\n" +
-	"\x11parties_evidenced\x18\x04 \x03(\tR\x10partiesEvidenced\"\xc5\x01\n" +
+	"\x11parties_evidenced\x18\x04 \x03(\tR\x10partiesEvidenced\"\xf5\x02\n" +
 	"\x10JudgmentOverride\x12$\n" +
 	"\rdetermination\x18\x01 \x01(\tR\rdetermination\x12\x14\n" +
 	"\x05basis\x18\x02 \x01(\tR\x05basis\x12\x12\n" +
@@ -3077,7 +3156,12 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x02at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x1d\n" +
 	"\n" +
 	"by_display\x18\x05 \x01(\tR\tbyDisplay\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xca\x01\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x120\n" +
+	"\x14carried_from_attempt\x18\a \x01(\x05R\x12carriedFromAttempt\x12\x18\n" +
+	"\arecheck\x18\b \x01(\bR\arecheck\x128\n" +
+	"\x18model_determination_then\x18\t \x01(\tR\x16modelDeterminationThen\x12(\n" +
+	"\x10model_basis_then\x18\n" +
+	" \x01(\tR\x0emodelBasisThen\"\xca\x01\n" +
 	"\x0fEarlierOverride\x12\x18\n" +
 	"\aattempt\x18\x01 \x01(\x05R\aattempt\x12$\n" +
 	"\rdetermination\x18\x02 \x01(\tR\rdetermination\x12\x14\n" +
@@ -3109,7 +3193,7 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\rkeyword_terms\x18\x14 \x03(\tR\fkeywordTerms\x12\x1f\n" +
 	"\vdecision_id\x18\x15 \x01(\x03R\n" +
 	"decisionId\x12E\n" +
-	"\x10earlier_override\x18\x16 \x01(\v2\x1a.career.v1.EarlierOverrideR\x0fearlierOverride\"\xad\a\n" +
+	"\x10earlier_override\x18\x16 \x01(\v2\x1a.career.v1.EarlierOverrideR\x0fearlierOverride\"\x8f\b\n" +
 	"\vMatchRecord\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
 	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12#\n" +
@@ -3139,17 +3223,21 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"finishedAt\x12)\n" +
 	"\x10corpus_documents\x18\x14 \x01(\x05R\x0fcorpusDocuments\x12\x14\n" +
 	"\x05model\x18\x15 \x01(\tR\x05model\x12/\n" +
-	"\x13requirements_edited\x18\x16 \x01(\bR\x12requirementsEdited\x1a;\n" +
+	"\x13requirements_edited\x18\x16 \x01(\bR\x12requirementsEdited\x12*\n" +
+	"\x0ereviewed_score\x18\x17 \x01(\x01H\x01R\rreviewedScore\x88\x01\x01\x12!\n" +
+	"\freviewed_fit\x18\x18 \x01(\tR\vreviewedFit\x1a;\n" +
 	"\rVersionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
-	"\f_match_score\"L\n" +
+	"\f_match_scoreB\x11\n" +
+	"\x0f_reviewed_score\"L\n" +
 	"\x0eOverrideChoice\x12$\n" +
 	"\rdetermination\x18\x01 \x01(\tR\rdetermination\x12\x14\n" +
-	"\x05bases\x18\x02 \x03(\tR\x05bases\"g\n" +
+	"\x05bases\x18\x02 \x03(\tR\x05bases\"\x84\x01\n" +
 	"\x15GetMatchRecordRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12\x1e\n" +
-	"\x06run_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\x05runId\"\xa9\x04\n" +
+	"\x06run_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\x05runId\x12\x1b\n" +
+	"\tas_member\x18\x03 \x01(\bR\basMember\"\xa9\x04\n" +
 	"\x16GetMatchRecordResponse\x12.\n" +
 	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record\x12<\n" +
 	"\x0edeterminations\x18\x02 \x03(\v2\x14.career.v1.VocabCodeR\x0edeterminations\x12*\n" +

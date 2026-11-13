@@ -146,6 +146,17 @@ type RecordOverride struct {
 	By            int64
 	ByDisplay     string
 	At            time.Time
+	// CarriedFromAttempt is the run the override was set on when it was
+	// carried to this one because the requirement is unchanged; 0 for an
+	// override set on this run.
+	CarriedFromAttempt int
+	// Recheck marks a carried override whose ground has moved: the
+	// model's verdict on this run is not the one the person overrode.
+	// ModelDeterminationThen and ModelBasisThen are what the model said
+	// on the run where the person decided.
+	Recheck                bool
+	ModelDeterminationThen string
+	ModelBasisThen         string
 }
 
 // EarlierOverride is an override on an earlier run's judgment of the
@@ -183,6 +194,9 @@ type RecordJudgment struct {
 	KeywordTerms           []string
 	DecisionID             int64
 	Earlier                *EarlierOverride
+	// SelfAttested is whether the judgment cites the candidate's own
+	// answer to a follow-up question.
+	SelfAttested bool
 }
 
 // Record is one run's match record with everything a reader is shown.
@@ -318,7 +332,10 @@ func (r *Repo) GetRecord(ctx context.Context, runID string) (Record, error) {
            COALESCE(j.override_role, ''), COALESCE(j.override_reason, ''), COALESCE(j.override_by, 0),
            j.override_by_name, j.override_at,
            j.rationale, j.rule_adjustments, j.reported_facts, j.stale,
-           j.evidence_ids::text[], COALESCE(j.decision_id, 0)
+           j.evidence_ids::text[], COALESCE(j.decision_id, 0),
+           COALESCE(j.override_carried_attempt, 0), COALESCE(j.override_recheck, false),
+           COALESCE(j.override_model_determination, ''), COALESCE(j.override_model_basis, ''),
+           COALESCE((j.provenance_summary->>'candidate_response')::int, 0) > 0
     FROM v_judgments_effective j
     WHERE j.run_id = $1::uuid AND j.tenant_id = $2`, runID, tid)
 	if err != nil {
@@ -341,6 +358,8 @@ func (r *Repo) GetRecord(ctx context.Context, runID string) (Record, error) {
 			&overridden, &o.Determination, &o.Basis, &o.Role, &o.Reason, &o.By, &o.ByDisplay, &at,
 			&j.Rationale, &adjustments, &facts, &j.Stale,
 			&evidenceIDs, &j.DecisionID,
+			&o.CarriedFromAttempt, &o.Recheck, &o.ModelDeterminationThen, &o.ModelBasisThen,
+			&j.SelfAttested,
 		); err != nil {
 			return Record{}, fmt.Errorf("match record: judgment: %w", err)
 		}
@@ -536,6 +555,124 @@ func RecordCoverage(formula string, items []Item, preferredFraction float64) (Co
 	return Coverage{}, false
 }
 
+// ScoreV2 is the score the résumé gate reads (D-32), from items: every
+// required item is in the denominator, any other joins it only when it
+// earned something, a met or met-by-equivalence item earns its weight
+// and an unresolved one half of it; a posting with no required item
+// counts every item. Weight 0 items (working-style rows) are left out.
+// It is the arithmetic of jd.Assessor's step 4 and of
+// v_dual_write_agreement, written once more here so the fit can be
+// worked out again when a person's verdict replaces the model's; the
+// record tests hold the three to the same answer.
+func ScoreV2(items []Item) float64 {
+	anyRequired := false
+	for _, it := range items {
+		if it.Weight > 0 && itemClass(it) == ClassRequired {
+			anyRequired = true
+			break
+		}
+	}
+	var weighted, total float64
+	for _, it := range items {
+		if it.Weight <= 0 {
+			continue
+		}
+		var v float64
+		switch DeriveVerdict(it.Determination) {
+		case "met":
+			v = 1
+		case "partial":
+			v = 0.5
+		}
+		w := float64(it.Weight)
+		if !anyRequired || itemClass(it) == ClassRequired || v > 0 {
+			total += w
+		}
+		weighted += w * v
+	}
+	if total == 0 {
+		return 0
+	}
+	return weighted / total
+}
+
+func itemClass(it Item) string {
+	if it.Class != "" {
+		return it.Class
+	}
+	return ClassFromCategory(it.Category)
+}
+
+// items is the record's judgments as the formulas read them, over the
+// effective determinations or over the model's own.
+func (rec Record) items(effective bool) []Item {
+	byID := map[string]Requirement{}
+	for _, q := range rec.Requirements {
+		byID[q.ID] = q
+	}
+	out := make([]Item, 0, len(rec.Judgments))
+	for _, j := range rec.Judgments {
+		q, ok := byID[j.RequirementID]
+		if !ok {
+			continue
+		}
+		it := Item{
+			Weight: q.Weight, Category: q.Category, Class: q.Class, Excluded: !q.Included,
+			Determination: j.Determination, SelfAttested: j.SelfAttested,
+		}
+		if effective {
+			it.Determination = j.EffectiveDetermination
+		}
+		if j.NotAssessed {
+			it.Weight = 0
+		}
+		out = append(out, it)
+	}
+	return out
+}
+
+// ModelScore is the gate's score over the model's own verdicts: what
+// the run scored when it finished.
+func (rec Record) ModelScore() float64 { return ScoreV2(rec.items(false)) }
+
+// ReviewedScore is the gate's score with each person's verdict in place
+// of the model's. ok is false when the record carries no override, in
+// which case there is nothing to work out again.
+func (rec Record) ReviewedScore() (float64, bool) {
+	if rec.OverrideCount == 0 {
+		return 0, false
+	}
+	return ScoreV2(rec.items(true)), true
+}
+
+// ModelOnly is the record as the model alone left it: no override on
+// any judgment, the effective values the model's, and the three numbers
+// computed over them. It is what a reader other than the hiring side is
+// sent (owner's decision, 2026-11-13): in Phase 0 the only person who
+// can override is the candidate, and the recruiter who submitted a
+// posting is shown what the model found, not what the candidate made of
+// it.
+func (rec Record) ModelOnly() Record {
+	out := rec
+	out.Judgments = make([]RecordJudgment, len(rec.Judgments))
+	for i, j := range rec.Judgments {
+		j.Override, j.Earlier = nil, nil
+		j.EffectiveDetermination, j.EffectiveBasis = j.Determination, j.Basis
+		j.GapClass = ""
+		if !j.NotAssessed {
+			j.GapClass = GapClass(j.Basis)
+		}
+		out.Judgments[i] = j
+	}
+	out.OverrideCount = 0
+	if rec.HasNumbers {
+		if c, ok := RecordCoverage(rec.FormulaVersion, out.items(false), rec.PreferredFraction); ok {
+			out.Coverage = c
+		}
+	}
+	return out
+}
+
 // OverrideInput is one override as a reviewer asked for it.
 type OverrideInput struct {
 	JudgmentID    string
@@ -623,12 +760,14 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
 		uncertainty                                     []string
 		prevDet, prevBasis, prevRole, prevReason        string
 		prevEffective                                   string
+		prevCarried                                     bool
 	)
 	err = tx.QueryRow(ctx, `
     SELECT j.run_id::text, j.requirement_local_id, j.determination, j.basis, j.uncertainty,
            cardinality(j.evidence_ids), j.effective_determination,
            COALESCE(j.override_determination, ''), COALESCE(j.override_basis, ''),
            COALESCE(j.override_role, ''), COALESCE(j.override_reason, ''),
+           j.override_carried_from IS NOT NULL,
            q.id::text, q.text, q.type, q.version, run.submission_id, run.attempt
     FROM judgments j
     JOIN requirements q ON q.id = j.requirement_id
@@ -637,7 +776,7 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
     FOR UPDATE OF j`, in.JudgmentID, tid).Scan(
 		&res.RunID, &res.LocalID, &res.ModelDetermined, &res.ModelBasis, &uncertainty,
 		&evidenceCount, &prevEffective,
-		&prevDet, &prevBasis, &prevRole, &prevReason,
+		&prevDet, &prevBasis, &prevRole, &prevReason, &prevCarried,
 		&requirementID, &requirementText, &requirementType, &requirementVersion, &res.SubmissionID, &attempt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return res, ErrNotFound
@@ -672,19 +811,24 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
 		if _, err := tx.Exec(ctx, `
       UPDATE judgments
       SET override_determination = NULL, override_basis = NULL, override_by = NULL,
-          override_at = NULL, override_reason = NULL, override_role = NULL
+          override_at = NULL, override_reason = NULL, override_role = NULL,
+          override_carried_from = NULL
       WHERE id = $1::uuid`, in.JudgmentID); err != nil {
 			return res, fmt.Errorf("override: withdraw: %w", err)
 		}
 		res.Effective, res.EffectiveBasis = res.ModelDetermined, res.ModelBasis
 	default:
-		if prevDet == in.Determination && prevBasis == in.Basis && prevRole == in.Role && prevReason == in.Reason {
+		// Saving a carried override again, unchanged, is how a person
+		// says it still stands on this run; saving this run's own
+		// override again, unchanged, is nothing.
+		if !prevCarried && prevDet == in.Determination && prevBasis == in.Basis && prevRole == in.Role && prevReason == in.Reason {
 			return res, invalidOverride("this judgment already carries that override")
 		}
 		if _, err := tx.Exec(ctx, `
       UPDATE judgments
       SET override_determination = $2, override_basis = $3, override_by = $4,
-          override_at = now(), override_reason = $5, override_role = $6
+          override_at = now(), override_reason = $5, override_role = $6,
+          override_carried_from = NULL
       WHERE id = $1::uuid`, in.JudgmentID, in.Determination, in.Basis, in.By, in.Reason, in.Role); err != nil {
 			return res, fmt.Errorf("override: write: %w", err)
 		}
@@ -697,7 +841,7 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
 	// in the queue to be graded by a human.
 	var previous any
 	if prevDet != "" {
-		previous = map[string]any{"determination": prevDet, "basis": prevBasis, "role": prevRole, "reason": prevReason}
+		previous = map[string]any{"determination": prevDet, "basis": prevBasis, "role": prevRole, "reason": prevReason, "carried": prevCarried}
 	}
 	input, _ := json.Marshal(map[string]any{
 		"judgment_id": in.JudgmentID, "run_id": res.RunID, "attempt": attempt,
@@ -723,59 +867,11 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
 	}
 
 	// The record's numbers, again, over effective determinations.
-	var formula string
-	var versions []byte
-	if err := tx.QueryRow(ctx, `
-    SELECT formula_version, versions FROM match_records WHERE run_id = $1::uuid FOR UPDATE`,
-		res.RunID).Scan(&formula, &versions); err != nil {
-		return res, fmt.Errorf("override: read record: %w", err)
-	}
-	_, fraction := flattenVersions(versions)
-	rows, err := tx.Query(ctx, `
-    SELECT j.effective_determination, q.weight, q.type, q.category, q.class, q.included,
-           COALESCE((j.provenance_summary->>'candidate_response')::int, 0) > 0,
-           j.override_determination IS NOT NULL
-    FROM judgments j
-    JOIN requirements q ON q.id = j.requirement_id
-    WHERE j.run_id = $1::uuid`, res.RunID)
+	count, err := refreshRecordNumbers(ctx, tx, res.RunID)
 	if err != nil {
-		return res, fmt.Errorf("override: read judgments: %w", err)
+		return res, err
 	}
-	var items []Item
-	for rows.Next() {
-		var it Item
-		var typ string
-		var included, overridden bool
-		if err := rows.Scan(&it.Determination, &it.Weight, &typ, &it.Category, &it.Class, &included, &it.SelfAttested, &overridden); err != nil {
-			rows.Close()
-			return res, fmt.Errorf("override: read judgments: %w", err)
-		}
-		if typ == TypeBehavioral {
-			it.Weight = 0
-		}
-		it.Excluded = !included
-		if overridden {
-			res.OverrideCount++
-		}
-		items = append(items, it)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return res, fmt.Errorf("override: read judgments: %w", err)
-	}
-	if c, ok := RecordCoverage(formula, items, fraction); ok {
-		if _, err := tx.Exec(ctx, `
-      UPDATE match_records
-      SET evidenced = $2, unresolved = $3, unmet = $4,
-          coverage_equivalent_share = $5, self_attested_share = $6, override_count = $7
-      WHERE run_id = $1::uuid`,
-			res.RunID, c.Evidenced, c.Unresolved, c.Unmet, c.EquivalentShare, c.SelfAttestedShare, res.OverrideCount); err != nil {
-			return res, fmt.Errorf("override: write record: %w", err)
-		}
-	} else if _, err := tx.Exec(ctx, `
-      UPDATE match_records SET override_count = $2 WHERE run_id = $1::uuid`, res.RunID, res.OverrideCount); err != nil {
-		return res, fmt.Errorf("override: write record: %w", err)
-	}
+	res.OverrideCount = count
 	if err := tx.Commit(ctx); err != nil {
 		return res, fmt.Errorf("override: commit: %w", err)
 	}
@@ -785,3 +881,161 @@ func (r *Repo) OverrideJudgment(ctx context.Context, in OverrideInput, reg *Regi
 // DecisionKindOverride is the decision_log kind of a person's override
 // of a judgment (14 §3.3).
 const DecisionKindOverride = "hf_override"
+
+// refreshRecordNumbers computes a run's three numbers and two shares
+// again over effective determinations, under the formula the record was
+// written with and the preferred fraction in its versions, and sets the
+// override count. It runs inside the transaction that changed an
+// override, so the record never shows numbers from before it.
+func refreshRecordNumbers(ctx context.Context, tx pgx.Tx, runID string) (int, error) {
+	var formula string
+	var versions []byte
+	if err := tx.QueryRow(ctx, `
+    SELECT formula_version, versions FROM match_records WHERE run_id = $1::uuid FOR UPDATE`,
+		runID).Scan(&formula, &versions); err != nil {
+		return 0, fmt.Errorf("override: read record: %w", err)
+	}
+	_, fraction := flattenVersions(versions)
+	rows, err := tx.Query(ctx, `
+    SELECT j.effective_determination, q.weight, q.type, q.category, q.class, q.included,
+           COALESCE((j.provenance_summary->>'candidate_response')::int, 0) > 0,
+           j.override_determination IS NOT NULL
+    FROM judgments j
+    JOIN requirements q ON q.id = j.requirement_id
+    WHERE j.run_id = $1::uuid`, runID)
+	if err != nil {
+		return 0, fmt.Errorf("override: read judgments: %w", err)
+	}
+	var items []Item
+	count := 0
+	for rows.Next() {
+		var it Item
+		var typ string
+		var included, overridden bool
+		if err := rows.Scan(&it.Determination, &it.Weight, &typ, &it.Category, &it.Class, &included, &it.SelfAttested, &overridden); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("override: read judgments: %w", err)
+		}
+		if typ == TypeBehavioral {
+			it.Weight = 0
+		}
+		it.Excluded = !included
+		if overridden {
+			count++
+		}
+		items = append(items, it)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("override: read judgments: %w", err)
+	}
+	if c, ok := RecordCoverage(formula, items, fraction); ok {
+		if _, err := tx.Exec(ctx, `
+      UPDATE match_records
+      SET evidenced = $2, unresolved = $3, unmet = $4,
+          coverage_equivalent_share = $5, self_attested_share = $6, override_count = $7
+      WHERE run_id = $1::uuid`,
+			runID, c.Evidenced, c.Unresolved, c.Unmet, c.EquivalentShare, c.SelfAttestedShare, count); err != nil {
+			return 0, fmt.Errorf("override: write record: %w", err)
+		}
+	} else if _, err := tx.Exec(ctx, `
+      UPDATE match_records SET override_count = $2 WHERE run_id = $1::uuid`, runID, count); err != nil {
+		return 0, fmt.Errorf("override: write record: %w", err)
+	}
+	return count, nil
+}
+
+// CarryOverrides copies each override on the newest earlier run of the
+// same posting onto this run's judgment of the same requirement
+// version, and computes the record's numbers again (owner's decision,
+// 2026-11-13). A new run judges every requirement again; without this a
+// person would decide the same row after every re-score. An override
+// is carried only while the requirement is unchanged: the judgment
+// names the exact version judged, so a requirement edited since has a
+// different id and nothing to carry. The model's fresh verdict stays on
+// the judgment beside the carried one, and the reading view marks the
+// row for a second look when that verdict is no longer the one the
+// person overrode. Each carry is logged as the override it continues.
+// It returns how many overrides were carried.
+func (r *Repo) CarryOverrides(ctx context.Context, runID string, submissionID int64, attempt int) (int, error) {
+	if attempt <= 1 {
+		return 0, nil
+	}
+	tid := tenant.FromContext(ctx).Int64()
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("carry overrides: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	rows, err := tx.Query(ctx, `
+    WITH src AS (
+      SELECT run.run_id, run.attempt FROM jd_runs run
+      WHERE run.submission_id = $2 AND run.attempt < $3
+        AND EXISTS (SELECT 1 FROM judgments x WHERE x.run_id = run.run_id)
+      ORDER BY run.attempt DESC LIMIT 1
+    )
+    UPDATE judgments n
+    SET override_determination = p.override_determination, override_basis = p.override_basis,
+        override_by = p.override_by, override_at = p.override_at,
+        override_reason = p.override_reason, override_role = p.override_role,
+        override_carried_from = COALESCE(p.override_carried_from, p.run_id)
+    FROM judgments p, src
+    WHERE n.run_id = $1::uuid AND n.tenant_id = $4 AND p.run_id = src.run_id
+      AND p.requirement_id = n.requirement_id
+      AND p.override_determination IS NOT NULL AND p.override_by IS NOT NULL
+    RETURNING n.id::text, n.requirement_local_id, n.determination, n.basis,
+              p.determination, p.basis, n.override_determination, n.override_basis,
+              n.override_role, n.override_reason, n.override_by, src.attempt`,
+		runID, submissionID, attempt, tid)
+	if err != nil {
+		return 0, fmt.Errorf("carry overrides: %w", err)
+	}
+	type carried struct {
+		id, local, det, basis, prevDet, prevBasis, oDet, oBasis, role, reason string
+		by                                                                    int64
+		from                                                                  int
+	}
+	var all []carried
+	for rows.Next() {
+		var c carried
+		if err := rows.Scan(&c.id, &c.local, &c.det, &c.basis, &c.prevDet, &c.prevBasis, &c.oDet, &c.oBasis, &c.role, &c.reason, &c.by, &c.from); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("carry overrides: scan: %w", err)
+		}
+		all = append(all, c)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("carry overrides: %w", err)
+	}
+	if len(all) == 0 {
+		return 0, nil
+	}
+	for _, c := range all {
+		input, _ := json.Marshal(map[string]any{
+			"judgment_id": c.id, "run_id": runID, "attempt": attempt, "carried_from_attempt": c.from,
+			"model":          map[string]any{"determination": c.det, "basis": c.basis},
+			"model_previous": map[string]any{"determination": c.prevDet, "basis": c.prevBasis},
+		})
+		output, _ := json.Marshal(map[string]any{
+			"action": "carry", "determination": c.oDet, "basis": c.oBasis, "role": c.role, "reason": c.reason,
+			"verdict": DeriveVerdict(c.oDet),
+		})
+		if _, err := tx.Exec(ctx, `
+      INSERT INTO decision_log
+        (tenant_id, run_id, kind, ref_kind, ref_id, key, model, input, output,
+         human_verdict, human_note, reviewed_by, reviewed_at)
+      VALUES ($1, $2::uuid, $3, 'jd_submission', $4, $5, 'code', $6, $7, $8, $9, $10, now())`,
+			tid, runID, DecisionKindOverride, submissionID, c.local, input, output,
+			DeriveVerdict(c.oDet), c.reason, c.by); err != nil {
+			return 0, fmt.Errorf("carry overrides: log: %w", err)
+		}
+	}
+	if _, err := refreshRecordNumbers(ctx, tx, runID); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("carry overrides: commit: %w", err)
+	}
+	return len(all), nil
+}

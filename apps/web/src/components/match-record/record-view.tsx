@@ -89,6 +89,9 @@ export type RecordData = {
     self_attested_line?: string;
     // Further lines under the figures: how many verdicts a person set.
     figure_notes?: string[];
+    // The fit, for the hiring side: the run's own, and the fit worked
+    // out again with a person's verdicts when the record carries any.
+    fit_lines?: { label?: string; value?: string; note?: string }[];
   };
   legend?: { determinations?: string[]; must?: string; nice?: string; weight?: string };
   definitions?: {
@@ -165,6 +168,18 @@ export function RecordView({
             <p className="mt-1 font-mono text-sm uppercase tracking-[0.14em] text-signal">{h.status}</p>
             {h.status_note ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink">{h.status_note}</p> : null}
           </div>
+        ) : null}
+
+        {h.fit_lines?.length ? (
+          <dl className="mt-6 grid gap-2 text-sm">
+            {h.fit_lines.map((f) => (
+              <div key={f.label} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <dt className={`${MONO} w-36 text-ink-3`}>{f.label}</dt>
+                <dd className="m-0 font-mono text-ink">{f.value}</dd>
+                {f.note ? <dd className="m-0 text-xs text-ink-3">{f.note}</dd> : null}
+              </div>
+            ))}
+          </dl>
         ) : null}
 
         {h.summary ? <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink">{h.summary}</p> : null}

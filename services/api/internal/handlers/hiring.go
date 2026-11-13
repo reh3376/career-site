@@ -36,7 +36,13 @@ type Hiring struct {
 	// release still releases and says no run began.
 	scorer *jd.Scorer
 	events *events.Writer
+	// bands names the fit a score falls in, for the fit after review on
+	// a record that carries an override; nil falls back to the scorer's.
+	bands *jd.BandsStore
 }
+
+// SetBands wires the fit bands.
+func (h *Hiring) SetBands(b *jd.BandsStore) { h.bands = b }
 
 // NewHiring wires the handler. scorer may be nil.
 func NewHiring(log *slog.Logger, repo *users.Repo, hiringRepo *hiring.Repo, settings *hiring.SettingsStore, scorer *jd.Scorer) *Hiring {

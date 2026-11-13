@@ -18,15 +18,19 @@ import (
 // The match record as a person reads it, and the override of a
 // judgment (FSD FR-HF-08, FR-HF-17; Phase 0 step 6).
 //
-// Two readers, one record. The member who submitted the posting and an
-// admin are sent the same judgments and the same numbers; what differs
-// is what surrounds a citation. An admin sees which document and which
-// passage a judgment cites, who overrode it and why, and the
-// decision-log row behind it. A member sees the kind of evidence, the
-// title of a document only when the document is public, and that a
-// person set a verdict and in what role, never the name or the reason:
-// those are the reviewer's notes, and the private corpus stays private
-// even by its titles.
+// Two readers, two records of the same run. An admin is sent the record
+// as it stands: the effective verdicts, which are a person's where one
+// was set, the numbers computed over them, who overrode what and why,
+// which document and passage each judgment cites, and the decision-log
+// row behind it. The member who submitted the posting is sent the
+// record as the model alone left it (hiring.Record.ModelOnly): the
+// model's verdicts, the numbers computed over those, and no override
+// (owner's decision, 2026-11-13). In Phase 0 the only person who can
+// override is the candidate, standing in for a hiring manager, and a
+// recruiter is shown what the model found, not what the candidate made
+// of it. A member is also sent the kind of evidence and the title of a
+// document only when the document is public: the private corpus stays
+// private even by its titles.
 
 // recordAudience says who a record is being built for.
 type recordAudience struct {
@@ -77,13 +81,20 @@ func judgmentProto(j hiring.RecordJudgment, aud recordAudience) *v1.Judgment {
 			AddedUncertainty: a.AddedUncertainty, Reason: a.Reason,
 		})
 	}
-	if o := j.Override; o != nil {
-		out.Override = &v1.JudgmentOverride{Determination: o.Determination, Basis: o.Basis, Role: o.Role}
+	// An override is the hiring side's and is sent to an admin only. A
+	// member's record was made model-only before it reached here; the
+	// guard is kept so that a caller who forgets cannot leak one.
+	if o := j.Override; o != nil && aud.admin {
+		out.Override = &v1.JudgmentOverride{
+			Determination: o.Determination, Basis: o.Basis, Role: o.Role,
+			ByDisplay: o.ByDisplay, Reason: o.Reason,
+			CarriedFromAttempt: int32(o.CarriedFromAttempt), Recheck: o.Recheck,
+		}
+		if o.CarriedFromAttempt > 0 {
+			out.Override.ModelDeterminationThen, out.Override.ModelBasisThen = o.ModelDeterminationThen, o.ModelBasisThen
+		}
 		if !o.At.IsZero() {
 			out.Override.At = timestamppb.New(o.At)
-		}
-		if aud.admin {
-			out.Override.ByDisplay, out.Override.Reason = o.ByDisplay, o.Reason
 		}
 	}
 	if aud.admin {
@@ -103,8 +114,12 @@ func judgmentProto(j hiring.RecordJudgment, aud recordAudience) *v1.Judgment {
 
 // recordProto renders a record for its reader. title and employer are
 // the submitter's own words for the role, which the record's role row
-// only approximates.
+// only approximates. A reader who is not an admin is rendered the
+// model-only record, whatever was passed in.
 func recordProto(rec hiring.Record, title, employer string, aud recordAudience) *v1.MatchRecord {
+	if !aud.admin {
+		rec = rec.ModelOnly()
+	}
 	if strings.TrimSpace(title) == "" {
 		title = rec.RoleTitle
 	}
@@ -190,13 +205,16 @@ func (h *Hiring) GetMatchRecord(
 	if err != nil {
 		return nil, notFound
 	}
-	aud := recordAudience{admin: caller.Role == users.RoleAdmin}
+	isAdmin := caller.Role == users.RoleAdmin
 	// A member reads the record of a posting they submitted and no
 	// other; the same not-found as a missing id, so an id cannot be
 	// probed.
-	if !aud.admin && (s.UserID == 0 || s.UserID != caller.ID) {
+	if !isAdmin && (s.UserID == 0 || s.UserID != caller.ID) {
 		return nil, notFound
 	}
+	// An admin may ask for the record as the member is sent it, to see
+	// what a recruiter sees.
+	aud := recordAudience{admin: isAdmin && !req.Msg.GetAsMember()}
 	out := &v1.GetMatchRecordResponse{}
 	reg, vErr := h.repo.LoadVocab(ctx)
 	if vErr != nil {
@@ -243,7 +261,7 @@ func (h *Hiring) GetMatchRecord(
 	if rec.SubmissionID != id {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("that run has no match record"))
 	}
-	out.Record = recordProto(rec, s.RoleHint, s.EmployerHint, aud)
+	out.Record = h.recordFor(ctx, rec, s.RoleHint, s.EmployerHint, aud)
 	if aud.admin && !rec.Superseded && reg != nil {
 		out.CanOverride = true
 		out.OverrideChoices = overrideChoices(reg)
@@ -325,6 +343,30 @@ func (h *Hiring) OverrideJudgment(
 		title, employer = s.RoleHint, s.EmployerHint
 	}
 	return connect.NewResponse(&v1.OverrideJudgmentResponse{
-		Record: recordProto(rec, title, employer, recordAudience{admin: true}),
+		Record: h.recordFor(ctx, rec, title, employer, recordAudience{admin: true}),
 	}), nil
+}
+
+// recordFor renders a record for its reader and, for an admin reading a
+// record that carries an override, adds the score the résumé gate
+// reads worked out again with each person's verdict in place of the
+// model's, and the fit it falls in (owner's decision, 2026-11-13: both
+// are shown, the run's own never replaced). The bands are the ones in
+// force now, which is what "what would this be today" means; without a
+// band store the score is sent and the fit left empty.
+func (h *Hiring) recordFor(ctx context.Context, rec hiring.Record, title, employer string, aud recordAudience) *v1.MatchRecord {
+	out := recordProto(rec, title, employer, aud)
+	if !aud.admin {
+		return out
+	}
+	if score, ok := rec.ReviewedScore(); ok {
+		out.ReviewedScore = &score
+		switch {
+		case h.bands != nil:
+			out.ReviewedFit = h.bands.Get(ctx).Category(score)
+		case h.scorer != nil:
+			out.ReviewedFit = h.scorer.Bands(ctx).Category(score)
+		}
+	}
+	return out
 }

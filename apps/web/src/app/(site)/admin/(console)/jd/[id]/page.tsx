@@ -328,10 +328,14 @@ export default async function AdminJdDetailPage({
             ) : null}
           </p>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">
-            The run as a reader sees it, and as the member who submitted the posting sees it without the passage
-            numbers, the private titles and the override form. A verdict you set here becomes the one the three
-            figures count; the model&rsquo;s stays on the row for comparison, and the fit and the résumé decision,
-            made when the run finished, do not move.
+            The run as the hiring side reads it. A verdict you set here becomes the one the three figures count on
+            this page, with the model&rsquo;s kept beside it, and it stays in force on later runs while the
+            requirement is unchanged. The recruiter who submitted the posting is shown the model&rsquo;s verdicts
+            and figures only, without passage numbers or private titles:{" "}
+            <Link href={`/jd-upload/${r.id}`} className="text-accent">
+              open the recruiter&rsquo;s view
+            </Link>
+            .
           </p>
           <RecordView
             record={recordData}
@@ -357,6 +361,7 @@ export default async function AdminJdDetailPage({
                     effectiveBasis: j.effectiveBasis ?? "",
                     overridden: Boolean(j.override),
                     overrideRole: j.override?.role,
+                    carried: (j.override?.carriedFromAttempt ?? 0) > 0,
                     closed,
                   }}
                   auditHref={`/admin/decisions?ref=${r.id}&all=1`}

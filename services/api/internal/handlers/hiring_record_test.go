@@ -13,12 +13,14 @@ import (
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
 	"github.com/reh3376/career-site/services/api/internal/hiring"
+	"github.com/reh3376/career-site/services/api/internal/jd"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
-// What a member is sent and what an admin is sent differ only around a
-// citation and around an override: no private title, no passage id, no
-// reviewer's name or reason, no decision-log id.
+// What a member is sent: no private title, no passage id, no
+// decision-log id, and no override at all. An override reaching the
+// member's rendering is dropped even if the record was not made
+// model-only first.
 func TestJudgmentProtoByAudience(t *testing.T) {
 	at := time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC)
 	j := hiring.RecordJudgment{
@@ -28,6 +30,7 @@ func TestJudgmentProtoByAudience(t *testing.T) {
 		Override: &hiring.RecordOverride{
 			Determination: hiring.DetMetEquivalent, Basis: hiring.BasisAdjacentDomain, Role: hiring.RoleHiringManager,
 			Reason: "the reviewer's own note", By: 7, ByDisplay: "A Reviewer", At: at,
+			CarriedFromAttempt: 2, Recheck: true, ModelDeterminationThen: hiring.DetNotMet, ModelBasisThen: hiring.BasisNotAddressed,
 		},
 		Evidence: []hiring.RecordEvidence{
 			{ID: "e1", SourceKind: "corpus_document", Title: "A private note", ChunkID: 41, Public: false},
@@ -40,7 +43,8 @@ func TestJudgmentProtoByAudience(t *testing.T) {
 	}
 	admin := judgmentProto(j, recordAudience{admin: true})
 	if admin.Evidence[0].Title != "A private note" || admin.Evidence[0].ChunkId != 41 || admin.Override.Reason == "" ||
-		admin.Override.ByDisplay != "A Reviewer" || admin.DecisionId != 991 || admin.EarlierOverride.GetAttempt() != 1 {
+		admin.Override.ByDisplay != "A Reviewer" || admin.DecisionId != 991 || admin.EarlierOverride.GetAttempt() != 1 ||
+		admin.Override.CarriedFromAttempt != 2 || !admin.Override.Recheck || admin.Override.ModelDeterminationThen != hiring.DetNotMet {
 		t.Errorf("an admin is sent the citation and the override whole: %+v", admin)
 	}
 	member := judgmentProto(j, recordAudience{})
@@ -50,17 +54,34 @@ func TestJudgmentProtoByAudience(t *testing.T) {
 	if member.Evidence[1].Title != "A published article" || member.Evidence[1].ChunkId != 0 {
 		t.Errorf("a member is sent a public document's title and no passage id: %+v", member.Evidence[1])
 	}
-	if o := member.Override; o == nil || o.Reason != "" || o.ByDisplay != "" || o.Role != hiring.RoleHiringManager ||
-		o.Determination != hiring.DetMetEquivalent || o.At == nil {
-		t.Errorf("a member is told a person set the verdict and in what role, not who or why: %+v", member.Override)
+	if member.Override != nil || member.DecisionId != 0 || member.EarlierOverride != nil {
+		t.Errorf("a member is sent no override, no decision-log id and no earlier override: %+v", member)
 	}
-	if member.DecisionId != 0 || member.EarlierOverride != nil {
-		t.Errorf("a member is sent no decision-log id and no earlier override: %+v", member)
+	if member.Determination != hiring.DetUnresolved || member.ReportedFacts.StatedSpanYears != 4 || member.ReportedFacts.StatedScope.GetUnit() != "usd" {
+		t.Errorf("the model's judgment itself must not differ by reader: %+v", member)
 	}
-	// Both readers get the same judgment.
-	if member.EffectiveDetermination != admin.EffectiveDetermination || member.Determination != hiring.DetUnresolved ||
-		member.GapClass != hiring.GapLexical || member.ReportedFacts.StatedSpanYears != 4 || member.ReportedFacts.StatedScope.GetUnit() != "usd" {
-		t.Errorf("the judgment itself must not differ by reader: %+v", member)
+
+	// The record as a whole: a member's is the model's own, whatever
+	// overrides the record that was passed in carries.
+	rec := hiring.Record{
+		RunID: "run", FormulaVersion: hiring.FormulaV4, PreferredFraction: 0.25, HasNumbers: true, OverrideCount: 1,
+		Coverage:     hiring.Coverage{Evidenced: 1},
+		Requirements: []hiring.Requirement{{ID: "q1", LocalID: "r1", Weight: 3, Class: hiring.ClassRequired, Included: true, EditedByDisplay: "An Editor", EditReason: "the editor's note"}},
+		Judgments:    []hiring.RecordJudgment{j},
+	}
+	forMember := recordProto(rec, "A role", "", recordAudience{})
+	mj := forMember.Judgments[0]
+	if forMember.OverrideCount != 0 || forMember.Coverage.Evidenced != 0 || forMember.Coverage.Unresolved != 1 ||
+		mj.Override != nil || mj.EffectiveDetermination != hiring.DetUnresolved || mj.EffectiveBasis != hiring.BasisAdjacentDomain {
+		t.Errorf("a member's record is the model's: count=%d coverage=%+v judgment=%+v", forMember.OverrideCount, forMember.Coverage, mj)
+	}
+	if q := forMember.Requirements[0]; q.EditedByDisplay != "" || q.EditReason != "" {
+		t.Errorf("a member is not sent who edited a requirement or why: %+v", q)
+	}
+	forAdmin := recordProto(rec, "A role", "", recordAudience{admin: true})
+	if forAdmin.OverrideCount != 1 || forAdmin.Coverage.Evidenced != 1 || forAdmin.Judgments[0].EffectiveDetermination != hiring.DetMetEquivalent ||
+		forAdmin.Requirements[0].EditReason == "" {
+		t.Errorf("an admin's record is the record as it stands: %+v", forAdmin)
 	}
 }
 
@@ -157,6 +178,7 @@ func newRecordFixture(t *testing.T, h *Hiring, pool *pgxpool.Pool, ctx context.C
 // each reader is sent, what an override does and what it refuses.
 func TestMatchRecordAgainstPostgres(t *testing.T) {
 	h, pool, ctx := hiringStack(t)
+	h.SetBands(jd.NewBandsStore(slog.New(slog.NewTextHandler(io.Discard, nil)), h.users, jd.DefaultBands(0.7)))
 	f := newRecordFixture(t, h, pool, ctx)
 	sid := strconv.FormatInt(f.submissionID, 10)
 	as := func(id int64, role users.Role) context.Context {
@@ -264,15 +286,34 @@ func TestMatchRecordAgainstPostgres(t *testing.T) {
 	if o.Determination != "unresolved" || o.EffectiveDetermination != "met_equivalent" || o.Override.GetReason() == "" || o.Override.GetByDisplay() != "Test admin" {
 		t.Errorf("the judgment after the override, as an admin reads it: %+v", o)
 	}
-	// The member sees the verdict a person set, and that a person set it.
+	// The fit after review rides beside the run's own: both required
+	// rows now earn their weight, and the run's score has not moved.
+	if after.GetReviewedScore() != 1 || after.ReviewedFit != jd.DefaultBands(0.7).Category(1) || after.GetMatchScore() != 0.7 || after.Fit != "strong" {
+		t.Errorf("fit after review: reviewed=%v %q, run=%v %q", after.GetReviewedScore(), after.ReviewedFit, after.GetMatchScore(), after.Fit)
+	}
+	// The member who submitted the posting is sent the record as the
+	// model left it: the model's verdict, the model's numbers, and no
+	// sign that anyone overrode anything.
 	mine, err = get(as(f.ownerID, users.RoleMember), &v1.GetMatchRecordRequest{SubmissionId: sid})
 	if err != nil {
 		t.Fatalf("the owner's read after the override: %v", err)
 	}
 	m := mine.Record.Judgments[1]
-	if m.EffectiveDetermination != "met_equivalent" || m.Override == nil || m.Override.Role != "hiring_manager" || m.Override.Reason != "" || m.Override.ByDisplay != "" ||
-		mine.Record.OverrideCount != 1 || mine.Record.Coverage.Evidenced != 1 {
-		t.Errorf("the member's record after the override: %+v count=%d", m, mine.Record.OverrideCount)
+	if m.EffectiveDetermination != "unresolved" || m.EffectiveBasis != "adjacent_domain" || m.Override != nil ||
+		mine.Record.OverrideCount != 0 || mine.Record.Coverage.Evidenced != 0.4 || mine.Record.Coverage.Unresolved != 0.6 ||
+		mine.Record.ReviewedScore != nil || mine.Record.ReviewedFit != "" {
+		t.Errorf("the member's record must not move with an override: %+v count=%d coverage=%+v", m, mine.Record.OverrideCount, mine.Record.Coverage)
+	}
+	// An admin can ask for exactly that, to see what a recruiter sees.
+	asMember, err := get(adminCtx, &v1.GetMatchRecordRequest{SubmissionId: sid, AsMember: true})
+	if err != nil {
+		t.Fatalf("the admin's read as a member: %v", err)
+	}
+	am := asMember.Record.Judgments[1]
+	if am.Override != nil || am.EffectiveDetermination != "unresolved" || am.Evidence[0].Title != "" || am.Evidence[0].ChunkId != 0 ||
+		asMember.Record.OverrideCount != 0 || asMember.Record.Coverage.Evidenced != 0.4 || asMember.CanOverride || len(asMember.OverrideChoices) != 0 ||
+		asMember.Record.ReviewedScore != nil {
+		t.Errorf("an admin reading as a member must get the member's record: %+v can=%v", am, asMember.CanOverride)
 	}
 
 	// The result names the record's run for its two readers, and stops

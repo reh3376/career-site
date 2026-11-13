@@ -237,7 +237,7 @@ database and `build-stats.json` on this date.
   decision log.
 - **Engineering posture.** 232 requirements in the FSD, 167 shipped,
   counted by script and checked in CI; 177 RPCs under a `buf` breaking
-  check with generated docs; 75 migrations replayed in CI; 11 ADRs;
+  check with generated docs; 76 migrations replayed in CI; 11 ADRs;
   467 Go, 91 web and 30 Python tests; 15 CI checks including
   govulncheck, pip-audit, pnpm audit, trivy, CodeQL for all three
   languages and dependabot; nightly backups with a weekly automated
@@ -347,5 +347,6 @@ items are mirrored in `backlog.md` §1c.
 |---|---|
 | 2026-11-10 | Opened at the owner's request, from his statement of the end goal the same day. Goals, problem, thesis, current state on `0ed804ba9d9a`, the five stages, the enterprise-readiness table and the risks written. Backlog §1c opened to mirror the open items. |
 | 2026-11-10, later | §4: stage A is under way; the post is up and the first two participants are on the whitelist. Production on `15007b6fb58f`. |
+| 2026-11-13, step 6 decisions | The owner answered seven questions on what step 6 left open: a recruiter is shown the model's verdicts only, the admin record shows the fit after review beside the run's own, overrides carry to the next run while the requirement is unchanged, a résumé after review is the owner's alone and by request, and the pilot keeps its approved sample for this wave. 76 migrations. |
 | 2026-11-12, step 6 | §4: Phase 0 steps 0 to 6 of 9. The match record is read by a person in its own form and a verdict can be overridden; 16 of the 24 FR-HF rows shipped or partially shipped; 168 requirements shipped, 177 RPCs, 75 migrations. The production line now names `1627cbd5a609`, which it had not since `0ed804ba9d9a`. |
 | 2026-11-10, step 5 | §4: Phase 0 steps 0 to 5 of 9. The requirement is an editable, versioned row with classes; 14 of the 24 FR-HF rows shipped or partially shipped; the engineering counts moved with it (167 requirements shipped, 175 RPCs, 74 migrations). |

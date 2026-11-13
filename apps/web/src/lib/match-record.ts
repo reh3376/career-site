@@ -48,6 +48,9 @@ export type ApiRequirement = {
   editedAt?: string;
 };
 
+// An override is sent to an admin only. The member who submitted a
+// posting is sent the record as the model left it (owner's decision,
+// 2026-11-13), so nothing below ever has one to draw for a member.
 export type ApiOverride = {
   determination?: string;
   basis?: string;
@@ -55,6 +58,13 @@ export type ApiOverride = {
   at?: string;
   byDisplay?: string;
   reason?: string;
+  // The run the override was set on, when it was carried to this run
+  // because the requirement is unchanged.
+  carriedFromAttempt?: number;
+  // The model's verdict on this run is not the one the person overrode.
+  recheck?: boolean;
+  modelDeterminationThen?: string;
+  modelBasisThen?: string;
 };
 
 export type ApiJudgment = {
@@ -119,6 +129,10 @@ export type ApiRecord = {
   corpusDocuments?: number;
   model?: string;
   requirementsEdited?: boolean;
+  // The gate's score and fit worked out again with a person's verdicts.
+  // Sent to an admin when the record carries an override.
+  reviewedScore?: number;
+  reviewedFit?: string;
 };
 
 export type OverrideChoice = { determination?: string; bases?: string[] };
@@ -139,6 +153,20 @@ export type MatchRecordResponse = {
 export type Audience = "member" | "admin";
 
 const EVIDENCED = new Set(["met", "met_equivalent"]);
+
+const FIT_LABEL: Record<string, string> = {
+  very_strong: "very strong fit",
+  strong: "strong fit",
+  possible: "possible fit",
+  weak: "weak fit",
+  very_weak: "very weak fit",
+};
+
+function fitValue(fit: string | undefined, score: number | undefined): string {
+  const name = fit ? (FIT_LABEL[fit] ?? fit.replace(/_/g, " ")) : "";
+  const figure = typeof score === "number" ? score.toFixed(2) : "";
+  return [name, figure].filter(Boolean).join(" · ");
+}
 
 // What a gap class means. The class itself is derived by the API from
 // the basis; there is no vocabulary row for it to carry a label.
@@ -322,23 +350,40 @@ function keywordLine(j: ApiJudgment): RecordRow["keyword"] {
   return { status: "A keyword screen would not have found this either" };
 }
 
-function reviewedBlock(j: ApiJudgment, r: MatchRecordResponse, audience: Audience): RecordRow["reviewed"] {
+function reviewedBlock(j: ApiJudgment, r: MatchRecordResponse): RecordRow["reviewed"] {
   const o = j.override;
   if (!o) return undefined;
   const role = label(r.overrideRoles, o.role) || "A reviewer";
-  const who = audience === "admin" && o.byDisplay ? `${o.byDisplay}, as ${lowerFirst(role)},` : `A person acting as ${lowerFirst(role)}`;
+  const who = o.byDisplay ? `${o.byDisplay}, as ${lowerFirst(role)},` : `A person acting as ${lowerFirst(role)}`;
   const on = day(o.at) ? ` on ${day(o.at)}` : "";
-  const set = `${label(r.determinations, o.determination)} (${lowerFirst(label(r.bases, o.basis))})`;
-  const model = `${label(r.determinations, j.determination)} (${lowerFirst(label(r.bases, j.basis))})`;
+  const pair = (det: string | undefined, basis: string | undefined) =>
+    `${label(r.determinations, det)} (${lowerFirst(label(r.bases, basis))})`;
+  const set = pair(o.determination, o.basis);
   const agrees = o.determination === j.determination && o.basis === j.basis;
+  const carried = (o.carriedFromAttempt ?? 0) > 0;
   const lines = agrees
     ? [`${who} confirmed the model's verdict${on}: ${set}.`]
     : [
         `${who} set this verdict${on}: ${set}.`,
-        `The model's verdict was ${model}. It is kept for comparison and no longer counts in the figures.`,
+        `The model's verdict on this run is ${pair(j.determination, j.basis)}. It is kept for comparison and does not count in the figures.`,
       ];
-  if (audience === "admin" && o.reason) lines.push(`Reason given: ${o.reason}`);
-  return { title: agrees ? "Verdict confirmed by a person" : "Verdict set by a person", lines };
+  if (carried) {
+    lines.push(
+      `Carried from run ${o.carriedFromAttempt}: the requirement has not changed since, so the verdict set there still stands on this run.`,
+    );
+  }
+  if (o.recheck) {
+    lines.push(
+      `Second look needed. When this was set the model's verdict was ${pair(o.modelDeterminationThen, o.modelBasisThen)}; on this run it is ${pair(j.determination, j.basis)}. The person's verdict still counts. Save it again to confirm it, change it, or withdraw it.`,
+    );
+  }
+  if (o.reason) lines.push(`Reason given: ${o.reason}`);
+  const title = o.recheck
+    ? "Verdict set by a person · second look needed"
+    : agrees
+      ? "Verdict confirmed by a person"
+      : "Verdict set by a person";
+  return { title, lines };
 }
 
 function earlierLine(j: ApiJudgment, r: MatchRecordResponse): string | undefined {
@@ -375,7 +420,11 @@ function toRow(q: ApiRequirement, j: ApiJudgment | undefined, r: MatchRecordResp
   const adjustments = (j.ruleAdjustments ?? []).filter((a) => a.rule !== "behavioral" && a.reason);
   if (!j.notAssessed && (compared || adjustments.length > 0)) marks.push("checked in code");
   if (q.editedAt) marks.push("edited before judging");
-  if (j.override) marks.push("set by a person");
+  if (j.override) {
+    marks.push("set by a person");
+    if ((j.override.carriedFromAttempt ?? 0) > 0) marks.push(`carried from run ${j.override.carriedFromAttempt}`);
+    if (j.override.recheck) marks.push("second look needed");
+  }
   row.marks = marks.length ? marks : undefined;
 
   row.determination = j.notAssessed ? "not_assessed" : effective;
@@ -387,7 +436,7 @@ function toRow(q: ApiRequirement, j: ApiJudgment | undefined, r: MatchRecordResp
   row.rationale = j.rationale;
   row.evidence = j.notAssessed ? undefined : evidenceLine(j, r, audience);
   row.keyword = keywordLine(j);
-  row.reviewed = reviewedBlock(j, r, audience);
+  row.reviewed = reviewedBlock(j, r);
   row.earlier = audience === "admin" ? earlierLine(j, r) : undefined;
   if (adjustments.length) row.adjustments = adjustments.map((a) => a.reason ?? "");
 
@@ -506,7 +555,12 @@ function definitions(r: MatchRecordResponse, rows: Counted[]): RecordData["defin
             {
               term: "Set by a person",
               meaning:
-                "A reviewer on the hiring side replaced or confirmed the model's verdict. The figures count the person's verdict; the model's is kept for comparison.",
+                "A reviewer on the hiring side replaced or confirmed the model's verdict. The figures count the person's verdict; the model's is kept for comparison. The recruiter who submitted the posting is shown the model's verdicts only.",
+            },
+            {
+              term: "Carried from an earlier run",
+              meaning:
+                "A verdict a person set stays in force on later runs while the requirement is unchanged. It is marked for a second look when the model's verdict is no longer the one the person overrode.",
             },
           ]
         : []),
@@ -607,9 +661,29 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
   const overrides = rec.overrideCount ?? 0;
   const figureNotes: string[] = [];
   if (overrides > 0) {
+    const second = (rec.judgments ?? []).filter((j) => j.override?.recheck).length;
     figureNotes.push(
-      `${overrides} ${plural(overrides, "verdict on this record was", "verdicts on this record were")} set or confirmed by a person, and the figures above count ${plural(overrides, "it", "them")}. The fit and the résumé decision were made when the run finished, from the model's own verdicts, and do not move with an override.`,
+      `${overrides} ${plural(overrides, "verdict on this record was", "verdicts on this record were")} set or confirmed by a person, and the figures above count ${plural(overrides, "it", "them")}. The recruiter who submitted the posting is shown the model's verdicts and figures only.`,
     );
+    if (second > 0) {
+      figureNotes.push(
+        `${second} carried ${plural(second, "verdict needs", "verdicts need")} a second look: the model's verdict on this run is not the one the person overrode.`,
+      );
+    }
+  }
+  // The fit is the hiring side's reading: the run's own, and beside it
+  // the same score worked out again with a person's verdicts. Never
+  // one in place of the other.
+  let fitLines: NonNullable<RecordData["header"]>["fit_lines"];
+  if (audience === "admin" && (rec.fit || typeof rec.matchScore === "number")) {
+    fitLines = [{ label: "Fit at run time", value: fitValue(rec.fit, rec.matchScore), note: "from the model's verdicts" }];
+    if (typeof rec.reviewedScore === "number") {
+      fitLines.push({
+        label: "Fit after review",
+        value: fitValue(rec.reviewedFit, rec.reviewedScore),
+        note: `with ${overrides} ${plural(overrides, "verdict", "verdicts")} set by a person; no résumé is written or sent on this figure`,
+      });
+    }
   }
 
   const header: RecordData["header"] = {
@@ -618,8 +692,11 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
     subtitle: [rec.employer, rec.submissionId ? `Posting #${rec.submissionId}` : ""].filter(Boolean).join(" · "),
     intro: `${n} ${plural(n, "requirement", "requirements")} ${
       rec.requirementsEdited ? "read from the posting and edited by a person on the hiring side" : "read from the posting"
-    }. Each one was judged against the candidate's own documents. Every row below shows the requirement, the posting's own words, the verdict, the basis for the verdict, the reasoning and the evidence it rests on. A person on the hiring side can overrule any verdict; where one has, the row says so.`,
+    }. Each one was judged against the candidate's own documents. Every row below shows the requirement, the posting's own words, the verdict, the basis for the verdict, the reasoning and the evidence it rests on.${
+      audience === "admin" ? " A person on the hiring side can overrule any verdict; where one has, the row says so." : ""
+    }`,
     run_note: runNote,
+    fit_lines: fitLines,
     summary: summary || undefined,
     coverage_label: `Counted weight · required in full, preferred at ${num(fraction * 100)}%`,
     evidenced_pct: ev,

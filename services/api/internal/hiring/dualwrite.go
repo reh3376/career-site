@@ -386,7 +386,23 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 		"embedder":            in.Embedder,
 		"corpus_fingerprint":  in.CorpusFingerprint,
 	})
-	return w.repo.UpsertMatchRecord(ctx, record)
+	if err := w.repo.UpsertMatchRecord(ctx, record); err != nil {
+		return err
+	}
+	// A person's verdicts on the run before this one stand on the
+	// requirements that have not changed (FR-HF-08). The run's own
+	// numbers were written first, so a failure here leaves a record that
+	// is right about the model and only lacks the carry.
+	if len(judgmentRows) > 0 {
+		carried, err := w.repo.CarryOverrides(ctx, in.RunID, in.SubmissionID, in.Attempt)
+		if err != nil {
+			return err
+		}
+		if carried > 0 && w.log != nil {
+			w.log.Info("hiring: overrides carried to the new run", slog.String("run", in.RunID), slog.Int("carried", carried))
+		}
+	}
+	return nil
 }
 
 // preferredFraction is the fraction the formula used, for the record.
