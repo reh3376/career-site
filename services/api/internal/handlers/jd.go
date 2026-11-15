@@ -543,6 +543,35 @@ func (h *Jd) ServeResumePDF(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(pdf)
 }
 
+// ServeReviewResumePDF serves the locked PDF of a résumé written after
+// review (FSD FR-HF-08) to an admin's session and to no one else. The
+// résumé is the owner's alone: there is no token that releases it and
+// the member who submitted the posting has no route to it, so every
+// refusal is the same not-found.
+func (h *Jd) ServeReviewResumePDF(w http.ResponseWriter, r *http.Request) {
+	runID, ok := strings.CutSuffix(r.PathValue("file"), ".pdf")
+	if !ok || !looksLikeUUID(runID) || h.hiring == nil || h.auth == nil {
+		http.NotFound(w, r)
+		return
+	}
+	caller, err := h.auth.LookupSessionUserHTTP(r.Context(), r)
+	if err != nil || caller == nil || caller.Status != users.StatusActive || caller.Role != users.RoleAdmin {
+		http.NotFound(w, r)
+		return
+	}
+	pdf, submissionID, err := h.hiring.GetReviewResumePDF(r.Context(), runID)
+	if err != nil || pdf == nil {
+		http.NotFound(w, r)
+		return
+	}
+	h.events.Emit(r.Context(), httpEvent(r, "admin.review_resume_downloaded", caller.ID, map[string]any{"run_id": runID, "submission_id": submissionID}))
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"roger-henley-resume-%d-after-review.pdf\"", submissionID))
+	w.Header().Set("Cache-Control", "private, no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(pdf)
+}
+
 // fixedSubmitAckMessage is the copy rendered back after every
 // successful submission. Kept server-side so an update lands on
 // every caller without a frontend rebuild.

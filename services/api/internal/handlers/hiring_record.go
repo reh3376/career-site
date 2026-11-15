@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -11,7 +12,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/reh3376/career-site/services/api/gen/career/v1"
+	"github.com/reh3376/career-site/services/api/internal/corpusscope"
 	"github.com/reh3376/career-site/services/api/internal/hiring"
+	"github.com/reh3376/career-site/services/api/internal/prompts"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -266,7 +269,160 @@ func (h *Hiring) GetMatchRecord(
 		out.CanOverride = true
 		out.OverrideChoices = overrideChoices(reg)
 	}
+	// The résumé after review is the hiring side's and is sent to an
+	// admin only; a member's response never names it.
+	if aud.admin {
+		existing, has, rErr := h.repo.GetReviewResume(ctx, rec.RunID)
+		if rErr != nil {
+			h.log.Warn("hiring: review résumé unavailable", slog.String("run", rec.RunID), slog.String("error", rErr.Error()))
+		}
+		if has {
+			out.ReviewResume = reviewResumeProto(existing)
+		}
+		out.CanWriteReviewResume, out.ReviewResumeNote = h.reviewResumeOffer(ctx, rec, has && existing.Status == hiring.ReviewResumeWriting)
+	}
 	return connect.NewResponse(out), nil
+}
+
+func reviewResumeProto(x hiring.ReviewResume) *v1.ReviewResume {
+	out := &v1.ReviewResume{
+		RunId: x.RunID, Status: x.Status, Error: x.Error, Markdown: x.Markdown,
+		RequestedAt:   timestamppb.New(x.RequestedAt),
+		ReviewedScore: x.ReviewedScore, OverrideCount: int32(x.OverrideCount), Model: x.Model,
+	}
+	if x.FinishedAt != nil {
+		out.FinishedAt = timestamppb.New(*x.FinishedAt)
+	}
+	if x.HasPDF {
+		out.DownloadPath = ReviewResumeDownloadPath(x.RunID)
+	}
+	return out
+}
+
+// ReviewResumeDownloadPath is where an admin's session downloads the
+// PDF of a résumé after review.
+func ReviewResumeDownloadPath(runID string) string {
+	return "/api/hiring/review-resume/" + runID + ".pdf"
+}
+
+// gate is the résumé gate in force, the lower edge of the strong band.
+func (h *Hiring) gate(ctx context.Context) (float64, bool) {
+	switch {
+	case h.bands != nil:
+		return h.bands.Get(ctx).Strong, true
+	case h.scorer != nil:
+		return h.scorer.Threshold(), true
+	}
+	return 0, false
+}
+
+// reviewResumeOffer says whether a résumé after review may be asked for
+// now and, when the record carries an override and it may not, why not,
+// as a sentence for the owner (owner's decision, 2026-11-13). It is
+// offered for the newest record of a run that finished below the gate,
+// and so wrote no résumé, once a person's verdicts lift the gate's
+// score to the gate. A record with no override is offered nothing and
+// told nothing: there is no review to write on.
+func (h *Hiring) reviewResumeOffer(ctx context.Context, rec hiring.Record, writing bool) (bool, string) {
+	score, reviewed := rec.ReviewedScore()
+	if !reviewed {
+		return false, ""
+	}
+	if writing {
+		return false, ""
+	}
+	if rec.Superseded {
+		return false, "A later run has replaced this record; a résumé after review is written from the newest one."
+	}
+	if rec.RunResumeGenerated {
+		return false, "This run wrote a résumé of its own, so none is written after review."
+	}
+	if rec.RunStatus != "below_threshold" {
+		return false, "A résumé after review is offered for a run that finished below the résumé gate."
+	}
+	gate, ok := h.gate(ctx)
+	if !ok || h.resumes == nil || !h.resumes.CanWriteResume() {
+		return false, "The résumé writer is not available here."
+	}
+	if score < gate {
+		return false, fmt.Sprintf("The score after review, %.2f, is below the résumé gate of %.2f, so no résumé is offered.", score, gate)
+	}
+	return true, ""
+}
+
+// WriteReviewResume asks for the tailored résumé on a run's verdicts
+// after review (FR-HF-08). It opens the row as being written and starts
+// the write in the background; the row is the result.
+func (h *Hiring) WriteReviewResume(
+	ctx context.Context,
+	req *connect.Request[v1.WriteReviewResumeRequest],
+) (*connect.Response[v1.WriteReviewResumeResponse], error) {
+	admin, err := RequireCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	runID := strings.TrimSpace(req.Msg.GetRunId())
+	if !looksLikeUUID(runID) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid run_id"))
+	}
+	rec, err := h.repo.GetRecord(ctx, runID)
+	if errors.Is(err, hiring.ErrNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("that run has no match record"))
+	}
+	if err != nil {
+		h.log.Error("hiring: record for a review résumé", slog.String("run", runID), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not read the record"))
+	}
+	existing, has, err := h.repo.GetReviewResume(ctx, runID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("could not read the résumé"))
+	}
+	if has && existing.Status == hiring.ReviewResumeWriting {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("a résumé is already being written for this run"))
+	}
+	ok, why := h.reviewResumeOffer(ctx, rec, false)
+	if !ok {
+		if why == "" {
+			why = "No verdict on this record has been set by a person, so there is no review to write a résumé on."
+		}
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(why))
+	}
+	s, err := h.users.GetJdSubmission(ctx, rec.SubmissionID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("the run's posting was not found"))
+	}
+	score, _ := rec.ReviewedScore()
+	gate, _ := h.gate(ctx)
+	if err := h.repo.StartReviewResume(ctx, hiring.ReviewResumeRequest{
+		RunID: runID, SubmissionID: rec.SubmissionID, ReviewedScore: score, Threshold: gate,
+		OverrideCount: rec.OverrideCount, RequestedBy: admin.ID,
+	}); err != nil {
+		if errors.Is(err, hiring.ErrReviewResumeBusy) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("a résumé is already being written for this run"))
+		}
+		h.log.Error("hiring: start review résumé", slog.String("run", runID), slog.String("error", err.Error()))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("the résumé could not be started"))
+	}
+	// Written under the scope the run itself read, so the résumé cannot
+	// draw on documents the review of this posting was not allowed to.
+	scope := corpusscope.Public
+	if rec.RunRetrievalScope == "all" {
+		scope = corpusscope.All
+	}
+	hints := prompts.Hints{Role: s.RoleHint, Employer: s.EmployerHint}
+	go h.resumes.WriteReviewResume(corpusscope.With(context.Background(), scope), rec.SubmissionID, runID, s.JdText, hints)
+
+	h.log.Info("hiring: résumé after review requested", slog.String("run", runID), slog.Int64("submission", rec.SubmissionID),
+		slog.Float64("reviewed_score", score), slog.Int64("admin_id", admin.ID))
+	h.events.Emit(ctx, requestEvent(req, "admin.review_resume_requested", admin.ID, map[string]any{
+		"run_id": runID, "submission_id": rec.SubmissionID, "reviewed_score": score, "threshold": gate,
+		"override_count": rec.OverrideCount, "again": has,
+	}))
+	row, _, err := h.repo.GetReviewResume(ctx, runID)
+	if err != nil {
+		return connect.NewResponse(&v1.WriteReviewResumeResponse{}), nil
+	}
+	return connect.NewResponse(&v1.WriteReviewResumeResponse{ReviewResume: reviewResumeProto(row)}), nil
 }
 
 // overrideError maps the override's errors onto Connect codes with the

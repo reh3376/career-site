@@ -201,16 +201,24 @@ type RecordJudgment struct {
 
 // Record is one run's match record with everything a reader is shown.
 type Record struct {
-	RunID             string
-	RoleID            string
-	RoleTitle         string
-	SubmissionID      int64
-	Attempt           int
-	SupersedesRunID   string
-	Superseded        bool
-	RunTrigger        string
-	FormulaVersion    string
-	PreferredFraction float64
+	RunID           string
+	RoleID          string
+	RoleTitle       string
+	SubmissionID    int64
+	Attempt         int
+	SupersedesRunID string
+	Superseded      bool
+	RunTrigger      string
+	// RunStatus is where the run ended (ready, below_threshold, failed)
+	// and RunResumeGenerated whether it wrote a résumé of its own;
+	// RunRetrievalScope is what it was allowed to read. A résumé after
+	// review is offered only for a run that wrote none, and is written
+	// under the scope the run read.
+	RunStatus          string
+	RunResumeGenerated bool
+	RunRetrievalScope  string
+	FormulaVersion     string
+	PreferredFraction  float64
 	// HasNumbers is false for a record written under the v2 arithmetic,
 	// which holds a score and not the three numbers.
 	HasNumbers         bool
@@ -266,7 +274,8 @@ func (r *Repo) GetRecord(ctx context.Context, runID string) (Record, error) {
            COALESCE(v.supersedes_run_id::text, ''), v.run_trigger, v.formula_version,
            v.evidenced, v.unresolved, v.unmet, v.coverage_equivalent_share, v.self_attested_share,
            v.override_count, v.keyword_baseline, v.versions, v.model, v.fit, v.run_match_score,
-           v.finished_at, v.corpus_documents, v.requirement_ids::text[]
+           v.finished_at, v.corpus_documents, v.requirement_ids::text[],
+           v.run_status, v.run_resume_generated, v.run_retrieval_scope
     FROM v_match_record v
     LEFT JOIN roles ro ON ro.id = v.role_id
     WHERE v.run_id = $1::uuid AND v.tenant_id = $2`, runID, tid).Scan(
@@ -274,7 +283,8 @@ func (r *Repo) GetRecord(ctx context.Context, runID string) (Record, error) {
 		&rec.SupersedesRunID, &rec.RunTrigger, &rec.FormulaVersion,
 		&evidenced, &unresolved, &unmet, &eqShare, &selfShare,
 		&rec.OverrideCount, &keyword, &versions, &rec.Model, &rec.Fit, &rec.MatchScore,
-		&rec.FinishedAt, &rec.CorpusDocuments, &reqIDs)
+		&rec.FinishedAt, &rec.CorpusDocuments, &reqIDs,
+		&rec.RunStatus, &rec.RunResumeGenerated, &rec.RunRetrievalScope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}

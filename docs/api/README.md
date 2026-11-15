@@ -129,7 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 85 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
-| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, and the settings the framework's arithmetic reads. | 7 |
+| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, and the settings the framework's arithmetic reads. | 8 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -5408,6 +5408,7 @@ framework's arithmetic reads.
 | [`SetHiringSettings`](#hiringservice-sethiringsettings) | `/api/career.v1.HiringService/SetHiringSettings` | Admin | default | `SetHiringSettingsRequest` → `SetHiringSettingsResponse` | Sets the framework's settings (stored in app_settings; the api caches them for 15 s). |
 | [`GetMatchRecord`](#hiringservice-getmatchrecord) | `/api/career.v1.HiringService/GetMatchRecord` | Member | default | `GetMatchRecordRequest` → `GetMatchRecordResponse` | Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and, for an admin, any override. |
 | [`OverrideJudgment`](#hiringservice-overridejudgment) | `/api/career.v1.HiringService/OverrideJudgment` | Admin | default | `OverrideJudgmentRequest` → `OverrideJudgmentResponse` | Sets, replaces or withdraws a person's override of one judgment (FSD FR-HF-08). |
+| [`WriteReviewResume`](#hiringservice-writereviewresume) | `/api/career.v1.HiringService/WriteReviewResume` | Admin | default | `WriteReviewResumeRequest` → `WriteReviewResumeResponse` | Asks for the tailored résumé to be written on a run's verdicts as they stand after review (FSD FR-HF-08). |
 
 ### HiringService.ListRequirements
 
@@ -5653,6 +5654,9 @@ registry.
 | `overrideRoles` | [`VocabCode`](#vocabcode)[] | array of object |  | The `override_role` codes a reviewer may act in today. The role reserved for a candidate's dispute is not offered. |
 | `canOverride` | `bool` | boolean |  | Whether the caller may override a judgment on this record: an admin, on a record no later run has superseded. |
 | `overrideChoices` | [`OverrideChoice`](#overridechoice)[] | array of object |  | The pairs an override may set. Sent when the caller may override. |
+| `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé written after review for this run, when one has been asked for. Sent to admins only. |
+| `canWriteReviewResume` | `bool` | boolean |  | Whether a résumé after review may be asked for now. Sent to admins only. |
+| `reviewResumeNote` | `string` | string |  | Why a résumé after review is not offered, as a sentence, when the record carries an override and it is not. Sent to admins only. |
 
 <details><summary>Example request body</summary>
 
@@ -5709,6 +5713,45 @@ again makes it that run's own.
   "reason": "string",
   "role": "string",
   "withdraw": true
+}
+```
+
+</details>
+
+### HiringService.WriteReviewResume
+
+`POST /api/career.v1.HiringService/WriteReviewResume` · **Auth:** Admin · **Rate limit:** default/min
+
+Asks for the tailored résumé to be written on a run's verdicts as
+they stand after review (FSD FR-HF-08). Offered when the run scored
+below the résumé gate, so wrote none, and a person's verdicts lift
+the score to the gate. The résumé is the owner's alone: it is kept
+apart from the submission, shown on the admin page, never emailed,
+and never sent to the member who submitted the posting. The call
+returns at once with the résumé marked as being written; the write
+waits its turn for the model like any review. Asking again replaces
+the last one. Refused when the run wrote a résumé of its own, when
+the score after review is below the gate, when no verdict has been
+set by a person, when a later run has superseded the record, and
+while one is already being written.
+
+**Request** — [`WriteReviewResumeRequest`](#writereviewresumerequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string | `string: min_len: 1 max_len: 64` | The run whose record the résumé is written from: the newest run of the posting. |
+
+**Response** — [`WriteReviewResumeResponse`](#writereviewresumeresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé's row. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "runId": "string"
 }
 ```
 
@@ -11028,6 +11071,9 @@ The record and the vocabularies it is labelled from.
 | `overrideRoles` | [`VocabCode`](#vocabcode)[] | array of object |  | The `override_role` codes a reviewer may act in today. The role reserved for a candidate's dispute is not offered. |
 | `canOverride` | `bool` | boolean |  | Whether the caller may override a judgment on this record: an admin, on a record no later run has superseded. |
 | `overrideChoices` | [`OverrideChoice`](#overridechoice)[] | array of object |  | The pairs an override may set. Sent when the caller may override. |
+| `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé written after review for this run, when one has been asked for. Sent to admins only. |
+| `canWriteReviewResume` | `bool` | boolean |  | Whether a résumé after review may be asked for now. Sent to admins only. |
+| `reviewResumeNote` | `string` | string |  | Why a résumé after review is not offered, as a sentence, when the record carries an override and it is not. Sent to admins only. |
 
 ### OverrideJudgmentRequest
 
@@ -11049,6 +11095,41 @@ The record after the override.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `record` | [`MatchRecord`](#matchrecord) | object |  | The record with its numbers computed again. |
+
+### ReviewResume
+
+A résumé written at the owner's request on a run's verdicts after
+review (FSD FR-HF-08). The owner's alone: never part of the member's
+review and never emailed.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string |  | The run whose record it was written from. |
+| `status` | `string` | string |  | Where it stands: `writing`, `ready` or `failed`. |
+| `error` | `string` | string |  | Why it failed, when it did. |
+| `markdown` | `string` | string |  | The résumé in markdown, once ready. |
+| `requestedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was asked for. |
+| `finishedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was finished or failed; unset while it is being written. |
+| `reviewedScore` | `double` | number |  | The gate's score with the person's verdicts when it was asked for. |
+| `overrideCount` | `int32` | number |  | How many verdicts a person had set when it was asked for. |
+| `downloadPath` | `string` | string |  | Download path of the locked PDF, for an admin's session; empty when no PDF was rendered. |
+| `model` | `string` | string |  | The model that wrote it. |
+
+### WriteReviewResumeRequest
+
+Names the run.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `runId` | `string` | string | `string: min_len: 1 max_len: 64` | The run whose record the résumé is written from: the newest run of the posting. |
+
+### WriteReviewResumeResponse
+
+The résumé as it stands after the request: being written.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé's row. |
 
 ### GetHomeRequest
 

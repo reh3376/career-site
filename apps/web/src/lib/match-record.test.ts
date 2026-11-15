@@ -137,7 +137,7 @@ describe("toRecordData", () => {
       "Fit at run time: possible fit · 0.62",
       "Fit after review: strong fit · 0.78",
     ]);
-    expect(lines[1].note).toContain("no résumé is written or sent on this figure");
+    expect(lines[1].note).toContain("nothing is sent on this figure");
     // With no override there is nothing after review to show.
     const plain = response();
     plain.record!.reviewedScore = undefined;

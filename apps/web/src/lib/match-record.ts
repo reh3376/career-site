@@ -137,8 +137,26 @@ export type ApiRecord = {
 
 export type OverrideChoice = { determination?: string; bases?: string[] };
 
+// A résumé written at the owner's request on a run's verdicts after
+// review. Sent to an admin only; it is never part of a member's review.
+export type ApiReviewResume = {
+  runId?: string;
+  status?: string;
+  error?: string;
+  markdown?: string;
+  requestedAt?: string;
+  finishedAt?: string;
+  reviewedScore?: number;
+  overrideCount?: number;
+  downloadPath?: string;
+  model?: string;
+};
+
 export type MatchRecordResponse = {
   record?: ApiRecord;
+  reviewResume?: ApiReviewResume;
+  canWriteReviewResume?: boolean;
+  reviewResumeNote?: string;
   determinations?: VocabCode[];
   bases?: VocabCode[];
   uncertainties?: VocabCode[];
@@ -681,7 +699,7 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
       fitLines.push({
         label: "Fit after review",
         value: fitValue(rec.reviewedFit, rec.reviewedScore),
-        note: `with ${overrides} ${plural(overrides, "verdict", "verdicts")} set by a person; no résumé is written or sent on this figure`,
+        note: `with ${overrides} ${plural(overrides, "verdict", "verdicts")} set by a person; nothing is sent on this figure`,
       });
     }
   }

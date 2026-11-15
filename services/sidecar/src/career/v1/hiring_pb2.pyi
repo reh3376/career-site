@@ -473,7 +473,7 @@ class GetMatchRecordRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ..., run_id: _Optional[str] = ..., as_member: _Optional[bool] = ...) -> None: ...
 
 class GetMatchRecordResponse(_message.Message):
-    __slots__ = ("record", "determinations", "bases", "uncertainties", "types", "classes", "source_kinds", "override_roles", "can_override", "override_choices")
+    __slots__ = ("record", "determinations", "bases", "uncertainties", "types", "classes", "source_kinds", "override_roles", "can_override", "override_choices", "review_resume", "can_write_review_resume", "review_resume_note")
     RECORD_FIELD_NUMBER: _ClassVar[int]
     DETERMINATIONS_FIELD_NUMBER: _ClassVar[int]
     BASES_FIELD_NUMBER: _ClassVar[int]
@@ -484,6 +484,9 @@ class GetMatchRecordResponse(_message.Message):
     OVERRIDE_ROLES_FIELD_NUMBER: _ClassVar[int]
     CAN_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     OVERRIDE_CHOICES_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
+    CAN_WRITE_REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
+    REVIEW_RESUME_NOTE_FIELD_NUMBER: _ClassVar[int]
     record: MatchRecord
     determinations: _containers.RepeatedCompositeFieldContainer[VocabCode]
     bases: _containers.RepeatedCompositeFieldContainer[VocabCode]
@@ -494,7 +497,10 @@ class GetMatchRecordResponse(_message.Message):
     override_roles: _containers.RepeatedCompositeFieldContainer[VocabCode]
     can_override: bool
     override_choices: _containers.RepeatedCompositeFieldContainer[OverrideChoice]
-    def __init__(self, record: _Optional[_Union[MatchRecord, _Mapping]] = ..., determinations: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., bases: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., uncertainties: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., types: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., classes: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., source_kinds: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., override_roles: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., can_override: _Optional[bool] = ..., override_choices: _Optional[_Iterable[_Union[OverrideChoice, _Mapping]]] = ...) -> None: ...
+    review_resume: ReviewResume
+    can_write_review_resume: bool
+    review_resume_note: str
+    def __init__(self, record: _Optional[_Union[MatchRecord, _Mapping]] = ..., determinations: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., bases: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., uncertainties: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., types: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., classes: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., source_kinds: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., override_roles: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., can_override: _Optional[bool] = ..., override_choices: _Optional[_Iterable[_Union[OverrideChoice, _Mapping]]] = ..., review_resume: _Optional[_Union[ReviewResume, _Mapping]] = ..., can_write_review_resume: _Optional[bool] = ..., review_resume_note: _Optional[str] = ...) -> None: ...
 
 class OverrideJudgmentRequest(_message.Message):
     __slots__ = ("judgment_id", "determination", "basis", "reason", "role", "withdraw")
@@ -517,3 +523,39 @@ class OverrideJudgmentResponse(_message.Message):
     RECORD_FIELD_NUMBER: _ClassVar[int]
     record: MatchRecord
     def __init__(self, record: _Optional[_Union[MatchRecord, _Mapping]] = ...) -> None: ...
+
+class ReviewResume(_message.Message):
+    __slots__ = ("run_id", "status", "error", "markdown", "requested_at", "finished_at", "reviewed_score", "override_count", "download_path", "model")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    MARKDOWN_FIELD_NUMBER: _ClassVar[int]
+    REQUESTED_AT_FIELD_NUMBER: _ClassVar[int]
+    FINISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_SCORE_FIELD_NUMBER: _ClassVar[int]
+    OVERRIDE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    DOWNLOAD_PATH_FIELD_NUMBER: _ClassVar[int]
+    MODEL_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    status: str
+    error: str
+    markdown: str
+    requested_at: _timestamp_pb2.Timestamp
+    finished_at: _timestamp_pb2.Timestamp
+    reviewed_score: float
+    override_count: int
+    download_path: str
+    model: str
+    def __init__(self, run_id: _Optional[str] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., markdown: _Optional[str] = ..., requested_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reviewed_score: _Optional[float] = ..., override_count: _Optional[int] = ..., download_path: _Optional[str] = ..., model: _Optional[str] = ...) -> None: ...
+
+class WriteReviewResumeRequest(_message.Message):
+    __slots__ = ("run_id",)
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    def __init__(self, run_id: _Optional[str] = ...) -> None: ...
+
+class WriteReviewResumeResponse(_message.Message):
+    __slots__ = ("review_resume",)
+    REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
+    review_resume: ReviewResume
+    def __init__(self, review_resume: _Optional[_Union[ReviewResume, _Mapping]] = ...) -> None: ...

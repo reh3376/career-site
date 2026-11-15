@@ -436,3 +436,78 @@ func TestOverrideChangesTheEffectiveValue(t *testing.T) {
 		t.Errorf("LatestRecordRun of an absent posting: ok=%v err=%v", ok, err)
 	}
 }
+
+// The résumé after review is a row of its own: opened as being written,
+// closed as ready or failed, replaced when asked for again, refused
+// while one is in flight, and closed at start-up when a restart cut it
+// off. Nothing here writes to the submission.
+func TestReviewResumeRow(t *testing.T) {
+	r, ctx := testRepo(t)
+	reviewer := testUser(t, r, ctx)
+	f := newFixture(t, r, ctx, 0.6)
+
+	if _, ok, err := r.GetReviewResume(ctx, f.runID); ok || err != nil {
+		t.Fatalf("before anything is asked for: ok=%v err=%v", ok, err)
+	}
+	ask := ReviewResumeRequest{RunID: f.runID, SubmissionID: f.submissionID, ReviewedScore: 0.78, Threshold: 0.7, OverrideCount: 2, RequestedBy: reviewer}
+	if err := r.StartReviewResume(ctx, ask); err != nil {
+		t.Fatalf("StartReviewResume: %v", err)
+	}
+	row, ok, err := r.GetReviewResume(ctx, f.runID)
+	if err != nil || !ok || row.Status != ReviewResumeWriting || row.SubmissionID != f.submissionID || row.ReviewedScore != 0.78 ||
+		row.Threshold != 0.7 || row.OverrideCount != 2 || row.RequestedBy != reviewer || row.FinishedAt != nil || row.HasPDF {
+		t.Fatalf("the row as opened: %+v ok=%v err=%v", row, ok, err)
+	}
+	if err := r.StartReviewResume(ctx, ask); !errors.Is(err, ErrReviewResumeBusy) {
+		t.Errorf("a second request while one is being written: %v, want busy", err)
+	}
+	if pdf, _, err := r.GetReviewResumePDF(ctx, f.runID); pdf != nil || err != nil {
+		t.Errorf("no PDF while it is being written: %d bytes, err %v", len(pdf), err)
+	}
+
+	if err := r.FinishReviewResume(ctx, f.runID, json.RawMessage(`{"experience":[]}`), "# A résumé", "test-model", "resume_tailor", 7); err != nil {
+		t.Fatalf("FinishReviewResume: %v", err)
+	}
+	if err := r.SetReviewResumePDF(ctx, f.runID, []byte("%PDF-1.7 test"), 2); err != nil {
+		t.Fatalf("SetReviewResumePDF: %v", err)
+	}
+	row, _, _ = r.GetReviewResume(ctx, f.runID)
+	if row.Status != ReviewResumeReady || row.Markdown != "# A résumé" || row.Model != "test-model" || row.PromptVersion != 7 || row.FinishedAt == nil || !row.HasPDF {
+		t.Errorf("the row when ready: %+v", row)
+	}
+	if pdf, sub, err := r.GetReviewResumePDF(ctx, f.runID); string(pdf) != "%PDF-1.7 test" || sub != f.submissionID || err != nil {
+		t.Errorf("the PDF: %q for submission %d, err %v", pdf, sub, err)
+	}
+	// The submission the member's review reads is untouched.
+	var status, markdown string
+	if err := r.pool.QueryRow(ctx, `SELECT status, COALESCE(resume_markdown, '') FROM jd_submissions WHERE id = $1`, f.submissionID).Scan(&status, &markdown); err != nil || markdown != "" {
+		t.Errorf("a résumé after review must never reach the submission: status=%s markdown=%q err=%v", status, markdown, err)
+	}
+
+	// Asked for again: the last one is replaced, down to its PDF.
+	ask.ReviewedScore, ask.OverrideCount = 0.9, 3
+	if err := r.StartReviewResume(ctx, ask); err != nil {
+		t.Fatalf("asking again: %v", err)
+	}
+	row, _, _ = r.GetReviewResume(ctx, f.runID)
+	if row.Status != ReviewResumeWriting || row.Markdown != "" || row.HasPDF || row.ReviewedScore != 0.9 || row.OverrideCount != 3 || row.FinishedAt != nil {
+		t.Errorf("the row when asked for again: %+v", row)
+	}
+	// A restart cuts it off; start-up closes it so it can be asked for.
+	if n, err := r.FailInterruptedReviewResumes(ctx); err != nil || n < 1 {
+		t.Fatalf("FailInterruptedReviewResumes: %d, %v", n, err)
+	}
+	row, _, _ = r.GetReviewResume(ctx, f.runID)
+	if row.Status != ReviewResumeFailed || row.Error == "" || row.FinishedAt == nil {
+		t.Errorf("the row after an interrupted write: %+v", row)
+	}
+	if err := r.StartReviewResume(ctx, ask); err != nil {
+		t.Errorf("a failed one can be asked for again: %v", err)
+	}
+	if err := r.FailReviewResume(ctx, f.runID, "the model returned nothing usable"); err != nil {
+		t.Fatal(err)
+	}
+	if row, _, _ = r.GetReviewResume(ctx, f.runID); row.Status != ReviewResumeFailed || row.Error != "the model returned nothing usable" {
+		t.Errorf("the row after a failed write: %+v", row)
+	}
+}

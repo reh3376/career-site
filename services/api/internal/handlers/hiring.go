@@ -39,10 +39,23 @@ type Hiring struct {
 	// bands names the fit a score falls in, for the fit after review on
 	// a record that carries an override; nil falls back to the scorer's.
 	bands *jd.BandsStore
+	// resumes writes a résumé after review; nil when the reviewer is
+	// not wired, in which case none is offered.
+	resumes reviewResumeRunner
 }
 
 // SetBands wires the fit bands.
 func (h *Hiring) SetBands(b *jd.BandsStore) { h.bands = b }
+
+// reviewResumeRunner is what writes a résumé after review: the scorer,
+// or a stand-in under test.
+type reviewResumeRunner interface {
+	CanWriteResume() bool
+	WriteReviewResume(ctx context.Context, submissionID int64, runID, jdText string, hints prompts.Hints)
+}
+
+// SetReviewResumes wires the writer of résumés after review.
+func (h *Hiring) SetReviewResumes(r reviewResumeRunner) { h.resumes = r }
 
 // NewHiring wires the handler. scorer may be nil.
 func NewHiring(log *slog.Logger, repo *users.Repo, hiringRepo *hiring.Repo, settings *hiring.SettingsStore, scorer *jd.Scorer) *Hiring {

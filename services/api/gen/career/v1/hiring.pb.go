@@ -2743,8 +2743,17 @@ type GetMatchRecordResponse struct {
 	CanOverride bool `protobuf:"varint,9,opt,name=can_override,json=canOverride,proto3" json:"can_override,omitempty"`
 	// The pairs an override may set. Sent when the caller may override.
 	OverrideChoices []*OverrideChoice `protobuf:"bytes,10,rep,name=override_choices,json=overrideChoices,proto3" json:"override_choices,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The résumé written after review for this run, when one has been
+	// asked for. Sent to admins only.
+	ReviewResume *ReviewResume `protobuf:"bytes,11,opt,name=review_resume,json=reviewResume,proto3" json:"review_resume,omitempty"`
+	// Whether a résumé after review may be asked for now. Sent to admins
+	// only.
+	CanWriteReviewResume bool `protobuf:"varint,12,opt,name=can_write_review_resume,json=canWriteReviewResume,proto3" json:"can_write_review_resume,omitempty"`
+	// Why a résumé after review is not offered, as a sentence, when the
+	// record carries an override and it is not. Sent to admins only.
+	ReviewResumeNote string `protobuf:"bytes,13,opt,name=review_resume_note,json=reviewResumeNote,proto3" json:"review_resume_note,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetMatchRecordResponse) Reset() {
@@ -2845,6 +2854,27 @@ func (x *GetMatchRecordResponse) GetOverrideChoices() []*OverrideChoice {
 		return x.OverrideChoices
 	}
 	return nil
+}
+
+func (x *GetMatchRecordResponse) GetReviewResume() *ReviewResume {
+	if x != nil {
+		return x.ReviewResume
+	}
+	return nil
+}
+
+func (x *GetMatchRecordResponse) GetCanWriteReviewResume() bool {
+	if x != nil {
+		return x.CanWriteReviewResume
+	}
+	return false
+}
+
+func (x *GetMatchRecordResponse) GetReviewResumeNote() string {
+	if x != nil {
+		return x.ReviewResumeNote
+	}
+	return ""
 }
 
 // One override of one judgment.
@@ -2986,6 +3016,229 @@ func (*OverrideJudgmentResponse) Descriptor() ([]byte, []int) {
 func (x *OverrideJudgmentResponse) GetRecord() *MatchRecord {
 	if x != nil {
 		return x.Record
+	}
+	return nil
+}
+
+// A résumé written at the owner's request on a run's verdicts after
+// review (FSD FR-HF-08). The owner's alone: never part of the member's
+// review and never emailed.
+type ReviewResume struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The run whose record it was written from.
+	RunId string `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// Where it stands: `writing`, `ready` or `failed`.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// Why it failed, when it did.
+	Error string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// The résumé in markdown, once ready.
+	Markdown string `protobuf:"bytes,4,opt,name=markdown,proto3" json:"markdown,omitempty"`
+	// When it was asked for.
+	RequestedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=requested_at,json=requestedAt,proto3" json:"requested_at,omitempty"`
+	// When it was finished or failed; unset while it is being written.
+	FinishedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	// The gate's score with the person's verdicts when it was asked for.
+	ReviewedScore float64 `protobuf:"fixed64,7,opt,name=reviewed_score,json=reviewedScore,proto3" json:"reviewed_score,omitempty"`
+	// How many verdicts a person had set when it was asked for.
+	OverrideCount int32 `protobuf:"varint,8,opt,name=override_count,json=overrideCount,proto3" json:"override_count,omitempty"`
+	// Download path of the locked PDF, for an admin's session; empty
+	// when no PDF was rendered.
+	DownloadPath string `protobuf:"bytes,9,opt,name=download_path,json=downloadPath,proto3" json:"download_path,omitempty"`
+	// The model that wrote it.
+	Model         string `protobuf:"bytes,10,opt,name=model,proto3" json:"model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewResume) Reset() {
+	*x = ReviewResume{}
+	mi := &file_career_v1_hiring_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewResume) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewResume) ProtoMessage() {}
+
+func (x *ReviewResume) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewResume.ProtoReflect.Descriptor instead.
+func (*ReviewResume) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ReviewResume) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *ReviewResume) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ReviewResume) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ReviewResume) GetMarkdown() string {
+	if x != nil {
+		return x.Markdown
+	}
+	return ""
+}
+
+func (x *ReviewResume) GetRequestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RequestedAt
+	}
+	return nil
+}
+
+func (x *ReviewResume) GetFinishedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FinishedAt
+	}
+	return nil
+}
+
+func (x *ReviewResume) GetReviewedScore() float64 {
+	if x != nil {
+		return x.ReviewedScore
+	}
+	return 0
+}
+
+func (x *ReviewResume) GetOverrideCount() int32 {
+	if x != nil {
+		return x.OverrideCount
+	}
+	return 0
+}
+
+func (x *ReviewResume) GetDownloadPath() string {
+	if x != nil {
+		return x.DownloadPath
+	}
+	return ""
+}
+
+func (x *ReviewResume) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+// Names the run.
+type WriteReviewResumeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The run whose record the résumé is written from: the newest run of
+	// the posting.
+	RunId         string `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteReviewResumeRequest) Reset() {
+	*x = WriteReviewResumeRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteReviewResumeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteReviewResumeRequest) ProtoMessage() {}
+
+func (x *WriteReviewResumeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteReviewResumeRequest.ProtoReflect.Descriptor instead.
+func (*WriteReviewResumeRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *WriteReviewResumeRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+// The résumé as it stands after the request: being written.
+type WriteReviewResumeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The résumé's row.
+	ReviewResume  *ReviewResume `protobuf:"bytes,1,opt,name=review_resume,json=reviewResume,proto3" json:"review_resume,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteReviewResumeResponse) Reset() {
+	*x = WriteReviewResumeResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteReviewResumeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteReviewResumeResponse) ProtoMessage() {}
+
+func (x *WriteReviewResumeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteReviewResumeResponse.ProtoReflect.Descriptor instead.
+func (*WriteReviewResumeResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *WriteReviewResumeResponse) GetReviewResume() *ReviewResume {
+	if x != nil {
+		return x.ReviewResume
 	}
 	return nil
 }
@@ -3237,7 +3490,7 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x15GetMatchRecordRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12\x1e\n" +
 	"\x06run_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\x05runId\x12\x1b\n" +
-	"\tas_member\x18\x03 \x01(\bR\basMember\"\xa9\x04\n" +
+	"\tas_member\x18\x03 \x01(\bR\basMember\"\xcc\x05\n" +
 	"\x16GetMatchRecordResponse\x12.\n" +
 	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record\x12<\n" +
 	"\x0edeterminations\x18\x02 \x03(\v2\x14.career.v1.VocabCodeR\x0edeterminations\x12*\n" +
@@ -3249,7 +3502,10 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x0eoverride_roles\x18\b \x03(\v2\x14.career.v1.VocabCodeR\roverrideRoles\x12!\n" +
 	"\fcan_override\x18\t \x01(\bR\vcanOverride\x12D\n" +
 	"\x10override_choices\x18\n" +
-	" \x03(\v2\x19.career.v1.OverrideChoiceR\x0foverrideChoices\"\xf0\x01\n" +
+	" \x03(\v2\x19.career.v1.OverrideChoiceR\x0foverrideChoices\x12<\n" +
+	"\rreview_resume\x18\v \x01(\v2\x17.career.v1.ReviewResumeR\freviewResume\x125\n" +
+	"\x17can_write_review_resume\x18\f \x01(\bR\x14canWriteReviewResume\x12,\n" +
+	"\x12review_resume_note\x18\r \x01(\tR\x10reviewResumeNote\"\xf0\x01\n" +
 	"\x17OverrideJudgmentRequest\x12*\n" +
 	"\vjudgment_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
 	"judgmentId\x12-\n" +
@@ -3260,12 +3516,29 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x04role\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18(R\x04role\x12\x1a\n" +
 	"\bwithdraw\x18\x06 \x01(\bR\bwithdraw\"J\n" +
 	"\x18OverrideJudgmentResponse\x12.\n" +
-	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record*\x94\x01\n" +
+	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record\"\xf4\x02\n" +
+	"\fReviewResume\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x1a\n" +
+	"\bmarkdown\x18\x04 \x01(\tR\bmarkdown\x12=\n" +
+	"\frequested_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vrequestedAt\x12;\n" +
+	"\vfinished_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"finishedAt\x12%\n" +
+	"\x0ereviewed_score\x18\a \x01(\x01R\rreviewedScore\x12%\n" +
+	"\x0eoverride_count\x18\b \x01(\x05R\roverrideCount\x12#\n" +
+	"\rdownload_path\x18\t \x01(\tR\fdownloadPath\x12\x14\n" +
+	"\x05model\x18\n" +
+	" \x01(\tR\x05model\"<\n" +
+	"\x18WriteReviewResumeRequest\x12 \n" +
+	"\x06run_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x05runId\"Y\n" +
+	"\x19WriteReviewResumeResponse\x12<\n" +
+	"\rreview_resume\x18\x01 \x01(\v2\x17.career.v1.ReviewResumeR\freviewResume*\x94\x01\n" +
 	"\x11RequirementStatus\x12\"\n" +
 	"\x1eREQUIREMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18REQUIREMENT_STATUS_DRAFT\x10\x01\x12\x1d\n" +
 	"\x19REQUIREMENT_STATUS_ACTIVE\x10\x02\x12\x1e\n" +
-	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xec\x05\n" +
+	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xd6\x06\n" +
 	"\rHiringService\x12e\n" +
 	"\x10ListRequirements\x12\".career.v1.ListRequirementsRequest\x1a#.career.v1.ListRequirementsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
 	"\x11UpdateRequirement\x12#.career.v1.UpdateRequirementRequest\x1a$.career.v1.UpdateRequirementResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
@@ -3273,7 +3546,8 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x11GetHiringSettings\x12#.career.v1.GetHiringSettingsRequest\x1a$.career.v1.GetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
 	"\x11SetHiringSettings\x12#.career.v1.SetHiringSettingsRequest\x1a$.career.v1.SetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12_\n" +
 	"\x0eGetMatchRecord\x12 .career.v1.GetMatchRecordRequest\x1a!.career.v1.GetMatchRecordResponse\"\b\x80\xb5\x18\x02\xa0\xb5\x18\x01\x12e\n" +
-	"\x10OverrideJudgment\x12\".career.v1.OverrideJudgmentRequest\x1a#.career.v1.OverrideJudgmentResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
+	"\x10OverrideJudgment\x12\".career.v1.OverrideJudgmentRequest\x1a#.career.v1.OverrideJudgmentResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
+	"\x11WriteReviewResume\x12#.career.v1.WriteReviewResumeRequest\x1a$.career.v1.WriteReviewResumeResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
 	"\rcom.career.v1B\vHiringProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -3290,7 +3564,7 @@ func file_career_v1_hiring_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_hiring_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_career_v1_hiring_proto_goTypes = []any{
 	(RequirementStatus)(0),              // 0: career.v1.RequirementStatus
 	(*ScopeThreshold)(nil),              // 1: career.v1.ScopeThreshold
@@ -3323,16 +3597,19 @@ var file_career_v1_hiring_proto_goTypes = []any{
 	(*GetMatchRecordResponse)(nil),      // 28: career.v1.GetMatchRecordResponse
 	(*OverrideJudgmentRequest)(nil),     // 29: career.v1.OverrideJudgmentRequest
 	(*OverrideJudgmentResponse)(nil),    // 30: career.v1.OverrideJudgmentResponse
-	nil,                                 // 31: career.v1.MatchRecord.VersionsEntry
-	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
+	(*ReviewResume)(nil),                // 31: career.v1.ReviewResume
+	(*WriteReviewResumeRequest)(nil),    // 32: career.v1.WriteReviewResumeRequest
+	(*WriteReviewResumeResponse)(nil),   // 33: career.v1.WriteReviewResumeResponse
+	nil,                                 // 34: career.v1.MatchRecord.VersionsEntry
+	(*timestamppb.Timestamp)(nil),       // 35: google.protobuf.Timestamp
 }
 var file_career_v1_hiring_proto_depIdxs = []int32{
 	1,  // 0: career.v1.Thresholds.min_scope:type_name -> career.v1.ScopeThreshold
 	2,  // 1: career.v1.Requirement.thresholds:type_name -> career.v1.Thresholds
-	32, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
+	35, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: career.v1.Requirement.status:type_name -> career.v1.RequirementStatus
-	32, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
-	32, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
+	35, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
+	35, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 6: career.v1.RequirementPatch.thresholds:type_name -> career.v1.Thresholds
 	4,  // 7: career.v1.RequirementPatch.alternatives:type_name -> career.v1.StringList
 	4,  // 8: career.v1.RequirementPatch.named_parties:type_name -> career.v1.StringList
@@ -3349,8 +3626,8 @@ var file_career_v1_hiring_proto_depIdxs = []int32{
 	13, // 19: career.v1.SetHiringSettingsRequest.settings:type_name -> career.v1.HiringSettings
 	13, // 20: career.v1.SetHiringSettingsResponse.settings:type_name -> career.v1.HiringSettings
 	1,  // 21: career.v1.ReportedFacts.stated_scope:type_name -> career.v1.ScopeThreshold
-	32, // 22: career.v1.JudgmentOverride.at:type_name -> google.protobuf.Timestamp
-	32, // 23: career.v1.EarlierOverride.at:type_name -> google.protobuf.Timestamp
+	35, // 22: career.v1.JudgmentOverride.at:type_name -> google.protobuf.Timestamp
+	35, // 23: career.v1.EarlierOverride.at:type_name -> google.protobuf.Timestamp
 	22, // 24: career.v1.Judgment.override:type_name -> career.v1.JudgmentOverride
 	19, // 25: career.v1.Judgment.evidence:type_name -> career.v1.EvidenceRef
 	20, // 26: career.v1.Judgment.rule_adjustments:type_name -> career.v1.RuleAdjustment
@@ -3359,8 +3636,8 @@ var file_career_v1_hiring_proto_depIdxs = []int32{
 	18, // 29: career.v1.MatchRecord.coverage:type_name -> career.v1.Coverage
 	3,  // 30: career.v1.MatchRecord.requirements:type_name -> career.v1.Requirement
 	24, // 31: career.v1.MatchRecord.judgments:type_name -> career.v1.Judgment
-	31, // 32: career.v1.MatchRecord.versions:type_name -> career.v1.MatchRecord.VersionsEntry
-	32, // 33: career.v1.MatchRecord.finished_at:type_name -> google.protobuf.Timestamp
+	34, // 32: career.v1.MatchRecord.versions:type_name -> career.v1.MatchRecord.VersionsEntry
+	35, // 33: career.v1.MatchRecord.finished_at:type_name -> google.protobuf.Timestamp
 	25, // 34: career.v1.GetMatchRecordResponse.record:type_name -> career.v1.MatchRecord
 	8,  // 35: career.v1.GetMatchRecordResponse.determinations:type_name -> career.v1.VocabCode
 	8,  // 36: career.v1.GetMatchRecordResponse.bases:type_name -> career.v1.VocabCode
@@ -3370,26 +3647,32 @@ var file_career_v1_hiring_proto_depIdxs = []int32{
 	8,  // 40: career.v1.GetMatchRecordResponse.source_kinds:type_name -> career.v1.VocabCode
 	8,  // 41: career.v1.GetMatchRecordResponse.override_roles:type_name -> career.v1.VocabCode
 	26, // 42: career.v1.GetMatchRecordResponse.override_choices:type_name -> career.v1.OverrideChoice
-	25, // 43: career.v1.OverrideJudgmentResponse.record:type_name -> career.v1.MatchRecord
-	6,  // 44: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
-	9,  // 45: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
-	11, // 46: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
-	14, // 47: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
-	16, // 48: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
-	27, // 49: career.v1.HiringService.GetMatchRecord:input_type -> career.v1.GetMatchRecordRequest
-	29, // 50: career.v1.HiringService.OverrideJudgment:input_type -> career.v1.OverrideJudgmentRequest
-	7,  // 51: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
-	10, // 52: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
-	12, // 53: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
-	15, // 54: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
-	17, // 55: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
-	28, // 56: career.v1.HiringService.GetMatchRecord:output_type -> career.v1.GetMatchRecordResponse
-	30, // 57: career.v1.HiringService.OverrideJudgment:output_type -> career.v1.OverrideJudgmentResponse
-	51, // [51:58] is the sub-list for method output_type
-	44, // [44:51] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	31, // 43: career.v1.GetMatchRecordResponse.review_resume:type_name -> career.v1.ReviewResume
+	25, // 44: career.v1.OverrideJudgmentResponse.record:type_name -> career.v1.MatchRecord
+	35, // 45: career.v1.ReviewResume.requested_at:type_name -> google.protobuf.Timestamp
+	35, // 46: career.v1.ReviewResume.finished_at:type_name -> google.protobuf.Timestamp
+	31, // 47: career.v1.WriteReviewResumeResponse.review_resume:type_name -> career.v1.ReviewResume
+	6,  // 48: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
+	9,  // 49: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
+	11, // 50: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
+	14, // 51: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
+	16, // 52: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
+	27, // 53: career.v1.HiringService.GetMatchRecord:input_type -> career.v1.GetMatchRecordRequest
+	29, // 54: career.v1.HiringService.OverrideJudgment:input_type -> career.v1.OverrideJudgmentRequest
+	32, // 55: career.v1.HiringService.WriteReviewResume:input_type -> career.v1.WriteReviewResumeRequest
+	7,  // 56: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
+	10, // 57: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
+	12, // 58: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
+	15, // 59: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
+	17, // 60: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
+	28, // 61: career.v1.HiringService.GetMatchRecord:output_type -> career.v1.GetMatchRecordResponse
+	30, // 62: career.v1.HiringService.OverrideJudgment:output_type -> career.v1.OverrideJudgmentResponse
+	33, // 63: career.v1.HiringService.WriteReviewResume:output_type -> career.v1.WriteReviewResumeResponse
+	56, // [56:64] is the sub-list for method output_type
+	48, // [48:56] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_hiring_proto_init() }
@@ -3407,7 +3690,7 @@ func file_career_v1_hiring_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_hiring_proto_rawDesc), len(file_career_v1_hiring_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   31,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
