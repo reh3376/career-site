@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import { callApi } from "@/lib/api-fetch";
 
-import { getJdLimit, getPreferredFraction } from "./actions";
+import { getHiringSettings, getJdLimit } from "./actions";
+import { ClarificationSettingsForm } from "./clarification-settings-form";
 import { FitBandsForm } from "./fit-bands-form";
 import { PreferredFractionForm } from "./preferred-fraction-form";
 import { SubmissionLimitForm } from "./submission-limit-form";
@@ -75,6 +76,7 @@ const STATUS_LABEL: Record<string, string> = {
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
   JD_STATUS_NOT_A_POSTING: "not a posting",
+  JD_STATUS_AWAITING_CANDIDATE: "awaiting the candidate",
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -87,6 +89,9 @@ const STATUS_TONE: Record<string, string> = {
   // Not an error: the reviewer declined to score something that was not
   // a posting, which is the system working.
   JD_STATUS_NOT_A_POSTING: "text-ink-2",
+  // Resting, not failed: the review asked the candidate something and
+  // gives no fit until it is answered or the time runs out.
+  JD_STATUS_AWAITING_CANDIDATE: "text-signal",
 };
 
 export default async function AdminJdPage() {
@@ -94,7 +99,8 @@ export default async function AdminJdPage() {
   const nowMs = getNowMs();
   const bands = await getJdBands(await getSessionCookie());
   const limit = await getJdLimit();
-  const preferredFraction = await getPreferredFraction();
+  const hiringSettings = await getHiringSettings();
+  const preferredFraction = hiringSettings?.preferredFraction;
 
   return (
     <>
@@ -179,6 +185,35 @@ export default async function AdminJdPage() {
           ) : (
             <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
               Could not read the fraction in force, so it is not shown rather
+              than guessed at.
+            </p>
+          )}
+        </div>
+
+        <h2
+          className="font-display mt-10 text-2xl leading-tight text-ink"
+          style={{ fontVariationSettings: '"opsz" 60, "SOFT" 50' }}
+        >
+          Whether a review asks you before it gives a fit.
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-3">
+          A review can leave a requirement unresolved because your documents say
+          the same thing in other words, name a different tool, or do not show a
+          relationship the posting names. Switched on, the review writes you a
+          follow-up question for each of those and gives the posting no fit
+          until you answer or the time runs out. Switched off, every review is
+          given its fit as it finishes and questions are written only when you
+          ask for them on a posting&rsquo;s page.
+        </p>
+        <div className="mt-4">
+          {hiringSettings ? (
+            <ClarificationSettingsForm
+              initialAuto={hiringSettings.clarificationAuto}
+              initialDays={hiringSettings.clarificationDays}
+            />
+          ) : (
+            <p className="border-l-2 border-signal bg-signal-soft/50 px-4 py-3 text-sm text-ink">
+              Could not read the setting in force, so it is not shown rather
               than guessed at.
             </p>
           )}

@@ -254,5 +254,182 @@ describe("toRecordData", () => {
 
   it("writes no em dash anywhere a reader will see", () => {
     expect(JSON.stringify(toRecordData(response(), "admin"))).not.toMatch(/—|&mdash;/);
+    expect(JSON.stringify(toRecordData(awaitingResponse(), "member"))).not.toMatch(/—|&mdash;/);
+    expect(JSON.stringify(toRecordData(closedResponse(), "admin"))).not.toMatch(/—|&mdash;/);
+  });
+});
+
+// The run as it rests while the candidate has been asked something
+// (FSD FR-HF-22): no override, no fit, r2 with a question open.
+function awaitingResponse(): MatchRecordResponse {
+  const r = memberResponse();
+  const rec = r.record!;
+  rec.fit = undefined;
+  rec.matchScore = undefined;
+  rec.awaitingCandidate = true;
+  rec.runTrigger = "rescore";
+  rec.clarification = {
+    status: "sent",
+    held: true,
+    asked: 1,
+    pending: 1,
+    askedAttempt: 2,
+    generatedAt: "2026-11-15T10:00:00Z",
+    expiresAt: "2026-11-18T10:00:00Z",
+  };
+  rec.judgments = (rec.judgments ?? []).map((j) =>
+    j.id === "j2"
+      ? { ...j, followUp: { status: "pending", question: "Which of your roles comes closest?", askedAttempt: 2, askedBy: "system" } }
+      : j,
+  );
+  return r;
+}
+
+// The run that closed those questions: r2 judged again with the
+// candidate's answer and now met through an equivalency.
+function closedResponse(): MatchRecordResponse {
+  const r = response();
+  r.sourceKinds = [...(r.sourceKinds ?? []), { code: "candidate_response", label: "Candidate's answer", description: "Self-attested." }];
+  r.askableCount = 0;
+  const rec = r.record!;
+  rec.attempt = 3;
+  rec.runTrigger = "clarification";
+  rec.overrideCount = undefined;
+  rec.reviewedScore = undefined;
+  rec.reviewedFit = undefined;
+  rec.coverage = { evidenced: 1, equivalentShare: 0.6, selfAttestedShare: 0.6, formulaVersion: "v4-classes", preferredFraction: 0.25 };
+  rec.clarification = {
+    requestId: "req-1",
+    status: "answered",
+    held: true,
+    closedReason: "answered",
+    asked: 1,
+    answered: 1,
+    askedAttempt: 2,
+    closingAttempt: 3,
+    closedByThisRun: true,
+  };
+  const statement =
+    "The candidate's own answer to a follow-up question about this requirement, given 2026-11-15. Your roles or projects: Director of Engineering, Acme, 2018 to 2022. The candidate adds: I led FEL-1 to FEL-3 on two plants.";
+  rec.judgments = (rec.judgments ?? []).map((j) =>
+    j.id === "j2"
+      ? {
+          ...j,
+          override: undefined,
+          determination: "met_equivalent",
+          uncertainty: undefined,
+          effectiveDetermination: "met_equivalent",
+          selfAttested: true,
+          evidence: [
+            { id: "e9", sourceKind: "candidate_response", statement },
+            { id: "e1", sourceKind: "corpus_document", title: "Career facts", chunkId: "3" },
+          ],
+          followUp: {
+            status: "answered",
+            question: "Which of your roles comes closest?",
+            statement,
+            answeredAt: "2026-11-15T12:00:00Z",
+            askedAttempt: 2,
+            askedBy: "system",
+            requestId: "req-1",
+            itemId: "item-1",
+          },
+        }
+      : j,
+  );
+  return r;
+}
+
+describe("the clarification loop on a record", () => {
+  it("reads as inconclusive, with no fit, while a question is open", () => {
+    const d = toRecordData(awaitingResponse(), "member");
+    expect(d?.header?.status).toBe("Inconclusive · awaiting the candidate");
+    expect(d?.header?.status_note).toContain("1 follow-up question has been put to the candidate");
+    expect(d?.header?.status_note).toContain("2026-11-18 10:00 UTC");
+    expect(d?.header?.status_note).toContain("No fit is given while a question is open");
+    expect(d?.header?.fit_lines).toBeUndefined();
+    const r2 = d?.rows?.find((r) => r.id === "r2");
+    expect(r2?.followup?.status).toBe("A question is open with the candidate");
+    expect(r2?.followup?.next).toContain("Asked on run 2: Which of your roles comes closest?");
+    expect(r2?.statement).toBeUndefined();
+  });
+
+  it("tells the hiring side the fit is withheld, not missing", () => {
+    const r = awaitingResponse();
+    const d = toRecordData(r, "admin");
+    expect(d?.header?.fit_lines).toEqual([
+      { label: "Fit", value: "withheld", note: "no fit is given while a follow-up question is open" },
+    ]);
+  });
+
+  it("gives every unresolved row a follow-up line, asked or not", () => {
+    const r = awaitingResponse();
+    r.record!.judgments = (r.record!.judgments ?? []).map((j) => ({ ...j, followUp: undefined }));
+    const rows = toRecordData(r, "member")?.rows ?? [];
+    expect(rows.find((x) => x.id === "r2")?.followup?.status).toBe("No question has been put to the candidate about this yet");
+    // A met row and a working-style row have nothing to follow up.
+    expect(rows.find((x) => x.id === "r1")?.followup).toBeUndefined();
+    expect(rows.find((x) => x.id === "r4")?.followup).toBeUndefined();
+  });
+
+  it("shows the candidate's answer as their own statement, with what it settled", () => {
+    const d = toRecordData(closedResponse(), "admin");
+    expect(d?.header?.status).toBeUndefined();
+    expect(d?.header?.run_note).toContain("It followed the candidate's answers to the 1 follow-up question asked on run 2");
+    expect(d?.header?.run_note).toContain("1 requirement was judged again with the answer");
+    expect(d?.header?.self_attested_line).toBe("60% rests on the candidate's own answers to follow-up questions.");
+    const r2 = d?.rows?.find((r) => r.id === "r2");
+    expect(r2?.marks).toContain("rests on the candidate's answer");
+    expect(r2?.followup?.status).toBe("Answered by the candidate on 2026-11-15");
+    expect(r2?.statement?.title).toBe("The candidate's own statement");
+    // The stored opening, which says whose statement it is and when, is
+    // the heading's job on the page.
+    expect(r2?.statement?.text).toBe(
+      "Your roles or projects: Director of Engineering, Acme, 2018 to 2022. The candidate adds: I led FEL-1 to FEL-3 on two plants.",
+    );
+    expect(r2?.evidence).toBe("the candidate's own answer to a follow-up question; Career facts · passage 3");
+    const marks = d?.definitions?.groups?.find((g) => g.title === "Marks on a row")?.terms?.map((t) => t.term) ?? [];
+    expect(marks).toContain("Follow-up");
+    expect(marks).toContain("Rests on the candidate's answer");
+  });
+
+  it("says when an answer was judged and did not settle the row", () => {
+    const stillOpen = (selfAttested: boolean) => {
+      const r = closedResponse();
+      r.record!.judgments = (r.record!.judgments ?? []).map((j) =>
+        j.id === "j2"
+          ? { ...j, determination: "unresolved", effectiveDetermination: "unresolved", uncertainty: ["equivalence_unconfirmed"], selfAttested }
+          : j,
+      );
+      return toRecordData(r, "member")?.rows?.find((x) => x.id === "r2")?.followup?.next ?? "";
+    };
+    // Made with the answer and still unresolved: the answer did not do it.
+    expect(stillOpen(true)).toContain("judged again with the answer and is still unresolved");
+    // Answered, the answers not yet submitted: it is still to be judged.
+    expect(stillOpen(false)).toContain("judged again with the answer when the answers are submitted");
+  });
+
+  it("says so when the time ran out and the fit was issued from what is evidenced", () => {
+    const r = closedResponse();
+    r.record!.clarification = { ...r.record!.clarification, status: "expired", closedReason: "expired", asked: 2, answered: 1 };
+    const note = toRecordData(r, "admin")?.header?.run_note ?? "";
+    expect(note).toContain("passed with 1 unanswered");
+    expect(note).toContain("the fit is issued from what is evidenced");
+  });
+
+  it("words each way a question can end", () => {
+    const end = (status: string) => {
+      const r = awaitingResponse();
+      r.record!.awaitingCandidate = undefined;
+      r.record!.judgments = (r.record!.judgments ?? []).map((j) =>
+        j.id === "j2" ? { ...j, followUp: { status, question: "Q?", askedAttempt: 2 } } : j,
+      );
+      return toRecordData(r, "member")?.rows?.find((x) => x.id === "r2")?.followup;
+    };
+    expect(end("not_applicable")?.status).toBe("The candidate states they have not done this");
+    expect(end("declined")?.status).toBe("The candidate preferred not to answer");
+    expect(end("withdrawn")?.status).toBe("The candidate withdrew their answer");
+    expect(end("unanswered")?.status).toBe("The question closed unanswered");
+    expect(end("superseded")?.status).toBe("The question was closed by a new run before it was answered");
   });
 });

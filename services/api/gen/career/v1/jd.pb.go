@@ -121,6 +121,13 @@ const (
 	// score computed from the wrong kind of input looks exactly like a
 	// real one and means nothing.
 	JdStatus_JD_STATUS_NOT_A_POSTING JdStatus = 7
+	// The review read the posting and has put follow-up questions to the
+	// candidate about requirements it could not settle from the documents
+	// (FSD FR-HF-22). No fit is given while a question is open: the
+	// review as it stands can be read, match_score is unset, and the
+	// submission finishes when the questions are answered or their time
+	// limit passes.
+	JdStatus_JD_STATUS_AWAITING_CANDIDATE JdStatus = 8
 )
 
 // Enum value maps for JdStatus.
@@ -134,16 +141,18 @@ var (
 		5: "JD_STATUS_READY",
 		6: "JD_STATUS_FAILED",
 		7: "JD_STATUS_NOT_A_POSTING",
+		8: "JD_STATUS_AWAITING_CANDIDATE",
 	}
 	JdStatus_value = map[string]int32{
-		"JD_STATUS_UNSPECIFIED":     0,
-		"JD_STATUS_RECEIVED":        1,
-		"JD_STATUS_SCORING":         2,
-		"JD_STATUS_BELOW_THRESHOLD": 3,
-		"JD_STATUS_GENERATING":      4,
-		"JD_STATUS_READY":           5,
-		"JD_STATUS_FAILED":          6,
-		"JD_STATUS_NOT_A_POSTING":   7,
+		"JD_STATUS_UNSPECIFIED":        0,
+		"JD_STATUS_RECEIVED":           1,
+		"JD_STATUS_SCORING":            2,
+		"JD_STATUS_BELOW_THRESHOLD":    3,
+		"JD_STATUS_GENERATING":         4,
+		"JD_STATUS_READY":              5,
+		"JD_STATUS_FAILED":             6,
+		"JD_STATUS_NOT_A_POSTING":      7,
+		"JD_STATUS_AWAITING_CANDIDATE": 8,
 	}
 )
 
@@ -1270,7 +1279,7 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x15JD_SOURCE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fJD_SOURCE_PASTE\x10\x01\x12\x11\n" +
 	"\rJD_SOURCE_PDF\x10\x02\x12\x19\n" +
-	"\x15JD_SOURCE_TEXT_UPLOAD\x10\x03*\xd5\x01\n" +
+	"\x15JD_SOURCE_TEXT_UPLOAD\x10\x03*\xf7\x01\n" +
 	"\bJdStatus\x12\x19\n" +
 	"\x15JD_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12JD_STATUS_RECEIVED\x10\x01\x12\x15\n" +
@@ -1279,7 +1288,8 @@ const file_career_v1_jd_proto_rawDesc = "" +
 	"\x14JD_STATUS_GENERATING\x10\x04\x12\x13\n" +
 	"\x0fJD_STATUS_READY\x10\x05\x12\x14\n" +
 	"\x10JD_STATUS_FAILED\x10\x06\x12\x1b\n" +
-	"\x17JD_STATUS_NOT_A_POSTING\x10\a2\xf6\x02\n" +
+	"\x17JD_STATUS_NOT_A_POSTING\x10\a\x12 \n" +
+	"\x1cJD_STATUS_AWAITING_CANDIDATE\x10\b2\xf6\x02\n" +
 	"\tJdService\x12I\n" +
 	"\bSubmitJd\x12\x1a.career.v1.SubmitJdRequest\x1a\x1b.career.v1.SubmitJdResponse\"\x04\x80\xb5\x18\x02\x12R\n" +
 	"\vGetJdResult\x12\x1d.career.v1.GetJdResultRequest\x1a\x1e.career.v1.GetJdResultResponse\"\x04\x80\xb5\x18\x02\x12d\n" +

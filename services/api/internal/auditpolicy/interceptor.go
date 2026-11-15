@@ -180,6 +180,10 @@ var targetFields = []struct {
 	{"review_item_id", "review_item"},
 	{"escalation_id", "escalation"},
 	{"session_key", "decision_test_session"},
+	// Before item_id, which names a different thing: a follow-up
+	// question to the candidate and the questionnaire it belongs to.
+	{"clarification_item_id", "clarification_item"},
+	{"clarification_request_id", "clarification_request"},
 	{"item_id", "review_item"},
 	{"decision_id", "decision"},
 	{"phrasing_id", "qa_phrasing"},

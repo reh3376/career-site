@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -103,6 +104,7 @@ func (i *Ingester) WalkDirectory(ctx context.Context, opts WalkOptions) (*WalkRe
 			SourcePath: rel,
 			Title:      title,
 			Visibility: effectiveVisibility(opts.Visibility, meta["visibility"]),
+			Meta:       documentMeta(opts.SourceKind, meta),
 			Body:       stripped,
 		})
 		if err != nil {
@@ -164,6 +166,100 @@ func (i *Ingester) WalkKinds(ctx context.Context, root, visibility, onlyKind str
 		return nil, nil, fmt.Errorf("walker: no %q directory under %s", onlyKind, root)
 	}
 	return agg, kinds, nil
+}
+
+// documentMeta is what a document's front matter says about where and
+// when the work was done, kept on the document for the kinds that are
+// an engagement: a role or a project. The clarification loop offers the
+// candidate's own roles and projects as the options of a question
+// (FSD FR-HF-13), and "which of these, and for how long" needs the
+// organisation and the years beside the title. Only the keys listed
+// are kept, each as the string the file states; nil for every other
+// kind and for a file that states none of them, so a document without
+// them is stored exactly as before.
+func documentMeta(sourceKind string, front map[string]string) []byte {
+	if sourceKind != "role" && sourceKind != "project" {
+		return nil
+	}
+	out := map[string]string{}
+	for _, key := range []string{"organization", "location", "start", "end", "order", "status"} {
+		if v := strings.TrimSpace(front[key]); v != "" {
+			out[key] = v
+		}
+	}
+	// A project states when it started under its own key.
+	if out["start"] == "" {
+		if v := strings.TrimSpace(front["started"]); v != "" {
+			out["start"] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	raw, err := json.Marshal(out)
+	if err != nil {
+		return nil
+	}
+	return raw
+}
+
+// MetaStore is what SyncEngagementMeta writes through.
+type MetaStore interface {
+	SetCorpusDocumentMeta(ctx context.Context, sourceKind, sourcePath string, meta []byte) (bool, error)
+}
+
+// SyncEngagementMeta brings the stored meta of the role and project
+// documents into line with their files' front matter (dirs maps each
+// kind to the directory its files are in),
+// without touching their text, chunks or embeddings. It exists so that
+// a deploy which begins to keep front matter (Phase 0 step 7) does not
+// depend on someone remembering to reindex: the clarification loop
+// offers these documents as choices and needs the organisation and the
+// years beside the title. A document that is not in the corpus yet is
+// left for the reindex that will ingest it; once the meta matches, a
+// reindex sees the document as unchanged and embeds nothing. It
+// returns how many documents it changed.
+func SyncEngagementMeta(ctx context.Context, store MetaStore, dirs map[string]string) (int, error) {
+	changed := 0
+	for _, kind := range []string{"role", "project"} {
+		dir := dirs[kind]
+		if dir == "" {
+			continue
+		}
+		if _, err := os.Stat(dir); err != nil {
+			continue
+		}
+		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !isTextSource(d.Name()) {
+				return nil
+			}
+			body, rErr := os.ReadFile(path)
+			if rErr != nil {
+				return nil
+			}
+			front, _ := parseFrontMatter(string(body))
+			meta := documentMeta(kind, front)
+			if meta == nil {
+				return nil
+			}
+			rel, relErr := filepath.Rel(dir, path)
+			if relErr != nil {
+				rel = path
+			}
+			ok, sErr := store.SetCorpusDocumentMeta(ctx, kind, rel, meta)
+			if sErr != nil {
+				return sErr
+			}
+			if ok {
+				changed++
+			}
+			return nil
+		})
+		if err != nil {
+			return changed, fmt.Errorf("sync engagement meta: %s: %w", kind, err)
+		}
+	}
+	return changed, nil
 }
 
 // effectiveVisibility lets front matter tighten the walk's visibility

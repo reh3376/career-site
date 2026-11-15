@@ -87,6 +87,13 @@ enum JdStatus {
   // score computed from the wrong kind of input looks exactly like a
   // real one and means nothing.
   JD_STATUS_NOT_A_POSTING = 7;
+  // The review read the posting and has put follow-up questions to the
+  // candidate about requirements it could not settle from the documents
+  // (FSD FR-HF-22). No fit is given while a question is open: the
+  // review as it stands can be read, match_score is unset, and the
+  // submission finishes when the questions are answered or their time
+  // limit passes.
+  JD_STATUS_AWAITING_CANDIDATE = 8;
 }
 
 // Submission request. Exactly one of jd_text (paste) OR

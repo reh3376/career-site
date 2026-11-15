@@ -39,6 +39,8 @@ const (
 	VocabScopeUnit        = "scope_unit"
 	VocabCredentialLevel  = "credential_level"
 	VocabRelationshipKind = "relationship_kind"
+	// Vocabulary 1.2 (migration 00078).
+	VocabActivityClass = "activity_class"
 
 	// Other is what an unknown code resolves to for logic. The raw
 	// value is kept beside it, never replaced (04 §0 rule 3).

@@ -304,6 +304,16 @@ func main() {
 			log, userRepo, ingest.SidecarEmbed{Client: sc}, nil,
 		)
 	}
+	// The clarification loop offers the owner's roles and projects as
+	// the choices of a question, with the organisation and years their
+	// files state. Those are kept on the document at ingest; this brings
+	// documents ingested before that into line at boot, without a
+	// reindex and without embedding anything.
+	if n, err := ingest.SyncEngagementMeta(ctx, userRepo, handlers.PublicCorpusDirs(cfg.CorpusRoot, "role", "project")); err != nil {
+		log.Warn("corpus: role and project front matter not synced", slog.String("error", err.Error()))
+	} else if n > 0 {
+		log.Info("corpus: role and project front matter synced to the documents", slog.Int("documents", n))
+	}
 	activityHandler := handlers.NewActivity(log, userRepo, authHandler)
 	// Product event stream: one writer shared by the browser beacon
 	// handler and the api's own emit points (docs/events/README.md).
@@ -579,6 +589,7 @@ func main() {
 	if jdScorer != nil {
 		hiringHandler.SetBands(jdScorer.BandsStore())
 		hiringHandler.SetReviewResumes(jdScorer)
+		hiringHandler.SetClarifications(jdScorer)
 	}
 	// A résumé after review is written by a goroutine of this process.
 	// One still marked as being written was cut off by the restart that
@@ -699,6 +710,17 @@ func main() {
 			}
 			return qaEmbedder.Run(ctx)
 		}},
+		// The clarification loop's clock (FSD FR-HF-22): a held review
+		// waits for the candidate at most its time limit, and the
+		// candidate is reminded a day before. Five minutes, because the
+		// limit is counted in days and a recruiter who has waited three
+		// of them does not notice five minutes more.
+		scheduler.Job{Name: "clarification-sweep", Interval: 5 * time.Minute, Run: func(ctx context.Context) error {
+			if jdScorer != nil {
+				jdScorer.SweepClarifications(ctx)
+			}
+			return nil
+		}},
 		scheduler.Job{Name: "events-anonymize", Interval: 24 * time.Hour, Run: func(ctx context.Context) error {
 			n, err := eventWriter.AnonymizeOlderThan(ctx, cfg.EventIdentityRetention)
 			if err != nil {
@@ -712,6 +734,12 @@ func main() {
 	)
 	sched.Start(ctx)
 	defer sched.Stop()
+	// A run that closes a questionnaire is a goroutine of this process,
+	// so a restart in the middle of one leaves the request answered or
+	// expired with no run behind it. Start those again.
+	if jdScorer != nil {
+		go jdScorer.ResumeClarifications(context.WithoutCancel(ctx))
+	}
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()

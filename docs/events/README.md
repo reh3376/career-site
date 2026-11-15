@@ -73,6 +73,8 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `jd.finished` | | `submission_id`, `outcome`, `score`, `threshold`, `fit` | a pipeline run reached ready, below_threshold or failed |
 | `jd.result_viewed` | yes | `submission_id`, `via` | a finished result rendered; `via` is `submit` or `reopen` |
 | `jd.pdf_downloaded` | | `submission_id` | the résumé PDF served |
+| `jd.questions_asked` | | `submission_id`, `questions`, `held` | a run wrote follow-up questions for the candidate and rests with no fit (FSD FR-HF-22, FR-HF-24); `held` is whether the fit is withheld |
+| `jd.questions_closed` | | `submission_id`, `reason`, `judged_again` | the run that closed a questionnaire finished its judging; `reason` is `answered` or `expired`, `judged_again` how many requirements were not carried forward unchanged |
 | `jd.poll_abandoned` | yes | `submission_id`, `waited_ms` | reserved; not yet emitted |
 | `jd.quota_blocked` | | `submitted`, `limit` | a member turned away at the daily cap |
 | `jd.outcome_recorded` | | `submission_id`, `status` | ground truth attached to a submission |
@@ -98,7 +100,11 @@ and this table mirrors it. Add a name in both places in the same PR.
 | `admin.judgment_overridden` | | `judgment_id`, `run_id`, `submission_id`, `local_id`, `action`, `role`, `model_determination`, `model_basis`, `determination`, `basis`, `agrees_with_model`, `override_count` | a person's verdict set, replaced or withdrawn on one judgment (`action` is `override` or `withdraw`). The model's values ride beside the person's so disagreement, and the basis it falls on, can be read off the stream; `agrees_with_model` marks a confirmation (FSD FR-HF-08) |
 | `admin.review_resume_requested` | | `run_id`, `submission_id`, `reviewed_score`, `threshold`, `override_count`, `again` | the owner asked for the résumé after review to be written on a run's verdicts as they stand; `again` is true when it replaces an earlier one (FSD FR-HF-08) |
 | `admin.review_resume_downloaded` | | `run_id`, `submission_id` | the PDF of a résumé after review was downloaded by an admin; it is never sent to anyone, so this is the only way it leaves the site |
-| `admin.hiring_settings_changed` | | `preferred_fraction` | the share of its weight a preferred requirement counts at was changed (FSD FR-HF-23) |
+| `admin.hiring_settings_changed` | | `preferred_fraction`, `clarification_auto`, `clarification_days` | the framework's settings were changed: the share of its weight a preferred requirement counts at (FSD FR-HF-23), whether a review asks the candidate by itself, and how many days a withheld review waits (FR-HF-22, FR-HF-24) |
+| `clarification.requested` | | `submission_id`, `questions` | follow-up questions written at the candidate's own request (FSD FR-HF-13) |
+| `clarification.answered` | | `submission_id`, `answer_type`, `status` | one question answered; `status` is `answered`, `not_applicable` or `declined`. What was answered is in the decision log, never here |
+| `clarification.submitted` | | `submission_id`, `questions`, `answered`, `run_started` | a questionnaire submitted, which starts the run that judges the answered requirements again |
+| `clarification.withdrawn` | | `submission_id`, `stale_judgments` | an answer taken back; `stale_judgments` is how many verdicts cited it |
 | `admin.qa_entry_created` | | `entry_id`, `enabled`, `covers_restricted` | a Q&A bank entry added |
 | `admin.qa_entry_updated` | | `entry_id`, `enabled`, `covers_restricted` | an entry edited |
 | `admin.qa_entry_enabled` | | `entry_id`, `enabled` | an entry approved or withdrawn |

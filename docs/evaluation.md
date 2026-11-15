@@ -95,6 +95,11 @@ detail:
       FROM llm_usage WHERE created_at > now() - interval '50 minutes'
      ORDER BY created_at;
 
+An evaluation run never waits on the candidate. Since 2026-11-15 a
+review can stop without a fit while a follow-up question is open (FSD
+FR-HF-22); a golden-set run is the pipeline's own answer and is given
+its fit as it finishes, whatever the setting says.
+
 ### Running one on the Mac instead
 
 Since 2026-11-10 the golden set can also run on the development

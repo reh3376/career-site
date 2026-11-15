@@ -168,6 +168,25 @@ type JudgmentInput struct {
 	// NotAssessed marks a behavioral requirement (FR-HF-18): weight 0 in
 	// the numbers, no model call.
 	NotAssessed bool
+	// EvidenceItemIDs are the evidence items cited that are not corpus
+	// passages: the candidate's own answers (FR-HF-14). A judgment that
+	// cites one rests, in part, on self-attestation.
+	EvidenceItemIDs []string
+	// ClarificationItemIDs are the answers this judgment consumed.
+	ClarificationItemIDs []string
+	// Carried is set for a judgment brought forward unchanged from the
+	// run before by a re-judge scoped to other requirements: the row is
+	// written as the earlier one was, with the prompt and model that
+	// made it, and names it as what it supersedes.
+	Carried *CarriedJudgment
+	// SettledFrom is set for a judgment settled in code from an earlier
+	// one on the candidate's answer (hiring.Resettle, or "I have not
+	// done this"). The row is this run's: its determination, basis and
+	// adjustments are what the rules now say. The model output it stands
+	// on is the earlier judgment's, so it keeps that judgment's evidence,
+	// prompt, model, decision row and keyword screen, and adds the
+	// answer.
+	SettledFrom *CarriedJudgment
 }
 
 // RunInput is one finished pipeline run as the scorer saw it.
@@ -273,6 +292,10 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 	}
 	var judgmentRows []JudgmentRow
 	var coverageItems []Item
+	// The keyword screen of a carried judgment is carried with it: the
+	// passages it was run over are the earlier run's, and this run
+	// offered that requirement nothing new.
+	carriedKeyword := map[string]any{}
 	for _, j := range in.Judgments {
 		if j.Determination == "" {
 			continue
@@ -281,29 +304,103 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 		if !ok {
 			continue
 		}
-		var evIDs []string
-		kinds := map[string]int{}
-		for _, id := range j.EvidenceChunkIDs {
-			if ref, ok := evidence[id]; ok {
-				evIDs = append(evIDs, ref.ID)
-				kinds[ref.SourceKind]++
+		var row JudgmentRow
+		selfAttested := false
+		if c := j.Carried; c != nil && c.RequirementID == q.ID {
+			// Brought forward as it was: its evidence, its provenance and
+			// the prompt and model that made it.
+			row = JudgmentRow{
+				RequirementID: q.ID, LocalID: j.LocalID,
+				Determination: c.Determination, Basis: c.Basis, Uncertainty: c.Uncertainty,
+				EvidenceIDs: c.EvidenceIDs, Rationale: c.Rationale,
+				ReportedFacts: c.ReportedFacts, Confidence: c.Confidence,
+				RuleAdjustments: c.RuleAdjustments, RationaleIssues: c.RationaleIssues,
+				ProvenanceSummary: c.ProvenanceSummary,
+				DerivedVerdict:    DeriveVerdict(c.Determination),
+				PromptID:          c.PromptID, PromptVersion: c.PromptVersion,
+				PromptFingerprint: c.PromptFingerprint, Model: c.Model,
+				Supersedes: c.ID, ClarificationItemIDs: c.ClarificationItemIDs,
 			}
-		}
-		summary, _ := json.Marshal(kinds)
-		row := JudgmentRow{
-			RequirementID: q.ID, LocalID: j.LocalID,
-			Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
-			EvidenceIDs: evIDs, Rationale: j.Rationale,
-			ReportedFacts: j.ReportedFacts, Confidence: j.Confidence,
-			RuleAdjustments: j.RuleAdjustments, RationaleIssues: j.RationaleIssues,
-			ProvenanceSummary: summary,
-			DerivedVerdict:    DeriveVerdict(j.Determination),
-			PromptID:          in.JudgePromptID, PromptVersion: in.JudgePromptVersion,
-			PromptFingerprint: in.Prompts[in.JudgePromptID], Model: in.Model,
-		}
-		if j.DecisionID > 0 {
-			id := j.DecisionID
-			row.DecisionID = &id
+			if c.DecisionID > 0 {
+				id := c.DecisionID
+				row.DecisionID = &id
+			}
+			selfAttested = len(c.AnswerEvidenceIDs) > 0
+			if c.KeywordKnown {
+				carriedKeyword[j.LocalID] = map[string]any{"found": c.KeywordFound, "terms": orEmptyStrings(c.KeywordTerms)}
+			}
+		} else if c := j.SettledFrom; c != nil && c.RequirementID == q.ID {
+			// Settled in code on the candidate's answer: the earlier
+			// judgment's evidence and the answer beside it.
+			evIDs := append([]string{}, c.EvidenceIDs...)
+			kinds := map[string]int{}
+			_ = json.Unmarshal(c.ProvenanceSummary, &kinds)
+			if j.Determination == DetNotMet && j.Basis == BasisNotAddressed {
+				// As everywhere, a judgment that nothing addresses cites
+				// no passage; what it rests on is the statement.
+				evIDs, kinds = nil, map[string]int{}
+			}
+			for _, id := range j.EvidenceItemIDs {
+				if id != "" && !slices.Contains(evIDs, id) {
+					evIDs = append(evIDs, id)
+					kinds[SourceCandidateResponse]++
+				}
+			}
+			selfAttested = kinds[SourceCandidateResponse] > 0
+			summary, _ := json.Marshal(kinds)
+			row = JudgmentRow{
+				RequirementID: q.ID, LocalID: j.LocalID,
+				Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
+				EvidenceIDs: evIDs, Rationale: j.Rationale,
+				ReportedFacts: j.ReportedFacts, Confidence: j.Confidence,
+				RuleAdjustments: j.RuleAdjustments, RationaleIssues: j.RationaleIssues,
+				ProvenanceSummary: summary,
+				DerivedVerdict:    DeriveVerdict(j.Determination),
+				PromptID:          c.PromptID, PromptVersion: c.PromptVersion,
+				PromptFingerprint: c.PromptFingerprint, Model: c.Model,
+				Supersedes: c.ID, ClarificationItemIDs: j.ClarificationItemIDs,
+			}
+			if c.DecisionID > 0 {
+				id := c.DecisionID
+				row.DecisionID = &id
+			}
+			if c.KeywordKnown {
+				carriedKeyword[j.LocalID] = map[string]any{"found": c.KeywordFound, "terms": orEmptyStrings(c.KeywordTerms)}
+			}
+		} else {
+			var evIDs []string
+			kinds := map[string]int{}
+			for _, id := range j.EvidenceChunkIDs {
+				if ref, ok := evidence[id]; ok {
+					evIDs = append(evIDs, ref.ID)
+					kinds[ref.SourceKind]++
+				}
+			}
+			// The candidate's own answers, cited beside the documents.
+			for _, id := range j.EvidenceItemIDs {
+				if id != "" && !slices.Contains(evIDs, id) {
+					evIDs = append(evIDs, id)
+					kinds[SourceCandidateResponse]++
+				}
+			}
+			selfAttested = kinds[SourceCandidateResponse] > 0
+			summary, _ := json.Marshal(kinds)
+			row = JudgmentRow{
+				RequirementID: q.ID, LocalID: j.LocalID,
+				Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
+				EvidenceIDs: evIDs, Rationale: j.Rationale,
+				ReportedFacts: j.ReportedFacts, Confidence: j.Confidence,
+				RuleAdjustments: j.RuleAdjustments, RationaleIssues: j.RationaleIssues,
+				ProvenanceSummary: summary,
+				DerivedVerdict:    DeriveVerdict(j.Determination),
+				PromptID:          in.JudgePromptID, PromptVersion: in.JudgePromptVersion,
+				PromptFingerprint: in.Prompts[in.JudgePromptID], Model: in.Model,
+				ClarificationItemIDs: j.ClarificationItemIDs,
+			}
+			if j.DecisionID > 0 {
+				id := j.DecisionID
+				row.DecisionID = &id
+			}
 		}
 		judgmentRows = append(judgmentRows, row)
 		weight := q.Weight
@@ -312,7 +409,7 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 		}
 		coverageItems = append(coverageItems, Item{
 			Weight: weight, Category: q.Category, Class: q.Class, Excluded: !q.Included,
-			Determination: j.Determination,
+			Determination: row.Determination, SelfAttested: selfAttested,
 		})
 	}
 	if len(judgmentRows) > 0 {
@@ -332,6 +429,10 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 			for _, c := range in.Offered[q.LocalID] {
 				texts = append(texts, c.Text)
 			}
+			if carried, ok := carriedKeyword[q.LocalID]; ok {
+				items[q.LocalID] = carried
+				continue
+			}
 			found, terms := KeywordBaseline(q.Text, texts)
 			if terms == nil {
 				terms = []string{}
@@ -344,6 +445,11 @@ func (w *Writer) Record(ctx context.Context, in RunInput) error {
 	prev, err := w.repo.PreviousRunID(ctx, in.SubmissionID, in.Attempt)
 	if err != nil {
 		return err
+	}
+	if len(judgmentRows) > 0 {
+		if err := w.repo.LinkSupersededJudgments(ctx, in.RunID, prev); err != nil {
+			return err
+		}
 	}
 	// The record: formula v4's three numbers over the judgment rows
 	// (FR-HF-06, FR-HF-23) when there are any, the v2 score otherwise.
@@ -445,4 +551,11 @@ func sortedPrompts(m map[string]string) map[string]string {
 		out[k] = m[k]
 	}
 	return out
+}
+
+func orEmptyStrings(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+	return in
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/reh3376/career-site/services/api/internal/email"
 	"github.com/reh3376/career-site/services/api/internal/events"
+	"github.com/reh3376/career-site/services/api/internal/hiring"
 	"github.com/reh3376/career-site/services/api/internal/users"
 )
 
@@ -285,6 +286,96 @@ func (m *OwnerMailer) NotifyJdOutcome(ctx context.Context, s *users.JdSubmission
 		}
 	}
 	return ownerErr
+}
+
+// jdQuestionsData is the payload of the two clarification mails.
+type jdQuestionsData struct {
+	ID       string
+	Headline string
+	// Questions is how many the request holds; Pending how many are
+	// still unanswered.
+	Questions int
+	Pending   int
+	// Held is whether the fit is withheld while they are open.
+	Held bool
+	// Deadline is when open questions are closed unanswered, as a date a
+	// reader can act on; empty when the request has no limit.
+	Deadline     string
+	Reminder     bool
+	QuestionsURL string
+	AdminURL     string
+	ReviewURL    string
+}
+
+// NotifyClarification implements ClarificationNotifier (FSD FR-HF-22):
+// the candidate, who in Phase 0 is the owner, is told that questions
+// are waiting and, a day before the limit, that some still are; the
+// submitter is told once that the review is waiting on the candidate
+// and by when it will finish regardless. Neither mail carries a
+// question, an answer, a verdict or a number: the questions are read
+// where they are answered, and the record where it is shown.
+func (m *OwnerMailer) NotifyClarification(ctx context.Context, s *users.JdSubmission, q hiring.ClarificationRequest, kind string) error {
+	if m == nil || m.to == "" {
+		return nil
+	}
+	id := fmt.Sprintf("%d", s.ID)
+	what := strings.TrimSpace(strings.Join(nonEmpty(s.RoleHint, s.EmployerHint), " at "))
+	if what == "" {
+		what = "untitled posting"
+	}
+	d := jdQuestionsData{
+		ID: id, Headline: what,
+		Questions: len(q.Items), Pending: q.Pending(), Held: q.Held,
+		Reminder:     kind == ClarificationReminder,
+		QuestionsURL: m.webBase + "/admin/questions/" + q.ID,
+		AdminURL:     m.webBase + "/admin/jd/" + id,
+		ReviewURL:    m.webBase + "/jd-upload/" + id,
+	}
+	if q.ExpiresAt != nil {
+		d.Deadline = q.ExpiresAt.UTC().Format("Monday 2 January, 15:04 UTC")
+	}
+	text, html, err := email.JdQuestionsTemplate.Render(d)
+	if err != nil {
+		return fmt.Errorf("render jd questions: %w", err)
+	}
+	subject := fmt.Sprintf("[JD #%s] %s: %d follow-up %s waiting", id, what, d.Questions, plural(d.Questions, "question", "questions"))
+	mailKind := "jd_questions"
+	if d.Reminder {
+		subject = fmt.Sprintf("[JD #%s] %s: one day left, %d %s open", id, what, d.Pending, plural(d.Pending, "question", "questions"))
+		mailKind = "jd_questions_reminder"
+	}
+	ownerErr := m.email.Send(ctx, email.Message{
+		From: m.from, To: m.to, Subject: subject, TextBody: text, HTMLBody: html, Kind: mailKind, UserID: s.UserID,
+	})
+	// The submitter is told once, when the wait begins, and only when
+	// the review is in fact withheld. The owner's own submissions are
+	// not mailed twice.
+	if d.Reminder || !q.Held {
+		return ownerErr
+	}
+	for _, to := range submitterAddresses(s) {
+		if strings.EqualFold(to, strings.TrimSpace(m.to)) {
+			continue
+		}
+		wt, wh, err := email.JdWaitingTemplate.Render(d)
+		if err != nil {
+			return fmt.Errorf("render jd waiting: %w", err)
+		}
+		if err := m.email.Send(ctx, email.Message{
+			From: m.from, To: to, Subject: fmt.Sprintf("Your JD review is waiting on the candidate: %s", what),
+			TextBody: wt, HTMLBody: wh, Kind: "jd_waiting", UserID: s.UserID,
+		}); err != nil {
+			m.log.Warn("jd: waiting mail failed", slog.Int64("jd_id", s.ID), slog.String("to", to), slog.String("error", err.Error()))
+		}
+	}
+	return ownerErr
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 // submitterAddresses returns the distinct addresses a finished review

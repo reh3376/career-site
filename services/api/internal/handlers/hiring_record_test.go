@@ -158,7 +158,12 @@ func newRecordFixture(t *testing.T, h *Hiring, pool *pgxpool.Pool, ctx context.C
 	}
 	w := hiring.NewWriter(slog.New(slog.NewTextHandler(io.Discard, nil)), h.repo)
 	if err := w.Record(ctx, hiring.RunInput{
-		SubmissionID: f.submissionID, Title: "Controls Engineer", RunID: f.runID, Attempt: 1, Score: 0.7, Model: "test-model",
+		// A model name of this package's own. The hiring package's tests
+		// read v_determination_agreement for "test-model", a view over
+		// every judgment in the database, and `go test ./...` runs the
+		// two packages at once against one database: an override made
+		// and cleaned up here moved their count under them.
+		SubmissionID: f.submissionID, Title: "Controls Engineer", RunID: f.runID, Attempt: 1, Score: 0.7, Model: "handlers-test-model",
 		Prompts:       map[string]string{"requirement_judge": "v14:ef01"},
 		JudgePromptID: "requirement_judge", JudgePromptVersion: 14,
 		Drafts: drafts, RequirementsSource: hiring.SourceExtraction,

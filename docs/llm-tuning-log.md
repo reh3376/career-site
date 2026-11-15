@@ -3241,3 +3241,152 @@ on (`Requirement.InclusionReason`). Production holds no rows drafted
 under the earlier rule; the guard is for the next time the rule
 changes.
 
+## 2026-11-15: step 7, the judge is shown the candidate's answer; no prompt or model change
+
+Phase 0 step 7 (`docs/framework-research/13` §2; FSD FR-HF-09, 13, 14,
+22 and 24): the clarification loop. Entered here because the judging
+pass gained a path, and a reader looking for what could have moved a
+verdict between two dates should find it.
+
+### What did not change
+
+`requirement_judge` stays v14 (`v14:42984a17`) and `jd_requirements`
+stays v5 (`v5:b95feedc`). The rules are `rules-v2`, the formula
+`v4-classes`, the keyword screen `kw1`. The vocabulary moves from 1.1 to
+1.2, which adds `activity_class`, a list a question offers and the judge
+never sees, so the judge's codes render to the same bytes and its
+fingerprint does not move.
+
+### What a run can now do
+
+1. **Carry a judgment.** A run that closes a questionnaire reads the
+   released rows and sends to the judge only the requirements a new
+   answer speaks to. Every other judgment is written again as it was:
+   the same determination, basis, evidence, rationale, rule
+   adjustments, prompt, model and decision row, with `supersedes`
+   naming the row it replaces. Nothing is retrieved for it and no model
+   is called.
+2. **Settle a judgment in code on an answer.** When a code rule had set
+   a judgment aside for want of a fact (a span of years, a scale, a
+   credential, a named party) and the candidate states that fact, the
+   same rules run again over the model's own pre-rule verdict
+   (`hiring.Resettle`). "I have not done this" settles to not met, not
+   addressed. Neither calls a model.
+3. **Show the judge an answer.** Any other answer is rendered as a
+   statement that says whose it is and when, and is put first among the
+   requirement's evidence under an id no corpus chunk has. The judge
+   prompt is the one it has always been; the passage is one more
+   passage, titled "The candidate's own answer to a follow-up
+   question". A structured answer's figure also replaces the model's
+   reading of that fact before the rules compare it.
+
+A run that does none of these, which is every first run of a posting
+and every evaluation run, takes the same path as before through a
+function that now has two more arguments.
+
+### Golden set, before and after, on the Mac
+
+Same setup as the entries of 2026-11-10 (`docs/evaluation.md`, "Running
+one on the Mac instead"): host Ollama with `qwen3:4b-q8_0` and
+`nomic-embed-text`, both corpora indexed, eight labelled postings, local
+gate 0.55. An evaluation run never waits on the candidate, whatever the
+setting says, and none of the golden postings has an answer on file, so
+this compares the unchanged path through the changed code.
+
+**Before** (the api as merged at `bcba4e3`) and **after** (this
+change): 8 of 8 scored, 5 on the right side of the 0.55 gate, 2 ordering
+violations, margin -0.0079, in both. Corpus fingerprint `025341e387c1`
+for both. Every score is the same to four places:
+
+    ati            1.0000      heaven-hill  1.0000     blue-origin  0.8438
+    cornerstone    0.8382
+    ---------------------------------------- expected above the gate
+    cai            0.8462      nexus        0.6786     xai          0.6071
+    profluent      0.4444
+    ---------------------------------------- expected below the gate
+
+The run before is also identical, score for score, to the last local
+run of 2026-11-11, which is what a pipeline with no sampled step should
+do. The three postings on the wrong side are on the wrong side of the
+local gate; they are the same three as on every local run since step 5
+and are not production's gate. Nothing moved, so no run on the box is
+owed for this step.
+
+### The loop on real runs, on the Mac
+
+Three local postings, all the owner's own test data, the answers marked
+as test statements.
+
+**A question at the candidate's request.** Posting #144's one unresolved
+row, "Bachelor of Science in Electrical Engineering or equivalent
+experience" (adjacent domain, equivalence unconfirmed), was asked as a
+pointer to the candidate's own roles. The answer named two roles and
+said in a sentence what the work was. The closing run sent that one
+requirement to the judge and carried eleven: 57 seconds against 98 for
+the full run before it. The row became met by equivalence, basis
+experience for education; the gate's score moved from 0.827 to 0.885.
+
+**Found on that run.** The judge changed its verdict on reading the
+answer and cited three documents, not the answer. The first build
+counted a verdict as resting on the candidate's word only when the
+answer was cited, so the record showed an answered question beside a
+self-attested share of zero. A judgment made with an answer among its
+evidence now counts the answer among what it rests on, cited or not: a
+question exists only where the documents alone left the row unresolved,
+so the answer is the one thing that was not there before, and
+overstating how much of a record is self-attested is the safe
+direction.
+
+**A review that waits.** With the setting on, a re-score of a posting
+far from the corpus (a machine-learning research role) ended at
+`awaiting_candidate` with two questions and no fit. One was answered and
+one set aside as "I have not done this". The closing run took 8.5
+seconds: one judge call, one row settled in code. The fit was then
+issued, possible at 0.444, with 25% of the evidenced weight marked as
+resting on the candidate's answers.
+
+**A limit that runs out.** A third posting held with two questions about
+depth of involvement. One was answered, the limit was moved into the
+past, and the clock closed the other unanswered: the run with trigger
+`expiry` judged the answered row again (met, on the candidate's
+statement), carried the unanswered one as unresolved, and issued the
+fit.
+
+**An answer that did not settle it.** A fourth posting, answered and
+submitted through the pages in a browser: "Used", one role, and one
+line about a requirement on qualifying laboratory equipment; the second
+question declined. The judge read the answer and left the row
+unresolved. The record says the question was answered, that the row was
+judged again with the answer and is still unresolved, and counts
+nothing for it; the declined row was carried as it was. An answer is
+evidence, not a pass.
+
+### What to watch
+
+1. `v_clarification_outcomes`: per uncertainty code, what the judgment
+   became after an answer. A code whose answers mostly leave the row
+   unresolved has a question that does not ask for the missing fact.
+2. Rows that become "met, direct" on a short answer alone. By the
+   owner's decision 10 an answer counts in full in Phase 0 and the
+   record says so on the row; the third posting above is the plain
+   case. It is in the backlog as a question for before a second
+   candidate.
+3. How often the judge cites the answer it was shown. It did not on
+   the first run and did on the second. The record does not depend on
+   it, but a model that never cites the passage that moved it is
+   worth knowing about.
+
+### Also found: a reindex could never skip a document
+
+The ingest is meant to skip a document whose text and metadata are
+unchanged. The metadata comparison was on bytes
+(`bytes.Equal(existing.Meta, meta)`), and Postgres returns jsonb in its
+own spelling and stores an absent meta as an empty object, while the
+walker sent none: the two sides could not be equal, so every reindex
+chunked and embedded every document again. Found when the walker began
+to send meta for roles and projects. The comparison is now on the value
+(`ingest.sameJSON`). On the Mac the first public reindex after the fix
+left 37 of 51 documents alone and re-ingested the 14 roles and projects,
+which were taking their meta; the next left all 51 alone and embedded
+nothing. Chunk ids are kept across a re-ingest, so nothing that cites a
+chunk was affected either way.

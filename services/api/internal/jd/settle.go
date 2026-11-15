@@ -25,6 +25,11 @@ type settleInput struct {
 	// repair is set when the answer broke a consistency rule twice; the
 	// judgment is then made consistent in code and the repair recorded.
 	repair bool
+	// factsFix puts what the candidate stated in a structured answer
+	// into the facts before the code rules read them (FR-HF-14): the
+	// question existed because the documents did not state the fact, so
+	// the candidate's figure is the one compared.
+	factsFix func(hiring.ReportedFacts) hiring.ReportedFacts
 }
 
 // judgeOrDefault is the judge this assessor sends, falling back to the
@@ -81,6 +86,9 @@ func settleJudgment(in settleInput) Judgment {
 		}
 	}
 	facts := in.raw.ReportedFacts
+	if in.factsFix != nil {
+		facts = in.factsFix(facts)
+	}
 	verdict := hiring.Verdict{Determination: in.raw.Determination, Basis: in.raw.Basis, Uncertainty: append([]string{}, in.raw.Uncertainty...)}
 	var adjustments []hiring.RuleAdjustment
 

@@ -1,0 +1,13 @@
+{{if .Reminder}}One day left: {{.Pending}} follow-up {{if eq .Pending 1}}question{{else}}questions{{end}} on {{.Headline}}{{else}}Follow-up questions are waiting: {{.Headline}}{{end}}
+
+{{if .Reminder}}The review of this posting is still waiting on {{.Pending}} of its {{.Questions}} follow-up {{if eq .Questions 1}}question{{else}}questions{{end}}.{{else}}The review of this posting could not settle {{.Questions}} {{if eq .Questions 1}}requirement{{else}}requirements{{end}} from the documents on file, and each one has a follow-up question for you.{{end}}
+{{if .Held}}
+No fit is given while a question is open.{{if .Deadline}} If any are still open on {{.Deadline}}, they are closed unanswered and the fit is issued from what is evidenced.{{end}}
+{{end}}
+Each question shows the posting's own words and takes an answer, "I have not done this" or "prefer not to answer":
+{{.QuestionsURL}}
+
+The record as it stands:
+{{.AdminURL}}
+
+career-site (JD reviewer)

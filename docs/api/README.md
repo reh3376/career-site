@@ -129,7 +129,7 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`AdminService`](#adminservice) | Owner console. | 85 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
-| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, and the settings the framework's arithmetic reads. | 8 |
+| [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, the follow-up questions to the candidate, and the settings the framework reads. | 14 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
 | [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
 
@@ -5396,8 +5396,8 @@ stop measures the fifteen-minute burden.
 ## HiringService
 
 Requirements as editable, versioned rows, the match record a run
-produced, the override of a judgment, and the settings the
-framework's arithmetic reads.
+produced, the override of a judgment, the follow-up questions to the
+candidate, and the settings the framework reads.
 
 | Method | Path | Auth | Rate limit /min | Request → Response | Summary |
 |---|---|---|---|---|---|
@@ -5409,6 +5409,12 @@ framework's arithmetic reads.
 | [`GetMatchRecord`](#hiringservice-getmatchrecord) | `/api/career.v1.HiringService/GetMatchRecord` | Member | default | `GetMatchRecordRequest` → `GetMatchRecordResponse` | Reads the match record of one run of a submitted posting: the three numbers and two shares, each requirement version judged, and each judgment with its basis, what is missing, the evidence cited, what the code rules changed, whether a keyword screen would have found it, and, for an admin, any override. |
 | [`OverrideJudgment`](#hiringservice-overridejudgment) | `/api/career.v1.HiringService/OverrideJudgment` | Admin | default | `OverrideJudgmentRequest` → `OverrideJudgmentResponse` | Sets, replaces or withdraws a person's override of one judgment (FSD FR-HF-08). |
 | [`WriteReviewResume`](#hiringservice-writereviewresume) | `/api/career.v1.HiringService/WriteReviewResume` | Admin | default | `WriteReviewResumeRequest` → `WriteReviewResumeResponse` | Asks for the tailored résumé to be written on a run's verdicts as they stand after review (FSD FR-HF-08). |
+| [`ListClarificationRequests`](#hiringservice-listclarificationrequests) | `/api/career.v1.HiringService/ListClarificationRequests` | Admin | default | `ListClarificationRequestsRequest` → `ListClarificationRequestsResponse` | Lists the questionnaires put to the candidate, newest first: which posting each belongs to, how many questions it holds and how many are still open, and by when (FSD FR-HF-13, FR-HF-22). |
+| [`GetClarificationRequest`](#hiringservice-getclarificationrequest) | `/api/career.v1.HiringService/GetClarificationRequest` | Admin | default | `GetClarificationRequestRequest` → `GetClarificationRequestResponse` | Reads one questionnaire as the candidate answers it: for each question the posting's own words for the requirement, the question, and the inputs it offers with any answer already saved. |
+| [`RequestClarification`](#hiringservice-requestclarification) | `/api/career.v1.HiringService/RequestClarification` | Admin | default | `RequestClarificationRequest` → `RequestClarificationResponse` | Writes the follow-up questions for every requirement the newest run of a posting left unresolved, at the candidate's own request (FSD FR-HF-13): one question per requirement, none for a requirement already asked about or answered. |
+| [`AnswerClarificationItem`](#hiringservice-answerclarificationitem) | `/api/career.v1.HiringService/AnswerClarificationItem` | Admin | default | `AnswerClarificationItemRequest` → `AnswerClarificationItemResponse` | Saves the candidate's answer to one question: an answer, "I have not done this", or "prefer not to answer" (FSD FR-HF-14). |
+| [`SubmitClarificationAnswers`](#hiringservice-submitclarificationanswers) | `/api/career.v1.HiringService/SubmitClarificationAnswers` | Admin | default | `SubmitClarificationAnswersRequest` → `SubmitClarificationAnswersResponse` | Submits a questionnaire once every question is answered or explicitly left, which closes it to further answers and starts the run that judges the answered requirements again, carries every other judgment forward, and gives the posting its fit (FSD FR-HF-14, FR-HF-22). |
+| [`WithdrawClarificationAnswer`](#hiringservice-withdrawclarificationanswer) | `/api/career.v1.HiringService/WithdrawClarificationAnswer` | Admin | default | `WithdrawClarificationAnswerRequest` → `WithdrawClarificationAnswerResponse` | Takes an answer back (FSD FR-HF-14). |
 
 ### HiringService.ListRequirements
 
@@ -5602,7 +5608,9 @@ already written keeps the fraction it was computed with.
 ```json
 {
   "settings": {
-    "preferredFraction": 0.5
+    "preferredFraction": 0.5,
+    "clarificationAuto": true,
+    "clarificationDays": 0
   }
 }
 ```
@@ -5657,6 +5665,7 @@ registry.
 | `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé written after review for this run, when one has been asked for. Sent to admins only. |
 | `canWriteReviewResume` | `bool` | boolean |  | Whether a résumé after review may be asked for now. Sent to admins only. |
 | `reviewResumeNote` | `string` | string |  | Why a résumé after review is not offered, as a sentence, when the record carries an override and it is not. Sent to admins only. |
+| `askableCount` | `int32` | number |  | How many unresolved requirements of this record have no follow-up question yet and could be asked about at the candidate's request. Sent to admins only, and 0 for a record a later run has superseded. |
 
 <details><summary>Example request body</summary>
 
@@ -5752,6 +5761,213 @@ while one is already being written.
 ```json
 {
   "runId": "string"
+}
+```
+
+</details>
+
+### HiringService.ListClarificationRequests
+
+`POST /api/career.v1.HiringService/ListClarificationRequests` · **Auth:** Admin · **Rate limit:** default/min
+
+Lists the questionnaires put to the candidate, newest first: which
+posting each belongs to, how many questions it holds and how many
+are still open, and by when (FSD FR-HF-13, FR-HF-22). The six
+clarification methods are the candidate's side of the loop. In
+Phase 0 the candidate is the owner, so they are admin methods; the
+level moves to the candidate's own when candidates have accounts.
+
+**Request** — [`ListClarificationRequestsRequest`](#listclarificationrequestsrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `openOnly` | `bool` | boolean |  | Only those still taking answers. |
+
+**Response** — [`ListClarificationRequestsResponse`](#listclarificationrequestsresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requests` | [`ClarificationRequest`](#clarificationrequest)[] | array of object |  | The questionnaires, without their questions. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "openOnly": true
+}
+```
+
+</details>
+
+### HiringService.GetClarificationRequest
+
+`POST /api/career.v1.HiringService/GetClarificationRequest` · **Auth:** Admin · **Rate limit:** default/min
+
+Reads one questionnaire as the candidate answers it: for each
+question the posting's own words for the requirement, the question,
+and the inputs it offers with any answer already saved. It never
+carries a threshold, an evidence standard, a determination or a
+score: the candidate is asked what they did, not shown what would
+score (FSD FR-HF-13).
+
+**Request** — [`GetClarificationRequestRequest`](#getclarificationrequestrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationRequestId` | `string` | string | `string: uuid: true` | The questionnaire's id. |
+
+**Response** — [`GetClarificationRequestResponse`](#getclarificationrequestresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "clarificationRequestId": "string"
+}
+```
+
+</details>
+
+### HiringService.RequestClarification
+
+`POST /api/career.v1.HiringService/RequestClarification` · **Auth:** Admin · **Rate limit:** default/min
+
+Writes the follow-up questions for every requirement the newest run
+of a posting left unresolved, at the candidate's own request (FSD
+FR-HF-13): one question per requirement, none for a requirement
+already asked about or answered. The run keeps the fit it was
+given; the questions do not withhold it. Refused when nothing is
+left to ask and while the posting is being scored.
+
+**Request** — [`RequestClarificationRequest`](#requestclarificationrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | The submitted posting's id. |
+
+**Response** — [`RequestClarificationResponse`](#requestclarificationresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire, with its questions. |
+| `added` | `int32` | number |  | How many questions this call added. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "submissionId": "string"
+}
+```
+
+</details>
+
+### HiringService.AnswerClarificationItem
+
+`POST /api/career.v1.HiringService/AnswerClarificationItem` · **Auth:** Admin · **Rate limit:** default/min
+
+Saves the candidate's answer to one question: an answer, "I have
+not done this", or "prefer not to answer" (FSD FR-HF-14). An answer
+is checked against the inputs the question offered and becomes a
+piece of evidence in the candidate's own words; saving again
+replaces it. Nothing is judged until the answers are submitted.
+Refused once the questionnaire is closed.
+
+**Request** — [`AnswerClarificationItemRequest`](#answerclarificationitemrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationItemId` | `string` | string | `string: uuid: true` | The question's id. |
+| `answer` | [`ClarificationAnswer`](#clarificationanswer) | object | `required: true` | The answer: status answered, not_applicable or declined, the values entered and the note. |
+
+**Response** — [`AnswerClarificationItemResponse`](#answerclarificationitemresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `item` | [`ClarificationItem`](#clarificationitem) | object |  | The question with its answer. |
+| `pendingCount` | `int32` | number |  | How many of the questionnaire's questions are still unanswered. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "clarificationItemId": "string",
+  "answer": {
+    "status": "string",
+    "values": {
+      "key": {}
+    },
+    "freeText": "string"
+  }
+}
+```
+
+</details>
+
+### HiringService.SubmitClarificationAnswers
+
+`POST /api/career.v1.HiringService/SubmitClarificationAnswers` · **Auth:** Admin · **Rate limit:** default/min
+
+Submits a questionnaire once every question is answered or
+explicitly left, which closes it to further answers and starts the
+run that judges the answered requirements again, carries every
+other judgment forward, and gives the posting its fit (FSD
+FR-HF-14, FR-HF-22). The call returns at once; the run waits its
+turn like any review.
+
+**Request** — [`SubmitClarificationAnswersRequest`](#submitclarificationanswersrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationRequestId` | `string` | string | `string: uuid: true` | The questionnaire's id. |
+
+**Response** — [`SubmitClarificationAnswersResponse`](#submitclarificationanswersresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire, closed to further answers. |
+| `runStarted` | `bool` | boolean |  | Whether a run was started to judge the answered requirements again. False without a model. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "clarificationRequestId": "string"
+}
+```
+
+</details>
+
+### HiringService.WithdrawClarificationAnswer
+
+`POST /api/career.v1.HiringService/WithdrawClarificationAnswer` · **Auth:** Admin · **Rate limit:** default/min
+
+Takes an answer back (FSD FR-HF-14). The statement stops being
+evidence, and every judgment that cites it is marked stale until a
+run judges its requirement again.
+
+**Request** — [`WithdrawClarificationAnswerRequest`](#withdrawclarificationanswerrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationItemId` | `string` | string | `string: uuid: true` | The question's id. |
+
+**Response** — [`WithdrawClarificationAnswerResponse`](#withdrawclarificationanswerresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `item` | [`ClarificationItem`](#clarificationitem) | object |  | The question, its answer withdrawn. |
+| `staleJudgments` | `int32` | number |  | How many judgments were marked stale because they cite the answer. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "clarificationItemId": "string"
 }
 ```
 
@@ -10844,6 +11060,8 @@ The framework's adjustable values.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `preferredFraction` | `double` | number | `double: lte: 1.0 gt: 0.0` | The share of its weight a preferred requirement counts at, and an evidenced ideal one: greater than 0, at most 1. 0.25 unless set. |
+| `clarificationAuto` | `bool` | boolean |  | _(oneof `_clarification_auto`)_ Whether a run that leaves a requirement unresolved on a difference of wording, tool or setting, or on an unproven relationship, asks the candidate about it without being asked, and carries no fit until the questions are closed (FSD FR-HF-22, FR-HF-24). Off, a run is given its fit as it finishes and questions are written only at the candidate's request. Left unset on a write, it is not changed. |
+| `clarificationDays` | `int32` | number | `int32: lte: 14 gte: 0` | How many days a withheld review waits for the candidate before the open questions are closed unanswered and the fit is issued from what is evidenced: 1 to 14, 3 unless set. 0 on a write leaves it as it is. |
 
 ### GetHiringSettingsRequest
 
@@ -10896,9 +11114,11 @@ computed over the model's answers alone.
 
 ### EvidenceRef
 
-One piece of evidence a judgment cites. A citation, never the text:
-the private text of the candidate's documents is not sent to any
-reader of a record.
+One piece of evidence a judgment cites. For a document it is a
+citation, never the text: the private text of the candidate's
+documents is not sent to any reader of a record. The candidate's own
+answer to a follow-up question is the exception, and carries its
+statement.
 
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
@@ -10907,6 +11127,7 @@ reader of a record.
 | `title` | `string` | string |  | The title of the document it is a passage of. Empty for a reader who may not see it: a member is sent the title of a public document only. |
 | `chunkId` | `int64` | string (decimal) |  | The corpus passage behind the item. Sent to admins only; 0 otherwise. |
 | `withdrawn` | `bool` | boolean |  | Whether the candidate has since withdrawn the item. |
+| `statement` | `string` | string |  | The candidate's own answer to a follow-up question, in their words, for an item of kind candidate_response. It was written for the employer whose posting it answers, and a reader shows it marked as the candidate's own statement. Empty for every other kind and once withdrawn. |
 
 ### RuleAdjustment
 
@@ -11001,6 +11222,46 @@ One judgment of one requirement version in one run (FSD FR-HF-04).
 | `keywordTerms` | `string`[] | array of string |  | The terms the filter matched. |
 | `decisionId` | `int64` | string (decimal) |  | The decision-log row that holds the prompt and the model's raw response. Sent to admins only; 0 otherwise. |
 | `earlierOverride` | [`EarlierOverride`](#earlieroverride) | object |  | An override on an earlier run's judgment of this requirement, when this judgment carries none. Sent to admins only. |
+| `followUp` | [`JudgmentFollowUp`](#judgmentfollowup) | object |  | The follow-up question put to the candidate about this requirement, on this run or an earlier one, and what came of it. Unset when none has been asked. |
+| `selfAttested` | `bool` | boolean |  | True when the judgment rests, in whole or in part, on the candidate's own answer to a follow-up question (FSD FR-HF-09). |
+
+### JudgmentFollowUp
+
+The follow-up question about one requirement and its answer (FSD
+FR-HF-13, FR-HF-14).
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | `string` | string |  | Where it stands: pending while the question is open; answered, not_applicable ("I have not done this"), declined or withdrawn as the candidate left it; unanswered when its time ran out with no answer; superseded when a new run of the posting replaced the record it was asked about before it was answered. |
+| `question` | `string` | string |  | The question as it was asked. |
+| `statement` | `string` | string |  | The candidate's answer in their own words, for an answered or not-applicable question. |
+| `answeredAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was answered. |
+| `askedAttempt` | `int32` | number |  | The run of the posting the question was asked on. |
+| `askedBy` | `string` | string |  | Who asked: system (the run, unprompted) or candidate (at their own request). |
+| `requestId` | `string` | string |  | The questionnaire it belongs to. Sent to admins only. |
+| `itemId` | `string` | string |  | The question's id. Sent to admins only. |
+
+### RecordClarification
+
+Where the follow-up questions of a record stand (FSD FR-HF-22): the
+questionnaire asked on this run, or the one this run closed.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requestId` | `string` | string |  | The questionnaire. Sent to admins only. |
+| `status` | `string` | string |  | sent while it takes answers; answered once the candidate has submitted; expired when the time limit passed or a later run replaced it. |
+| `held` | `bool` | boolean |  | Whether the run that asked carries no fit while the questions are open. |
+| `closedReason` | `string` | string |  | How it closed: answered, expired, superseded. Empty until the run that closes it has finished. |
+| `asked` | `int32` | number |  | How many questions were asked. |
+| `pending` | `int32` | number |  | How many are still open. |
+| `answered` | `int32` | number |  | How many were answered, "I have not done this" included. |
+| `generatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the questions were written. |
+| `expiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When open questions are closed unanswered; unset when there is no limit. |
+| `answeredAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the candidate submitted the answers. |
+| `closedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the run that closed the questions finished with them. |
+| `askedAttempt` | `int32` | number |  | The run the questions were asked on. |
+| `closingAttempt` | `int32` | number |  | The run that judged the answered requirements again; 0 until one has. |
+| `closedByThisRun` | `bool` | boolean |  | True on the record of the run that closed the questions. |
 
 ### MatchRecord
 
@@ -11032,6 +11293,8 @@ The match record of one run (FSD FR-HF-10, FR-HF-17).
 | `requirementsEdited` | `bool` | boolean |  | Whether a person edited any requirement version this run judged. |
 | `reviewedScore` | `double` | number |  | _(oneof `_reviewed_score`)_ The score the résumé gate reads, worked out again with each person's verdict in place of the model's. Set for an admin when the record carries an override; `match_score` stays the run's own. |
 | `reviewedFit` | `string` | string |  | The fit that score falls in under the bands in force now: very_strong, strong, possible, weak, very_weak. Set with `reviewed_score`. Shown beside `fit`, never in place of it. |
+| `clarification` | [`RecordClarification`](#recordclarification) | object |  | The follow-up questions asked on this run, or closed by it. Unset when there are none. |
+| `awaitingCandidate` | `bool` | boolean |  | True while the run carries no fit because the candidate has been asked something (FSD FR-HF-22). The record is then the state so far: `fit`, `match_score` and the reviewed pair are unset, and a reader shows it as inconclusive, awaiting the candidate. |
 
 ### OverrideChoice
 
@@ -11074,6 +11337,7 @@ The record and the vocabularies it is labelled from.
 | `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé written after review for this run, when one has been asked for. Sent to admins only. |
 | `canWriteReviewResume` | `bool` | boolean |  | Whether a résumé after review may be asked for now. Sent to admins only. |
 | `reviewResumeNote` | `string` | string |  | Why a résumé after review is not offered, as a sentence, when the record carries an override and it is not. Sent to admins only. |
+| `askableCount` | `int32` | number |  | How many unresolved requirements of this record have no follow-up question yet and could be asked about at the candidate's request. Sent to admins only, and 0 for a record a later run has superseded. |
 
 ### OverrideJudgmentRequest
 
@@ -11130,6 +11394,185 @@ The résumé as it stands after the request: being written.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `reviewResume` | [`ReviewResume`](#reviewresume) | object |  | The résumé's row. |
+
+### ClarificationOption
+
+One choice a question offers.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `value` | `string` | string |  | The value an answer carries when this choice is picked. |
+| `label` | `string` | string |  | The choice as it reads. |
+| `source` | `string` | string |  | Where the choice comes from: own_corpus (one of the candidate's own roles or projects), generic_list (a list that is the same for every requirement), posting (an organisation the posting itself names). Never anything a requirement is scored on. |
+
+### ClarificationField
+
+One controlled input of a question.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `name` | `string` | string |  | The key the answer carries this input under. |
+| `label` | `string` | string |  | The input's label. |
+| `kind` | `string` | string |  | choice (pick one), multi (pick any), number, text. |
+| `required` | `bool` | boolean |  | Whether an answer must fill it. |
+| `options` | [`ClarificationOption`](#clarificationoption)[] | array of object |  | The choices, for choice and multi. |
+| `max` | `double` | number |  | The largest number accepted, for number. |
+| `maxLen` | `int32` | number |  | The longest text accepted, for text. |
+| `hint` | `string` | string |  | A line of help shown under the input. |
+
+### ClarificationAnswer
+
+A candidate's answer to one question.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `status` | `string` | string |  | pending until answered; then answered, not_applicable ("I have not done this"), declined ("prefer not to answer") or withdrawn. |
+| `values` | map<`string`, [`StringList`](#stringlist)> | object of object |  | What was entered in each input, by the input's name: one value for choice, number and text, any number for multi. A number travels as its decimal text. |
+| `freeText` | `string` | string |  | The note in the candidate's own words, at most 600 characters. It is kept as evidence beside the answer and never parsed. |
+
+### ClarificationItem
+
+One question and, once given, its answer, as the candidate sees it.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | The question's id. |
+| `requirementLocalId` | `string` | string |  | The requirement's id within the role: r1, r2, ... |
+| `sourceQuote` | `string` | string |  | The posting's own words for the requirement, shown above the question. The requirement's text stands in when extraction kept no quote. |
+| `answerType` | `string` | string |  | The kind of answer asked for: span, magnitude, involvement, credential, relationship, evidence_pointer, disambiguation. |
+| `question` | `string` | string |  | The question. |
+| `fields` | [`ClarificationField`](#clarificationfield)[] | array of object |  | The inputs it offers, as they were offered when it was written. |
+| `freeTextRequired` | `bool` | boolean |  | Whether an answer must carry the note. |
+| `freeTextMax` | `int32` | number |  | The longest note accepted. |
+| `answer` | [`ClarificationAnswer`](#clarificationanswer) | object |  | The answer as saved; status pending until there is one. |
+| `answeredAt` | `Timestamp` | string (RFC 3339, UTC) |  | When it was answered. |
+| `statement` | `string` | string |  | The answer as the statement a reader of the record is shown, for an answered or not-applicable question. |
+
+### ClarificationRequest
+
+One questionnaire: the follow-up questions from one run of one
+posting.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `id` | `string` | string |  | The questionnaire's id. |
+| `submissionId` | `string` | string |  | The submitted posting it belongs to. |
+| `runId` | `string` | string |  | The run that asked. |
+| `attempt` | `int32` | number |  | That run's number among the posting's runs. |
+| `roleTitle` | `string` | string |  | The role as the submitter named it, or the posting's first line. |
+| `employer` | `string` | string |  | The employer as the submitter named it, if they did. |
+| `status` | `string` | string |  | sent while it takes answers; answered once submitted; expired when the time limit passed or a later run replaced it. |
+| `held` | `bool` | boolean |  | Whether the posting's fit is withheld while it is open. |
+| `askedBy` | `string` | string |  | Who asked: system or candidate. |
+| `generatedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the questions were written. |
+| `expiresAt` | `Timestamp` | string (RFC 3339, UTC) |  | When open questions are closed unanswered; unset when there is no limit. |
+| `answeredAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the answers were submitted. |
+| `closedAt` | `Timestamp` | string (RFC 3339, UTC) |  | When the run that closed it finished with it. |
+| `closedReason` | `string` | string |  | How it closed: answered, expired, superseded. |
+| `itemCount` | `int32` | number |  | How many questions it holds. |
+| `pendingCount` | `int32` | number |  | How many are still unanswered. |
+| `items` | [`ClarificationItem`](#clarificationitem)[] | array of object |  | The questions. Sent by GetClarificationRequest, and by the calls that change one; a listing leaves it empty. |
+
+### ListClarificationRequestsRequest
+
+Which questionnaires to list.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `openOnly` | `bool` | boolean |  | Only those still taking answers. |
+
+### ListClarificationRequestsResponse
+
+The questionnaires, newest first.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `requests` | [`ClarificationRequest`](#clarificationrequest)[] | array of object |  | The questionnaires, without their questions. |
+
+### GetClarificationRequestRequest
+
+Names one questionnaire.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationRequestId` | `string` | string | `string: uuid: true` | The questionnaire's id. |
+
+### GetClarificationRequestResponse
+
+The questionnaire with its questions.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire. |
+
+### RequestClarificationRequest
+
+Asks for follow-up questions on a posting's newest record.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `submissionId` | `string` | string | `string: min_len: 1 max_len: 32` | The submitted posting's id. |
+
+### RequestClarificationResponse
+
+The questionnaire as it now stands.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire, with its questions. |
+| `added` | `int32` | number |  | How many questions this call added. |
+
+### AnswerClarificationItemRequest
+
+One answer to one question.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationItemId` | `string` | string | `string: uuid: true` | The question's id. |
+| `answer` | [`ClarificationAnswer`](#clarificationanswer) | object | `required: true` | The answer: status answered, not_applicable or declined, the values entered and the note. |
+
+### AnswerClarificationItemResponse
+
+The question as saved.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `item` | [`ClarificationItem`](#clarificationitem) | object |  | The question with its answer. |
+| `pendingCount` | `int32` | number |  | How many of the questionnaire's questions are still unanswered. |
+
+### SubmitClarificationAnswersRequest
+
+Names the questionnaire to submit.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationRequestId` | `string` | string | `string: uuid: true` | The questionnaire's id. |
+
+### SubmitClarificationAnswersResponse
+
+The questionnaire as submitted.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `request` | [`ClarificationRequest`](#clarificationrequest) | object |  | The questionnaire, closed to further answers. |
+| `runStarted` | `bool` | boolean |  | Whether a run was started to judge the answered requirements again. False without a model. |
+
+### WithdrawClarificationAnswerRequest
+
+Names the answer to take back.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `clarificationItemId` | `string` | string | `string: uuid: true` | The question's id. |
+
+### WithdrawClarificationAnswerResponse
+
+The question after the withdrawal.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `item` | [`ClarificationItem`](#clarificationitem) | object |  | The question, its answer withdrawn. |
+| `staleJudgments` | `int32` | number |  | How many judgments were marked stale because they cite the answer. |
 
 ### GetHomeRequest
 
@@ -12314,6 +12757,7 @@ Lifecycle of a submission — mirrors jd_submissions.status.
 | `JD_STATUS_READY` | 5 | Résumé is ready; generated_resume_url is populated. |
 | `JD_STATUS_FAILED` | 6 | Anything above raised an error; see error_message for detail. |
 | `JD_STATUS_NOT_A_POSTING` | 7 | The submitted text is not a job posting (a list of search terms, a résumé, a fragment), so nothing was scored. error_message says what it looked like and what to do. This is a refusal, not a failure: a score computed from the wrong kind of input looks exactly like a real one and means nothing. |
+| `JD_STATUS_AWAITING_CANDIDATE` | 8 | The review read the posting and has put follow-up questions to the candidate about requirements it could not settle from the documents (FSD FR-HF-22). No fit is given while a question is open: the review as it stands can be read, match_score is unset, and the submission finishes when the questions are answered or their time limit passes. |
 
 ### ListMembersRequest.Sort
 

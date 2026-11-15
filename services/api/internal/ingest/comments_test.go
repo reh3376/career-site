@@ -4,7 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	"context"
 	"github.com/reh3376/career-site/services/api/internal/users"
+	"os"
+	"path/filepath"
 )
 
 // The leak these tests exist to prevent: a scrubbed corpus copy
@@ -177,5 +180,93 @@ func TestUnchangedComparesEveryColumnTheUpsertWrites(t *testing.T) {
 	}
 	if unchanged(nil, base.Title, base.Visibility, meta, hash) {
 		t.Error("a document that does not exist yet must not skip")
+	} // Meta is compared as a value. Postgres returns jsonb in its own
+	// spelling and stores an absent meta as an empty object; comparing
+	// bytes called every document changed on every reindex.
+	stored := &users.CorpusDocument{Title: base.Title, Visibility: base.Visibility, ContentHash: hash,
+		Meta: []byte(`{"end": "2022", "start": "2018", "organization": "Acme"}`)}
+	if !unchanged(stored, base.Title, base.Visibility, []byte(`{"organization":"Acme","start":"2018","end":"2022"}`), hash) {
+		t.Error("the same meta in Postgres's spelling should skip")
+	}
+	empty := &users.CorpusDocument{Title: base.Title, Visibility: base.Visibility, ContentHash: hash, Meta: []byte(`{}`)}
+	if !unchanged(empty, base.Title, base.Visibility, nil, hash) {
+		t.Error("no meta sent and an empty object stored are the same")
+	}
+	if unchanged(empty, base.Title, base.Visibility, []byte(`{"start":"2018"}`), hash) {
+		t.Error("meta added to a document that had none must not skip")
+	}
+}
+
+func TestDocumentMetaKeepsEngagementFrontMatter(t *testing.T) {
+	role := map[string]string{"title": "Director", "organization": "Acme", "start": "2018", "end": "2022", "order": "20", "technologies": "x"}
+	got := string(documentMeta("role", role))
+	if got != `{"end":"2022","order":"20","organization":"Acme","start":"2018"}` {
+		t.Errorf("role meta = %s", got)
+	}
+	project := map[string]string{"title": "P", "started": "2026", "status": "active"}
+	if got := string(documentMeta("project", project)); got != `{"start":"2026","status":"active"}` {
+		t.Errorf("project meta = %s", got)
+	}
+	if documentMeta("article", role) != nil {
+		t.Error("only roles and projects carry engagement meta")
+	}
+	if documentMeta("role", map[string]string{"title": "x"}) != nil {
+		t.Error("a role that states none of the keys has no meta")
+	}
+}
+
+type metaStore struct {
+	stored map[string]string
+	writes int
+}
+
+func (m *metaStore) SetCorpusDocumentMeta(_ context.Context, kind, path string, meta []byte) (bool, error) {
+	key := kind + "/" + path
+	old, exists := m.stored[key]
+	// A document that is not in the corpus is not created, and one whose
+	// meta already matches is not written.
+	if !exists || old == string(meta) {
+		return false, nil
+	}
+	m.stored[key] = string(meta)
+	m.writes++
+	return true, nil
+}
+
+// The boot-time sync writes a role's front matter onto the document
+// that already exists for it, leaves an unknown file and an unrelated
+// kind alone, and writes nothing the second time.
+func TestSyncEngagementMeta(t *testing.T) {
+	root := t.TempDir()
+	write := func(dir, name, body string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("roles", "01-acme.md", "---\ntitle: Director\norganization: Acme\nstart: 2018\nend: 2022\n---\nBody.\n")
+	write("roles", "02-new.md", "---\ntitle: New\norganization: Beta\nstart: 2023\n---\nBody.\n")
+	write("projects", "10-thing.md", "---\ntitle: Thing\nstarted: 2026\nstatus: active\n---\nBody.\n")
+	write("articles", "a.md", "---\ntitle: An article\nstart: 2020\n---\nBody.\n")
+	store := &metaStore{stored: map[string]string{"role/01-acme.md": "{}", "project/10-thing.md": "{}"}}
+	dirs := map[string]string{"role": filepath.Join(root, "roles"), "project": filepath.Join(root, "projects"), "article": filepath.Join(root, "articles")}
+	n, err := SyncEngagementMeta(context.Background(), store, dirs)
+	if err != nil || n != 2 {
+		t.Fatalf("first sync: %d (err %v)", n, err)
+	}
+	if got := store.stored["role/01-acme.md"]; got != `{"end":"2022","organization":"Acme","start":"2018"}` {
+		t.Errorf("the role's meta: %s", got)
+	}
+	if got := store.stored["project/10-thing.md"]; got != `{"start":"2026","status":"active"}` {
+		t.Errorf("the project's meta: %s", got)
+	}
+	if _, made := store.stored["role/02-new.md"]; made {
+		t.Error("a file with no document yet is left for the reindex")
+	}
+	if n, err := SyncEngagementMeta(context.Background(), store, dirs); err != nil || n != 0 {
+		t.Errorf("second sync: %d (err %v), want nothing written", n, err)
 	}
 }

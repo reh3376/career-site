@@ -272,12 +272,32 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   for it again. He is the only person who can start one, so he knows
   when one is in flight; if that stops being true, add the table to the
   quiet check.
-- **An override to unresolved names nothing as missing (2026-11-12).**
-  FR-HF-08 has a person set a determination and a basis. The
-  uncertainty code, which is what step 7 turns into a question, is the
-  model's, and a row the model called not met has none. Step 7 needs
-  either a third field on the override or the code the basis implies
-  (`hiring.ShortfallBases` already maps the shortfall bases to one).
+- **The candidate's side of the clarification loop lives in the admin
+  console (2026-11-15).** The six clarification methods are ADMIN and
+  the pages are under `/admin/questions`, because in Phase 0 the
+  candidate is the owner. When a candidate has an account of their own
+  (D-33) the methods move to that session, the pages move out of the
+  console, and the read of one questionnaire has to check that it is
+  the caller's. What a candidate is sent is already the right shape:
+  the posting's words, the question and the inputs, nothing scored.
+- **A verdict that rests only on the candidate's word reads as met
+  (2026-11-15).** By the owner's decision 10 an answer counts in full
+  in Phase 0, and the record marks the row and reports the share. The
+  first local runs show what that means in practice: a requirement the
+  documents left unresolved became "met, direct" on a two-line answer.
+  Before a second candidate, decide whether some answer types need a
+  document behind them (FSD FR-HF-09's `verified_external`), or count
+  at less than full weight.
+- **One round of questions, and no floor (2026-11-15).** A question
+  whose time ran out is not asked again unless the candidate asks; a
+  posting far below the gate is still asked about its lexical gaps
+  when the setting is on. Both are D-35's open half and wait for what
+  the pilot says about "questions outstanding".
+- **A deploy can cut off a closing run (2026-11-15).** `rollout.sh`
+  does not look at clarification requests. A run that is judging
+  submitted answers when the api is recreated is failed like any run in
+  flight and started again at boot, up to three times, so nothing is
+  lost; the recruiter's finished mail is late by one run.
 - **A real-run version of the pilot's sample, for a later wave
   (decided 2026-11-13).** This wave keeps the approved sample
   (stimulus v1.1). Alongside it, a version built from a real run of
@@ -286,8 +306,9 @@ D1 shipped 2026-09-22 (`docs/events/README.md`). Remaining, in order:
   the editor and releases, so the two-run story on the first row is
   real. `lib/match-record.ts` gives the display model in the sample's
   own shape; the candidate, employers and document titles are then
-  made anonymous by hand, as the sample has them, and the follow-up
-  parts wait for step 7. It goes in front of participants only in a
+  made anonymous by hand, as the sample has them. The follow-up parts
+  are real since step 7 (2026-11-15): with the setting on, the run
+  writes its own questions. It goes in front of participants only in a
   later wave, after the owner approves it. Waits on the owner's run of
   #122.
 - **An account that set an override cannot be deleted (found

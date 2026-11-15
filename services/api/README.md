@@ -88,7 +88,7 @@ docker build \
 
 ## Background jobs
 
-Seven recurring jobs run inside this process rather than as cron entries, so they ship and roll back with the binary. `cmd/api/main.go` registers them and `internal/scheduler` runs them:
+Eight recurring jobs run inside this process rather than as cron entries, so they ship and roll back with the binary. `cmd/api/main.go` registers them and `internal/scheduler` runs them:
 
 | Job | Interval | Does |
 |---|---|---|
@@ -98,9 +98,10 @@ Seven recurring jobs run inside this process rather than as cron entries, so the
 | `calendar-health` | 6h | probes the Google credential, mails the owner when it is refused, and keeps it from ageing into Google's six-month inactivity expiry |
 | `prompt-warm` | 1m | keeps the LLM KV cache prefix warm |
 | `qa-embed` | 5m | embeds newly approved Q&A bank phrasings |
+| `clarification-sweep` | 5m | closes a withheld review's follow-up questions at their time limit and starts the run that issues the fit; reminds the candidate a day before (FSD FR-HF-22) |
 | `events-anonymize` | 24h | drops event identity after `EVENT_IDENTITY_RETENTION_DAYS` |
 
-Separately, startup reconciles work that a restart stranded mid-flight: `FailStrandedJd`, `FailStrandedRuns` and `FailStrandedEvalRuns` close runs left in a non-terminal status, because a process that dies during generation would otherwise leave a row claiming to be generating forever.
+Separately, startup reconciles work that a restart stranded mid-flight: `FailStrandedJd`, `FailStrandedRuns` and `FailStrandedEvalRuns` close runs left in a non-terminal status, because a process that dies during generation would otherwise leave a row claiming to be generating forever. A posting resting at `awaiting_candidate` is not in flight and is left as it is; a run that was judging submitted answers when the process died is started again (`ResumeClarifications`), and role and project documents are brought into line with their files' front matter (`ingest.SyncEngagementMeta`).
 
 ## Configuration
 

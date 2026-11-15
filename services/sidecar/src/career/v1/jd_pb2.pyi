@@ -29,6 +29,7 @@ class JdStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     JD_STATUS_READY: _ClassVar[JdStatus]
     JD_STATUS_FAILED: _ClassVar[JdStatus]
     JD_STATUS_NOT_A_POSTING: _ClassVar[JdStatus]
+    JD_STATUS_AWAITING_CANDIDATE: _ClassVar[JdStatus]
 JD_SOURCE_UNSPECIFIED: JdSource
 JD_SOURCE_PASTE: JdSource
 JD_SOURCE_PDF: JdSource
@@ -41,6 +42,7 @@ JD_STATUS_GENERATING: JdStatus
 JD_STATUS_READY: JdStatus
 JD_STATUS_FAILED: JdStatus
 JD_STATUS_NOT_A_POSTING: JdStatus
+JD_STATUS_AWAITING_CANDIDATE: JdStatus
 
 class SubmitJdRequest(_message.Message):
     __slots__ = ("jd_text", "source", "role_hint", "employer_hint", "contact_email", "apply_url")

@@ -78,7 +78,16 @@ export type ApiJudgment = {
   effectiveBasis?: string;
   override?: ApiOverride;
   rationale?: string;
-  evidence?: { id?: string; sourceKind?: string; title?: string; chunkId?: string | number; withdrawn?: boolean }[];
+  evidence?: {
+    id?: string;
+    sourceKind?: string;
+    title?: string;
+    chunkId?: string | number;
+    withdrawn?: boolean;
+    // The candidate's own answer to a follow-up question, in their
+    // words; set for an item of kind candidate_response only.
+    statement?: string;
+  }[];
   ruleAdjustments?: { rule?: string; reason?: string; fromDetermination?: string; toDetermination?: string }[];
   reportedFacts?: { statedSpanYears?: number; mostRecentYear?: number; statedScope?: { unit?: string; value?: number } };
   gapClass?: string;
@@ -96,6 +105,43 @@ export type ApiJudgment = {
     at?: string;
     sameVersion?: boolean;
   };
+  // The follow-up question put to the candidate about this requirement
+  // and what came of it (FSD FR-HF-13, FR-HF-14).
+  followUp?: ApiFollowUp;
+  // The verdict rests, in whole or in part, on the candidate's own
+  // answer to a follow-up question.
+  selfAttested?: boolean;
+};
+
+export type ApiFollowUp = {
+  // pending, answered, not_applicable, declined, withdrawn, unanswered,
+  // superseded.
+  status?: string;
+  question?: string;
+  statement?: string;
+  answeredAt?: string;
+  askedAttempt?: number;
+  askedBy?: string;
+  requestId?: string;
+  itemId?: string;
+};
+
+// Where a record's follow-up questions stand (FSD FR-HF-22).
+export type ApiClarification = {
+  requestId?: string;
+  status?: string;
+  held?: boolean;
+  closedReason?: string;
+  asked?: number;
+  pending?: number;
+  answered?: number;
+  generatedAt?: string;
+  expiresAt?: string;
+  answeredAt?: string;
+  closedAt?: string;
+  askedAttempt?: number;
+  closingAttempt?: number;
+  closedByThisRun?: boolean;
 };
 
 export type ApiRecord = {
@@ -133,6 +179,10 @@ export type ApiRecord = {
   // Sent to an admin when the record carries an override.
   reviewedScore?: number;
   reviewedFit?: string;
+  // The follow-up questions asked on this run, or closed by it.
+  clarification?: ApiClarification;
+  // No fit while the candidate has been asked something.
+  awaitingCandidate?: boolean;
 };
 
 export type OverrideChoice = { determination?: string; bases?: string[] };
@@ -166,6 +216,9 @@ export type MatchRecordResponse = {
   overrideRoles?: VocabCode[];
   canOverride?: boolean;
   overrideChoices?: OverrideChoice[];
+  // How many unresolved requirements could still be asked about. Sent
+  // to an admin.
+  askableCount?: number;
 };
 
 export type Audience = "member" | "admin";
@@ -226,6 +279,13 @@ function day(iso: string | undefined): string {
   // The date as written in UTC, so the server's render and the
   // browser's are the same string.
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+
+// A moment a reader has to act by, to the minute, in UTC.
+function moment(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
 function num(n: number): string {
@@ -316,7 +376,11 @@ function evidenceLine(j: ApiJudgment, r: MatchRecordResponse, audience: Audience
     const kind = label(r.sourceKinds, e.sourceKind);
     const chunk = Number(e.chunkId ?? 0);
     const withdrawn = e.withdrawn ? " (withdrawn)" : "";
-    if (e.title) {
+    if (e.sourceKind === "candidate_response") {
+      // Not a passage of a document: the candidate's own statement,
+      // which the row shows in full below.
+      named.push(`the candidate's own answer to a follow-up question${withdrawn}`);
+    } else if (e.title) {
       named.push(`${e.title}${audience === "admin" && chunk > 0 ? ` · passage ${chunk}` : ""}${withdrawn}`);
     } else if (audience === "admin" && chunk > 0) {
       named.push(`${kind} · passage ${chunk}${withdrawn}`);
@@ -413,6 +477,104 @@ function earlierLine(j: ApiJudgment, r: MatchRecordResponse): string | undefined
   return `On run ${e.attempt ?? "?"} a person acting as ${role} set ${version} to ${set}. This run judged the row again and starts without that override.`;
 }
 
+// The candidate's statement as stored opens by saying whose it is and
+// when it was given, for the judge's benefit. The row says both in its
+// own heading, so the opening is taken off for display.
+export function statementBody(statement: string | undefined): string {
+  return (statement ?? "")
+    .replace(/^The candidate's own answer to a follow-up question about this requirement, given \d{4}-\d{2}-\d{2}\.\s*/, "")
+    .trim();
+}
+
+// The follow-up line of a row (FSD FR-HF-13, 14, 24): what was asked
+// and what came of it, or, for an unresolved row nobody has asked
+// about, that nothing has been asked yet.
+function followUpOf(j: ApiJudgment, effective: string, audience: Audience): Pick<RecordRow, "followup" | "statement"> {
+  const f = j.followUp;
+  if (!f) {
+    if (effective !== "unresolved") return {};
+    return {
+      followup: {
+        status: "No question has been put to the candidate about this yet",
+        next:
+          audience === "admin"
+            ? "A question can be written for it from the follow-up panel above the record. When it is answered this requirement is judged again with the answer."
+            : "It stays unresolved until the candidate is asked and answers, or a person on the hiring side settles it.",
+      },
+    };
+  }
+  const asked = f.question ? `Asked on run ${f.askedAttempt ?? "?"}: ${f.question}` : undefined;
+  const on = day(f.answeredAt) ? ` on ${day(f.answeredAt)}` : "";
+  const body = statementBody(f.statement);
+  // An answered row that is still unresolved is in one of two places:
+  // judged again with the answer, which did not settle it, or waiting
+  // for the answers to be submitted. The judgment says which: it was
+  // made with the answer or it was not.
+  const judged =
+    effective !== "unresolved"
+      ? ""
+      : j.selfAttested
+        ? "It was judged again with the answer and is still unresolved: the answer did not supply what was missing."
+        : "The requirement is judged again with the answer when the answers are submitted.";
+  switch (f.status) {
+    case "pending":
+      return {
+        followup: {
+          status: "A question is open with the candidate",
+          next: [asked, "When the answer arrives this requirement is judged again with it and the figures are worked out again."]
+            .filter(Boolean)
+            .join(" "),
+        },
+      };
+    case "answered":
+      return {
+        followup: { status: `Answered by the candidate${on}`, next: [asked, judged].filter(Boolean).join(" ") || undefined },
+        statement: body
+          ? {
+              title: "The candidate's own statement",
+              text: body,
+              note: "Given in answer to the question above. It is the candidate's word, not a document, and the record counts it as such: see the share of the evidenced weight that rests on the candidate's own answers, under the figures.",
+            }
+          : undefined,
+      };
+    case "not_applicable":
+      return {
+        followup: {
+          status: `The candidate states they have not done this${on}`,
+          next: [asked, "On that statement the requirement is not met."].filter(Boolean).join(" "),
+        },
+      };
+    case "declined":
+      return {
+        followup: {
+          status: "The candidate preferred not to answer",
+          next: [asked, "The requirement stays unresolved and the question is not asked again."].filter(Boolean).join(" "),
+        },
+      };
+    case "withdrawn":
+      return {
+        followup: {
+          status: "The candidate withdrew their answer",
+          next: [asked, "A verdict made on it is marked stale until the requirement is judged again."].filter(Boolean).join(" "),
+        },
+      };
+    case "superseded":
+      return {
+        followup: {
+          status: "The question was closed by a new run before it was answered",
+          next: [asked, "A later run of the posting replaced the record it was asked about. It can be asked again."].filter(Boolean).join(" "),
+        },
+      };
+    default:
+      return {
+        followup: {
+          status: "The question closed unanswered",
+          next: [asked, "The time for answering passed, so the verdict rests on the documents alone."].filter(Boolean).join(" "),
+        },
+      };
+  }
+}
+
 function toRow(q: ApiRequirement, j: ApiJudgment | undefined, r: MatchRecordResponse, audience: Audience): RecordRow {
   const cls = q.requirementClass ?? "";
   const row: RecordRow = {
@@ -443,6 +605,7 @@ function toRow(q: ApiRequirement, j: ApiJudgment | undefined, r: MatchRecordResp
     if ((j.override.carriedFromAttempt ?? 0) > 0) marks.push(`carried from run ${j.override.carriedFromAttempt}`);
     if (j.override.recheck) marks.push("second look needed");
   }
+  if (j.selfAttested) marks.push("rests on the candidate's answer");
   row.marks = marks.length ? marks : undefined;
 
   row.determination = j.notAssessed ? "not_assessed" : effective;
@@ -478,9 +641,18 @@ function toRow(q: ApiRequirement, j: ApiJudgment | undefined, r: MatchRecordResp
       reason: [why, accepted].filter(Boolean).join(" ") || undefined,
     };
   }
+  if (!j.notAssessed) {
+    const { followup, statement } = followUpOf(j, effective, audience);
+    row.followup = followup;
+    row.statement = statement;
+  }
   const notes: string[] = [];
   if (j.notAssessed) notes.push("This item has no bearing on the figures or the fit.");
-  if (j.stale) notes.push("A document this verdict cites has since been withdrawn; the verdict stands as it was made.");
+  if (j.stale) {
+    notes.push(
+      "Evidence this verdict cites has since been withdrawn. The verdict stands as it was made until the requirement is judged again.",
+    );
+  }
   if (notes.length) row.note = notes.join(" ");
   return row;
 }
@@ -497,6 +669,8 @@ function definitions(r: MatchRecordResponse, rows: Counted[]): RecordData["defin
   const anyHuman = rows.some(({ j }) => j?.notAssessed);
   const anyOverride = rows.some(({ j }) => j?.override);
   const anyEdited = rows.some(({ q }) => q.editedAt);
+  const anyFollowUp = rows.some(({ j }) => j?.followUp);
+  const anySelfAttested = rows.some(({ j }) => j?.selfAttested);
   const term = (c: VocabCode) => ({ term: c.label ?? c.code, meaning: c.description ?? "" });
 
   const groups: NonNullable<NonNullable<RecordData["definitions"]>["groups"]> = [
@@ -565,6 +739,24 @@ function definitions(r: MatchRecordResponse, rows: Counted[]): RecordData["defin
             {
               term: "Edited before judging",
               meaning: "A person corrected the requirement after it was read from the posting; the row was judged as edited.",
+            },
+          ]
+        : []),
+      ...(anyFollowUp
+        ? [
+            {
+              term: "Follow-up",
+              meaning:
+                "A question put to the candidate about a requirement their documents could not settle. It shows the posting's own words and asks what the candidate did; it never shows what would score. No fit is given while a question the review asked by itself is open.",
+            },
+          ]
+        : []),
+      ...(anySelfAttested
+        ? [
+            {
+              term: "Rests on the candidate's answer",
+              meaning:
+                "The verdict cites, or was settled on, the candidate's own answer to a follow-up question. That is the candidate's statement and not a document. It counts in full, and the share of the evidenced weight that rests on such answers is shown under the figures.",
             },
           ]
         : []),
@@ -676,8 +868,61 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
     runNote = `This is run ${attempt} on this posting; it replaces the runs before it.`;
   }
 
+  // The clarification loop, as the record's status and as a note on the
+  // run that closed it (FSD FR-HF-22).
+  const cl = rec.clarification;
+  let status: Pick<NonNullable<RecordData["header"]>, "status_label" | "status" | "status_note"> = {};
+  const overridesNote: string[] = [];
+  if (cl && cl.closedByThisRun && !rec.superseded) {
+    const asked = cl.asked ?? 0;
+    const answered = cl.answered ?? 0;
+    const left = asked - answered;
+    const q = (k: number) => `${k} follow-up ${plural(k, "question", "questions")}`;
+    runNote =
+      cl.closedReason === "expired"
+        ? `This is run ${attempt} on this posting. The time for answering the ${q(asked)} asked on run ${cl.askedAttempt ?? "?"} passed with ${left} unanswered, so the fit is issued from what is evidenced. ${
+            answered > 0
+              ? `${answered} ${plural(answered, "requirement was", "requirements were")} judged again with the candidate's ${plural(answered, "answer", "answers")}, and every other verdict was carried forward unchanged.`
+              : "Every verdict was carried forward unchanged."
+          }`
+        : `This is run ${attempt} on this posting. It followed the candidate's answers to the ${q(asked)} asked on run ${cl.askedAttempt ?? "?"}: ${
+            answered > 0
+              ? `${answered} ${plural(answered, "requirement was", "requirements were")} judged again with the ${plural(answered, "answer", "answers")}`
+              : "no requirement was judged again"
+          }, and every other verdict was carried forward unchanged.`;
+  } else if (cl && !cl.closedByThisRun && !rec.superseded) {
+    const asked = cl.asked ?? 0;
+    const pending = cl.pending ?? 0;
+    const limit = moment(cl.expiresAt);
+    const q = `${asked} follow-up ${plural(asked, "question has", "questions have")}`;
+    if (rec.awaitingCandidate && cl.status === "sent") {
+      status = {
+        status_label: "Status",
+        status: "Inconclusive · awaiting the candidate",
+        status_note: `${q} been put to the candidate about ${plural(asked, "a requirement", "requirements")} their documents could not settle${
+          pending < asked ? `, and ${pending} ${plural(pending, "is", "are")} still open` : ""
+        }. No fit is given while a question is open: the verdicts and figures below are the state so far.${
+          limit ? ` Any question still open at ${limit} is closed unanswered, and the fit is then issued from what is evidenced.` : ""
+        }`,
+      };
+    } else if (rec.awaitingCandidate) {
+      status = {
+        status_label: "Status",
+        status: "Inconclusive · the answers are being judged",
+        status_note:
+          cl.status === "answered"
+            ? "The candidate has answered. The requirements the answers speak to are being judged again, and the fit follows from that run."
+            : "The time for answering has passed. The fit is being issued from what is evidenced, with whatever was answered.",
+      };
+    } else if (cl.status === "sent") {
+      overridesNote.push(
+        `${q} been put to the candidate at their own request${pending < asked ? `, ${pending} still open` : ""}. The fit this run was given stands meanwhile; when the answers are submitted the requirements they speak to are judged again in a new run.`,
+      );
+    }
+  }
+
   const overrides = rec.overrideCount ?? 0;
-  const figureNotes: string[] = [];
+  const figureNotes: string[] = [...overridesNote];
   if (overrides > 0) {
     const second = (rec.judgments ?? []).filter((j) => j.override?.recheck).length;
     figureNotes.push(
@@ -693,7 +938,9 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
   // the same score worked out again with a person's verdicts. Never
   // one in place of the other.
   let fitLines: NonNullable<RecordData["header"]>["fit_lines"];
-  if (audience === "admin" && (rec.fit || typeof rec.matchScore === "number")) {
+  if (audience === "admin" && rec.awaitingCandidate) {
+    fitLines = [{ label: "Fit", value: "withheld", note: "no fit is given while a follow-up question is open" }];
+  } else if (audience === "admin" && (rec.fit || typeof rec.matchScore === "number")) {
     fitLines = [{ label: "Fit at run time", value: fitValue(rec.fit, rec.matchScore), note: "from the model's verdicts" }];
     if (typeof rec.reviewedScore === "number") {
       fitLines.push({
@@ -714,6 +961,7 @@ export function toRecordData(r: MatchRecordResponse, audience: Audience): Record
       audience === "admin" ? " A person on the hiring side can overrule any verdict; where one has, the row says so." : ""
     }`,
     run_note: runNote,
+    ...status,
     fit_lines: fitLines,
     summary: summary || undefined,
     coverage_label: `Counted weight · required in full, preferred at ${num(fraction * 100)}%`,

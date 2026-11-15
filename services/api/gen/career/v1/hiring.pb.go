@@ -14,9 +14,10 @@
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
 // Phase 0 step 5 landed the requirement methods and the settings; step
-// 6 lands the match record as a person reads it and the override of a
-// judgment; the clarification loop and the catalog follow in steps 7
-// and 8.
+// 6 the match record as a person reads it and the override of a
+// judgment; step 7 the clarification loop: the follow-up questions a
+// run puts to the candidate, their answers, and the run that judges the
+// answered requirements again. The catalog follows in step 8.
 //
 // Vocabulary codes (type, class, threshold units, determination, basis,
 // uncertainty, source kind, override role) travel as strings,
@@ -1243,6 +1244,18 @@ type HiringSettings struct {
 	// The share of its weight a preferred requirement counts at, and an
 	// evidenced ideal one: greater than 0, at most 1. 0.25 unless set.
 	PreferredFraction float64 `protobuf:"fixed64,1,opt,name=preferred_fraction,json=preferredFraction,proto3" json:"preferred_fraction,omitempty"`
+	// Whether a run that leaves a requirement unresolved on a difference
+	// of wording, tool or setting, or on an unproven relationship, asks
+	// the candidate about it without being asked, and carries no fit
+	// until the questions are closed (FSD FR-HF-22, FR-HF-24). Off, a run
+	// is given its fit as it finishes and questions are written only at
+	// the candidate's request. Left unset on a write, it is not changed.
+	ClarificationAuto *bool `protobuf:"varint,2,opt,name=clarification_auto,json=clarificationAuto,proto3,oneof" json:"clarification_auto,omitempty"`
+	// How many days a withheld review waits for the candidate before the
+	// open questions are closed unanswered and the fit is issued from
+	// what is evidenced: 1 to 14, 3 unless set. 0 on a write leaves it as
+	// it is.
+	ClarificationDays int32 `protobuf:"varint,3,opt,name=clarification_days,json=clarificationDays,proto3" json:"clarification_days,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1280,6 +1293,20 @@ func (*HiringSettings) Descriptor() ([]byte, []int) {
 func (x *HiringSettings) GetPreferredFraction() float64 {
 	if x != nil {
 		return x.PreferredFraction
+	}
+	return 0
+}
+
+func (x *HiringSettings) GetClarificationAuto() bool {
+	if x != nil && x.ClarificationAuto != nil {
+		return *x.ClarificationAuto
+	}
+	return false
+}
+
+func (x *HiringSettings) GetClarificationDays() int32 {
+	if x != nil {
+		return x.ClarificationDays
 	}
 	return 0
 }
@@ -1569,9 +1596,11 @@ func (x *Coverage) GetPreferredFraction() float64 {
 	return 0
 }
 
-// One piece of evidence a judgment cites. A citation, never the text:
-// the private text of the candidate's documents is not sent to any
-// reader of a record.
+// One piece of evidence a judgment cites. For a document it is a
+// citation, never the text: the private text of the candidate's
+// documents is not sent to any reader of a record. The candidate's own
+// answer to a follow-up question is the exception, and carries its
+// statement.
 type EvidenceRef struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The evidence item's id.
@@ -1587,7 +1616,13 @@ type EvidenceRef struct {
 	// otherwise.
 	ChunkId int64 `protobuf:"varint,4,opt,name=chunk_id,json=chunkId,proto3" json:"chunk_id,omitempty"`
 	// Whether the candidate has since withdrawn the item.
-	Withdrawn     bool `protobuf:"varint,5,opt,name=withdrawn,proto3" json:"withdrawn,omitempty"`
+	Withdrawn bool `protobuf:"varint,5,opt,name=withdrawn,proto3" json:"withdrawn,omitempty"`
+	// The candidate's own answer to a follow-up question, in their words,
+	// for an item of kind candidate_response. It was written for the
+	// employer whose posting it answers, and a reader shows it marked as
+	// the candidate's own statement. Empty for every other kind and once
+	// withdrawn.
+	Statement     string `protobuf:"bytes,6,opt,name=statement,proto3" json:"statement,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1655,6 +1690,13 @@ func (x *EvidenceRef) GetWithdrawn() bool {
 		return x.Withdrawn
 	}
 	return false
+}
+
+func (x *EvidenceRef) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
 }
 
 // One change the code rules made to the model's answer (FSD FR-HF-05):
@@ -2141,8 +2183,15 @@ type Judgment struct {
 	// An override on an earlier run's judgment of this requirement, when
 	// this judgment carries none. Sent to admins only.
 	EarlierOverride *EarlierOverride `protobuf:"bytes,22,opt,name=earlier_override,json=earlierOverride,proto3" json:"earlier_override,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The follow-up question put to the candidate about this requirement,
+	// on this run or an earlier one, and what came of it. Unset when none
+	// has been asked.
+	FollowUp *JudgmentFollowUp `protobuf:"bytes,23,opt,name=follow_up,json=followUp,proto3" json:"follow_up,omitempty"`
+	// True when the judgment rests, in whole or in part, on the
+	// candidate's own answer to a follow-up question (FSD FR-HF-09).
+	SelfAttested  bool `protobuf:"varint,24,opt,name=self_attested,json=selfAttested,proto3" json:"self_attested,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Judgment) Reset() {
@@ -2329,6 +2378,306 @@ func (x *Judgment) GetEarlierOverride() *EarlierOverride {
 	return nil
 }
 
+func (x *Judgment) GetFollowUp() *JudgmentFollowUp {
+	if x != nil {
+		return x.FollowUp
+	}
+	return nil
+}
+
+func (x *Judgment) GetSelfAttested() bool {
+	if x != nil {
+		return x.SelfAttested
+	}
+	return false
+}
+
+// The follow-up question about one requirement and its answer (FSD
+// FR-HF-13, FR-HF-14).
+type JudgmentFollowUp struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Where it stands: pending while the question is open; answered,
+	// not_applicable ("I have not done this"), declined or withdrawn as
+	// the candidate left it; unanswered when its time ran out with no
+	// answer; superseded when a new run of the posting replaced the
+	// record it was asked about before it was answered.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// The question as it was asked.
+	Question string `protobuf:"bytes,2,opt,name=question,proto3" json:"question,omitempty"`
+	// The candidate's answer in their own words, for an answered or
+	// not-applicable question.
+	Statement string `protobuf:"bytes,3,opt,name=statement,proto3" json:"statement,omitempty"`
+	// When it was answered.
+	AnsweredAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=answered_at,json=answeredAt,proto3" json:"answered_at,omitempty"`
+	// The run of the posting the question was asked on.
+	AskedAttempt int32 `protobuf:"varint,5,opt,name=asked_attempt,json=askedAttempt,proto3" json:"asked_attempt,omitempty"`
+	// Who asked: system (the run, unprompted) or candidate (at their own
+	// request).
+	AskedBy string `protobuf:"bytes,6,opt,name=asked_by,json=askedBy,proto3" json:"asked_by,omitempty"`
+	// The questionnaire it belongs to. Sent to admins only.
+	RequestId string `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// The question's id. Sent to admins only.
+	ItemId        string `protobuf:"bytes,8,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JudgmentFollowUp) Reset() {
+	*x = JudgmentFollowUp{}
+	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JudgmentFollowUp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JudgmentFollowUp) ProtoMessage() {}
+
+func (x *JudgmentFollowUp) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JudgmentFollowUp.ProtoReflect.Descriptor instead.
+func (*JudgmentFollowUp) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *JudgmentFollowUp) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *JudgmentFollowUp) GetQuestion() string {
+	if x != nil {
+		return x.Question
+	}
+	return ""
+}
+
+func (x *JudgmentFollowUp) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+func (x *JudgmentFollowUp) GetAnsweredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AnsweredAt
+	}
+	return nil
+}
+
+func (x *JudgmentFollowUp) GetAskedAttempt() int32 {
+	if x != nil {
+		return x.AskedAttempt
+	}
+	return 0
+}
+
+func (x *JudgmentFollowUp) GetAskedBy() string {
+	if x != nil {
+		return x.AskedBy
+	}
+	return ""
+}
+
+func (x *JudgmentFollowUp) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *JudgmentFollowUp) GetItemId() string {
+	if x != nil {
+		return x.ItemId
+	}
+	return ""
+}
+
+// Where the follow-up questions of a record stand (FSD FR-HF-22): the
+// questionnaire asked on this run, or the one this run closed.
+type RecordClarification struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire. Sent to admins only.
+	RequestId string `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// sent while it takes answers; answered once the candidate has
+	// submitted; expired when the time limit passed or a later run
+	// replaced it.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// Whether the run that asked carries no fit while the questions are
+	// open.
+	Held bool `protobuf:"varint,3,opt,name=held,proto3" json:"held,omitempty"`
+	// How it closed: answered, expired, superseded. Empty until the run
+	// that closes it has finished.
+	ClosedReason string `protobuf:"bytes,4,opt,name=closed_reason,json=closedReason,proto3" json:"closed_reason,omitempty"`
+	// How many questions were asked.
+	Asked int32 `protobuf:"varint,5,opt,name=asked,proto3" json:"asked,omitempty"`
+	// How many are still open.
+	Pending int32 `protobuf:"varint,6,opt,name=pending,proto3" json:"pending,omitempty"`
+	// How many were answered, "I have not done this" included.
+	Answered int32 `protobuf:"varint,7,opt,name=answered,proto3" json:"answered,omitempty"`
+	// When the questions were written.
+	GeneratedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
+	// When open questions are closed unanswered; unset when there is no
+	// limit.
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// When the candidate submitted the answers.
+	AnsweredAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=answered_at,json=answeredAt,proto3" json:"answered_at,omitempty"`
+	// When the run that closed the questions finished with them.
+	ClosedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	// The run the questions were asked on.
+	AskedAttempt int32 `protobuf:"varint,12,opt,name=asked_attempt,json=askedAttempt,proto3" json:"asked_attempt,omitempty"`
+	// The run that judged the answered requirements again; 0 until one
+	// has.
+	ClosingAttempt int32 `protobuf:"varint,13,opt,name=closing_attempt,json=closingAttempt,proto3" json:"closing_attempt,omitempty"`
+	// True on the record of the run that closed the questions.
+	ClosedByThisRun bool `protobuf:"varint,14,opt,name=closed_by_this_run,json=closedByThisRun,proto3" json:"closed_by_this_run,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RecordClarification) Reset() {
+	*x = RecordClarification{}
+	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordClarification) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordClarification) ProtoMessage() {}
+
+func (x *RecordClarification) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordClarification.ProtoReflect.Descriptor instead.
+func (*RecordClarification) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *RecordClarification) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RecordClarification) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *RecordClarification) GetHeld() bool {
+	if x != nil {
+		return x.Held
+	}
+	return false
+}
+
+func (x *RecordClarification) GetClosedReason() string {
+	if x != nil {
+		return x.ClosedReason
+	}
+	return ""
+}
+
+func (x *RecordClarification) GetAsked() int32 {
+	if x != nil {
+		return x.Asked
+	}
+	return 0
+}
+
+func (x *RecordClarification) GetPending() int32 {
+	if x != nil {
+		return x.Pending
+	}
+	return 0
+}
+
+func (x *RecordClarification) GetAnswered() int32 {
+	if x != nil {
+		return x.Answered
+	}
+	return 0
+}
+
+func (x *RecordClarification) GetGeneratedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GeneratedAt
+	}
+	return nil
+}
+
+func (x *RecordClarification) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *RecordClarification) GetAnsweredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AnsweredAt
+	}
+	return nil
+}
+
+func (x *RecordClarification) GetClosedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return nil
+}
+
+func (x *RecordClarification) GetAskedAttempt() int32 {
+	if x != nil {
+		return x.AskedAttempt
+	}
+	return 0
+}
+
+func (x *RecordClarification) GetClosingAttempt() int32 {
+	if x != nil {
+		return x.ClosingAttempt
+	}
+	return 0
+}
+
+func (x *RecordClarification) GetClosedByThisRun() bool {
+	if x != nil {
+		return x.ClosedByThisRun
+	}
+	return false
+}
+
 // The match record of one run (FSD FR-HF-10, FR-HF-17).
 type MatchRecord struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2388,14 +2737,22 @@ type MatchRecord struct {
 	// The fit that score falls in under the bands in force now:
 	// very_strong, strong, possible, weak, very_weak. Set with
 	// `reviewed_score`. Shown beside `fit`, never in place of it.
-	ReviewedFit   string `protobuf:"bytes,24,opt,name=reviewed_fit,json=reviewedFit,proto3" json:"reviewed_fit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReviewedFit string `protobuf:"bytes,24,opt,name=reviewed_fit,json=reviewedFit,proto3" json:"reviewed_fit,omitempty"`
+	// The follow-up questions asked on this run, or closed by it. Unset
+	// when there are none.
+	Clarification *RecordClarification `protobuf:"bytes,25,opt,name=clarification,proto3" json:"clarification,omitempty"`
+	// True while the run carries no fit because the candidate has been
+	// asked something (FSD FR-HF-22). The record is then the state so
+	// far: `fit`, `match_score` and the reviewed pair are unset, and a
+	// reader shows it as inconclusive, awaiting the candidate.
+	AwaitingCandidate bool `protobuf:"varint,26,opt,name=awaiting_candidate,json=awaitingCandidate,proto3" json:"awaiting_candidate,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *MatchRecord) Reset() {
 	*x = MatchRecord{}
-	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	mi := &file_career_v1_hiring_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2407,7 +2764,7 @@ func (x *MatchRecord) String() string {
 func (*MatchRecord) ProtoMessage() {}
 
 func (x *MatchRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[24]
+	mi := &file_career_v1_hiring_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2420,7 +2777,7 @@ func (x *MatchRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchRecord.ProtoReflect.Descriptor instead.
 func (*MatchRecord) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{24}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *MatchRecord) GetRunId() string {
@@ -2591,6 +2948,20 @@ func (x *MatchRecord) GetReviewedFit() string {
 	return ""
 }
 
+func (x *MatchRecord) GetClarification() *RecordClarification {
+	if x != nil {
+		return x.Clarification
+	}
+	return nil
+}
+
+func (x *MatchRecord) GetAwaitingCandidate() bool {
+	if x != nil {
+		return x.AwaitingCandidate
+	}
+	return false
+}
+
 // The determinations a reviewer may set and, for each, the bases that
 // do not contradict it, so an override form offers only pairs the
 // server will accept.
@@ -2606,7 +2977,7 @@ type OverrideChoice struct {
 
 func (x *OverrideChoice) Reset() {
 	*x = OverrideChoice{}
-	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	mi := &file_career_v1_hiring_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2618,7 +2989,7 @@ func (x *OverrideChoice) String() string {
 func (*OverrideChoice) ProtoMessage() {}
 
 func (x *OverrideChoice) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[25]
+	mi := &file_career_v1_hiring_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2631,7 +3002,7 @@ func (x *OverrideChoice) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideChoice.ProtoReflect.Descriptor instead.
 func (*OverrideChoice) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{25}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *OverrideChoice) GetDetermination() string {
@@ -2668,7 +3039,7 @@ type GetMatchRecordRequest struct {
 
 func (x *GetMatchRecordRequest) Reset() {
 	*x = GetMatchRecordRequest{}
-	mi := &file_career_v1_hiring_proto_msgTypes[26]
+	mi := &file_career_v1_hiring_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2680,7 +3051,7 @@ func (x *GetMatchRecordRequest) String() string {
 func (*GetMatchRecordRequest) ProtoMessage() {}
 
 func (x *GetMatchRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[26]
+	mi := &file_career_v1_hiring_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2693,7 +3064,7 @@ func (x *GetMatchRecordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchRecordRequest.ProtoReflect.Descriptor instead.
 func (*GetMatchRecordRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{26}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetMatchRecordRequest) GetSubmissionId() string {
@@ -2752,13 +3123,17 @@ type GetMatchRecordResponse struct {
 	// Why a résumé after review is not offered, as a sentence, when the
 	// record carries an override and it is not. Sent to admins only.
 	ReviewResumeNote string `protobuf:"bytes,13,opt,name=review_resume_note,json=reviewResumeNote,proto3" json:"review_resume_note,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// How many unresolved requirements of this record have no follow-up
+	// question yet and could be asked about at the candidate's request.
+	// Sent to admins only, and 0 for a record a later run has superseded.
+	AskableCount  int32 `protobuf:"varint,14,opt,name=askable_count,json=askableCount,proto3" json:"askable_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetMatchRecordResponse) Reset() {
 	*x = GetMatchRecordResponse{}
-	mi := &file_career_v1_hiring_proto_msgTypes[27]
+	mi := &file_career_v1_hiring_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2770,7 +3145,7 @@ func (x *GetMatchRecordResponse) String() string {
 func (*GetMatchRecordResponse) ProtoMessage() {}
 
 func (x *GetMatchRecordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[27]
+	mi := &file_career_v1_hiring_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2783,7 +3158,7 @@ func (x *GetMatchRecordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchRecordResponse.ProtoReflect.Descriptor instead.
 func (*GetMatchRecordResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{27}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GetMatchRecordResponse) GetRecord() *MatchRecord {
@@ -2877,6 +3252,13 @@ func (x *GetMatchRecordResponse) GetReviewResumeNote() string {
 	return ""
 }
 
+func (x *GetMatchRecordResponse) GetAskableCount() int32 {
+	if x != nil {
+		return x.AskableCount
+	}
+	return 0
+}
+
 // One override of one judgment.
 type OverrideJudgmentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2904,7 +3286,7 @@ type OverrideJudgmentRequest struct {
 
 func (x *OverrideJudgmentRequest) Reset() {
 	*x = OverrideJudgmentRequest{}
-	mi := &file_career_v1_hiring_proto_msgTypes[28]
+	mi := &file_career_v1_hiring_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2916,7 +3298,7 @@ func (x *OverrideJudgmentRequest) String() string {
 func (*OverrideJudgmentRequest) ProtoMessage() {}
 
 func (x *OverrideJudgmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[28]
+	mi := &file_career_v1_hiring_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2929,7 +3311,7 @@ func (x *OverrideJudgmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideJudgmentRequest.ProtoReflect.Descriptor instead.
 func (*OverrideJudgmentRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{28}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *OverrideJudgmentRequest) GetJudgmentId() string {
@@ -2985,7 +3367,7 @@ type OverrideJudgmentResponse struct {
 
 func (x *OverrideJudgmentResponse) Reset() {
 	*x = OverrideJudgmentResponse{}
-	mi := &file_career_v1_hiring_proto_msgTypes[29]
+	mi := &file_career_v1_hiring_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2997,7 +3379,7 @@ func (x *OverrideJudgmentResponse) String() string {
 func (*OverrideJudgmentResponse) ProtoMessage() {}
 
 func (x *OverrideJudgmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[29]
+	mi := &file_career_v1_hiring_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3010,7 +3392,7 @@ func (x *OverrideJudgmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideJudgmentResponse.ProtoReflect.Descriptor instead.
 func (*OverrideJudgmentResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{29}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *OverrideJudgmentResponse) GetRecord() *MatchRecord {
@@ -3052,7 +3434,7 @@ type ReviewResume struct {
 
 func (x *ReviewResume) Reset() {
 	*x = ReviewResume{}
-	mi := &file_career_v1_hiring_proto_msgTypes[30]
+	mi := &file_career_v1_hiring_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3064,7 +3446,7 @@ func (x *ReviewResume) String() string {
 func (*ReviewResume) ProtoMessage() {}
 
 func (x *ReviewResume) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[30]
+	mi := &file_career_v1_hiring_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3077,7 +3459,7 @@ func (x *ReviewResume) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewResume.ProtoReflect.Descriptor instead.
 func (*ReviewResume) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{30}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ReviewResume) GetRunId() string {
@@ -3162,7 +3544,7 @@ type WriteReviewResumeRequest struct {
 
 func (x *WriteReviewResumeRequest) Reset() {
 	*x = WriteReviewResumeRequest{}
-	mi := &file_career_v1_hiring_proto_msgTypes[31]
+	mi := &file_career_v1_hiring_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3174,7 +3556,7 @@ func (x *WriteReviewResumeRequest) String() string {
 func (*WriteReviewResumeRequest) ProtoMessage() {}
 
 func (x *WriteReviewResumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[31]
+	mi := &file_career_v1_hiring_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3187,7 +3569,7 @@ func (x *WriteReviewResumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteReviewResumeRequest.ProtoReflect.Descriptor instead.
 func (*WriteReviewResumeRequest) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{31}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *WriteReviewResumeRequest) GetRunId() string {
@@ -3208,7 +3590,7 @@ type WriteReviewResumeResponse struct {
 
 func (x *WriteReviewResumeResponse) Reset() {
 	*x = WriteReviewResumeResponse{}
-	mi := &file_career_v1_hiring_proto_msgTypes[32]
+	mi := &file_career_v1_hiring_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3220,7 +3602,7 @@ func (x *WriteReviewResumeResponse) String() string {
 func (*WriteReviewResumeResponse) ProtoMessage() {}
 
 func (x *WriteReviewResumeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_v1_hiring_proto_msgTypes[32]
+	mi := &file_career_v1_hiring_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3233,7 +3615,7 @@ func (x *WriteReviewResumeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteReviewResumeResponse.ProtoReflect.Descriptor instead.
 func (*WriteReviewResumeResponse) Descriptor() ([]byte, []int) {
-	return file_career_v1_hiring_proto_rawDescGZIP(), []int{32}
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *WriteReviewResumeResponse) GetReviewResume() *ReviewResume {
@@ -3241,6 +3623,1183 @@ func (x *WriteReviewResumeResponse) GetReviewResume() *ReviewResume {
 		return x.ReviewResume
 	}
 	return nil
+}
+
+// One choice a question offers.
+type ClarificationOption struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The value an answer carries when this choice is picked.
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	// The choice as it reads.
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// Where the choice comes from: own_corpus (one of the candidate's own
+	// roles or projects), generic_list (a list that is the same for every
+	// requirement), posting (an organisation the posting itself names).
+	// Never anything a requirement is scored on.
+	Source        string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClarificationOption) Reset() {
+	*x = ClarificationOption{}
+	mi := &file_career_v1_hiring_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClarificationOption) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClarificationOption) ProtoMessage() {}
+
+func (x *ClarificationOption) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClarificationOption.ProtoReflect.Descriptor instead.
+func (*ClarificationOption) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ClarificationOption) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *ClarificationOption) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ClarificationOption) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+// One controlled input of a question.
+type ClarificationField struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The key the answer carries this input under.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The input's label.
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// choice (pick one), multi (pick any), number, text.
+	Kind string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Whether an answer must fill it.
+	Required bool `protobuf:"varint,4,opt,name=required,proto3" json:"required,omitempty"`
+	// The choices, for choice and multi.
+	Options []*ClarificationOption `protobuf:"bytes,5,rep,name=options,proto3" json:"options,omitempty"`
+	// The largest number accepted, for number.
+	Max float64 `protobuf:"fixed64,6,opt,name=max,proto3" json:"max,omitempty"`
+	// The longest text accepted, for text.
+	MaxLen int32 `protobuf:"varint,7,opt,name=max_len,json=maxLen,proto3" json:"max_len,omitempty"`
+	// A line of help shown under the input.
+	Hint          string `protobuf:"bytes,8,opt,name=hint,proto3" json:"hint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClarificationField) Reset() {
+	*x = ClarificationField{}
+	mi := &file_career_v1_hiring_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClarificationField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClarificationField) ProtoMessage() {}
+
+func (x *ClarificationField) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClarificationField.ProtoReflect.Descriptor instead.
+func (*ClarificationField) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ClarificationField) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ClarificationField) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ClarificationField) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ClarificationField) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+func (x *ClarificationField) GetOptions() []*ClarificationOption {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+func (x *ClarificationField) GetMax() float64 {
+	if x != nil {
+		return x.Max
+	}
+	return 0
+}
+
+func (x *ClarificationField) GetMaxLen() int32 {
+	if x != nil {
+		return x.MaxLen
+	}
+	return 0
+}
+
+func (x *ClarificationField) GetHint() string {
+	if x != nil {
+		return x.Hint
+	}
+	return ""
+}
+
+// A candidate's answer to one question.
+type ClarificationAnswer struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// pending until answered; then answered, not_applicable ("I have not
+	// done this"), declined ("prefer not to answer") or withdrawn.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// What was entered in each input, by the input's name: one value for
+	// choice, number and text, any number for multi. A number travels as
+	// its decimal text.
+	Values map[string]*StringList `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The note in the candidate's own words, at most 600 characters. It
+	// is kept as evidence beside the answer and never parsed.
+	FreeText      string `protobuf:"bytes,3,opt,name=free_text,json=freeText,proto3" json:"free_text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClarificationAnswer) Reset() {
+	*x = ClarificationAnswer{}
+	mi := &file_career_v1_hiring_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClarificationAnswer) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClarificationAnswer) ProtoMessage() {}
+
+func (x *ClarificationAnswer) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClarificationAnswer.ProtoReflect.Descriptor instead.
+func (*ClarificationAnswer) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ClarificationAnswer) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ClarificationAnswer) GetValues() map[string]*StringList {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+func (x *ClarificationAnswer) GetFreeText() string {
+	if x != nil {
+		return x.FreeText
+	}
+	return ""
+}
+
+// One question and, once given, its answer, as the candidate sees it.
+type ClarificationItem struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The question's id.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The requirement's id within the role: r1, r2, ...
+	RequirementLocalId string `protobuf:"bytes,2,opt,name=requirement_local_id,json=requirementLocalId,proto3" json:"requirement_local_id,omitempty"`
+	// The posting's own words for the requirement, shown above the
+	// question. The requirement's text stands in when extraction kept no
+	// quote.
+	SourceQuote string `protobuf:"bytes,3,opt,name=source_quote,json=sourceQuote,proto3" json:"source_quote,omitempty"`
+	// The kind of answer asked for: span, magnitude, involvement,
+	// credential, relationship, evidence_pointer, disambiguation.
+	AnswerType string `protobuf:"bytes,4,opt,name=answer_type,json=answerType,proto3" json:"answer_type,omitempty"`
+	// The question.
+	Question string `protobuf:"bytes,5,opt,name=question,proto3" json:"question,omitempty"`
+	// The inputs it offers, as they were offered when it was written.
+	Fields []*ClarificationField `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`
+	// Whether an answer must carry the note.
+	FreeTextRequired bool `protobuf:"varint,7,opt,name=free_text_required,json=freeTextRequired,proto3" json:"free_text_required,omitempty"`
+	// The longest note accepted.
+	FreeTextMax int32 `protobuf:"varint,8,opt,name=free_text_max,json=freeTextMax,proto3" json:"free_text_max,omitempty"`
+	// The answer as saved; status pending until there is one.
+	Answer *ClarificationAnswer `protobuf:"bytes,9,opt,name=answer,proto3" json:"answer,omitempty"`
+	// When it was answered.
+	AnsweredAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=answered_at,json=answeredAt,proto3" json:"answered_at,omitempty"`
+	// The answer as the statement a reader of the record is shown, for an
+	// answered or not-applicable question.
+	Statement     string `protobuf:"bytes,11,opt,name=statement,proto3" json:"statement,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClarificationItem) Reset() {
+	*x = ClarificationItem{}
+	mi := &file_career_v1_hiring_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClarificationItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClarificationItem) ProtoMessage() {}
+
+func (x *ClarificationItem) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClarificationItem.ProtoReflect.Descriptor instead.
+func (*ClarificationItem) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ClarificationItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ClarificationItem) GetRequirementLocalId() string {
+	if x != nil {
+		return x.RequirementLocalId
+	}
+	return ""
+}
+
+func (x *ClarificationItem) GetSourceQuote() string {
+	if x != nil {
+		return x.SourceQuote
+	}
+	return ""
+}
+
+func (x *ClarificationItem) GetAnswerType() string {
+	if x != nil {
+		return x.AnswerType
+	}
+	return ""
+}
+
+func (x *ClarificationItem) GetQuestion() string {
+	if x != nil {
+		return x.Question
+	}
+	return ""
+}
+
+func (x *ClarificationItem) GetFields() []*ClarificationField {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+func (x *ClarificationItem) GetFreeTextRequired() bool {
+	if x != nil {
+		return x.FreeTextRequired
+	}
+	return false
+}
+
+func (x *ClarificationItem) GetFreeTextMax() int32 {
+	if x != nil {
+		return x.FreeTextMax
+	}
+	return 0
+}
+
+func (x *ClarificationItem) GetAnswer() *ClarificationAnswer {
+	if x != nil {
+		return x.Answer
+	}
+	return nil
+}
+
+func (x *ClarificationItem) GetAnsweredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AnsweredAt
+	}
+	return nil
+}
+
+func (x *ClarificationItem) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+// One questionnaire: the follow-up questions from one run of one
+// posting.
+type ClarificationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire's id.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The submitted posting it belongs to.
+	SubmissionId string `protobuf:"bytes,2,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	// The run that asked.
+	RunId string `protobuf:"bytes,3,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// That run's number among the posting's runs.
+	Attempt int32 `protobuf:"varint,4,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// The role as the submitter named it, or the posting's first line.
+	RoleTitle string `protobuf:"bytes,5,opt,name=role_title,json=roleTitle,proto3" json:"role_title,omitempty"`
+	// The employer as the submitter named it, if they did.
+	Employer string `protobuf:"bytes,6,opt,name=employer,proto3" json:"employer,omitempty"`
+	// sent while it takes answers; answered once submitted; expired when
+	// the time limit passed or a later run replaced it.
+	Status string `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	// Whether the posting's fit is withheld while it is open.
+	Held bool `protobuf:"varint,8,opt,name=held,proto3" json:"held,omitempty"`
+	// Who asked: system or candidate.
+	AskedBy string `protobuf:"bytes,9,opt,name=asked_by,json=askedBy,proto3" json:"asked_by,omitempty"`
+	// When the questions were written.
+	GeneratedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
+	// When open questions are closed unanswered; unset when there is no
+	// limit.
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// When the answers were submitted.
+	AnsweredAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=answered_at,json=answeredAt,proto3" json:"answered_at,omitempty"`
+	// When the run that closed it finished with it.
+	ClosedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	// How it closed: answered, expired, superseded.
+	ClosedReason string `protobuf:"bytes,14,opt,name=closed_reason,json=closedReason,proto3" json:"closed_reason,omitempty"`
+	// How many questions it holds.
+	ItemCount int32 `protobuf:"varint,15,opt,name=item_count,json=itemCount,proto3" json:"item_count,omitempty"`
+	// How many are still unanswered.
+	PendingCount int32 `protobuf:"varint,16,opt,name=pending_count,json=pendingCount,proto3" json:"pending_count,omitempty"`
+	// The questions. Sent by GetClarificationRequest, and by the calls
+	// that change one; a listing leaves it empty.
+	Items         []*ClarificationItem `protobuf:"bytes,17,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClarificationRequest) Reset() {
+	*x = ClarificationRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClarificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClarificationRequest) ProtoMessage() {}
+
+func (x *ClarificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClarificationRequest.ProtoReflect.Descriptor instead.
+func (*ClarificationRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ClarificationRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetAttempt() int32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *ClarificationRequest) GetRoleTitle() string {
+	if x != nil {
+		return x.RoleTitle
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetEmployer() string {
+	if x != nil {
+		return x.Employer
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetHeld() bool {
+	if x != nil {
+		return x.Held
+	}
+	return false
+}
+
+func (x *ClarificationRequest) GetAskedBy() string {
+	if x != nil {
+		return x.AskedBy
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetGeneratedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GeneratedAt
+	}
+	return nil
+}
+
+func (x *ClarificationRequest) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *ClarificationRequest) GetAnsweredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AnsweredAt
+	}
+	return nil
+}
+
+func (x *ClarificationRequest) GetClosedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return nil
+}
+
+func (x *ClarificationRequest) GetClosedReason() string {
+	if x != nil {
+		return x.ClosedReason
+	}
+	return ""
+}
+
+func (x *ClarificationRequest) GetItemCount() int32 {
+	if x != nil {
+		return x.ItemCount
+	}
+	return 0
+}
+
+func (x *ClarificationRequest) GetPendingCount() int32 {
+	if x != nil {
+		return x.PendingCount
+	}
+	return 0
+}
+
+func (x *ClarificationRequest) GetItems() []*ClarificationItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+// Which questionnaires to list.
+type ListClarificationRequestsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only those still taking answers.
+	OpenOnly      bool `protobuf:"varint,1,opt,name=open_only,json=openOnly,proto3" json:"open_only,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListClarificationRequestsRequest) Reset() {
+	*x = ListClarificationRequestsRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListClarificationRequestsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListClarificationRequestsRequest) ProtoMessage() {}
+
+func (x *ListClarificationRequestsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListClarificationRequestsRequest.ProtoReflect.Descriptor instead.
+func (*ListClarificationRequestsRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListClarificationRequestsRequest) GetOpenOnly() bool {
+	if x != nil {
+		return x.OpenOnly
+	}
+	return false
+}
+
+// The questionnaires, newest first.
+type ListClarificationRequestsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaires, without their questions.
+	Requests      []*ClarificationRequest `protobuf:"bytes,1,rep,name=requests,proto3" json:"requests,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListClarificationRequestsResponse) Reset() {
+	*x = ListClarificationRequestsResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListClarificationRequestsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListClarificationRequestsResponse) ProtoMessage() {}
+
+func (x *ListClarificationRequestsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListClarificationRequestsResponse.ProtoReflect.Descriptor instead.
+func (*ListClarificationRequestsResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ListClarificationRequestsResponse) GetRequests() []*ClarificationRequest {
+	if x != nil {
+		return x.Requests
+	}
+	return nil
+}
+
+// Names one questionnaire.
+type GetClarificationRequestRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire's id.
+	ClarificationRequestId string `protobuf:"bytes,1,opt,name=clarification_request_id,json=clarificationRequestId,proto3" json:"clarification_request_id,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *GetClarificationRequestRequest) Reset() {
+	*x = GetClarificationRequestRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClarificationRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClarificationRequestRequest) ProtoMessage() {}
+
+func (x *GetClarificationRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClarificationRequestRequest.ProtoReflect.Descriptor instead.
+func (*GetClarificationRequestRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *GetClarificationRequestRequest) GetClarificationRequestId() string {
+	if x != nil {
+		return x.ClarificationRequestId
+	}
+	return ""
+}
+
+// The questionnaire with its questions.
+type GetClarificationRequestResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire.
+	Request       *ClarificationRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetClarificationRequestResponse) Reset() {
+	*x = GetClarificationRequestResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClarificationRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClarificationRequestResponse) ProtoMessage() {}
+
+func (x *GetClarificationRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClarificationRequestResponse.ProtoReflect.Descriptor instead.
+func (*GetClarificationRequestResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *GetClarificationRequestResponse) GetRequest() *ClarificationRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
+// Asks for follow-up questions on a posting's newest record.
+type RequestClarificationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The submitted posting's id.
+	SubmissionId  string `protobuf:"bytes,1,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestClarificationRequest) Reset() {
+	*x = RequestClarificationRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestClarificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestClarificationRequest) ProtoMessage() {}
+
+func (x *RequestClarificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestClarificationRequest.ProtoReflect.Descriptor instead.
+func (*RequestClarificationRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *RequestClarificationRequest) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+// The questionnaire as it now stands.
+type RequestClarificationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire, with its questions.
+	Request *ClarificationRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	// How many questions this call added.
+	Added         int32 `protobuf:"varint,2,opt,name=added,proto3" json:"added,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestClarificationResponse) Reset() {
+	*x = RequestClarificationResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestClarificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestClarificationResponse) ProtoMessage() {}
+
+func (x *RequestClarificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestClarificationResponse.ProtoReflect.Descriptor instead.
+func (*RequestClarificationResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RequestClarificationResponse) GetRequest() *ClarificationRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
+func (x *RequestClarificationResponse) GetAdded() int32 {
+	if x != nil {
+		return x.Added
+	}
+	return 0
+}
+
+// One answer to one question.
+type AnswerClarificationItemRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The question's id.
+	ClarificationItemId string `protobuf:"bytes,1,opt,name=clarification_item_id,json=clarificationItemId,proto3" json:"clarification_item_id,omitempty"`
+	// The answer: status answered, not_applicable or declined, the values
+	// entered and the note.
+	Answer        *ClarificationAnswer `protobuf:"bytes,2,opt,name=answer,proto3" json:"answer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnswerClarificationItemRequest) Reset() {
+	*x = AnswerClarificationItemRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnswerClarificationItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnswerClarificationItemRequest) ProtoMessage() {}
+
+func (x *AnswerClarificationItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnswerClarificationItemRequest.ProtoReflect.Descriptor instead.
+func (*AnswerClarificationItemRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *AnswerClarificationItemRequest) GetClarificationItemId() string {
+	if x != nil {
+		return x.ClarificationItemId
+	}
+	return ""
+}
+
+func (x *AnswerClarificationItemRequest) GetAnswer() *ClarificationAnswer {
+	if x != nil {
+		return x.Answer
+	}
+	return nil
+}
+
+// The question as saved.
+type AnswerClarificationItemResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The question with its answer.
+	Item *ClarificationItem `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	// How many of the questionnaire's questions are still unanswered.
+	PendingCount  int32 `protobuf:"varint,2,opt,name=pending_count,json=pendingCount,proto3" json:"pending_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnswerClarificationItemResponse) Reset() {
+	*x = AnswerClarificationItemResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnswerClarificationItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnswerClarificationItemResponse) ProtoMessage() {}
+
+func (x *AnswerClarificationItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnswerClarificationItemResponse.ProtoReflect.Descriptor instead.
+func (*AnswerClarificationItemResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *AnswerClarificationItemResponse) GetItem() *ClarificationItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+func (x *AnswerClarificationItemResponse) GetPendingCount() int32 {
+	if x != nil {
+		return x.PendingCount
+	}
+	return 0
+}
+
+// Names the questionnaire to submit.
+type SubmitClarificationAnswersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire's id.
+	ClarificationRequestId string `protobuf:"bytes,1,opt,name=clarification_request_id,json=clarificationRequestId,proto3" json:"clarification_request_id,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *SubmitClarificationAnswersRequest) Reset() {
+	*x = SubmitClarificationAnswersRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitClarificationAnswersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitClarificationAnswersRequest) ProtoMessage() {}
+
+func (x *SubmitClarificationAnswersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitClarificationAnswersRequest.ProtoReflect.Descriptor instead.
+func (*SubmitClarificationAnswersRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *SubmitClarificationAnswersRequest) GetClarificationRequestId() string {
+	if x != nil {
+		return x.ClarificationRequestId
+	}
+	return ""
+}
+
+// The questionnaire as submitted.
+type SubmitClarificationAnswersResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The questionnaire, closed to further answers.
+	Request *ClarificationRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	// Whether a run was started to judge the answered requirements again.
+	// False without a model.
+	RunStarted    bool `protobuf:"varint,2,opt,name=run_started,json=runStarted,proto3" json:"run_started,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitClarificationAnswersResponse) Reset() {
+	*x = SubmitClarificationAnswersResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitClarificationAnswersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitClarificationAnswersResponse) ProtoMessage() {}
+
+func (x *SubmitClarificationAnswersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitClarificationAnswersResponse.ProtoReflect.Descriptor instead.
+func (*SubmitClarificationAnswersResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *SubmitClarificationAnswersResponse) GetRequest() *ClarificationRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
+func (x *SubmitClarificationAnswersResponse) GetRunStarted() bool {
+	if x != nil {
+		return x.RunStarted
+	}
+	return false
+}
+
+// Names the answer to take back.
+type WithdrawClarificationAnswerRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The question's id.
+	ClarificationItemId string `protobuf:"bytes,1,opt,name=clarification_item_id,json=clarificationItemId,proto3" json:"clarification_item_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *WithdrawClarificationAnswerRequest) Reset() {
+	*x = WithdrawClarificationAnswerRequest{}
+	mi := &file_career_v1_hiring_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WithdrawClarificationAnswerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WithdrawClarificationAnswerRequest) ProtoMessage() {}
+
+func (x *WithdrawClarificationAnswerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WithdrawClarificationAnswerRequest.ProtoReflect.Descriptor instead.
+func (*WithdrawClarificationAnswerRequest) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *WithdrawClarificationAnswerRequest) GetClarificationItemId() string {
+	if x != nil {
+		return x.ClarificationItemId
+	}
+	return ""
+}
+
+// The question after the withdrawal.
+type WithdrawClarificationAnswerResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The question, its answer withdrawn.
+	Item *ClarificationItem `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	// How many judgments were marked stale because they cite the answer.
+	StaleJudgments int32 `protobuf:"varint,2,opt,name=stale_judgments,json=staleJudgments,proto3" json:"stale_judgments,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WithdrawClarificationAnswerResponse) Reset() {
+	*x = WithdrawClarificationAnswerResponse{}
+	mi := &file_career_v1_hiring_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WithdrawClarificationAnswerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WithdrawClarificationAnswerResponse) ProtoMessage() {}
+
+func (x *WithdrawClarificationAnswerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_v1_hiring_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WithdrawClarificationAnswerResponse.ProtoReflect.Descriptor instead.
+func (*WithdrawClarificationAnswerResponse) Descriptor() ([]byte, []int) {
+	return file_career_v1_hiring_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *WithdrawClarificationAnswerResponse) GetItem() *ClarificationItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+func (x *WithdrawClarificationAnswerResponse) GetStaleJudgments() int32 {
+	if x != nil {
+		return x.StaleJudgments
+	}
+	return 0
 }
 
 var File_career_v1_hiring_proto protoreflect.FileDescriptor
@@ -3360,9 +4919,12 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\breleased\x18\x01 \x03(\v2\x16.career.v1.RequirementR\breleased\x12\x1f\n" +
 	"\vrun_started\x18\x02 \x01(\bR\n" +
 	"runStarted\x12#\n" +
-	"\rsubmission_id\x18\x03 \x01(\tR\fsubmissionId\"X\n" +
+	"\rsubmission_id\x18\x03 \x01(\tR\fsubmissionId\"\xdd\x01\n" +
 	"\x0eHiringSettings\x12F\n" +
-	"\x12preferred_fraction\x18\x01 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x11preferredFraction\"\x1a\n" +
+	"\x12preferred_fraction\x18\x01 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x11preferredFraction\x122\n" +
+	"\x12clarification_auto\x18\x02 \x01(\bH\x00R\x11clarificationAuto\x88\x01\x01\x128\n" +
+	"\x12clarification_days\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x0e(\x00R\x11clarificationDaysB\x15\n" +
+	"\x13_clarification_auto\"\x1a\n" +
 	"\x18GetHiringSettingsRequest\"R\n" +
 	"\x19GetHiringSettingsResponse\x125\n" +
 	"\bsettings\x18\x01 \x01(\v2\x19.career.v1.HiringSettingsR\bsettings\"Y\n" +
@@ -3379,14 +4941,15 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x10equivalent_share\x18\x04 \x01(\x01R\x0fequivalentShare\x12.\n" +
 	"\x13self_attested_share\x18\x05 \x01(\x01R\x11selfAttestedShare\x12'\n" +
 	"\x0fformula_version\x18\x06 \x01(\tR\x0eformulaVersion\x12-\n" +
-	"\x12preferred_fraction\x18\a \x01(\x01R\x11preferredFraction\"\x8d\x01\n" +
+	"\x12preferred_fraction\x18\a \x01(\x01R\x11preferredFraction\"\xab\x01\n" +
 	"\vEvidenceRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vsource_kind\x18\x02 \x01(\tR\n" +
 	"sourceKind\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x19\n" +
 	"\bchunk_id\x18\x04 \x01(\x03R\achunkId\x12\x1c\n" +
-	"\twithdrawn\x18\x05 \x01(\bR\twithdrawn\"\xa0\x02\n" +
+	"\twithdrawn\x18\x05 \x01(\bR\twithdrawn\x12\x1c\n" +
+	"\tstatement\x18\x06 \x01(\tR\tstatement\"\xa0\x02\n" +
 	"\x0eRuleAdjustment\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12!\n" +
 	"\frule_version\x18\x02 \x01(\tR\vruleVersion\x12-\n" +
@@ -3421,7 +4984,7 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x05basis\x18\x03 \x01(\tR\x05basis\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\x12*\n" +
 	"\x02at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12!\n" +
-	"\fsame_version\x18\x06 \x01(\bR\vsameVersion\"\x9b\a\n" +
+	"\fsame_version\x18\x06 \x01(\bR\vsameVersion\"\xfa\a\n" +
 	"\bJudgment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x0erequirement_id\x18\x02 \x01(\tR\rrequirementId\x120\n" +
@@ -3446,7 +5009,39 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\rkeyword_terms\x18\x14 \x03(\tR\fkeywordTerms\x12\x1f\n" +
 	"\vdecision_id\x18\x15 \x01(\x03R\n" +
 	"decisionId\x12E\n" +
-	"\x10earlier_override\x18\x16 \x01(\v2\x1a.career.v1.EarlierOverrideR\x0fearlierOverride\"\x8f\b\n" +
+	"\x10earlier_override\x18\x16 \x01(\v2\x1a.career.v1.EarlierOverrideR\x0fearlierOverride\x128\n" +
+	"\tfollow_up\x18\x17 \x01(\v2\x1b.career.v1.JudgmentFollowUpR\bfollowUp\x12#\n" +
+	"\rself_attested\x18\x18 \x01(\bR\fselfAttested\"\x99\x02\n" +
+	"\x10JudgmentFollowUp\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1a\n" +
+	"\bquestion\x18\x02 \x01(\tR\bquestion\x12\x1c\n" +
+	"\tstatement\x18\x03 \x01(\tR\tstatement\x12;\n" +
+	"\vanswered_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"answeredAt\x12#\n" +
+	"\rasked_attempt\x18\x05 \x01(\x05R\faskedAttempt\x12\x19\n" +
+	"\basked_by\x18\x06 \x01(\tR\aaskedBy\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\a \x01(\tR\trequestId\x12\x17\n" +
+	"\aitem_id\x18\b \x01(\tR\x06itemId\"\xbc\x04\n" +
+	"\x13RecordClarification\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04held\x18\x03 \x01(\bR\x04held\x12#\n" +
+	"\rclosed_reason\x18\x04 \x01(\tR\fclosedReason\x12\x14\n" +
+	"\x05asked\x18\x05 \x01(\x05R\x05asked\x12\x18\n" +
+	"\apending\x18\x06 \x01(\x05R\apending\x12\x1a\n" +
+	"\banswered\x18\a \x01(\x05R\banswered\x12=\n" +
+	"\fgenerated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAt\x129\n" +
+	"\n" +
+	"expires_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12;\n" +
+	"\vanswered_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"answeredAt\x127\n" +
+	"\tclosed_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\bclosedAt\x12#\n" +
+	"\rasked_attempt\x18\f \x01(\x05R\faskedAttempt\x12'\n" +
+	"\x0fclosing_attempt\x18\r \x01(\x05R\x0eclosingAttempt\x12+\n" +
+	"\x12closed_by_this_run\x18\x0e \x01(\bR\x0fclosedByThisRun\"\x84\t\n" +
 	"\vMatchRecord\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
 	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12#\n" +
@@ -3478,7 +5073,9 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x05model\x18\x15 \x01(\tR\x05model\x12/\n" +
 	"\x13requirements_edited\x18\x16 \x01(\bR\x12requirementsEdited\x12*\n" +
 	"\x0ereviewed_score\x18\x17 \x01(\x01H\x01R\rreviewedScore\x88\x01\x01\x12!\n" +
-	"\freviewed_fit\x18\x18 \x01(\tR\vreviewedFit\x1a;\n" +
+	"\freviewed_fit\x18\x18 \x01(\tR\vreviewedFit\x12D\n" +
+	"\rclarification\x18\x19 \x01(\v2\x1e.career.v1.RecordClarificationR\rclarification\x12-\n" +
+	"\x12awaiting_candidate\x18\x1a \x01(\bR\x11awaitingCandidate\x1a;\n" +
 	"\rVersionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
@@ -3490,7 +5087,7 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x15GetMatchRecordRequest\x12.\n" +
 	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\x12\x1e\n" +
 	"\x06run_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\x05runId\x12\x1b\n" +
-	"\tas_member\x18\x03 \x01(\bR\basMember\"\xcc\x05\n" +
+	"\tas_member\x18\x03 \x01(\bR\basMember\"\xf1\x05\n" +
 	"\x16GetMatchRecordResponse\x12.\n" +
 	"\x06record\x18\x01 \x01(\v2\x16.career.v1.MatchRecordR\x06record\x12<\n" +
 	"\x0edeterminations\x18\x02 \x03(\v2\x14.career.v1.VocabCodeR\x0edeterminations\x12*\n" +
@@ -3505,7 +5102,8 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	" \x03(\v2\x19.career.v1.OverrideChoiceR\x0foverrideChoices\x12<\n" +
 	"\rreview_resume\x18\v \x01(\v2\x17.career.v1.ReviewResumeR\freviewResume\x125\n" +
 	"\x17can_write_review_resume\x18\f \x01(\bR\x14canWriteReviewResume\x12,\n" +
-	"\x12review_resume_note\x18\r \x01(\tR\x10reviewResumeNote\"\xf0\x01\n" +
+	"\x12review_resume_note\x18\r \x01(\tR\x10reviewResumeNote\x12#\n" +
+	"\raskable_count\x18\x0e \x01(\x05R\faskableCount\"\xf0\x01\n" +
 	"\x17OverrideJudgmentRequest\x12*\n" +
 	"\vjudgment_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
 	"judgmentId\x12-\n" +
@@ -3533,12 +5131,100 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x18WriteReviewResumeRequest\x12 \n" +
 	"\x06run_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x05runId\"Y\n" +
 	"\x19WriteReviewResumeResponse\x12<\n" +
-	"\rreview_resume\x18\x01 \x01(\v2\x17.career.v1.ReviewResumeR\freviewResume*\x94\x01\n" +
+	"\rreview_resume\x18\x01 \x01(\v2\x17.career.v1.ReviewResumeR\freviewResume\"Y\n" +
+	"\x13ClarificationOption\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x16\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\"\xe7\x01\n" +
+	"\x12ClarificationField\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x12\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x1a\n" +
+	"\brequired\x18\x04 \x01(\bR\brequired\x128\n" +
+	"\aoptions\x18\x05 \x03(\v2\x1e.career.v1.ClarificationOptionR\aoptions\x12\x10\n" +
+	"\x03max\x18\x06 \x01(\x01R\x03max\x12\x17\n" +
+	"\amax_len\x18\a \x01(\x05R\x06maxLen\x12\x12\n" +
+	"\x04hint\x18\b \x01(\tR\x04hint\"\xe0\x01\n" +
+	"\x13ClarificationAnswer\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12B\n" +
+	"\x06values\x18\x02 \x03(\v2*.career.v1.ClarificationAnswer.ValuesEntryR\x06values\x12\x1b\n" +
+	"\tfree_text\x18\x03 \x01(\tR\bfreeText\x1aP\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12+\n" +
+	"\x05value\x18\x02 \x01(\v2\x15.career.v1.StringListR\x05value:\x028\x01\"\xd1\x03\n" +
+	"\x11ClarificationItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x120\n" +
+	"\x14requirement_local_id\x18\x02 \x01(\tR\x12requirementLocalId\x12!\n" +
+	"\fsource_quote\x18\x03 \x01(\tR\vsourceQuote\x12\x1f\n" +
+	"\vanswer_type\x18\x04 \x01(\tR\n" +
+	"answerType\x12\x1a\n" +
+	"\bquestion\x18\x05 \x01(\tR\bquestion\x125\n" +
+	"\x06fields\x18\x06 \x03(\v2\x1d.career.v1.ClarificationFieldR\x06fields\x12,\n" +
+	"\x12free_text_required\x18\a \x01(\bR\x10freeTextRequired\x12\"\n" +
+	"\rfree_text_max\x18\b \x01(\x05R\vfreeTextMax\x126\n" +
+	"\x06answer\x18\t \x01(\v2\x1e.career.v1.ClarificationAnswerR\x06answer\x12;\n" +
+	"\vanswered_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"answeredAt\x12\x1c\n" +
+	"\tstatement\x18\v \x01(\tR\tstatement\"\x8b\x05\n" +
+	"\x14ClarificationRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rsubmission_id\x18\x02 \x01(\tR\fsubmissionId\x12\x15\n" +
+	"\x06run_id\x18\x03 \x01(\tR\x05runId\x12\x18\n" +
+	"\aattempt\x18\x04 \x01(\x05R\aattempt\x12\x1d\n" +
+	"\n" +
+	"role_title\x18\x05 \x01(\tR\troleTitle\x12\x1a\n" +
+	"\bemployer\x18\x06 \x01(\tR\bemployer\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12\x12\n" +
+	"\x04held\x18\b \x01(\bR\x04held\x12\x19\n" +
+	"\basked_by\x18\t \x01(\tR\aaskedBy\x12=\n" +
+	"\fgenerated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\vgeneratedAt\x129\n" +
+	"\n" +
+	"expires_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12;\n" +
+	"\vanswered_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"answeredAt\x127\n" +
+	"\tclosed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\bclosedAt\x12#\n" +
+	"\rclosed_reason\x18\x0e \x01(\tR\fclosedReason\x12\x1d\n" +
+	"\n" +
+	"item_count\x18\x0f \x01(\x05R\titemCount\x12#\n" +
+	"\rpending_count\x18\x10 \x01(\x05R\fpendingCount\x122\n" +
+	"\x05items\x18\x11 \x03(\v2\x1c.career.v1.ClarificationItemR\x05items\"?\n" +
+	" ListClarificationRequestsRequest\x12\x1b\n" +
+	"\topen_only\x18\x01 \x01(\bR\bopenOnly\"`\n" +
+	"!ListClarificationRequestsResponse\x12;\n" +
+	"\brequests\x18\x01 \x03(\v2\x1f.career.v1.ClarificationRequestR\brequests\"d\n" +
+	"\x1eGetClarificationRequestRequest\x12B\n" +
+	"\x18clarification_request_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16clarificationRequestId\"\\\n" +
+	"\x1fGetClarificationRequestResponse\x129\n" +
+	"\arequest\x18\x01 \x01(\v2\x1f.career.v1.ClarificationRequestR\arequest\"M\n" +
+	"\x1bRequestClarificationRequest\x12.\n" +
+	"\rsubmission_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\fsubmissionId\"o\n" +
+	"\x1cRequestClarificationResponse\x129\n" +
+	"\arequest\x18\x01 \x01(\v2\x1f.career.v1.ClarificationRequestR\arequest\x12\x14\n" +
+	"\x05added\x18\x02 \x01(\x05R\x05added\"\x9e\x01\n" +
+	"\x1eAnswerClarificationItemRequest\x12<\n" +
+	"\x15clarification_item_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13clarificationItemId\x12>\n" +
+	"\x06answer\x18\x02 \x01(\v2\x1e.career.v1.ClarificationAnswerB\x06\xbaH\x03\xc8\x01\x01R\x06answer\"x\n" +
+	"\x1fAnswerClarificationItemResponse\x120\n" +
+	"\x04item\x18\x01 \x01(\v2\x1c.career.v1.ClarificationItemR\x04item\x12#\n" +
+	"\rpending_count\x18\x02 \x01(\x05R\fpendingCount\"g\n" +
+	"!SubmitClarificationAnswersRequest\x12B\n" +
+	"\x18clarification_request_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x16clarificationRequestId\"\x80\x01\n" +
+	"\"SubmitClarificationAnswersResponse\x129\n" +
+	"\arequest\x18\x01 \x01(\v2\x1f.career.v1.ClarificationRequestR\arequest\x12\x1f\n" +
+	"\vrun_started\x18\x02 \x01(\bR\n" +
+	"runStarted\"b\n" +
+	"\"WithdrawClarificationAnswerRequest\x12<\n" +
+	"\x15clarification_item_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13clarificationItemId\"\x80\x01\n" +
+	"#WithdrawClarificationAnswerResponse\x120\n" +
+	"\x04item\x18\x01 \x01(\v2\x1c.career.v1.ClarificationItemR\x04item\x12'\n" +
+	"\x0fstale_judgments\x18\x02 \x01(\x05R\x0estaleJudgments*\x94\x01\n" +
 	"\x11RequirementStatus\x12\"\n" +
 	"\x1eREQUIREMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18REQUIREMENT_STATUS_DRAFT\x10\x01\x12\x1d\n" +
 	"\x19REQUIREMENT_STATUS_ACTIVE\x10\x02\x12\x1e\n" +
-	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xd6\x06\n" +
+	"\x1aREQUIREMENT_STATUS_RETIRED\x10\x032\xd3\f\n" +
 	"\rHiringService\x12e\n" +
 	"\x10ListRequirements\x12\".career.v1.ListRequirementsRequest\x1a#.career.v1.ListRequirementsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12h\n" +
 	"\x11UpdateRequirement\x12#.career.v1.UpdateRequirementRequest\x1a$.career.v1.UpdateRequirementResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12n\n" +
@@ -3547,7 +5233,13 @@ const file_career_v1_hiring_proto_rawDesc = "" +
 	"\x11SetHiringSettings\x12#.career.v1.SetHiringSettingsRequest\x1a$.career.v1.SetHiringSettingsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12_\n" +
 	"\x0eGetMatchRecord\x12 .career.v1.GetMatchRecordRequest\x1a!.career.v1.GetMatchRecordResponse\"\b\x80\xb5\x18\x02\xa0\xb5\x18\x01\x12e\n" +
 	"\x10OverrideJudgment\x12\".career.v1.OverrideJudgmentRequest\x1a#.career.v1.OverrideJudgmentResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12h\n" +
-	"\x11WriteReviewResume\x12#.career.v1.WriteReviewResumeRequest\x1a$.career.v1.WriteReviewResumeResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
+	"\x11WriteReviewResume\x12#.career.v1.WriteReviewResumeRequest\x1a$.career.v1.WriteReviewResumeResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\x80\x01\n" +
+	"\x19ListClarificationRequests\x12+.career.v1.ListClarificationRequestsRequest\x1a,.career.v1.ListClarificationRequestsResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12z\n" +
+	"\x17GetClarificationRequest\x12).career.v1.GetClarificationRequestRequest\x1a*.career.v1.GetClarificationRequestResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x01\x12q\n" +
+	"\x14RequestClarification\x12&.career.v1.RequestClarificationRequest\x1a'.career.v1.RequestClarificationResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12z\n" +
+	"\x17AnswerClarificationItem\x12).career.v1.AnswerClarificationItemRequest\x1a*.career.v1.AnswerClarificationItemResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\x83\x01\n" +
+	"\x1aSubmitClarificationAnswers\x12,.career.v1.SubmitClarificationAnswersRequest\x1a-.career.v1.SubmitClarificationAnswersResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02\x12\x86\x01\n" +
+	"\x1bWithdrawClarificationAnswer\x12-.career.v1.WithdrawClarificationAnswerRequest\x1a..career.v1.WithdrawClarificationAnswerResponse\"\b\x80\xb5\x18\x03\xa0\xb5\x18\x02B\xa5\x01\n" +
 	"\rcom.career.v1B\vHiringProtoP\x01ZBgithub.com/reh3376/career-site/services/api/gen/career/v1;careerv1\xa2\x02\x03CXX\xaa\x02\tCareer.V1\xca\x02\tCareer\\V1\xe2\x02\x15Career\\V1\\GPBMetadata\xea\x02\n" +
 	"Career::V1b\x06proto3"
 
@@ -3564,52 +5256,72 @@ func file_career_v1_hiring_proto_rawDescGZIP() []byte {
 }
 
 var file_career_v1_hiring_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_career_v1_hiring_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_career_v1_hiring_proto_goTypes = []any{
-	(RequirementStatus)(0),              // 0: career.v1.RequirementStatus
-	(*ScopeThreshold)(nil),              // 1: career.v1.ScopeThreshold
-	(*Thresholds)(nil),                  // 2: career.v1.Thresholds
-	(*Requirement)(nil),                 // 3: career.v1.Requirement
-	(*StringList)(nil),                  // 4: career.v1.StringList
-	(*RequirementPatch)(nil),            // 5: career.v1.RequirementPatch
-	(*ListRequirementsRequest)(nil),     // 6: career.v1.ListRequirementsRequest
-	(*ListRequirementsResponse)(nil),    // 7: career.v1.ListRequirementsResponse
-	(*VocabCode)(nil),                   // 8: career.v1.VocabCode
-	(*UpdateRequirementRequest)(nil),    // 9: career.v1.UpdateRequirementRequest
-	(*UpdateRequirementResponse)(nil),   // 10: career.v1.UpdateRequirementResponse
-	(*ReleaseRequirementsRequest)(nil),  // 11: career.v1.ReleaseRequirementsRequest
-	(*ReleaseRequirementsResponse)(nil), // 12: career.v1.ReleaseRequirementsResponse
-	(*HiringSettings)(nil),              // 13: career.v1.HiringSettings
-	(*GetHiringSettingsRequest)(nil),    // 14: career.v1.GetHiringSettingsRequest
-	(*GetHiringSettingsResponse)(nil),   // 15: career.v1.GetHiringSettingsResponse
-	(*SetHiringSettingsRequest)(nil),    // 16: career.v1.SetHiringSettingsRequest
-	(*SetHiringSettingsResponse)(nil),   // 17: career.v1.SetHiringSettingsResponse
-	(*Coverage)(nil),                    // 18: career.v1.Coverage
-	(*EvidenceRef)(nil),                 // 19: career.v1.EvidenceRef
-	(*RuleAdjustment)(nil),              // 20: career.v1.RuleAdjustment
-	(*ReportedFacts)(nil),               // 21: career.v1.ReportedFacts
-	(*JudgmentOverride)(nil),            // 22: career.v1.JudgmentOverride
-	(*EarlierOverride)(nil),             // 23: career.v1.EarlierOverride
-	(*Judgment)(nil),                    // 24: career.v1.Judgment
-	(*MatchRecord)(nil),                 // 25: career.v1.MatchRecord
-	(*OverrideChoice)(nil),              // 26: career.v1.OverrideChoice
-	(*GetMatchRecordRequest)(nil),       // 27: career.v1.GetMatchRecordRequest
-	(*GetMatchRecordResponse)(nil),      // 28: career.v1.GetMatchRecordResponse
-	(*OverrideJudgmentRequest)(nil),     // 29: career.v1.OverrideJudgmentRequest
-	(*OverrideJudgmentResponse)(nil),    // 30: career.v1.OverrideJudgmentResponse
-	(*ReviewResume)(nil),                // 31: career.v1.ReviewResume
-	(*WriteReviewResumeRequest)(nil),    // 32: career.v1.WriteReviewResumeRequest
-	(*WriteReviewResumeResponse)(nil),   // 33: career.v1.WriteReviewResumeResponse
-	nil,                                 // 34: career.v1.MatchRecord.VersionsEntry
-	(*timestamppb.Timestamp)(nil),       // 35: google.protobuf.Timestamp
+	(RequirementStatus)(0),                      // 0: career.v1.RequirementStatus
+	(*ScopeThreshold)(nil),                      // 1: career.v1.ScopeThreshold
+	(*Thresholds)(nil),                          // 2: career.v1.Thresholds
+	(*Requirement)(nil),                         // 3: career.v1.Requirement
+	(*StringList)(nil),                          // 4: career.v1.StringList
+	(*RequirementPatch)(nil),                    // 5: career.v1.RequirementPatch
+	(*ListRequirementsRequest)(nil),             // 6: career.v1.ListRequirementsRequest
+	(*ListRequirementsResponse)(nil),            // 7: career.v1.ListRequirementsResponse
+	(*VocabCode)(nil),                           // 8: career.v1.VocabCode
+	(*UpdateRequirementRequest)(nil),            // 9: career.v1.UpdateRequirementRequest
+	(*UpdateRequirementResponse)(nil),           // 10: career.v1.UpdateRequirementResponse
+	(*ReleaseRequirementsRequest)(nil),          // 11: career.v1.ReleaseRequirementsRequest
+	(*ReleaseRequirementsResponse)(nil),         // 12: career.v1.ReleaseRequirementsResponse
+	(*HiringSettings)(nil),                      // 13: career.v1.HiringSettings
+	(*GetHiringSettingsRequest)(nil),            // 14: career.v1.GetHiringSettingsRequest
+	(*GetHiringSettingsResponse)(nil),           // 15: career.v1.GetHiringSettingsResponse
+	(*SetHiringSettingsRequest)(nil),            // 16: career.v1.SetHiringSettingsRequest
+	(*SetHiringSettingsResponse)(nil),           // 17: career.v1.SetHiringSettingsResponse
+	(*Coverage)(nil),                            // 18: career.v1.Coverage
+	(*EvidenceRef)(nil),                         // 19: career.v1.EvidenceRef
+	(*RuleAdjustment)(nil),                      // 20: career.v1.RuleAdjustment
+	(*ReportedFacts)(nil),                       // 21: career.v1.ReportedFacts
+	(*JudgmentOverride)(nil),                    // 22: career.v1.JudgmentOverride
+	(*EarlierOverride)(nil),                     // 23: career.v1.EarlierOverride
+	(*Judgment)(nil),                            // 24: career.v1.Judgment
+	(*JudgmentFollowUp)(nil),                    // 25: career.v1.JudgmentFollowUp
+	(*RecordClarification)(nil),                 // 26: career.v1.RecordClarification
+	(*MatchRecord)(nil),                         // 27: career.v1.MatchRecord
+	(*OverrideChoice)(nil),                      // 28: career.v1.OverrideChoice
+	(*GetMatchRecordRequest)(nil),               // 29: career.v1.GetMatchRecordRequest
+	(*GetMatchRecordResponse)(nil),              // 30: career.v1.GetMatchRecordResponse
+	(*OverrideJudgmentRequest)(nil),             // 31: career.v1.OverrideJudgmentRequest
+	(*OverrideJudgmentResponse)(nil),            // 32: career.v1.OverrideJudgmentResponse
+	(*ReviewResume)(nil),                        // 33: career.v1.ReviewResume
+	(*WriteReviewResumeRequest)(nil),            // 34: career.v1.WriteReviewResumeRequest
+	(*WriteReviewResumeResponse)(nil),           // 35: career.v1.WriteReviewResumeResponse
+	(*ClarificationOption)(nil),                 // 36: career.v1.ClarificationOption
+	(*ClarificationField)(nil),                  // 37: career.v1.ClarificationField
+	(*ClarificationAnswer)(nil),                 // 38: career.v1.ClarificationAnswer
+	(*ClarificationItem)(nil),                   // 39: career.v1.ClarificationItem
+	(*ClarificationRequest)(nil),                // 40: career.v1.ClarificationRequest
+	(*ListClarificationRequestsRequest)(nil),    // 41: career.v1.ListClarificationRequestsRequest
+	(*ListClarificationRequestsResponse)(nil),   // 42: career.v1.ListClarificationRequestsResponse
+	(*GetClarificationRequestRequest)(nil),      // 43: career.v1.GetClarificationRequestRequest
+	(*GetClarificationRequestResponse)(nil),     // 44: career.v1.GetClarificationRequestResponse
+	(*RequestClarificationRequest)(nil),         // 45: career.v1.RequestClarificationRequest
+	(*RequestClarificationResponse)(nil),        // 46: career.v1.RequestClarificationResponse
+	(*AnswerClarificationItemRequest)(nil),      // 47: career.v1.AnswerClarificationItemRequest
+	(*AnswerClarificationItemResponse)(nil),     // 48: career.v1.AnswerClarificationItemResponse
+	(*SubmitClarificationAnswersRequest)(nil),   // 49: career.v1.SubmitClarificationAnswersRequest
+	(*SubmitClarificationAnswersResponse)(nil),  // 50: career.v1.SubmitClarificationAnswersResponse
+	(*WithdrawClarificationAnswerRequest)(nil),  // 51: career.v1.WithdrawClarificationAnswerRequest
+	(*WithdrawClarificationAnswerResponse)(nil), // 52: career.v1.WithdrawClarificationAnswerResponse
+	nil,                           // 53: career.v1.MatchRecord.VersionsEntry
+	nil,                           // 54: career.v1.ClarificationAnswer.ValuesEntry
+	(*timestamppb.Timestamp)(nil), // 55: google.protobuf.Timestamp
 }
 var file_career_v1_hiring_proto_depIdxs = []int32{
 	1,  // 0: career.v1.Thresholds.min_scope:type_name -> career.v1.ScopeThreshold
 	2,  // 1: career.v1.Requirement.thresholds:type_name -> career.v1.Thresholds
-	35, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
+	55, // 2: career.v1.Requirement.edited_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: career.v1.Requirement.status:type_name -> career.v1.RequirementStatus
-	35, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
-	35, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
+	55, // 4: career.v1.Requirement.released_at:type_name -> google.protobuf.Timestamp
+	55, // 5: career.v1.Requirement.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 6: career.v1.RequirementPatch.thresholds:type_name -> career.v1.Thresholds
 	4,  // 7: career.v1.RequirementPatch.alternatives:type_name -> career.v1.StringList
 	4,  // 8: career.v1.RequirementPatch.named_parties:type_name -> career.v1.StringList
@@ -3626,53 +5338,90 @@ var file_career_v1_hiring_proto_depIdxs = []int32{
 	13, // 19: career.v1.SetHiringSettingsRequest.settings:type_name -> career.v1.HiringSettings
 	13, // 20: career.v1.SetHiringSettingsResponse.settings:type_name -> career.v1.HiringSettings
 	1,  // 21: career.v1.ReportedFacts.stated_scope:type_name -> career.v1.ScopeThreshold
-	35, // 22: career.v1.JudgmentOverride.at:type_name -> google.protobuf.Timestamp
-	35, // 23: career.v1.EarlierOverride.at:type_name -> google.protobuf.Timestamp
+	55, // 22: career.v1.JudgmentOverride.at:type_name -> google.protobuf.Timestamp
+	55, // 23: career.v1.EarlierOverride.at:type_name -> google.protobuf.Timestamp
 	22, // 24: career.v1.Judgment.override:type_name -> career.v1.JudgmentOverride
 	19, // 25: career.v1.Judgment.evidence:type_name -> career.v1.EvidenceRef
 	20, // 26: career.v1.Judgment.rule_adjustments:type_name -> career.v1.RuleAdjustment
 	21, // 27: career.v1.Judgment.reported_facts:type_name -> career.v1.ReportedFacts
 	23, // 28: career.v1.Judgment.earlier_override:type_name -> career.v1.EarlierOverride
-	18, // 29: career.v1.MatchRecord.coverage:type_name -> career.v1.Coverage
-	3,  // 30: career.v1.MatchRecord.requirements:type_name -> career.v1.Requirement
-	24, // 31: career.v1.MatchRecord.judgments:type_name -> career.v1.Judgment
-	34, // 32: career.v1.MatchRecord.versions:type_name -> career.v1.MatchRecord.VersionsEntry
-	35, // 33: career.v1.MatchRecord.finished_at:type_name -> google.protobuf.Timestamp
-	25, // 34: career.v1.GetMatchRecordResponse.record:type_name -> career.v1.MatchRecord
-	8,  // 35: career.v1.GetMatchRecordResponse.determinations:type_name -> career.v1.VocabCode
-	8,  // 36: career.v1.GetMatchRecordResponse.bases:type_name -> career.v1.VocabCode
-	8,  // 37: career.v1.GetMatchRecordResponse.uncertainties:type_name -> career.v1.VocabCode
-	8,  // 38: career.v1.GetMatchRecordResponse.types:type_name -> career.v1.VocabCode
-	8,  // 39: career.v1.GetMatchRecordResponse.classes:type_name -> career.v1.VocabCode
-	8,  // 40: career.v1.GetMatchRecordResponse.source_kinds:type_name -> career.v1.VocabCode
-	8,  // 41: career.v1.GetMatchRecordResponse.override_roles:type_name -> career.v1.VocabCode
-	26, // 42: career.v1.GetMatchRecordResponse.override_choices:type_name -> career.v1.OverrideChoice
-	31, // 43: career.v1.GetMatchRecordResponse.review_resume:type_name -> career.v1.ReviewResume
-	25, // 44: career.v1.OverrideJudgmentResponse.record:type_name -> career.v1.MatchRecord
-	35, // 45: career.v1.ReviewResume.requested_at:type_name -> google.protobuf.Timestamp
-	35, // 46: career.v1.ReviewResume.finished_at:type_name -> google.protobuf.Timestamp
-	31, // 47: career.v1.WriteReviewResumeResponse.review_resume:type_name -> career.v1.ReviewResume
-	6,  // 48: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
-	9,  // 49: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
-	11, // 50: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
-	14, // 51: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
-	16, // 52: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
-	27, // 53: career.v1.HiringService.GetMatchRecord:input_type -> career.v1.GetMatchRecordRequest
-	29, // 54: career.v1.HiringService.OverrideJudgment:input_type -> career.v1.OverrideJudgmentRequest
-	32, // 55: career.v1.HiringService.WriteReviewResume:input_type -> career.v1.WriteReviewResumeRequest
-	7,  // 56: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
-	10, // 57: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
-	12, // 58: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
-	15, // 59: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
-	17, // 60: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
-	28, // 61: career.v1.HiringService.GetMatchRecord:output_type -> career.v1.GetMatchRecordResponse
-	30, // 62: career.v1.HiringService.OverrideJudgment:output_type -> career.v1.OverrideJudgmentResponse
-	33, // 63: career.v1.HiringService.WriteReviewResume:output_type -> career.v1.WriteReviewResumeResponse
-	56, // [56:64] is the sub-list for method output_type
-	48, // [48:56] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	25, // 29: career.v1.Judgment.follow_up:type_name -> career.v1.JudgmentFollowUp
+	55, // 30: career.v1.JudgmentFollowUp.answered_at:type_name -> google.protobuf.Timestamp
+	55, // 31: career.v1.RecordClarification.generated_at:type_name -> google.protobuf.Timestamp
+	55, // 32: career.v1.RecordClarification.expires_at:type_name -> google.protobuf.Timestamp
+	55, // 33: career.v1.RecordClarification.answered_at:type_name -> google.protobuf.Timestamp
+	55, // 34: career.v1.RecordClarification.closed_at:type_name -> google.protobuf.Timestamp
+	18, // 35: career.v1.MatchRecord.coverage:type_name -> career.v1.Coverage
+	3,  // 36: career.v1.MatchRecord.requirements:type_name -> career.v1.Requirement
+	24, // 37: career.v1.MatchRecord.judgments:type_name -> career.v1.Judgment
+	53, // 38: career.v1.MatchRecord.versions:type_name -> career.v1.MatchRecord.VersionsEntry
+	55, // 39: career.v1.MatchRecord.finished_at:type_name -> google.protobuf.Timestamp
+	26, // 40: career.v1.MatchRecord.clarification:type_name -> career.v1.RecordClarification
+	27, // 41: career.v1.GetMatchRecordResponse.record:type_name -> career.v1.MatchRecord
+	8,  // 42: career.v1.GetMatchRecordResponse.determinations:type_name -> career.v1.VocabCode
+	8,  // 43: career.v1.GetMatchRecordResponse.bases:type_name -> career.v1.VocabCode
+	8,  // 44: career.v1.GetMatchRecordResponse.uncertainties:type_name -> career.v1.VocabCode
+	8,  // 45: career.v1.GetMatchRecordResponse.types:type_name -> career.v1.VocabCode
+	8,  // 46: career.v1.GetMatchRecordResponse.classes:type_name -> career.v1.VocabCode
+	8,  // 47: career.v1.GetMatchRecordResponse.source_kinds:type_name -> career.v1.VocabCode
+	8,  // 48: career.v1.GetMatchRecordResponse.override_roles:type_name -> career.v1.VocabCode
+	28, // 49: career.v1.GetMatchRecordResponse.override_choices:type_name -> career.v1.OverrideChoice
+	33, // 50: career.v1.GetMatchRecordResponse.review_resume:type_name -> career.v1.ReviewResume
+	27, // 51: career.v1.OverrideJudgmentResponse.record:type_name -> career.v1.MatchRecord
+	55, // 52: career.v1.ReviewResume.requested_at:type_name -> google.protobuf.Timestamp
+	55, // 53: career.v1.ReviewResume.finished_at:type_name -> google.protobuf.Timestamp
+	33, // 54: career.v1.WriteReviewResumeResponse.review_resume:type_name -> career.v1.ReviewResume
+	36, // 55: career.v1.ClarificationField.options:type_name -> career.v1.ClarificationOption
+	54, // 56: career.v1.ClarificationAnswer.values:type_name -> career.v1.ClarificationAnswer.ValuesEntry
+	37, // 57: career.v1.ClarificationItem.fields:type_name -> career.v1.ClarificationField
+	38, // 58: career.v1.ClarificationItem.answer:type_name -> career.v1.ClarificationAnswer
+	55, // 59: career.v1.ClarificationItem.answered_at:type_name -> google.protobuf.Timestamp
+	55, // 60: career.v1.ClarificationRequest.generated_at:type_name -> google.protobuf.Timestamp
+	55, // 61: career.v1.ClarificationRequest.expires_at:type_name -> google.protobuf.Timestamp
+	55, // 62: career.v1.ClarificationRequest.answered_at:type_name -> google.protobuf.Timestamp
+	55, // 63: career.v1.ClarificationRequest.closed_at:type_name -> google.protobuf.Timestamp
+	39, // 64: career.v1.ClarificationRequest.items:type_name -> career.v1.ClarificationItem
+	40, // 65: career.v1.ListClarificationRequestsResponse.requests:type_name -> career.v1.ClarificationRequest
+	40, // 66: career.v1.GetClarificationRequestResponse.request:type_name -> career.v1.ClarificationRequest
+	40, // 67: career.v1.RequestClarificationResponse.request:type_name -> career.v1.ClarificationRequest
+	38, // 68: career.v1.AnswerClarificationItemRequest.answer:type_name -> career.v1.ClarificationAnswer
+	39, // 69: career.v1.AnswerClarificationItemResponse.item:type_name -> career.v1.ClarificationItem
+	40, // 70: career.v1.SubmitClarificationAnswersResponse.request:type_name -> career.v1.ClarificationRequest
+	39, // 71: career.v1.WithdrawClarificationAnswerResponse.item:type_name -> career.v1.ClarificationItem
+	4,  // 72: career.v1.ClarificationAnswer.ValuesEntry.value:type_name -> career.v1.StringList
+	6,  // 73: career.v1.HiringService.ListRequirements:input_type -> career.v1.ListRequirementsRequest
+	9,  // 74: career.v1.HiringService.UpdateRequirement:input_type -> career.v1.UpdateRequirementRequest
+	11, // 75: career.v1.HiringService.ReleaseRequirements:input_type -> career.v1.ReleaseRequirementsRequest
+	14, // 76: career.v1.HiringService.GetHiringSettings:input_type -> career.v1.GetHiringSettingsRequest
+	16, // 77: career.v1.HiringService.SetHiringSettings:input_type -> career.v1.SetHiringSettingsRequest
+	29, // 78: career.v1.HiringService.GetMatchRecord:input_type -> career.v1.GetMatchRecordRequest
+	31, // 79: career.v1.HiringService.OverrideJudgment:input_type -> career.v1.OverrideJudgmentRequest
+	34, // 80: career.v1.HiringService.WriteReviewResume:input_type -> career.v1.WriteReviewResumeRequest
+	41, // 81: career.v1.HiringService.ListClarificationRequests:input_type -> career.v1.ListClarificationRequestsRequest
+	43, // 82: career.v1.HiringService.GetClarificationRequest:input_type -> career.v1.GetClarificationRequestRequest
+	45, // 83: career.v1.HiringService.RequestClarification:input_type -> career.v1.RequestClarificationRequest
+	47, // 84: career.v1.HiringService.AnswerClarificationItem:input_type -> career.v1.AnswerClarificationItemRequest
+	49, // 85: career.v1.HiringService.SubmitClarificationAnswers:input_type -> career.v1.SubmitClarificationAnswersRequest
+	51, // 86: career.v1.HiringService.WithdrawClarificationAnswer:input_type -> career.v1.WithdrawClarificationAnswerRequest
+	7,  // 87: career.v1.HiringService.ListRequirements:output_type -> career.v1.ListRequirementsResponse
+	10, // 88: career.v1.HiringService.UpdateRequirement:output_type -> career.v1.UpdateRequirementResponse
+	12, // 89: career.v1.HiringService.ReleaseRequirements:output_type -> career.v1.ReleaseRequirementsResponse
+	15, // 90: career.v1.HiringService.GetHiringSettings:output_type -> career.v1.GetHiringSettingsResponse
+	17, // 91: career.v1.HiringService.SetHiringSettings:output_type -> career.v1.SetHiringSettingsResponse
+	30, // 92: career.v1.HiringService.GetMatchRecord:output_type -> career.v1.GetMatchRecordResponse
+	32, // 93: career.v1.HiringService.OverrideJudgment:output_type -> career.v1.OverrideJudgmentResponse
+	35, // 94: career.v1.HiringService.WriteReviewResume:output_type -> career.v1.WriteReviewResumeResponse
+	42, // 95: career.v1.HiringService.ListClarificationRequests:output_type -> career.v1.ListClarificationRequestsResponse
+	44, // 96: career.v1.HiringService.GetClarificationRequest:output_type -> career.v1.GetClarificationRequestResponse
+	46, // 97: career.v1.HiringService.RequestClarification:output_type -> career.v1.RequestClarificationResponse
+	48, // 98: career.v1.HiringService.AnswerClarificationItem:output_type -> career.v1.AnswerClarificationItemResponse
+	50, // 99: career.v1.HiringService.SubmitClarificationAnswers:output_type -> career.v1.SubmitClarificationAnswersResponse
+	52, // 100: career.v1.HiringService.WithdrawClarificationAnswer:output_type -> career.v1.WithdrawClarificationAnswerResponse
+	87, // [87:101] is the sub-list for method output_type
+	73, // [73:87] is the sub-list for method input_type
+	73, // [73:73] is the sub-list for extension type_name
+	73, // [73:73] is the sub-list for extension extendee
+	0,  // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_career_v1_hiring_proto_init() }
@@ -3683,14 +5432,15 @@ func file_career_v1_hiring_proto_init() {
 	file_career_v1_options_proto_init()
 	file_career_v1_hiring_proto_msgTypes[1].OneofWrappers = []any{}
 	file_career_v1_hiring_proto_msgTypes[4].OneofWrappers = []any{}
-	file_career_v1_hiring_proto_msgTypes[24].OneofWrappers = []any{}
+	file_career_v1_hiring_proto_msgTypes[12].OneofWrappers = []any{}
+	file_career_v1_hiring_proto_msgTypes[26].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_v1_hiring_proto_rawDesc), len(file_career_v1_hiring_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   34,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

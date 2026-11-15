@@ -608,6 +608,8 @@ func jdStatusRepoToProto(status string) v1.JdStatus {
 		return v1.JdStatus_JD_STATUS_FAILED
 	case "not_a_posting":
 		return v1.JdStatus_JD_STATUS_NOT_A_POSTING
+	case "awaiting_candidate":
+		return v1.JdStatus_JD_STATUS_AWAITING_CANDIDATE
 	default:
 		return v1.JdStatus_JD_STATUS_UNSPECIFIED
 	}

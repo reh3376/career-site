@@ -14,9 +14,10 @@
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
 // Phase 0 step 5 landed the requirement methods and the settings; step
-// 6 lands the match record as a person reads it and the override of a
-// judgment; the clarification loop and the catalog follow in steps 7
-// and 8.
+// 6 the match record as a person reads it and the override of a
+// judgment; step 7 the clarification loop: the follow-up questions a
+// run puts to the candidate, their answers, and the run that judges the
+// answered requirements again. The catalog follows in step 8.
 //
 // Vocabulary codes (type, class, threshold units, determination, basis,
 // uncertainty, source kind, override role) travel as strings,
@@ -41,7 +42,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file career/v1/hiring.proto.
  */
 export const file_career_v1_hiring: GenFile = /*@__PURE__*/
-  fileDesc("ChZjYXJlZXIvdjEvaGlyaW5nLnByb3RvEgljYXJlZXIudjEiRgoOU2NvcGVUaHJlc2hvbGQSFQoEdW5pdBgBIAEoCUIHukgEcgIYIBIdCgV2YWx1ZRgCIAEoAUIOukgLEgkhAAAAAAAAAAAiqgIKClRocmVzaG9sZHMSLwoJbWluX3llYXJzGAEgASgBQhe6SBQSEhkAAAAAAABOQCkAAAAAAAAAAEgAiAEBEjMKDXJlY2VuY3lfeWVhcnMYAiABKAFCF7pIFBISGQAAAAAAAE5AKQAAAAAAAAAASAGIAQESLAoJbWluX3Njb3BlGAMgASgLMhkuY2FyZWVyLnYxLlNjb3BlVGhyZXNob2xkEiEKEGNyZWRlbnRpYWxfbGV2ZWwYBCABKAlCB7pIBHICGCASIQoQY3JlZGVudGlhbF9maWVsZBgFIAEoCUIHukgEcgIYeBIiChFyZWxhdGlvbnNoaXBfa2luZBgGIAEoCUIHukgEcgIYIEIMCgpfbWluX3llYXJzQhAKDl9yZWNlbmN5X3llYXJzIpEGCgtSZXF1aXJlbWVudBIKCgJpZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhAKCGxvY2FsX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSEgoKc3VwZXJzZWRlcxgFIAEoCRIWCg5zY2hlbWFfdmVyc2lvbhgGIAEoCRIVCg12b2NhYl92ZXJzaW9uGAcgASgJEgwKBHRleHQYCCABKAkSFAoMc291cmNlX3F1b3RlGAkgASgJEgwKBHR5cGUYCiABKAkSEAoIY2F0ZWdvcnkYCyABKAkSGQoRcmVxdWlyZW1lbnRfY2xhc3MYDCABKAkSDgoGd2VpZ2h0GA0gASgFEhkKEWV2aWRlbmNlX3N0YW5kYXJkGA4gASgJEiIKGmV2aWRlbmNlX3N0YW5kYXJkX3RlbXBsYXRlGA8gASgJEhQKDGFsdGVybmF0aXZlcxgQIAMoCRIZChFlcXVpdmFsZW5jZV9ub3RlcxgRIAEoCRITCgtlcXVpdmFsZW5jeRgSIAEoCRIpCgp0aHJlc2hvbGRzGBMgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSFQoNbmFtZWRfcGFydGllcxgUIAMoCRIQCghpbmNsdWRlZBgVIAEoCBIYChBpbmNsdXNpb25fcmVhc29uGBYgASgJEhkKEWVkaXRlZF9ieV9kaXNwbGF5GBcgASgJEi0KCWVkaXRlZF9hdBgYIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZWRpdF9yZWFzb24YGSABKAkSLAoGc3RhdHVzGBogASgOMhwuY2FyZWVyLnYxLlJlcXVpcmVtZW50U3RhdHVzEi8KC3JlbGVhc2VkX2F0GBsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaChJyZWxlYXNlZF9ieV9wZXJzb24YHCABKAgSLgoKY3JlYXRlZF9hdBgdIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLdHlwZV9zb3VyY2UYHiABKAkiLQoKU3RyaW5nTGlzdBIfCgZ2YWx1ZXMYASADKAlCD7pIDJIBCRAIIgVyAxisAiKDBAoQUmVxdWlyZW1lbnRQYXRjaBIdCgR0ZXh0GAEgASgJQgq6SAdyBRABGPQDSACIAQESGgoEdHlwZRgCIAEoCUIHukgEcgIYIEgBiAEBEicKEXJlcXVpcmVtZW50X2NsYXNzGAMgASgJQge6SARyAhggSAKIAQESHgoGd2VpZ2h0GAQgASgFQgm6SAYaBBgDKAFIA4gBARIpCgp0aHJlc2hvbGRzGAUgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSKAoRZXZpZGVuY2Vfc3RhbmRhcmQYBiABKAlCCLpIBXIDGPQDSASIAQESKAoRZXF1aXZhbGVuY2Vfbm90ZXMYByABKAlCCLpIBXIDGOgHSAWIAQESIgoLZXF1aXZhbGVuY3kYCCABKAlCCLpIBXIDGPQDSAaIAQESKwoMYWx0ZXJuYXRpdmVzGAkgASgLMhUuY2FyZWVyLnYxLlN0cmluZ0xpc3QSLAoNbmFtZWRfcGFydGllcxgKIAEoCzIVLmNhcmVlci52MS5TdHJpbmdMaXN0QgcKBV90ZXh0QgcKBV90eXBlQhQKEl9yZXF1aXJlbWVudF9jbGFzc0IJCgdfd2VpZ2h0QhQKEl9ldmlkZW5jZV9zdGFuZGFyZEIUChJfZXF1aXZhbGVuY2Vfbm90ZXNCDgoMX2VxdWl2YWxlbmN5ImwKF0xpc3RSZXF1aXJlbWVudHNSZXF1ZXN0EhgKB3JvbGVfaWQYASABKAlCB7pIBHICGEASHgoNc3VibWlzc2lvbl9pZBgCIAEoCUIHukgEcgIYIBIXCg9pbmNsdWRlX3JldGlyZWQYAyABKAgi4QIKGExpc3RSZXF1aXJlbWVudHNSZXNwb25zZRIPCgdyb2xlX2lkGAEgASgJEiwKDHJlcXVpcmVtZW50cxgCIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBIWCg5wZW5kaW5nX2RyYWZ0cxgDIAEoBRIUCgxodW1hbl9lZGl0ZWQYBCABKAgSIwoFdHlwZXMYBSADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiUKB2NsYXNzZXMYBiADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEikKC3Njb3BlX3VuaXRzGAcgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIvChFjcmVkZW50aWFsX2xldmVscxgIIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSMAoScmVsYXRpb25zaGlwX2tpbmRzGAkgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZSI9CglWb2NhYkNvZGUSDAoEY29kZRgBIAEoCRINCgVsYWJlbBgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCSKSAQoYVXBkYXRlUmVxdWlyZW1lbnRSZXF1ZXN0EiEKDnJlcXVpcmVtZW50X2lkGAEgASgJQgm6SAZyBBABGEASMgoFcGF0Y2gYAiABKAsyGy5jYXJlZXIudjEuUmVxdWlyZW1lbnRQYXRjaEIGukgDyAEBEh8KC2VkaXRfcmVhc29uGAMgASgJQgq6SAdyBRABGPQDIkgKGVVwZGF0ZVJlcXVpcmVtZW50UmVzcG9uc2USKwoLcmVxdWlyZW1lbnQYASABKAsyFi5jYXJlZXIudjEuUmVxdWlyZW1lbnQiOAoaUmVsZWFzZVJlcXVpcmVtZW50c1JlcXVlc3QSGgoHcm9sZV9pZBgBIAEoCUIJukgGcgQQARhAInMKG1JlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZRIoCghyZWxlYXNlZBgBIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBITCgtydW5fc3RhcnRlZBgCIAEoCBIVCg1zdWJtaXNzaW9uX2lkGAMgASgJIkUKDkhpcmluZ1NldHRpbmdzEjMKEnByZWZlcnJlZF9mcmFjdGlvbhgBIAEoAUIXukgUEhIZAAAAAAAA8D8hAAAAAAAAAAAiGgoYR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0IkgKGUdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2USKwoIc2V0dGluZ3MYASABKAsyGS5jYXJlZXIudjEuSGlyaW5nU2V0dGluZ3MiTwoYU2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0EjMKCHNldHRpbmdzGAEgASgLMhkuY2FyZWVyLnYxLkhpcmluZ1NldHRpbmdzQga6SAPIAQEiSAoZU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZRIrCghzZXR0aW5ncxgBIAEoCzIZLmNhcmVlci52MS5IaXJpbmdTZXR0aW5ncyKsAQoIQ292ZXJhZ2USEQoJZXZpZGVuY2VkGAEgASgBEhIKCnVucmVzb2x2ZWQYAiABKAESDQoFdW5tZXQYAyABKAESGAoQZXF1aXZhbGVudF9zaGFyZRgEIAEoARIbChNzZWxmX2F0dGVzdGVkX3NoYXJlGAUgASgBEhcKD2Zvcm11bGFfdmVyc2lvbhgGIAEoCRIaChJwcmVmZXJyZWRfZnJhY3Rpb24YByABKAEiYgoLRXZpZGVuY2VSZWYSCgoCaWQYASABKAkSEwoLc291cmNlX2tpbmQYAiABKAkSDQoFdGl0bGUYAyABKAkSEAoIY2h1bmtfaWQYBCABKAMSEQoJd2l0aGRyYXduGAUgASgIIrsBCg5SdWxlQWRqdXN0bWVudBIMCgRydWxlGAEgASgJEhQKDHJ1bGVfdmVyc2lvbhgCIAEoCRIaChJmcm9tX2RldGVybWluYXRpb24YAyABKAkSGAoQdG9fZGV0ZXJtaW5hdGlvbhgEIAEoCRISCgpmcm9tX2Jhc2lzGAUgASgJEhAKCHRvX2Jhc2lzGAYgASgJEhkKEWFkZGVkX3VuY2VydGFpbnR5GAcgAygJEg4KBnJlYXNvbhgIIAEoCSKQAQoNUmVwb3J0ZWRGYWN0cxIZChFzdGF0ZWRfc3Bhbl95ZWFycxgBIAEoARIYChBtb3N0X3JlY2VudF95ZWFyGAIgASgFEi8KDHN0YXRlZF9zY29wZRgDIAEoCzIZLmNhcmVlci52MS5TY29wZVRocmVzaG9sZBIZChFwYXJ0aWVzX2V2aWRlbmNlZBgEIAMoCSL9AQoQSnVkZ21lbnRPdmVycmlkZRIVCg1kZXRlcm1pbmF0aW9uGAEgASgJEg0KBWJhc2lzGAIgASgJEgwKBHJvbGUYAyABKAkSJgoCYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmJ5X2Rpc3BsYXkYBSABKAkSDgoGcmVhc29uGAYgASgJEhwKFGNhcnJpZWRfZnJvbV9hdHRlbXB0GAcgASgFEg8KB3JlY2hlY2sYCCABKAgSIAoYbW9kZWxfZGV0ZXJtaW5hdGlvbl90aGVuGAkgASgJEhgKEG1vZGVsX2Jhc2lzX3RoZW4YCiABKAkilAEKD0VhcmxpZXJPdmVycmlkZRIPCgdhdHRlbXB0GAEgASgFEhUKDWRldGVybWluYXRpb24YAiABKAkSDQoFYmFzaXMYAyABKAkSDAoEcm9sZRgEIAEoCRImCgJhdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFAoMc2FtZV92ZXJzaW9uGAYgASgIIvUECghKdWRnbWVudBIKCgJpZBgBIAEoCRIWCg5yZXF1aXJlbWVudF9pZBgCIAEoCRIcChRyZXF1aXJlbWVudF9sb2NhbF9pZBgDIAEoCRIVCg1kZXRlcm1pbmF0aW9uGAQgASgJEg0KBWJhc2lzGAUgASgJEhMKC3VuY2VydGFpbnR5GAYgAygJEh8KF2VmZmVjdGl2ZV9kZXRlcm1pbmF0aW9uGAcgASgJEhcKD2VmZmVjdGl2ZV9iYXNpcxgIIAEoCRItCghvdmVycmlkZRgJIAEoCzIbLmNhcmVlci52MS5KdWRnbWVudE92ZXJyaWRlEhcKD2Rlcml2ZWRfdmVyZGljdBgKIAEoCRIRCglyYXRpb25hbGUYCyABKAkSKAoIZXZpZGVuY2UYDCADKAsyFi5jYXJlZXIudjEuRXZpZGVuY2VSZWYSMwoQcnVsZV9hZGp1c3RtZW50cxgNIAMoCzIZLmNhcmVlci52MS5SdWxlQWRqdXN0bWVudBIwCg5yZXBvcnRlZF9mYWN0cxgOIAEoCzIYLmNhcmVlci52MS5SZXBvcnRlZEZhY3RzEhEKCWdhcF9jbGFzcxgPIAEoCRIUCgxub3RfYXNzZXNzZWQYECABKAgSDQoFc3RhbGUYESABKAgSFQoNa2V5d29yZF9rbm93bhgSIAEoCBIVCg1rZXl3b3JkX2ZvdW5kGBMgASgIEhUKDWtleXdvcmRfdGVybXMYFCADKAkSEwoLZGVjaXNpb25faWQYFSABKAMSNAoQZWFybGllcl9vdmVycmlkZRgWIAEoCzIaLmNhcmVlci52MS5FYXJsaWVyT3ZlcnJpZGUi4QUKC01hdGNoUmVjb3JkEg4KBnJ1bl9pZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhUKDXN1Ym1pc3Npb25faWQYAyABKAkSDwoHYXR0ZW1wdBgEIAEoBRIZChFzdXBlcnNlZGVzX3J1bl9pZBgFIAEoCRISCgpzdXBlcnNlZGVkGAYgASgIEhMKC3J1bl90cmlnZ2VyGAcgASgJEhIKCnJvbGVfdGl0bGUYCCABKAkSEAoIZW1wbG95ZXIYCSABKAkSJQoIY292ZXJhZ2UYCiABKAsyEy5jYXJlZXIudjEuQ292ZXJhZ2USLAoMcmVxdWlyZW1lbnRzGAsgAygLMhYuY2FyZWVyLnYxLlJlcXVpcmVtZW50EiYKCWp1ZGdtZW50cxgMIAMoCzITLmNhcmVlci52MS5KdWRnbWVudBIWCg5vdmVycmlkZV9jb3VudBgNIAEoBRIUCgxrZXl3b3JkX3J1bGUYDiABKAkSFwoPa2V5d29yZF9za2lwcGVkGA8gASgJEjYKCHZlcnNpb25zGBAgAygLMiQuY2FyZWVyLnYxLk1hdGNoUmVjb3JkLlZlcnNpb25zRW50cnkSCwoDZml0GBEgASgJEhgKC21hdGNoX3Njb3JlGBIgASgBSACIAQESLwoLZmluaXNoZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvcnB1c19kb2N1bWVudHMYFCABKAUSDQoFbW9kZWwYFSABKAkSGwoTcmVxdWlyZW1lbnRzX2VkaXRlZBgWIAEoCBIbCg5yZXZpZXdlZF9zY29yZRgXIAEoAUgBiAEBEhQKDHJldmlld2VkX2ZpdBgYIAEoCRovCg1WZXJzaW9uc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCDgoMX21hdGNoX3Njb3JlQhEKD19yZXZpZXdlZF9zY29yZSI2Cg5PdmVycmlkZUNob2ljZRIVCg1kZXRlcm1pbmF0aW9uGAEgASgJEg0KBWJhc2VzGAIgAygJImUKFUdldE1hdGNoUmVjb3JkUmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCASFwoGcnVuX2lkGAIgASgJQge6SARyAhhAEhEKCWFzX21lbWJlchgDIAEoCCKeBAoWR2V0TWF0Y2hSZWNvcmRSZXNwb25zZRImCgZyZWNvcmQYASABKAsyFi5jYXJlZXIudjEuTWF0Y2hSZWNvcmQSLAoOZGV0ZXJtaW5hdGlvbnMYAiADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiMKBWJhc2VzGAMgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIrCg11bmNlcnRhaW50aWVzGAQgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIjCgV0eXBlcxgFIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSJQoHY2xhc3NlcxgGIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSKgoMc291cmNlX2tpbmRzGAcgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIsCg5vdmVycmlkZV9yb2xlcxgIIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSFAoMY2FuX292ZXJyaWRlGAkgASgIEjMKEG92ZXJyaWRlX2Nob2ljZXMYCiADKAsyGS5jYXJlZXIudjEuT3ZlcnJpZGVDaG9pY2USLgoNcmV2aWV3X3Jlc3VtZRgLIAEoCzIXLmNhcmVlci52MS5SZXZpZXdSZXN1bWUSHwoXY2FuX3dyaXRlX3Jldmlld19yZXN1bWUYDCABKAgSGgoScmV2aWV3X3Jlc3VtZV9ub3RlGA0gASgJIrYBChdPdmVycmlkZUp1ZGdtZW50UmVxdWVzdBIeCgtqdWRnbWVudF9pZBgBIAEoCUIJukgGcgQQARhAEh4KDWRldGVybWluYXRpb24YAiABKAlCB7pIBHICGCgSFgoFYmFzaXMYAyABKAlCB7pIBHICGCgSGgoGcmVhc29uGAQgASgJQgq6SAdyBRABGOgHEhUKBHJvbGUYBSABKAlCB7pIBHICGCgSEAoId2l0aGRyYXcYBiABKAgiQgoYT3ZlcnJpZGVKdWRnbWVudFJlc3BvbnNlEiYKBnJlY29yZBgBIAEoCzIWLmNhcmVlci52MS5NYXRjaFJlY29yZCKIAgoMUmV2aWV3UmVzdW1lEg4KBnJ1bl9pZBgBIAEoCRIOCgZzdGF0dXMYAiABKAkSDQoFZXJyb3IYAyABKAkSEAoIbWFya2Rvd24YBCABKAkSMAoMcmVxdWVzdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgtmaW5pc2hlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoOcmV2aWV3ZWRfc2NvcmUYByABKAESFgoOb3ZlcnJpZGVfY291bnQYCCABKAUSFQoNZG93bmxvYWRfcGF0aBgJIAEoCRINCgVtb2RlbBgKIAEoCSI1ChhXcml0ZVJldmlld1Jlc3VtZVJlcXVlc3QSGQoGcnVuX2lkGAEgASgJQgm6SAZyBBABGEAiSwoZV3JpdGVSZXZpZXdSZXN1bWVSZXNwb25zZRIuCg1yZXZpZXdfcmVzdW1lGAEgASgLMhcuY2FyZWVyLnYxLlJldmlld1Jlc3VtZSqUAQoRUmVxdWlyZW1lbnRTdGF0dXMSIgoeUkVRVUlSRU1FTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYUkVRVUlSRU1FTlRfU1RBVFVTX0RSQUZUEAESHQoZUkVRVUlSRU1FTlRfU1RBVFVTX0FDVElWRRACEh4KGlJFUVVJUkVNRU5UX1NUQVRVU19SRVRJUkVEEAMy1gYKDUhpcmluZ1NlcnZpY2USZQoQTGlzdFJlcXVpcmVtZW50cxIiLmNhcmVlci52MS5MaXN0UmVxdWlyZW1lbnRzUmVxdWVzdBojLmNhcmVlci52MS5MaXN0UmVxdWlyZW1lbnRzUmVzcG9uc2UiCIC1GAOgtRgBEmgKEVVwZGF0ZVJlcXVpcmVtZW50EiMuY2FyZWVyLnYxLlVwZGF0ZVJlcXVpcmVtZW50UmVxdWVzdBokLmNhcmVlci52MS5VcGRhdGVSZXF1aXJlbWVudFJlc3BvbnNlIgiAtRgDoLUYAhJuChNSZWxlYXNlUmVxdWlyZW1lbnRzEiUuY2FyZWVyLnYxLlJlbGVhc2VSZXF1aXJlbWVudHNSZXF1ZXN0GiYuY2FyZWVyLnYxLlJlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZSIIgLUYA6C1GAISaAoRR2V0SGlyaW5nU2V0dGluZ3MSIy5jYXJlZXIudjEuR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0GiQuY2FyZWVyLnYxLkdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2UiCIC1GAOgtRgBEmgKEVNldEhpcmluZ1NldHRpbmdzEiMuY2FyZWVyLnYxLlNldEhpcmluZ1NldHRpbmdzUmVxdWVzdBokLmNhcmVlci52MS5TZXRIaXJpbmdTZXR0aW5nc1Jlc3BvbnNlIgiAtRgDoLUYAhJfCg5HZXRNYXRjaFJlY29yZBIgLmNhcmVlci52MS5HZXRNYXRjaFJlY29yZFJlcXVlc3QaIS5jYXJlZXIudjEuR2V0TWF0Y2hSZWNvcmRSZXNwb25zZSIIgLUYAqC1GAESZQoQT3ZlcnJpZGVKdWRnbWVudBIiLmNhcmVlci52MS5PdmVycmlkZUp1ZGdtZW50UmVxdWVzdBojLmNhcmVlci52MS5PdmVycmlkZUp1ZGdtZW50UmVzcG9uc2UiCIC1GAOgtRgCEmgKEVdyaXRlUmV2aWV3UmVzdW1lEiMuY2FyZWVyLnYxLldyaXRlUmV2aWV3UmVzdW1lUmVxdWVzdBokLmNhcmVlci52MS5Xcml0ZVJldmlld1Jlc3VtZVJlc3BvbnNlIgiAtRgDoLUYAkKlAQoNY29tLmNhcmVlci52MUILSGlyaW5nUHJvdG9QAVpCZ2l0aHViLmNvbS9yZWgzMzc2L2NhcmVlci1zaXRlL3NlcnZpY2VzL2FwaS9nZW4vY2FyZWVyL3YxO2NhcmVlcnYxogIDQ1hYqgIJQ2FyZWVyLlYxygIJQ2FyZWVyXFYx4gIVQ2FyZWVyXFYxXEdQQk1ldGFkYXRh6gIKQ2FyZWVyOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
+  fileDesc("ChZjYXJlZXIvdjEvaGlyaW5nLnByb3RvEgljYXJlZXIudjEiRgoOU2NvcGVUaHJlc2hvbGQSFQoEdW5pdBgBIAEoCUIHukgEcgIYIBIdCgV2YWx1ZRgCIAEoAUIOukgLEgkhAAAAAAAAAAAiqgIKClRocmVzaG9sZHMSLwoJbWluX3llYXJzGAEgASgBQhe6SBQSEhkAAAAAAABOQCkAAAAAAAAAAEgAiAEBEjMKDXJlY2VuY3lfeWVhcnMYAiABKAFCF7pIFBISGQAAAAAAAE5AKQAAAAAAAAAASAGIAQESLAoJbWluX3Njb3BlGAMgASgLMhkuY2FyZWVyLnYxLlNjb3BlVGhyZXNob2xkEiEKEGNyZWRlbnRpYWxfbGV2ZWwYBCABKAlCB7pIBHICGCASIQoQY3JlZGVudGlhbF9maWVsZBgFIAEoCUIHukgEcgIYeBIiChFyZWxhdGlvbnNoaXBfa2luZBgGIAEoCUIHukgEcgIYIEIMCgpfbWluX3llYXJzQhAKDl9yZWNlbmN5X3llYXJzIpEGCgtSZXF1aXJlbWVudBIKCgJpZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhAKCGxvY2FsX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSEgoKc3VwZXJzZWRlcxgFIAEoCRIWCg5zY2hlbWFfdmVyc2lvbhgGIAEoCRIVCg12b2NhYl92ZXJzaW9uGAcgASgJEgwKBHRleHQYCCABKAkSFAoMc291cmNlX3F1b3RlGAkgASgJEgwKBHR5cGUYCiABKAkSEAoIY2F0ZWdvcnkYCyABKAkSGQoRcmVxdWlyZW1lbnRfY2xhc3MYDCABKAkSDgoGd2VpZ2h0GA0gASgFEhkKEWV2aWRlbmNlX3N0YW5kYXJkGA4gASgJEiIKGmV2aWRlbmNlX3N0YW5kYXJkX3RlbXBsYXRlGA8gASgJEhQKDGFsdGVybmF0aXZlcxgQIAMoCRIZChFlcXVpdmFsZW5jZV9ub3RlcxgRIAEoCRITCgtlcXVpdmFsZW5jeRgSIAEoCRIpCgp0aHJlc2hvbGRzGBMgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSFQoNbmFtZWRfcGFydGllcxgUIAMoCRIQCghpbmNsdWRlZBgVIAEoCBIYChBpbmNsdXNpb25fcmVhc29uGBYgASgJEhkKEWVkaXRlZF9ieV9kaXNwbGF5GBcgASgJEi0KCWVkaXRlZF9hdBgYIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZWRpdF9yZWFzb24YGSABKAkSLAoGc3RhdHVzGBogASgOMhwuY2FyZWVyLnYxLlJlcXVpcmVtZW50U3RhdHVzEi8KC3JlbGVhc2VkX2F0GBsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIaChJyZWxlYXNlZF9ieV9wZXJzb24YHCABKAgSLgoKY3JlYXRlZF9hdBgdIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLdHlwZV9zb3VyY2UYHiABKAkiLQoKU3RyaW5nTGlzdBIfCgZ2YWx1ZXMYASADKAlCD7pIDJIBCRAIIgVyAxisAiKDBAoQUmVxdWlyZW1lbnRQYXRjaBIdCgR0ZXh0GAEgASgJQgq6SAdyBRABGPQDSACIAQESGgoEdHlwZRgCIAEoCUIHukgEcgIYIEgBiAEBEicKEXJlcXVpcmVtZW50X2NsYXNzGAMgASgJQge6SARyAhggSAKIAQESHgoGd2VpZ2h0GAQgASgFQgm6SAYaBBgDKAFIA4gBARIpCgp0aHJlc2hvbGRzGAUgASgLMhUuY2FyZWVyLnYxLlRocmVzaG9sZHMSKAoRZXZpZGVuY2Vfc3RhbmRhcmQYBiABKAlCCLpIBXIDGPQDSASIAQESKAoRZXF1aXZhbGVuY2Vfbm90ZXMYByABKAlCCLpIBXIDGOgHSAWIAQESIgoLZXF1aXZhbGVuY3kYCCABKAlCCLpIBXIDGPQDSAaIAQESKwoMYWx0ZXJuYXRpdmVzGAkgASgLMhUuY2FyZWVyLnYxLlN0cmluZ0xpc3QSLAoNbmFtZWRfcGFydGllcxgKIAEoCzIVLmNhcmVlci52MS5TdHJpbmdMaXN0QgcKBV90ZXh0QgcKBV90eXBlQhQKEl9yZXF1aXJlbWVudF9jbGFzc0IJCgdfd2VpZ2h0QhQKEl9ldmlkZW5jZV9zdGFuZGFyZEIUChJfZXF1aXZhbGVuY2Vfbm90ZXNCDgoMX2VxdWl2YWxlbmN5ImwKF0xpc3RSZXF1aXJlbWVudHNSZXF1ZXN0EhgKB3JvbGVfaWQYASABKAlCB7pIBHICGEASHgoNc3VibWlzc2lvbl9pZBgCIAEoCUIHukgEcgIYIBIXCg9pbmNsdWRlX3JldGlyZWQYAyABKAgi4QIKGExpc3RSZXF1aXJlbWVudHNSZXNwb25zZRIPCgdyb2xlX2lkGAEgASgJEiwKDHJlcXVpcmVtZW50cxgCIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBIWCg5wZW5kaW5nX2RyYWZ0cxgDIAEoBRIUCgxodW1hbl9lZGl0ZWQYBCABKAgSIwoFdHlwZXMYBSADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiUKB2NsYXNzZXMYBiADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEikKC3Njb3BlX3VuaXRzGAcgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIvChFjcmVkZW50aWFsX2xldmVscxgIIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSMAoScmVsYXRpb25zaGlwX2tpbmRzGAkgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZSI9CglWb2NhYkNvZGUSDAoEY29kZRgBIAEoCRINCgVsYWJlbBgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCSKSAQoYVXBkYXRlUmVxdWlyZW1lbnRSZXF1ZXN0EiEKDnJlcXVpcmVtZW50X2lkGAEgASgJQgm6SAZyBBABGEASMgoFcGF0Y2gYAiABKAsyGy5jYXJlZXIudjEuUmVxdWlyZW1lbnRQYXRjaEIGukgDyAEBEh8KC2VkaXRfcmVhc29uGAMgASgJQgq6SAdyBRABGPQDIkgKGVVwZGF0ZVJlcXVpcmVtZW50UmVzcG9uc2USKwoLcmVxdWlyZW1lbnQYASABKAsyFi5jYXJlZXIudjEuUmVxdWlyZW1lbnQiOAoaUmVsZWFzZVJlcXVpcmVtZW50c1JlcXVlc3QSGgoHcm9sZV9pZBgBIAEoCUIJukgGcgQQARhAInMKG1JlbGVhc2VSZXF1aXJlbWVudHNSZXNwb25zZRIoCghyZWxlYXNlZBgBIAMoCzIWLmNhcmVlci52MS5SZXF1aXJlbWVudBITCgtydW5fc3RhcnRlZBgCIAEoCBIVCg1zdWJtaXNzaW9uX2lkGAMgASgJIqQBCg5IaXJpbmdTZXR0aW5ncxIzChJwcmVmZXJyZWRfZnJhY3Rpb24YASABKAFCF7pIFBISGQAAAAAAAPA/IQAAAAAAAAAAEh8KEmNsYXJpZmljYXRpb25fYXV0bxgCIAEoCEgAiAEBEiUKEmNsYXJpZmljYXRpb25fZGF5cxgDIAEoBUIJukgGGgQYDigAQhUKE19jbGFyaWZpY2F0aW9uX2F1dG8iGgoYR2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0IkgKGUdldEhpcmluZ1NldHRpbmdzUmVzcG9uc2USKwoIc2V0dGluZ3MYASABKAsyGS5jYXJlZXIudjEuSGlyaW5nU2V0dGluZ3MiTwoYU2V0SGlyaW5nU2V0dGluZ3NSZXF1ZXN0EjMKCHNldHRpbmdzGAEgASgLMhkuY2FyZWVyLnYxLkhpcmluZ1NldHRpbmdzQga6SAPIAQEiSAoZU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZRIrCghzZXR0aW5ncxgBIAEoCzIZLmNhcmVlci52MS5IaXJpbmdTZXR0aW5ncyKsAQoIQ292ZXJhZ2USEQoJZXZpZGVuY2VkGAEgASgBEhIKCnVucmVzb2x2ZWQYAiABKAESDQoFdW5tZXQYAyABKAESGAoQZXF1aXZhbGVudF9zaGFyZRgEIAEoARIbChNzZWxmX2F0dGVzdGVkX3NoYXJlGAUgASgBEhcKD2Zvcm11bGFfdmVyc2lvbhgGIAEoCRIaChJwcmVmZXJyZWRfZnJhY3Rpb24YByABKAEidQoLRXZpZGVuY2VSZWYSCgoCaWQYASABKAkSEwoLc291cmNlX2tpbmQYAiABKAkSDQoFdGl0bGUYAyABKAkSEAoIY2h1bmtfaWQYBCABKAMSEQoJd2l0aGRyYXduGAUgASgIEhEKCXN0YXRlbWVudBgGIAEoCSK7AQoOUnVsZUFkanVzdG1lbnQSDAoEcnVsZRgBIAEoCRIUCgxydWxlX3ZlcnNpb24YAiABKAkSGgoSZnJvbV9kZXRlcm1pbmF0aW9uGAMgASgJEhgKEHRvX2RldGVybWluYXRpb24YBCABKAkSEgoKZnJvbV9iYXNpcxgFIAEoCRIQCgh0b19iYXNpcxgGIAEoCRIZChFhZGRlZF91bmNlcnRhaW50eRgHIAMoCRIOCgZyZWFzb24YCCABKAkikAEKDVJlcG9ydGVkRmFjdHMSGQoRc3RhdGVkX3NwYW5feWVhcnMYASABKAESGAoQbW9zdF9yZWNlbnRfeWVhchgCIAEoBRIvCgxzdGF0ZWRfc2NvcGUYAyABKAsyGS5jYXJlZXIudjEuU2NvcGVUaHJlc2hvbGQSGQoRcGFydGllc19ldmlkZW5jZWQYBCADKAki/QEKEEp1ZGdtZW50T3ZlcnJpZGUSFQoNZGV0ZXJtaW5hdGlvbhgBIAEoCRINCgViYXNpcxgCIAEoCRIMCgRyb2xlGAMgASgJEiYKAmF0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpieV9kaXNwbGF5GAUgASgJEg4KBnJlYXNvbhgGIAEoCRIcChRjYXJyaWVkX2Zyb21fYXR0ZW1wdBgHIAEoBRIPCgdyZWNoZWNrGAggASgIEiAKGG1vZGVsX2RldGVybWluYXRpb25fdGhlbhgJIAEoCRIYChBtb2RlbF9iYXNpc190aGVuGAogASgJIpQBCg9FYXJsaWVyT3ZlcnJpZGUSDwoHYXR0ZW1wdBgBIAEoBRIVCg1kZXRlcm1pbmF0aW9uGAIgASgJEg0KBWJhc2lzGAMgASgJEgwKBHJvbGUYBCABKAkSJgoCYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHNhbWVfdmVyc2lvbhgGIAEoCCK8BQoISnVkZ21lbnQSCgoCaWQYASABKAkSFgoOcmVxdWlyZW1lbnRfaWQYAiABKAkSHAoUcmVxdWlyZW1lbnRfbG9jYWxfaWQYAyABKAkSFQoNZGV0ZXJtaW5hdGlvbhgEIAEoCRINCgViYXNpcxgFIAEoCRITCgt1bmNlcnRhaW50eRgGIAMoCRIfChdlZmZlY3RpdmVfZGV0ZXJtaW5hdGlvbhgHIAEoCRIXCg9lZmZlY3RpdmVfYmFzaXMYCCABKAkSLQoIb3ZlcnJpZGUYCSABKAsyGy5jYXJlZXIudjEuSnVkZ21lbnRPdmVycmlkZRIXCg9kZXJpdmVkX3ZlcmRpY3QYCiABKAkSEQoJcmF0aW9uYWxlGAsgASgJEigKCGV2aWRlbmNlGAwgAygLMhYuY2FyZWVyLnYxLkV2aWRlbmNlUmVmEjMKEHJ1bGVfYWRqdXN0bWVudHMYDSADKAsyGS5jYXJlZXIudjEuUnVsZUFkanVzdG1lbnQSMAoOcmVwb3J0ZWRfZmFjdHMYDiABKAsyGC5jYXJlZXIudjEuUmVwb3J0ZWRGYWN0cxIRCglnYXBfY2xhc3MYDyABKAkSFAoMbm90X2Fzc2Vzc2VkGBAgASgIEg0KBXN0YWxlGBEgASgIEhUKDWtleXdvcmRfa25vd24YEiABKAgSFQoNa2V5d29yZF9mb3VuZBgTIAEoCBIVCg1rZXl3b3JkX3Rlcm1zGBQgAygJEhMKC2RlY2lzaW9uX2lkGBUgASgDEjQKEGVhcmxpZXJfb3ZlcnJpZGUYFiABKAsyGi5jYXJlZXIudjEuRWFybGllck92ZXJyaWRlEi4KCWZvbGxvd191cBgXIAEoCzIbLmNhcmVlci52MS5KdWRnbWVudEZvbGxvd1VwEhUKDXNlbGZfYXR0ZXN0ZWQYGCABKAgixgEKEEp1ZGdtZW50Rm9sbG93VXASDgoGc3RhdHVzGAEgASgJEhAKCHF1ZXN0aW9uGAIgASgJEhEKCXN0YXRlbWVudBgDIAEoCRIvCgthbnN3ZXJlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFQoNYXNrZWRfYXR0ZW1wdBgFIAEoBRIQCghhc2tlZF9ieRgGIAEoCRISCgpyZXF1ZXN0X2lkGAcgASgJEg8KB2l0ZW1faWQYCCABKAkingMKE1JlY29yZENsYXJpZmljYXRpb24SEgoKcmVxdWVzdF9pZBgBIAEoCRIOCgZzdGF0dXMYAiABKAkSDAoEaGVsZBgDIAEoCBIVCg1jbG9zZWRfcmVhc29uGAQgASgJEg0KBWFza2VkGAUgASgFEg8KB3BlbmRpbmcYBiABKAUSEAoIYW5zd2VyZWQYByABKAUSMAoMZ2VuZXJhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpleHBpcmVzX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgthbnN3ZXJlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJY2xvc2VkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIVCg1hc2tlZF9hdHRlbXB0GAwgASgFEhcKD2Nsb3NpbmdfYXR0ZW1wdBgNIAEoBRIaChJjbG9zZWRfYnlfdGhpc19ydW4YDiABKAgitAYKC01hdGNoUmVjb3JkEg4KBnJ1bl9pZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhUKDXN1Ym1pc3Npb25faWQYAyABKAkSDwoHYXR0ZW1wdBgEIAEoBRIZChFzdXBlcnNlZGVzX3J1bl9pZBgFIAEoCRISCgpzdXBlcnNlZGVkGAYgASgIEhMKC3J1bl90cmlnZ2VyGAcgASgJEhIKCnJvbGVfdGl0bGUYCCABKAkSEAoIZW1wbG95ZXIYCSABKAkSJQoIY292ZXJhZ2UYCiABKAsyEy5jYXJlZXIudjEuQ292ZXJhZ2USLAoMcmVxdWlyZW1lbnRzGAsgAygLMhYuY2FyZWVyLnYxLlJlcXVpcmVtZW50EiYKCWp1ZGdtZW50cxgMIAMoCzITLmNhcmVlci52MS5KdWRnbWVudBIWCg5vdmVycmlkZV9jb3VudBgNIAEoBRIUCgxrZXl3b3JkX3J1bGUYDiABKAkSFwoPa2V5d29yZF9za2lwcGVkGA8gASgJEjYKCHZlcnNpb25zGBAgAygLMiQuY2FyZWVyLnYxLk1hdGNoUmVjb3JkLlZlcnNpb25zRW50cnkSCwoDZml0GBEgASgJEhgKC21hdGNoX3Njb3JlGBIgASgBSACIAQESLwoLZmluaXNoZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKEGNvcnB1c19kb2N1bWVudHMYFCABKAUSDQoFbW9kZWwYFSABKAkSGwoTcmVxdWlyZW1lbnRzX2VkaXRlZBgWIAEoCBIbCg5yZXZpZXdlZF9zY29yZRgXIAEoAUgBiAEBEhQKDHJldmlld2VkX2ZpdBgYIAEoCRI1Cg1jbGFyaWZpY2F0aW9uGBkgASgLMh4uY2FyZWVyLnYxLlJlY29yZENsYXJpZmljYXRpb24SGgoSYXdhaXRpbmdfY2FuZGlkYXRlGBogASgIGi8KDVZlcnNpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfbWF0Y2hfc2NvcmVCEQoPX3Jldmlld2VkX3Njb3JlIjYKDk92ZXJyaWRlQ2hvaWNlEhUKDWRldGVybWluYXRpb24YASABKAkSDQoFYmFzZXMYAiADKAkiZQoVR2V0TWF0Y2hSZWNvcmRSZXF1ZXN0EiAKDXN1Ym1pc3Npb25faWQYASABKAlCCbpIBnIEEAEYIBIXCgZydW5faWQYAiABKAlCB7pIBHICGEASEQoJYXNfbWVtYmVyGAMgASgIIrUEChZHZXRNYXRjaFJlY29yZFJlc3BvbnNlEiYKBnJlY29yZBgBIAEoCzIWLmNhcmVlci52MS5NYXRjaFJlY29yZBIsCg5kZXRlcm1pbmF0aW9ucxgCIAMoCzIULmNhcmVlci52MS5Wb2NhYkNvZGUSIwoFYmFzZXMYAyADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEisKDXVuY2VydGFpbnRpZXMYBCADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiMKBXR5cGVzGAUgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIlCgdjbGFzc2VzGAYgAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIqCgxzb3VyY2Vfa2luZHMYByADKAsyFC5jYXJlZXIudjEuVm9jYWJDb2RlEiwKDm92ZXJyaWRlX3JvbGVzGAggAygLMhQuY2FyZWVyLnYxLlZvY2FiQ29kZRIUCgxjYW5fb3ZlcnJpZGUYCSABKAgSMwoQb3ZlcnJpZGVfY2hvaWNlcxgKIAMoCzIZLmNhcmVlci52MS5PdmVycmlkZUNob2ljZRIuCg1yZXZpZXdfcmVzdW1lGAsgASgLMhcuY2FyZWVyLnYxLlJldmlld1Jlc3VtZRIfChdjYW5fd3JpdGVfcmV2aWV3X3Jlc3VtZRgMIAEoCBIaChJyZXZpZXdfcmVzdW1lX25vdGUYDSABKAkSFQoNYXNrYWJsZV9jb3VudBgOIAEoBSK2AQoXT3ZlcnJpZGVKdWRnbWVudFJlcXVlc3QSHgoLanVkZ21lbnRfaWQYASABKAlCCbpIBnIEEAEYQBIeCg1kZXRlcm1pbmF0aW9uGAIgASgJQge6SARyAhgoEhYKBWJhc2lzGAMgASgJQge6SARyAhgoEhoKBnJlYXNvbhgEIAEoCUIKukgHcgUQARjoBxIVCgRyb2xlGAUgASgJQge6SARyAhgoEhAKCHdpdGhkcmF3GAYgASgIIkIKGE92ZXJyaWRlSnVkZ21lbnRSZXNwb25zZRImCgZyZWNvcmQYASABKAsyFi5jYXJlZXIudjEuTWF0Y2hSZWNvcmQiiAIKDFJldmlld1Jlc3VtZRIOCgZydW5faWQYASABKAkSDgoGc3RhdHVzGAIgASgJEg0KBWVycm9yGAMgASgJEhAKCG1hcmtkb3duGAQgASgJEjAKDHJlcXVlc3RlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLwoLZmluaXNoZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDnJldmlld2VkX3Njb3JlGAcgASgBEhYKDm92ZXJyaWRlX2NvdW50GAggASgFEhUKDWRvd25sb2FkX3BhdGgYCSABKAkSDQoFbW9kZWwYCiABKAkiNQoYV3JpdGVSZXZpZXdSZXN1bWVSZXF1ZXN0EhkKBnJ1bl9pZBgBIAEoCUIJukgGcgQQARhAIksKGVdyaXRlUmV2aWV3UmVzdW1lUmVzcG9uc2USLgoNcmV2aWV3X3Jlc3VtZRgBIAEoCzIXLmNhcmVlci52MS5SZXZpZXdSZXN1bWUiQwoTQ2xhcmlmaWNhdGlvbk9wdGlvbhINCgV2YWx1ZRgBIAEoCRINCgVsYWJlbBgCIAEoCRIOCgZzb3VyY2UYAyABKAkirgEKEkNsYXJpZmljYXRpb25GaWVsZBIMCgRuYW1lGAEgASgJEg0KBWxhYmVsGAIgASgJEgwKBGtpbmQYAyABKAkSEAoIcmVxdWlyZWQYBCABKAgSLwoHb3B0aW9ucxgFIAMoCzIeLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uT3B0aW9uEgsKA21heBgGIAEoARIPCgdtYXhfbGVuGAcgASgFEgwKBGhpbnQYCCABKAkiugEKE0NsYXJpZmljYXRpb25BbnN3ZXISDgoGc3RhdHVzGAEgASgJEjoKBnZhbHVlcxgCIAMoCzIqLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uQW5zd2VyLlZhbHVlc0VudHJ5EhEKCWZyZWVfdGV4dBgDIAEoCRpECgtWYWx1ZXNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5jYXJlZXIudjEuU3RyaW5nTGlzdDoCOAEi0AIKEUNsYXJpZmljYXRpb25JdGVtEgoKAmlkGAEgASgJEhwKFHJlcXVpcmVtZW50X2xvY2FsX2lkGAIgASgJEhQKDHNvdXJjZV9xdW90ZRgDIAEoCRITCgthbnN3ZXJfdHlwZRgEIAEoCRIQCghxdWVzdGlvbhgFIAEoCRItCgZmaWVsZHMYBiADKAsyHS5jYXJlZXIudjEuQ2xhcmlmaWNhdGlvbkZpZWxkEhoKEmZyZWVfdGV4dF9yZXF1aXJlZBgHIAEoCBIVCg1mcmVlX3RleHRfbWF4GAggASgFEi4KBmFuc3dlchgJIAEoCzIeLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uQW5zd2VyEi8KC2Fuc3dlcmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCglzdGF0ZW1lbnQYCyABKAki4QMKFENsYXJpZmljYXRpb25SZXF1ZXN0EgoKAmlkGAEgASgJEhUKDXN1Ym1pc3Npb25faWQYAiABKAkSDgoGcnVuX2lkGAMgASgJEg8KB2F0dGVtcHQYBCABKAUSEgoKcm9sZV90aXRsZRgFIAEoCRIQCghlbXBsb3llchgGIAEoCRIOCgZzdGF0dXMYByABKAkSDAoEaGVsZBgIIAEoCBIQCghhc2tlZF9ieRgJIAEoCRIwCgxnZW5lcmF0ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmV4cGlyZXNfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC2Fuc3dlcmVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCgljbG9zZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhUKDWNsb3NlZF9yZWFzb24YDiABKAkSEgoKaXRlbV9jb3VudBgPIAEoBRIVCg1wZW5kaW5nX2NvdW50GBAgASgFEisKBWl0ZW1zGBEgAygLMhwuY2FyZWVyLnYxLkNsYXJpZmljYXRpb25JdGVtIjUKIExpc3RDbGFyaWZpY2F0aW9uUmVxdWVzdHNSZXF1ZXN0EhEKCW9wZW5fb25seRgBIAEoCCJWCiFMaXN0Q2xhcmlmaWNhdGlvblJlcXVlc3RzUmVzcG9uc2USMQoIcmVxdWVzdHMYASADKAsyHy5jYXJlZXIudjEuQ2xhcmlmaWNhdGlvblJlcXVlc3QiTAoeR2V0Q2xhcmlmaWNhdGlvblJlcXVlc3RSZXF1ZXN0EioKGGNsYXJpZmljYXRpb25fcmVxdWVzdF9pZBgBIAEoCUIIukgFcgOwAQEiUwofR2V0Q2xhcmlmaWNhdGlvblJlcXVlc3RSZXNwb25zZRIwCgdyZXF1ZXN0GAEgASgLMh8uY2FyZWVyLnYxLkNsYXJpZmljYXRpb25SZXF1ZXN0Ij8KG1JlcXVlc3RDbGFyaWZpY2F0aW9uUmVxdWVzdBIgCg1zdWJtaXNzaW9uX2lkGAEgASgJQgm6SAZyBBABGCAiXwocUmVxdWVzdENsYXJpZmljYXRpb25SZXNwb25zZRIwCgdyZXF1ZXN0GAEgASgLMh8uY2FyZWVyLnYxLkNsYXJpZmljYXRpb25SZXF1ZXN0Eg0KBWFkZGVkGAIgASgFIoEBCh5BbnN3ZXJDbGFyaWZpY2F0aW9uSXRlbVJlcXVlc3QSJwoVY2xhcmlmaWNhdGlvbl9pdGVtX2lkGAEgASgJQgi6SAVyA7ABARI2CgZhbnN3ZXIYAiABKAsyHi5jYXJlZXIudjEuQ2xhcmlmaWNhdGlvbkFuc3dlckIGukgDyAEBImQKH0Fuc3dlckNsYXJpZmljYXRpb25JdGVtUmVzcG9uc2USKgoEaXRlbRgBIAEoCzIcLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uSXRlbRIVCg1wZW5kaW5nX2NvdW50GAIgASgFIk8KIVN1Ym1pdENsYXJpZmljYXRpb25BbnN3ZXJzUmVxdWVzdBIqChhjbGFyaWZpY2F0aW9uX3JlcXVlc3RfaWQYASABKAlCCLpIBXIDsAEBImsKIlN1Ym1pdENsYXJpZmljYXRpb25BbnN3ZXJzUmVzcG9uc2USMAoHcmVxdWVzdBgBIAEoCzIfLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uUmVxdWVzdBITCgtydW5fc3RhcnRlZBgCIAEoCCJNCiJXaXRoZHJhd0NsYXJpZmljYXRpb25BbnN3ZXJSZXF1ZXN0EicKFWNsYXJpZmljYXRpb25faXRlbV9pZBgBIAEoCUIIukgFcgOwAQEiagojV2l0aGRyYXdDbGFyaWZpY2F0aW9uQW5zd2VyUmVzcG9uc2USKgoEaXRlbRgBIAEoCzIcLmNhcmVlci52MS5DbGFyaWZpY2F0aW9uSXRlbRIXCg9zdGFsZV9qdWRnbWVudHMYAiABKAUqlAEKEVJlcXVpcmVtZW50U3RhdHVzEiIKHlJFUVVJUkVNRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGFJFUVVJUkVNRU5UX1NUQVRVU19EUkFGVBABEh0KGVJFUVVJUkVNRU5UX1NUQVRVU19BQ1RJVkUQAhIeChpSRVFVSVJFTUVOVF9TVEFUVVNfUkVUSVJFRBADMtMMCg1IaXJpbmdTZXJ2aWNlEmUKEExpc3RSZXF1aXJlbWVudHMSIi5jYXJlZXIudjEuTGlzdFJlcXVpcmVtZW50c1JlcXVlc3QaIy5jYXJlZXIudjEuTGlzdFJlcXVpcmVtZW50c1Jlc3BvbnNlIgiAtRgDoLUYARJoChFVcGRhdGVSZXF1aXJlbWVudBIjLmNhcmVlci52MS5VcGRhdGVSZXF1aXJlbWVudFJlcXVlc3QaJC5jYXJlZXIudjEuVXBkYXRlUmVxdWlyZW1lbnRSZXNwb25zZSIIgLUYA6C1GAISbgoTUmVsZWFzZVJlcXVpcmVtZW50cxIlLmNhcmVlci52MS5SZWxlYXNlUmVxdWlyZW1lbnRzUmVxdWVzdBomLmNhcmVlci52MS5SZWxlYXNlUmVxdWlyZW1lbnRzUmVzcG9uc2UiCIC1GAOgtRgCEmgKEUdldEhpcmluZ1NldHRpbmdzEiMuY2FyZWVyLnYxLkdldEhpcmluZ1NldHRpbmdzUmVxdWVzdBokLmNhcmVlci52MS5HZXRIaXJpbmdTZXR0aW5nc1Jlc3BvbnNlIgiAtRgDoLUYARJoChFTZXRIaXJpbmdTZXR0aW5ncxIjLmNhcmVlci52MS5TZXRIaXJpbmdTZXR0aW5nc1JlcXVlc3QaJC5jYXJlZXIudjEuU2V0SGlyaW5nU2V0dGluZ3NSZXNwb25zZSIIgLUYA6C1GAISXwoOR2V0TWF0Y2hSZWNvcmQSIC5jYXJlZXIudjEuR2V0TWF0Y2hSZWNvcmRSZXF1ZXN0GiEuY2FyZWVyLnYxLkdldE1hdGNoUmVjb3JkUmVzcG9uc2UiCIC1GAKgtRgBEmUKEE92ZXJyaWRlSnVkZ21lbnQSIi5jYXJlZXIudjEuT3ZlcnJpZGVKdWRnbWVudFJlcXVlc3QaIy5jYXJlZXIudjEuT3ZlcnJpZGVKdWRnbWVudFJlc3BvbnNlIgiAtRgDoLUYAhJoChFXcml0ZVJldmlld1Jlc3VtZRIjLmNhcmVlci52MS5Xcml0ZVJldmlld1Jlc3VtZVJlcXVlc3QaJC5jYXJlZXIudjEuV3JpdGVSZXZpZXdSZXN1bWVSZXNwb25zZSIIgLUYA6C1GAISgAEKGUxpc3RDbGFyaWZpY2F0aW9uUmVxdWVzdHMSKy5jYXJlZXIudjEuTGlzdENsYXJpZmljYXRpb25SZXF1ZXN0c1JlcXVlc3QaLC5jYXJlZXIudjEuTGlzdENsYXJpZmljYXRpb25SZXF1ZXN0c1Jlc3BvbnNlIgiAtRgDoLUYARJ6ChdHZXRDbGFyaWZpY2F0aW9uUmVxdWVzdBIpLmNhcmVlci52MS5HZXRDbGFyaWZpY2F0aW9uUmVxdWVzdFJlcXVlc3QaKi5jYXJlZXIudjEuR2V0Q2xhcmlmaWNhdGlvblJlcXVlc3RSZXNwb25zZSIIgLUYA6C1GAEScQoUUmVxdWVzdENsYXJpZmljYXRpb24SJi5jYXJlZXIudjEuUmVxdWVzdENsYXJpZmljYXRpb25SZXF1ZXN0GicuY2FyZWVyLnYxLlJlcXVlc3RDbGFyaWZpY2F0aW9uUmVzcG9uc2UiCIC1GAOgtRgCEnoKF0Fuc3dlckNsYXJpZmljYXRpb25JdGVtEikuY2FyZWVyLnYxLkFuc3dlckNsYXJpZmljYXRpb25JdGVtUmVxdWVzdBoqLmNhcmVlci52MS5BbnN3ZXJDbGFyaWZpY2F0aW9uSXRlbVJlc3BvbnNlIgiAtRgDoLUYAhKDAQoaU3VibWl0Q2xhcmlmaWNhdGlvbkFuc3dlcnMSLC5jYXJlZXIudjEuU3VibWl0Q2xhcmlmaWNhdGlvbkFuc3dlcnNSZXF1ZXN0Gi0uY2FyZWVyLnYxLlN1Ym1pdENsYXJpZmljYXRpb25BbnN3ZXJzUmVzcG9uc2UiCIC1GAOgtRgCEoYBChtXaXRoZHJhd0NsYXJpZmljYXRpb25BbnN3ZXISLS5jYXJlZXIudjEuV2l0aGRyYXdDbGFyaWZpY2F0aW9uQW5zd2VyUmVxdWVzdBouLmNhcmVlci52MS5XaXRoZHJhd0NsYXJpZmljYXRpb25BbnN3ZXJSZXNwb25zZSIIgLUYA6C1GAJCpQEKDWNvbS5jYXJlZXIudjFCC0hpcmluZ1Byb3RvUAFaQmdpdGh1Yi5jb20vcmVoMzM3Ni9jYXJlZXItc2l0ZS9zZXJ2aWNlcy9hcGkvZ2VuL2NhcmVlci92MTtjYXJlZXJ2MaICA0NYWKoCCUNhcmVlci5WMcoCCUNhcmVlclxWMeICFUNhcmVlclxWMVxHUEJNZXRhZGF0YeoCCkNhcmVlcjo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_career_v1_options, file_google_protobuf_timestamp]);
 
 /**
  * A scale: how many of what.
@@ -765,6 +766,28 @@ export type HiringSettings = Message<"career.v1.HiringSettings"> & {
    * @generated from field: double preferred_fraction = 1;
    */
   preferredFraction: number;
+
+  /**
+   * Whether a run that leaves a requirement unresolved on a difference
+   * of wording, tool or setting, or on an unproven relationship, asks
+   * the candidate about it without being asked, and carries no fit
+   * until the questions are closed (FSD FR-HF-22, FR-HF-24). Off, a run
+   * is given its fit as it finishes and questions are written only at
+   * the candidate's request. Left unset on a write, it is not changed.
+   *
+   * @generated from field: optional bool clarification_auto = 2;
+   */
+  clarificationAuto?: boolean | undefined;
+
+  /**
+   * How many days a withheld review waits for the candidate before the
+   * open questions are closed unanswered and the fit is issued from
+   * what is evidenced: 1 to 14, 3 unless set. 0 on a write leaves it as
+   * it is.
+   *
+   * @generated from field: int32 clarification_days = 3;
+   */
+  clarificationDays: number;
 };
 
 /**
@@ -926,9 +949,11 @@ export const CoverageSchema: GenMessage<Coverage> = /*@__PURE__*/
   messageDesc(file_career_v1_hiring, 17);
 
 /**
- * One piece of evidence a judgment cites. A citation, never the text:
- * the private text of the candidate's documents is not sent to any
- * reader of a record.
+ * One piece of evidence a judgment cites. For a document it is a
+ * citation, never the text: the private text of the candidate's
+ * documents is not sent to any reader of a record. The candidate's own
+ * answer to a follow-up question is the exception, and carries its
+ * statement.
  *
  * @generated from message career.v1.EvidenceRef
  */
@@ -971,6 +996,17 @@ export type EvidenceRef = Message<"career.v1.EvidenceRef"> & {
    * @generated from field: bool withdrawn = 5;
    */
   withdrawn: boolean;
+
+  /**
+   * The candidate's own answer to a follow-up question, in their words,
+   * for an item of kind candidate_response. It was written for the
+   * employer whose posting it answers, and a reader shows it marked as
+   * the candidate's own statement. Empty for every other kind and once
+   * withdrawn.
+   *
+   * @generated from field: string statement = 6;
+   */
+  statement: string;
 };
 
 /**
@@ -1428,6 +1464,23 @@ export type Judgment = Message<"career.v1.Judgment"> & {
    * @generated from field: career.v1.EarlierOverride earlier_override = 22;
    */
   earlierOverride?: EarlierOverride | undefined;
+
+  /**
+   * The follow-up question put to the candidate about this requirement,
+   * on this run or an earlier one, and what came of it. Unset when none
+   * has been asked.
+   *
+   * @generated from field: career.v1.JudgmentFollowUp follow_up = 23;
+   */
+  followUp?: JudgmentFollowUp | undefined;
+
+  /**
+   * True when the judgment rests, in whole or in part, on the
+   * candidate's own answer to a follow-up question (FSD FR-HF-09).
+   *
+   * @generated from field: bool self_attested = 24;
+   */
+  selfAttested: boolean;
 };
 
 /**
@@ -1436,6 +1489,202 @@ export type Judgment = Message<"career.v1.Judgment"> & {
  */
 export const JudgmentSchema: GenMessage<Judgment> = /*@__PURE__*/
   messageDesc(file_career_v1_hiring, 23);
+
+/**
+ * The follow-up question about one requirement and its answer (FSD
+ * FR-HF-13, FR-HF-14).
+ *
+ * @generated from message career.v1.JudgmentFollowUp
+ */
+export type JudgmentFollowUp = Message<"career.v1.JudgmentFollowUp"> & {
+  /**
+   * Where it stands: pending while the question is open; answered,
+   * not_applicable ("I have not done this"), declined or withdrawn as
+   * the candidate left it; unanswered when its time ran out with no
+   * answer; superseded when a new run of the posting replaced the
+   * record it was asked about before it was answered.
+   *
+   * @generated from field: string status = 1;
+   */
+  status: string;
+
+  /**
+   * The question as it was asked.
+   *
+   * @generated from field: string question = 2;
+   */
+  question: string;
+
+  /**
+   * The candidate's answer in their own words, for an answered or
+   * not-applicable question.
+   *
+   * @generated from field: string statement = 3;
+   */
+  statement: string;
+
+  /**
+   * When it was answered.
+   *
+   * @generated from field: google.protobuf.Timestamp answered_at = 4;
+   */
+  answeredAt?: Timestamp | undefined;
+
+  /**
+   * The run of the posting the question was asked on.
+   *
+   * @generated from field: int32 asked_attempt = 5;
+   */
+  askedAttempt: number;
+
+  /**
+   * Who asked: system (the run, unprompted) or candidate (at their own
+   * request).
+   *
+   * @generated from field: string asked_by = 6;
+   */
+  askedBy: string;
+
+  /**
+   * The questionnaire it belongs to. Sent to admins only.
+   *
+   * @generated from field: string request_id = 7;
+   */
+  requestId: string;
+
+  /**
+   * The question's id. Sent to admins only.
+   *
+   * @generated from field: string item_id = 8;
+   */
+  itemId: string;
+};
+
+/**
+ * Describes the message career.v1.JudgmentFollowUp.
+ * Use `create(JudgmentFollowUpSchema)` to create a new message.
+ */
+export const JudgmentFollowUpSchema: GenMessage<JudgmentFollowUp> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 24);
+
+/**
+ * Where the follow-up questions of a record stand (FSD FR-HF-22): the
+ * questionnaire asked on this run, or the one this run closed.
+ *
+ * @generated from message career.v1.RecordClarification
+ */
+export type RecordClarification = Message<"career.v1.RecordClarification"> & {
+  /**
+   * The questionnaire. Sent to admins only.
+   *
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * sent while it takes answers; answered once the candidate has
+   * submitted; expired when the time limit passed or a later run
+   * replaced it.
+   *
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * Whether the run that asked carries no fit while the questions are
+   * open.
+   *
+   * @generated from field: bool held = 3;
+   */
+  held: boolean;
+
+  /**
+   * How it closed: answered, expired, superseded. Empty until the run
+   * that closes it has finished.
+   *
+   * @generated from field: string closed_reason = 4;
+   */
+  closedReason: string;
+
+  /**
+   * How many questions were asked.
+   *
+   * @generated from field: int32 asked = 5;
+   */
+  asked: number;
+
+  /**
+   * How many are still open.
+   *
+   * @generated from field: int32 pending = 6;
+   */
+  pending: number;
+
+  /**
+   * How many were answered, "I have not done this" included.
+   *
+   * @generated from field: int32 answered = 7;
+   */
+  answered: number;
+
+  /**
+   * When the questions were written.
+   *
+   * @generated from field: google.protobuf.Timestamp generated_at = 8;
+   */
+  generatedAt?: Timestamp | undefined;
+
+  /**
+   * When open questions are closed unanswered; unset when there is no
+   * limit.
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 9;
+   */
+  expiresAt?: Timestamp | undefined;
+
+  /**
+   * When the candidate submitted the answers.
+   *
+   * @generated from field: google.protobuf.Timestamp answered_at = 10;
+   */
+  answeredAt?: Timestamp | undefined;
+
+  /**
+   * When the run that closed the questions finished with them.
+   *
+   * @generated from field: google.protobuf.Timestamp closed_at = 11;
+   */
+  closedAt?: Timestamp | undefined;
+
+  /**
+   * The run the questions were asked on.
+   *
+   * @generated from field: int32 asked_attempt = 12;
+   */
+  askedAttempt: number;
+
+  /**
+   * The run that judged the answered requirements again; 0 until one
+   * has.
+   *
+   * @generated from field: int32 closing_attempt = 13;
+   */
+  closingAttempt: number;
+
+  /**
+   * True on the record of the run that closed the questions.
+   *
+   * @generated from field: bool closed_by_this_run = 14;
+   */
+  closedByThisRun: boolean;
+};
+
+/**
+ * Describes the message career.v1.RecordClarification.
+ * Use `create(RecordClarificationSchema)` to create a new message.
+ */
+export const RecordClarificationSchema: GenMessage<RecordClarification> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 25);
 
 /**
  * The match record of one run (FSD FR-HF-10, FR-HF-17).
@@ -1619,6 +1868,24 @@ export type MatchRecord = Message<"career.v1.MatchRecord"> & {
    * @generated from field: string reviewed_fit = 24;
    */
   reviewedFit: string;
+
+  /**
+   * The follow-up questions asked on this run, or closed by it. Unset
+   * when there are none.
+   *
+   * @generated from field: career.v1.RecordClarification clarification = 25;
+   */
+  clarification?: RecordClarification | undefined;
+
+  /**
+   * True while the run carries no fit because the candidate has been
+   * asked something (FSD FR-HF-22). The record is then the state so
+   * far: `fit`, `match_score` and the reviewed pair are unset, and a
+   * reader shows it as inconclusive, awaiting the candidate.
+   *
+   * @generated from field: bool awaiting_candidate = 26;
+   */
+  awaitingCandidate: boolean;
 };
 
 /**
@@ -1626,7 +1893,7 @@ export type MatchRecord = Message<"career.v1.MatchRecord"> & {
  * Use `create(MatchRecordSchema)` to create a new message.
  */
 export const MatchRecordSchema: GenMessage<MatchRecord> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 24);
+  messageDesc(file_career_v1_hiring, 26);
 
 /**
  * The determinations a reviewer may set and, for each, the bases that
@@ -1656,7 +1923,7 @@ export type OverrideChoice = Message<"career.v1.OverrideChoice"> & {
  * Use `create(OverrideChoiceSchema)` to create a new message.
  */
 export const OverrideChoiceSchema: GenMessage<OverrideChoice> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 25);
+  messageDesc(file_career_v1_hiring, 27);
 
 /**
  * Names the record: the submitted posting, and optionally one run of
@@ -1696,7 +1963,7 @@ export type GetMatchRecordRequest = Message<"career.v1.GetMatchRecordRequest"> &
  * Use `create(GetMatchRecordRequestSchema)` to create a new message.
  */
 export const GetMatchRecordRequestSchema: GenMessage<GetMatchRecordRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 26);
+  messageDesc(file_career_v1_hiring, 28);
 
 /**
  * The record and the vocabularies it is labelled from.
@@ -1800,6 +2067,15 @@ export type GetMatchRecordResponse = Message<"career.v1.GetMatchRecordResponse">
    * @generated from field: string review_resume_note = 13;
    */
   reviewResumeNote: string;
+
+  /**
+   * How many unresolved requirements of this record have no follow-up
+   * question yet and could be asked about at the candidate's request.
+   * Sent to admins only, and 0 for a record a later run has superseded.
+   *
+   * @generated from field: int32 askable_count = 14;
+   */
+  askableCount: number;
 };
 
 /**
@@ -1807,7 +2083,7 @@ export type GetMatchRecordResponse = Message<"career.v1.GetMatchRecordResponse">
  * Use `create(GetMatchRecordResponseSchema)` to create a new message.
  */
 export const GetMatchRecordResponseSchema: GenMessage<GetMatchRecordResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 27);
+  messageDesc(file_career_v1_hiring, 29);
 
 /**
  * One override of one judgment.
@@ -1869,7 +2145,7 @@ export type OverrideJudgmentRequest = Message<"career.v1.OverrideJudgmentRequest
  * Use `create(OverrideJudgmentRequestSchema)` to create a new message.
  */
 export const OverrideJudgmentRequestSchema: GenMessage<OverrideJudgmentRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 28);
+  messageDesc(file_career_v1_hiring, 30);
 
 /**
  * The record after the override.
@@ -1890,7 +2166,7 @@ export type OverrideJudgmentResponse = Message<"career.v1.OverrideJudgmentRespon
  * Use `create(OverrideJudgmentResponseSchema)` to create a new message.
  */
 export const OverrideJudgmentResponseSchema: GenMessage<OverrideJudgmentResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 29);
+  messageDesc(file_career_v1_hiring, 31);
 
 /**
  * A résumé written at the owner's request on a run's verdicts after
@@ -1977,7 +2253,7 @@ export type ReviewResume = Message<"career.v1.ReviewResume"> & {
  * Use `create(ReviewResumeSchema)` to create a new message.
  */
 export const ReviewResumeSchema: GenMessage<ReviewResume> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 30);
+  messageDesc(file_career_v1_hiring, 32);
 
 /**
  * Names the run.
@@ -1999,7 +2275,7 @@ export type WriteReviewResumeRequest = Message<"career.v1.WriteReviewResumeReque
  * Use `create(WriteReviewResumeRequestSchema)` to create a new message.
  */
 export const WriteReviewResumeRequestSchema: GenMessage<WriteReviewResumeRequest> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 31);
+  messageDesc(file_career_v1_hiring, 33);
 
 /**
  * The résumé as it stands after the request: being written.
@@ -2020,7 +2296,675 @@ export type WriteReviewResumeResponse = Message<"career.v1.WriteReviewResumeResp
  * Use `create(WriteReviewResumeResponseSchema)` to create a new message.
  */
 export const WriteReviewResumeResponseSchema: GenMessage<WriteReviewResumeResponse> = /*@__PURE__*/
-  messageDesc(file_career_v1_hiring, 32);
+  messageDesc(file_career_v1_hiring, 34);
+
+/**
+ * One choice a question offers.
+ *
+ * @generated from message career.v1.ClarificationOption
+ */
+export type ClarificationOption = Message<"career.v1.ClarificationOption"> & {
+  /**
+   * The value an answer carries when this choice is picked.
+   *
+   * @generated from field: string value = 1;
+   */
+  value: string;
+
+  /**
+   * The choice as it reads.
+   *
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * Where the choice comes from: own_corpus (one of the candidate's own
+   * roles or projects), generic_list (a list that is the same for every
+   * requirement), posting (an organisation the posting itself names).
+   * Never anything a requirement is scored on.
+   *
+   * @generated from field: string source = 3;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message career.v1.ClarificationOption.
+ * Use `create(ClarificationOptionSchema)` to create a new message.
+ */
+export const ClarificationOptionSchema: GenMessage<ClarificationOption> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 35);
+
+/**
+ * One controlled input of a question.
+ *
+ * @generated from message career.v1.ClarificationField
+ */
+export type ClarificationField = Message<"career.v1.ClarificationField"> & {
+  /**
+   * The key the answer carries this input under.
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * The input's label.
+   *
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * choice (pick one), multi (pick any), number, text.
+   *
+   * @generated from field: string kind = 3;
+   */
+  kind: string;
+
+  /**
+   * Whether an answer must fill it.
+   *
+   * @generated from field: bool required = 4;
+   */
+  required: boolean;
+
+  /**
+   * The choices, for choice and multi.
+   *
+   * @generated from field: repeated career.v1.ClarificationOption options = 5;
+   */
+  options: ClarificationOption[];
+
+  /**
+   * The largest number accepted, for number.
+   *
+   * @generated from field: double max = 6;
+   */
+  max: number;
+
+  /**
+   * The longest text accepted, for text.
+   *
+   * @generated from field: int32 max_len = 7;
+   */
+  maxLen: number;
+
+  /**
+   * A line of help shown under the input.
+   *
+   * @generated from field: string hint = 8;
+   */
+  hint: string;
+};
+
+/**
+ * Describes the message career.v1.ClarificationField.
+ * Use `create(ClarificationFieldSchema)` to create a new message.
+ */
+export const ClarificationFieldSchema: GenMessage<ClarificationField> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 36);
+
+/**
+ * A candidate's answer to one question.
+ *
+ * @generated from message career.v1.ClarificationAnswer
+ */
+export type ClarificationAnswer = Message<"career.v1.ClarificationAnswer"> & {
+  /**
+   * pending until answered; then answered, not_applicable ("I have not
+   * done this"), declined ("prefer not to answer") or withdrawn.
+   *
+   * @generated from field: string status = 1;
+   */
+  status: string;
+
+  /**
+   * What was entered in each input, by the input's name: one value for
+   * choice, number and text, any number for multi. A number travels as
+   * its decimal text.
+   *
+   * @generated from field: map<string, career.v1.StringList> values = 2;
+   */
+  values: { [key: string]: StringList };
+
+  /**
+   * The note in the candidate's own words, at most 600 characters. It
+   * is kept as evidence beside the answer and never parsed.
+   *
+   * @generated from field: string free_text = 3;
+   */
+  freeText: string;
+};
+
+/**
+ * Describes the message career.v1.ClarificationAnswer.
+ * Use `create(ClarificationAnswerSchema)` to create a new message.
+ */
+export const ClarificationAnswerSchema: GenMessage<ClarificationAnswer> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 37);
+
+/**
+ * One question and, once given, its answer, as the candidate sees it.
+ *
+ * @generated from message career.v1.ClarificationItem
+ */
+export type ClarificationItem = Message<"career.v1.ClarificationItem"> & {
+  /**
+   * The question's id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The requirement's id within the role: r1, r2, ...
+   *
+   * @generated from field: string requirement_local_id = 2;
+   */
+  requirementLocalId: string;
+
+  /**
+   * The posting's own words for the requirement, shown above the
+   * question. The requirement's text stands in when extraction kept no
+   * quote.
+   *
+   * @generated from field: string source_quote = 3;
+   */
+  sourceQuote: string;
+
+  /**
+   * The kind of answer asked for: span, magnitude, involvement,
+   * credential, relationship, evidence_pointer, disambiguation.
+   *
+   * @generated from field: string answer_type = 4;
+   */
+  answerType: string;
+
+  /**
+   * The question.
+   *
+   * @generated from field: string question = 5;
+   */
+  question: string;
+
+  /**
+   * The inputs it offers, as they were offered when it was written.
+   *
+   * @generated from field: repeated career.v1.ClarificationField fields = 6;
+   */
+  fields: ClarificationField[];
+
+  /**
+   * Whether an answer must carry the note.
+   *
+   * @generated from field: bool free_text_required = 7;
+   */
+  freeTextRequired: boolean;
+
+  /**
+   * The longest note accepted.
+   *
+   * @generated from field: int32 free_text_max = 8;
+   */
+  freeTextMax: number;
+
+  /**
+   * The answer as saved; status pending until there is one.
+   *
+   * @generated from field: career.v1.ClarificationAnswer answer = 9;
+   */
+  answer?: ClarificationAnswer | undefined;
+
+  /**
+   * When it was answered.
+   *
+   * @generated from field: google.protobuf.Timestamp answered_at = 10;
+   */
+  answeredAt?: Timestamp | undefined;
+
+  /**
+   * The answer as the statement a reader of the record is shown, for an
+   * answered or not-applicable question.
+   *
+   * @generated from field: string statement = 11;
+   */
+  statement: string;
+};
+
+/**
+ * Describes the message career.v1.ClarificationItem.
+ * Use `create(ClarificationItemSchema)` to create a new message.
+ */
+export const ClarificationItemSchema: GenMessage<ClarificationItem> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 38);
+
+/**
+ * One questionnaire: the follow-up questions from one run of one
+ * posting.
+ *
+ * @generated from message career.v1.ClarificationRequest
+ */
+export type ClarificationRequest = Message<"career.v1.ClarificationRequest"> & {
+  /**
+   * The questionnaire's id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The submitted posting it belongs to.
+   *
+   * @generated from field: string submission_id = 2;
+   */
+  submissionId: string;
+
+  /**
+   * The run that asked.
+   *
+   * @generated from field: string run_id = 3;
+   */
+  runId: string;
+
+  /**
+   * That run's number among the posting's runs.
+   *
+   * @generated from field: int32 attempt = 4;
+   */
+  attempt: number;
+
+  /**
+   * The role as the submitter named it, or the posting's first line.
+   *
+   * @generated from field: string role_title = 5;
+   */
+  roleTitle: string;
+
+  /**
+   * The employer as the submitter named it, if they did.
+   *
+   * @generated from field: string employer = 6;
+   */
+  employer: string;
+
+  /**
+   * sent while it takes answers; answered once submitted; expired when
+   * the time limit passed or a later run replaced it.
+   *
+   * @generated from field: string status = 7;
+   */
+  status: string;
+
+  /**
+   * Whether the posting's fit is withheld while it is open.
+   *
+   * @generated from field: bool held = 8;
+   */
+  held: boolean;
+
+  /**
+   * Who asked: system or candidate.
+   *
+   * @generated from field: string asked_by = 9;
+   */
+  askedBy: string;
+
+  /**
+   * When the questions were written.
+   *
+   * @generated from field: google.protobuf.Timestamp generated_at = 10;
+   */
+  generatedAt?: Timestamp | undefined;
+
+  /**
+   * When open questions are closed unanswered; unset when there is no
+   * limit.
+   *
+   * @generated from field: google.protobuf.Timestamp expires_at = 11;
+   */
+  expiresAt?: Timestamp | undefined;
+
+  /**
+   * When the answers were submitted.
+   *
+   * @generated from field: google.protobuf.Timestamp answered_at = 12;
+   */
+  answeredAt?: Timestamp | undefined;
+
+  /**
+   * When the run that closed it finished with it.
+   *
+   * @generated from field: google.protobuf.Timestamp closed_at = 13;
+   */
+  closedAt?: Timestamp | undefined;
+
+  /**
+   * How it closed: answered, expired, superseded.
+   *
+   * @generated from field: string closed_reason = 14;
+   */
+  closedReason: string;
+
+  /**
+   * How many questions it holds.
+   *
+   * @generated from field: int32 item_count = 15;
+   */
+  itemCount: number;
+
+  /**
+   * How many are still unanswered.
+   *
+   * @generated from field: int32 pending_count = 16;
+   */
+  pendingCount: number;
+
+  /**
+   * The questions. Sent by GetClarificationRequest, and by the calls
+   * that change one; a listing leaves it empty.
+   *
+   * @generated from field: repeated career.v1.ClarificationItem items = 17;
+   */
+  items: ClarificationItem[];
+};
+
+/**
+ * Describes the message career.v1.ClarificationRequest.
+ * Use `create(ClarificationRequestSchema)` to create a new message.
+ */
+export const ClarificationRequestSchema: GenMessage<ClarificationRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 39);
+
+/**
+ * Which questionnaires to list.
+ *
+ * @generated from message career.v1.ListClarificationRequestsRequest
+ */
+export type ListClarificationRequestsRequest = Message<"career.v1.ListClarificationRequestsRequest"> & {
+  /**
+   * Only those still taking answers.
+   *
+   * @generated from field: bool open_only = 1;
+   */
+  openOnly: boolean;
+};
+
+/**
+ * Describes the message career.v1.ListClarificationRequestsRequest.
+ * Use `create(ListClarificationRequestsRequestSchema)` to create a new message.
+ */
+export const ListClarificationRequestsRequestSchema: GenMessage<ListClarificationRequestsRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 40);
+
+/**
+ * The questionnaires, newest first.
+ *
+ * @generated from message career.v1.ListClarificationRequestsResponse
+ */
+export type ListClarificationRequestsResponse = Message<"career.v1.ListClarificationRequestsResponse"> & {
+  /**
+   * The questionnaires, without their questions.
+   *
+   * @generated from field: repeated career.v1.ClarificationRequest requests = 1;
+   */
+  requests: ClarificationRequest[];
+};
+
+/**
+ * Describes the message career.v1.ListClarificationRequestsResponse.
+ * Use `create(ListClarificationRequestsResponseSchema)` to create a new message.
+ */
+export const ListClarificationRequestsResponseSchema: GenMessage<ListClarificationRequestsResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 41);
+
+/**
+ * Names one questionnaire.
+ *
+ * @generated from message career.v1.GetClarificationRequestRequest
+ */
+export type GetClarificationRequestRequest = Message<"career.v1.GetClarificationRequestRequest"> & {
+  /**
+   * The questionnaire's id.
+   *
+   * @generated from field: string clarification_request_id = 1;
+   */
+  clarificationRequestId: string;
+};
+
+/**
+ * Describes the message career.v1.GetClarificationRequestRequest.
+ * Use `create(GetClarificationRequestRequestSchema)` to create a new message.
+ */
+export const GetClarificationRequestRequestSchema: GenMessage<GetClarificationRequestRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 42);
+
+/**
+ * The questionnaire with its questions.
+ *
+ * @generated from message career.v1.GetClarificationRequestResponse
+ */
+export type GetClarificationRequestResponse = Message<"career.v1.GetClarificationRequestResponse"> & {
+  /**
+   * The questionnaire.
+   *
+   * @generated from field: career.v1.ClarificationRequest request = 1;
+   */
+  request?: ClarificationRequest | undefined;
+};
+
+/**
+ * Describes the message career.v1.GetClarificationRequestResponse.
+ * Use `create(GetClarificationRequestResponseSchema)` to create a new message.
+ */
+export const GetClarificationRequestResponseSchema: GenMessage<GetClarificationRequestResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 43);
+
+/**
+ * Asks for follow-up questions on a posting's newest record.
+ *
+ * @generated from message career.v1.RequestClarificationRequest
+ */
+export type RequestClarificationRequest = Message<"career.v1.RequestClarificationRequest"> & {
+  /**
+   * The submitted posting's id.
+   *
+   * @generated from field: string submission_id = 1;
+   */
+  submissionId: string;
+};
+
+/**
+ * Describes the message career.v1.RequestClarificationRequest.
+ * Use `create(RequestClarificationRequestSchema)` to create a new message.
+ */
+export const RequestClarificationRequestSchema: GenMessage<RequestClarificationRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 44);
+
+/**
+ * The questionnaire as it now stands.
+ *
+ * @generated from message career.v1.RequestClarificationResponse
+ */
+export type RequestClarificationResponse = Message<"career.v1.RequestClarificationResponse"> & {
+  /**
+   * The questionnaire, with its questions.
+   *
+   * @generated from field: career.v1.ClarificationRequest request = 1;
+   */
+  request?: ClarificationRequest | undefined;
+
+  /**
+   * How many questions this call added.
+   *
+   * @generated from field: int32 added = 2;
+   */
+  added: number;
+};
+
+/**
+ * Describes the message career.v1.RequestClarificationResponse.
+ * Use `create(RequestClarificationResponseSchema)` to create a new message.
+ */
+export const RequestClarificationResponseSchema: GenMessage<RequestClarificationResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 45);
+
+/**
+ * One answer to one question.
+ *
+ * @generated from message career.v1.AnswerClarificationItemRequest
+ */
+export type AnswerClarificationItemRequest = Message<"career.v1.AnswerClarificationItemRequest"> & {
+  /**
+   * The question's id.
+   *
+   * @generated from field: string clarification_item_id = 1;
+   */
+  clarificationItemId: string;
+
+  /**
+   * The answer: status answered, not_applicable or declined, the values
+   * entered and the note.
+   *
+   * @generated from field: career.v1.ClarificationAnswer answer = 2;
+   */
+  answer?: ClarificationAnswer | undefined;
+};
+
+/**
+ * Describes the message career.v1.AnswerClarificationItemRequest.
+ * Use `create(AnswerClarificationItemRequestSchema)` to create a new message.
+ */
+export const AnswerClarificationItemRequestSchema: GenMessage<AnswerClarificationItemRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 46);
+
+/**
+ * The question as saved.
+ *
+ * @generated from message career.v1.AnswerClarificationItemResponse
+ */
+export type AnswerClarificationItemResponse = Message<"career.v1.AnswerClarificationItemResponse"> & {
+  /**
+   * The question with its answer.
+   *
+   * @generated from field: career.v1.ClarificationItem item = 1;
+   */
+  item?: ClarificationItem | undefined;
+
+  /**
+   * How many of the questionnaire's questions are still unanswered.
+   *
+   * @generated from field: int32 pending_count = 2;
+   */
+  pendingCount: number;
+};
+
+/**
+ * Describes the message career.v1.AnswerClarificationItemResponse.
+ * Use `create(AnswerClarificationItemResponseSchema)` to create a new message.
+ */
+export const AnswerClarificationItemResponseSchema: GenMessage<AnswerClarificationItemResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 47);
+
+/**
+ * Names the questionnaire to submit.
+ *
+ * @generated from message career.v1.SubmitClarificationAnswersRequest
+ */
+export type SubmitClarificationAnswersRequest = Message<"career.v1.SubmitClarificationAnswersRequest"> & {
+  /**
+   * The questionnaire's id.
+   *
+   * @generated from field: string clarification_request_id = 1;
+   */
+  clarificationRequestId: string;
+};
+
+/**
+ * Describes the message career.v1.SubmitClarificationAnswersRequest.
+ * Use `create(SubmitClarificationAnswersRequestSchema)` to create a new message.
+ */
+export const SubmitClarificationAnswersRequestSchema: GenMessage<SubmitClarificationAnswersRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 48);
+
+/**
+ * The questionnaire as submitted.
+ *
+ * @generated from message career.v1.SubmitClarificationAnswersResponse
+ */
+export type SubmitClarificationAnswersResponse = Message<"career.v1.SubmitClarificationAnswersResponse"> & {
+  /**
+   * The questionnaire, closed to further answers.
+   *
+   * @generated from field: career.v1.ClarificationRequest request = 1;
+   */
+  request?: ClarificationRequest | undefined;
+
+  /**
+   * Whether a run was started to judge the answered requirements again.
+   * False without a model.
+   *
+   * @generated from field: bool run_started = 2;
+   */
+  runStarted: boolean;
+};
+
+/**
+ * Describes the message career.v1.SubmitClarificationAnswersResponse.
+ * Use `create(SubmitClarificationAnswersResponseSchema)` to create a new message.
+ */
+export const SubmitClarificationAnswersResponseSchema: GenMessage<SubmitClarificationAnswersResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 49);
+
+/**
+ * Names the answer to take back.
+ *
+ * @generated from message career.v1.WithdrawClarificationAnswerRequest
+ */
+export type WithdrawClarificationAnswerRequest = Message<"career.v1.WithdrawClarificationAnswerRequest"> & {
+  /**
+   * The question's id.
+   *
+   * @generated from field: string clarification_item_id = 1;
+   */
+  clarificationItemId: string;
+};
+
+/**
+ * Describes the message career.v1.WithdrawClarificationAnswerRequest.
+ * Use `create(WithdrawClarificationAnswerRequestSchema)` to create a new message.
+ */
+export const WithdrawClarificationAnswerRequestSchema: GenMessage<WithdrawClarificationAnswerRequest> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 50);
+
+/**
+ * The question after the withdrawal.
+ *
+ * @generated from message career.v1.WithdrawClarificationAnswerResponse
+ */
+export type WithdrawClarificationAnswerResponse = Message<"career.v1.WithdrawClarificationAnswerResponse"> & {
+  /**
+   * The question, its answer withdrawn.
+   *
+   * @generated from field: career.v1.ClarificationItem item = 1;
+   */
+  item?: ClarificationItem | undefined;
+
+  /**
+   * How many judgments were marked stale because they cite the answer.
+   *
+   * @generated from field: int32 stale_judgments = 2;
+   */
+  staleJudgments: number;
+};
+
+/**
+ * Describes the message career.v1.WithdrawClarificationAnswerResponse.
+ * Use `create(WithdrawClarificationAnswerResponseSchema)` to create a new message.
+ */
+export const WithdrawClarificationAnswerResponseSchema: GenMessage<WithdrawClarificationAnswerResponse> = /*@__PURE__*/
+  messageDesc(file_career_v1_hiring, 51);
 
 /**
  * Where a requirement version stands.
@@ -2066,8 +3010,8 @@ export const RequirementStatusSchema: GenEnum<RequirementStatus> = /*@__PURE__*/
 
 /**
  * Requirements as editable, versioned rows, the match record a run
- * produced, the override of a judgment, and the settings the
- * framework's arithmetic reads.
+ * produced, the override of a judgment, the follow-up questions to the
+ * candidate, and the settings the framework reads.
  *
  * @generated from service career.v1.HiringService
  */
@@ -2206,6 +3150,93 @@ export const HiringService: GenService<{
     methodKind: "unary";
     input: typeof WriteReviewResumeRequestSchema;
     output: typeof WriteReviewResumeResponseSchema;
+  },
+  /**
+   * Lists the questionnaires put to the candidate, newest first: which
+   * posting each belongs to, how many questions it holds and how many
+   * are still open, and by when (FSD FR-HF-13, FR-HF-22). The six
+   * clarification methods are the candidate's side of the loop. In
+   * Phase 0 the candidate is the owner, so they are admin methods; the
+   * level moves to the candidate's own when candidates have accounts.
+   *
+   * @generated from rpc career.v1.HiringService.ListClarificationRequests
+   */
+  listClarificationRequests: {
+    methodKind: "unary";
+    input: typeof ListClarificationRequestsRequestSchema;
+    output: typeof ListClarificationRequestsResponseSchema;
+  },
+  /**
+   * Reads one questionnaire as the candidate answers it: for each
+   * question the posting's own words for the requirement, the question,
+   * and the inputs it offers with any answer already saved. It never
+   * carries a threshold, an evidence standard, a determination or a
+   * score: the candidate is asked what they did, not shown what would
+   * score (FSD FR-HF-13).
+   *
+   * @generated from rpc career.v1.HiringService.GetClarificationRequest
+   */
+  getClarificationRequest: {
+    methodKind: "unary";
+    input: typeof GetClarificationRequestRequestSchema;
+    output: typeof GetClarificationRequestResponseSchema;
+  },
+  /**
+   * Writes the follow-up questions for every requirement the newest run
+   * of a posting left unresolved, at the candidate's own request (FSD
+   * FR-HF-13): one question per requirement, none for a requirement
+   * already asked about or answered. The run keeps the fit it was
+   * given; the questions do not withhold it. Refused when nothing is
+   * left to ask and while the posting is being scored.
+   *
+   * @generated from rpc career.v1.HiringService.RequestClarification
+   */
+  requestClarification: {
+    methodKind: "unary";
+    input: typeof RequestClarificationRequestSchema;
+    output: typeof RequestClarificationResponseSchema;
+  },
+  /**
+   * Saves the candidate's answer to one question: an answer, "I have
+   * not done this", or "prefer not to answer" (FSD FR-HF-14). An answer
+   * is checked against the inputs the question offered and becomes a
+   * piece of evidence in the candidate's own words; saving again
+   * replaces it. Nothing is judged until the answers are submitted.
+   * Refused once the questionnaire is closed.
+   *
+   * @generated from rpc career.v1.HiringService.AnswerClarificationItem
+   */
+  answerClarificationItem: {
+    methodKind: "unary";
+    input: typeof AnswerClarificationItemRequestSchema;
+    output: typeof AnswerClarificationItemResponseSchema;
+  },
+  /**
+   * Submits a questionnaire once every question is answered or
+   * explicitly left, which closes it to further answers and starts the
+   * run that judges the answered requirements again, carries every
+   * other judgment forward, and gives the posting its fit (FSD
+   * FR-HF-14, FR-HF-22). The call returns at once; the run waits its
+   * turn like any review.
+   *
+   * @generated from rpc career.v1.HiringService.SubmitClarificationAnswers
+   */
+  submitClarificationAnswers: {
+    methodKind: "unary";
+    input: typeof SubmitClarificationAnswersRequestSchema;
+    output: typeof SubmitClarificationAnswersResponseSchema;
+  },
+  /**
+   * Takes an answer back (FSD FR-HF-14). The statement stops being
+   * evidence, and every judgment that cites it is marked stale until a
+   * run judges its requirement again.
+   *
+   * @generated from rpc career.v1.HiringService.WithdrawClarificationAnswer
+   */
+  withdrawClarificationAnswer: {
+    methodKind: "unary";
+    input: typeof WithdrawClarificationAnswerRequestSchema;
+    output: typeof WithdrawClarificationAnswerResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_career_v1_hiring, 0);

@@ -97,6 +97,23 @@ func (r *Repo) GetCorpusDocumentByPath(
 	return d, nil
 }
 
+// SetCorpusDocumentMeta replaces the meta of a document that already
+// exists, leaving its text, hash and chunks alone, and reports whether
+// anything changed. A document that is not there is not created.
+func (r *Repo) SetCorpusDocumentMeta(ctx context.Context, sourceKind, sourcePath string, meta []byte) (bool, error) {
+	if len(meta) == 0 {
+		meta = []byte("{}")
+	}
+	tag, err := r.pool.Exec(ctx, `
+    UPDATE corpus_documents SET meta = $3::jsonb, updated_at = now()
+    WHERE source_kind = $1 AND source_path = $2 AND meta IS DISTINCT FROM $3::jsonb`,
+		sourceKind, sourcePath, string(meta))
+	if err != nil {
+		return false, fmt.Errorf("set corpus document meta: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 // UpsertCorpusDocument creates or replaces a document by (source_kind,
 // source_path). Returns the stored row.
 func (r *Repo) UpsertCorpusDocument(

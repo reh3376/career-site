@@ -199,6 +199,9 @@ func (r *Repo) ListJdRuns(ctx context.Context, submissionID int64) ([]JdRun, err
 // which is exactly what happened: see FailStrandedRuns.
 var jdRunTerminalStatuses = []string{
 	"ready", "failed", "below_threshold", "not_a_posting",
+	// A run that asked the candidate questions rests here with no fit
+	// (FSD FR-HF-22); the run that closes the questions is a new one.
+	"awaiting_candidate",
 }
 
 // FailStrandedRuns closes runs left in flight by a process that died.

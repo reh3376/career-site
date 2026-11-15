@@ -38,6 +38,7 @@ const LABEL: Record<string, string> = {
   JD_STATUS_READY: "résumé ready",
   JD_STATUS_FAILED: "failed",
   JD_STATUS_NOT_A_POSTING: "not a posting",
+  JD_STATUS_AWAITING_CANDIDATE: "waiting on the candidate",
 };
 
 // The member's own submissions, newest first. Server-rendered; each
