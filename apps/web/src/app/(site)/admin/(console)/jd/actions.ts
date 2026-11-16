@@ -239,9 +239,17 @@ export async function setPreferredFractionAction(
   return { saved: true, fraction };
 }
 
-// The fraction in force. Undefined when the read is refused, so the
-// console shows nothing rather than a number nobody set.
-export async function getPreferredFraction(): Promise<number | undefined> {
+export type HiringSettings = {
+  preferredFraction: number;
+  // Whether a review asks the candidate by itself and withholds the fit
+  // meanwhile, and for how many days it waits (FSD FR-HF-22, FR-HF-24).
+  clarificationAuto: boolean;
+  clarificationDays: number;
+};
+
+// The framework's settings in force. Undefined when the read is
+// refused, so the console shows nothing rather than values nobody set.
+export async function getHiringSettings(): Promise<HiringSettings | undefined> {
   const cookie = await getSessionCookie();
   if (!cookie) return undefined;
   const resp = await callApi({
@@ -251,9 +259,46 @@ export async function getPreferredFraction(): Promise<number | undefined> {
   });
   if (!resp.ok) return undefined;
   try {
-    const j = (await resp.json()) as { settings?: { preferredFraction?: number } };
-    return j.settings?.preferredFraction;
+    const j = (await resp.json()) as {
+      settings?: { preferredFraction?: number; clarificationAuto?: boolean; clarificationDays?: number };
+    };
+    if (typeof j.settings?.preferredFraction !== "number") return undefined;
+    return {
+      preferredFraction: j.settings.preferredFraction,
+      clarificationAuto: Boolean(j.settings.clarificationAuto),
+      clarificationDays: j.settings.clarificationDays ?? 3,
+    };
   } catch {
     return undefined;
   }
+}
+
+export type ClarificationSettingsState = { saved?: boolean; error?: string; auto?: boolean; days?: number };
+
+// The clarification loop's switch and time limit. The fraction is read
+// first and sent back unchanged, because the settings are stored as
+// one value and the API wants a whole one.
+export async function setClarificationSettingsAction(
+  _prev: ClarificationSettingsState,
+  formData: FormData,
+): Promise<ClarificationSettingsState> {
+  const auto = formData.get("auto") === "on";
+  const days = Number(String(formData.get("days") ?? "").trim());
+  if (!Number.isInteger(days) || days < 1 || days > 14) {
+    return { error: "A whole number of days from 1 to 14.", auto };
+  }
+  const cookie = await getSessionCookie();
+  if (!cookie) return { error: "Not signed in.", auto, days };
+  const current = await getHiringSettings();
+  if (!current) return { error: "Could not read the settings in force; nothing was changed.", auto, days };
+  const resp = await callApi({
+    path: "/api/career.v1.HiringService/SetHiringSettings",
+    body: {
+      settings: { preferredFraction: current.preferredFraction, clarificationAuto: auto, clarificationDays: days },
+    },
+    cookie,
+  });
+  if (!resp.ok) return { error: await errorText(resp), auto, days };
+  revalidatePath("/admin/jd", "layout");
+  return { saved: true, auto, days };
 }

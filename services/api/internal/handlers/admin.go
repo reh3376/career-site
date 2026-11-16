@@ -609,6 +609,22 @@ type CorpusRoots struct {
 	Private string
 }
 
+// PublicCorpusDirs returns, for each kind named, the directory under
+// the public root its files are in; a kind with no public directory is
+// left out.
+func PublicCorpusDirs(root string, kinds ...string) map[string]string {
+	out := map[string]string{}
+	if root == "" {
+		return out
+	}
+	for _, k := range kinds {
+		if sub, ok := publicCorpusSubdirs[k]; ok {
+			out[k] = root + "/" + sub
+		}
+	}
+	return out
+}
+
 // publicCorpusSubdirs maps a source_kind to its subdirectory under the
 // public root. The committed content tree predates the kind naming, so
 // it keeps its own layout here; the private root uses kind = directory.

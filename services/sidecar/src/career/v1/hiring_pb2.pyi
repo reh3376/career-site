@@ -216,10 +216,14 @@ class ReleaseRequirementsResponse(_message.Message):
     def __init__(self, released: _Optional[_Iterable[_Union[Requirement, _Mapping]]] = ..., run_started: _Optional[bool] = ..., submission_id: _Optional[str] = ...) -> None: ...
 
 class HiringSettings(_message.Message):
-    __slots__ = ("preferred_fraction",)
+    __slots__ = ("preferred_fraction", "clarification_auto", "clarification_days")
     PREFERRED_FRACTION_FIELD_NUMBER: _ClassVar[int]
+    CLARIFICATION_AUTO_FIELD_NUMBER: _ClassVar[int]
+    CLARIFICATION_DAYS_FIELD_NUMBER: _ClassVar[int]
     preferred_fraction: float
-    def __init__(self, preferred_fraction: _Optional[float] = ...) -> None: ...
+    clarification_auto: bool
+    clarification_days: int
+    def __init__(self, preferred_fraction: _Optional[float] = ..., clarification_auto: _Optional[bool] = ..., clarification_days: _Optional[int] = ...) -> None: ...
 
 class GetHiringSettingsRequest(_message.Message):
     __slots__ = ()
@@ -262,18 +266,20 @@ class Coverage(_message.Message):
     def __init__(self, evidenced: _Optional[float] = ..., unresolved: _Optional[float] = ..., unmet: _Optional[float] = ..., equivalent_share: _Optional[float] = ..., self_attested_share: _Optional[float] = ..., formula_version: _Optional[str] = ..., preferred_fraction: _Optional[float] = ...) -> None: ...
 
 class EvidenceRef(_message.Message):
-    __slots__ = ("id", "source_kind", "title", "chunk_id", "withdrawn")
+    __slots__ = ("id", "source_kind", "title", "chunk_id", "withdrawn", "statement")
     ID_FIELD_NUMBER: _ClassVar[int]
     SOURCE_KIND_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     CHUNK_ID_FIELD_NUMBER: _ClassVar[int]
     WITHDRAWN_FIELD_NUMBER: _ClassVar[int]
+    STATEMENT_FIELD_NUMBER: _ClassVar[int]
     id: str
     source_kind: str
     title: str
     chunk_id: int
     withdrawn: bool
-    def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., title: _Optional[str] = ..., chunk_id: _Optional[int] = ..., withdrawn: _Optional[bool] = ...) -> None: ...
+    statement: str
+    def __init__(self, id: _Optional[str] = ..., source_kind: _Optional[str] = ..., title: _Optional[str] = ..., chunk_id: _Optional[int] = ..., withdrawn: _Optional[bool] = ..., statement: _Optional[str] = ...) -> None: ...
 
 class RuleAdjustment(_message.Message):
     __slots__ = ("rule", "rule_version", "from_determination", "to_determination", "from_basis", "to_basis", "added_uncertainty", "reason")
@@ -348,7 +354,7 @@ class EarlierOverride(_message.Message):
     def __init__(self, attempt: _Optional[int] = ..., determination: _Optional[str] = ..., basis: _Optional[str] = ..., role: _Optional[str] = ..., at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., same_version: _Optional[bool] = ...) -> None: ...
 
 class Judgment(_message.Message):
-    __slots__ = ("id", "requirement_id", "requirement_local_id", "determination", "basis", "uncertainty", "effective_determination", "effective_basis", "override", "derived_verdict", "rationale", "evidence", "rule_adjustments", "reported_facts", "gap_class", "not_assessed", "stale", "keyword_known", "keyword_found", "keyword_terms", "decision_id", "earlier_override")
+    __slots__ = ("id", "requirement_id", "requirement_local_id", "determination", "basis", "uncertainty", "effective_determination", "effective_basis", "override", "derived_verdict", "rationale", "evidence", "rule_adjustments", "reported_facts", "gap_class", "not_assessed", "stale", "keyword_known", "keyword_found", "keyword_terms", "decision_id", "earlier_override", "follow_up", "self_attested")
     ID_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENT_ID_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENT_LOCAL_ID_FIELD_NUMBER: _ClassVar[int]
@@ -371,6 +377,8 @@ class Judgment(_message.Message):
     KEYWORD_TERMS_FIELD_NUMBER: _ClassVar[int]
     DECISION_ID_FIELD_NUMBER: _ClassVar[int]
     EARLIER_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
+    FOLLOW_UP_FIELD_NUMBER: _ClassVar[int]
+    SELF_ATTESTED_FIELD_NUMBER: _ClassVar[int]
     id: str
     requirement_id: str
     requirement_local_id: str
@@ -393,10 +401,64 @@ class Judgment(_message.Message):
     keyword_terms: _containers.RepeatedScalarFieldContainer[str]
     decision_id: int
     earlier_override: EarlierOverride
-    def __init__(self, id: _Optional[str] = ..., requirement_id: _Optional[str] = ..., requirement_local_id: _Optional[str] = ..., determination: _Optional[str] = ..., basis: _Optional[str] = ..., uncertainty: _Optional[_Iterable[str]] = ..., effective_determination: _Optional[str] = ..., effective_basis: _Optional[str] = ..., override: _Optional[_Union[JudgmentOverride, _Mapping]] = ..., derived_verdict: _Optional[str] = ..., rationale: _Optional[str] = ..., evidence: _Optional[_Iterable[_Union[EvidenceRef, _Mapping]]] = ..., rule_adjustments: _Optional[_Iterable[_Union[RuleAdjustment, _Mapping]]] = ..., reported_facts: _Optional[_Union[ReportedFacts, _Mapping]] = ..., gap_class: _Optional[str] = ..., not_assessed: _Optional[bool] = ..., stale: _Optional[bool] = ..., keyword_known: _Optional[bool] = ..., keyword_found: _Optional[bool] = ..., keyword_terms: _Optional[_Iterable[str]] = ..., decision_id: _Optional[int] = ..., earlier_override: _Optional[_Union[EarlierOverride, _Mapping]] = ...) -> None: ...
+    follow_up: JudgmentFollowUp
+    self_attested: bool
+    def __init__(self, id: _Optional[str] = ..., requirement_id: _Optional[str] = ..., requirement_local_id: _Optional[str] = ..., determination: _Optional[str] = ..., basis: _Optional[str] = ..., uncertainty: _Optional[_Iterable[str]] = ..., effective_determination: _Optional[str] = ..., effective_basis: _Optional[str] = ..., override: _Optional[_Union[JudgmentOverride, _Mapping]] = ..., derived_verdict: _Optional[str] = ..., rationale: _Optional[str] = ..., evidence: _Optional[_Iterable[_Union[EvidenceRef, _Mapping]]] = ..., rule_adjustments: _Optional[_Iterable[_Union[RuleAdjustment, _Mapping]]] = ..., reported_facts: _Optional[_Union[ReportedFacts, _Mapping]] = ..., gap_class: _Optional[str] = ..., not_assessed: _Optional[bool] = ..., stale: _Optional[bool] = ..., keyword_known: _Optional[bool] = ..., keyword_found: _Optional[bool] = ..., keyword_terms: _Optional[_Iterable[str]] = ..., decision_id: _Optional[int] = ..., earlier_override: _Optional[_Union[EarlierOverride, _Mapping]] = ..., follow_up: _Optional[_Union[JudgmentFollowUp, _Mapping]] = ..., self_attested: _Optional[bool] = ...) -> None: ...
+
+class JudgmentFollowUp(_message.Message):
+    __slots__ = ("status", "question", "statement", "answered_at", "asked_attempt", "asked_by", "request_id", "item_id")
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_FIELD_NUMBER: _ClassVar[int]
+    STATEMENT_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_AT_FIELD_NUMBER: _ClassVar[int]
+    ASKED_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    ASKED_BY_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    ITEM_ID_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    question: str
+    statement: str
+    answered_at: _timestamp_pb2.Timestamp
+    asked_attempt: int
+    asked_by: str
+    request_id: str
+    item_id: str
+    def __init__(self, status: _Optional[str] = ..., question: _Optional[str] = ..., statement: _Optional[str] = ..., answered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., asked_attempt: _Optional[int] = ..., asked_by: _Optional[str] = ..., request_id: _Optional[str] = ..., item_id: _Optional[str] = ...) -> None: ...
+
+class RecordClarification(_message.Message):
+    __slots__ = ("request_id", "status", "held", "closed_reason", "asked", "pending", "answered", "generated_at", "expires_at", "answered_at", "closed_at", "asked_attempt", "closing_attempt", "closed_by_this_run")
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    HELD_FIELD_NUMBER: _ClassVar[int]
+    CLOSED_REASON_FIELD_NUMBER: _ClassVar[int]
+    ASKED_FIELD_NUMBER: _ClassVar[int]
+    PENDING_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_AT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_AT_FIELD_NUMBER: _ClassVar[int]
+    CLOSED_AT_FIELD_NUMBER: _ClassVar[int]
+    ASKED_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    CLOSING_ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    CLOSED_BY_THIS_RUN_FIELD_NUMBER: _ClassVar[int]
+    request_id: str
+    status: str
+    held: bool
+    closed_reason: str
+    asked: int
+    pending: int
+    answered: int
+    generated_at: _timestamp_pb2.Timestamp
+    expires_at: _timestamp_pb2.Timestamp
+    answered_at: _timestamp_pb2.Timestamp
+    closed_at: _timestamp_pb2.Timestamp
+    asked_attempt: int
+    closing_attempt: int
+    closed_by_this_run: bool
+    def __init__(self, request_id: _Optional[str] = ..., status: _Optional[str] = ..., held: _Optional[bool] = ..., closed_reason: _Optional[str] = ..., asked: _Optional[int] = ..., pending: _Optional[int] = ..., answered: _Optional[int] = ..., generated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., answered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., closed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., asked_attempt: _Optional[int] = ..., closing_attempt: _Optional[int] = ..., closed_by_this_run: _Optional[bool] = ...) -> None: ...
 
 class MatchRecord(_message.Message):
-    __slots__ = ("run_id", "role_id", "submission_id", "attempt", "supersedes_run_id", "superseded", "run_trigger", "role_title", "employer", "coverage", "requirements", "judgments", "override_count", "keyword_rule", "keyword_skipped", "versions", "fit", "match_score", "finished_at", "corpus_documents", "model", "requirements_edited", "reviewed_score", "reviewed_fit")
+    __slots__ = ("run_id", "role_id", "submission_id", "attempt", "supersedes_run_id", "superseded", "run_trigger", "role_title", "employer", "coverage", "requirements", "judgments", "override_count", "keyword_rule", "keyword_skipped", "versions", "fit", "match_score", "finished_at", "corpus_documents", "model", "requirements_edited", "reviewed_score", "reviewed_fit", "clarification", "awaiting_candidate")
     class VersionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -428,6 +490,8 @@ class MatchRecord(_message.Message):
     REQUIREMENTS_EDITED_FIELD_NUMBER: _ClassVar[int]
     REVIEWED_SCORE_FIELD_NUMBER: _ClassVar[int]
     REVIEWED_FIT_FIELD_NUMBER: _ClassVar[int]
+    CLARIFICATION_FIELD_NUMBER: _ClassVar[int]
+    AWAITING_CANDIDATE_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     role_id: str
     submission_id: str
@@ -452,7 +516,9 @@ class MatchRecord(_message.Message):
     requirements_edited: bool
     reviewed_score: float
     reviewed_fit: str
-    def __init__(self, run_id: _Optional[str] = ..., role_id: _Optional[str] = ..., submission_id: _Optional[str] = ..., attempt: _Optional[int] = ..., supersedes_run_id: _Optional[str] = ..., superseded: _Optional[bool] = ..., run_trigger: _Optional[str] = ..., role_title: _Optional[str] = ..., employer: _Optional[str] = ..., coverage: _Optional[_Union[Coverage, _Mapping]] = ..., requirements: _Optional[_Iterable[_Union[Requirement, _Mapping]]] = ..., judgments: _Optional[_Iterable[_Union[Judgment, _Mapping]]] = ..., override_count: _Optional[int] = ..., keyword_rule: _Optional[str] = ..., keyword_skipped: _Optional[str] = ..., versions: _Optional[_Mapping[str, str]] = ..., fit: _Optional[str] = ..., match_score: _Optional[float] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., corpus_documents: _Optional[int] = ..., model: _Optional[str] = ..., requirements_edited: _Optional[bool] = ..., reviewed_score: _Optional[float] = ..., reviewed_fit: _Optional[str] = ...) -> None: ...
+    clarification: RecordClarification
+    awaiting_candidate: bool
+    def __init__(self, run_id: _Optional[str] = ..., role_id: _Optional[str] = ..., submission_id: _Optional[str] = ..., attempt: _Optional[int] = ..., supersedes_run_id: _Optional[str] = ..., superseded: _Optional[bool] = ..., run_trigger: _Optional[str] = ..., role_title: _Optional[str] = ..., employer: _Optional[str] = ..., coverage: _Optional[_Union[Coverage, _Mapping]] = ..., requirements: _Optional[_Iterable[_Union[Requirement, _Mapping]]] = ..., judgments: _Optional[_Iterable[_Union[Judgment, _Mapping]]] = ..., override_count: _Optional[int] = ..., keyword_rule: _Optional[str] = ..., keyword_skipped: _Optional[str] = ..., versions: _Optional[_Mapping[str, str]] = ..., fit: _Optional[str] = ..., match_score: _Optional[float] = ..., finished_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., corpus_documents: _Optional[int] = ..., model: _Optional[str] = ..., requirements_edited: _Optional[bool] = ..., reviewed_score: _Optional[float] = ..., reviewed_fit: _Optional[str] = ..., clarification: _Optional[_Union[RecordClarification, _Mapping]] = ..., awaiting_candidate: _Optional[bool] = ...) -> None: ...
 
 class OverrideChoice(_message.Message):
     __slots__ = ("determination", "bases")
@@ -473,7 +539,7 @@ class GetMatchRecordRequest(_message.Message):
     def __init__(self, submission_id: _Optional[str] = ..., run_id: _Optional[str] = ..., as_member: _Optional[bool] = ...) -> None: ...
 
 class GetMatchRecordResponse(_message.Message):
-    __slots__ = ("record", "determinations", "bases", "uncertainties", "types", "classes", "source_kinds", "override_roles", "can_override", "override_choices", "review_resume", "can_write_review_resume", "review_resume_note")
+    __slots__ = ("record", "determinations", "bases", "uncertainties", "types", "classes", "source_kinds", "override_roles", "can_override", "override_choices", "review_resume", "can_write_review_resume", "review_resume_note", "askable_count")
     RECORD_FIELD_NUMBER: _ClassVar[int]
     DETERMINATIONS_FIELD_NUMBER: _ClassVar[int]
     BASES_FIELD_NUMBER: _ClassVar[int]
@@ -487,6 +553,7 @@ class GetMatchRecordResponse(_message.Message):
     REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
     CAN_WRITE_REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
     REVIEW_RESUME_NOTE_FIELD_NUMBER: _ClassVar[int]
+    ASKABLE_COUNT_FIELD_NUMBER: _ClassVar[int]
     record: MatchRecord
     determinations: _containers.RepeatedCompositeFieldContainer[VocabCode]
     bases: _containers.RepeatedCompositeFieldContainer[VocabCode]
@@ -500,7 +567,8 @@ class GetMatchRecordResponse(_message.Message):
     review_resume: ReviewResume
     can_write_review_resume: bool
     review_resume_note: str
-    def __init__(self, record: _Optional[_Union[MatchRecord, _Mapping]] = ..., determinations: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., bases: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., uncertainties: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., types: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., classes: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., source_kinds: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., override_roles: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., can_override: _Optional[bool] = ..., override_choices: _Optional[_Iterable[_Union[OverrideChoice, _Mapping]]] = ..., review_resume: _Optional[_Union[ReviewResume, _Mapping]] = ..., can_write_review_resume: _Optional[bool] = ..., review_resume_note: _Optional[str] = ...) -> None: ...
+    askable_count: int
+    def __init__(self, record: _Optional[_Union[MatchRecord, _Mapping]] = ..., determinations: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., bases: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., uncertainties: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., types: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., classes: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., source_kinds: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., override_roles: _Optional[_Iterable[_Union[VocabCode, _Mapping]]] = ..., can_override: _Optional[bool] = ..., override_choices: _Optional[_Iterable[_Union[OverrideChoice, _Mapping]]] = ..., review_resume: _Optional[_Union[ReviewResume, _Mapping]] = ..., can_write_review_resume: _Optional[bool] = ..., review_resume_note: _Optional[str] = ..., askable_count: _Optional[int] = ...) -> None: ...
 
 class OverrideJudgmentRequest(_message.Message):
     __slots__ = ("judgment_id", "determination", "basis", "reason", "role", "withdraw")
@@ -559,3 +627,196 @@ class WriteReviewResumeResponse(_message.Message):
     REVIEW_RESUME_FIELD_NUMBER: _ClassVar[int]
     review_resume: ReviewResume
     def __init__(self, review_resume: _Optional[_Union[ReviewResume, _Mapping]] = ...) -> None: ...
+
+class ClarificationOption(_message.Message):
+    __slots__ = ("value", "label", "source")
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    value: str
+    label: str
+    source: str
+    def __init__(self, value: _Optional[str] = ..., label: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
+
+class ClarificationField(_message.Message):
+    __slots__ = ("name", "label", "kind", "required", "options", "max", "max_len", "hint")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    MAX_FIELD_NUMBER: _ClassVar[int]
+    MAX_LEN_FIELD_NUMBER: _ClassVar[int]
+    HINT_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    label: str
+    kind: str
+    required: bool
+    options: _containers.RepeatedCompositeFieldContainer[ClarificationOption]
+    max: float
+    max_len: int
+    hint: str
+    def __init__(self, name: _Optional[str] = ..., label: _Optional[str] = ..., kind: _Optional[str] = ..., required: _Optional[bool] = ..., options: _Optional[_Iterable[_Union[ClarificationOption, _Mapping]]] = ..., max: _Optional[float] = ..., max_len: _Optional[int] = ..., hint: _Optional[str] = ...) -> None: ...
+
+class ClarificationAnswer(_message.Message):
+    __slots__ = ("status", "values", "free_text")
+    class ValuesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: StringList
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[StringList, _Mapping]] = ...) -> None: ...
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    VALUES_FIELD_NUMBER: _ClassVar[int]
+    FREE_TEXT_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    values: _containers.MessageMap[str, StringList]
+    free_text: str
+    def __init__(self, status: _Optional[str] = ..., values: _Optional[_Mapping[str, StringList]] = ..., free_text: _Optional[str] = ...) -> None: ...
+
+class ClarificationItem(_message.Message):
+    __slots__ = ("id", "requirement_local_id", "source_quote", "answer_type", "question", "fields", "free_text_required", "free_text_max", "answer", "answered_at", "statement")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    REQUIREMENT_LOCAL_ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_QUOTE_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_TYPE_FIELD_NUMBER: _ClassVar[int]
+    QUESTION_FIELD_NUMBER: _ClassVar[int]
+    FIELDS_FIELD_NUMBER: _ClassVar[int]
+    FREE_TEXT_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    FREE_TEXT_MAX_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_AT_FIELD_NUMBER: _ClassVar[int]
+    STATEMENT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    requirement_local_id: str
+    source_quote: str
+    answer_type: str
+    question: str
+    fields: _containers.RepeatedCompositeFieldContainer[ClarificationField]
+    free_text_required: bool
+    free_text_max: int
+    answer: ClarificationAnswer
+    answered_at: _timestamp_pb2.Timestamp
+    statement: str
+    def __init__(self, id: _Optional[str] = ..., requirement_local_id: _Optional[str] = ..., source_quote: _Optional[str] = ..., answer_type: _Optional[str] = ..., question: _Optional[str] = ..., fields: _Optional[_Iterable[_Union[ClarificationField, _Mapping]]] = ..., free_text_required: _Optional[bool] = ..., free_text_max: _Optional[int] = ..., answer: _Optional[_Union[ClarificationAnswer, _Mapping]] = ..., answered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., statement: _Optional[str] = ...) -> None: ...
+
+class ClarificationRequest(_message.Message):
+    __slots__ = ("id", "submission_id", "run_id", "attempt", "role_title", "employer", "status", "held", "asked_by", "generated_at", "expires_at", "answered_at", "closed_at", "closed_reason", "item_count", "pending_count", "items")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    ATTEMPT_FIELD_NUMBER: _ClassVar[int]
+    ROLE_TITLE_FIELD_NUMBER: _ClassVar[int]
+    EMPLOYER_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    HELD_FIELD_NUMBER: _ClassVar[int]
+    ASKED_BY_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_AT_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    ANSWERED_AT_FIELD_NUMBER: _ClassVar[int]
+    CLOSED_AT_FIELD_NUMBER: _ClassVar[int]
+    CLOSED_REASON_FIELD_NUMBER: _ClassVar[int]
+    ITEM_COUNT_FIELD_NUMBER: _ClassVar[int]
+    PENDING_COUNT_FIELD_NUMBER: _ClassVar[int]
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    submission_id: str
+    run_id: str
+    attempt: int
+    role_title: str
+    employer: str
+    status: str
+    held: bool
+    asked_by: str
+    generated_at: _timestamp_pb2.Timestamp
+    expires_at: _timestamp_pb2.Timestamp
+    answered_at: _timestamp_pb2.Timestamp
+    closed_at: _timestamp_pb2.Timestamp
+    closed_reason: str
+    item_count: int
+    pending_count: int
+    items: _containers.RepeatedCompositeFieldContainer[ClarificationItem]
+    def __init__(self, id: _Optional[str] = ..., submission_id: _Optional[str] = ..., run_id: _Optional[str] = ..., attempt: _Optional[int] = ..., role_title: _Optional[str] = ..., employer: _Optional[str] = ..., status: _Optional[str] = ..., held: _Optional[bool] = ..., asked_by: _Optional[str] = ..., generated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., answered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., closed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., closed_reason: _Optional[str] = ..., item_count: _Optional[int] = ..., pending_count: _Optional[int] = ..., items: _Optional[_Iterable[_Union[ClarificationItem, _Mapping]]] = ...) -> None: ...
+
+class ListClarificationRequestsRequest(_message.Message):
+    __slots__ = ("open_only",)
+    OPEN_ONLY_FIELD_NUMBER: _ClassVar[int]
+    open_only: bool
+    def __init__(self, open_only: _Optional[bool] = ...) -> None: ...
+
+class ListClarificationRequestsResponse(_message.Message):
+    __slots__ = ("requests",)
+    REQUESTS_FIELD_NUMBER: _ClassVar[int]
+    requests: _containers.RepeatedCompositeFieldContainer[ClarificationRequest]
+    def __init__(self, requests: _Optional[_Iterable[_Union[ClarificationRequest, _Mapping]]] = ...) -> None: ...
+
+class GetClarificationRequestRequest(_message.Message):
+    __slots__ = ("clarification_request_id",)
+    CLARIFICATION_REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    clarification_request_id: str
+    def __init__(self, clarification_request_id: _Optional[str] = ...) -> None: ...
+
+class GetClarificationRequestResponse(_message.Message):
+    __slots__ = ("request",)
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    request: ClarificationRequest
+    def __init__(self, request: _Optional[_Union[ClarificationRequest, _Mapping]] = ...) -> None: ...
+
+class RequestClarificationRequest(_message.Message):
+    __slots__ = ("submission_id",)
+    SUBMISSION_ID_FIELD_NUMBER: _ClassVar[int]
+    submission_id: str
+    def __init__(self, submission_id: _Optional[str] = ...) -> None: ...
+
+class RequestClarificationResponse(_message.Message):
+    __slots__ = ("request", "added")
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    ADDED_FIELD_NUMBER: _ClassVar[int]
+    request: ClarificationRequest
+    added: int
+    def __init__(self, request: _Optional[_Union[ClarificationRequest, _Mapping]] = ..., added: _Optional[int] = ...) -> None: ...
+
+class AnswerClarificationItemRequest(_message.Message):
+    __slots__ = ("clarification_item_id", "answer")
+    CLARIFICATION_ITEM_ID_FIELD_NUMBER: _ClassVar[int]
+    ANSWER_FIELD_NUMBER: _ClassVar[int]
+    clarification_item_id: str
+    answer: ClarificationAnswer
+    def __init__(self, clarification_item_id: _Optional[str] = ..., answer: _Optional[_Union[ClarificationAnswer, _Mapping]] = ...) -> None: ...
+
+class AnswerClarificationItemResponse(_message.Message):
+    __slots__ = ("item", "pending_count")
+    ITEM_FIELD_NUMBER: _ClassVar[int]
+    PENDING_COUNT_FIELD_NUMBER: _ClassVar[int]
+    item: ClarificationItem
+    pending_count: int
+    def __init__(self, item: _Optional[_Union[ClarificationItem, _Mapping]] = ..., pending_count: _Optional[int] = ...) -> None: ...
+
+class SubmitClarificationAnswersRequest(_message.Message):
+    __slots__ = ("clarification_request_id",)
+    CLARIFICATION_REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    clarification_request_id: str
+    def __init__(self, clarification_request_id: _Optional[str] = ...) -> None: ...
+
+class SubmitClarificationAnswersResponse(_message.Message):
+    __slots__ = ("request", "run_started")
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    RUN_STARTED_FIELD_NUMBER: _ClassVar[int]
+    request: ClarificationRequest
+    run_started: bool
+    def __init__(self, request: _Optional[_Union[ClarificationRequest, _Mapping]] = ..., run_started: _Optional[bool] = ...) -> None: ...
+
+class WithdrawClarificationAnswerRequest(_message.Message):
+    __slots__ = ("clarification_item_id",)
+    CLARIFICATION_ITEM_ID_FIELD_NUMBER: _ClassVar[int]
+    clarification_item_id: str
+    def __init__(self, clarification_item_id: _Optional[str] = ...) -> None: ...
+
+class WithdrawClarificationAnswerResponse(_message.Message):
+    __slots__ = ("item", "stale_judgments")
+    ITEM_FIELD_NUMBER: _ClassVar[int]
+    STALE_JUDGMENTS_FIELD_NUMBER: _ClassVar[int]
+    item: ClarificationItem
+    stale_judgments: int
+    def __init__(self, item: _Optional[_Union[ClarificationItem, _Mapping]] = ..., stale_judgments: _Optional[int] = ...) -> None: ...

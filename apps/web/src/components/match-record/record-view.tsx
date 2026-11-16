@@ -18,7 +18,9 @@ import type { ReactNode } from "react";
 // (docs/framework-research/15 §14). Step 6 of Phase 0 (2026-11-12)
 // added what only a real record has: the gap class, what is missing,
 // the keyword screen, what code changed, and a verdict set by a person.
-// The stimulus sets none of those, so the pilot's page is unchanged.
+// Step 7 (2026-11-15) added the candidate's own statement in answer to
+// a follow-up. The stimulus sets none of those, so the pilot's page is
+// unchanged.
 export type RecordRow = {
   id: string;
   requirement?: string;
@@ -45,6 +47,11 @@ export type RecordRow = {
   callout?: { title?: string; lines?: string[] };
   inclusion?: { status?: string; reason?: string };
   followup?: { status?: string; next?: string };
+  // The candidate's own answer to the follow-up question, in their
+  // words (FR-HF-14). The one piece of evidence a record quotes: it was
+  // written for the employer whose posting it answers, and it is drawn
+  // apart from the documents so nobody takes it for one.
+  statement?: { title?: string; text?: string; note?: string };
   note?: string;
   // What kind of distance lies between the evidence and the
   // requirement, for a row that is not met (FR-HF-17).
@@ -440,6 +447,14 @@ function Row({
           <Label>Follow-up</Label>
           <p className="mt-1 text-sm text-ink">{r.followup.status}</p>
           {r.followup.next ? <p className="mt-1 text-sm leading-relaxed text-ink-2">{r.followup.next}</p> : null}
+        </div>
+      ) : null}
+
+      {r.statement?.text ? (
+        <div className="mt-4 border border-line-strong bg-canvas px-4 py-4">
+          <p className={`${MONO} text-signal`}>{r.statement.title ?? "The candidate's own statement"}</p>
+          <p className="mt-2 text-sm leading-relaxed text-ink">{r.statement.text}</p>
+          {r.statement.note ? <p className="mt-3 text-xs leading-relaxed text-ink-3">{r.statement.note}</p> : null}
         </div>
       ) : null}
 

@@ -11,6 +11,7 @@ import { getSessionCookie } from "@/lib/session";
 
 import { RescoreButton } from "../rescore-button";
 
+import { FollowUpPanel } from "./follow-up-panel";
 import { OutcomePanel, type Feedback, type Outcome } from "./outcome-panel";
 import { OverrideControl } from "./override-control";
 import { ReviewResumePanel } from "./review-resume-panel";
@@ -103,6 +104,7 @@ const STATUS_LABEL: Record<string, string> = {
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
   JD_STATUS_NOT_A_POSTING: "not a posting",
+  JD_STATUS_AWAITING_CANDIDATE: "awaiting the candidate",
 };
 
 const VERDICT_TONE: Record<string, string> = {
@@ -338,6 +340,14 @@ export default async function AdminJdDetailPage({
             </Link>
             .
           </p>
+          <FollowUpPanel
+            submissionId={r.id}
+            clarification={recordResp.record?.clarification}
+            askable={recordResp.askableCount ?? 0}
+            awaiting={Boolean(recordResp.record?.awaitingCandidate)}
+            superseded={Boolean(recordResp.record?.superseded)}
+            busy={inFlight}
+          />
           <ReviewResumePanel
             key={`${recordResp.reviewResume?.status ?? "none"}:${recordResp.reviewResume?.requestedAt ?? ""}`}
             runId={recordResp.record?.runId ?? ""}

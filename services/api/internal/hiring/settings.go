@@ -19,22 +19,56 @@ type Settings struct {
 	// PreferredFraction is the share of its weight a preferred item, and
 	// an evidenced ideal one, counts at. Greater than 0, at most 1.
 	PreferredFraction float64 `json:"preferred_fraction"`
+	// ClarificationAuto turns on the clarification loop's unprompted
+	// half (FR-HF-22, FR-HF-24): a run that leaves a requirement
+	// unresolved on a lexical basis or an unproven relationship asks the
+	// candidate about it without waiting to be asked, and carries no fit
+	// until the questions are closed. Off, a run is given its fit as it
+	// always was and questions are asked only when the candidate asks
+	// for them. It ships off, so the first review that waits on the
+	// candidate is one the owner chose to start.
+	ClarificationAuto bool `json:"clarification_auto"`
+	// ClarificationDays is how long a held review waits for the
+	// candidate before the open questions are closed unanswered and the
+	// fit is issued from what is evidenced (owner's decision,
+	// 2026-11-15: three days). 1 to 14.
+	ClarificationDays int `json:"clarification_days"`
 }
+
+// DefaultClarificationDays is the time limit unless the setting says
+// otherwise.
+const DefaultClarificationDays = 3
 
 // DefaultSettings is what a fresh install runs with.
 func DefaultSettings() Settings {
-	return Settings{PreferredFraction: DefaultPreferredFraction}
+	return Settings{PreferredFraction: DefaultPreferredFraction, ClarificationDays: DefaultClarificationDays}
 }
 
 // ErrInvalidSettings is returned for values outside their range.
 var ErrInvalidSettings = errors.New("preferred fraction must be greater than 0 and at most 1")
+
+// ErrInvalidClarificationDays is returned for a time limit outside its
+// range.
+var ErrInvalidClarificationDays = errors.New("the time limit for the candidate's answers must be between 1 and 14 days")
 
 // Validate checks the ranges.
 func (s Settings) Validate() error {
 	if !(s.PreferredFraction > 0 && s.PreferredFraction <= 1) {
 		return ErrInvalidSettings
 	}
+	if s.ClarificationDays < 1 || s.ClarificationDays > 14 {
+		return ErrInvalidClarificationDays
+	}
 	return nil
+}
+
+// ClarificationLimit is how long a held review waits.
+func (s Settings) ClarificationLimit() time.Duration {
+	days := s.ClarificationDays
+	if days < 1 {
+		days = DefaultClarificationDays
+	}
+	return time.Duration(days) * 24 * time.Hour
 }
 
 // SettingKey is the app_settings key.
@@ -96,6 +130,11 @@ func (s *SettingsStore) load(ctx context.Context) (Settings, error) {
 	var v Settings
 	if err := json.Unmarshal(raw, &v); err != nil {
 		return Settings{}, fmt.Errorf("decode hiring settings: %w", err)
+	}
+	// A row stored before the time limit existed has none: it runs with
+	// the default, not with zero days.
+	if v.ClarificationDays == 0 {
+		v.ClarificationDays = DefaultClarificationDays
 	}
 	if err := v.Validate(); err != nil {
 		return Settings{}, err

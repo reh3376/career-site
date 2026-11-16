@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 170 of them, and none missing:
+**Every method declares a level.** 176 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 100 |
+| `AUTH_LEVEL_ADMIN` | 106 |
 | `AUTH_LEVEL_MEMBER` | 53 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 170 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 176 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1193,6 +1193,15 @@ command.
 9. 2026-11-13: 100/53/17 (170). `HiringService.WriteReviewResume`,
    ADMIN and audited with `run_id` as its target: the résumé after
    review, the owner's alone (FSD FR-HF-08). 162 procedures served.
+10. 2026-11-15: 106/53/17 (176). The clarification loop (FSD FR-HF-13,
+    14 and 22, Phase 0 step 7): six `HiringService` methods, all ADMIN.
+    They are the candidate's side of the loop, and 14 §3.3 gives them to
+    the candidate's own session; in Phase 0 the candidate is the owner
+    and there is no candidate account for them to belong to, so they
+    are admin methods until there is. `ListClarificationRequests` and
+    `GetClarificationRequest` read; `RequestClarification`,
+    `AnswerClarificationItem`, `SubmitClarificationAnswers` and
+    `WithdrawClarificationAnswer` are audited. 168 procedures served.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

@@ -24,6 +24,20 @@ for review").
 The owner gets the `jd_outcome` mail at step 8 as well (score, verdicts
 with rationales, application link, admin and decision-review links).
 
+**Between steps 7 and 8, since 2026-11-15, a review may wait on the
+candidate** (FSD FR-HF-22; only when the owner has switched the setting
+on at `/admin/jd`). When the review cannot settle a requirement because
+the documents say it in other words, name a different tool or do not
+show a relationship the posting names, it writes Roger a follow-up
+question and stops without a fit. The submitter's page then reads
+"waiting on the candidate" in place of a fit, shows the match record as
+the state so far with the number of questions and the time they close,
+and a `jd_waiting` mail says the same. The wait is at most three days:
+when the questions are answered, or at the limit if they are not, the
+review finishes and steps 8 and 9 follow as usual. On the finished
+record each answered row shows the question and the candidate's answer,
+marked as the candidate's own statement.
+
 ## What was wrong before 2026-09-22
 
 - **No way back.** The acknowledgement said "come back with your

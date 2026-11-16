@@ -131,6 +131,110 @@ type Judgment struct {
 	// record it was written from. They never change the verdict. See
 	// rationale.go.
 	RationaleIssues []rationaleIssue `json:"rationale_issues,omitempty"`
+	// AnswerEvidence lists the candidate's own answers, as evidence item
+	// ids, that this judgment cites or was settled on (FR-HF-14). A
+	// judgment with any rests in part on self-attestation.
+	AnswerEvidence []string `json:"answer_evidence,omitempty"`
+	// ClarificationItems are the clarification items it consumed.
+	ClarificationItems []string `json:"clarification_items,omitempty"`
+	// Carried marks a judgment brought forward unchanged from the run
+	// before, by a re-judge scoped to other requirements.
+	Carried bool `json:"carried,omitempty"`
+}
+
+// AnswerEvidence is a candidate's standing answer about one requirement
+// as a judging pass uses it (Phase 0 step 7): the statement the judge is
+// shown as a passage of evidence, the evidence item and clarification
+// item behind it, and, for an answer with a structured part, how that
+// part enters the facts the code rules compare.
+type AnswerEvidence struct {
+	ItemID         string
+	EvidenceItemID string
+	Statement      string
+	FactsFix       func(hiring.ReportedFacts) hiring.ReportedFacts
+	// NotApplicable is the candidate's "I have not done this". The judge
+	// is shown the statement like any other, and whatever it answers the
+	// judgment is settled in code as not met, not addressed (FR-HF-14):
+	// a candidate's own statement that they have not done a thing is not
+	// something a reading of their documents overrules.
+	NotApplicable bool
+}
+
+// JudgeOptions narrows and extends a judging pass (FR-HF-14).
+type JudgeOptions struct {
+	// Carry holds, by requirement id, judgments that are already
+	// settled: carried from the run before, or settled in code from a
+	// candidate's answer. A requirement with one is not retrieved for
+	// and not sent to the judge.
+	Carry map[string]Judgment
+	// CarryDecisions names the decision-log row behind a carried
+	// judgment, so the row written for this run still points at the
+	// prompt and response that produced it.
+	CarryDecisions map[string]int64
+	// Answers holds, by requirement id, the candidate's standing answer
+	// for a requirement the judge is to look at with it.
+	Answers map[string]AnswerEvidence
+}
+
+// answerTitle is how a candidate's answer is titled among the evidence
+// the judge is shown.
+const answerTitle = "The candidate's own answer to a follow-up question"
+
+// answerHit is a candidate's answer as a passage of evidence. It has no
+// corpus chunk behind it, so it is given an id below zero, which no
+// chunk has; the pass maps a citation of that id back to the evidence
+// item.
+func answerHit(id int64, a AnswerEvidence) users.CorpusHit {
+	return users.CorpusHit{
+		Chunk:      users.CorpusChunk{ID: id, Text: a.Statement},
+		Title:      answerTitle,
+		SourceKind: hiring.SourceCandidateResponse,
+		Visibility: users.VisibilityPublic,
+		Similarity: 1,
+	}
+}
+
+// answerSettled finishes a judgment made with the candidate's answer
+// among its evidence (FR-HF-14). A citation of the answer is taken out
+// of the chunk ids: it names an evidence item, not a passage of a
+// document, and everything downstream that reads chunk ids (the
+// keyword screen, the résumé writer) must not see it. shown is whether
+// the requirement had an answer at all; isAnswer says whether a cited
+// id is the id an answer was shown under.
+func answerSettled(settled Judgment, ans AnswerEvidence, shown bool, isAnswer func(int64) bool) Judgment {
+	var chunks []int64
+	for _, id := range settled.EvidenceIDs {
+		if !isAnswer(id) && id > 0 {
+			chunks = append(chunks, id)
+		}
+	}
+	settled.EvidenceIDs = chunks
+	if !shown || ans.ItemID == "" {
+		return settled
+	}
+	// The judgment was made with the answer on the table, so it is not
+	// asked about or re-judged for it again, and the answer is among
+	// what it rests on whether or not the model cited it. A question
+	// exists only where the documents alone left the requirement
+	// unresolved, so the answer is the one thing that was not there
+	// before; and a small model that changes its verdict on reading a
+	// statement does not reliably cite the statement. The first real
+	// run showed it: the verdict moved from unresolved to met by
+	// equivalence on the answer and cited three documents. Counting it
+	// as resting on the candidate's word can only overstate how much of
+	// a record is self-attested, which is the safe direction.
+	settled.ClarificationItems = []string{ans.ItemID}
+	settled.AnswerEvidence = []string{ans.EvidenceItemID}
+	if ans.NotApplicable && !(settled.Determination == hiring.DetNotMet && settled.Basis == hiring.BasisNotAddressed) {
+		v, adj := hiring.NotApplicableVerdict(settled.Basis)
+		adj.FromDetermination = settled.Determination
+		settled.Determination, settled.Basis, settled.Uncertainty = v.Determination, v.Basis, v.Uncertainty
+		settled.Verdict = hiring.DeriveVerdict(v.Determination)
+		settled.RuleAdjustments = append(settled.RuleAdjustments, adj)
+		settled.Adjusted = strings.TrimPrefix(settled.Adjusted+"; "+adj.Reason, "; ")
+		settled.EvidenceIDs = nil
+	}
+	return settled
 }
 
 // Coverage is the match record's arithmetic (FR-HF-06): three numbers
@@ -242,6 +346,16 @@ func (a *Assessor) SetSettings(s *hiring.SettingsStore) {
 	if a != nil {
 		a.settings = s
 	}
+}
+
+// Settings are the framework's settings in force: the preferred
+// fraction the arithmetic reads and the clarification loop's switch and
+// time limit.
+func (a *Assessor) Settings(ctx context.Context) hiring.Settings {
+	if a == nil {
+		return hiring.DefaultSettings()
+	}
+	return a.settings.Get(ctx)
 }
 
 // ExtractorPrompt is the extractor as this assessor sends it, for run
@@ -450,6 +564,15 @@ func Drafts(extracted []prompts.Requirement, catalog *hiring.Catalog, prov hirin
 // llm_usage. Progress is reported from 12% to 75%; the scorer owns the
 // rest (résumé, PDF).
 func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts.Requirement, model, source string, progress Progress) (*Assessment, error) {
+	return a.JudgeWith(ctx, submissionID, reqs, model, source, JudgeOptions{}, progress)
+}
+
+// JudgeWith is Judge with judgments that are already settled and with
+// the candidate's standing answers (FR-HF-14). A requirement in
+// opts.Carry keeps the judgment given and costs no retrieval and no
+// model call; one in opts.Answers is judged with the answer beside its
+// retrieved evidence. With empty options it is exactly Judge.
+func (a *Assessor) JudgeWith(ctx context.Context, submissionID int64, reqs []prompts.Requirement, model, source string, opts JudgeOptions, progress Progress) (*Assessment, error) {
 	if len(reqs) == 0 {
 		return nil, errors.New("judge: no requirements")
 	}
@@ -480,17 +603,29 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 
 	progress.report(12, fmt.Sprintf("%d requirements found; gathering evidence", len(reqs)))
 
-	// 2. Retrieval per requirement (one batched embed call).
-	texts := make([]string, len(reqs))
-	for i, r := range reqs {
+	// 2. Retrieval per requirement (one batched embed call), for the
+	// requirements this pass judges. A carried requirement was retrieved
+	// for when it was judged.
+	var fresh []prompts.Requirement
+	for _, r := range reqs {
+		if _, carried := opts.Carry[r.ID]; !carried {
+			fresh = append(fresh, r)
+		}
+	}
+	texts := make([]string, len(fresh))
+	for i, r := range fresh {
 		texts[i] = r.Text
 	}
-	vectors, _, err := a.embed.Embed(ctx, texts, ingest.PurposeQuery)
-	if err != nil {
-		return nil, fmt.Errorf("embed requirements: %w", err)
-	}
-	if len(vectors) != len(reqs) {
-		return nil, errors.New("embed requirements: vector count mismatch")
+	var vectors [][]float32
+	if len(texts) > 0 {
+		var err error
+		vectors, _, err = a.embed.Embed(ctx, texts, ingest.PurposeQuery)
+		if err != nil {
+			return nil, fmt.Errorf("embed requirements: %w", err)
+		}
+		if len(vectors) != len(fresh) {
+			return nil, errors.New("embed requirements: vector count mismatch")
+		}
 	}
 	// The career facts sheet (source_kind "profile") is offered to every
 	// requirement. Embedding retrieval is unreliable for tenure, title,
@@ -504,15 +639,31 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 		a.log.Warn("profile chunks unavailable", slog.String("error", err.Error()))
 	}
 	evidence := make(map[string][]users.CorpusHit, len(reqs))
-	for i, r := range reqs {
+	// answerOf maps the id an answer was shown under back to the answer.
+	answerOf := map[int64]AnswerEvidence{}
+	for i, r := range fresh {
 		hits, err := a.users.SearchCorpus(ctx, vectors[i], EvidencePerRequirement)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve %s: %w", r.ID, err)
+		}
+		// The candidate's answer about this requirement goes first among
+		// its evidence: it is the one passage written about exactly this
+		// line, and a small model reads the top of a list best.
+		if ans, ok := opts.Answers[r.ID]; ok && ans.Statement != "" {
+			id := int64(-(i + 1))
+			answerOf[id] = ans
+			hits = append([]users.CorpusHit{answerHit(id, ans)}, hits...)
 		}
 		hits = withProfile(profile, hits)
 		evidence[r.ID] = hits
 		for _, h := range hits {
 			out.EvidenceIDs[r.ID] = append(out.EvidenceIDs[r.ID], h.Chunk.ID)
+		}
+	}
+	for id, j := range opts.Carry {
+		out.EvidenceIDs[id] = append([]int64{}, j.EvidenceIDs...)
+		if d := opts.CarryDecisions[id]; d > 0 {
+			out.DecisionIDs[id] = d
 		}
 	}
 
@@ -544,7 +695,7 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 	// scoring personality adjectives from documents is the opaque
 	// culture-fit judgment the framework names as a root cause.
 	var judgeable []prompts.Requirement
-	for _, r := range reqs {
+	for _, r := range fresh {
 		if r.Type != "behavioral" {
 			judgeable = append(judgeable, r)
 		}
@@ -645,15 +796,33 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 		for _, id := range out.EvidenceIDs[j.RequirementID] {
 			offered[id] = true
 		}
-		byReq[j.RequirementID] = settleJudgment(settleInput{
+		settled := settleJudgment(settleInput{
 			req: req, raw: j, offered: offered, evidence: evidence[j.RequirementID],
 			now: now, vocab: a.vocab, repair: repairs[j.RequirementID],
+			factsFix: opts.Answers[j.RequirementID].FactsFix,
 		})
+		ans, shown := opts.Answers[j.RequirementID]
+		settled = answerSettled(settled, ans, shown, func(id int64) bool { _, ok := answerOf[id]; return ok })
+		byReq[j.RequirementID] = settled
 	}
-	for _, r := range reqs {
+	for _, r := range fresh {
 		if r.Type == "behavioral" {
 			byReq[r.ID] = notAssessedJudgment(r)
 		}
+	}
+	for id, j := range opts.Carry {
+		byReq[id] = j
+	}
+	// The offered ids keep only real passages from here on, for the same
+	// reason a judgment's cited ids do.
+	for id, list := range out.EvidenceIDs {
+		var chunks []int64
+		for _, c := range list {
+			if c > 0 {
+				chunks = append(chunks, c)
+			}
+		}
+		out.EvidenceIDs[id] = chunks
 	}
 
 	// 4. Score in code. A requirement the model skipped counts as unmet.
@@ -701,7 +870,7 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 		weighted += float64(w) * v
 		items = append(items, hiring.Item{
 			Weight: w, Category: r.Category, Class: r.Class, Excluded: !r.Counts(),
-			Determination: j.Determination,
+			Determination: j.Determination, SelfAttested: len(j.AnswerEvidence) > 0,
 		})
 		if !r.Counts() && w > 0 {
 			excluded = append(excluded, r.ID)
@@ -722,7 +891,7 @@ func (a *Assessor) Judge(ctx context.Context, submissionID int64, reqs []prompts
 
 	// 5. Decision log: one row per verdict with everything the owner
 	// needs to judge it himself (docs/decision-log.md). Best-effort.
-	a.logVerdicts(ctx, submissionID, out, evidence, rawByReq, calls, userPrompts, batchOf)
+	a.logVerdicts(ctx, submissionID, out, evidence, rawByReq, calls, userPrompts, batchOf, opts.Carry)
 	return out, nil
 }
 
@@ -740,6 +909,7 @@ func (a *Assessor) logVerdicts(
 	ctx context.Context, submissionID int64, out *Assessment,
 	evidence map[string][]users.CorpusHit, raw map[string]rawJudgment,
 	calls []callResult, userPrompts []string, batchOf map[string]int,
+	carried map[string]Judgment,
 ) {
 	type evidenceRow struct {
 		ChunkID    int64   `json:"chunk_id"`
@@ -751,6 +921,11 @@ func (a *Assessor) logVerdicts(
 	}
 	rows := make([]users.Decision, 0, len(out.Requirements))
 	for _, r := range out.Requirements {
+		// A carried judgment was logged by the run that made it, and
+		// this run still points at that row.
+		if _, ok := carried[r.ID]; ok {
+			continue
+		}
 		var ev []evidenceRow
 		for _, h := range evidence[r.ID] {
 			access, title := "public", h.Title

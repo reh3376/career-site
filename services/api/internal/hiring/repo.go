@@ -116,6 +116,13 @@ type JudgmentRow struct {
 	PromptVersion     int
 	PromptFingerprint string
 	Model             string
+	// Supersedes is the judgment of the same requirement version on the
+	// run before, when this row was carried forward from it; rows judged
+	// in this run are linked after the write (LinkSupersededJudgments).
+	Supersedes string
+	// ClarificationItemIDs are the candidate's answers this judgment
+	// consumed (FR-HF-14).
+	ClarificationItemIDs []string
 }
 
 // ReplaceJudgments writes a run's judgments in one transaction,
@@ -142,20 +149,27 @@ func (r *Repo) ReplaceJudgments(ctx context.Context, runID string, rows []Judgme
 		if ev == nil {
 			ev = []string{}
 		}
+		items := j.ClarificationItemIDs
+		if items == nil {
+			items = []string{}
+		}
 		if _, err := tx.Exec(ctx, `
       INSERT INTO judgments
         (tenant_id, run_id, requirement_id, requirement_local_id, candidate_id, schema_version, vocab_version,
          determination, basis, uncertainty, evidence_ids, rationale, reported_facts, confidence,
          rule_adjustments, rationale_issues, provenance_summary, derived_verdict,
-         decision_id, prompt_id, prompt_version, prompt_fingerprint, model)
+         decision_id, prompt_id, prompt_version, prompt_fingerprint, model,
+         supersedes, clarification_item_ids)
       VALUES ($1, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7,
               $8, $9, $10, $11::uuid[], $12, $13, $14,
               $15, $16, $17, $18,
-              $19, $20, $21, $22, $23)`,
+              $19, $20, $21, $22, $23,
+              NULLIF($24, '')::uuid, $25::uuid[])`,
 			tid, runID, j.RequirementID, j.LocalID, OwnerCandidateID, JudgmentSchema, VocabVersion,
 			j.Determination, j.Basis, unc, ev, j.Rationale, orEmptyObject(j.ReportedFacts), j.Confidence,
 			orEmptyArray(j.RuleAdjustments), orEmptyArray(j.RationaleIssues), orEmptyObject(j.ProvenanceSummary), j.DerivedVerdict,
 			j.DecisionID, j.PromptID, j.PromptVersion, j.PromptFingerprint, j.Model,
+			j.Supersedes, items,
 		); err != nil {
 			return fmt.Errorf("judgments: insert %s: %w", j.LocalID, err)
 		}
@@ -256,4 +270,119 @@ func (r *Repo) PreviousRunID(ctx context.Context, submissionID int64, attempt in
 		return "", fmt.Errorf("previous run: %w", err)
 	}
 	return id, nil
+}
+
+// LinkSupersededJudgments points each judgment of a run at the judgment
+// of the same requirement version on the run it supersedes, where the
+// writer did not already say (a carried row names its source itself).
+// It is what lets a reader ask what a verdict was before a re-judge.
+func (r *Repo) LinkSupersededJudgments(ctx context.Context, runID, previousRunID string) error {
+	if previousRunID == "" {
+		return nil
+	}
+	_, err := r.pool.Exec(ctx, `
+    UPDATE judgments n SET supersedes = p.id
+    FROM judgments p
+    WHERE n.run_id = $1::uuid AND p.run_id = $2::uuid
+      AND p.requirement_id = n.requirement_id AND n.supersedes IS NULL`, runID, previousRunID)
+	if err != nil {
+		return fmt.Errorf("link superseded judgments: %w", err)
+	}
+	return nil
+}
+
+// CarriedJudgment is a judgment of an earlier run as a later run
+// carries it forward unchanged (FR-HF-14: a re-judge is scoped to the
+// affected requirements and carries the rest). It keeps everything the
+// row holds, the prompt and model that made it included, so a carried
+// row says who judged it and is not restamped with the run that copied
+// it.
+type CarriedJudgment struct {
+	ID                   string
+	RequirementID        string
+	LocalID              string
+	RequirementType      string
+	Determination        string
+	Basis                string
+	Uncertainty          []string
+	EvidenceIDs          []string
+	ChunkIDs             []int64
+	AnswerEvidenceIDs    []string
+	Rationale            string
+	ReportedFacts        json.RawMessage
+	RuleAdjustments      json.RawMessage
+	RationaleIssues      json.RawMessage
+	ProvenanceSummary    json.RawMessage
+	Confidence           *float64
+	DecisionID           int64
+	PromptID             string
+	PromptVersion        int
+	PromptFingerprint    string
+	Model                string
+	ClarificationItemIDs []string
+	// The keyword screen as the earlier record held it for this
+	// requirement, carried with the judgment.
+	KeywordKnown bool
+	KeywordFound bool
+	KeywordTerms []string
+}
+
+// CarryableJudgments reads a run's judgments whole, keyed by the
+// requirement's id within the role, for a later run to carry.
+func (r *Repo) CarryableJudgments(ctx context.Context, runID string) (map[string]CarriedJudgment, error) {
+	tid := tenant.FromContext(ctx).Int64()
+	var keyword []byte
+	err := r.pool.QueryRow(ctx, `SELECT keyword_baseline FROM match_records WHERE run_id = $1::uuid AND tenant_id = $2`, runID, tid).Scan(&keyword)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("carryable judgments: record: %w", err)
+	}
+	var baseline struct {
+		Skipped string `json:"skipped"`
+		Items   map[string]struct {
+			Found bool     `json:"found"`
+			Terms []string `json:"terms"`
+		} `json:"items"`
+	}
+	_ = json.Unmarshal(keyword, &baseline)
+	rows, err := r.pool.Query(ctx, `
+    SELECT j.id::text, j.requirement_id::text, j.requirement_local_id, q.type,
+           j.determination, j.basis, j.uncertainty, j.evidence_ids::text[],
+           ARRAY(SELECT e.chunk_id FROM evidence_items e WHERE e.id = ANY (j.evidence_ids) AND e.chunk_id IS NOT NULL ORDER BY e.chunk_id),
+           ARRAY(SELECT e.id::text FROM evidence_items e WHERE e.id = ANY (j.evidence_ids) AND e.source_kind = 'candidate_response'),
+           j.rationale, j.reported_facts, j.rule_adjustments, j.rationale_issues, j.provenance_summary,
+           j.confidence, COALESCE(j.decision_id, 0), j.prompt_id, j.prompt_version, j.prompt_fingerprint, j.model,
+           j.clarification_item_ids::text[]
+    FROM judgments j
+    JOIN requirements q ON q.id = j.requirement_id
+    WHERE j.run_id = $1::uuid AND j.tenant_id = $2`, runID, tid)
+	if err != nil {
+		return nil, fmt.Errorf("carryable judgments: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]CarriedJudgment{}
+	for rows.Next() {
+		var c CarriedJudgment
+		var confidence *float32
+		var facts, adjustments, issues, provenance []byte
+		if err := rows.Scan(&c.ID, &c.RequirementID, &c.LocalID, &c.RequirementType,
+			&c.Determination, &c.Basis, &c.Uncertainty, &c.EvidenceIDs, &c.ChunkIDs, &c.AnswerEvidenceIDs,
+			&c.Rationale, &facts, &adjustments, &issues, &provenance,
+			&confidence, &c.DecisionID, &c.PromptID, &c.PromptVersion, &c.PromptFingerprint, &c.Model,
+			&c.ClarificationItemIDs); err != nil {
+			return nil, fmt.Errorf("carryable judgments: %w", err)
+		}
+		c.ReportedFacts, c.RuleAdjustments, c.RationaleIssues, c.ProvenanceSummary = facts, adjustments, issues, provenance
+		if confidence != nil {
+			f := float64(*confidence)
+			c.Confidence = &f
+		}
+		if item, ok := baseline.Items[c.LocalID]; ok && baseline.Skipped == "" {
+			c.KeywordKnown, c.KeywordFound, c.KeywordTerms = true, item.Found, item.Terms
+		}
+		out[c.LocalID] = c
+	}
+	return out, rows.Err()
 }

@@ -50,6 +50,8 @@ var (
 	PasswordResetTemplate       = mustLoad("password_reset")
 	JdOutcomeTemplate           = mustLoad("jd_outcome")
 	JdResultTemplate            = mustLoad("jd_result")
+	JdQuestionsTemplate         = mustLoad("jd_questions")
+	JdWaitingTemplate           = mustLoad("jd_waiting")
 	MeetingBookedTemplate       = mustLoad("meeting_booked")
 	MeetingConfirmedTemplate    = mustLoad("meeting_confirmed")
 	DecisionTestResultTemplate  = mustLoad("decision_test_result")

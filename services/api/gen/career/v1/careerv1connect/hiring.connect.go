@@ -14,9 +14,10 @@
 // because the member's submit-and-poll flow and the hiring side's
 // editing flow have different callers and different rules (14 §3.3).
 // Phase 0 step 5 landed the requirement methods and the settings; step
-// 6 lands the match record as a person reads it and the override of a
-// judgment; the clarification loop and the catalog follow in steps 7
-// and 8.
+// 6 the match record as a person reads it and the override of a
+// judgment; step 7 the clarification loop: the follow-up questions a
+// run puts to the candidate, their answers, and the run that judges the
+// answered requirements again. The catalog follows in step 8.
 //
 // Vocabulary codes (type, class, threshold units, determination, basis,
 // uncertainty, source kind, override role) travel as strings,
@@ -84,6 +85,24 @@ const (
 	// HiringServiceWriteReviewResumeProcedure is the fully-qualified name of the HiringService's
 	// WriteReviewResume RPC.
 	HiringServiceWriteReviewResumeProcedure = "/career.v1.HiringService/WriteReviewResume"
+	// HiringServiceListClarificationRequestsProcedure is the fully-qualified name of the
+	// HiringService's ListClarificationRequests RPC.
+	HiringServiceListClarificationRequestsProcedure = "/career.v1.HiringService/ListClarificationRequests"
+	// HiringServiceGetClarificationRequestProcedure is the fully-qualified name of the HiringService's
+	// GetClarificationRequest RPC.
+	HiringServiceGetClarificationRequestProcedure = "/career.v1.HiringService/GetClarificationRequest"
+	// HiringServiceRequestClarificationProcedure is the fully-qualified name of the HiringService's
+	// RequestClarification RPC.
+	HiringServiceRequestClarificationProcedure = "/career.v1.HiringService/RequestClarification"
+	// HiringServiceAnswerClarificationItemProcedure is the fully-qualified name of the HiringService's
+	// AnswerClarificationItem RPC.
+	HiringServiceAnswerClarificationItemProcedure = "/career.v1.HiringService/AnswerClarificationItem"
+	// HiringServiceSubmitClarificationAnswersProcedure is the fully-qualified name of the
+	// HiringService's SubmitClarificationAnswers RPC.
+	HiringServiceSubmitClarificationAnswersProcedure = "/career.v1.HiringService/SubmitClarificationAnswers"
+	// HiringServiceWithdrawClarificationAnswerProcedure is the fully-qualified name of the
+	// HiringService's WithdrawClarificationAnswer RPC.
+	HiringServiceWithdrawClarificationAnswerProcedure = "/career.v1.HiringService/WithdrawClarificationAnswer"
 )
 
 // HiringServiceClient is a client for the career.v1.HiringService service.
@@ -159,6 +178,45 @@ type HiringServiceClient interface {
 	// set by a person, when a later run has superseded the record, and
 	// while one is already being written.
 	WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error)
+	// Lists the questionnaires put to the candidate, newest first: which
+	// posting each belongs to, how many questions it holds and how many
+	// are still open, and by when (FSD FR-HF-13, FR-HF-22). The six
+	// clarification methods are the candidate's side of the loop. In
+	// Phase 0 the candidate is the owner, so they are admin methods; the
+	// level moves to the candidate's own when candidates have accounts.
+	ListClarificationRequests(context.Context, *connect.Request[v1.ListClarificationRequestsRequest]) (*connect.Response[v1.ListClarificationRequestsResponse], error)
+	// Reads one questionnaire as the candidate answers it: for each
+	// question the posting's own words for the requirement, the question,
+	// and the inputs it offers with any answer already saved. It never
+	// carries a threshold, an evidence standard, a determination or a
+	// score: the candidate is asked what they did, not shown what would
+	// score (FSD FR-HF-13).
+	GetClarificationRequest(context.Context, *connect.Request[v1.GetClarificationRequestRequest]) (*connect.Response[v1.GetClarificationRequestResponse], error)
+	// Writes the follow-up questions for every requirement the newest run
+	// of a posting left unresolved, at the candidate's own request (FSD
+	// FR-HF-13): one question per requirement, none for a requirement
+	// already asked about or answered. The run keeps the fit it was
+	// given; the questions do not withhold it. Refused when nothing is
+	// left to ask and while the posting is being scored.
+	RequestClarification(context.Context, *connect.Request[v1.RequestClarificationRequest]) (*connect.Response[v1.RequestClarificationResponse], error)
+	// Saves the candidate's answer to one question: an answer, "I have
+	// not done this", or "prefer not to answer" (FSD FR-HF-14). An answer
+	// is checked against the inputs the question offered and becomes a
+	// piece of evidence in the candidate's own words; saving again
+	// replaces it. Nothing is judged until the answers are submitted.
+	// Refused once the questionnaire is closed.
+	AnswerClarificationItem(context.Context, *connect.Request[v1.AnswerClarificationItemRequest]) (*connect.Response[v1.AnswerClarificationItemResponse], error)
+	// Submits a questionnaire once every question is answered or
+	// explicitly left, which closes it to further answers and starts the
+	// run that judges the answered requirements again, carries every
+	// other judgment forward, and gives the posting its fit (FSD
+	// FR-HF-14, FR-HF-22). The call returns at once; the run waits its
+	// turn like any review.
+	SubmitClarificationAnswers(context.Context, *connect.Request[v1.SubmitClarificationAnswersRequest]) (*connect.Response[v1.SubmitClarificationAnswersResponse], error)
+	// Takes an answer back (FSD FR-HF-14). The statement stops being
+	// evidence, and every judgment that cites it is marked stale until a
+	// run judges its requirement again.
+	WithdrawClarificationAnswer(context.Context, *connect.Request[v1.WithdrawClarificationAnswerRequest]) (*connect.Response[v1.WithdrawClarificationAnswerResponse], error)
 }
 
 // NewHiringServiceClient constructs a client for the career.v1.HiringService service. By default,
@@ -220,19 +278,61 @@ func NewHiringServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(hiringServiceMethods.ByName("WriteReviewResume")),
 			connect.WithClientOptions(opts...),
 		),
+		listClarificationRequests: connect.NewClient[v1.ListClarificationRequestsRequest, v1.ListClarificationRequestsResponse](
+			httpClient,
+			baseURL+HiringServiceListClarificationRequestsProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("ListClarificationRequests")),
+			connect.WithClientOptions(opts...),
+		),
+		getClarificationRequest: connect.NewClient[v1.GetClarificationRequestRequest, v1.GetClarificationRequestResponse](
+			httpClient,
+			baseURL+HiringServiceGetClarificationRequestProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("GetClarificationRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		requestClarification: connect.NewClient[v1.RequestClarificationRequest, v1.RequestClarificationResponse](
+			httpClient,
+			baseURL+HiringServiceRequestClarificationProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("RequestClarification")),
+			connect.WithClientOptions(opts...),
+		),
+		answerClarificationItem: connect.NewClient[v1.AnswerClarificationItemRequest, v1.AnswerClarificationItemResponse](
+			httpClient,
+			baseURL+HiringServiceAnswerClarificationItemProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("AnswerClarificationItem")),
+			connect.WithClientOptions(opts...),
+		),
+		submitClarificationAnswers: connect.NewClient[v1.SubmitClarificationAnswersRequest, v1.SubmitClarificationAnswersResponse](
+			httpClient,
+			baseURL+HiringServiceSubmitClarificationAnswersProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("SubmitClarificationAnswers")),
+			connect.WithClientOptions(opts...),
+		),
+		withdrawClarificationAnswer: connect.NewClient[v1.WithdrawClarificationAnswerRequest, v1.WithdrawClarificationAnswerResponse](
+			httpClient,
+			baseURL+HiringServiceWithdrawClarificationAnswerProcedure,
+			connect.WithSchema(hiringServiceMethods.ByName("WithdrawClarificationAnswer")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // hiringServiceClient implements HiringServiceClient.
 type hiringServiceClient struct {
-	listRequirements    *connect.Client[v1.ListRequirementsRequest, v1.ListRequirementsResponse]
-	updateRequirement   *connect.Client[v1.UpdateRequirementRequest, v1.UpdateRequirementResponse]
-	releaseRequirements *connect.Client[v1.ReleaseRequirementsRequest, v1.ReleaseRequirementsResponse]
-	getHiringSettings   *connect.Client[v1.GetHiringSettingsRequest, v1.GetHiringSettingsResponse]
-	setHiringSettings   *connect.Client[v1.SetHiringSettingsRequest, v1.SetHiringSettingsResponse]
-	getMatchRecord      *connect.Client[v1.GetMatchRecordRequest, v1.GetMatchRecordResponse]
-	overrideJudgment    *connect.Client[v1.OverrideJudgmentRequest, v1.OverrideJudgmentResponse]
-	writeReviewResume   *connect.Client[v1.WriteReviewResumeRequest, v1.WriteReviewResumeResponse]
+	listRequirements            *connect.Client[v1.ListRequirementsRequest, v1.ListRequirementsResponse]
+	updateRequirement           *connect.Client[v1.UpdateRequirementRequest, v1.UpdateRequirementResponse]
+	releaseRequirements         *connect.Client[v1.ReleaseRequirementsRequest, v1.ReleaseRequirementsResponse]
+	getHiringSettings           *connect.Client[v1.GetHiringSettingsRequest, v1.GetHiringSettingsResponse]
+	setHiringSettings           *connect.Client[v1.SetHiringSettingsRequest, v1.SetHiringSettingsResponse]
+	getMatchRecord              *connect.Client[v1.GetMatchRecordRequest, v1.GetMatchRecordResponse]
+	overrideJudgment            *connect.Client[v1.OverrideJudgmentRequest, v1.OverrideJudgmentResponse]
+	writeReviewResume           *connect.Client[v1.WriteReviewResumeRequest, v1.WriteReviewResumeResponse]
+	listClarificationRequests   *connect.Client[v1.ListClarificationRequestsRequest, v1.ListClarificationRequestsResponse]
+	getClarificationRequest     *connect.Client[v1.GetClarificationRequestRequest, v1.GetClarificationRequestResponse]
+	requestClarification        *connect.Client[v1.RequestClarificationRequest, v1.RequestClarificationResponse]
+	answerClarificationItem     *connect.Client[v1.AnswerClarificationItemRequest, v1.AnswerClarificationItemResponse]
+	submitClarificationAnswers  *connect.Client[v1.SubmitClarificationAnswersRequest, v1.SubmitClarificationAnswersResponse]
+	withdrawClarificationAnswer *connect.Client[v1.WithdrawClarificationAnswerRequest, v1.WithdrawClarificationAnswerResponse]
 }
 
 // ListRequirements calls career.v1.HiringService.ListRequirements.
@@ -273,6 +373,36 @@ func (c *hiringServiceClient) OverrideJudgment(ctx context.Context, req *connect
 // WriteReviewResume calls career.v1.HiringService.WriteReviewResume.
 func (c *hiringServiceClient) WriteReviewResume(ctx context.Context, req *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error) {
 	return c.writeReviewResume.CallUnary(ctx, req)
+}
+
+// ListClarificationRequests calls career.v1.HiringService.ListClarificationRequests.
+func (c *hiringServiceClient) ListClarificationRequests(ctx context.Context, req *connect.Request[v1.ListClarificationRequestsRequest]) (*connect.Response[v1.ListClarificationRequestsResponse], error) {
+	return c.listClarificationRequests.CallUnary(ctx, req)
+}
+
+// GetClarificationRequest calls career.v1.HiringService.GetClarificationRequest.
+func (c *hiringServiceClient) GetClarificationRequest(ctx context.Context, req *connect.Request[v1.GetClarificationRequestRequest]) (*connect.Response[v1.GetClarificationRequestResponse], error) {
+	return c.getClarificationRequest.CallUnary(ctx, req)
+}
+
+// RequestClarification calls career.v1.HiringService.RequestClarification.
+func (c *hiringServiceClient) RequestClarification(ctx context.Context, req *connect.Request[v1.RequestClarificationRequest]) (*connect.Response[v1.RequestClarificationResponse], error) {
+	return c.requestClarification.CallUnary(ctx, req)
+}
+
+// AnswerClarificationItem calls career.v1.HiringService.AnswerClarificationItem.
+func (c *hiringServiceClient) AnswerClarificationItem(ctx context.Context, req *connect.Request[v1.AnswerClarificationItemRequest]) (*connect.Response[v1.AnswerClarificationItemResponse], error) {
+	return c.answerClarificationItem.CallUnary(ctx, req)
+}
+
+// SubmitClarificationAnswers calls career.v1.HiringService.SubmitClarificationAnswers.
+func (c *hiringServiceClient) SubmitClarificationAnswers(ctx context.Context, req *connect.Request[v1.SubmitClarificationAnswersRequest]) (*connect.Response[v1.SubmitClarificationAnswersResponse], error) {
+	return c.submitClarificationAnswers.CallUnary(ctx, req)
+}
+
+// WithdrawClarificationAnswer calls career.v1.HiringService.WithdrawClarificationAnswer.
+func (c *hiringServiceClient) WithdrawClarificationAnswer(ctx context.Context, req *connect.Request[v1.WithdrawClarificationAnswerRequest]) (*connect.Response[v1.WithdrawClarificationAnswerResponse], error) {
+	return c.withdrawClarificationAnswer.CallUnary(ctx, req)
 }
 
 // HiringServiceHandler is an implementation of the career.v1.HiringService service.
@@ -348,6 +478,45 @@ type HiringServiceHandler interface {
 	// set by a person, when a later run has superseded the record, and
 	// while one is already being written.
 	WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error)
+	// Lists the questionnaires put to the candidate, newest first: which
+	// posting each belongs to, how many questions it holds and how many
+	// are still open, and by when (FSD FR-HF-13, FR-HF-22). The six
+	// clarification methods are the candidate's side of the loop. In
+	// Phase 0 the candidate is the owner, so they are admin methods; the
+	// level moves to the candidate's own when candidates have accounts.
+	ListClarificationRequests(context.Context, *connect.Request[v1.ListClarificationRequestsRequest]) (*connect.Response[v1.ListClarificationRequestsResponse], error)
+	// Reads one questionnaire as the candidate answers it: for each
+	// question the posting's own words for the requirement, the question,
+	// and the inputs it offers with any answer already saved. It never
+	// carries a threshold, an evidence standard, a determination or a
+	// score: the candidate is asked what they did, not shown what would
+	// score (FSD FR-HF-13).
+	GetClarificationRequest(context.Context, *connect.Request[v1.GetClarificationRequestRequest]) (*connect.Response[v1.GetClarificationRequestResponse], error)
+	// Writes the follow-up questions for every requirement the newest run
+	// of a posting left unresolved, at the candidate's own request (FSD
+	// FR-HF-13): one question per requirement, none for a requirement
+	// already asked about or answered. The run keeps the fit it was
+	// given; the questions do not withhold it. Refused when nothing is
+	// left to ask and while the posting is being scored.
+	RequestClarification(context.Context, *connect.Request[v1.RequestClarificationRequest]) (*connect.Response[v1.RequestClarificationResponse], error)
+	// Saves the candidate's answer to one question: an answer, "I have
+	// not done this", or "prefer not to answer" (FSD FR-HF-14). An answer
+	// is checked against the inputs the question offered and becomes a
+	// piece of evidence in the candidate's own words; saving again
+	// replaces it. Nothing is judged until the answers are submitted.
+	// Refused once the questionnaire is closed.
+	AnswerClarificationItem(context.Context, *connect.Request[v1.AnswerClarificationItemRequest]) (*connect.Response[v1.AnswerClarificationItemResponse], error)
+	// Submits a questionnaire once every question is answered or
+	// explicitly left, which closes it to further answers and starts the
+	// run that judges the answered requirements again, carries every
+	// other judgment forward, and gives the posting its fit (FSD
+	// FR-HF-14, FR-HF-22). The call returns at once; the run waits its
+	// turn like any review.
+	SubmitClarificationAnswers(context.Context, *connect.Request[v1.SubmitClarificationAnswersRequest]) (*connect.Response[v1.SubmitClarificationAnswersResponse], error)
+	// Takes an answer back (FSD FR-HF-14). The statement stops being
+	// evidence, and every judgment that cites it is marked stale until a
+	// run judges its requirement again.
+	WithdrawClarificationAnswer(context.Context, *connect.Request[v1.WithdrawClarificationAnswerRequest]) (*connect.Response[v1.WithdrawClarificationAnswerResponse], error)
 }
 
 // NewHiringServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -405,6 +574,42 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(hiringServiceMethods.ByName("WriteReviewResume")),
 		connect.WithHandlerOptions(opts...),
 	)
+	hiringServiceListClarificationRequestsHandler := connect.NewUnaryHandler(
+		HiringServiceListClarificationRequestsProcedure,
+		svc.ListClarificationRequests,
+		connect.WithSchema(hiringServiceMethods.ByName("ListClarificationRequests")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceGetClarificationRequestHandler := connect.NewUnaryHandler(
+		HiringServiceGetClarificationRequestProcedure,
+		svc.GetClarificationRequest,
+		connect.WithSchema(hiringServiceMethods.ByName("GetClarificationRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceRequestClarificationHandler := connect.NewUnaryHandler(
+		HiringServiceRequestClarificationProcedure,
+		svc.RequestClarification,
+		connect.WithSchema(hiringServiceMethods.ByName("RequestClarification")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceAnswerClarificationItemHandler := connect.NewUnaryHandler(
+		HiringServiceAnswerClarificationItemProcedure,
+		svc.AnswerClarificationItem,
+		connect.WithSchema(hiringServiceMethods.ByName("AnswerClarificationItem")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceSubmitClarificationAnswersHandler := connect.NewUnaryHandler(
+		HiringServiceSubmitClarificationAnswersProcedure,
+		svc.SubmitClarificationAnswers,
+		connect.WithSchema(hiringServiceMethods.ByName("SubmitClarificationAnswers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hiringServiceWithdrawClarificationAnswerHandler := connect.NewUnaryHandler(
+		HiringServiceWithdrawClarificationAnswerProcedure,
+		svc.WithdrawClarificationAnswer,
+		connect.WithSchema(hiringServiceMethods.ByName("WithdrawClarificationAnswer")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/career.v1.HiringService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case HiringServiceListRequirementsProcedure:
@@ -423,6 +628,18 @@ func NewHiringServiceHandler(svc HiringServiceHandler, opts ...connect.HandlerOp
 			hiringServiceOverrideJudgmentHandler.ServeHTTP(w, r)
 		case HiringServiceWriteReviewResumeProcedure:
 			hiringServiceWriteReviewResumeHandler.ServeHTTP(w, r)
+		case HiringServiceListClarificationRequestsProcedure:
+			hiringServiceListClarificationRequestsHandler.ServeHTTP(w, r)
+		case HiringServiceGetClarificationRequestProcedure:
+			hiringServiceGetClarificationRequestHandler.ServeHTTP(w, r)
+		case HiringServiceRequestClarificationProcedure:
+			hiringServiceRequestClarificationHandler.ServeHTTP(w, r)
+		case HiringServiceAnswerClarificationItemProcedure:
+			hiringServiceAnswerClarificationItemHandler.ServeHTTP(w, r)
+		case HiringServiceSubmitClarificationAnswersProcedure:
+			hiringServiceSubmitClarificationAnswersHandler.ServeHTTP(w, r)
+		case HiringServiceWithdrawClarificationAnswerProcedure:
+			hiringServiceWithdrawClarificationAnswerHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -462,4 +679,28 @@ func (UnimplementedHiringServiceHandler) OverrideJudgment(context.Context, *conn
 
 func (UnimplementedHiringServiceHandler) WriteReviewResume(context.Context, *connect.Request[v1.WriteReviewResumeRequest]) (*connect.Response[v1.WriteReviewResumeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.WriteReviewResume is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) ListClarificationRequests(context.Context, *connect.Request[v1.ListClarificationRequestsRequest]) (*connect.Response[v1.ListClarificationRequestsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.ListClarificationRequests is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) GetClarificationRequest(context.Context, *connect.Request[v1.GetClarificationRequestRequest]) (*connect.Response[v1.GetClarificationRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.GetClarificationRequest is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) RequestClarification(context.Context, *connect.Request[v1.RequestClarificationRequest]) (*connect.Response[v1.RequestClarificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.RequestClarification is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) AnswerClarificationItem(context.Context, *connect.Request[v1.AnswerClarificationItemRequest]) (*connect.Response[v1.AnswerClarificationItemResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.AnswerClarificationItem is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) SubmitClarificationAnswers(context.Context, *connect.Request[v1.SubmitClarificationAnswersRequest]) (*connect.Response[v1.SubmitClarificationAnswersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.SubmitClarificationAnswers is not implemented"))
+}
+
+func (UnimplementedHiringServiceHandler) WithdrawClarificationAnswer(context.Context, *connect.Request[v1.WithdrawClarificationAnswerRequest]) (*connect.Response[v1.WithdrawClarificationAnswerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.HiringService.WithdrawClarificationAnswer is not implemented"))
 }

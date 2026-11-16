@@ -3,9 +3,11 @@ package ingest
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -288,7 +290,35 @@ func unchanged(existing *users.CorpusDocument, title, visibility string, meta, h
 		bytes.Equal(existing.ContentHash, hash) &&
 		existing.Visibility == visibility &&
 		existing.Title == title &&
-		bytes.Equal(existing.Meta, meta)
+		sameJSON(existing.Meta, meta)
+}
+
+// sameJSON reports whether two jsonb values are the same value. The
+// stored one comes back from Postgres in its own spelling (a space
+// after every colon, keys in its own order) and an absent one is
+// stored as an empty object, so comparing bytes called every document
+// changed, and every reindex chunked and embedded the whole corpus
+// again. Found on 2026-11-15 when the walker began to send meta.
+func sameJSON(a, b []byte) bool {
+	decode := func(raw []byte) (any, bool) {
+		if len(bytes.TrimSpace(raw)) == 0 {
+			return map[string]any{}, true
+		}
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return nil, false
+		}
+		if v == nil {
+			return map[string]any{}, true
+		}
+		return v, true
+	}
+	av, aok := decode(a)
+	bv, bok := decode(b)
+	if !aok || !bok {
+		return bytes.Equal(a, b)
+	}
+	return reflect.DeepEqual(av, bv)
 }
 
 // stripHTMLComments removes `<!-- ... -->` spans, including ones

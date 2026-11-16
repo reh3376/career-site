@@ -67,8 +67,22 @@ func judgmentProto(j hiring.RecordJudgment, aud recordAudience) *v1.Judgment {
 	if s := j.Facts.StatedScope; s != nil && s.Value > 0 {
 		out.ReportedFacts.StatedScope = &v1.ScopeThreshold{Unit: s.Unit, Value: s.Value}
 	}
+	out.SelfAttested = j.SelfAttested
+	if f := j.FollowUp; f != nil {
+		// The question and the candidate's answer are for every reader of
+		// the record: the answer was written for the employer whose
+		// posting it answers (owner's decision, 2026-11-15). The ids are
+		// the hiring side's.
+		out.FollowUp = &v1.JudgmentFollowUp{
+			Status: f.Status, Question: f.Question, Statement: f.Statement,
+			AnsweredAt: timeProto(f.AnsweredAt), AskedAttempt: int32(f.AskedAttempt), AskedBy: f.AskedBy,
+		}
+		if aud.admin {
+			out.FollowUp.RequestId, out.FollowUp.ItemId = f.RequestID, f.ItemID
+		}
+	}
 	for _, e := range j.Evidence {
-		ref := &v1.EvidenceRef{Id: e.ID, SourceKind: e.SourceKind, Withdrawn: e.Withdrawn}
+		ref := &v1.EvidenceRef{Id: e.ID, SourceKind: e.SourceKind, Withdrawn: e.Withdrawn, Statement: e.Statement}
 		if aud.admin {
 			ref.Title, ref.ChunkId = e.Title, e.ChunkID
 		} else if e.Public {
@@ -139,6 +153,25 @@ func recordProto(rec hiring.Record, title, employer string, aud recordAudience) 
 	}
 	if rec.FinishedAt != nil {
 		out.FinishedAt = timestamppb.New(*rec.FinishedAt)
+	}
+	if rec.AwaitingCandidate() {
+		// FR-HF-22: no fit while the candidate has been asked something.
+		// The run wrote none; this makes sure a reader is sent none.
+		out.AwaitingCandidate = true
+		out.Fit, out.MatchScore = "", nil
+	}
+	if c := rec.Clarification; c != nil {
+		out.Clarification = &v1.RecordClarification{
+			Status: c.Status, Held: c.Held, ClosedReason: c.ClosedReason,
+			Asked: int32(c.Asked), Pending: int32(c.Pending), Answered: int32(c.Answered),
+			GeneratedAt: timestamppb.New(c.GeneratedAt), ExpiresAt: timeProto(c.ExpiresAt),
+			AnsweredAt: timeProto(c.AnsweredAt), ClosedAt: timeProto(c.ClosedAt),
+			AskedAttempt: int32(c.AskedAttempt), ClosingAttempt: int32(c.ClosingAttempt),
+			ClosedByThisRun: c.ClosedByThisRun,
+		}
+		if aud.admin {
+			out.Clarification.RequestId = c.RequestID
+		}
 	}
 	for _, q := range rec.Requirements {
 		p := requirementProto(q)
@@ -269,6 +302,9 @@ func (h *Hiring) GetMatchRecord(
 		out.CanOverride = true
 		out.OverrideChoices = overrideChoices(reg)
 	}
+	if aud.admin && !rec.Superseded {
+		out.AskableCount = int32(askable(rec))
+	}
 	// The résumé after review is the hiring side's and is sent to an
 	// admin only; a member's response never names it.
 	if aud.admin {
@@ -282,6 +318,25 @@ func (h *Hiring) GetMatchRecord(
 		out.CanWriteReviewResume, out.ReviewResumeNote = h.reviewResumeOffer(ctx, rec, has && existing.Status == hiring.ReviewResumeWriting)
 	}
 	return connect.NewResponse(out), nil
+}
+
+// askable counts the requirements of a record a question could still
+// be written for at the candidate's request: unresolved as the record
+// stands, judged from documents, and not already asked about. It
+// mirrors what hiring.GenerateClarification would ask with All set.
+func askable(rec hiring.Record) int {
+	n := 0
+	for _, j := range rec.Judgments {
+		if j.NotAssessed || j.EffectiveDetermination != hiring.DetUnresolved {
+			continue
+		}
+		if f := j.FollowUp; f != nil && f.Status != hiring.ItemWithdrawn && f.Status != hiring.FollowUpUnanswered &&
+			f.Status != hiring.FollowUpSuperseded {
+			continue
+		}
+		n++
+	}
+	return n
 }
 
 func reviewResumeProto(x hiring.ReviewResume) *v1.ReviewResume {
@@ -512,7 +567,7 @@ func (h *Hiring) OverrideJudgment(
 // band store the score is sent and the fit left empty.
 func (h *Hiring) recordFor(ctx context.Context, rec hiring.Record, title, employer string, aud recordAudience) *v1.MatchRecord {
 	out := recordProto(rec, title, employer, aud)
-	if !aud.admin {
+	if !aud.admin || rec.AwaitingCandidate() {
 		return out
 	}
 	if score, ok := rec.ReviewedScore(); ok {

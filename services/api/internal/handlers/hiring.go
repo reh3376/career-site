@@ -42,6 +42,10 @@ type Hiring struct {
 	// resumes writes a résumé after review; nil when the reviewer is
 	// not wired, in which case none is offered.
 	resumes reviewResumeRunner
+	// clarify starts the run a submitted questionnaire owes; nil when
+	// the reviewer is not wired, in which case answers are kept and no
+	// run begins.
+	clarify clarificationRunner
 }
 
 // SetBands wires the fit bands.
@@ -445,10 +449,16 @@ func (h *Hiring) GetHiringSettings(
 	if _, err := RequireCaller(ctx); err != nil {
 		return nil, err
 	}
-	s := h.settings.Get(ctx)
 	return connect.NewResponse(&v1.GetHiringSettingsResponse{
-		Settings: &v1.HiringSettings{PreferredFraction: s.PreferredFraction},
+		Settings: hiringSettingsProto(h.settings.Get(ctx)),
 	}), nil
+}
+
+func hiringSettingsProto(s hiring.Settings) *v1.HiringSettings {
+	auto := s.ClarificationAuto
+	return &v1.HiringSettings{
+		PreferredFraction: s.PreferredFraction, ClarificationAuto: &auto, ClarificationDays: int32(s.ClarificationDays),
+	}
 }
 
 // SetHiringSettings stores the framework's settings (FR-HF-23: the
@@ -465,9 +475,19 @@ func (h *Hiring) SetHiringSettings(
 	if in == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("settings are required"))
 	}
-	next := hiring.Settings{PreferredFraction: in.GetPreferredFraction()}
+	// The clarification switch and limit are kept as they are when a
+	// write leaves them out, so a caller that sets only the fraction
+	// does not switch the loop off.
+	next := h.settings.Get(ctx)
+	next.PreferredFraction = in.GetPreferredFraction()
+	if in.ClarificationAuto != nil {
+		next.ClarificationAuto = in.GetClarificationAuto()
+	}
+	if d := int(in.GetClarificationDays()); d != 0 {
+		next.ClarificationDays = d
+	}
 	if err := h.settings.Set(ctx, next, admin.ID); err != nil {
-		if errors.Is(err, hiring.ErrInvalidSettings) {
+		if errors.Is(err, hiring.ErrInvalidSettings) || errors.Is(err, hiring.ErrInvalidClarificationDays) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 		h.log.Error("hiring: set settings", slog.String("error", err.Error()))
@@ -475,8 +495,9 @@ func (h *Hiring) SetHiringSettings(
 	}
 	h.events.Emit(ctx, requestEvent(req, "admin.hiring_settings_changed", admin.ID, map[string]any{
 		"preferred_fraction": next.PreferredFraction,
+		"clarification_auto": next.ClarificationAuto, "clarification_days": next.ClarificationDays,
 	}))
 	return connect.NewResponse(&v1.SetHiringSettingsResponse{
-		Settings: &v1.HiringSettings{PreferredFraction: next.PreferredFraction},
+		Settings: hiringSettingsProto(next),
 	}), nil
 }

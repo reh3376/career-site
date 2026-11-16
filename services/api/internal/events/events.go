@@ -74,6 +74,10 @@ var Registry = map[string]struct {
 	"jd.finished":       {Props: []string{"submission_id", "outcome", "score", "threshold", "fit"}},
 	"jd.result_viewed":  {Browser: true, Props: []string{"submission_id", "via"}},
 	"jd.pdf_downloaded": {Props: []string{"submission_id"}},
+	// The clarification loop (Phase 0 step 7): a run wrote follow-up
+	// questions for the candidate, and a run closed them.
+	"jd.questions_asked":  {Props: []string{"submission_id", "questions", "held"}},
+	"jd.questions_closed": {Props: []string{"submission_id", "reason", "judged_again"}},
 	// Ground truth and judgment (data layer D3).
 	"jd.outcome_recorded":  {Props: []string{"submission_id", "status"}},
 	"jd.feedback_recorded": {Props: []string{"submission_id", "target", "rating"}},
@@ -153,7 +157,14 @@ var Registry = map[string]struct {
 	// extraction people correct can be read off the stream.
 	"admin.requirement_edited":      {Props: []string{"requirement_id", "role_id", "local_id", "version", "fields"}},
 	"admin.requirements_released":   {Props: []string{"role_id", "submission_id", "released", "run_started"}},
-	"admin.hiring_settings_changed": {Props: []string{"preferred_fraction"}},
+	"admin.hiring_settings_changed": {Props: []string{"preferred_fraction", "clarification_auto", "clarification_days"}},
+	// The clarification loop, candidate's side (Phase 0 step 7). What
+	// was asked and answered is in the decision log; these say only that
+	// it happened.
+	"clarification.requested": {Props: []string{"submission_id", "questions"}},
+	"clarification.answered":  {Props: []string{"submission_id", "answer_type", "status"}},
+	"clarification.submitted": {Props: []string{"submission_id", "questions", "answered", "run_started"}},
+	"clarification.withdrawn": {Props: []string{"submission_id", "stale_judgments"}},
 	// A person's override of a judgment, or its withdrawal (FR-HF-08).
 	// The model's value rides beside the person's so disagreement, and
 	// which basis it falls on, can be read off the stream without a

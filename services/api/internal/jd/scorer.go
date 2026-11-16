@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/reh3376/career-site/services/api/internal/build"
@@ -80,6 +81,11 @@ type Scorer struct {
 	pipelineTimeout time.Duration
 	// notifier is told when a run reaches a terminal state (see notify.go).
 	notifier OutcomeNotifier
+	// closing holds the questionnaires whose closing run this process
+	// has started and not finished (clarify.go), so that the clock, the
+	// boot-time resume and a submit cannot start two for one request.
+	closingMu sync.Mutex
+	closing   map[string]bool
 }
 
 // NewScorer wires the deps. assessor and resume may be nil; a
@@ -217,7 +223,7 @@ func (s *Scorer) Score(ctx context.Context, jdText string) (score float64, hits 
 // left at `scoring` forever (which is what happened on prod on
 // 2026-09-22 when a submission queued for 28 minutes behind another).
 func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints) {
-	s.scoreAndPersist(ctx, submissionID, jdText, hints, "submit", 0)
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, "submit", 0, nil)
 }
 
 // RescoreAndPersist is ScoreAndPersist for an admin re-run. The only
@@ -225,7 +231,7 @@ func (s *Scorer) ScoreAndPersist(ctx context.Context, submissionID int64, jdText
 // asked, which is exactly the sort of thing that is impossible to
 // reconstruct later if it is not written down at the time.
 func (s *Scorer) RescoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, adminID int64) {
-	s.scoreAndPersist(ctx, submissionID, jdText, hints, "rescore", adminID)
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, "rescore", adminID, nil)
 }
 
 // RejudgeAndPersist runs the pipeline against the role's released
@@ -235,7 +241,7 @@ func (s *Scorer) RescoreAndPersist(ctx context.Context, submissionID int64, jdTe
 // requirements is the ordinary pipeline: retrieval, the judge, the
 // rules, the gate and, above it, the résumé.
 func (s *Scorer) RejudgeAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, adminID int64) {
-	s.scoreAndPersist(ctx, submissionID, jdText, hints, TriggerRelease, adminID)
+	s.scoreAndPersist(ctx, submissionID, jdText, hints, TriggerRelease, adminID, nil)
 }
 
 // TriggerRelease is the run trigger of a re-judge on released rows.
@@ -247,6 +253,10 @@ const TriggerRelease = "release"
 type runRequirements struct {
 	rows   []hiring.Requirement
 	drafts []hiring.Requirement
+	// carry is what the run did not send to the judge: judgments carried
+	// forward from the run before, and judgments settled in code from a
+	// candidate's answer (clarify.go).
+	carry runCarry
 }
 
 // assess settles a run's requirements and judges them (Phase 0 step
@@ -256,7 +266,12 @@ type runRequirements struct {
 // to re-judge, reads the released rows and does not extract. Row
 // writes use the context that survives cancellation, so a run that
 // times out in the judge does not leave a half-written list.
-func (s *Scorer) assess(ctx, persist context.Context, submissionID int64, jdText string, hints prompts.Hints, useRows bool, progress Progress) (*Assessment, runRequirements, error) {
+//
+// Since step 7 the judge is also given the candidate's standing answers
+// about the rows it judges, and a run that closes a questionnaire
+// (scope set) judges only the rows an answer speaks to and carries the
+// rest (judgeOptions).
+func (s *Scorer) assess(ctx, persist context.Context, submissionID int64, jdText string, hints prompts.Hints, useRows bool, scope *clarifyScope, progress Progress) (*Assessment, runRequirements, error) {
 	var rr runRequirements
 	if useRows {
 		if s.hiring == nil {
@@ -268,7 +283,17 @@ func (s *Scorer) assess(ctx, persist context.Context, submissionID int64, jdText
 		}
 		rr.rows = prepared.Rows
 		progress.report(8, "reading the released requirements")
-		a, err := s.assessor.Judge(ctx, submissionID, FromRows(rr.rows), "", hiring.SourceRows, progress)
+		opts, carry, err := s.judgeOptions(persist, rr.rows, scope)
+		if err != nil {
+			return nil, rr, err
+		}
+		rr.carry = carry
+		a, err := s.assessor.JudgeWith(ctx, submissionID, FromRows(rr.rows), "", hiring.SourceRows, opts, progress)
+		if a != nil && a.Model == "" {
+			// Nothing went to the judge: the model of record is the one
+			// that made the judgments carried.
+			a.Model = carry.model()
+		}
 		return a, rr, err
 	}
 	extracted, model, err := s.assessor.Extract(ctx, submissionID, jdText, hints, progress)
@@ -314,11 +339,18 @@ func (s *Scorer) assess(ctx, persist context.Context, submissionID int64, jdText
 	if len(judged) == 0 {
 		judged = rr.drafts
 	}
-	a, err := s.assessor.Judge(ctx, submissionID, FromRows(judged), model, source, progress)
+	// A run that extracts carries nothing, but the candidate's answers
+	// about the versions it judges still stand.
+	opts, carry, err := s.judgeOptions(persist, rr.rows, nil)
+	if err != nil {
+		return nil, rr, err
+	}
+	rr.carry = carry
+	a, err := s.assessor.JudgeWith(ctx, submissionID, FromRows(judged), model, source, opts, progress)
 	return a, rr, err
 }
 
-func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, trigger string, adminID int64) {
+func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText string, hints prompts.Hints, trigger string, adminID int64, closing *clarifyScope) {
 	persist := context.WithoutCancel(ctx)
 
 	// The run record (data layer D2). A re-score overwrites the
@@ -435,7 +467,33 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	// a person has edited: an extraction must never overwrite an edit,
 	// so once there is one, "re-score" means judge the list as it now
 	// stands.
-	useRows := trigger == TriggerRelease
+	//
+	// A run that closes a questionnaire (step 7) judges the rows the run
+	// that asked judged, and only the ones an answer speaks to. That
+	// holds while the asking run is still the one before this: if
+	// another run has come between, its record is the current one and
+	// already had the answers, so this run judges everything like a
+	// re-score and only owes the request its closing.
+	scope := closing
+	if scope != nil && runOpen && s.hiring != nil && s.hiring.Repo() != nil {
+		if prev, pErr := s.hiring.Repo().PreviousRunID(persist, submissionID, run.Attempt); pErr != nil || prev != scope.prevRunID {
+			s.log.Info("jd: the run that asked is no longer the latest; judging every requirement",
+				slog.Int64("id", submissionID), slog.String("request", scope.requestID))
+			scope = nil
+		}
+	} else if scope != nil {
+		scope = nil
+	}
+	if closing == nil && s.hiring != nil && s.hiring.Repo() != nil {
+		// A full run replaces the record any open questions were asked
+		// about, and asks its own. Answers already given stand.
+		if n, sErr := s.hiring.Repo().SupersedeClarifications(persist, submissionID, time.Now()); sErr != nil {
+			s.log.Warn("jd: could not close the earlier follow-up questions", slog.Int64("id", submissionID), slog.String("error", sErr.Error()))
+		} else if n > 0 {
+			s.log.Info("jd: earlier follow-up questions closed by a new run", slog.Int64("id", submissionID), slog.Int64("requests", n))
+		}
+	}
+	useRows := trigger == TriggerRelease || scope != nil
 	if !useRows && s.hiring != nil {
 		if edited, eErr := s.hiring.Edited(persist, submissionID); eErr != nil {
 			s.log.Warn("jd: could not tell whether the requirements were edited; extracting",
@@ -501,11 +559,11 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 	var judged runRequirements
 	if s.assessor != nil {
 		started := time.Now()
-		assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, progress)
+		assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, scope, progress)
 		if err != nil && isTransient(err) {
 			s.log.Warn("jd: assessment transient failure, retrying once", slog.Int64("id", submissionID), slog.String("error", err.Error()))
 			if sleepCtx(ctx, retryDelay) {
-				assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, progress)
+				assessment, judged, err = s.assess(ctx, persist, submissionID, jdText, hints, useRows, scope, progress)
 			}
 		}
 		if err != nil {
@@ -557,6 +615,38 @@ func (s *Scorer) scoreAndPersist(ctx context.Context, submissionID int64, jdText
 		}
 		if runOpen {
 			s.recordHiring(persist, submissionID, jdText, hints, run, assessment, judged)
+		}
+		switch {
+		case closing != nil:
+			// The questions are closed by this run, whatever it goes on to
+			// decide: each answered item now names the run that judged its
+			// requirement again.
+			if s.hiring != nil && s.hiring.Repo() != nil {
+				if cErr := s.hiring.Repo().CloseClarificationRequest(persist, closing.requestID, closing.reason, run.RunID, time.Now()); cErr != nil {
+					s.log.Warn("jd: could not close the follow-up questions", slog.Int64("id", submissionID),
+						slog.String("request", closing.requestID), slog.String("error", cErr.Error()))
+				}
+				s.events.Emit(persist, events.Event{Name: "jd.questions_closed", Props: map[string]any{
+					"submission_id": submissionID, "reason": closing.reason, "judged_again": assessment.judgedAgain(),
+				}})
+			}
+		case runOpen:
+			// FR-HF-22, FR-HF-24: a run that owes the candidate a question
+			// carries no fit. The record is written and readable as the
+			// state so far; the gate, the résumé and the finished mail
+			// wait for the run that closes the questions.
+			if q, held := s.holdForCandidate(persist, submissionID, run.RunID, watch != nil); held {
+				outcome.Status = StatusAwaitingCandidate
+				if uErr := s.users.UpdateJdScoring(persist, submissionID, StatusAwaitingCandidate, nil, ""); uErr != nil {
+					s.log.Warn("jd: failed to record the wait for the candidate", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
+				}
+				_ = s.users.UpdateJdProgress(persist, submissionID, 99, "waiting for the candidate's answers")
+				s.events.Emit(persist, events.Event{Name: "jd.questions_asked", Props: map[string]any{
+					"submission_id": submissionID, "questions": len(q.Items), "held": true,
+				}})
+				s.notifyClarification(persist, q, ClarificationAsked)
+				return
+			}
 		}
 	} else if uErr := s.users.SetJdAssessment(persist, submissionID, retrieval, nil); uErr != nil {
 		s.log.Warn("jd: failed to store retrieval score", slog.Int64("id", submissionID), slog.String("error", uErr.Error()))
@@ -756,12 +846,24 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 	}
 	judge := s.assessor.JudgePrompt()
 	in.JudgePromptID, in.JudgePromptVersion = judge.ID, judge.Version
+	// local ids of the rows this run did not send to the judge: their
+	// evidence is the earlier judgment's, read from its row and not from
+	// the passages offered now.
+	kept := map[string]bool{}
 	for _, j := range a.Judgments {
 		ji := hiring.JudgmentInput{
 			LocalID: j.RequirementID, Verdict: j.Verdict, EvidenceChunkIDs: j.EvidenceIDs,
 			Determination: j.Determination, Basis: j.Basis, Uncertainty: j.Uncertainty,
 			Rationale: j.Rationale, Confidence: j.Confidence, NotAssessed: j.NotAssessed,
-			DecisionID: a.DecisionIDs[j.RequirementID],
+			DecisionID:      a.DecisionIDs[j.RequirementID],
+			EvidenceItemIDs: j.AnswerEvidence, ClarificationItemIDs: j.ClarificationItems,
+		}
+		if c, ok := judged.carry.carried[j.RequirementID]; ok && j.Carried {
+			ji.Carried, ji.EvidenceChunkIDs = &c, nil
+			kept[j.RequirementID] = true
+		} else if c, ok := judged.carry.settled[j.RequirementID]; ok {
+			ji.SettledFrom, ji.EvidenceChunkIDs = &c, nil
+			kept[j.RequirementID] = true
 		}
 		if j.ReportedFacts != nil {
 			ji.ReportedFacts, _ = json.Marshal(j.ReportedFacts)
@@ -774,10 +876,13 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 		}
 		in.Judgments = append(in.Judgments, ji)
 	}
-	// Every chunk offered to any requirement, read once.
+	// Every chunk offered to any requirement this run judged, read once.
 	var ids []int64
 	seen := map[int64]bool{}
-	for _, list := range a.EvidenceIDs {
+	for localID, list := range a.EvidenceIDs {
+		if kept[localID] {
+			continue
+		}
 		for _, id := range list {
 			if !seen[id] {
 				seen[id] = true
@@ -800,6 +905,9 @@ func (s *Scorer) recordHiring(ctx context.Context, submissionID int64, jdText st
 		}
 	}
 	for localID, list := range a.EvidenceIDs {
+		if kept[localID] {
+			continue
+		}
 		for _, id := range list {
 			in.Offered[localID] = append(in.Offered[localID], hiring.Chunk{ID: id, Text: text[id]})
 		}

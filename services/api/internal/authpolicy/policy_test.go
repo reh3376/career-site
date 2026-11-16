@@ -30,7 +30,7 @@ func TestBuildCoversEveryDeclaredMethod(t *testing.T) {
 		level v1.AuthLevel
 		want  int
 	}{
-		{v1.AuthLevel_AUTH_LEVEL_ADMIN, 100},
+		{v1.AuthLevel_AUTH_LEVEL_ADMIN, 106},
 		{v1.AuthLevel_AUTH_LEVEL_MEMBER, 53},
 		{v1.AuthLevel_AUTH_LEVEL_PUBLIC, 17},
 	}
@@ -153,7 +153,7 @@ func TestSummaryNamesEveryLevel(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 	got := m.Summary()
-	for _, want := range []string{"170 methods", "admin=100", "member=53", "public=17"} {
+	for _, want := range []string{"176 methods", "admin=106", "member=53", "public=17"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Summary() = %q, missing %q", got, want)
 		}

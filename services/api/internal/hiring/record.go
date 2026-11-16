@@ -124,8 +124,8 @@ func overrideRefused(format string, args ...any) error {
 }
 
 // RecordEvidence is one citation on a judgment: what kind of thing was
-// cited and, for a passage of a document, which document. The text is
-// never part of it.
+// cited and, for a passage of a document, which document. The text of
+// a document is never part of it.
 type RecordEvidence struct {
 	ID         string
 	SourceKind string
@@ -135,6 +135,71 @@ type RecordEvidence struct {
 	// not an admin is shown the title only when it is.
 	Public    bool
 	Withdrawn bool
+	// Statement is the candidate's own answer to a follow-up question,
+	// for an item of kind candidate_response and no other. It is the
+	// one piece of evidence whose words a reader of the record is
+	// shown: the candidate wrote it for the employer whose posting it
+	// answers (owner's decision, 2026-11-15), and it is marked as the
+	// candidate's own statement wherever it appears. Empty once
+	// withdrawn.
+	Statement string
+}
+
+// Follow-up states, as a record shows them. The item statuses, and two
+// more for a question that closed with no answer: unanswered, when its
+// time ran out, and superseded, when a new run of the posting replaced
+// the record it was asked about before it could be answered.
+const (
+	FollowUpUnanswered = "unanswered"
+	FollowUpSuperseded = "superseded"
+)
+
+// RecordFollowUp is the follow-up question put to the candidate about
+// one requirement, and what came of it (FR-HF-13, FR-HF-14, FR-HF-24).
+type RecordFollowUp struct {
+	ItemID    string
+	RequestID string
+	// Status: pending while the question is open; answered,
+	// not_applicable, declined or withdrawn as the candidate left it;
+	// unanswered or superseded when it closed with no answer.
+	Status   string
+	Question string
+	// Statement is the answer as the candidate gave it, for an answered
+	// or not-applicable item.
+	Statement  string
+	AnsweredAt *time.Time
+	// AskedAttempt is the run the question was asked on.
+	AskedAttempt int
+	AskedBy      string
+}
+
+// RecordClarification is where a record's follow-up questions stand:
+// the questionnaire asked on this run, or the one this run closed.
+type RecordClarification struct {
+	RequestID string
+	// Status is the request's: sent while it takes answers, answered
+	// once the candidate has submitted, expired when the limit passed
+	// or a later run replaced it.
+	Status string
+	// Held is whether the run that asked carries no fit while the
+	// request is open (FR-HF-22).
+	Held bool
+	// ClosedReason: answered, expired or superseded; empty while the
+	// closing run has not finished.
+	ClosedReason string
+	Asked        int
+	Pending      int
+	Answered     int
+	GeneratedAt  time.Time
+	ExpiresAt    *time.Time
+	AnsweredAt   *time.Time
+	ClosedAt     *time.Time
+	// AskedAttempt is the run that asked; ClosingAttempt the run that
+	// judged the answered requirements again, 0 until it has.
+	AskedAttempt   int
+	ClosingAttempt int
+	// ClosedByThisRun is true on the record of the closing run.
+	ClosedByThisRun bool
 }
 
 // RecordOverride is a person's override as stored.
@@ -197,6 +262,10 @@ type RecordJudgment struct {
 	// SelfAttested is whether the judgment cites the candidate's own
 	// answer to a follow-up question.
 	SelfAttested bool
+	// FollowUp is the question put to the candidate about this
+	// requirement version, on this run or an earlier one; nil when none
+	// has been.
+	FollowUp *RecordFollowUp
 }
 
 // Record is one run's match record with everything a reader is shown.
@@ -235,7 +304,14 @@ type Record struct {
 	CorpusDocuments    int
 	Model              string
 	RequirementsEdited bool
+	// Clarification is the questionnaire asked on this run, or the one
+	// this run closed; nil when neither exists.
+	Clarification *RecordClarification
 }
+
+// AwaitingCandidate reports whether the run rests with no fit because
+// the candidate has been asked something (FR-HF-22).
+func (r Record) AwaitingCandidate() bool { return r.RunStatus == RunAwaitingCandidate }
 
 // LatestRecordRun names the newest run of a submission that has a match
 // record with judgment rows, which is the record a reader is shown.
@@ -432,7 +508,85 @@ func (r *Repo) GetRecord(ctx context.Context, runID string) (Record, error) {
 	if err := r.earlierOverrides(ctx, &rec); err != nil {
 		return Record{}, err
 	}
+	if err := r.recordFollowUps(ctx, &rec); err != nil {
+		return Record{}, err
+	}
 	return rec, nil
+}
+
+// recordFollowUps attaches the clarification loop to a record: the
+// request asked on this run or closed by it, and, per judgment, the
+// newest question put to the candidate about that requirement version
+// on this run or an earlier one of the same posting.
+func (r *Repo) recordFollowUps(ctx context.Context, rec *Record) error {
+	tid := tenant.FromContext(ctx).Int64()
+	var c RecordClarification
+	err := r.pool.QueryRow(ctx, `
+    SELECT cr.id::text, cr.status, cr.held, cr.closed_reason, cr.generated_at, cr.expires_at, cr.answered_at, cr.closed_at,
+           asked.attempt, COALESCE(closing.attempt, 0), cr.closing_run_id IS NOT DISTINCT FROM $1::uuid,
+           (SELECT count(*) FROM clarification_items i WHERE i.request_id = cr.id),
+           (SELECT count(*) FROM clarification_items i WHERE i.request_id = cr.id AND i.answer_status = 'pending'),
+           (SELECT count(*) FROM clarification_items i WHERE i.request_id = cr.id AND i.answer_status IN ('answered', 'not_applicable'))
+    FROM clarification_requests cr
+    JOIN jd_runs asked ON asked.run_id = cr.run_id
+    LEFT JOIN jd_runs closing ON closing.run_id = cr.closing_run_id
+    WHERE cr.tenant_id = $2 AND (cr.run_id = $1::uuid OR cr.closing_run_id = $1::uuid)
+    ORDER BY (cr.run_id = $1::uuid) DESC, cr.generated_at DESC LIMIT 1`, rec.RunID, tid).Scan(
+		&c.RequestID, &c.Status, &c.Held, &c.ClosedReason, &c.GeneratedAt, &c.ExpiresAt, &c.AnsweredAt, &c.ClosedAt,
+		&c.AskedAttempt, &c.ClosingAttempt, &c.ClosedByThisRun, &c.Asked, &c.Pending, &c.Answered)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+	case err != nil:
+		return fmt.Errorf("match record: clarification: %w", err)
+	default:
+		rec.Clarification = &c
+	}
+
+	ids := make([]string, 0, len(rec.Judgments))
+	for _, j := range rec.Judgments {
+		ids = append(ids, j.RequirementID)
+	}
+	rows, err := r.pool.Query(ctx, `
+    SELECT DISTINCT ON (i.requirement_id)
+           i.requirement_id::text, i.id::text, i.request_id::text, i.answer_status, i.question_text,
+           COALESCE(e.text, ''), i.answered_at, run.attempt, i.asked_by, cr.status, cr.closed_reason
+    FROM clarification_items i
+    JOIN clarification_requests cr ON cr.id = i.request_id
+    JOIN jd_runs run ON run.run_id = cr.run_id
+    LEFT JOIN evidence_items e ON e.id = i.evidence_item_id AND e.withdrawn_at IS NULL
+    WHERE i.requirement_id = ANY($1::uuid[]) AND i.tenant_id = $2
+      AND run.submission_id = $3 AND run.attempt <= $4
+    ORDER BY i.requirement_id, run.attempt DESC, i.created_at DESC`, ids, tid, rec.SubmissionID, rec.Attempt)
+	if err != nil {
+		return fmt.Errorf("match record: follow-ups: %w", err)
+	}
+	defer rows.Close()
+	byReq := map[string]*RecordFollowUp{}
+	for rows.Next() {
+		var f RecordFollowUp
+		var reqID, requestStatus, closedReason string
+		if err := rows.Scan(&reqID, &f.ItemID, &f.RequestID, &f.Status, &f.Question,
+			&f.Statement, &f.AnsweredAt, &f.AskedAttempt, &f.AskedBy, &requestStatus, &closedReason); err != nil {
+			return fmt.Errorf("match record: follow-ups: %w", err)
+		}
+		if f.Status == ItemPending && requestStatus != RequestSent {
+			f.Status = FollowUpUnanswered
+			if closedReason == ClosedSuperseded {
+				f.Status = FollowUpSuperseded
+			}
+		}
+		if f.Status != ItemAnswered && f.Status != ItemNotApplicable {
+			f.Statement, f.AnsweredAt = "", nil
+		}
+		byReq[reqID] = &f
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("match record: follow-ups: %w", err)
+	}
+	for i := range rec.Judgments {
+		rec.Judgments[i].FollowUp = byReq[rec.Judgments[i].RequirementID]
+	}
+	return nil
 }
 
 // recordEvidence reads the citations behind a set of evidence items.
@@ -443,7 +597,8 @@ func (r *Repo) recordEvidence(ctx context.Context, ids []string) (map[string]Rec
 	}
 	rows, err := r.pool.Query(ctx, `
     SELECT e.id::text, e.source_kind, COALESCE(d.title, ''), COALESCE(e.chunk_id, 0),
-           e.visibility = 'public', e.withdrawn_at IS NOT NULL
+           e.visibility = 'public', e.withdrawn_at IS NOT NULL,
+           CASE WHEN e.source_kind = 'candidate_response' AND e.withdrawn_at IS NULL THEN e.text ELSE '' END
     FROM evidence_items e
     LEFT JOIN corpus_chunks c ON c.id = e.chunk_id
     LEFT JOIN corpus_documents d ON d.id = c.document_id
@@ -454,7 +609,7 @@ func (r *Repo) recordEvidence(ctx context.Context, ids []string) (map[string]Rec
 	defer rows.Close()
 	for rows.Next() {
 		var e RecordEvidence
-		if err := rows.Scan(&e.ID, &e.SourceKind, &e.Title, &e.ChunkID, &e.Public, &e.Withdrawn); err != nil {
+		if err := rows.Scan(&e.ID, &e.SourceKind, &e.Title, &e.ChunkID, &e.Public, &e.Withdrawn, &e.Statement); err != nil {
 			return nil, fmt.Errorf("match record: evidence: %w", err)
 		}
 		out[e.ID] = e

@@ -28,8 +28,10 @@ const (
 	// VocabVersion is the vocabulary every row written today names.
 	// The codes themselves are rows in vocab_codes (vocab.go). 1.1 added
 	// the requirement classes and the vocabularies thresholds are
-	// written in (migration 00074); additive, so a minor version.
-	VocabVersion = "1.1"
+	// written in (migration 00074); additive, so a minor version. 1.2
+	// added the activity classes a clarification answer chooses from
+	// (migration 00078), additive again.
+	VocabVersion = "1.2"
 
 	// FormulaV2 is the prototype's arithmetic, which the dual write
 	// carries until step 4; FormulaV3 is the three numbers; FormulaV4 is

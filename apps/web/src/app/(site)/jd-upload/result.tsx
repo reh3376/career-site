@@ -138,6 +138,11 @@ function VerdictBreakdown({
   );
 }
 
+// What a submitter is told while the review waits on the candidate.
+// The record below it says how many questions and by when.
+const AWAITING_NOTE =
+  "The review has read the posting against Roger's records and put follow-up questions to Roger about the requirements the documents on file could not settle. No fit is given while a question is open, so that the result you get is the one with the answers in it. The record below is the state so far, and you get the finished review by email.";
+
 const LIVE = new Set([
   "JD_STATUS_RECEIVED",
   "JD_STATUS_SCORING",
@@ -152,6 +157,7 @@ const STEP_LABEL: Record<string, string> = {
   JD_STATUS_READY: "ready",
   JD_STATUS_FAILED: "failed",
   JD_STATUS_NOT_A_POSTING: "not a posting",
+  JD_STATUS_AWAITING_CANDIDATE: "waiting on the candidate",
 };
 
 // Polls the public GetJdResult endpoint with the submission's result
@@ -298,6 +304,9 @@ export function JdResult({
   const stage = poll.progressStage ?? poll.progress_stage ?? "";
   const fit = poll.fitCategory ?? poll.fit_category ?? "";
   const recordData = record ? toRecordData(record, "member") : null;
+  // The review has asked the candidate something and gives no fit
+  // until it is answered or the time runs out (FSD FR-HF-22).
+  const awaiting = status === "JD_STATUS_AWAITING_CANDIDATE";
 
   return (
     <div className="space-y-5">
@@ -352,10 +361,13 @@ export function JdResult({
                 <h2 id="jd-progress-title" className="mt-2 text-lg text-ink">
                   {status === "JD_STATUS_FAILED"
                     ? "The review hit an error"
-                    : fit
-                      ? `Finished: ${FIT_LABEL[fit] ?? fit}`
-                      : "Finished"}
+                    : awaiting
+                      ? "Waiting on the candidate"
+                      : fit
+                        ? `Finished: ${FIT_LABEL[fit] ?? fit}`
+                        : "Finished"}
                 </h2>
+                {awaiting ? <p className="mt-3 text-sm leading-relaxed text-ink-2">{AWAITING_NOTE}</p> : null}
                 {typeof score === "number" ? (
                   <p className="mt-2 font-mono text-sm text-ink-2">
                     match score{" "}
@@ -449,6 +461,10 @@ export function JdResult({
           </Link>{" "}
           and you get an email when it finishes.
         </p>
+      ) : null}
+
+      {awaiting ? (
+        <p className="border-l-2 border-signal bg-signal-soft/40 px-4 py-3 text-sm leading-relaxed text-ink">{AWAITING_NOTE}</p>
       ) : null}
 
       {status === "JD_STATUS_BELOW_THRESHOLD" ? (
