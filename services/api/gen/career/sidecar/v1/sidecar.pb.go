@@ -1421,7 +1421,7 @@ type RenderDecisionTestReportRequest struct {
 	// paragraphs, tables, chart payloads), some marked for one copy only.
 	// Its `schema` field must match the version this sidecar draws.
 	DocumentJson string `protobuf:"bytes,1,opt,name=document_json,json=documentJson,proto3" json:"document_json,omitempty"`
-	// Caller trace id for log correlation (e.g. `dt:0f3c9a2e`).
+	// Caller trace id for log correlation (e.g. `dt:aaaaaaaa`).
 	TraceId       string `protobuf:"bytes,2,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

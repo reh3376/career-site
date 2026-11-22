@@ -6919,7 +6919,7 @@ decides nothing. Rendering never touches a model.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `documentJson` | `string` | string | `string: min_len: 2 max_len: 2000000` | The report document as JSON: a list of blocks (headings, paragraphs, tables, chart payloads), some marked for one copy only. Its `schema` field must match the version this sidecar draws. |
-| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:0f3c9a2e`). |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:aaaaaaaa`). |
 
 **Response** — [`RenderDecisionTestReportResponse`](#renderdecisiontestreportresponse)
 
@@ -7126,7 +7126,7 @@ Decision test report render request.
 | Field (JSON) | Type | JSON encoding | Rules | Description |
 |---|---|---|---|---|
 | `documentJson` | `string` | string | `string: min_len: 2 max_len: 2000000` | The report document as JSON: a list of blocks (headings, paragraphs, tables, chart payloads), some marked for one copy only. Its `schema` field must match the version this sidecar draws. |
-| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:0f3c9a2e`). |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:aaaaaaaa`). |
 
 ### RenderDecisionTestReportResponse
 

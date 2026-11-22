@@ -609,8 +609,11 @@ func metaOf(doc *Document) string {
 }
 
 func TestRunAccessors(t *testing.T) {
-	r := Run{Key: "0f3c9a2e-7b1d-4c5e-9a60-3d2f8e1b4c7a", InstrumentVersion: "v4-m6000-q25000-r20000"}
-	if r.ShortID() != "0f3c9a2e" || r.Generation() != 4 || r.Timings() != "m6000-q25000-r20000" {
+	// An obviously made-up session id. A realistic-looking one beside the
+	// word "key" reads as a credential to the secret scanner, and it is
+	// right to be suspicious.
+	r := Run{Key: "aaaaaaaa-1111-4000-8000-000000000000", InstrumentVersion: "v4-m6000-q25000-r20000"}
+	if r.ShortID() != "aaaaaaaa" || r.Generation() != 4 || r.Timings() != "m6000-q25000-r20000" {
 		t.Fatalf("%q %d %q", r.ShortID(), r.Generation(), r.Timings())
 	}
 	if m, q, rc := r.limits(); m != 6 || q != 25 || rc != 20 {

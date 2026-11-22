@@ -44,7 +44,7 @@ func (f *fakeDTStore) DTReportInput(context.Context, int64) (*dtreport.Input, er
 		return nil, f.inputErr
 	}
 	one := 1
-	run := dtreport.Run{Key: "0f3c9a2e-0000-4000-8000-000000000000", AttemptNo: &one, Usable: true,
+	run := dtreport.Run{Key: "bbbbbbbb-0000-4000-8000-000000000000", AttemptNo: &one, Usable: true,
 		Started: time.Date(2026, 11, 19, 2, 55, 0, 0, time.UTC), Finished: time.Date(2026, 11, 19, 3, 7, 0, 0, time.UTC),
 		InstrumentVersion: "v4-m6000-q25000-r20000", ItemSetVersion: "pool-2026-10-07"}
 	for i := 1; i <= 30; i++ {
@@ -79,7 +79,7 @@ func (f *fakeDTStore) DTReportsDue(context.Context, time.Duration, int) ([]int64
 func (f *fakeDTStore) DTReportStateByID(_ context.Context, id int64) (*users.DTReportState, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	st := &users.DTReportState{SessionID: id, SessionKey: "0f3c9a2e-0000-4000-8000-000000000000", Status: f.status,
+	st := &users.DTReportState{SessionID: id, SessionKey: "bbbbbbbb-0000-4000-8000-000000000000", Status: f.status,
 		StartedAt: time.Date(2026, 11, 19, 2, 55, 0, 0, time.UTC), Attempts: f.attempts, Permanent: f.perm, LastError: f.lastErr,
 		CanSend: f.wants && f.addr != ""}
 	if n := len(f.reports); n > 0 {
@@ -211,7 +211,7 @@ func TestTheResultsEmailGoesOnce(t *testing.T) {
 	if string(att.Data) != "%PDF-participant" || att.ContentType != "application/pdf" {
 		t.Fatalf("attachment: %q %q", att.Data, att.ContentType)
 	}
-	if att.Filename != "decision-test-results-0f3c9a2e-0000-4000-8000-000000000000.pdf" {
+	if att.Filename != "decision-test-results-bbbbbbbb-0000-4000-8000-000000000000.pdf" {
 		t.Fatalf("filename: %q", att.Filename)
 	}
 	if !strings.Contains(msg.TextBody, "The attached PDF goes further") || !strings.Contains(msg.HTMLBody, "The attached PDF goes further") {
@@ -375,12 +375,13 @@ func TestConsoleActions(t *testing.T) {
 }
 
 func TestReportFilenames(t *testing.T) {
-	// The whole run id, so a file names exactly one run.
-	const key = "0f3c9a2e-7b1d-4c5e-9a60-3d2f8e1b4c7a"
-	if got := users.DTReportFilename(key, false); got != "decision-test-results-"+key+".pdf" {
+	// The whole run id, so a file names exactly one run. The id here is
+	// plainly invented; see the note in dtreport's TestRunAccessors.
+	const session = "aaaaaaaa-1111-4000-8000-000000000000"
+	if got := users.DTReportFilename(session, false); got != "decision-test-results-"+session+".pdf" {
 		t.Fatal(got)
 	}
-	if got := users.DTReportFilename(key, true); got != "decision-test-results-"+key+"-owner-copy.pdf" {
+	if got := users.DTReportFilename(session, true); got != "decision-test-results-"+session+"-owner-copy.pdf" {
 		t.Fatal(got)
 	}
 }
