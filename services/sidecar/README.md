@@ -15,6 +15,7 @@ services/sidecar/
 │   │   ├── embed.py          embedding providers (ollama, stub)
 │   │   ├── llm.py            generation providers (ollama, stub)
 │   │   ├── render.py         résumé rendering to PDF
+│   │   ├── report/           decision test report: charts.py, layout.py, fonts.py
 │   │   ├── build.py          Typst/template assembly
 │   │   └── templates/        résumé templates
 │   ├── career/               generated Protobuf + gRPC stubs (do not edit)
@@ -72,8 +73,12 @@ Both providers default to `stub` so a checkout runs, and CI tests, without Ollam
 
 ## The RPC surface
 
-Implemented: `Health`, `Embed`, `Generate`, `RenderResume`.
+Implemented: `Health`, `Embed`, `Generate`, `RenderResume`, `RenderDecisionTestReport`.
 
 Still returning `UNIMPLEMENTED`: `Rerank`, `Classify`, `RunJob`, `GetJob`. None is currently blocking anything. Retrieval ranks by cosine similarity in Postgres without a reranking pass, classification happens in the Go API's `jd` package where the scoring rules live, and ingestion runs as an in-process job on the API side rather than as a sidecar job, so `RunJob`/`GetJob` have no caller.
+
+`RenderDecisionTestReport` draws the decision test's individual results report (FSD FR-DT-21). The api sends the report as a finished document, a list of blocks: headings, paragraphs, tables and chart payloads, with every figure worked out and every sentence chosen in `services/api/internal/dtreport`. `report/charts.py` draws the charts with matplotlib, `report/layout.py` lays the pages out with reportlab, and the call returns two PDFs: the participant's copy, and the owner's copy, which adds the blocks the document marks `only: owner` (the answer-by-answer table and the questions with their answers). The renderer holds no figure and no wording, so a change to what a report says is a change to the api alone. The document carries a `schema` number and a mismatch is refused, which is what happens for the minute or two of a deploy in which the two services are from different builds; the api retries.
+
+The report is set in Liberation Sans, installed in the image from Debian's `fonts-liberation`. It is metric-compatible with Arial, so a page lays out in the container exactly as on the workstation it was designed on. A machine with neither falls back to the DejaVu Sans that matplotlib carries, and the engine string returned with every render says which face was used (`reportlab:5.1.0+matplotlib:3.11.2+Liberation Sans`).
 
 `Generate` is single-shot, not streaming. That is why an Ask Roger answer arrives as one delta rather than token by token: the streaming exists between the browser and the Go API, but the model call underneath it returns complete. Changing that means a server-streaming RPC here first.

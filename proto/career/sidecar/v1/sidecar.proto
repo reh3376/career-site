@@ -46,6 +46,12 @@ service SidecarService {
   // Typst and applies an owner password so the file opens freely but
   // cannot be edited. Rendering never touches a model.
   rpc RenderResume(RenderResumeRequest) returns (RenderResumeResponse);
+  // Renders a decision test results report to two PDFs: the
+  // participant's copy and the owner's copy. The API sends the report
+  // as a finished document, every figure worked out and every sentence
+  // chosen; the sidecar draws the charts and lays out the pages, and
+  // decides nothing. Rendering never touches a model.
+  rpc RenderDecisionTestReport(RenderDecisionTestReportRequest) returns (RenderDecisionTestReportResponse);
 }
 
 // Why a text is being embedded; some models use different instructions for
@@ -349,6 +355,36 @@ message RenderResumeResponse {
   int32 pages = 2;
   // Renderer identifier (e.g. `typst:0.15.0`).
   string engine = 3;
+}
+
+// Decision test report render request.
+message RenderDecisionTestReportRequest {
+  // The report document as JSON: a list of blocks (headings,
+  // paragraphs, tables, chart payloads), some marked for one copy only.
+  // Its `schema` field must match the version this sidecar draws.
+  string document_json = 1 [(buf.validate.field).string = {
+    min_len: 2
+    max_len: 2000000
+  }];
+  // Caller trace id for log correlation (e.g. `dt:0f3c9a2e`).
+  string trace_id = 2 [(buf.validate.field).string.max_len = 64];
+}
+
+// Decision test report render result.
+message RenderDecisionTestReportResponse {
+  // The participant's copy. It carries no question, no answer option
+  // and no item code.
+  bytes participant_pdf = 1;
+  // The owner's copy, which adds the blocks the document marks for the
+  // owner: the answer-by-answer table and the questions with their
+  // answers.
+  bytes owner_pdf = 2;
+  // Page count of the participant's copy.
+  int32 participant_pages = 3;
+  // Page count of the owner's copy.
+  int32 owner_pages = 4;
+  // Renderer identifier (e.g. `reportlab:5.1.0+matplotlib:3.11.2+Liberation Sans`).
+  string engine = 5;
 }
 
 // Empty.

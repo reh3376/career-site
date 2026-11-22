@@ -16,11 +16,11 @@ exist.
 
 ## What is true today, checked rather than assumed
 
-**Every method declares a level.** 176 of them, and none missing:
+**Every method declares a level.** 179 of them, and none missing:
 
 | level | methods |
 |---|---|
-| `AUTH_LEVEL_ADMIN` | 106 |
+| `AUTH_LEVEL_ADMIN` | 109 |
 | `AUTH_LEVEL_MEMBER` | 53 |
 | `AUTH_LEVEL_PUBLIC` | 17 |
 
@@ -48,7 +48,7 @@ sixteenth until it was declared PUBLIC on 2026-10-09; see S1.
 
 | option | declared on | enforced |
 |---|---|---|
-| `auth` | 176 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
+| `auth` | 179 methods | **by the interceptor since 2026-10-11**, and still by hand in each handler until S5 |
 | `mfa_fresh` | ~~79 methods~~ **0, removed 2026-10-09** | never, and now declared nowhere |
 | `rate_limit_per_minute` | ~~35 methods~~ **0, removed 2026-10-09** | never from the contract; real limits are hand-wired |
 | `allow_unverified` | ~~3 methods~~ **2, enforced 2026-10-11** | by the interceptor |
@@ -1202,6 +1202,15 @@ command.
     `GetClarificationRequest` read; `RequestClarification`,
     `AnswerClarificationItem`, `SubmitClarificationAnswers` and
     `WithdrawClarificationAnswer` are audited. 168 procedures served.
+11. 2026-11-22: 109/53/17 (179). The decision test's results report
+    (FSD FR-DT-21 to 24): three `AdminService` methods, all ADMIN and
+    all audited with `session_key` as their target.
+    `DownloadDecisionTestReport` is recorded because one of the two
+    copies it serves is the answer key for the questions a run drew;
+    `GenerateDecisionTestReport` builds a new version and
+    `SendDecisionTestReport` emails the participant, which is the one
+    console action here that reaches somebody outside. 171 procedures
+    served.
 5. **Does rate limiting matter yet?** 35 methods declare a budget. With
    the current traffic it is theoretical, and it needs a counter store;
    it may be right to drop the option rather than carry it unenforced.

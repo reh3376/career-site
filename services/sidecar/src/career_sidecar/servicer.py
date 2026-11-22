@@ -10,7 +10,7 @@ import time
 import grpc
 
 from career.sidecar.v1 import sidecar_pb2, sidecar_pb2_grpc
-from career_sidecar import render
+from career_sidecar import render, report
 from career_sidecar.build import VERSION
 from career_sidecar.embed import PURPOSE_DOCUMENT, PURPOSE_QUERY, Embedder
 from career_sidecar.llm import LLM
@@ -76,6 +76,36 @@ class SidecarServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             context.set_details(f"render failed: {e}")
             return sidecar_pb2.RenderResumeResponse()
         return sidecar_pb2.RenderResumeResponse(pdf=res.pdf, pages=res.pages, engine=res.engine)
+
+    def RenderDecisionTestReport(
+        self,
+        request: sidecar_pb2.RenderDecisionTestReportRequest,
+        context: grpc.ServicerContext,
+    ) -> sidecar_pb2.RenderDecisionTestReportResponse:
+        if not report.renderer_ready():
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("report renderer not available")
+            return sidecar_pb2.RenderDecisionTestReportResponse()
+        try:
+            res = report.render_report(request.document_json)
+        except ValueError as e:
+            # A document this renderer cannot draw: malformed, or written
+            # for another schema. Retrying will not help, and the code
+            # says so to the caller.
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return sidecar_pb2.RenderDecisionTestReportResponse()
+        except Exception as e:  # noqa: BLE001 — propagate error to gRPC
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"render failed: {e}")
+            return sidecar_pb2.RenderDecisionTestReportResponse()
+        return sidecar_pb2.RenderDecisionTestReportResponse(
+            participant_pdf=res.participant_pdf,
+            owner_pdf=res.owner_pdf,
+            participant_pages=res.participant_pages,
+            owner_pages=res.owner_pages,
+            engine=res.engine,
+        )
 
     def Generate(
         self,

@@ -55,6 +55,11 @@ class SidecarServiceStub:
                 request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.SerializeToString,
                 response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.FromString,
                 _registered_method=True)
+        self.RenderDecisionTestReport = channel.unary_unary(
+                '/career.sidecar.v1.SidecarService/RenderDecisionTestReport',
+                request_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportRequest.SerializeToString,
+                response_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportResponse.FromString,
+                _registered_method=True)
 
 
 class SidecarServiceServicer:
@@ -131,6 +136,17 @@ class SidecarServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RenderDecisionTestReport(self, request, context):
+        """Renders a decision test results report to two PDFs: the
+        participant's copy and the owner's copy. The API sends the report
+        as a finished document, every figure worked out and every sentence
+        chosen; the sidecar draws the charts and lays out the pages, and
+        decides nothing. Rendering never touches a model.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SidecarServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -173,6 +189,11 @@ def add_SidecarServiceServicer_to_server(servicer, server):
                     servicer.RenderResume,
                     request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.FromString,
                     response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.SerializeToString,
+            ),
+            'RenderDecisionTestReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.RenderDecisionTestReport,
+                    request_deserializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportRequest.FromString,
+                    response_serializer=career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -392,6 +413,33 @@ class SidecarService:
             '/career.sidecar.v1.SidecarService/RenderResume',
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeRequest.SerializeToString,
             career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderResumeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RenderDecisionTestReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/career.sidecar.v1.SidecarService/RenderDecisionTestReport',
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportRequest.SerializeToString,
+            career_dot_sidecar_dot_v1_dot_sidecar__pb2.RenderDecisionTestReportResponse.FromString,
             options,
             channel_credentials,
             insecure,

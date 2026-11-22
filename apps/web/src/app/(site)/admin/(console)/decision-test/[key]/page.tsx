@@ -9,6 +9,8 @@ import type { Run } from "../runs";
 import { attemptEvidence, attemptLabel } from "../runs";
 import { BlockReview, SessionReview } from "../review";
 import { RunExport } from "../run-export";
+import { RunReport } from "../run-report";
+import type { Report } from "../report-state";
 import { unratedCount, unratedNote } from "../confidence";
 import { describeMove, moveText } from "../move";
 import { recallLabel, recallState } from "../recall-state";
@@ -98,6 +100,7 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
     answers?: Answer[];
     reviewHistory?: ReviewEvent[];
     drawnItems?: DrawnItem[];
+    report?: Report;
   };
   const run = res?.run;
   if (!run) notFound();
@@ -506,6 +509,11 @@ export default async function RunPage({ params }: { params: Promise<{ key: strin
           </tbody>
         </table>
       </div>
+
+      {/* The report first: it is what the participant was, or will be,
+          told about this run, which is the thing a reviewer most needs
+          beside the numbers above. The raw files follow. */}
+      <RunReport sessionKey={key} initial={res?.report} />
 
       <RunExport sessionKey={key} />
 

@@ -57,6 +57,9 @@ type Admin struct {
 	roPool   *db.Pool         // read-only pool used by the /admin/db surface
 	ingest   *ingest.Ingester // Ask Roger corpus ingest
 	corpus   CorpusRoots
+	// dtReports builds, rebuilds and sends decision test reports. Nil
+	// until SetDTReports runs, and the report actions refuse without it.
+	dtReports *DTReports
 	// scheduler serves the meeting-scheduler settings the admin surface
 	// edits; calendar answers whether anything can actually be booked
 	// against them. Both nil until SetScheduler runs.

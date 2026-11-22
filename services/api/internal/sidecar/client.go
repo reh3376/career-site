@@ -74,3 +74,15 @@ func (c *Client) RenderResume(ctx context.Context, resumeJSON, ownerPassword, tr
 		TraceId:       traceID,
 	})
 }
+
+// RenderDecisionTestReport draws a decision test results report from
+// the document the api wrote, and returns both copies. Rendering takes
+// a second or two; two minutes bounds a wedged sidecar.
+func (c *Client) RenderDecisionTestReport(ctx context.Context, documentJSON, traceID string) (*sidecarv1.RenderDecisionTestReportResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	return c.stub.RenderDecisionTestReport(ctx, &sidecarv1.RenderDecisionTestReportRequest{
+		DocumentJson: documentJSON,
+		TraceId:      traceID,
+	})
+}

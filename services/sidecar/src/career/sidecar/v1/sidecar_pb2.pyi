@@ -250,6 +250,28 @@ class RenderResumeResponse(_message.Message):
     engine: str
     def __init__(self, pdf: _Optional[bytes] = ..., pages: _Optional[int] = ..., engine: _Optional[str] = ...) -> None: ...
 
+class RenderDecisionTestReportRequest(_message.Message):
+    __slots__ = ("document_json", "trace_id")
+    DOCUMENT_JSON_FIELD_NUMBER: _ClassVar[int]
+    TRACE_ID_FIELD_NUMBER: _ClassVar[int]
+    document_json: str
+    trace_id: str
+    def __init__(self, document_json: _Optional[str] = ..., trace_id: _Optional[str] = ...) -> None: ...
+
+class RenderDecisionTestReportResponse(_message.Message):
+    __slots__ = ("participant_pdf", "owner_pdf", "participant_pages", "owner_pages", "engine")
+    PARTICIPANT_PDF_FIELD_NUMBER: _ClassVar[int]
+    OWNER_PDF_FIELD_NUMBER: _ClassVar[int]
+    PARTICIPANT_PAGES_FIELD_NUMBER: _ClassVar[int]
+    OWNER_PAGES_FIELD_NUMBER: _ClassVar[int]
+    ENGINE_FIELD_NUMBER: _ClassVar[int]
+    participant_pdf: bytes
+    owner_pdf: bytes
+    participant_pages: int
+    owner_pages: int
+    engine: str
+    def __init__(self, participant_pdf: _Optional[bytes] = ..., owner_pdf: _Optional[bytes] = ..., participant_pages: _Optional[int] = ..., owner_pages: _Optional[int] = ..., engine: _Optional[str] = ...) -> None: ...
+
 class HealthRequest(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

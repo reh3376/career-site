@@ -13,6 +13,11 @@ license = { text = "MIT" }
 
 dependencies = [
   "grpcio>=1.66",
+  # The decision test report: matplotlib draws its charts, reportlab
+  # lays the pages out (report/). Charts are where Python's libraries
+  # are decisive, which is the sidecar's reason for existing (ADR 0004).
+  # Neither parses anything: both only write, from the api's own figures.
+  "matplotlib>=3.10",
   # buf's protoc-gen-python currently emits gencode v7.36.x; runtime must match.
   "protobuf>=7,<8",
   # Floor raised twice in two weeks, both times for the same reason.
@@ -27,6 +32,7 @@ dependencies = [
   # service only ever parses a PDF typst produced seconds earlier from
   # its own template. See render.py.
   "pypdf[crypto]>=6.21.4",
+  "reportlab>=4.2",
   "typst>=0.15.0",
 ]
 

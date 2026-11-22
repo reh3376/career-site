@@ -76,6 +76,12 @@ class ActivitySort(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ACTIVITY_SORT_SESSIONS_DESC: _ClassVar[ActivitySort]
     ACTIVITY_SORT_ACTIVE_TIME_DESC: _ClassVar[ActivitySort]
     ACTIVITY_SORT_ASK_ROGER_DESC: _ClassVar[ActivitySort]
+
+class DecisionTestReportCopy(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    DECISION_TEST_REPORT_COPY_UNSPECIFIED: _ClassVar[DecisionTestReportCopy]
+    DECISION_TEST_REPORT_COPY_PARTICIPANT: _ClassVar[DecisionTestReportCopy]
+    DECISION_TEST_REPORT_COPY_OWNER: _ClassVar[DecisionTestReportCopy]
 REVIEW_KIND_UNSPECIFIED: ReviewKind
 REVIEW_KIND_NEGATIVE_FEEDBACK: ReviewKind
 REVIEW_KIND_NO_SUPPORT: ReviewKind
@@ -116,6 +122,9 @@ ACTIVITY_SORT_LAST_EVENT_DESC: ActivitySort
 ACTIVITY_SORT_SESSIONS_DESC: ActivitySort
 ACTIVITY_SORT_ACTIVE_TIME_DESC: ActivitySort
 ACTIVITY_SORT_ASK_ROGER_DESC: ActivitySort
+DECISION_TEST_REPORT_COPY_UNSPECIFIED: DecisionTestReportCopy
+DECISION_TEST_REPORT_COPY_PARTICIPANT: DecisionTestReportCopy
+DECISION_TEST_REPORT_COPY_OWNER: DecisionTestReportCopy
 
 class MemberCounts(_message.Message):
     __slots__ = ("views", "downloads", "chat_messages", "escalations", "saved")
@@ -2551,18 +2560,108 @@ class GetDecisionTestRunRequest(_message.Message):
     def __init__(self, session_key: _Optional[str] = ...) -> None: ...
 
 class GetDecisionTestRunResponse(_message.Message):
-    __slots__ = ("run", "blocks", "answers", "review_history", "drawn_items")
+    __slots__ = ("run", "blocks", "answers", "review_history", "drawn_items", "report")
     RUN_FIELD_NUMBER: _ClassVar[int]
     BLOCKS_FIELD_NUMBER: _ClassVar[int]
     ANSWERS_FIELD_NUMBER: _ClassVar[int]
     REVIEW_HISTORY_FIELD_NUMBER: _ClassVar[int]
     DRAWN_ITEMS_FIELD_NUMBER: _ClassVar[int]
+    REPORT_FIELD_NUMBER: _ClassVar[int]
     run: DecisionTestRun
     blocks: _containers.RepeatedCompositeFieldContainer[DecisionTestBlock]
     answers: _containers.RepeatedCompositeFieldContainer[DecisionTestAnswer]
     review_history: _containers.RepeatedCompositeFieldContainer[DecisionTestReviewEvent]
     drawn_items: _containers.RepeatedCompositeFieldContainer[DecisionTestDrawnItem]
-    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ..., review_history: _Optional[_Iterable[_Union[DecisionTestReviewEvent, _Mapping]]] = ..., drawn_items: _Optional[_Iterable[_Union[DecisionTestDrawnItem, _Mapping]]] = ...) -> None: ...
+    report: DecisionTestReport
+    def __init__(self, run: _Optional[_Union[DecisionTestRun, _Mapping]] = ..., blocks: _Optional[_Iterable[_Union[DecisionTestBlock, _Mapping]]] = ..., answers: _Optional[_Iterable[_Union[DecisionTestAnswer, _Mapping]]] = ..., review_history: _Optional[_Iterable[_Union[DecisionTestReviewEvent, _Mapping]]] = ..., drawn_items: _Optional[_Iterable[_Union[DecisionTestDrawnItem, _Mapping]]] = ..., report: _Optional[_Union[DecisionTestReport, _Mapping]] = ...) -> None: ...
+
+class DecisionTestReport(_message.Message):
+    __slots__ = ("state", "version", "generated_at", "compared", "no_ranking_reason", "others", "score", "total", "rank", "group_size", "percentile", "participant_pages", "owner_pages", "template", "error", "emailed_at", "emailed_by", "can_send", "participant_filename", "owner_filename", "engine")
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_AT_FIELD_NUMBER: _ClassVar[int]
+    COMPARED_FIELD_NUMBER: _ClassVar[int]
+    NO_RANKING_REASON_FIELD_NUMBER: _ClassVar[int]
+    OTHERS_FIELD_NUMBER: _ClassVar[int]
+    SCORE_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_FIELD_NUMBER: _ClassVar[int]
+    RANK_FIELD_NUMBER: _ClassVar[int]
+    GROUP_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PERCENTILE_FIELD_NUMBER: _ClassVar[int]
+    PARTICIPANT_PAGES_FIELD_NUMBER: _ClassVar[int]
+    OWNER_PAGES_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    EMAILED_AT_FIELD_NUMBER: _ClassVar[int]
+    EMAILED_BY_FIELD_NUMBER: _ClassVar[int]
+    CAN_SEND_FIELD_NUMBER: _ClassVar[int]
+    PARTICIPANT_FILENAME_FIELD_NUMBER: _ClassVar[int]
+    OWNER_FILENAME_FIELD_NUMBER: _ClassVar[int]
+    ENGINE_FIELD_NUMBER: _ClassVar[int]
+    state: str
+    version: int
+    generated_at: str
+    compared: bool
+    no_ranking_reason: str
+    others: int
+    score: int
+    total: int
+    rank: int
+    group_size: int
+    percentile: float
+    participant_pages: int
+    owner_pages: int
+    template: str
+    error: str
+    emailed_at: str
+    emailed_by: str
+    can_send: bool
+    participant_filename: str
+    owner_filename: str
+    engine: str
+    def __init__(self, state: _Optional[str] = ..., version: _Optional[int] = ..., generated_at: _Optional[str] = ..., compared: _Optional[bool] = ..., no_ranking_reason: _Optional[str] = ..., others: _Optional[int] = ..., score: _Optional[int] = ..., total: _Optional[int] = ..., rank: _Optional[int] = ..., group_size: _Optional[int] = ..., percentile: _Optional[float] = ..., participant_pages: _Optional[int] = ..., owner_pages: _Optional[int] = ..., template: _Optional[str] = ..., error: _Optional[str] = ..., emailed_at: _Optional[str] = ..., emailed_by: _Optional[str] = ..., can_send: _Optional[bool] = ..., participant_filename: _Optional[str] = ..., owner_filename: _Optional[str] = ..., engine: _Optional[str] = ...) -> None: ...
+
+class DownloadDecisionTestReportRequest(_message.Message):
+    __slots__ = ("session_key", "copy")
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    COPY_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    copy: DecisionTestReportCopy
+    def __init__(self, session_key: _Optional[str] = ..., copy: _Optional[_Union[DecisionTestReportCopy, str]] = ...) -> None: ...
+
+class DownloadDecisionTestReportResponse(_message.Message):
+    __slots__ = ("filename", "pdf", "version")
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    PDF_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    filename: str
+    pdf: bytes
+    version: int
+    def __init__(self, filename: _Optional[str] = ..., pdf: _Optional[bytes] = ..., version: _Optional[int] = ...) -> None: ...
+
+class GenerateDecisionTestReportRequest(_message.Message):
+    __slots__ = ("session_key",)
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    def __init__(self, session_key: _Optional[str] = ...) -> None: ...
+
+class GenerateDecisionTestReportResponse(_message.Message):
+    __slots__ = ("report",)
+    REPORT_FIELD_NUMBER: _ClassVar[int]
+    report: DecisionTestReport
+    def __init__(self, report: _Optional[_Union[DecisionTestReport, _Mapping]] = ...) -> None: ...
+
+class SendDecisionTestReportRequest(_message.Message):
+    __slots__ = ("session_key",)
+    SESSION_KEY_FIELD_NUMBER: _ClassVar[int]
+    session_key: str
+    def __init__(self, session_key: _Optional[str] = ...) -> None: ...
+
+class SendDecisionTestReportResponse(_message.Message):
+    __slots__ = ("report",)
+    REPORT_FIELD_NUMBER: _ClassVar[int]
+    report: DecisionTestReport
+    def __init__(self, report: _Optional[_Union[DecisionTestReport, _Mapping]] = ...) -> None: ...
 
 class ExportDecisionTestDataRequest(_message.Message):
     __slots__ = ("include_synthetic", "include_excluded")

@@ -530,6 +530,12 @@ func main() {
 	// mailer, so a send lands in notification_deliveries like every
 	// other transactional message.
 	decisionTestHandler.SetMailer(mailer, cfg.MailFrom, cfg.WebBaseURL)
+	// The results report. One service for the finish handler, the sweep
+	// and the admin console, so they share its lock. The sidecar draws
+	// the PDFs; without one, results still go out by email alone.
+	dtReports := handlers.NewDTReports(log, userRepo, sc)
+	dtReports.SetMailer(mailer, cfg.MailFrom, cfg.WebBaseURL)
+	decisionTestHandler.SetReports(dtReports)
 
 	meetingsHandler := handlers.NewMeetings(log, userRepo, authHandler, schedSettings, calProvider, cfg.OwnerContactEmail)
 
@@ -554,6 +560,7 @@ func main() {
 		jdScorer, cfg.JDPipelineTimeout,
 	)
 	adminHandler.SetAgentAccess(cfg.AgentLoginUsername)
+	adminHandler.SetDTReports(dtReports)
 
 	// Server-side emit points share the one writer.
 	authHandler.SetTurnstile(bots)
@@ -721,6 +728,13 @@ func main() {
 			}
 			return nil
 		}},
+		// The decision test's results reports (FSD FR-DT-22). A run that
+		// finished without making its own second call, a build that
+		// failed while the renderer was restarting, and every run from
+		// before reports existed all arrive here. Every minute, because
+		// the thing waiting on it is a participant who has just given
+		// fifteen minutes and was told an email would follow.
+		scheduler.Job{Name: "decision-test-reports", Interval: time.Minute, Run: dtReports.Sweep},
 		scheduler.Job{Name: "events-anonymize", Interval: 24 * time.Hour, Run: func(ctx context.Context) error {
 			n, err := eventWriter.AnonymizeOlderThan(ctx, cfg.EventIdentityRetention)
 			if err != nil {
