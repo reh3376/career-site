@@ -49,8 +49,27 @@
         # frame-src is NOT optional here: default-src 'self' would
         # otherwise block the iframe and the widget renders as a blank
         # box with no error anyone sees until a registration fails.
-        Content-Security-Policy "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://api.github.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.github.com https://api.pwnedpasswords.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         -Server
+    }
+
+    # The site's CSP, for every path except the v2c translator. /v2c is a
+    # separate app (github.com/reh3376/v2c-translator) that sends its own,
+    # narrower policy; scoping this one keeps the translator's robot check
+    # from depending on this app's allow-list. A `header` with a value
+    # replaces the upstream header, so without the matcher the browser would
+    # receive this policy instead of the translator's. Verified in a browser
+    # by v2c-translator's deploy/verify-behind-caddy.sh in both arrangements.
+    @site not path /v2c /v2c/*
+    header @site Content-Security-Policy "default-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com https://api.github.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.github.com https://api.pwnedpasswords.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+    # /v2c -> the veterans' military-to-civilian translator. X-Real-IP is
+    # set here (replacing anything the client sent) because the
+    # translator's per-visitor rate limit keys on it, as the api's does.
+    @v2c path /v2c /v2c/*
+    handle @v2c {
+        reverse_proxy v2c:3009 {
+            header_up X-Real-IP {remote_host}
+        }
     }
 
     # /api/* -> Go API. Same-origin, so session cookies stay first-party

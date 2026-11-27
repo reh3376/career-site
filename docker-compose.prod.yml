@@ -230,3 +230,45 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+  # Veterans' military-to-civilian translator (github.com/reh3376/v2c-translator),
+  # served at /v2c by Caddy. Built and published by that repository, so its
+  # tag moves independently of IMAGE_TAG: deploy/rollout-v2c.sh rolls it.
+  # No host port; Caddy reaches it on the `app` network. Uploads are read
+  # in a memory-only tmpfs and deleted as each report is written, so a
+  # document never touches the disk; the root filesystem is read-only.
+  # Memory: ~1.2 GB per concurrent scanned-PDF translation before the
+  # one-pass change (v2c-translator PR "perf/one-pass-translate"), about
+  # half that after it. 3g covers V2C_MAX_CONCURRENT=2 today; once the
+  # one-pass image is deployed set V2C_MEM_LIMIT=1536m in .env.prod.
+  v2c:
+    image: ghcr.io/${GHCR_OWNER:-reh3376}/v2c-translator:${V2C_IMAGE_TAG:-main}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      TZ: UTC
+      V2C_MODE: hosted
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+      V2C_MAX_CONCURRENT: ${V2C_MAX_CONCURRENT:-2}
+      V2C_QUEUE_MAX: ${V2C_QUEUE_MAX:-8}
+      V2C_RATE_LIMIT: ${V2C_RATE_LIMIT:-10}
+      V2C_RATE_WINDOW_MINUTES: ${V2C_RATE_WINDOW_MINUTES:-10}
+      V2C_MAX_BODY_MB: ${V2C_MAX_BODY_MB:-25}
+      V2C_TMPDIR: /tmp/v2c
+    read_only: true
+    tmpfs:
+      - /tmp/v2c:rw,noexec,nosuid,size=256m,mode=1777
+    mem_limit: ${V2C_MEM_LIMIT:-3g}
+    cpus: ${V2C_CPUS:-2.0}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3009/v2c/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    networks: [app]

@@ -32,6 +32,7 @@ the Q&A bank, the meeting scheduler and the whole decision test.
 | **postgres** | `pgvector/pgvector:pg16` | `postgres:5432` | dev: `5432`; prod: none | app role `career` / `POSTGRES_PASSWORD`; read-only role `career_admin_readonly` / `DB_READONLY_PASSWORD` for `/admin/db` (migration `00005`) | Data volume `postgres_data`. pgvector with `vector(768)` + HNSW cosine index on `corpus_chunks`. |
 | **minio** | `quay.io/minio/minio:latest` | `minio:9000` (S3), `minio:9001` (console) | dev: `9000`, `9001`; prod: none | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | Provisioned for uploads and object storage; not yet used by the api (résumé PDFs are stored on the submission row for now). |
 | **mailpit** | `axllent/mailpit:v1` (dev only) | `mailpit:1025` (SMTP), `mailpit:8025` (web UI) | dev: `1025`, `8025` | none | Prod uses Resend; the service is under the `disabled` profile in the prod overlay. |
+| **v2c** | Next.js 16 + Python `dd214kw` + tesseract; `ghcr.io/reh3376/v2c-translator:<sha>`, built by [v2c-translator](https://github.com/reh3376/v2c-translator), not this repo | `v2c:3009` | none | none (public); Cloudflare Turnstile on every upload (`TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`, the api's pair) | The veterans' military-to-civilian translator, served by caddy at `/v2c` with its own CSP. `V2C_MODE=hosted`: refuses to boot without the Turnstile secret, rate-limits per `X-Real-IP`, runs at most `V2C_MAX_CONCURRENT` translations with a bounded queue. Uploads are read in a memory-only tmpfs (`/tmp/v2c`) and deleted when the report is written; read-only root FS; never logs file names or contents. Health: `GET /v2c/api/healthz`, `GET /v2c/api/readyz`. Tag in `V2C_IMAGE_TAG`, rolled by `deploy/rollout-v2c.sh`, never by `rollout.sh`. |
 
 ### Bind mounts into `api`
 
@@ -104,6 +105,18 @@ Every prod variable, with comments, is in [`.env.prod.example`](.env.prod.exampl
 | `OLLAMA_EMBED_MODEL` | model pulled at container start | `nomic-embed-text` |
 | `OLLAMA_MEM_LIMIT`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_NUM_PARALLEL` | container memory cap, idle unload, concurrency | prod `7g`, `30m` (read from the box's `.env.prod` 2026-09-22; overlay default `5m`), `1` |
 | `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE` | memory levers for running the LLM next to the embedder: one resident model, flash attention, 8-bit KV cache (about 1 GB off the peak; the first run with both models resident and a full-precision cache OOM-killed llama-server) | prod `1`, `1`, `q8_0` |
+
+### v2c
+
+| Var | Purpose | Where set |
+|---|---|---|
+| `V2C_IMAGE_TAG` | which v2c-translator build runs; moved only by `deploy/rollout-v2c.sh` | `.env.prod` (overlay default `main`) |
+| `V2C_MODE` | `hosted` turns on Turnstile, rate limit, hosted privacy copy and `/v2c` base path | prod overlay: `hosted` |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | robot check on uploads; the same pair the api uses, same hostname | `.env.prod` |
+| `V2C_MEM_LIMIT`, `V2C_CPUS` | container caps; ~1.2 GB per concurrent scanned-PDF translation before the one-pass image, about half after | overlay `3g`, `2.0` (set `1536m` once the one-pass image is live) |
+| `V2C_MAX_CONCURRENT`, `V2C_QUEUE_MAX` | translations at once / waiting before a 503 | overlay `2`, `8` |
+| `V2C_RATE_LIMIT`, `V2C_RATE_WINDOW_MINUTES` | translations per visitor per window, keyed on caddy's `X-Real-IP` | overlay `10`, `10` |
+| `V2C_MAX_BODY_MB`, `V2C_TMPDIR` | request size cap / where uploads are read (the tmpfs) | overlay `25`, `/tmp/v2c` |
 
 ### caddy
 
