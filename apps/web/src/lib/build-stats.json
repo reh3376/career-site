@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 560,
+    "byAssistant": 564,
     "byBot": 25,
     "byOwner": 47,
-    "commits": 1046,
-    "days": 66,
+    "commits": 1051,
+    "days": 71,
     "firstCommit": "2026-09-18",
-    "lastCommit": "2026-11-22",
-    "merges": 414,
-    "nonMerge": 632,
+    "lastCommit": "2026-11-27",
+    "merges": 415,
+    "nonMerge": 636,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,7 +25,7 @@
   },
   "lines": {
     "code": {
-      "files": 599,
+      "files": 600,
       "languages": [
         {
           "files": 182,
@@ -35,7 +35,7 @@
         {
           "files": 167,
           "language": "TSX",
-          "lines": 32098
+          "lines": 32112
         },
         {
           "files": 82,
@@ -53,9 +53,9 @@
           "lines": 7761
         },
         {
-          "files": 20,
+          "files": 21,
           "language": "Shell",
-          "lines": 2633
+          "lines": 2760
         },
         {
           "files": 34,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 113873
+      "lines": 114014
     },
     "config": {
       "files": 35,
@@ -81,10 +81,10 @@
         {
           "files": 17,
           "language": "YAML",
-          "lines": 2062
+          "lines": 2104
         }
       ],
-      "lines": 6877
+      "lines": 6919
     },
     "contract": {
       "files": 19,
@@ -98,15 +98,15 @@
       "lines": 9964
     },
     "documentation": {
-      "files": 147,
+      "files": 149,
       "languages": [
         {
-          "files": 147,
+          "files": 149,
           "language": "Markdown",
-          "lines": 40704
+          "lines": 40892
         }
       ],
-      "lines": 40704
+      "lines": 40892
     },
     "generated": {
       "files": 78,
@@ -162,17 +162,17 @@
     }
   },
   "structure": {
-    "adrs": 11,
+    "adrs": 12,
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
     "goTests": 573,
     "migrations": 79,
     "pythonTests": 35,
-    "requirements": 236,
+    "requirements": 237,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
-    "requirementsNotBuilt": 49,
+    "requirementsNotBuilt": 50,
     "requirementsPartial": 14,
     "requirementsShipped": 171,
     "rpcs": 188,
