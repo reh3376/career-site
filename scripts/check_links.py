@@ -60,6 +60,29 @@ NON_PAGE_ROUTES = {
     "/pilot/company-workflow.svg",
 }
 
+# Paths Caddy sends to a container that is not this app (ADR-0033). A
+# link to one of these has no page.tsx behind it and never will, so it
+# is excused here, but only while the proxy really routes it: each entry
+# names the line in the production Caddyfile that serves it, and the
+# check fails if that line is gone. Without that, removing the service
+# would leave its links returning 404 with this list still vouching for
+# them.
+CADDYFILE = REPO / "deploy" / "caddy" / "Caddyfile.prod"
+PROXIED_ROUTES = {
+    # The veterans' translator, built by reh3376/v2c-translator.
+    "/v2c": "@v2c path /v2c /v2c/*",
+}
+
+
+def proxied_routes_still_served() -> list[str]:
+    conf = CADDYFILE.read_text(encoding="utf-8") if CADDYFILE.exists() else ""
+    return [
+        f"{route} is excused as proxied, but {CADDYFILE.relative_to(REPO)} "
+        f"no longer contains {needle!r}"
+        for route, needle in PROXIED_ROUTES.items()
+        if needle not in conf
+    ]
+
 
 def routes() -> set[str]:
     """Every path the app router serves, from the file tree.
@@ -83,7 +106,7 @@ def routes() -> set[str]:
 
 
 def matches(link: str, known: set[str]) -> bool:
-    if link in known or link in NON_PAGE_ROUTES:
+    if link in known or link in NON_PAGE_ROUTES or link in PROXIED_ROUTES:
         return True
     want = [s for s in link.strip("/").split("/") if s]
     for route in known:
@@ -205,6 +228,10 @@ def main() -> int:
                 problems += 1
 
     for msg in canonicals_declared():
+        print(msg)
+        problems += 1
+
+    for msg in proxied_routes_still_served():
         print(msg)
         problems += 1
 

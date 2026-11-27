@@ -239,8 +239,8 @@ rather than estimated:
 | Partially shipped | 14 |
 | Dropped, decided against | 1 |
 | Deferred, blocked on content | 1 |
-| Not built | 49 |
-| **Total** | **236** |
+| Not built | 50 |
+| **Total** | **237** |
 
 Moved on 2026-11-08: §5.15 added 21 FR-HF rows, all Not built, so Not
 built went from 46 to 67 and the total from 186 to 207 with nothing
@@ -250,7 +250,7 @@ two more, to 84 and 224. PL-1 then shipped five of the new rows the
 same night: Shipped 136 to 141, Not built 84 to 79, total unchanged; PL-3 then
 shipped the twelve pilot pages rows: Shipped 141 to 153, Not built 79 to 67. On 2026-11-09 FR-PLT-15 was added
 and shipped in one change: Shipped 153 to 154, total 224 to 225. Phase 0 step 3 the same day moved two
-FR-HF rows to Shipped and five to Partially shipped: 156, 7 and 60; FR-PLT-16 and 17 the same day took Shipped to 158 of 227, and FR-PLT-18 to 159 of 228, and FR-ADM-25 to 160 of 229. FR-HF-22 to 24, the owner's rules from the match-record conversation, added Not built the same day: 63 and 232. Phase 0 step 4 on 2026-11-10 shipped FR-HF-04, 05, 06, 07 and 18: Shipped 165, Not built 58. Step 5 the same day shipped FR-HF-01 (from Partially shipped) and 02, and built FR-HF-03 and 23 as far as the owner's live review, which is what Partially shipped means for a surface: Shipped 167, Partially shipped 8, Not built 55. Step 6 on 2026-11-12 shipped FR-HF-10 (from Partially shipped) and built FR-HF-08 and 17 as far as the owner's live review: Shipped 168, Partially shipped 9, Not built 53. Step 7 on 2026-11-15 shipped FR-HF-09 (from Partially shipped) and built FR-HF-13, 14, 22 and 24 as far as the owner's live review: Shipped 169, Partially shipped 12, Not built 49. On 2026-11-22 the decision test's results report added four rows, FR-DT-21 to 24: the mechanism and the comparison rules shipped, the report as a participant reads it and the console panel are built as far as the owner's live review: Shipped 171, Partially shipped 14, total 236. Specification ahead of code is what the
+FR-HF rows to Shipped and five to Partially shipped: 156, 7 and 60; FR-PLT-16 and 17 the same day took Shipped to 158 of 227, and FR-PLT-18 to 159 of 228, and FR-ADM-25 to 160 of 229. FR-HF-22 to 24, the owner's rules from the match-record conversation, added Not built the same day: 63 and 232. Phase 0 step 4 on 2026-11-10 shipped FR-HF-04, 05, 06, 07 and 18: Shipped 165, Not built 58. Step 5 the same day shipped FR-HF-01 (from Partially shipped) and 02, and built FR-HF-03 and 23 as far as the owner's live review, which is what Partially shipped means for a surface: Shipped 167, Partially shipped 8, Not built 55. Step 6 on 2026-11-12 shipped FR-HF-10 (from Partially shipped) and built FR-HF-08 and 17 as far as the owner's live review: Shipped 168, Partially shipped 9, Not built 53. Step 7 on 2026-11-15 shipped FR-HF-09 (from Partially shipped) and built FR-HF-13, 14, 22 and 24 as far as the owner's live review: Shipped 169, Partially shipped 12, Not built 49. On 2026-11-22 the decision test's results report added four rows, FR-DT-21 to 24: the mechanism and the comparison rules shipped, the report as a participant reads it and the console panel are built as far as the owner's live review: Shipped 171, Partially shipped 14, total 236. On 2026-11-27 FR-PUB-06, the veterans' translator at `/v2c`, was added as built and awaiting deploy: Not built 49 to 50, total 236 to 237. Specification ahead of code is what the
 spec-first rule asks for, and the table says so rather than hiding it.
 
 **This table is checked, not trusted.** `scripts/check_docs.py` compares
