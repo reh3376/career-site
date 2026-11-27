@@ -89,13 +89,21 @@ fi
 
 # ─── Web (TypeScript) ─────────────────────────────────────────────────────
 if [ "$SKIP_WEB" = false ]; then
-  log "web (typescript): install + typecheck + lint + test + audit + build"
+  log "web (typescript): install + typecheck + lint + test + repo checks + audit + build"
   (
     cd apps/web
     pnpm install --frozen-lockfile >/dev/null
     pnpm typecheck
     pnpm lint
     pnpm test
+    # The five checks CI's web job runs between the tests and the build.
+    # They were missing here, so a push could be green locally and fail
+    # CI on a link, a count or a token (PR 428, 2026-11-27).
+    python3 ../../scripts/check_design_tokens.py
+    python3 ../../scripts/check_content.py
+    python3 ../../scripts/check_links.py
+    python3 ../../scripts/check_docs.py
+    python3 ../../scripts/build_stats.py --check
     pnpm audit --prod --audit-level=high || echo "  (audit failed; not a hard block locally — CI enforces)"
     pnpm build
   )
