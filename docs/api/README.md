@@ -126,12 +126,12 @@ curl -sS -X POST https://<host>/api/career.v1.SystemService/GetVersion \
 | [`ChatService`](#chatservice) | Conversations with the assistant. | 11 |
 | [`ActivityService`](#activityservice) | Batched, fire-and-forget activity reporting. | 1 |
 | [`EventService`](#eventservice) | Accepts browser-minted events. | 1 |
-| [`AdminService`](#adminservice) | Owner console. | 85 |
+| [`AdminService`](#adminservice) | Owner console. | 88 |
 | [`SystemService`](#systemservice) | Version and governance status. | 3 |
 | [`DecisionTestService`](#decisiontestservice) | Runs one sitting of the decision test. | 5 |
 | [`HiringService`](#hiringservice) | Requirements as editable, versioned rows, the match record a run produced, the override of a judgment, the follow-up questions to the candidate, and the settings the framework reads. | 14 |
 | [`PilotService`](#pilotservice) | The pilot: one sitting per participant per instrument version. | 15 |
-| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 8 |
+| [`SidecarService`](#sidecarservice) | Embedding, reranking, classification, and batch jobs. _(internal)_ | 9 |
 
 ## AuthService
 
@@ -2188,6 +2188,9 @@ Owner console.
 | [`GetDecisionTestAnalysis`](#adminservice-getdecisiontestanalysis) | `/api/career.v1.AdminService/GetDecisionTestAnalysis` | Admin | default | `GetDecisionTestAnalysisRequest` → `GetDecisionTestAnalysisResponse` | Reads the decision test's three analysis views. |
 | [`ExportDecisionTestRun`](#adminservice-exportdecisiontestrun) | `/api/career.v1.AdminService/ExportDecisionTestRun` | Admin | default | `ExportDecisionTestRunRequest` → `ExportDecisionTestRunResponse` | Downloads one run's blocks and answers as two CSV files. |
 | [`ReviewDecisionTestRun`](#adminservice-reviewdecisiontestrun) | `/api/career.v1.AdminService/ReviewDecisionTestRun` | Admin | default | `ReviewDecisionTestRunRequest` → `ReviewDecisionTestRunResponse` | Records the owner's judgement about a run, or about one block of one, and returns the run as it now reads. |
+| [`DownloadDecisionTestReport`](#adminservice-downloaddecisiontestreport) | `/api/career.v1.AdminService/DownloadDecisionTestReport` | Admin | default | `DownloadDecisionTestReportRequest` → `DownloadDecisionTestReportResponse` | Downloads one copy of a run's results report as a PDF. |
+| [`GenerateDecisionTestReport`](#adminservice-generatedecisiontestreport) | `/api/career.v1.AdminService/GenerateDecisionTestReport` | Admin | default | `GenerateDecisionTestReportRequest` → `GenerateDecisionTestReportResponse` | Builds a run's results report again, as a new version. |
+| [`SendDecisionTestReport`](#adminservice-senddecisiontestreport) | `/api/career.v1.AdminService/SendDecisionTestReport` | Admin | default | `SendDecisionTestReportRequest` → `SendDecisionTestReportResponse` | Emails the participant the latest version of their report. |
 | [`GetSchedulerSettings`](#adminservice-getschedulersettings) | `/api/career.v1.AdminService/GetSchedulerSettings` | Admin | default | `GetSchedulerSettingsRequest` → `GetSchedulerSettingsResponse` | Reads the meeting-scheduler settings: the weekly windows a member may book into, the lengths on offer, the clearance between meetings, and the zone all of it is quoted in. |
 | [`SetSchedulerSettings`](#adminservice-setschedulersettings) | `/api/career.v1.AdminService/SetSchedulerSettings` | Admin | default | `SetSchedulerSettingsRequest` → `SetSchedulerSettingsResponse` | Replaces the meeting-scheduler settings (stored in app_settings; the api caches them for 15 s). |
 | [`ListQaEntries`](#adminservice-listqaentries) | `/api/career.v1.AdminService/ListQaEntries` | Admin | default | `ListQaEntriesRequest` → `ListQaEntriesResponse` | Lists the Q&A bank: the owner's own answers, served verbatim by Ask Roger with no model involved. |
@@ -4360,6 +4363,7 @@ One run in full: every answer, every recall, and the block summary.
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
 | `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
 | `drawnItems` | [`DecisionTestDrawnItem`](#decisiontestdrawnitem)[] | array of object |  | The thirty questions this run was drawn, in order, including any it never reached. |
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The run's results report: whether one exists, what it told the participant, and whether it was sent. |
 
 <details><summary>Example request body</summary>
 
@@ -4527,6 +4531,111 @@ it produced.
   "status": "string",
   "reason": "string",
   "note": "string"
+}
+```
+
+</details>
+
+### AdminService.DownloadDecisionTestReport
+
+`POST /api/career.v1.AdminService/DownloadDecisionTestReport` · **Auth:** Admin · **Rate limit:** default/min
+
+Downloads one copy of a run's results report as a PDF.
+
+Two copies exist for every finished run (FSD FR-DT-21). The
+participant's copy describes answers by kind and can be sent to
+them. The owner's copy adds the questions with the answers given
+and the correct answers, so it is the answer key for the questions
+that run drew and is recorded when it is taken.
+
+**Request** — [`DownloadDecisionTestReportRequest`](#downloaddecisiontestreportrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+| `copy` | [`DecisionTestReportCopy`](#decisiontestreportcopy) | string (enum name) |  | Which copy. |
+
+**Response** — [`DownloadDecisionTestReportResponse`](#downloaddecisiontestreportresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `filename` | `string` | string |  | The filename to save it under. |
+| `pdf` | `bytes` | string (base64) |  | The PDF. |
+| `version` | `int32` | number |  | Which build of the report this is. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string",
+  "copy": "DECISION_TEST_REPORT_COPY_PARTICIPANT"
+}
+```
+
+</details>
+
+### AdminService.GenerateDecisionTestReport
+
+`POST /api/career.v1.AdminService/GenerateDecisionTestReport` · **Auth:** Admin · **Rate limit:** default/min
+
+Builds a run's results report again, as a new version.
+
+A report is a snapshot: the comparison group is whoever had
+finished when it was built. Building it again after more people
+have taken the test moves the ranking, which is why the earlier
+version is kept rather than replaced and why this never sends
+anything by itself.
+
+**Request** — [`GenerateDecisionTestReportRequest`](#generatedecisiontestreportrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+
+**Response** — [`GenerateDecisionTestReportResponse`](#generatedecisiontestreportresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The new version, or the failure. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string"
+}
+```
+
+</details>
+
+### AdminService.SendDecisionTestReport
+
+`POST /api/career.v1.AdminService/SendDecisionTestReport` · **Auth:** Admin · **Rate limit:** default/min
+
+Emails the participant the latest version of their report.
+
+Refused unless the participant asked for their results and left an
+address: nothing is sent to anybody who did not ask (FR-DT-17).
+This is how a report reaches somebody whose run finished before
+reports existed, and how one is sent again.
+
+**Request** — [`SendDecisionTestReportRequest`](#senddecisiontestreportrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+
+**Response** — [`SendDecisionTestReportResponse`](#senddecisiontestreportresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The report, with the send recorded on it. |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "sessionKey": "string"
 }
 ```
 
@@ -6493,6 +6602,7 @@ Embedding, reranking, classification, and batch jobs.
 | [`Health`](#sidecarservice-health) | `/career.sidecar.v1.SidecarService/Health (gRPC)` | — | — | `HealthRequest` → `HealthResponse` | Reports readiness: models loaded, storage reachable, version. |
 | [`Generate`](#sidecarservice-generate) | `/career.sidecar.v1.SidecarService/Generate (gRPC)` | — | — | `GenerateRequest` → `GenerateResponse` | Runs one chat completion with the configured LLM provider (Ollama locally / on-host, a hosted API later, stub in CI). |
 | [`RenderResume`](#sidecarservice-renderresume) | `/career.sidecar.v1.SidecarService/RenderResume (gRPC)` | — | — | `RenderResumeRequest` → `RenderResumeResponse` | Renders a verified résumé (the API's structured JSON) to a PDF with Typst and applies an owner password so the file opens freely but cannot be edited. |
+| [`RenderDecisionTestReport`](#sidecarservice-renderdecisiontestreport) | `/career.sidecar.v1.SidecarService/RenderDecisionTestReport (gRPC)` | — | — | `RenderDecisionTestReportRequest` → `RenderDecisionTestReportResponse` | Renders a decision test results report to two PDFs: the participant's copy and the owner's copy. |
 
 ### SidecarService.Embed
 
@@ -6794,6 +6904,44 @@ cannot be edited. Rendering never touches a model.
 
 </details>
 
+### SidecarService.RenderDecisionTestReport
+
+`/career.sidecar.v1.SidecarService/RenderDecisionTestReport` (gRPC)
+
+Renders a decision test results report to two PDFs: the
+participant's copy and the owner's copy. The API sends the report
+as a finished document, every figure worked out and every sentence
+chosen; the sidecar draws the charts and lays out the pages, and
+decides nothing. Rendering never touches a model.
+
+**Request** — [`RenderDecisionTestReportRequest`](#renderdecisiontestreportrequest)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documentJson` | `string` | string | `string: min_len: 2 max_len: 2000000` | The report document as JSON: a list of blocks (headings, paragraphs, tables, chart payloads), some marked for one copy only. Its `schema` field must match the version this sidecar draws. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:aaaaaaaa`). |
+
+**Response** — [`RenderDecisionTestReportResponse`](#renderdecisiontestreportresponse)
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `participantPdf` | `bytes` | string (base64) |  | The participant's copy. It carries no question, no answer option and no item code. |
+| `ownerPdf` | `bytes` | string (base64) |  | The owner's copy, which adds the blocks the document marks for the owner: the answer-by-answer table and the questions with their answers. |
+| `participantPages` | `int32` | number |  | Page count of the participant's copy. |
+| `ownerPages` | `int32` | number |  | Page count of the owner's copy. |
+| `engine` | `string` | string |  | Renderer identifier (e.g. `reportlab:5.1.0+matplotlib:3.11.2+Liberation Sans`). |
+
+<details><summary>Example request body</summary>
+
+```json
+{
+  "documentJson": "string",
+  "traceId": "string"
+}
+```
+
+</details>
+
 ## Types
 
 Every message and enum, in declaration order. Request and response messages already shown above are included so links resolve.
@@ -6970,6 +7118,27 @@ Résumé render result.
 | `pdf` | `bytes` | string (base64) |  | The encrypted PDF. |
 | `pages` | `int32` | number |  | Page count. |
 | `engine` | `string` | string |  | Renderer identifier (e.g. `typst:0.15.0`). |
+
+### RenderDecisionTestReportRequest
+
+Decision test report render request.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `documentJson` | `string` | string | `string: min_len: 2 max_len: 2000000` | The report document as JSON: a list of blocks (headings, paragraphs, tables, chart payloads), some marked for one copy only. Its `schema` field must match the version this sidecar draws. |
+| `traceId` | `string` | string | `string: max_len: 64` | Caller trace id for log correlation (e.g. `dt:aaaaaaaa`). |
+
+### RenderDecisionTestReportResponse
+
+Decision test report render result.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `participantPdf` | `bytes` | string (base64) |  | The participant's copy. It carries no question, no answer option and no item code. |
+| `ownerPdf` | `bytes` | string (base64) |  | The owner's copy, which adds the blocks the document marks for the owner: the answer-by-answer table and the questions with their answers. |
+| `participantPages` | `int32` | number |  | Page count of the participant's copy. |
+| `ownerPages` | `int32` | number |  | Page count of the owner's copy. |
+| `engine` | `string` | string |  | Renderer identifier (e.g. `reportlab:5.1.0+matplotlib:3.11.2+Liberation Sans`). |
 
 ### HealthRequest
 
@@ -9923,6 +10092,86 @@ One run in full.
 | `answers` | [`DecisionTestAnswer`](#decisiontestanswer)[] | array of object |  | Every answer, in presentation order. |
 | `reviewHistory` | [`DecisionTestReviewEvent`](#decisiontestreviewevent)[] | array of object |  | Every judgement ever recorded for this run, oldest first. |
 | `drawnItems` | [`DecisionTestDrawnItem`](#decisiontestdrawnitem)[] | array of object |  | The thirty questions this run was drawn, in order, including any it never reached. |
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The run's results report: whether one exists, what it told the participant, and whether it was sent. |
+
+### DecisionTestReport
+
+The state of one run's results report.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `state` | `string` | string |  | `none` before a report exists, `ready` when both PDFs are stored, `failed` when the last attempt to build one did not finish. |
+| `version` | `int32` | number |  | Which build this is. 1 is the one made when the run finished; each rebuild adds one. |
+| `generatedAt` | `string` | string |  | When this version was built, RFC 3339. Empty when there is none. |
+| `compared` | `bool` | boolean |  | Whether the report ranks the participant against other first-time participants. |
+| `noRankingReason` | `string` | string |  | Why it does not, when it does not: `small_group`, `repeat`, `unplaced` or `synthetic`. |
+| `others` | `int32` | number |  | How many other first-time participants the run could be compared with when the report was built. |
+| `score` | `int32` | number |  | Questions answered correctly. |
+| `total` | `int32` | number |  | Questions asked. |
+| `rank` | `int32` | number |  | Place in the comparison group, counting from 1. Zero when the report carries no ranking. |
+| `groupSize` | `int32` | number |  | Size of the comparison group, the participant included. |
+| `percentile` | `double` | number |  | Percentile rank of the score in that group, 0 to 100. |
+| `participantPages` | `int32` | number |  | Pages in the participant's copy. |
+| `ownerPages` | `int32` | number |  | Pages in the owner's copy. |
+| `template` | `string` | string |  | Which wording and layout the report was written under. |
+| `error` | `string` | string |  | What went wrong, when the state is `failed`. |
+| `emailedAt` | `string` | string |  | When the report was last emailed to the participant, RFC 3339. Empty when it never was. |
+| `emailedBy` | `string` | string |  | Who sent it: `system` for the automatic send when the run finished, otherwise the admin's name. |
+| `canSend` | `bool` | boolean |  | Whether it can be sent: the participant asked for results and left an address. |
+| `participantFilename` | `string` | string |  | The filename the participant's copy downloads and is attached as. |
+| `ownerFilename` | `string` | string |  | The filename the owner's copy downloads as. |
+| `engine` | `string` | string |  | The renderer that drew it. |
+
+### DownloadDecisionTestReportRequest
+
+Asks for one copy of a run's report.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+| `copy` | [`DecisionTestReportCopy`](#decisiontestreportcopy) | string (enum name) |  | Which copy. |
+
+### DownloadDecisionTestReportResponse
+
+One copy of a report.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `filename` | `string` | string |  | The filename to save it under. |
+| `pdf` | `bytes` | string (base64) |  | The PDF. |
+| `version` | `int32` | number |  | Which build of the report this is. |
+
+### GenerateDecisionTestReportRequest
+
+Asks for a run's report to be built again.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+
+### GenerateDecisionTestReportResponse
+
+The report as it now stands.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The new version, or the failure. |
+
+### SendDecisionTestReportRequest
+
+Asks for a run's report to be emailed to its participant.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `sessionKey` | `string` | string | `string: max_len: 64` | Which run, from the list. |
+
+### SendDecisionTestReportResponse
+
+The report after the send.
+
+| Field (JSON) | Type | JSON encoding | Rules | Description |
+|---|---|---|---|---|
+| `report` | [`DecisionTestReport`](#decisiontestreport) | object |  | The report, with the send recorded on it. |
 
 ### ExportDecisionTestDataRequest
 
@@ -12861,6 +13110,16 @@ Sort order for ListMemberActivity.
 | `ACTIVITY_SORT_SESSIONS_DESC` | 2 | Highest total session count first. |
 | `ACTIVITY_SORT_ACTIVE_TIME_DESC` | 3 | Highest total active-time first. |
 | `ACTIVITY_SORT_ASK_ROGER_DESC` | 4 | Most Ask Roger interactions first. |
+
+### DecisionTestReportCopy
+
+Which copy of a report.
+
+| Value | Number | Description |
+|---|---|---|
+| `DECISION_TEST_REPORT_COPY_UNSPECIFIED` | 0 | Not set. Treated as the participant's copy, the safe one. |
+| `DECISION_TEST_REPORT_COPY_PARTICIPANT` | 1 | The copy that can be sent to the participant. |
+| `DECISION_TEST_REPORT_COPY_OWNER` | 2 | The copy with the questions and their answers. |
 
 ### ListContentRequest.Order
 

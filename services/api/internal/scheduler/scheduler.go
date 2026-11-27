@@ -1,8 +1,8 @@
 // Package scheduler runs recurring background jobs in the API process.
-// Eight are registered in cmd/api/main.go: the expiry warn/cut pair,
+// Nine are registered in cmd/api/main.go: the expiry warn/cut pair,
 // auto-decline, the calendar health probe, the prompt cache
-// warmer, the Q&A bank embedder, the clarification loop's clock, and
-// event anonymisation. In-process
+// warmer, the Q&A bank embedder, the clarification loop's clock, the
+// decision test's report sweep, and event anonymisation. In-process
 // rather than cron so a job ships and rolls back with the binary; the
 // cost is that every job runs on each replica, which is fine while
 // there is one.

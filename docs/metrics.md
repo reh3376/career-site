@@ -161,6 +161,41 @@ a synthetic run that every aggregate must exclude. Both files exist
 because the threshold bug above passed review, passed the replay, and
 would have read as a strong result.
 
+### The figures in a participant's report
+
+Every finished run gets a results report (FSD FR-DT-21 to 24), and it
+states figures no view above holds: a place in a group, a percentile, a
+median across people. They are not views, and that is deliberate. A
+report is a snapshot of who had finished when it was built, so its
+figures are computed once, by `internal/dtreport`, from rows read
+through `v_dt_answers`, and stored with the report. The row-level
+definitions are still the views': correct, lure, expired, the sitting
+number, `usable`, and the confidence at which an answer counts as sure
+(`dt_confident_threshold()`). What dtreport adds is the arithmetic over
+people, and it is defined there, once, with a test beside each:
+
+| figure | definition |
+|---|---|
+| comparison group | completed, non-synthetic first sittings (`attempt_no = 1`) on the same `item_set_version` and the same time limits, usable at the level of the run and of every block, with all thirty answers. The run itself is never its own peer. A ranking needs ten others (`users.DTReportMinPeers`). |
+| rank | one more than the number of people who scored higher. Ties share the better place. |
+| percentile | the share of the group scored above, counting the participant and anyone level as half a place each: `(below + 0.5 * (level + 1)) / n`. Fifth of sixteen with nobody level is `(11 + 0.5) / 16`, the 72nd. The report prints this arithmetic. |
+| the others' median | the median across the other people of each person's own figure, never a figure pooled over their answers. Used for score, average confidence, confidence minus accuracy, wrong and sure, time per answer, and Brier. |
+| the others' average, block charts | the mean across people of each person's count correct, or average confidence, in that block. One person one vote. |
+| by kind of question, and by rating | pooled over every answer the others gave. The only two places answers are pooled, and the report's method note says so. |
+| confidence minus accuracy | average confidence over rated answers, minus the percentage of all questions answered correctly. A question that ran out of time is wrong and unrated. |
+| wrong and sure | wrong answers rated at or above `dt_confident_threshold()`. An expired question is not counted: nothing was rated. |
+| the draw | what the others' success rates on the participant's own thirty questions add up to, set against the others' average score on their own draws. A question nobody else was given counts at the others' rate for its kind. |
+
+Two things a reader of these figures should know. The group is pooled
+across instrument generations where the time limits match, which the
+curves above never do: a score out of thirty on the same questions under
+the same clock is comparable across the change that separated v2 from
+v3, and the report says how many of the group sat the other form and
+restates the standing among those who sat the same one. And the figures
+the report shares with the results email (early blocks against the
+hardest, whether the last block held) are not recomputed: they are the
+email's own, from `DTResultFor`, handed to the report as `EmailFigures`.
+
 ## What is not here
 
 These views cover the reviewer. **Ask Roger has no views at all.** Its

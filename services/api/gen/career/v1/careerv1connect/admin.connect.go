@@ -239,6 +239,15 @@ const (
 	// AdminServiceReviewDecisionTestRunProcedure is the fully-qualified name of the AdminService's
 	// ReviewDecisionTestRun RPC.
 	AdminServiceReviewDecisionTestRunProcedure = "/career.v1.AdminService/ReviewDecisionTestRun"
+	// AdminServiceDownloadDecisionTestReportProcedure is the fully-qualified name of the AdminService's
+	// DownloadDecisionTestReport RPC.
+	AdminServiceDownloadDecisionTestReportProcedure = "/career.v1.AdminService/DownloadDecisionTestReport"
+	// AdminServiceGenerateDecisionTestReportProcedure is the fully-qualified name of the AdminService's
+	// GenerateDecisionTestReport RPC.
+	AdminServiceGenerateDecisionTestReportProcedure = "/career.v1.AdminService/GenerateDecisionTestReport"
+	// AdminServiceSendDecisionTestReportProcedure is the fully-qualified name of the AdminService's
+	// SendDecisionTestReport RPC.
+	AdminServiceSendDecisionTestReportProcedure = "/career.v1.AdminService/SendDecisionTestReport"
 	// AdminServiceGetSchedulerSettingsProcedure is the fully-qualified name of the AdminService's
 	// GetSchedulerSettings RPC.
 	AdminServiceGetSchedulerSettingsProcedure = "/career.v1.AdminService/GetSchedulerSettings"
@@ -574,6 +583,29 @@ type AdminServiceClient interface {
 	// a rule. Nothing is ever deleted: an excluded run keeps every row
 	// it produced.
 	ReviewDecisionTestRun(context.Context, *connect.Request[v1.ReviewDecisionTestRunRequest]) (*connect.Response[v1.ReviewDecisionTestRunResponse], error)
+	// Downloads one copy of a run's results report as a PDF.
+	//
+	// Two copies exist for every finished run (FSD FR-DT-21). The
+	// participant's copy describes answers by kind and can be sent to
+	// them. The owner's copy adds the questions with the answers given
+	// and the correct answers, so it is the answer key for the questions
+	// that run drew and is recorded when it is taken.
+	DownloadDecisionTestReport(context.Context, *connect.Request[v1.DownloadDecisionTestReportRequest]) (*connect.Response[v1.DownloadDecisionTestReportResponse], error)
+	// Builds a run's results report again, as a new version.
+	//
+	// A report is a snapshot: the comparison group is whoever had
+	// finished when it was built. Building it again after more people
+	// have taken the test moves the ranking, which is why the earlier
+	// version is kept rather than replaced and why this never sends
+	// anything by itself.
+	GenerateDecisionTestReport(context.Context, *connect.Request[v1.GenerateDecisionTestReportRequest]) (*connect.Response[v1.GenerateDecisionTestReportResponse], error)
+	// Emails the participant the latest version of their report.
+	//
+	// Refused unless the participant asked for their results and left an
+	// address: nothing is sent to anybody who did not ask (FR-DT-17).
+	// This is how a report reaches somebody whose run finished before
+	// reports existed, and how one is sent again.
+	SendDecisionTestReport(context.Context, *connect.Request[v1.SendDecisionTestReportRequest]) (*connect.Response[v1.SendDecisionTestReportResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -1057,6 +1089,24 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("ReviewDecisionTestRun")),
 			connect.WithClientOptions(opts...),
 		),
+		downloadDecisionTestReport: connect.NewClient[v1.DownloadDecisionTestReportRequest, v1.DownloadDecisionTestReportResponse](
+			httpClient,
+			baseURL+AdminServiceDownloadDecisionTestReportProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("DownloadDecisionTestReport")),
+			connect.WithClientOptions(opts...),
+		),
+		generateDecisionTestReport: connect.NewClient[v1.GenerateDecisionTestReportRequest, v1.GenerateDecisionTestReportResponse](
+			httpClient,
+			baseURL+AdminServiceGenerateDecisionTestReportProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GenerateDecisionTestReport")),
+			connect.WithClientOptions(opts...),
+		),
+		sendDecisionTestReport: connect.NewClient[v1.SendDecisionTestReportRequest, v1.SendDecisionTestReportResponse](
+			httpClient,
+			baseURL+AdminServiceSendDecisionTestReportProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("SendDecisionTestReport")),
+			connect.WithClientOptions(opts...),
+		),
 		getSchedulerSettings: connect.NewClient[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse](
 			httpClient,
 			baseURL+AdminServiceGetSchedulerSettingsProcedure,
@@ -1164,91 +1214,94 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	listMembers             *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	resendNotification      *connect.Client[v1.ResendNotificationRequest, v1.ResendNotificationResponse]
-	getMember               *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
-	addMemberNote           *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
-	setMemberStatus         *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
-	setMemberPilotApproved  *connect.Client[v1.SetMemberPilotApprovedRequest, v1.SetMemberPilotApprovedResponse]
-	deleteMember            *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
-	createAgentPassword     *connect.Client[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse]
-	listAgentPasswords      *connect.Client[v1.ListAgentPasswordsRequest, v1.ListAgentPasswordsResponse]
-	revokeAgentPassword     *connect.Client[v1.RevokeAgentPasswordRequest, v1.RevokeAgentPasswordResponse]
-	revokeAgentSessions     *connect.Client[v1.RevokeAgentSessionsRequest, v1.RevokeAgentSessionsResponse]
-	getReviewQueue          *connect.Client[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse]
-	resolveReviewItem       *connect.Client[v1.ResolveReviewItemRequest, v1.ResolveReviewItemResponse]
-	replyEscalation         *connect.Client[v1.ReplyEscalationRequest, v1.ReplyEscalationResponse]
-	getMemberConversation   *connect.Client[v1.GetMemberConversationRequest, v1.GetMemberConversationResponse]
-	getCorpusStatus         *connect.Client[v1.GetCorpusStatusRequest, v1.GetCorpusStatusResponse]
-	testRetrieval           *connect.Client[v1.TestRetrievalRequest, v1.TestRetrievalResponse]
-	runJob                  *connect.Client[v1.RunJobRequest, v1.RunJobResponse]
-	getJob                  *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
-	getPersona              *connect.Client[v1.GetPersonaRequest, v1.GetPersonaResponse]
-	getAnalytics            *connect.Client[v1.GetAnalyticsRequest, v1.GetAnalyticsResponse]
-	getAudit                *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
-	listContactMessages     *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
-	resolveContactMessage   *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
-	approveRegistration     *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
-	declineRegistration     *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
-	extendAccess            *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
-	listDbTables            *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
-	runDbQuery              *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
-	listAccessGrants        *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
-	upsertAccessGrant       *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
-	deleteAccessGrant       *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
-	listSavedQueries        *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
-	upsertSavedQuery        *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
-	deleteSavedQuery        *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
-	listMemberActivity      *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
-	ingestCorpusText        *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
-	listCorpusDocuments     *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
-	reindexCorpus           *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
-	sweepCorpusEmbeddings   *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
-	listJdSubmissions       *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
-	getJdSubmission         *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
-	rescoreJd               *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
-	setJdOutcome            *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
-	recordJdFeedback        *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
-	listGoldenPostings      *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
-	upsertGoldenPosting     *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
-	setGoldenActive         *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
-	labelGoldenPosting      *connect.Client[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse]
-	listEvalRuns            *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
-	getEvalRun              *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
-	getMetrics              *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
-	getOpsStatus            *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
-	getJobDetail            *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
-	getGate                 *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
-	listDecisionLog         *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
-	reviewDecision          *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
-	exportDecisionLog       *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
-	getJdFitBands           *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
-	setJdFitBands           *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
-	getDecisionTestSettings *connect.Client[v1.GetDecisionTestSettingsRequest, v1.GetDecisionTestSettingsResponse]
-	setDecisionTestSettings *connect.Client[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse]
-	listDecisionTestRuns    *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
-	getDecisionTestRun      *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
-	exportDecisionTestData  *connect.Client[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse]
-	getDecisionTestAnalysis *connect.Client[v1.GetDecisionTestAnalysisRequest, v1.GetDecisionTestAnalysisResponse]
-	exportDecisionTestRun   *connect.Client[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse]
-	reviewDecisionTestRun   *connect.Client[v1.ReviewDecisionTestRunRequest, v1.ReviewDecisionTestRunResponse]
-	getSchedulerSettings    *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
-	setSchedulerSettings    *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
-	listQaEntries           *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
-	createQaEntry           *connect.Client[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse]
-	updateQaEntry           *connect.Client[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse]
-	setQaEntryEnabled       *connect.Client[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse]
-	deleteQaEntry           *connect.Client[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse]
-	addQaPhrasing           *connect.Client[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse]
-	deleteQaPhrasing        *connect.Client[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse]
-	getCalendarConnectURL   *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
-	connectCalendar         *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
-	getCalendarStatus       *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
-	disconnectCalendar      *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
-	listMeetings            *connect.Client[v1.ListMeetingsRequest, v1.ListMeetingsResponse]
-	cancelMeetingAsAdmin    *connect.Client[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse]
-	getJdSubmissionLimit    *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
-	setJdSubmissionLimit    *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
+	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	resendNotification         *connect.Client[v1.ResendNotificationRequest, v1.ResendNotificationResponse]
+	getMember                  *connect.Client[v1.GetMemberRequest, v1.GetMemberResponse]
+	addMemberNote              *connect.Client[v1.AddMemberNoteRequest, v1.AddMemberNoteResponse]
+	setMemberStatus            *connect.Client[v1.SetMemberStatusRequest, v1.SetMemberStatusResponse]
+	setMemberPilotApproved     *connect.Client[v1.SetMemberPilotApprovedRequest, v1.SetMemberPilotApprovedResponse]
+	deleteMember               *connect.Client[v1.DeleteMemberRequest, v1.DeleteMemberResponse]
+	createAgentPassword        *connect.Client[v1.CreateAgentPasswordRequest, v1.CreateAgentPasswordResponse]
+	listAgentPasswords         *connect.Client[v1.ListAgentPasswordsRequest, v1.ListAgentPasswordsResponse]
+	revokeAgentPassword        *connect.Client[v1.RevokeAgentPasswordRequest, v1.RevokeAgentPasswordResponse]
+	revokeAgentSessions        *connect.Client[v1.RevokeAgentSessionsRequest, v1.RevokeAgentSessionsResponse]
+	getReviewQueue             *connect.Client[v1.GetReviewQueueRequest, v1.GetReviewQueueResponse]
+	resolveReviewItem          *connect.Client[v1.ResolveReviewItemRequest, v1.ResolveReviewItemResponse]
+	replyEscalation            *connect.Client[v1.ReplyEscalationRequest, v1.ReplyEscalationResponse]
+	getMemberConversation      *connect.Client[v1.GetMemberConversationRequest, v1.GetMemberConversationResponse]
+	getCorpusStatus            *connect.Client[v1.GetCorpusStatusRequest, v1.GetCorpusStatusResponse]
+	testRetrieval              *connect.Client[v1.TestRetrievalRequest, v1.TestRetrievalResponse]
+	runJob                     *connect.Client[v1.RunJobRequest, v1.RunJobResponse]
+	getJob                     *connect.Client[v1.GetJobRequest, v1.GetJobResponse]
+	getPersona                 *connect.Client[v1.GetPersonaRequest, v1.GetPersonaResponse]
+	getAnalytics               *connect.Client[v1.GetAnalyticsRequest, v1.GetAnalyticsResponse]
+	getAudit                   *connect.Client[v1.GetAuditRequest, v1.GetAuditResponse]
+	listContactMessages        *connect.Client[v1.ListContactMessagesRequest, v1.ListContactMessagesResponse]
+	resolveContactMessage      *connect.Client[v1.ResolveContactMessageRequest, v1.ResolveContactMessageResponse]
+	approveRegistration        *connect.Client[v1.ApproveRegistrationRequest, v1.ApproveRegistrationResponse]
+	declineRegistration        *connect.Client[v1.DeclineRegistrationRequest, v1.DeclineRegistrationResponse]
+	extendAccess               *connect.Client[v1.ExtendAccessRequest, v1.ExtendAccessResponse]
+	listDbTables               *connect.Client[v1.ListDbTablesRequest, v1.ListDbTablesResponse]
+	runDbQuery                 *connect.Client[v1.RunDbQueryRequest, v1.RunDbQueryResponse]
+	listAccessGrants           *connect.Client[v1.ListAccessGrantsRequest, v1.ListAccessGrantsResponse]
+	upsertAccessGrant          *connect.Client[v1.UpsertAccessGrantRequest, v1.UpsertAccessGrantResponse]
+	deleteAccessGrant          *connect.Client[v1.DeleteAccessGrantRequest, v1.DeleteAccessGrantResponse]
+	listSavedQueries           *connect.Client[v1.ListSavedQueriesRequest, v1.ListSavedQueriesResponse]
+	upsertSavedQuery           *connect.Client[v1.UpsertSavedQueryRequest, v1.UpsertSavedQueryResponse]
+	deleteSavedQuery           *connect.Client[v1.DeleteSavedQueryRequest, v1.DeleteSavedQueryResponse]
+	listMemberActivity         *connect.Client[v1.ListMemberActivityRequest, v1.ListMemberActivityResponse]
+	ingestCorpusText           *connect.Client[v1.IngestCorpusTextRequest, v1.IngestCorpusTextResponse]
+	listCorpusDocuments        *connect.Client[v1.ListCorpusDocumentsRequest, v1.ListCorpusDocumentsResponse]
+	reindexCorpus              *connect.Client[v1.ReindexCorpusRequest, v1.ReindexCorpusResponse]
+	sweepCorpusEmbeddings      *connect.Client[v1.SweepCorpusEmbeddingsRequest, v1.SweepCorpusEmbeddingsResponse]
+	listJdSubmissions          *connect.Client[v1.ListJdSubmissionsRequest, v1.ListJdSubmissionsResponse]
+	getJdSubmission            *connect.Client[v1.GetJdSubmissionRequest, v1.GetJdSubmissionResponse]
+	rescoreJd                  *connect.Client[v1.RescoreJdRequest, v1.RescoreJdResponse]
+	setJdOutcome               *connect.Client[v1.SetJdOutcomeRequest, v1.SetJdOutcomeResponse]
+	recordJdFeedback           *connect.Client[v1.RecordJdFeedbackRequest, v1.RecordJdFeedbackResponse]
+	listGoldenPostings         *connect.Client[v1.ListGoldenPostingsRequest, v1.ListGoldenPostingsResponse]
+	upsertGoldenPosting        *connect.Client[v1.UpsertGoldenPostingRequest, v1.UpsertGoldenPostingResponse]
+	setGoldenActive            *connect.Client[v1.SetGoldenActiveRequest, v1.SetGoldenActiveResponse]
+	labelGoldenPosting         *connect.Client[v1.LabelGoldenPostingRequest, v1.LabelGoldenPostingResponse]
+	listEvalRuns               *connect.Client[v1.ListEvalRunsRequest, v1.ListEvalRunsResponse]
+	getEvalRun                 *connect.Client[v1.GetEvalRunRequest, v1.GetEvalRunResponse]
+	getMetrics                 *connect.Client[v1.GetMetricsRequest, v1.GetMetricsResponse]
+	getOpsStatus               *connect.Client[v1.GetOpsStatusRequest, v1.GetOpsStatusResponse]
+	getJobDetail               *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
+	getGate                    *connect.Client[v1.GetGateRequest, v1.GetGateResponse]
+	listDecisionLog            *connect.Client[v1.ListDecisionLogRequest, v1.ListDecisionLogResponse]
+	reviewDecision             *connect.Client[v1.ReviewDecisionRequest, v1.ReviewDecisionResponse]
+	exportDecisionLog          *connect.Client[v1.ExportDecisionLogRequest, v1.ExportDecisionLogResponse]
+	getJdFitBands              *connect.Client[v1.GetJdFitBandsRequest, v1.GetJdFitBandsResponse]
+	setJdFitBands              *connect.Client[v1.SetJdFitBandsRequest, v1.SetJdFitBandsResponse]
+	getDecisionTestSettings    *connect.Client[v1.GetDecisionTestSettingsRequest, v1.GetDecisionTestSettingsResponse]
+	setDecisionTestSettings    *connect.Client[v1.SetDecisionTestSettingsRequest, v1.SetDecisionTestSettingsResponse]
+	listDecisionTestRuns       *connect.Client[v1.ListDecisionTestRunsRequest, v1.ListDecisionTestRunsResponse]
+	getDecisionTestRun         *connect.Client[v1.GetDecisionTestRunRequest, v1.GetDecisionTestRunResponse]
+	exportDecisionTestData     *connect.Client[v1.ExportDecisionTestDataRequest, v1.ExportDecisionTestDataResponse]
+	getDecisionTestAnalysis    *connect.Client[v1.GetDecisionTestAnalysisRequest, v1.GetDecisionTestAnalysisResponse]
+	exportDecisionTestRun      *connect.Client[v1.ExportDecisionTestRunRequest, v1.ExportDecisionTestRunResponse]
+	reviewDecisionTestRun      *connect.Client[v1.ReviewDecisionTestRunRequest, v1.ReviewDecisionTestRunResponse]
+	downloadDecisionTestReport *connect.Client[v1.DownloadDecisionTestReportRequest, v1.DownloadDecisionTestReportResponse]
+	generateDecisionTestReport *connect.Client[v1.GenerateDecisionTestReportRequest, v1.GenerateDecisionTestReportResponse]
+	sendDecisionTestReport     *connect.Client[v1.SendDecisionTestReportRequest, v1.SendDecisionTestReportResponse]
+	getSchedulerSettings       *connect.Client[v1.GetSchedulerSettingsRequest, v1.GetSchedulerSettingsResponse]
+	setSchedulerSettings       *connect.Client[v1.SetSchedulerSettingsRequest, v1.SetSchedulerSettingsResponse]
+	listQaEntries              *connect.Client[v1.ListQaEntriesRequest, v1.ListQaEntriesResponse]
+	createQaEntry              *connect.Client[v1.CreateQaEntryRequest, v1.CreateQaEntryResponse]
+	updateQaEntry              *connect.Client[v1.UpdateQaEntryRequest, v1.UpdateQaEntryResponse]
+	setQaEntryEnabled          *connect.Client[v1.SetQaEntryEnabledRequest, v1.SetQaEntryEnabledResponse]
+	deleteQaEntry              *connect.Client[v1.DeleteQaEntryRequest, v1.DeleteQaEntryResponse]
+	addQaPhrasing              *connect.Client[v1.AddQaPhrasingRequest, v1.AddQaPhrasingResponse]
+	deleteQaPhrasing           *connect.Client[v1.DeleteQaPhrasingRequest, v1.DeleteQaPhrasingResponse]
+	getCalendarConnectURL      *connect.Client[v1.GetCalendarConnectURLRequest, v1.GetCalendarConnectURLResponse]
+	connectCalendar            *connect.Client[v1.ConnectCalendarRequest, v1.ConnectCalendarResponse]
+	getCalendarStatus          *connect.Client[v1.GetCalendarStatusRequest, v1.GetCalendarStatusResponse]
+	disconnectCalendar         *connect.Client[v1.DisconnectCalendarRequest, v1.DisconnectCalendarResponse]
+	listMeetings               *connect.Client[v1.ListMeetingsRequest, v1.ListMeetingsResponse]
+	cancelMeetingAsAdmin       *connect.Client[v1.CancelMeetingAsAdminRequest, v1.CancelMeetingAsAdminResponse]
+	getJdSubmissionLimit       *connect.Client[v1.GetJdSubmissionLimitRequest, v1.GetJdSubmissionLimitResponse]
+	setJdSubmissionLimit       *connect.Client[v1.SetJdSubmissionLimitRequest, v1.SetJdSubmissionLimitResponse]
 }
 
 // ListMembers calls career.v1.AdminService.ListMembers.
@@ -1589,6 +1642,21 @@ func (c *adminServiceClient) ExportDecisionTestRun(ctx context.Context, req *con
 // ReviewDecisionTestRun calls career.v1.AdminService.ReviewDecisionTestRun.
 func (c *adminServiceClient) ReviewDecisionTestRun(ctx context.Context, req *connect.Request[v1.ReviewDecisionTestRunRequest]) (*connect.Response[v1.ReviewDecisionTestRunResponse], error) {
 	return c.reviewDecisionTestRun.CallUnary(ctx, req)
+}
+
+// DownloadDecisionTestReport calls career.v1.AdminService.DownloadDecisionTestReport.
+func (c *adminServiceClient) DownloadDecisionTestReport(ctx context.Context, req *connect.Request[v1.DownloadDecisionTestReportRequest]) (*connect.Response[v1.DownloadDecisionTestReportResponse], error) {
+	return c.downloadDecisionTestReport.CallUnary(ctx, req)
+}
+
+// GenerateDecisionTestReport calls career.v1.AdminService.GenerateDecisionTestReport.
+func (c *adminServiceClient) GenerateDecisionTestReport(ctx context.Context, req *connect.Request[v1.GenerateDecisionTestReportRequest]) (*connect.Response[v1.GenerateDecisionTestReportResponse], error) {
+	return c.generateDecisionTestReport.CallUnary(ctx, req)
+}
+
+// SendDecisionTestReport calls career.v1.AdminService.SendDecisionTestReport.
+func (c *adminServiceClient) SendDecisionTestReport(ctx context.Context, req *connect.Request[v1.SendDecisionTestReportRequest]) (*connect.Response[v1.SendDecisionTestReportResponse], error) {
+	return c.sendDecisionTestReport.CallUnary(ctx, req)
 }
 
 // GetSchedulerSettings calls career.v1.AdminService.GetSchedulerSettings.
@@ -1958,6 +2026,29 @@ type AdminServiceHandler interface {
 	// a rule. Nothing is ever deleted: an excluded run keeps every row
 	// it produced.
 	ReviewDecisionTestRun(context.Context, *connect.Request[v1.ReviewDecisionTestRunRequest]) (*connect.Response[v1.ReviewDecisionTestRunResponse], error)
+	// Downloads one copy of a run's results report as a PDF.
+	//
+	// Two copies exist for every finished run (FSD FR-DT-21). The
+	// participant's copy describes answers by kind and can be sent to
+	// them. The owner's copy adds the questions with the answers given
+	// and the correct answers, so it is the answer key for the questions
+	// that run drew and is recorded when it is taken.
+	DownloadDecisionTestReport(context.Context, *connect.Request[v1.DownloadDecisionTestReportRequest]) (*connect.Response[v1.DownloadDecisionTestReportResponse], error)
+	// Builds a run's results report again, as a new version.
+	//
+	// A report is a snapshot: the comparison group is whoever had
+	// finished when it was built. Building it again after more people
+	// have taken the test moves the ranking, which is why the earlier
+	// version is kept rather than replaced and why this never sends
+	// anything by itself.
+	GenerateDecisionTestReport(context.Context, *connect.Request[v1.GenerateDecisionTestReportRequest]) (*connect.Response[v1.GenerateDecisionTestReportResponse], error)
+	// Emails the participant the latest version of their report.
+	//
+	// Refused unless the participant asked for their results and left an
+	// address: nothing is sent to anybody who did not ask (FR-DT-17).
+	// This is how a report reaches somebody whose run finished before
+	// reports existed, and how one is sent again.
+	SendDecisionTestReport(context.Context, *connect.Request[v1.SendDecisionTestReportRequest]) (*connect.Response[v1.SendDecisionTestReportResponse], error)
 	// Reads the meeting-scheduler settings: the weekly windows a member
 	// may book into, the lengths on offer, the clearance between
 	// meetings, and the zone all of it is quoted in.
@@ -2437,6 +2528,24 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("ReviewDecisionTestRun")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceDownloadDecisionTestReportHandler := connect.NewUnaryHandler(
+		AdminServiceDownloadDecisionTestReportProcedure,
+		svc.DownloadDecisionTestReport,
+		connect.WithSchema(adminServiceMethods.ByName("DownloadDecisionTestReport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceGenerateDecisionTestReportHandler := connect.NewUnaryHandler(
+		AdminServiceGenerateDecisionTestReportProcedure,
+		svc.GenerateDecisionTestReport,
+		connect.WithSchema(adminServiceMethods.ByName("GenerateDecisionTestReport")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceSendDecisionTestReportHandler := connect.NewUnaryHandler(
+		AdminServiceSendDecisionTestReportProcedure,
+		svc.SendDecisionTestReport,
+		connect.WithSchema(adminServiceMethods.ByName("SendDecisionTestReport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceGetSchedulerSettingsHandler := connect.NewUnaryHandler(
 		AdminServiceGetSchedulerSettingsProcedure,
 		svc.GetSchedulerSettings,
@@ -2677,6 +2786,12 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceExportDecisionTestRunHandler.ServeHTTP(w, r)
 		case AdminServiceReviewDecisionTestRunProcedure:
 			adminServiceReviewDecisionTestRunHandler.ServeHTTP(w, r)
+		case AdminServiceDownloadDecisionTestReportProcedure:
+			adminServiceDownloadDecisionTestReportHandler.ServeHTTP(w, r)
+		case AdminServiceGenerateDecisionTestReportProcedure:
+			adminServiceGenerateDecisionTestReportHandler.ServeHTTP(w, r)
+		case AdminServiceSendDecisionTestReportProcedure:
+			adminServiceSendDecisionTestReportHandler.ServeHTTP(w, r)
 		case AdminServiceGetSchedulerSettingsProcedure:
 			adminServiceGetSchedulerSettingsHandler.ServeHTTP(w, r)
 		case AdminServiceSetSchedulerSettingsProcedure:
@@ -2990,6 +3105,18 @@ func (UnimplementedAdminServiceHandler) ExportDecisionTestRun(context.Context, *
 
 func (UnimplementedAdminServiceHandler) ReviewDecisionTestRun(context.Context, *connect.Request[v1.ReviewDecisionTestRunRequest]) (*connect.Response[v1.ReviewDecisionTestRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.ReviewDecisionTestRun is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) DownloadDecisionTestReport(context.Context, *connect.Request[v1.DownloadDecisionTestReportRequest]) (*connect.Response[v1.DownloadDecisionTestReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.DownloadDecisionTestReport is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GenerateDecisionTestReport(context.Context, *connect.Request[v1.GenerateDecisionTestReportRequest]) (*connect.Response[v1.GenerateDecisionTestReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.GenerateDecisionTestReport is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) SendDecisionTestReport(context.Context, *connect.Request[v1.SendDecisionTestReportRequest]) (*connect.Response[v1.SendDecisionTestReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("career.v1.AdminService.SendDecisionTestReport is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) GetSchedulerSettings(context.Context, *connect.Request[v1.GetSchedulerSettingsRequest]) (*connect.Response[v1.GetSchedulerSettingsResponse], error) {

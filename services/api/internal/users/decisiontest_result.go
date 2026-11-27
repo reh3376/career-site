@@ -76,11 +76,20 @@ func (r DTResult) AccuracyPhrase() string   { return movement("Your accuracy", r
 func (r DTResult) ConfidencePhrase() string { return movement("Your confidence", r.ConfidenceDrop()) }
 
 func movement(subject string, drop int) string {
+	// "1 point", not "1 points". The report attached to this email words
+	// the same movement the same way (dtreport.movement), and a test
+	// there holds the two together.
+	unit := func(n int) string {
+		if n == 1 {
+			return "point"
+		}
+		return "points"
+	}
 	switch {
 	case drop > 0:
-		return fmt.Sprintf("%s fell %d points", subject, drop)
+		return fmt.Sprintf("%s fell %d %s", subject, drop, unit(drop))
 	case drop < 0:
-		return fmt.Sprintf("%s rose %d points", subject, -drop)
+		return fmt.Sprintf("%s rose %d %s", subject, -drop, unit(-drop))
 	default:
 		return subject + " did not move"
 	}

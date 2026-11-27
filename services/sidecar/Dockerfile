@@ -20,6 +20,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.14-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
+# The decision test report is set in Liberation Sans, which is
+# metric-compatible with Arial: a report lays out here exactly as it
+# does on the workstation it was designed on. Installed from Debian so
+# no font binary lives in the repository. Without it the renderer falls
+# back to DejaVu Sans, which is wider and moves every line break; see
+# report/fonts.py.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --system --create-home --uid 65532 sidecar
 USER sidecar
 WORKDIR /home/sidecar

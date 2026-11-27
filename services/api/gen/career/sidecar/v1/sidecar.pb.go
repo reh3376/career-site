@@ -1414,6 +1414,148 @@ func (x *RenderResumeResponse) GetEngine() string {
 	return ""
 }
 
+// Decision test report render request.
+type RenderDecisionTestReportRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The report document as JSON: a list of blocks (headings,
+	// paragraphs, tables, chart payloads), some marked for one copy only.
+	// Its `schema` field must match the version this sidecar draws.
+	DocumentJson string `protobuf:"bytes,1,opt,name=document_json,json=documentJson,proto3" json:"document_json,omitempty"`
+	// Caller trace id for log correlation (e.g. `dt:aaaaaaaa`).
+	TraceId       string `protobuf:"bytes,2,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderDecisionTestReportRequest) Reset() {
+	*x = RenderDecisionTestReportRequest{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderDecisionTestReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderDecisionTestReportRequest) ProtoMessage() {}
+
+func (x *RenderDecisionTestReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderDecisionTestReportRequest.ProtoReflect.Descriptor instead.
+func (*RenderDecisionTestReportRequest) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RenderDecisionTestReportRequest) GetDocumentJson() string {
+	if x != nil {
+		return x.DocumentJson
+	}
+	return ""
+}
+
+func (x *RenderDecisionTestReportRequest) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+// Decision test report render result.
+type RenderDecisionTestReportResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The participant's copy. It carries no question, no answer option
+	// and no item code.
+	ParticipantPdf []byte `protobuf:"bytes,1,opt,name=participant_pdf,json=participantPdf,proto3" json:"participant_pdf,omitempty"`
+	// The owner's copy, which adds the blocks the document marks for the
+	// owner: the answer-by-answer table and the questions with their
+	// answers.
+	OwnerPdf []byte `protobuf:"bytes,2,opt,name=owner_pdf,json=ownerPdf,proto3" json:"owner_pdf,omitempty"`
+	// Page count of the participant's copy.
+	ParticipantPages int32 `protobuf:"varint,3,opt,name=participant_pages,json=participantPages,proto3" json:"participant_pages,omitempty"`
+	// Page count of the owner's copy.
+	OwnerPages int32 `protobuf:"varint,4,opt,name=owner_pages,json=ownerPages,proto3" json:"owner_pages,omitempty"`
+	// Renderer identifier (e.g. `reportlab:5.1.0+matplotlib:3.11.2+Liberation Sans`).
+	Engine        string `protobuf:"bytes,5,opt,name=engine,proto3" json:"engine,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderDecisionTestReportResponse) Reset() {
+	*x = RenderDecisionTestReportResponse{}
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderDecisionTestReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderDecisionTestReportResponse) ProtoMessage() {}
+
+func (x *RenderDecisionTestReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderDecisionTestReportResponse.ProtoReflect.Descriptor instead.
+func (*RenderDecisionTestReportResponse) Descriptor() ([]byte, []int) {
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *RenderDecisionTestReportResponse) GetParticipantPdf() []byte {
+	if x != nil {
+		return x.ParticipantPdf
+	}
+	return nil
+}
+
+func (x *RenderDecisionTestReportResponse) GetOwnerPdf() []byte {
+	if x != nil {
+		return x.OwnerPdf
+	}
+	return nil
+}
+
+func (x *RenderDecisionTestReportResponse) GetParticipantPages() int32 {
+	if x != nil {
+		return x.ParticipantPages
+	}
+	return 0
+}
+
+func (x *RenderDecisionTestReportResponse) GetOwnerPages() int32 {
+	if x != nil {
+		return x.OwnerPages
+	}
+	return 0
+}
+
+func (x *RenderDecisionTestReportResponse) GetEngine() string {
+	if x != nil {
+		return x.Engine
+	}
+	return ""
+}
+
 // Empty.
 type HealthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1423,7 +1565,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1435,7 +1577,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[17]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1448,7 +1590,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{17}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{19}
 }
 
 // Readiness.
@@ -1485,7 +1627,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1497,7 +1639,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[18]
+	mi := &file_career_sidecar_v1_sidecar_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1510,7 +1652,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{18}
+	return file_career_sidecar_v1_sidecar_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *HealthResponse) GetReady() bool {
@@ -1678,7 +1820,17 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x14RenderResumeResponse\x12\x10\n" +
 	"\x03pdf\x18\x01 \x01(\fR\x03pdf\x12\x14\n" +
 	"\x05pages\x18\x02 \x01(\x05R\x05pages\x12\x16\n" +
-	"\x06engine\x18\x03 \x01(\tR\x06engine\"\x0f\n" +
+	"\x06engine\x18\x03 \x01(\tR\x06engine\"w\n" +
+	"\x1fRenderDecisionTestReportRequest\x120\n" +
+	"\rdocument_json\x18\x01 \x01(\tB\v\xbaH\br\x06\x10\x02\x18\x80\x89zR\fdocumentJson\x12\"\n" +
+	"\btrace_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\atraceId\"\xce\x01\n" +
+	" RenderDecisionTestReportResponse\x12'\n" +
+	"\x0fparticipant_pdf\x18\x01 \x01(\fR\x0eparticipantPdf\x12\x1b\n" +
+	"\towner_pdf\x18\x02 \x01(\fR\bownerPdf\x12+\n" +
+	"\x11participant_pages\x18\x03 \x01(\x05R\x10participantPages\x12\x1f\n" +
+	"\vowner_pages\x18\x04 \x01(\x05R\n" +
+	"ownerPages\x12\x16\n" +
+	"\x06engine\x18\x05 \x01(\tR\x06engine\"\x0f\n" +
 	"\rHealthRequest\"\xb9\x02\n" +
 	"\x0eHealthResponse\x12\x14\n" +
 	"\x05ready\x18\x01 \x01(\bR\x05ready\x12%\n" +
@@ -1716,7 +1868,7 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x11JOB_STATUS_QUEUED\x10\x01\x12\x16\n" +
 	"\x12JOB_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14JOB_STATUS_SUCCEEDED\x10\x03\x12\x15\n" +
-	"\x11JOB_STATUS_FAILED\x10\x042\xa3\x05\n" +
+	"\x11JOB_STATUS_FAILED\x10\x042\xa9\x06\n" +
 	"\x0eSidecarService\x12J\n" +
 	"\x05Embed\x12\x1f.career.sidecar.v1.EmbedRequest\x1a .career.sidecar.v1.EmbedResponse\x12M\n" +
 	"\x06Rerank\x12 .career.sidecar.v1.RerankRequest\x1a!.career.sidecar.v1.RerankResponse\x12S\n" +
@@ -1725,7 +1877,8 @@ const file_career_sidecar_v1_sidecar_proto_rawDesc = "" +
 	"\x06GetJob\x12 .career.sidecar.v1.GetJobRequest\x1a!.career.sidecar.v1.GetJobResponse\x12M\n" +
 	"\x06Health\x12 .career.sidecar.v1.HealthRequest\x1a!.career.sidecar.v1.HealthResponse\x12S\n" +
 	"\bGenerate\x12\".career.sidecar.v1.GenerateRequest\x1a#.career.sidecar.v1.GenerateResponse\x12_\n" +
-	"\fRenderResume\x12&.career.sidecar.v1.RenderResumeRequest\x1a'.career.sidecar.v1.RenderResumeResponseB\xd8\x01\n" +
+	"\fRenderResume\x12&.career.sidecar.v1.RenderResumeRequest\x1a'.career.sidecar.v1.RenderResumeResponse\x12\x83\x01\n" +
+	"\x18RenderDecisionTestReport\x122.career.sidecar.v1.RenderDecisionTestReportRequest\x1a3.career.sidecar.v1.RenderDecisionTestReportResponseB\xd8\x01\n" +
 	"\x15com.career.sidecar.v1B\fSidecarProtoP\x01ZKgithub.com/reh3376/career-site/services/api/gen/career/sidecar/v1;sidecarv1\xa2\x02\x03CSX\xaa\x02\x11Career.Sidecar.V1\xca\x02\x11Career\\Sidecar\\V1\xe2\x02\x1dCareer\\Sidecar\\V1\\GPBMetadata\xea\x02\x13Career::Sidecar::V1b\x06proto3"
 
 var (
@@ -1741,33 +1894,35 @@ func file_career_sidecar_v1_sidecar_proto_rawDescGZIP() []byte {
 }
 
 var file_career_sidecar_v1_sidecar_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_career_sidecar_v1_sidecar_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_career_sidecar_v1_sidecar_proto_goTypes = []any{
-	(EmbedPurpose)(0),             // 0: career.sidecar.v1.EmbedPurpose
-	(Scope)(0),                    // 1: career.sidecar.v1.Scope
-	(JobKind)(0),                  // 2: career.sidecar.v1.JobKind
-	(JobStatus)(0),                // 3: career.sidecar.v1.JobStatus
-	(*EmbedRequest)(nil),          // 4: career.sidecar.v1.EmbedRequest
-	(*Embedding)(nil),             // 5: career.sidecar.v1.Embedding
-	(*EmbedResponse)(nil),         // 6: career.sidecar.v1.EmbedResponse
-	(*RerankCandidate)(nil),       // 7: career.sidecar.v1.RerankCandidate
-	(*RerankRequest)(nil),         // 8: career.sidecar.v1.RerankRequest
-	(*RerankScore)(nil),           // 9: career.sidecar.v1.RerankScore
-	(*RerankResponse)(nil),        // 10: career.sidecar.v1.RerankResponse
-	(*ClassifyRequest)(nil),       // 11: career.sidecar.v1.ClassifyRequest
-	(*ClassifyResponse)(nil),      // 12: career.sidecar.v1.ClassifyResponse
-	(*RunJobRequest)(nil),         // 13: career.sidecar.v1.RunJobRequest
-	(*RunJobResponse)(nil),        // 14: career.sidecar.v1.RunJobResponse
-	(*GetJobRequest)(nil),         // 15: career.sidecar.v1.GetJobRequest
-	(*GetJobResponse)(nil),        // 16: career.sidecar.v1.GetJobResponse
-	(*GenerateRequest)(nil),       // 17: career.sidecar.v1.GenerateRequest
-	(*GenerateResponse)(nil),      // 18: career.sidecar.v1.GenerateResponse
-	(*RenderResumeRequest)(nil),   // 19: career.sidecar.v1.RenderResumeRequest
-	(*RenderResumeResponse)(nil),  // 20: career.sidecar.v1.RenderResumeResponse
-	(*HealthRequest)(nil),         // 21: career.sidecar.v1.HealthRequest
-	(*HealthResponse)(nil),        // 22: career.sidecar.v1.HealthResponse
-	nil,                           // 23: career.sidecar.v1.RunJobRequest.ArgsEntry
-	(*timestamppb.Timestamp)(nil), // 24: google.protobuf.Timestamp
+	(EmbedPurpose)(0),                        // 0: career.sidecar.v1.EmbedPurpose
+	(Scope)(0),                               // 1: career.sidecar.v1.Scope
+	(JobKind)(0),                             // 2: career.sidecar.v1.JobKind
+	(JobStatus)(0),                           // 3: career.sidecar.v1.JobStatus
+	(*EmbedRequest)(nil),                     // 4: career.sidecar.v1.EmbedRequest
+	(*Embedding)(nil),                        // 5: career.sidecar.v1.Embedding
+	(*EmbedResponse)(nil),                    // 6: career.sidecar.v1.EmbedResponse
+	(*RerankCandidate)(nil),                  // 7: career.sidecar.v1.RerankCandidate
+	(*RerankRequest)(nil),                    // 8: career.sidecar.v1.RerankRequest
+	(*RerankScore)(nil),                      // 9: career.sidecar.v1.RerankScore
+	(*RerankResponse)(nil),                   // 10: career.sidecar.v1.RerankResponse
+	(*ClassifyRequest)(nil),                  // 11: career.sidecar.v1.ClassifyRequest
+	(*ClassifyResponse)(nil),                 // 12: career.sidecar.v1.ClassifyResponse
+	(*RunJobRequest)(nil),                    // 13: career.sidecar.v1.RunJobRequest
+	(*RunJobResponse)(nil),                   // 14: career.sidecar.v1.RunJobResponse
+	(*GetJobRequest)(nil),                    // 15: career.sidecar.v1.GetJobRequest
+	(*GetJobResponse)(nil),                   // 16: career.sidecar.v1.GetJobResponse
+	(*GenerateRequest)(nil),                  // 17: career.sidecar.v1.GenerateRequest
+	(*GenerateResponse)(nil),                 // 18: career.sidecar.v1.GenerateResponse
+	(*RenderResumeRequest)(nil),              // 19: career.sidecar.v1.RenderResumeRequest
+	(*RenderResumeResponse)(nil),             // 20: career.sidecar.v1.RenderResumeResponse
+	(*RenderDecisionTestReportRequest)(nil),  // 21: career.sidecar.v1.RenderDecisionTestReportRequest
+	(*RenderDecisionTestReportResponse)(nil), // 22: career.sidecar.v1.RenderDecisionTestReportResponse
+	(*HealthRequest)(nil),                    // 23: career.sidecar.v1.HealthRequest
+	(*HealthResponse)(nil),                   // 24: career.sidecar.v1.HealthResponse
+	nil,                                      // 25: career.sidecar.v1.RunJobRequest.ArgsEntry
+	(*timestamppb.Timestamp)(nil),            // 26: google.protobuf.Timestamp
 }
 var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	0,  // 0: career.sidecar.v1.EmbedRequest.purpose:type_name -> career.sidecar.v1.EmbedPurpose
@@ -1776,29 +1931,31 @@ var file_career_sidecar_v1_sidecar_proto_depIdxs = []int32{
 	9,  // 3: career.sidecar.v1.RerankResponse.scores:type_name -> career.sidecar.v1.RerankScore
 	1,  // 4: career.sidecar.v1.ClassifyResponse.scope:type_name -> career.sidecar.v1.Scope
 	2,  // 5: career.sidecar.v1.RunJobRequest.kind:type_name -> career.sidecar.v1.JobKind
-	23, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
+	25, // 6: career.sidecar.v1.RunJobRequest.args:type_name -> career.sidecar.v1.RunJobRequest.ArgsEntry
 	2,  // 7: career.sidecar.v1.GetJobResponse.kind:type_name -> career.sidecar.v1.JobKind
 	3,  // 8: career.sidecar.v1.GetJobResponse.status:type_name -> career.sidecar.v1.JobStatus
-	24, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
-	24, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
+	26, // 9: career.sidecar.v1.GetJobResponse.started_at:type_name -> google.protobuf.Timestamp
+	26, // 10: career.sidecar.v1.GetJobResponse.finished_at:type_name -> google.protobuf.Timestamp
 	4,  // 11: career.sidecar.v1.SidecarService.Embed:input_type -> career.sidecar.v1.EmbedRequest
 	8,  // 12: career.sidecar.v1.SidecarService.Rerank:input_type -> career.sidecar.v1.RerankRequest
 	11, // 13: career.sidecar.v1.SidecarService.Classify:input_type -> career.sidecar.v1.ClassifyRequest
 	13, // 14: career.sidecar.v1.SidecarService.RunJob:input_type -> career.sidecar.v1.RunJobRequest
 	15, // 15: career.sidecar.v1.SidecarService.GetJob:input_type -> career.sidecar.v1.GetJobRequest
-	21, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
+	23, // 16: career.sidecar.v1.SidecarService.Health:input_type -> career.sidecar.v1.HealthRequest
 	17, // 17: career.sidecar.v1.SidecarService.Generate:input_type -> career.sidecar.v1.GenerateRequest
 	19, // 18: career.sidecar.v1.SidecarService.RenderResume:input_type -> career.sidecar.v1.RenderResumeRequest
-	6,  // 19: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
-	10, // 20: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
-	12, // 21: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
-	14, // 22: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
-	16, // 23: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
-	22, // 24: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
-	18, // 25: career.sidecar.v1.SidecarService.Generate:output_type -> career.sidecar.v1.GenerateResponse
-	20, // 26: career.sidecar.v1.SidecarService.RenderResume:output_type -> career.sidecar.v1.RenderResumeResponse
-	19, // [19:27] is the sub-list for method output_type
-	11, // [11:19] is the sub-list for method input_type
+	21, // 19: career.sidecar.v1.SidecarService.RenderDecisionTestReport:input_type -> career.sidecar.v1.RenderDecisionTestReportRequest
+	6,  // 20: career.sidecar.v1.SidecarService.Embed:output_type -> career.sidecar.v1.EmbedResponse
+	10, // 21: career.sidecar.v1.SidecarService.Rerank:output_type -> career.sidecar.v1.RerankResponse
+	12, // 22: career.sidecar.v1.SidecarService.Classify:output_type -> career.sidecar.v1.ClassifyResponse
+	14, // 23: career.sidecar.v1.SidecarService.RunJob:output_type -> career.sidecar.v1.RunJobResponse
+	16, // 24: career.sidecar.v1.SidecarService.GetJob:output_type -> career.sidecar.v1.GetJobResponse
+	24, // 25: career.sidecar.v1.SidecarService.Health:output_type -> career.sidecar.v1.HealthResponse
+	18, // 26: career.sidecar.v1.SidecarService.Generate:output_type -> career.sidecar.v1.GenerateResponse
+	20, // 27: career.sidecar.v1.SidecarService.RenderResume:output_type -> career.sidecar.v1.RenderResumeResponse
+	22, // 28: career.sidecar.v1.SidecarService.RenderDecisionTestReport:output_type -> career.sidecar.v1.RenderDecisionTestReportResponse
+	20, // [20:29] is the sub-list for method output_type
+	11, // [11:20] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -1815,7 +1972,7 @@ func file_career_sidecar_v1_sidecar_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_career_sidecar_v1_sidecar_proto_rawDesc), len(file_career_sidecar_v1_sidecar_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

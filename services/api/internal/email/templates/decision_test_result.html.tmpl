@@ -27,6 +27,10 @@
 <p>The last block repeated the difficulty of the first, twelve minutes later, and you scored {{.Block1Accuracy}}% then {{.Block5Accuracy}}%. Falling away at the end means some of what happened in between may have been fatigue as much as load.</p>
 {{end}}
 
+{{if .HasReport}}
+<p>The attached PDF goes further: your results block by block, how sure you were against how you did, and what became of your quickest answers{{if .Compared}}, with where you stand among the other people who have taken the test for the first time{{end}}. Like this email, it describes your answers by kind and never shows a question.</p>
+{{end}}
+
 <p>One thing deliberately missing: which questions you got wrong, and what the right answers were. Everybody sees the same thirty questions, so one answer getting out spoils it for everybody after you. When collection closes, the full explanation of what was being measured and why the wrong answers feel so right goes up publicly, and you will not need this email to read it.</p>
 
 <p>An n of one proves nothing about you. It demonstrates an effect, on you, which is a different and more useful thing.</p>

@@ -47,18 +47,19 @@ type DecisionTest struct {
 	// why it defaults off.
 	allowFixtureBank bool
 
-	// Results go out to participants who asked for them. Nil leaves the
-	// test working and the emails unsent, which is the right failure:
-	// somebody mid-run must not be stopped because a mailer is down.
-	email   email.Provider
-	from    string
-	siteURL string
+	// The results report and the email that carries it, for
+	// participants who asked. Never nil: without a mailer or a renderer
+	// it does less, and the test itself is untouched either way, which
+	// is the right failure. Somebody mid-run must not be stopped because
+	// a mailer is down.
+	reports *DTReports
 }
 
 // NewDecisionTest wires the handler. auth may be nil: the test is
 // public and a signed-in member is simply recognised when present.
 func NewDecisionTest(log *slog.Logger, repo *users.Repo, auth *Auth) *DecisionTest {
-	return &DecisionTest{log: log, users: repo, auth: auth, turnstile: turnstile.Noop{}}
+	return &DecisionTest{log: log, users: repo, auth: auth, turnstile: turnstile.Noop{},
+		reports: NewDTReports(log, repo, nil)}
 }
 
 // SetTurnstile replaces the bot-challenge verifier. main wires the real
@@ -72,7 +73,16 @@ func (h *DecisionTest) SetTurnstile(v turnstile.Verifier) {
 // SetMailer wires result emails. Optional: without it the test runs and
 // nobody is written to.
 func (h *DecisionTest) SetMailer(p email.Provider, from, siteURL string) {
-	h.email, h.from, h.siteURL = p, from, siteURL
+	h.reports.SetMailer(p, from, siteURL)
+}
+
+// SetReports replaces the report service with the one main wired to the
+// renderer, so the handler, the sweep and the admin console all work
+// through the same instance and its one lock.
+func (h *DecisionTest) SetReports(r *DTReports) {
+	if r != nil {
+		h.reports = r
+	}
 }
 
 // SetAllowFixtureBank lets this instance draw from the placeholder item
@@ -428,11 +438,23 @@ func (h *DecisionTest) FinishSession(
 		}))
 	}
 
-	// Sent after the response, not before it. A participant who has just
-	// given fifteen minutes should see the thank-you immediately; an
-	// email provider having a slow afternoon is not their problem, and
-	// a failed send must not turn a completed run into an error.
-	go h.sendResult(sess.ID)
+	// The report and the results email, after the response and not
+	// before it. A participant who has just given fifteen minutes should
+	// see the thank-you immediately; a renderer or an email provider
+	// having a slow afternoon is not their problem, and a failed send
+	// must not turn a completed run into an error.
+	//
+	// Only on the call that carries the debrief answer. The run screen
+	// calls this twice, first to close the run and then with how the
+	// participant held the number, and the report quotes that answer.
+	// Starting on the first call built every report without it, and
+	// until the send was claimed in the database (migration 00079) it
+	// also sent every results email twice. A participant who shuts the
+	// tab on the question never makes the second call; the sweep picks
+	// their run up two minutes later.
+	if strategy != "" {
+		go h.reports.Process(sess.ID)
+	}
 	return connect.NewResponse(&v1.FinishSessionResponse{
 		Correct: int32(correct), Total: int32(total),
 	}), nil
@@ -544,80 +566,6 @@ func toProtoQuestions(items []users.DTItem, firstPosition int) []*v1.Question {
 		})
 	}
 	return out
-}
-
-// sendResult mails one participant their figures, if they asked.
-//
-// Detached from the request, with its own context: the caller's is
-// cancelled the moment the response is written.
-func (h *DecisionTest) sendResult(sessionID int64) {
-	if h.email == nil || h.from == "" {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	wants, addr, err := h.users.DTWantsResults(ctx, sessionID)
-	if err != nil {
-		h.log.Warn("decision test: result email, wants check",
-			slog.Int64("session_id", sessionID), slog.String("error", err.Error()))
-		return
-	}
-	// Nothing is sent to somebody who did not ask. That is the
-	// commitment the intake form makes and the privacy policy states,
-	// and it is enforced here rather than trusted to the form.
-	if !wants {
-		return
-	}
-
-	res, err := h.users.DTResultFor(ctx, sessionID)
-	if err != nil {
-		h.log.Error("decision test: result email, figures",
-			slog.Int64("session_id", sessionID), slog.String("error", err.Error()))
-		return
-	}
-
-	// The template is handed finished words and a named reading, not
-	// signed numbers to branch on. Which true thing a run supports is a
-	// decision about the research, and it belongs in DTResult where it
-	// is unit-tested, not in a sign comparison inside an email body.
-	text, html, err := email.DecisionTestResultTemplate.Render(struct {
-		*users.DTResult
-		AccuracyPhrase   string
-		ConfidencePhrase string
-		Reading          string
-		FatigueHeld      bool
-		SiteURL          string
-	}{
-		DTResult:         res,
-		AccuracyPhrase:   res.AccuracyPhrase(),
-		ConfidencePhrase: res.ConfidencePhrase(),
-		Reading:          res.Reading(),
-		FatigueHeld:      res.FatigueHeld(),
-		SiteURL:          h.siteURL,
-	})
-	if err != nil {
-		h.log.Error("decision test: result email, render", slog.String("error", err.Error()))
-		return
-	}
-
-	if err := h.email.Send(ctx, email.Message{
-		To: addr, From: h.from,
-		// Kind is what makes the delivery log answerable. Without it
-		// the row lands as "unknown", and the question a participant
-		// will eventually ask ("did my results ever go out?") has no
-		// query. Found on the first real send, 2026-10-05, where the
-		// email arrived and the audit row said nothing about what it
-		// was.
-		Kind:     "decision_test_result",
-		Subject:  "Your results from the decision test",
-		TextBody: text, HTMLBody: html,
-	}); err != nil {
-		h.log.Error("decision test: result email, send",
-			slog.String("to_domain", emailDomain(addr)), slog.String("error", err.Error()))
-		return
-	}
-	h.log.Info("decision test result sent", slog.Int64("session_id", sessionID))
 }
 
 // emailDomain returns just the domain, for logs. The address itself is

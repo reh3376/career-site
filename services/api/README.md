@@ -88,7 +88,7 @@ docker build \
 
 ## Background jobs
 
-Eight recurring jobs run inside this process rather than as cron entries, so they ship and roll back with the binary. `cmd/api/main.go` registers them and `internal/scheduler` runs them:
+Nine recurring jobs run inside this process rather than as cron entries, so they ship and roll back with the binary. `cmd/api/main.go` registers them and `internal/scheduler` runs them:
 
 | Job | Interval | Does |
 |---|---|---|
@@ -99,6 +99,7 @@ Eight recurring jobs run inside this process rather than as cron entries, so the
 | `prompt-warm` | 1m | keeps the LLM KV cache prefix warm |
 | `qa-embed` | 5m | embeds newly approved Q&A bank phrasings |
 | `clarification-sweep` | 5m | closes a withheld review's follow-up questions at their time limit and starts the run that issues the fit; reminds the candidate a day before (FSD FR-HF-22) |
+| `decision-test-reports` | 1m | builds the results report for finished decision test runs that have none, retries a build the renderer refused, and sends each participant who asked their one results email (FSD FR-DT-22) |
 | `events-anonymize` | 24h | drops event identity after `EVENT_IDENTITY_RETENTION_DAYS` |
 
 Separately, startup reconciles work that a restart stranded mid-flight: `FailStrandedJd`, `FailStrandedRuns` and `FailStrandedEvalRuns` close runs left in a non-terminal status, because a process that dies during generation would otherwise leave a row claiming to be generating forever. A posting resting at `awaiting_candidate` is not in flight and is left as it is; a run that was judging submitted answers when the process died is started again (`ResumeClarifications`), and role and project documents are brought into line with their files' front matter (`ingest.SyncEngagementMeta`).

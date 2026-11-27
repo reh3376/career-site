@@ -9,7 +9,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/privacy",
 });
 
-const UPDATED = "5 October 2026";
+const UPDATED = "22 November 2026";
 
 // Plain statements, one per paragraph, in the order a visitor meets
 // them: anonymous visit, contact, registration, JD review, meetings,
@@ -33,6 +33,14 @@ const UPDATED = "5 October 2026";
 // actually does, so it is what the page says. A policy that promises a
 // deletion the schema does not perform is worse than one that admits
 // the asymmetry.
+//
+// The results report (FSD FR-DT-21 to 24) arrived on 2026-11-22 and is
+// described here in the same change, which is the rule finally kept.
+// It adds one thing a participant could not have guessed from the
+// paragraphs above: their own figures, unnamed, are part of the
+// comparison other participants are shown. That is a use of the data
+// by someone other than the researcher, so it is stated rather than
+// implied by "research dataset".
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20 sm:px-10 sm:py-28">
@@ -158,10 +166,25 @@ export default function PrivacyPage() {
             involved in the test.
           </p>
           <p>
+            Every finished run gets a written report of its results.
+            If you asked for your results, it is attached to the email
+            that carries them; nobody who did not ask is sent anything.
+            Once enough people have taken the test, a report sets your
+            figures beside those of the other people who took it for
+            the first time, and your figures appear in theirs the same
+            way: as one unnamed mark among the others and as part of an
+            average. No name, email address or other detail you gave
+            appears in any report, yours or anyone else&rsquo;s.
+          </p>
+          <p>
             You are never told which individual questions you got right
             or wrong, during the test or afterwards. That is not
             secrecy for its own sake: an answer key that gets out ruins
             the instrument permanently for everyone who takes it later.
+            The report describes your answers by kind and never by
+            question. A second copy that does print the questions and
+            what you answered is kept for my own use in checking the
+            test, and is sent to no one.
           </p>
         </Section>
 
@@ -195,7 +218,8 @@ export default function PrivacyPage() {
               pieces cannot be analysed. The identity attached to a run
               (name, email, age band, education, occupation) is cleared
               whenever you ask, which leaves the measurements in place
-              with no person attached to them.
+              with no person attached to them. The report of a run is
+              kept with the run and removed with it.
             </li>
           </ul>
         </Section>

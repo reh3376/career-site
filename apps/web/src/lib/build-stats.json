@@ -9,15 +9,15 @@
     "botNames": [
       "dependabot[bot]"
     ],
-    "byAssistant": 558,
+    "byAssistant": 560,
     "byBot": 25,
     "byOwner": 47,
-    "commits": 1043,
-    "days": 58,
+    "commits": 1046,
+    "days": 66,
     "firstCommit": "2026-09-18",
-    "lastCommit": "2026-11-14",
-    "merges": 413,
-    "nonMerge": 630,
+    "lastCommit": "2026-11-22",
+    "merges": 414,
+    "nonMerge": 632,
     "ownerNames": [
       "Roger Edward Henley II",
       "Roger Henley"
@@ -25,32 +25,32 @@
   },
   "lines": {
     "code": {
-      "files": 579,
+      "files": 599,
       "languages": [
         {
-          "files": 169,
+          "files": 182,
           "language": "Go",
-          "lines": 47660
+          "lines": 52391
         },
         {
-          "files": 166,
+          "files": 167,
           "language": "TSX",
-          "lines": 31896
+          "lines": 32098
         },
         {
-          "files": 81,
+          "files": 82,
           "language": "SQL",
-          "lines": 9615
+          "lines": 9743
         },
         {
-          "files": 79,
+          "files": 80,
           "language": "TypeScript",
-          "lines": 7993
+          "lines": 8213
         },
         {
-          "files": 29,
+          "files": 33,
           "language": "Python",
-          "lines": 6197
+          "lines": 7761
         },
         {
           "files": 20,
@@ -60,7 +60,7 @@
         {
           "files": 34,
           "language": "Email templates",
-          "lines": 760
+          "lines": 766
         },
         {
           "files": 1,
@@ -68,7 +68,7 @@
           "lines": 268
         }
       ],
-      "lines": 107022
+      "lines": 113873
     },
     "config": {
       "files": 35,
@@ -76,7 +76,7 @@
         {
           "files": 18,
           "language": "JSON",
-          "lines": 4751
+          "lines": 4815
         },
         {
           "files": 17,
@@ -84,7 +84,7 @@
           "lines": 2062
         }
       ],
-      "lines": 6813
+      "lines": 6877
     },
     "contract": {
       "files": 19,
@@ -92,10 +92,10 @@
         {
           "files": 19,
           "language": "Protobuf",
-          "lines": 9786
+          "lines": 9964
         }
       ],
-      "lines": 9786
+      "lines": 9964
     },
     "documentation": {
       "files": 147,
@@ -103,10 +103,10 @@
         {
           "files": 147,
           "language": "Markdown",
-          "lines": 40389
+          "lines": 40704
         }
       ],
-      "lines": 40389
+      "lines": 40704
     },
     "generated": {
       "files": 78,
@@ -114,12 +114,12 @@
         {
           "files": 36,
           "language": "Go",
-          "lines": 55413
+          "lines": 56419
         },
         {
           "files": 19,
           "language": "TypeScript",
-          "lines": 30970
+          "lines": 31376
         },
         {
           "files": 1,
@@ -129,7 +129,7 @@
         {
           "files": 21,
           "language": "Python",
-          "lines": 3811
+          "lines": 3895
         },
         {
           "files": 1,
@@ -137,28 +137,28 @@
           "lines": 183
         }
       ],
-      "lines": 96176
+      "lines": 97672
     },
     "tests": {
-      "files": 125,
+      "files": 130,
       "languages": [
         {
-          "files": 105,
+          "files": 108,
           "language": "Go",
-          "lines": 21220
+          "lines": 22683
         },
         {
-          "files": 15,
+          "files": 16,
           "language": "TypeScript",
-          "lines": 1536
+          "lines": 1645
         },
         {
-          "files": 5,
+          "files": 6,
           "language": "Python",
-          "lines": 456
+          "lines": 807
         }
       ],
-      "lines": 23212
+      "lines": 25135
     }
   },
   "structure": {
@@ -166,18 +166,18 @@
     "ciChecks": 15,
     "customChecks": 6,
     "directDependencies": 27,
-    "goTests": 549,
-    "migrations": 78,
-    "pythonTests": 30,
-    "requirements": 232,
+    "goTests": 573,
+    "migrations": 79,
+    "pythonTests": 35,
+    "requirements": 236,
     "requirementsDeferred": 1,
     "requirementsDropped": 1,
     "requirementsNotBuilt": 49,
-    "requirementsPartial": 12,
-    "requirementsShipped": 169,
-    "rpcs": 184,
+    "requirementsPartial": 14,
+    "requirementsShipped": 171,
+    "rpcs": 188,
     "runtimeServices": 9,
     "services": 17,
-    "webTests": 111
+    "webTests": 119
   }
 }

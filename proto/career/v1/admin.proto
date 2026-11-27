@@ -510,6 +510,38 @@ service AdminService {
     option (career.v1.auth) = AUTH_LEVEL_ADMIN;
     option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
   }
+  // Downloads one copy of a run's results report as a PDF.
+  //
+  // Two copies exist for every finished run (FSD FR-DT-21). The
+  // participant's copy describes answers by kind and can be sent to
+  // them. The owner's copy adds the questions with the answers given
+  // and the correct answers, so it is the answer key for the questions
+  // that run drew and is recorded when it is taken.
+  rpc DownloadDecisionTestReport(DownloadDecisionTestReportRequest) returns (DownloadDecisionTestReportResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Builds a run's results report again, as a new version.
+  //
+  // A report is a snapshot: the comparison group is whoever had
+  // finished when it was built. Building it again after more people
+  // have taken the test moves the ranking, which is why the earlier
+  // version is kept rather than replaced and why this never sends
+  // anything by itself.
+  rpc GenerateDecisionTestReport(GenerateDecisionTestReportRequest) returns (GenerateDecisionTestReportResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
+  // Emails the participant the latest version of their report.
+  //
+  // Refused unless the participant asked for their results and left an
+  // address: nothing is sent to anybody who did not ask (FR-DT-17).
+  // This is how a report reaches somebody whose run finished before
+  // reports existed, and how one is sent again.
+  rpc SendDecisionTestReport(SendDecisionTestReportRequest) returns (SendDecisionTestReportResponse) {
+    option (career.v1.auth) = AUTH_LEVEL_ADMIN;
+    option (career.v1.audit) = AUDIT_LEVEL_RECORDED;
+  }
   // Reads the meeting-scheduler settings: the weekly windows a member
   // may book into, the lengths on offer, the clearance between
   // meetings, and the zone all of it is quoted in.
@@ -3652,6 +3684,116 @@ message GetDecisionTestRunResponse {
   // The thirty questions this run was drawn, in order, including any it
   // never reached.
   repeated DecisionTestDrawnItem drawn_items = 5;
+  // The run's results report: whether one exists, what it told the
+  // participant, and whether it was sent.
+  DecisionTestReport report = 6;
+}
+
+// The state of one run's results report.
+message DecisionTestReport {
+  // `none` before a report exists, `ready` when both PDFs are stored,
+  // `failed` when the last attempt to build one did not finish.
+  string state = 1;
+  // Which build this is. 1 is the one made when the run finished; each
+  // rebuild adds one.
+  int32 version = 2;
+  // When this version was built, RFC 3339. Empty when there is none.
+  string generated_at = 3;
+  // Whether the report ranks the participant against other first-time
+  // participants.
+  bool compared = 4;
+  // Why it does not, when it does not: `small_group`, `repeat`,
+  // `unplaced` or `synthetic`.
+  string no_ranking_reason = 5;
+  // How many other first-time participants the run could be compared
+  // with when the report was built.
+  int32 others = 6;
+  // Questions answered correctly.
+  int32 score = 7;
+  // Questions asked.
+  int32 total = 8;
+  // Place in the comparison group, counting from 1. Zero when the
+  // report carries no ranking.
+  int32 rank = 9;
+  // Size of the comparison group, the participant included.
+  int32 group_size = 10;
+  // Percentile rank of the score in that group, 0 to 100.
+  double percentile = 11;
+  // Pages in the participant's copy.
+  int32 participant_pages = 12;
+  // Pages in the owner's copy.
+  int32 owner_pages = 13;
+  // Which wording and layout the report was written under.
+  string template = 14;
+  // What went wrong, when the state is `failed`.
+  string error = 15;
+  // When the report was last emailed to the participant, RFC 3339.
+  // Empty when it never was.
+  string emailed_at = 16;
+  // Who sent it: `system` for the automatic send when the run
+  // finished, otherwise the admin's name.
+  string emailed_by = 17;
+  // Whether it can be sent: the participant asked for results and left
+  // an address.
+  bool can_send = 18;
+  // The filename the participant's copy downloads and is attached as.
+  string participant_filename = 19;
+  // The filename the owner's copy downloads as.
+  string owner_filename = 20;
+  // The renderer that drew it.
+  string engine = 21;
+}
+
+// Which copy of a report.
+enum DecisionTestReportCopy {
+  // Not set. Treated as the participant's copy, the safe one.
+  DECISION_TEST_REPORT_COPY_UNSPECIFIED = 0;
+  // The copy that can be sent to the participant.
+  DECISION_TEST_REPORT_COPY_PARTICIPANT = 1;
+  // The copy with the questions and their answers.
+  DECISION_TEST_REPORT_COPY_OWNER = 2;
+}
+
+// Asks for one copy of a run's report.
+message DownloadDecisionTestReportRequest {
+  // Which run, from the list.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+  // Which copy.
+  DecisionTestReportCopy copy = 2;
+}
+
+// One copy of a report.
+message DownloadDecisionTestReportResponse {
+  // The filename to save it under.
+  string filename = 1;
+  // The PDF.
+  bytes pdf = 2;
+  // Which build of the report this is.
+  int32 version = 3;
+}
+
+// Asks for a run's report to be built again.
+message GenerateDecisionTestReportRequest {
+  // Which run, from the list.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+}
+
+// The report as it now stands.
+message GenerateDecisionTestReportResponse {
+  // The new version, or the failure.
+  DecisionTestReport report = 1;
+}
+
+// Asks for a run's report to be emailed to its participant.
+message SendDecisionTestReportRequest {
+  // Which run, from the list.
+  string session_key = 1 [(buf.validate.field).string.max_len = 64];
+}
+
+// The report after the send.
+message SendDecisionTestReportResponse {
+  // The report, with the send recorded on it.
+  DecisionTestReport report = 1;
 }
 
 // Asks for the dataset as CSV.

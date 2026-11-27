@@ -213,6 +213,7 @@ func (a *Admin) GetDecisionTestRun(
 	return connect.NewResponse(&v1.GetDecisionTestRunResponse{
 		Run: toProtoRun(*run), Blocks: pb, Answers: pa, ReviewHistory: ph,
 		DrawnItems: pd,
+		Report:     a.dtReportProto(ctx, req.Msg.GetSessionKey()),
 	}), nil
 }
 

@@ -27,14 +27,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SidecarService_Embed_FullMethodName        = "/career.sidecar.v1.SidecarService/Embed"
-	SidecarService_Rerank_FullMethodName       = "/career.sidecar.v1.SidecarService/Rerank"
-	SidecarService_Classify_FullMethodName     = "/career.sidecar.v1.SidecarService/Classify"
-	SidecarService_RunJob_FullMethodName       = "/career.sidecar.v1.SidecarService/RunJob"
-	SidecarService_GetJob_FullMethodName       = "/career.sidecar.v1.SidecarService/GetJob"
-	SidecarService_Health_FullMethodName       = "/career.sidecar.v1.SidecarService/Health"
-	SidecarService_Generate_FullMethodName     = "/career.sidecar.v1.SidecarService/Generate"
-	SidecarService_RenderResume_FullMethodName = "/career.sidecar.v1.SidecarService/RenderResume"
+	SidecarService_Embed_FullMethodName                    = "/career.sidecar.v1.SidecarService/Embed"
+	SidecarService_Rerank_FullMethodName                   = "/career.sidecar.v1.SidecarService/Rerank"
+	SidecarService_Classify_FullMethodName                 = "/career.sidecar.v1.SidecarService/Classify"
+	SidecarService_RunJob_FullMethodName                   = "/career.sidecar.v1.SidecarService/RunJob"
+	SidecarService_GetJob_FullMethodName                   = "/career.sidecar.v1.SidecarService/GetJob"
+	SidecarService_Health_FullMethodName                   = "/career.sidecar.v1.SidecarService/Health"
+	SidecarService_Generate_FullMethodName                 = "/career.sidecar.v1.SidecarService/Generate"
+	SidecarService_RenderResume_FullMethodName             = "/career.sidecar.v1.SidecarService/RenderResume"
+	SidecarService_RenderDecisionTestReport_FullMethodName = "/career.sidecar.v1.SidecarService/RenderDecisionTestReport"
 )
 
 // SidecarServiceClient is the client API for SidecarService service.
@@ -73,6 +74,12 @@ type SidecarServiceClient interface {
 	// Typst and applies an owner password so the file opens freely but
 	// cannot be edited. Rendering never touches a model.
 	RenderResume(ctx context.Context, in *RenderResumeRequest, opts ...grpc.CallOption) (*RenderResumeResponse, error)
+	// Renders a decision test results report to two PDFs: the
+	// participant's copy and the owner's copy. The API sends the report
+	// as a finished document, every figure worked out and every sentence
+	// chosen; the sidecar draws the charts and lays out the pages, and
+	// decides nothing. Rendering never touches a model.
+	RenderDecisionTestReport(ctx context.Context, in *RenderDecisionTestReportRequest, opts ...grpc.CallOption) (*RenderDecisionTestReportResponse, error)
 }
 
 type sidecarServiceClient struct {
@@ -163,6 +170,16 @@ func (c *sidecarServiceClient) RenderResume(ctx context.Context, in *RenderResum
 	return out, nil
 }
 
+func (c *sidecarServiceClient) RenderDecisionTestReport(ctx context.Context, in *RenderDecisionTestReportRequest, opts ...grpc.CallOption) (*RenderDecisionTestReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenderDecisionTestReportResponse)
+	err := c.cc.Invoke(ctx, SidecarService_RenderDecisionTestReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SidecarServiceServer is the server API for SidecarService service.
 // All implementations must embed UnimplementedSidecarServiceServer
 // for forward compatibility.
@@ -199,6 +216,12 @@ type SidecarServiceServer interface {
 	// Typst and applies an owner password so the file opens freely but
 	// cannot be edited. Rendering never touches a model.
 	RenderResume(context.Context, *RenderResumeRequest) (*RenderResumeResponse, error)
+	// Renders a decision test results report to two PDFs: the
+	// participant's copy and the owner's copy. The API sends the report
+	// as a finished document, every figure worked out and every sentence
+	// chosen; the sidecar draws the charts and lays out the pages, and
+	// decides nothing. Rendering never touches a model.
+	RenderDecisionTestReport(context.Context, *RenderDecisionTestReportRequest) (*RenderDecisionTestReportResponse, error)
 	mustEmbedUnimplementedSidecarServiceServer()
 }
 
@@ -232,6 +255,9 @@ func (UnimplementedSidecarServiceServer) Generate(context.Context, *GenerateRequ
 }
 func (UnimplementedSidecarServiceServer) RenderResume(context.Context, *RenderResumeRequest) (*RenderResumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RenderResume not implemented")
+}
+func (UnimplementedSidecarServiceServer) RenderDecisionTestReport(context.Context, *RenderDecisionTestReportRequest) (*RenderDecisionTestReportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenderDecisionTestReport not implemented")
 }
 func (UnimplementedSidecarServiceServer) mustEmbedUnimplementedSidecarServiceServer() {}
 func (UnimplementedSidecarServiceServer) testEmbeddedByValue()                        {}
@@ -398,6 +424,24 @@ func _SidecarService_RenderResume_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SidecarService_RenderDecisionTestReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenderDecisionTestReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SidecarServiceServer).RenderDecisionTestReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SidecarService_RenderDecisionTestReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SidecarServiceServer).RenderDecisionTestReport(ctx, req.(*RenderDecisionTestReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SidecarService_ServiceDesc is the grpc.ServiceDesc for SidecarService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -436,6 +480,10 @@ var SidecarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RenderResume",
 			Handler:    _SidecarService_RenderResume_Handler,
+		},
+		{
+			MethodName: "RenderDecisionTestReport",
+			Handler:    _SidecarService_RenderDecisionTestReport_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
