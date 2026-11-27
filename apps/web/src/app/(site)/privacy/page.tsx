@@ -194,7 +194,7 @@ export default function PrivacyPage() {
             DD-214, DD-215 or VMET you upload is sent over HTTPS to this server,
             read in memory, and deleted as soon as your report is written. The
             files, the report and the text in them are not stored, logged or
-            shared, and nothing is sent to an outside service. A Cloudflare
+            shared, and none of it is sent to an outside service. A Cloudflare
             Turnstile check guards the upload, and your network address is held
             in memory for a few minutes to limit how many translations one
             visitor can run. Do not upload a document you are not comfortable
