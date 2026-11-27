@@ -126,6 +126,40 @@ afterwards clears the override and puts the stack back on one tag.
 `live-check.sh` reports all three, so a mixture is visible rather than
 inferred.
 
+## The v2c translator (/v2c)
+
+The veterans' military-to-civilian translator is a separate app,
+[reh3376/v2c-translator](https://github.com/reh3376/v2c-translator),
+built and published to GHCR by that repository. It runs here as the
+`v2c` service (prod overlay only) and caddy routes `/v2c` and `/v2c/*`
+to it, with the site CSP scoped away from those paths so the
+translator's own policy is the one the browser receives.
+
+Its tag, `V2C_IMAGE_TAG`, moves independently of `IMAGE_TAG`.
+`rollout.sh` never pulls it; `deploy/rollout-v2c.sh [sha]` does, and
+recreates only the `v2c` container, so a translator release cannot
+touch the api, an evaluation in flight or a decision-test run.
+`deploy/rollout-v2c.sh --rollback` returns to the previous v2c tag.
+
+First deploy, once:
+
+1. Merge the career-site change (compose service, Caddyfile, this
+   section) and run `deploy/rollout.sh` as usual. It pulls the checkout,
+   restarts caddy because the Caddyfile changed, and `up -d` creates the
+   `v2c` container on the `main` image.
+2. Run `deploy/rollout-v2c.sh` to pin `V2C_IMAGE_TAG` to a sha and check
+   `/v2c/api/healthz`, `/v2c/api/readyz` and that the page loads the
+   Turnstile script.
+3. Open https://rogerhenley.dev/v2c/ in a browser and confirm the
+   robot-check box appears. Cloudflare's test keys used in the
+   translator's CI draw no iframe, so this is the one thing only a live
+   check proves.
+
+Privacy model: uploads are read in a 256 MB tmpfs and deleted when the
+report is written; the root filesystem is read-only; the container never
+logs file names, contents or report data. See the "veterans' translator"
+section of `/privacy`.
+
 ## Sequence
 
 Do these in order. Each step is a hand-off between you and me.

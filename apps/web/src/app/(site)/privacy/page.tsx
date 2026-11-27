@@ -9,7 +9,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/privacy",
 });
 
-const UPDATED = "22 November 2026";
+const UPDATED = "27 November 2026";
 
 // Plain statements, one per paragraph, in the order a visitor meets
 // them: anonymous visit, contact, registration, JD review, meetings,
@@ -185,6 +185,20 @@ export default function PrivacyPage() {
             question. A second copy that does print the questions and
             what you answered is kept for my own use in checking the
             test, and is sent to no one.
+          </p>
+        </Section>
+
+        <Section title="The veterans' translator">
+          <p>
+            The military-to-civilian translator at /v2c needs no account. A
+            DD-214, DD-215 or VMET you upload is sent over HTTPS to this server,
+            read in memory, and deleted as soon as your report is written. The
+            files, the report and the text in them are not stored, logged or
+            shared, and nothing is sent to an outside service. A Cloudflare
+            Turnstile check guards the upload, and your network address is held
+            in memory for a few minutes to limit how many translations one
+            visitor can run. Do not upload a document you are not comfortable
+            sending.
           </p>
         </Section>
 

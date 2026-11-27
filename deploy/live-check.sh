@@ -40,6 +40,23 @@ for path in /jd-upload /home /settings /admin; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$path")
   check "GET $path (anonymous) -> $code, redirected" "[ '$code' = '307' ] || [ '$code' = '302' ]"
 done
+# The v2c translator at /v2c is a separate container behind caddy. Its
+# health, its readiness (CLI + O*NET index present), its hosted copy and
+# its own CSP (which must allow Turnstile) are what a bad deploy breaks
+# silently.
+echo "-- v2c translator (/v2c)"
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE/v2c/api/healthz")
+check "GET /v2c/api/healthz -> $code" "[ '$code' = '200' ]"
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE/v2c/api/readyz")
+check "GET /v2c/api/readyz -> $code" "[ '$code' = '200' ]"
+v2cpage=$(curl -s --max-time 20 "$BASE/v2c/")
+v2c_hosted=no; echo "$v2cpage" | grep -q 'sent over HTTPS to this server' && v2c_hosted=yes
+check "/v2c/ shows the hosted privacy copy -> $v2c_hosted" "[ '$v2c_hosted' = yes ]"
+v2ccsp=$(curl -sI --max-time 20 "$BASE/v2c/" | grep -i '^content-security-policy' | tr -d '\r')
+v2c_own=no
+if echo "$v2ccsp" | grep -q 'challenges.cloudflare.com' && ! echo "$v2ccsp" | grep -q 'api.pwnedpasswords.com'; then v2c_own=yes; fi
+check "/v2c/ carries the translator's own CSP, not the site's -> $v2c_own" "[ '$v2c_own' = yes ]"
+
 # The gallery serves a subset anonymously; if the filter broke, every
 # photo would be public. Counting the rendered derivatives is the
 # cheapest way to notice from outside.
