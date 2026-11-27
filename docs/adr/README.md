@@ -19,3 +19,4 @@ The reasoning in a record is historical and is not rewritten. Where a later chan
 | [0030](0030-relational-collection-graph-analysis.md) | Collect in Postgres, analyse in a graph later | Accepted 2026-10-04 |
 | [0031](0031-declared-controls-are-enforced-controls.md) | A declared control is an enforced control | Accepted 2026-10-12 |
 | [0032](0032-generalise-the-reviewer-into-the-hiring-framework.md) | Generalise the JD reviewer into the hiring framework's Phase 0 | Accepted 2026-11-08 |
+| [0033](0033-a-separately-built-service-behind-the-proxy.md) | Run a separately built service behind the site's proxy, at a path | Accepted 2026-11-27 |
