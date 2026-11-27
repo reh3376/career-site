@@ -49,10 +49,14 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE/v2c/api/healt
 check "GET /v2c/api/healthz -> $code" "[ '$code' = '200' ]"
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE/v2c/api/readyz")
 check "GET /v2c/api/readyz -> $code" "[ '$code' = '200' ]"
-v2cpage=$(curl -s --max-time 20 "$BASE/v2c/")
+# -L on both: the translator answers /v2c/ with a 308 to /v2c, and the
+# page and its policy are on the response after the redirect. Without
+# it these two read an empty body and no header, and fail on a working
+# deploy (the first rollout, 2026-11-27).
+v2cpage=$(curl -sL --max-time 20 "$BASE/v2c/")
 v2c_hosted=no; echo "$v2cpage" | grep -q 'sent over HTTPS to this server' && v2c_hosted=yes
 check "/v2c/ shows the hosted privacy copy -> $v2c_hosted" "[ '$v2c_hosted' = yes ]"
-v2ccsp=$(curl -sI --max-time 20 "$BASE/v2c/" | grep -i '^content-security-policy' | tr -d '\r')
+v2ccsp=$(curl -sIL --max-time 20 "$BASE/v2c/" | grep -i '^content-security-policy' | tail -1 | tr -d '\r')
 v2c_own=no
 if echo "$v2ccsp" | grep -q 'challenges.cloudflare.com' && ! echo "$v2ccsp" | grep -q 'api.pwnedpasswords.com'; then v2c_own=yes; fi
 check "/v2c/ carries the translator's own CSP, not the site's -> $v2c_own" "[ '$v2c_own' = yes ]"
