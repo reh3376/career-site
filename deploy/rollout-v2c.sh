@@ -92,13 +92,15 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$SITE/v2c/api/ready
 [ "$code" = "200" ] || die "/v2c/api/readyz -> $code: the translator or its index is not ready"
 echo "  ok   readyz"
 
-page=$(curl -s --max-time 20 "$SITE/v2c/")
+# -L: the translator redirects /v2c/ to /v2c (308); the page and its
+# policy are on the response after the redirect.
+page=$(curl -sL --max-time 20 "$SITE/v2c/")
 echo "$page" | grep -q 'sent over HTTPS to this server' || die "/v2c/ is not showing the hosted privacy copy: is V2C_MODE=hosted reaching the container?"
 echo "  ok   hosted privacy copy"
 SITE_KEY=$(S "grep '^TURNSTILE_SITE_KEY=' $REMOTE/.env.prod | cut -d= -f2-")
 echo "$page" | grep -qF "$SITE_KEY" || die "/v2c/ does not carry TURNSTILE_SITE_KEY: the robot check cannot render"
 echo "  ok   Turnstile site key on the page"
-csp=$(curl -sI --max-time 20 "$SITE/v2c/" | grep -i '^content-security-policy' | tr -d '\r')
+csp=$(curl -sIL --max-time 20 "$SITE/v2c/" | grep -i '^content-security-policy' | tail -1 | tr -d '\r')
 echo "$csp" | grep -q 'challenges.cloudflare.com' || die "/v2c/ policy does not allow Turnstile"
 echo "$csp" | grep -q 'api.pwnedpasswords.com' && die "/v2c/ is receiving the site's CSP, not its own: check the @site matcher in Caddyfile.prod and that caddy restarted"
 echo "  ok   the translator's own CSP"
